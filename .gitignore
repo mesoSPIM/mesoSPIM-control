@@ -1,0 +1,12 @@
+__pycache__
+/**/__pycache__
+.ipynb_checkpoints
+/**/.ipynb_checkpoints
+**/*.ipynb_checkpoints/
+log/*
+/log/*
+.idea
+prototypes/orcas/*.tif
+*.bin
+
+prototypes/python-essentials/temp\.tif
