@@ -17,6 +17,13 @@ Development notes
 
    share/development/development_notes.rst
 
+Modules
+-------
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   share/devices/devices.rst
 
 Indices and tables
 ==================

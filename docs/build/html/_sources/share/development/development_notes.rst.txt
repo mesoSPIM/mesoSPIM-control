@@ -11,8 +11,8 @@ Useful Links: General
 ---------------------
 * `Restructured Text Tutorial <https://github.com/kiith-sa/RestructuredText-tutorial>`_
 
-PyQt5
------
+PyQt5 Links
+-----------
 * `PyQt5 Documentation <http://pyqt.sourceforge.net/Docs/PyQt5/>`_
 * `PyQt5 News <https://www.riverbankcomputing.com/news>`_
 * `Modules <http://pyqt.sourceforge.net/Docs/PyQt5/modules.html>`_
