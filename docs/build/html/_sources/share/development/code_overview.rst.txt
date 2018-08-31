@@ -19,7 +19,7 @@ Basic overview
 
   * ``mesoSPIM_AcquisitionPlanner`` which is a window with an
     editable table allowing the creation of multidimensional acquisitions
-  * ``mesoSPIM_CameraGUI``, the camera window (using `pyqtgraph <http://pyqtgraph.org/>`_ )
+  * ``mesoSPIM_CameraGUI``, the camera window (using `pyqtgraph <http://pyqtgraph.org/>`_)
 
 Multithreading and signal exchange
 ----------------------------------

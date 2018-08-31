@@ -8,6 +8,7 @@ Welcome to the documentation of the mesoSPIM software!
    share/overview.rst
    share/window.rst
    share/worker.rst
+   share/acquisitions.rst
 
 Development notes
 -----------------
@@ -24,6 +25,7 @@ Modules
    :caption: Contents:
 
    share/devices/devices.rst
+   share/acquisitions.rst
 
 Indices and tables
 ==================

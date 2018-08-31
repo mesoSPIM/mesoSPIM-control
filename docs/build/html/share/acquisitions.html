@@ -1,0 +1,270 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>The Acquisitions module &#8212; mesoSPIM Control 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Development Notes" href="development/development_notes.html" />
+    <link rel="prev" title="The mesoSPIM Worker module" href="worker.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-mesoSPIM.src.utils.acquisitions">
+<span id="the-acquisitions-module"></span><h1>The Acquisitions module<a class="headerlink" href="#module-mesoSPIM.src.utils.acquisitions" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="acquisitions-py">
+<h2>acquisitions.py<a class="headerlink" href="#acquisitions-py" title="Permalink to this headline">¶</a></h2>
+<p>Helper classes for mesoSPIM acquisitions</p>
+<dl class="class">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition">
+<em class="property">class </em><code class="descclassname">mesoSPIM.src.utils.acquisitions.</code><code class="descname">Acquisition</code><span class="sig-paren">(</span><em>x_pos=0</em>, <em>y_pos=0</em>, <em>z_start=0</em>, <em>z_end=100</em>, <em>z_step=1</em>, <em>theta_pos=0</em>, <em>f_pos=0</em>, <em>laser='488 nm'</em>, <em>intensity=0</em>, <em>filter='515LP'</em>, <em>zoom='1x'</em>, <em>shutter='Left'</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">indexed.IndexedOrderedDict</span></code></p>
+<p>Custom acquisition dictionary. Contains all the information to run a single
+acquisition.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>x_pos</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – X start position in microns</li>
+<li><strong>y_pos</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Y start position in microns</li>
+<li><strong>z_start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Z start position in microns</li>
+<li><strong>z_end</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Z end position in microns</li>
+<li><strong>z_step</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Z stepsize in microns ,</li>
+<li><strong>theta_pos</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Rotation angle in microns</li>
+<li><strong>f_pos</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Focus position in microns</li>
+<li><strong>laser</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Laser designation</li>
+<li><strong>intensity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Laser intensity in 0-100</li>
+<li><strong>filter</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Filter designation (has to be in the config)</li>
+<li><strong>zoom</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Zoom designation</li>
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Filename for the file to be saved</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Attributes:</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Getting keys: <code class="docutils literal notranslate"><span class="pre">keys</span> <span class="pre">=</span> <span class="pre">[key</span> <span class="pre">for</span> <span class="pre">key</span> <span class="pre">in</span> <span class="pre">acq1.keys()]</span></code></p>
+</div>
+<p class="rubric">Example</p>
+<p>Getting keys: <code class="docutils literal notranslate"><span class="pre">keys</span> <span class="pre">=</span> <span class="pre">[key</span> <span class="pre">for</span> <span class="pre">key</span> <span class="pre">in</span> <span class="pre">acq1.keys()]</span></code></p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">(Zeke) Change this to use relations.</p>
+</div>
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_acquisition_time">
+<code class="descname">get_acquisition_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_acquisition_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_acquisition_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to return the time the acquisition will take</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Acquisition time in seconds</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_delta_z_dict">
+<code class="descname">get_delta_z_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_delta_z_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_delta_z_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns relative movement dict for z-steps</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_endpoint">
+<code class="descname">get_endpoint</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_endpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_endpoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_filename">
+<code class="descname">get_filename</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_filename"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_filter">
+<code class="descname">get_filter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_image_count">
+<code class="descname">get_image_count</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_image_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_image_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to return the number of planes in the acquisition</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_intensity">
+<code class="descname">get_intensity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_intensity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_intensity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_keylist">
+<code class="descname">get_keylist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_keylist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_keylist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Here, a list of capitalized keys is returned for usage as a table header</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_laser">
+<code class="descname">get_laser</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_laser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_laser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_midpoint">
+<code class="descname">get_midpoint</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_midpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_midpoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_startpoint">
+<code class="descname">get_startpoint</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_startpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_startpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provides a dictionary with the startpoint coordinates</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.Acquisition.get_zoom">
+<code class="descname">get_zoom</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#Acquisition.get_zoom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.Acquisition.get_zoom" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Zoom</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.src.utils.acquisitions.AcquisitionList">
+<em class="property">class </em><code class="descclassname">mesoSPIM.src.utils.acquisitions.</code><code class="descname">AcquisitionList</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#AcquisitionList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.AcquisitionList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a></p>
+<p>Class for a list of acquisition objects</p>
+<p>Examples: “([acq1,acq2,acq3])” is due to the fact that list takes only a single argument
+acq_list = AcquisitionList([acq1,acq2,acq3])
+acq_list.time()
+&gt; 3600
+acq_list.planes()
+&gt; 18000</p>
+<p>acq_list[2](2)
+&gt;10
+acq_list[2][‘y_pos’]
+&gt;10
+acq_list[2][‘y_pos’] = 34</p>
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.AcquisitionList.get_acquisition_time">
+<code class="descname">get_acquisition_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#AcquisitionList.get_acquisition_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_acquisition_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns total time in seconds of a list of acquisitions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.AcquisitionList.get_image_count">
+<code class="descname">get_image_count</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#AcquisitionList.get_image_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_image_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the total number of planes for a list of acquistions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.AcquisitionList.get_keylist">
+<code class="descname">get_keylist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#AcquisitionList.get_keylist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_keylist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Here, a list of capitalized keys is returnes for usage as a table header</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.src.utils.acquisitions.AcquisitionList.get_startpoint">
+<code class="descname">get_startpoint</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/src/utils/acquisitions.html#AcquisitionList.get_startpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_startpoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The Acquisitions module</a><ul>
+<li><a class="reference internal" href="#acquisitions-py">acquisitions.py</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="worker.html" title="previous chapter">The mesoSPIM Worker module</a></li>
+      <li>Next: <a href="development/development_notes.html" title="next chapter">Development Notes</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/share/acquisitions.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Fabian F. Voigt.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/share/acquisitions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
