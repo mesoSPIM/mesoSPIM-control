@@ -9,6 +9,8 @@ class Window(QtWidgets.QMainWindow):
     '''
     Main application window which instantiates worker objects and moves them
     to a thread.
+
+    
     '''
     sig_start = QtCore.pyqtSignal()
 
