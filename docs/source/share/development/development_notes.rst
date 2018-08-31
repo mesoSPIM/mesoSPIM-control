@@ -5,7 +5,9 @@ Development Notes
    :maxdepth: 2
    :caption: Contents:
 
+   code_overview.rst
    coding_conventions.rst
+
 
 Useful Links: General
 ---------------------
