@@ -8,8 +8,7 @@ import sys
 
 from PyQt5 import QtWidgets
 
-from .src.window import Window
-from .config.config import my_config as cfg
+from src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
 def main():
     """
@@ -20,7 +19,7 @@ def main():
             A string to assign to the `name` instance attribute.
     """
     app = QtWidgets.QApplication(sys.argv)
-    ex = Window(cfg)
+    ex = mesoSPIM_MainWindow()
     ex.show()
     sys.exit(app.exec_())
 
