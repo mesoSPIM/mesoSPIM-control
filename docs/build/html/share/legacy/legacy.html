@@ -40,8 +40,1394 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="legacy-code-overview">
-<h1>Legacy code overview<a class="headerlink" href="#legacy-code-overview" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-mesoSPIM.legacy.mesoSPIM.mesoSPIM_control">
+<span id="legacy-code-overview"></span><h1>Legacy code overview<a class="headerlink" href="#module-mesoSPIM.legacy.mesoSPIM.mesoSPIM_control" title="Permalink to this headline">¶</a></h1>
+<p>mesoSPIM Control software</p>
+<p>Author: Fabian Voigt</p>
+<p>Currently, everything is in one big file to avoid the messiness of relative imports</p>
+<p>TODO: CHANGE</p>
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.Script_Repository">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">Script_Repository</code><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#Script_Repository"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.Script_Repository" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtCore.QObject</span></code></p>
+<p>Class that contains scripts.</p>
+<p>Things should be written in here using the mutex.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_Camera</code><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtCore.QObject</span></code></p>
+<p>Class for the Hamamatsu Camera</p>
+<p>Will run in its own thread</p>
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.add_images_to_stack">
+<code class="descname">add_images_to_stack</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera.add_images_to_stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.add_images_to_stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.end_stack">
+<code class="descname">end_stack</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera.end_stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.end_stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.frame">
+<code class="descname">frame</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.frame" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.live">
+<code class="descname">live</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera.live"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.live" title="Permalink to this definition">¶</a></dt>
+<dd><p>camera running in live mode</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.prepare_stack">
+<code class="descname">prepare_stack</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera.prepare_stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.prepare_stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.set_exposure_time">
+<code class="descname">set_exposure_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera.set_exposure_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.set_exposure_time" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.set_line_interval">
+<code class="descname">set_line_interval</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera.set_line_interval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.set_line_interval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.status">
+<code class="descname">status</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.status" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Camera.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Camera.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_Core</code><span class="sig-paren">(</span><em>config</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtCore.QObject</span></code></p>
+<p>The mesoSPIM core takes care of all interactions with NI hardware and is
+thus the pacemaker of the microscope (responsible for synchronizing
+all digital and analog outs).</p>
+<p>TODO: In the future, the core will take care of script execution as well.</p>
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.bundle_galvo_and_etl_waveforms">
+<code class="descname">bundle_galvo_and_etl_waveforms</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.bundle_galvo_and_etl_waveforms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.bundle_galvo_and_etl_waveforms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stacks the Galvo and ETL waveforms into a numpy array adequate for
+the NI cards.</p>
+<p>In here, the assignment of output channels of the Galvo / ETL card to the
+corresponding output channel is hardcoded: This could be improved.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.calculate_number_of_stack_planes">
+<code class="descname">calculate_number_of_stack_planes</code><span class="sig-paren">(</span><em>start_z</em>, <em>end_z</em>, <em>stepsize</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.calculate_number_of_stack_planes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.calculate_number_of_stack_planes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of planes</p>
+<p>Uses int( ) to round down to the nearest integer.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.close_image_series">
+<code class="descname">close_image_series</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.close_image_series"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.close_image_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cleans up after series without waveform update</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.close_shutters">
+<code class="descname">close_shutters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.close_shutters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.close_shutters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.close_tasks">
+<code class="descname">close_tasks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.close_tasks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.close_tasks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes the tasks for triggering, analog and counter outputs.</p>
+<p>Tasks should only be closed are they are stopped.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.create_filename">
+<code class="descname">create_filename</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.create_filename"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.create_filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.create_tasks">
+<code class="descname">create_tasks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.create_tasks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.create_tasks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a total of four tasks for the mesoSPIM:</p>
+<p>These are:
+- the master trigger task, a digital out task that only provides a trigger pulse for the others
+- the camera trigger task, a counter task that triggers the camera in lightsheet mode
+- the galvo task (analog out) that controls the left &amp; right galvos for creation of</p>
+<blockquote>
+<div>the light-sheet and shadow avoidance</div></blockquote>
+<ul class="simple">
+<li>the ETL &amp; Laser task (analog out) that controls all the laser intensities (Laser should only
+be on when the camera is acquiring) and the left/right ETL waveforms</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.execute_script">
+<code class="descname">execute_script</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.execute_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.execute_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute script</p>
+<p>The script QMutex is locked to avoid the script being changed while
+there is an execution happening.</p>
+<p>Using the traceback module to provide decent exception messages
+when script execution fails.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.lightsheet_alignment_mode">
+<code class="descname">lightsheet_alignment_mode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.lightsheet_alignment_mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.lightsheet_alignment_mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Switches shutters after each image to allow coalignment of both lightsheets</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.live">
+<code class="descname">live</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.live"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.live" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.move_absolute">
+<code class="descname">move_absolute</code><span class="sig-paren">(</span><em>dict</em>, <em>wait_until_done=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.move_absolute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.move_absolute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper method to allow running movements with or without waiting for completion</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.move_relative">
+<code class="descname">move_relative</code><span class="sig-paren">(</span><em>dict</em>, <em>wait_until_done=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.move_relative"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.move_relative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper method to allow running movements with or without waiting for completion</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.open_shutters">
+<code class="descname">open_shutters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.open_shutters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.open_shutters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Here, the possible values are hardcoded which is a DRY violation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.prepare_image_series">
+<code class="descname">prepare_image_series</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.prepare_image_series"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.prepare_image_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepares an image series without waveform update</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.run_stack">
+<code class="descname">run_stack</code><span class="sig-paren">(</span><em>start_z</em>, <em>end_z</em>, <em>stepsize</em>, <em>return_to_start=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.run_stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.run_stack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs a stack</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.run_tasks">
+<code class="descname">run_tasks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.run_tasks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.run_tasks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the tasks for triggering, analog and counter outputs</p>
+<p>Firstly, the master trigger triggers all other task via a shared trigger
+line (PFI line as given in the config file).</p>
+<p>For this to work, all analog output and counter tasks have to be started so
+that they are waiting for the trigger signal.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.save_etl_parameters_to_csv">
+<code class="descname">save_etl_parameters_to_csv</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.save_etl_parameters_to_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.save_etl_parameters_to_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the current ETL left/right offsets and amplitudes from the
+values to the ETL csv files</p>
+<p>The .csv file needs to contain the following columns:</p>
+<p>Wavelength
+Zoom
+ETL-Left-Offset
+ETL-Left-Amp
+ETL-Right-Offset
+ETL-Right-Amp</p>
+<p>Creates a temporary cfg file with the ending _tmp</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_etl_l_waveform">
+<code class="descname">set_etl_l_waveform</code><span class="sig-paren">(</span><em>amplitude</em>, <em>offset</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_etl_l_waveform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_etl_l_waveform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows simple external changing of the ETL left parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_etl_r_waveform">
+<code class="descname">set_etl_r_waveform</code><span class="sig-paren">(</span><em>amplitude</em>, <em>offset</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_etl_r_waveform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_etl_r_waveform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows simple external changing of the ETL right parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_galvo_waveforms">
+<code class="descname">set_galvo_waveforms</code><span class="sig-paren">(</span><em>freq=99.5</em>, <em>amp=3</em>, <em>offset_l=0</em>, <em>offset_r=0</em>, <em>phase_l=1.5707963267948966</em>, <em>phase_r=1.5707963267948966</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_galvo_waveforms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_galvo_waveforms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates galvo waveforms, assumes that the frequencies and amplitudes are the same on both sides</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_intensity">
+<code class="descname">set_intensity</code><span class="sig-paren">(</span><em>intensity</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_intensity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates Intensity of the activated laser</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_laser">
+<code class="descname">set_laser</code><span class="sig-paren">(</span><em>laser</em>, <em>intensity</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_laser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_laser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enables laser line, sets laser intensity, updates laser and
+ETL waveforms with values from the parameter table</p>
+<p>laser: String
+intensity: Float between 0 and 100 %</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_laser_intensity">
+<code class="descname">set_laser_intensity</code><span class="sig-paren">(</span><em>laserline</em>, <em>intensity</em>, <em>delay_percent=10</em>, <em>pulse_percent=80</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_laser_intensity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_laser_intensity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_shutter_selection">
+<code class="descname">set_shutter_selection</code><span class="sig-paren">(</span><em>shutterstring</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_shutter_selection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_shutter_selection" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_sweeptime">
+<code class="descname">set_sweeptime</code><span class="sig-paren">(</span><em>sweeptime</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_sweeptime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_sweeptime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the sweeptime in seconds and updates all related waveforms</p>
+<p>Things to update:
+ETL and Galvo parameters are retained, but laser intensity etc.
+has to be updated</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_zoom">
+<code class="descname">set_zoom</code><span class="sig-paren">(</span><em>zoom</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.set_zoom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.set_zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Little helper method: Because the mesoSPIM core is not handling
+the serial Zoom connection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.snap">
+<code class="descname">snap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.snap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.snap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.snap_image">
+<code class="descname">snap_image</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.snap_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.snap_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Snaps a single image after updating the waveforms.</p>
+<p>Can be used in acquisitions where changing waveforms are required,
+but there is additional overhead due to the need to write the
+waveforms into the buffers of the NI cards.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.snap_image_in_series">
+<code class="descname">snap_image_in_series</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.snap_image_in_series"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.snap_image_in_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Snaps and image from a series without waveform update</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.stack">
+<code class="descname">stack</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.stack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stack algorithm</p>
+<p>Get start and end points &amp; stepsize from the state
+Go to start position
+Update waveforms
+Lock waveform controls
+Open shutters
+for i in range(…):</p>
+<blockquote>
+<div><p>Snap image in series
+Move stage
+Signal progress
+How to escape the loop?</p>
+<blockquote>
+<div>Break when stopflag pops up</div></blockquote>
+</div></blockquote>
+<p>Close shutters (no shutterswitch in this one)
+Go back to start position
+Enable waveform controls</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.start_tasks">
+<code class="descname">start_tasks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.start_tasks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.start_tasks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts the tasks for camera triggering and analog outputs</p>
+<p>If the tasks are configured to be triggered, they won’t output any
+signals until run_tasks() is called.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signal-invoked local stop flag telling all listeners to stop.</p>
+<p>TODO: Investigate whether this might be better handled with an
+internal signal.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.stop_tasks">
+<code class="descname">stop_tasks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.stop_tasks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.stop_tasks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the tasks for triggering, analog and counter outputs</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_etl">
+<code class="descname">update_etl</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.update_etl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_etl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Little helper method to update ETL parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_etl_parameters_from_csv">
+<code class="descname">update_etl_parameters_from_csv</code><span class="sig-paren">(</span><em>cfg_path</em>, <em>laser</em>, <em>zoom</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.update_etl_parameters_from_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_etl_parameters_from_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the internal ETL left/right offsets and amplitudes from the
+values in the ETL csv files</p>
+<p>The .csv file needs to contain the follwing columns:</p>
+<p>Wavelength
+Zoom
+ETL-Left-Offset
+ETL-Left-Amp
+ETL-Right-Offset
+ETL-Right-Amp</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_position_state">
+<code class="descname">update_position_state</code><span class="sig-paren">(</span><em>position_dict</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.update_position_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_position_state" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_stack_parameters">
+<code class="descname">update_stack_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.update_stack_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.update_stack_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the stack parameters: calculates z_planes after
+z_start, z_end, z_stepsize are known</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.visual_mode">
+<code class="descname">visual_mode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.visual_mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.visual_mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provides a simple way to show brains visually with a stereomicroscope</p>
+<p>TODO: Sweeptime-induced laser shuttering is still there. Not having this would mean we need
+a continous output task for the Galvos, which would be a bit of work.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.write_line">
+<code class="descname">write_line</code><span class="sig-paren">(</span><em>file</em>, <em>key=''</em>, <em>value=''</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.write_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.write_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Little helper method to write a single line with a key and value for metadata</p>
+<p>Adds a line break at the end.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.write_metadata">
+<code class="descname">write_metadata</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.write_metadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.write_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes a metadata.txt file</p>
+<p>Path contains the file to be written
+Filename</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.write_waveforms_to_tasks">
+<code class="descname">write_waveforms_to_tasks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Core.write_waveforms_to_tasks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Core.write_waveforms_to_tasks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the waveforms to the slave tasks</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_GUI</code><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtWidgets.QMainWindow</span></code></p>
+<p>Main application window which instantiates a worker object and moves it
+to a thread.</p>
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button1">
+<code class="descname">button1</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button1" title="Permalink to this definition">¶</a></dt>
+<dd><p>select the first laser</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button10">
+<code class="descname">button10</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button10"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button10" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button11">
+<code class="descname">button11</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button11"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button11" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment filter</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button12">
+<code class="descname">button12</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button12"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button12" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrement filter</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button13">
+<code class="descname">button13</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button13"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button13" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment zoom</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button14">
+<code class="descname">button14</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button14"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button14" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrement zoom</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button15">
+<code class="descname">button15</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button15"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button15" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero XYZ</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button16">
+<code class="descname">button16</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button16"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button16" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero F</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button17">
+<code class="descname">button17</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button17"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button17" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select left shutter</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button18">
+<code class="descname">button18</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button18"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button18" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select left shutter</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button19">
+<code class="descname">button19</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button19"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button19" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select left shutter</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button2">
+<code class="descname">button2</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button20">
+<code class="descname">button20</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button20"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button20" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select right shutter</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button21">
+<code class="descname">button21</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button21"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button21" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button22">
+<code class="descname">button22</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button22"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button22" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button23">
+<code class="descname">button23</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button23"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button23" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button24">
+<code class="descname">button24</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button24"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button24" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button25">
+<code class="descname">button25</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button25"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button25" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button26">
+<code class="descname">button26</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button26"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button26" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increase laser intensity</p>
+<p>The LaserSliderChangeCount is used to decrease the number of events,
+otherwise the slider would be moved too quickly.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button27">
+<code class="descname">button27</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button27"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button27" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrease laser intensity</p>
+<p>The LaserSliderChangeCount is used to decrease the number of events,
+otherwise the slider would be moved too quickly.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button28">
+<code class="descname">button28</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button28"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button28" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button29">
+<code class="descname">button29</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button29"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button29" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button3">
+<code class="descname">button3</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button3" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button4">
+<code class="descname">button4</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button4"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button4" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button5">
+<code class="descname">button5</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button5"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button5" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button6">
+<code class="descname">button6</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button6"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button6" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button7">
+<code class="descname">button7</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button7"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button7" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button8">
+<code class="descname">button8</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button8"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button8" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button9">
+<code class="descname">button9</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button9"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button9" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button_handler">
+<code class="descname">button_handler</code><span class="sig-paren">(</span><em>string</em>, <em>index</em>, <em>message</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button_handler" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button_handler_method">
+<code class="descname">button_handler_method</code><span class="sig-paren">(</span><em>string</em>, <em>index</em>, <em>method_to_call</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.button_handler_method"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.button_handler_method" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.choose_etl_config">
+<code class="descname">choose_etl_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.choose_etl_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.choose_etl_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>File dialog for choosing the config file</p>
+<p>TODO: Check that this is really a .csv-File</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.disable_alignment_mode_buttons">
+<code class="descname">disable_alignment_mode_buttons</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.disable_alignment_mode_buttons"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.disable_alignment_mode_buttons" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.disable_controls">
+<code class="descname">disable_controls</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.disable_controls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.disable_controls" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.disable_mode_control_buttons">
+<code class="descname">disable_mode_control_buttons</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.disable_mode_control_buttons"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.disable_mode_control_buttons" title="Permalink to this definition">¶</a></dt>
+<dd><p>If the microscope is in any acquisition state,
+it should disable ALL the buttons that can cause it to go into another
+mode and enable the stop button.</p>
+<p>ONLY the stop button or proper finishing of the acquisition allow
+the GUI to return to the original state.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.display_status_message">
+<code class="descname">display_status_message</code><span class="sig-paren">(</span><em>string</em>, <em>time=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.display_status_message"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.display_status_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Displays a message in the status bar for a time in ms</p>
+<p>If time=0, the message will stay.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.enable_alignment_mode_buttons">
+<code class="descname">enable_alignment_mode_buttons</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.enable_alignment_mode_buttons"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.enable_alignment_mode_buttons" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.enable_controls">
+<code class="descname">enable_controls</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.enable_controls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.enable_controls" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.enable_stop_button">
+<code class="descname">enable_stop_button</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.enable_stop_button"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.enable_stop_button" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.execute_script">
+<code class="descname">execute_script</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.execute_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.execute_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>If the script comes as a string, we can just exec it</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.farm_panel_handler">
+<code class="descname">farm_panel_handler</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.farm_panel_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.farm_panel_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Buttons 1 to 8</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.get_bin">
+<code class="descname">get_bin</code><span class="sig-paren">(</span><em>x</em>, <em>n=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.get_bin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.get_bin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the binary representation of x.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – </li>
+<li><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Minimum number of digits. If x needs less digits in binary, the rest
+is filled with zeros.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_handler">
+<code class="descname">joystick_handler</code><span class="sig-paren">(</span><em>axis</em>, <em>value</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.joystick_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_handler" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_persistent_update">
+<code class="descname">joystick_persistent_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.joystick_persistent_update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_persistent_update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_timer_start">
+<code class="descname">joystick_timer_start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.joystick_timer_start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_timer_start" title="Permalink to this definition">¶</a></dt>
+<dd><p>The interval is hardcoded and was found to be ok with PI stages</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_timer_stop">
+<code class="descname">joystick_timer_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.joystick_timer_stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.joystick_timer_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.lightsheet_alignment_mode">
+<code class="descname">lightsheet_alignment_mode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.lightsheet_alignment_mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.lightsheet_alignment_mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run in light-sheet switching mode: interleaved left/right shuttering for
+coalignment of the light-sheets</p>
+<p>TODO: When Stack / Script buttons become available, disable them as well</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.live">
+<code class="descname">live</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.live"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.live" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enter live mode</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.load_sample">
+<code class="descname">load_sample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.load_sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.load_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.load_script">
+<code class="descname">load_script</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.load_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.load_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a script</p>
+<p>The empty string in the method arguments ensures that it remembers the
+last location from where a file was opened.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.mark_stack_end">
+<code class="descname">mark_stack_end</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.mark_stack_end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.mark_stack_end" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.mark_stack_start">
+<code class="descname">mark_stack_start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.mark_stack_start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.mark_stack_start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.pos2str">
+<code class="descname">pos2str</code><span class="sig-paren">(</span><em>position</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.pos2str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.pos2str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Little helper method for converting positions to strings</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.relative_movement">
+<code class="descname">relative_movement</code><span class="sig-paren">(</span><em>dict</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.relative_movement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.relative_movement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a single-axis movement dict in the form</p>
+<p>{‘z_rel’: 100}
+and sends it out as
+{‘x_rel’: 0,’y_rel’: 0, ‘z_rel’: 100, ‘f_rel’: 0, ‘theta_rel’: 0}</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.reset_GUI">
+<code class="descname">reset_GUI</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.reset_GUI"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.reset_GUI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the GUI after any acquisition (live, stack, alignment etc ran)</p>
+<p>TODO: When Stack / Script buttons become available, reset them as well</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.sample_handler">
+<code class="descname">sample_handler</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.sample_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.sample_handler" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.save_etl_config">
+<code class="descname">save_etl_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.save_etl_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.save_etl_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save current ETL parameters into config</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.save_script">
+<code class="descname">save_script</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.save_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.save_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a script</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_etl_increments">
+<code class="descname">set_etl_increments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_etl_increments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_etl_increments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_etl_parameters">
+<code class="descname">set_etl_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_etl_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_etl_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_exposure_time">
+<code class="descname">set_exposure_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_exposure_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_exposure_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display is in ms, value needed is in seconds</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_filter">
+<code class="descname">set_filter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_galvo_parameters">
+<code class="descname">set_galvo_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_galvo_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_galvo_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update Galvo Parameters from the values in the parameter tab</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_intensity">
+<code class="descname">set_intensity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_intensity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates laser intensity of the running laser</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_laser_and_intensity">
+<code class="descname">set_laser_and_intensity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_laser_and_intensity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_laser_and_intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sends laser and laser intensity in %</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_laser_via_button">
+<code class="descname">set_laser_via_button</code><span class="sig-paren">(</span><em>index</em>, <em>laser</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_laser_via_button"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_laser_via_button" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_line_interval">
+<code class="descname">set_line_interval</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_line_interval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_line_interval" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change line interval</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_progressbar_to_busy">
+<code class="descname">set_progressbar_to_busy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_progressbar_to_busy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_progressbar_to_busy" title="Permalink to this definition">¶</a></dt>
+<dd><p>If min and max of a progress bar are 0, it shows a “busy” indicator</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_progressbar_to_standard">
+<code class="descname">set_progressbar_to_standard</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_progressbar_to_standard"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_progressbar_to_standard" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_shutter_selection">
+<code class="descname">set_shutter_selection</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_shutter_selection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_shutter_selection" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_sweeptime">
+<code class="descname">set_sweeptime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_sweeptime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_sweeptime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display is in ms, value needed is in seconds</p>
+<p>TODO: Functionality needs to be added</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_tiling_start_position">
+<code class="descname">set_tiling_start_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_tiling_start_position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_tiling_start_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_tiling_z_end_position">
+<code class="descname">set_tiling_z_end_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_tiling_z_end_position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_tiling_z_end_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_z_stepsize">
+<code class="descname">set_z_stepsize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_z_stepsize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_z_stepsize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_zoom">
+<code class="descname">set_zoom</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.set_zoom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.set_zoom" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.snap">
+<code class="descname">snap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.snap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.snap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Snap a single image</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.stack">
+<code class="descname">stack</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Should stop everything</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.stop_movement">
+<code class="descname">stop_movement</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.stop_movement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.stop_movement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.tiling">
+<code class="descname">tiling</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.tiling"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.tiling" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.unload_sample">
+<code class="descname">unload_sample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.unload_sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.unload_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_etl_parameters">
+<code class="descname">update_etl_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_etl_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_etl_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_file_prefix">
+<code class="descname">update_file_prefix</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_file_prefix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_file_prefix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_folder">
+<code class="descname">update_folder</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_folder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a new folder name for saving the acquisition</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_position_indicators">
+<code class="descname">update_position_indicators</code><span class="sig-paren">(</span><em>dict</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_position_indicators"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_position_indicators" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_progressbar">
+<code class="descname">update_progressbar</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_progressbar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_progressbar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_start_number">
+<code class="descname">update_start_number</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_start_number"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_start_number" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_tiling_parameters">
+<code class="descname">update_tiling_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_tiling_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_tiling_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Here, the tiling parameters are calculated and set by the GUI</p>
+<p>These are:
+- number of z_planes per substack
+- total number of planes</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_z_planes">
+<code class="descname">update_z_planes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.update_z_planes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.update_z_planes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.visual_mode">
+<code class="descname">visual_mode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.visual_mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.visual_mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run in visual mode without ETL parameters</p>
+<p>TODO: Disable ETL controls and reenable them later as part of the stop method ?</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zeroLeftETL">
+<code class="descname">zeroLeftETL</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.zeroLeftETL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zeroLeftETL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zeros the amplitude of the left ETL for faster alignment</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zeroRightETL">
+<code class="descname">zeroRightETL</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.zeroRightETL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zeroRightETL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zeros the amplitude of the right ETL for faster alignment</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_focus">
+<code class="descname">zero_focus</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.zero_focus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_focus" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_rot">
+<code class="descname">zero_rot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.zero_rot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_rot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_xy">
+<code class="descname">zero_xy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.zero_xy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_xy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_xyz">
+<code class="descname">zero_xyz</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.zero_xyz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_xyz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_z">
+<code class="descname">zero_z</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_GUI.zero_z"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_GUI.zero_z" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_Global_Signals</code><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Global_Signals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtCore.QObject</span></code></p>
+<p>Contains general state and config of the microscope</p>
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.acquisition">
+<code class="descname">acquisition</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.acquisition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.add_images_to_stack">
+<code class="descname">add_images_to_stack</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.add_images_to_stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.end_stack">
+<code class="descname">end_stack</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.end_stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.execute_script">
+<code class="descname">execute_script</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.execute_script" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.finished">
+<code class="descname">finished</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.finished" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.joystick_timer_start">
+<code class="descname">joystick_timer_start</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.joystick_timer_start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.joystick_timer_stop">
+<code class="descname">joystick_timer_stop</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.joystick_timer_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.lightsheet_alignment_mode">
+<code class="descname">lightsheet_alignment_mode</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.lightsheet_alignment_mode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.live">
+<code class="descname">live</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.live" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.load_sample">
+<code class="descname">load_sample</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.load_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_absolute">
+<code class="descname">move_absolute</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_absolute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_absolute_and_wait_until_done">
+<code class="descname">move_absolute_and_wait_until_done</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_absolute_and_wait_until_done" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_relative">
+<code class="descname">move_relative</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_relative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_relative_and_wait_until_done">
+<code class="descname">move_relative_and_wait_until_done</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.move_relative_and_wait_until_done" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.prepare_stack">
+<code class="descname">prepare_stack</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.prepare_stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.progress">
+<code class="descname">progress</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.progress" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.save_etl_parameters_to_csv">
+<code class="descname">save_etl_parameters_to_csv</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.save_etl_parameters_to_csv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_filter">
+<code class="descname">set_filter</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_intensity">
+<code class="descname">set_intensity</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_intensity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_laser_and_intensity">
+<code class="descname">set_laser_and_intensity</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_laser_and_intensity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_zoom">
+<code class="descname">set_zoom</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.set_zoom" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.snap">
+<code class="descname">snap</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.snap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.stack">
+<code class="descname">stack</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.status_message">
+<code class="descname">status_message</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.status_message" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.stop">
+<code class="descname">stop</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.stop_movement">
+<code class="descname">stop_movement</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.stop_movement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.unload_sample">
+<code class="descname">unload_sample</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.unload_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_camera_exposure">
+<code class="descname">update_camera_exposure</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_camera_exposure" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_camera_line_interval">
+<code class="descname">update_camera_line_interval</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_camera_line_interval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_etl_from_csv">
+<code class="descname">update_etl_from_csv</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_etl_from_csv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_etl_gui">
+<code class="descname">update_etl_gui</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_etl_gui" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_gui">
+<code class="descname">update_gui</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_gui" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_position">
+<code class="descname">update_position</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_stack_parameters">
+<code class="descname">update_stack_parameters</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_stack_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_sweeptime">
+<code class="descname">update_sweeptime</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_sweeptime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_waveforms">
+<code class="descname">update_waveforms</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.update_waveforms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.visual_mode">
+<code class="descname">visual_mode</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.visual_mode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_focus">
+<code class="descname">zero_focus</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_focus" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_rot">
+<code class="descname">zero_rot</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_rot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_xy">
+<code class="descname">zero_xy</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_xy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_xyz">
+<code class="descname">zero_xyz</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_xyz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_z">
+<code class="descname">zero_z</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Global_Signals.zero_z" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_Serial</code><span class="sig-paren">(</span><em>config</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtCore.QObject</span></code></p>
+<p>The mesoSPIM Serial class takes care of all interactions via serial ports.</p>
+<dl class="docutils">
+<dt>These are:</dt>
+<dd><ul class="first last simple">
+<li>Stages (translation and rotation)</li>
+<li>Zoom Control</li>
+<li>Filter wheels</li>
+</ul>
+</dd>
+</dl>
+<p>The reason for running this in its own thread is that stages require frequent
+polling of coordinates.</p>
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.block_till_controller_is_ready">
+<code class="descname">block_till_controller_is_ready</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.block_till_controller_is_ready"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.block_till_controller_is_ready" title="Permalink to this definition">¶</a></dt>
+<dd><p>Blocks further execution (especially during referencing moves)
+till the PI controller returns ready</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.check_target_safety">
+<code class="descname">check_target_safety</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em>, <em>f</em>, <em>theta</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.check_target_safety"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.check_target_safety" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.create_internal_position_dict">
+<code class="descname">create_internal_position_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.create_internal_position_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.create_internal_position_dict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.create_position_dict">
+<code class="descname">create_position_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.create_position_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.create_position_dict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.load_sample">
+<code class="descname">load_sample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.load_sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.load_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_absolute">
+<code class="descname">move_absolute</code><span class="sig-paren">(</span><em>dict</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.move_absolute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_absolute" title="Permalink to this definition">¶</a></dt>
+<dd><p>PI move absolute method</p>
+<p>Lots of implementation details in here, should be replaced by a facade</p>
+<p>TODO: Also lots of repeating code.
+TODO: DRY principle violated
+TODO: Emission of a stop signal a good idea or not?</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_relative">
+<code class="descname">move_relative</code><span class="sig-paren">(</span><em>dict</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.move_relative"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_relative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_relative_and_wait">
+<code class="descname">move_relative_and_wait</code><span class="sig-paren">(</span><em>dict</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.move_relative_and_wait"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_relative_and_wait" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_relative_with_wait_option">
+<code class="descname">move_relative_with_wait_option</code><span class="sig-paren">(</span><em>dict</em>, <em>wait_until_done=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.move_relative_with_wait_option"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.move_relative_with_wait_option" title="Permalink to this definition">¶</a></dt>
+<dd><p>PI move relative method</p>
+<p>Lots of implementation details in here, should be replaced by a facade</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.read_position">
+<code class="descname">read_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.read_position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.read_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.send_position">
+<code class="descname">send_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.send_position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.send_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.set_filter">
+<code class="descname">set_filter</code><span class="sig-paren">(</span><em>filterstring</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.set_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.set_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.set_zoom">
+<code class="descname">set_zoom</code><span class="sig-paren">(</span><em>zoomstring</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.set_zoom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.set_zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>This should also signal back to the GUI that sth was changed</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.sig_move_rel_xy">
+<code class="descname">sig_move_rel_xy</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.sig_move_rel_xy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.sig_zero_xy">
+<code class="descname">sig_zero_xy</code><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.sig_zero_xy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.stop_movement">
+<code class="descname">stop_movement</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.stop_movement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.stop_movement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.unload_sample">
+<code class="descname">unload_sample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.unload_sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.unload_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_focus">
+<code class="descname">zero_focus</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.zero_focus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_focus" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_rot">
+<code class="descname">zero_rot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.zero_rot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_rot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_xy">
+<code class="descname">zero_xy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.zero_xy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_xy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_xyz">
+<code class="descname">zero_xyz</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.zero_xyz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_xyz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_z">
+<code class="descname">zero_z</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Serial.zero_z"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Serial.zero_z" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_Stages</code><span class="sig-paren">(</span><em>config</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Stages"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Implements a facade providing a unified interface for the stages &amp; movement
+depending on whether a Galil &amp; L&amp;N or Physik Instrumente stage combination
+is installed.</p>
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages.move_absolute">
+<code class="descname">move_absolute</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Stages.move_absolute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages.move_absolute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages.move_relative">
+<code class="descname">move_relative</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Stages.move_relative"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages.move_relative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages.read_coordinates">
+<code class="descname">read_coordinates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_Stages.read_coordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_Stages.read_coordinates" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_State">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_State</code><span class="sig-paren">(</span><em>cfg</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_State"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_State" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtCore.QObject</span></code></p>
+<p>This class contains the microscope state</p>
+<p>Here, we convert from a dictionary to a normal object</p>
+<p>Any access to this global state should be locked via mutexes</p>
+<p>TODO: Turn this into a singleton at some point, for now: Instantiate only once.</p>
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_State.calculate_samples">
+<code class="descname">calculate_samples</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_State.calculate_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_State.calculate_samples" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI">
+<em class="property">class </em><code class="descclassname">mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.</code><code class="descname">mesoSPIM_camera_GUI</code><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_camera_GUI"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt5.QtWidgets.QWidget</span></code></p>
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI.display_status_message">
+<code class="descname">display_status_message</code><span class="sig-paren">(</span><em>string</em>, <em>time=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_camera_GUI.display_status_message"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI.display_status_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Displays a message in the status bar for a time in ms</p>
+<p>If time=0, the message will stay.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI.draw_crosshairs">
+<code class="descname">draw_crosshairs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_camera_GUI.draw_crosshairs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI.draw_crosshairs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI.set_image">
+<code class="descname">set_image</code><span class="sig-paren">(</span><em>image</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/mesoSPIM/legacy/mesoSPIM/mesoSPIM_control.html#mesoSPIM_camera_GUI.set_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mesoSPIM.legacy.mesoSPIM.mesoSPIM_control.mesoSPIM_camera_GUI.set_image" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
 
 
