@@ -4,15 +4,15 @@ The Joysticks module
 Joystick handlers
 -----------------
 
-.. automodule:: mesoSPIM.src.devices.joysticks.joystick_handlers.py
+.. automodule:: mesoSPIM.src.devices.joysticks.joystick_handlers
     :members:
     :undoc-members:
     :show-inheritance:
 
-Logitech joysticks
-------------------
+Logitech joystick support
+-------------------------
 
-.. automodule:: mesoSPIM.src.devices.joysticks.logitech.py
+.. automodule:: mesoSPIM.src.devices.joysticks.logitech
     :members:
     :undoc-members:
     :show-inheritance:

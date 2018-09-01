@@ -12,6 +12,18 @@ from PyQt5 import QtCore
 import pywinusb.hid as hid
 
 class FarmSimulatorSidePanel(QtCore.QObject):
+    '''
+
+
+    The joystick is set up using the pyqinusb package by using an HidDeviceFilter
+    for the side panel values.
+
+    Attributes:
+        mode (str): Joysticks can have different modes (e.g. whether analog axes 1-3
+                    or 4-6 are selected). This is represented in this attribute.
+
+    '''
+
     button_pressed = QtCore.pyqtSignal(int) # <-- allows handling of buttons
     axis_moved = QtCore.pyqtSignal(int, int) # <-- axis, value
     mode_changed = QtCore.pyqtSignal(str) # <-- Modal switching (XY/ZF mode)
@@ -21,9 +33,6 @@ class FarmSimulatorSidePanel(QtCore.QObject):
 
     def __init__(self):
         super().__init__()
-        '''
-        Setting up the joystick using an HID filter for the side panel values
-        '''
         self.hid_filter = hid.HidDeviceFilter(vendor_id = 0x0738, product_id = 0x2218)
         self.hid_device = self.hid_filter.get_devices()
         self.joystick = self.hid_device[0]
@@ -84,20 +93,18 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         print(data[1])
 
     def get_bin(self, x, n=0):
-        """
+        '''
         Get the binary representation of x.
 
-        Parameters
-        ----------
-        x : int
-        n : int
-            Minimum number of digits. If x needs less digits in binary, the rest
+        Args:
+            x (int): Data
+            n (int): Minimum number of digits. If x needs less digits in binary, the rest
             is filled with zeros.
 
         Returns
         -------
         str
-        """
+        '''
         return format(x, 'b').zfill(n)
 
     def farm_panel_handler(self, data):

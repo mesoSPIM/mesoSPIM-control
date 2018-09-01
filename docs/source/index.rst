@@ -10,6 +10,15 @@ Welcome to the documentation of the mesoSPIM software!
    share/worker.rst
    share/acquisitions.rst
 
+Legacy code & notes
+-------------------
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   share/legacy/legacy.rst
+
+
 Development notes
 -----------------
 .. toctree::

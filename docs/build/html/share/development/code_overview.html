@@ -4,12 +4,20 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Overview of the mesoSPIM code &#8212; mesoSPIM Control 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
@@ -23,7 +31,8 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
+  </head>
+  <body>
   
 
     <div class="document">
@@ -36,21 +45,21 @@
 <div class="section" id="basic-overview">
 <h2>Basic overview<a class="headerlink" href="#basic-overview" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>the main entry point into the program is <code class="docutils literal notranslate"><span class="pre">mesoSPIM_control.py</span></code>, it prompts for a
-configuration file upon startup and initializes the <code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow</span></code> spawns the following threads:<ul>
-<li><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core</span></code>, the main thread<ul>
+<li>the main entry point into the program is <code class="docutils literal"><span class="pre">mesoSPIM_control.py</span></code>, it prompts for a
+configuration file upon startup and initializes the <code class="docutils literal"><span class="pre">mesoSPIM_MainWindow</span></code></li>
+<li><code class="docutils literal"><span class="pre">mesoSPIM_MainWindow</span></code> spawns the following threads:<ul>
+<li><code class="docutils literal"><span class="pre">mesoSPIM_Core</span></code>, the main thread<ul>
 <li>in turn, the core spawns the following threads:<ul>
-<li><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial</span></code></li>
+<li><code class="docutils literal"><span class="pre">mesoSPIM_Camera</span></code></li>
+<li><code class="docutils literal"><span class="pre">mesoSPIM_Serial</span></code></li>
 </ul>
 </li>
 <li>Scripts are executed in the context of the core</li>
 </ul>
 </li>
-<li><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionPlanner</span></code> which is a window with an
+<li><code class="docutils literal"><span class="pre">mesoSPIM_AcquisitionPlanner</span></code> which is a window with an
 editable table allowing the creation of multidimensional acquisitions</li>
-<li><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraGUI</span></code>, the camera window (using <a class="reference external" href="http://pyqtgraph.org/">pyqtgraph</a>)</li>
+<li><code class="docutils literal"><span class="pre">mesoSPIM_CameraGUI</span></code>, the camera window (using <a class="reference external" href="http://pyqtgraph.org/">pyqtgraph</a>)</li>
 </ul>
 </li>
 </ul>
@@ -94,14 +103,12 @@ editable table allowing the creation of multidimensional acquisitions</li>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -112,7 +119,7 @@ editable table allowing the creation of multidimensional acquisitions</li>
       &copy;2018, Fabian F. Voigt.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

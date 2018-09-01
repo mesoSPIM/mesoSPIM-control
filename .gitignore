@@ -4,6 +4,7 @@ __pycache__
 /**/.ipynb_checkpoints
 **/*.ipynb_checkpoints/
 log/*
+mesoSPIM/legacy/*
 /log/*
 .idea
 prototypes/orcas/*.tif
