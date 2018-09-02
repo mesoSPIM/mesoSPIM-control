@@ -2,11 +2,15 @@
 mesoSPIM CameraWindow
 
 '''
+import numpy as np
+
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 import pyqtgraph as pg
-import numpy as np
+pg.setConfigOptions(imageAxisOrder='row-major')
+pg.setConfigOptions(foreground='k')
+pg.setConfigOptions(background='w')
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     def __init__(self):

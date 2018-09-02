@@ -43,7 +43,6 @@ def main():
     Main function
     """
     cfg = load_config()
-    print(cfg.my_config)
     app = QtWidgets.QApplication(sys.argv)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
