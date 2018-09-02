@@ -38,6 +38,8 @@ def load_config():
                 QtWidgets.QMessageBox.Ok)
         sys.exit()
 
+    sys.exit(cfg_app.exec_())
+
 def main():
     """
     Main function
@@ -46,6 +48,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
+
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
