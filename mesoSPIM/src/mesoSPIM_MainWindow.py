@@ -17,6 +17,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
     def __init__(self, config=None):
         super().__init__()
+
+        self.cfg = config
+
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle('Thread Template')
 
