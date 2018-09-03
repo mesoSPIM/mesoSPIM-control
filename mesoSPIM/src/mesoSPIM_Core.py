@@ -20,6 +20,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_State
+from .devices.cameras.mesoSPIM_Camera import mesoSPIM_Camera
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM'''
@@ -32,6 +33,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
+        self.state_mutex = parent.state_mutex
+        self.cfg = self.parent.cfg
 
         ''' The signal-slot switchboard '''
         self.parent.sig_live.connect(lambda: self.set_filter('515LP'))

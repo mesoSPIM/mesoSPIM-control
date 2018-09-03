@@ -33,6 +33,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def __init__(self, config=None):
         super().__init__()
 
+        '''
+        Initial housekeeping
+        '''
+
         self.cfg = config
         self.script_window_counter = 0
         self.enable_external_gui_updates = False
@@ -40,6 +44,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Instantiate the one and only mesoSPIM state and get a mutex for it '''
         self.state = copy.deepcopy(config.startup)
         self.state_mutex = QtCore.QMutex()
+
+        '''
+        Setting up the user interface windows
+        '''
 
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle('Thread Template')
@@ -50,10 +58,27 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
 
+        '''
+        Setting up the threads
+        '''
+
         ''' Setting the mesoSPIM_Core thread up '''
         self.core_thread = QtCore.QThread()
         self.core = mesoSPIM_Core(self.cfg, self)
         self.core.moveToThread(self.core_thread)
+
+        # ''' Set the Camera thread up '''
+        # self.camera_thread = QtCore.QThread()
+        # self.camera_worker = mesoSPIM_Camera()
+        # self.camera_worker.moveToThread(self.camera_thread)
+        #
+        # ''' Set the serial thread up '''
+        # self.serial_thread = QtCore.QThread()
+        # self.serial_worker = mesoSPIM_Serial(config)
+        # self.serial_worker.moveToThread(self.serial_thread)
+
+        # self.camera_thread.start()
+        # self.serial_thread.start()
 
         ''' Connecting the menu actions '''
         self.actionClose.triggered.connect(lambda: self.close())
@@ -173,7 +198,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.ShutterComboBox.setCurrentText(self.state['shutterconfig'])
                 self.LaserComboBox.setCurrentText(self.state['laser'])
                 self.LaserIntensitySlider.setValue(self.state['intensity'])
-            #QtWidgets.QApplication.processEvents()
             self.ControlGroupBox.blockSignals(False)
             # also for self.tabWidget
 

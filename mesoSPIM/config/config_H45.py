@@ -61,7 +61,11 @@ shutteroptions = ('Left','Right','Both')
 '''
 Camera configuration
 '''
-camera_parameters = {'camera_id' : 0,
+camera = 'HamamatsuOrcaFlash' # 'Demo'
+
+camera_parameters = {'x_pixels' : 2048,
+                     'y_pixels' : 2048,
+                     'camera_id' : 0,
                      'sensor_mode' : 12,    # 12 for progressive
                      'defect_correct_mode': 2,
                      'binning' : '1x1',
