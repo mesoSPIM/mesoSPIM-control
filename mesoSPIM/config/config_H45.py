@@ -148,32 +148,28 @@ pixelsize = {'0.63x' : 10.52,
 
 '''
 Initial acquisition parameters
+
+This gets set up into the first microscope state
 '''
 
 startup = {
-'state' : '', # is empty initially
+'state' : 'init', # is empty initially
 'samplerate' : 100000,
 'sweeptime' : 0.2,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
-'ETL_cfg_file' : 'configuration_files/ETL-parameters.csv',
-'filepath' : 'E:/tmp/file.raw',
-'folder' : 'E:/tmp/',
+'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
+'filepath' : '/tmp/file.raw',
+'folder' : '/tmp/',
 'file_prefix' : '',
 'start_number' : 1,
 'file_suffix' : '000001',
 'zoom' : '1x',
 'pixelsize' : 6.55,
 'laser' : '488 nm',
-'intensities' : {'405 nm' : 10,
-                 '488 nm' : 10,
-                 '515 nm' : 10,
-                 '561 nm' : 10,
-                 '594 nm' : 10,
-                 '647 nm' : 10,},
 'max_laser_voltage':10,
 'intensity' : 10,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Left', # Can be "Left", "Right" or "Both"
+'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
 'filter' : '405-488-561-640-Quadrupleblock',
 'etl_l_delay_%' : 7.5,
@@ -196,27 +192,10 @@ startup = {
 'galvo_r_offset' : 0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
-'laser_delay_%' : 10, # was 10
-'laser_pulse_%' : 87, # was 83
+'laser_delay_%' : 10,
+'laser_pulse_%' : 87,
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
 'camera_exposure':0.02,
 'camera_line_interval':0.000075,
-'stack':{'z_start':0,
-         'z_end':10,
-         'z_stepsize':5,
-         'z_planes':3,
-         },
-'tiling':{'x_start': 0,
-          'y_start': 0,
-          'z_start': 0,
-          'z_end' : 0,
-          'z_stepsize': 1,
-          'z_planes': 3,
-          'x_offset': 100,
-          'y_offset': 100,
-          'x_steps': 2,
-          'y_steps': 2,
-          'total_planes' : 1
-          }
 }

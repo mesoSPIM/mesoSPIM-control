@@ -2,6 +2,7 @@
 mesoSPIM MainWindow
 
 '''
+import copy
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
@@ -9,6 +10,8 @@ from PyQt5.uic import loadUi
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 
+from .mesoSPIM_State import mesoSPIM_State
+from .mesoSPIM_Core import mesoSPIM_Core
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
@@ -20,6 +23,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.cfg = config
 
+        self.state = copy.deepcopy(config.startup)
+        self.state_mutex = QtCore.QMutex()
+
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle('Thread Template')
 
@@ -28,3 +34,5 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.acquisiton_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisiton_manager_window.show()
+
+        self.core = mesoSPIM_Core(self.cfg, self)
