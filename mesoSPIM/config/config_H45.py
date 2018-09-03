@@ -169,7 +169,7 @@ startup = {
 'max_laser_voltage':10,
 'intensity' : 10,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
+'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
 'filter' : '405-488-561-640-Quadrupleblock',
 'etl_l_delay_%' : 7.5,

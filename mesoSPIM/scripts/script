@@ -1,0 +1,5 @@
+print('Started')
+self.disable_gui()
+time.sleep(1)
+self.enable_gui()
+print('Stopped')

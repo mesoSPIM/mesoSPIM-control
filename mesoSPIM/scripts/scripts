@@ -1,0 +1,7 @@
+print('Started')
+self.disable_gui()
+QtWidgets.QApplication.processEvents()
+time.sleep(1)
+self.enable_gui()
+QtWidgets.QApplication.processEvents()
+print('Stopped')

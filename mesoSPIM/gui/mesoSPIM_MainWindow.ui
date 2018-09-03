@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>919</width>
+    <width>922</width>
     <height>1251</height>
    </rect>
   </property>
@@ -2432,42 +2432,6 @@ MOVEMENT </string>
       <string>Z </string>
      </property>
     </widget>
-    <widget class="QProgressBar" name="ProgressBar">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>340</y>
-       <width>881</width>
-       <height>71</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>16</pointsize>
-      </font>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="value">
-      <number>0</number>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="invertedAppearance">
-      <bool>false</bool>
-     </property>
-     <property name="textDirection">
-      <enum>QProgressBar::TopToBottom</enum>
-     </property>
-     <property name="format">
-      <string>%p%</string>
-     </property>
-    </widget>
     <widget class="QPushButton" name="LiveButton">
      <property name="geometry">
       <rect>
@@ -2527,11 +2491,6 @@ MOVEMENT </string>
        <pointsize>14</pointsize>
       </font>
      </property>
-     <item>
-      <property name="text">
-       <string>List not populated</string>
-      </property>
-     </item>
     </widget>
     <widget class="QLineEdit" name="Rotation_Position_Indicator">
      <property name="enabled">
@@ -2601,37 +2560,8 @@ MOVEMENT </string>
        <pointsize>14</pointsize>
       </font>
      </property>
-     <item>
-      <property name="text">
-       <string>List not populated</string>
-      </property>
-     </item>
     </widget>
-    <widget class="QPushButton" name="ScriptButton">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="geometry">
-      <rect>
-       <x>490</x>
-       <y>240</y>
-       <width>201</width>
-       <height>91</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-       <weight>50</weight>
-       <italic>false</italic>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Run Acquisition</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="StackButton">
+    <widget class="QPushButton" name="AcquisitionButton">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -2652,7 +2582,8 @@ MOVEMENT </string>
       </font>
      </property>
      <property name="text">
-      <string>Run Stack</string>
+      <string>Run 
+ Selected Acquisition</string>
      </property>
     </widget>
     <widget class="QComboBox" name="ShutterComboBox">
@@ -2672,11 +2603,6 @@ MOVEMENT </string>
        <pointsize>14</pointsize>
       </font>
      </property>
-     <item>
-      <property name="text">
-       <string>List not populated</string>
-      </property>
-     </item>
     </widget>
     <widget class="QLineEdit" name="X_Position_Indicator">
      <property name="geometry">
@@ -2767,11 +2693,6 @@ MOVEMENT </string>
        <pointsize>14</pointsize>
       </font>
      </property>
-     <item>
-      <property name="text">
-       <string>List not populated</string>
-      </property>
-     </item>
     </widget>
     <widget class="QLabel" name="label_5">
      <property name="geometry">
@@ -2791,7 +2712,7 @@ MOVEMENT </string>
       <string>Angle</string>
      </property>
     </widget>
-    <widget class="QSlider" name="LaserSlider">
+    <widget class="QSlider" name="LaserIntensitySlider">
      <property name="geometry">
       <rect>
        <x>280</x>
@@ -2873,6 +2794,118 @@ MOVEMENT </string>
       <string>Focus</string>
      </property>
     </widget>
+    <widget class="QProgressBar" name="acquisitionProgressBar">
+     <property name="geometry">
+      <rect>
+       <x>280</x>
+       <y>350</y>
+       <width>611</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>15</pointsize>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="format">
+      <string>%p%</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>350</y>
+       <width>211</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>15</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Acquisition Progress</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>400</y>
+       <width>151</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>15</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Total Progress</string>
+     </property>
+    </widget>
+    <widget class="QProgressBar" name="totalProgressBar">
+     <property name="geometry">
+      <rect>
+       <x>280</x>
+       <y>400</y>
+       <width>611</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>15</pointsize>
+      </font>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="AcquisitionButton_2">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>490</x>
+       <y>240</y>
+       <width>201</width>
+       <height>91</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+       <weight>50</weight>
+       <italic>false</italic>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Run 
+ Acquisition List</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar">
@@ -2882,6 +2915,45 @@ MOVEMENT </string>
     </font>
    </property>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>922</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuNew">
+     <property name="title">
+      <string>New</string>
+     </property>
+     <addaction name="actionScriptWindow"/>
+    </widget>
+    <addaction name="menuNew"/>
+    <addaction name="actionClose_2"/>
+   </widget>
+   <addaction name="menuFile"/>
+  </widget>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </action>
+  <action name="actionClose_2">
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </action>
+  <action name="actionScriptWindow">
+   <property name="text">
+    <string>Script Window</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
