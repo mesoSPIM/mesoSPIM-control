@@ -2337,7 +2337,7 @@ MOVEMENT </string>
      </widget>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="groupBox_3">
+   <widget class="QGroupBox" name="ControlGroupBox">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -2921,7 +2921,7 @@ MOVEMENT </string>
      <x>0</x>
      <y>0</y>
      <width>922</width>
-     <height>25</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

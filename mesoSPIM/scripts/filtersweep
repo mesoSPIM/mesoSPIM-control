@@ -1,0 +1,3 @@
+for filter in ['515LP','561LP','594LP']:
+	self.set_filter(filter)
+	time.sleep(1)

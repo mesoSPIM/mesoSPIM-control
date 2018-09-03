@@ -30,6 +30,7 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
 
         self.Editor = QtWidgets.QPlainTextEdit()
         self.Editor.zoomIn(self.zoom_factor)
+        self.Editor.setTabStopWidth(20)
         # self.Editor.wheelEvent.connect(lambda: print('Wheel wheeled'))
 
         self.layout = QtWidgets.QGridLayout()

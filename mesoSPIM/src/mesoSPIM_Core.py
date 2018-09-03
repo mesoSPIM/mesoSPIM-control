@@ -13,10 +13,10 @@ import traceback
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 '''National Instruments Imports'''
-import nidaqmx
-from nidaqmx.constants import AcquisitionType, TaskMode
-from nidaqmx.constants import LineGrouping, DigitalWidthUnits
-from nidaqmx.types import CtrTime
+# import nidaqmx
+# from nidaqmx.constants import AcquisitionType, TaskMode
+# from nidaqmx.constants import LineGrouping, DigitalWidthUnits
+# from nidaqmx.types import CtrTime
 
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_State
@@ -25,18 +25,50 @@ class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM'''
     sig_finished = QtCore.pyqtSignal()
 
+    sig_state_updated = QtCore.pyqtSignal()
+
     def __init__(self, config, parent):
         super().__init__()
 
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
-        self.set_filter('515LP')
 
         ''' The signal-slot switchboard '''
         self.parent.sig_live.connect(lambda: self.set_filter('515LP'))
         self.parent.sig_state_request.connect(self.state_request_handler)
 
         self.parent.sig_execute_script.connect(self.execute_script)
+
+        # ''' Set the Camera thread up '''
+        # self.camera_thread = QtCore.QThread()
+        # self.camera_worker = mesoSPIM_Camera()
+        # self.camera_worker.moveToThread(self.camera_thread)
+        #
+        # ''' Set the serial thread up '''
+        # self.serial_thread = QtCore.QThread()
+        # self.serial_worker = mesoSPIM_Serial(config)
+        # self.serial_worker.moveToThread(self.serial_thread)
+
+        # self.camera_thread.start()
+        # self.serial_thread.start()
+
+        self.set_state_parameter('state','idle')
+
+    def __del__(self):
+        '''Cleans the threads up after deletion, waits until the threads
+        have truly finished their life.
+
+        Make sure to keep this up to date with the number of threads
+        '''
+        # try:
+        #     self.camera_thread.quit()
+        #     self.serial_thread.quit()
+        #
+        #     self.camera_thread.wait()
+        #     self.serial_thread.wait()
+        # except:
+        #     pass
+
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -63,6 +95,7 @@ class mesoSPIM_Core(QtCore.QObject):
         with QtCore.QMutexLocker(self.parent.state_mutex):
             if key in self.parent.state:
                 self.parent.state[key]=value
+                self.sig_state_updated.emit()
             else:
                 print('Set state parameters failed: Key ', key, 'not in state dictionary!')
 
@@ -77,8 +110,16 @@ class mesoSPIM_Core(QtCore.QObject):
             for key, value in dict:
                 if key in self.parent.state:
                     self.parent.state[key]=value
+                    self.sig_state_updated.emit()
                 else:
                     print('Set state parameters failed: Key ', key, 'not in state dictionary!')
+
+    def get_state_parameter(self, key):
+        with QtCore.QMutexLocker(self.parent.state_mutex):
+            if key in self.parent.state:
+                return self.parent.state[key]
+            else:
+                print('Getting state parameters failed: Key ', key, 'not in state dictionary!')
 
     def set_filter(self, filter):
         print('Setting filter')
@@ -110,8 +151,10 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
+        self.set_state_parameter('state','running_script')
         try:
             exec(script)
         except:
             traceback.print_exc()
         self.sig_finished.emit()
+        self.set_state_parameter('state','idle')
