@@ -29,8 +29,7 @@ class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
         '''
         Draw a line across the entire row rather than just the column
-        we're hovering over.  This may not always work depending on global
-        style - for instance I think it won't work on OSX.
+        we're hovering over.  
         '''
         if element == self.PE_IndicatorItemViewItemDrop and not option.rect.isNull():
             option_new = QtWidgets.QStyleOption(option)

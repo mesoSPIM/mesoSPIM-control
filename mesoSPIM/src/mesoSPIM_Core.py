@@ -23,7 +23,14 @@ from .mesoSPIM_State import mesoSPIM_State
 from .devices.cameras.mesoSPIM_Camera import mesoSPIM_Camera
 
 class mesoSPIM_Core(QtCore.QObject):
-    '''This class is the pacemaker of a mesoSPIM'''
+    '''This class is the pacemaker of a mesoSPIM
+
+    Signals it can send: 
+
+    '''
+
+
+
     sig_finished = QtCore.pyqtSignal()
 
     sig_state_updated = QtCore.pyqtSignal()
@@ -124,12 +131,12 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 print('Getting state parameters failed: Key ', key, 'not in state dictionary!')
 
-    def set_filter(self, filter):
+    def set_filter(self, filter, wait_until_done=False):
         print('Setting filter')
         self.set_state_parameter('filter',filter)
         print('Filter set')
 
-    def set_zoom(self, zoom):
+    def set_zoom(self, zoom, wait_until_done=False):
         print('Setting zoom')
         self.set_state_parameter('zoom',zoom)
         print('Zoom set')
