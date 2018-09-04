@@ -6,8 +6,8 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 class mesoSPIM_Camera(QtCore.QObject):
-    sig_camera_status = pyqtSignal(str)
-    sig_frame = pyqtSignal(np.ndarray)
+    sig_camera_status = QtCore.pyqtSignal(str)
+    sig_frame = QtCore.pyqtSignal(np.ndarray)
 
     def __init__(self, config, parent = None):
         super().__init__()
@@ -93,4 +93,4 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_Camera):
     def __init__(self, config, parent = None):
         super().__init__(config, parent)
 
-        from devices.camera import hamamatsu_camera as self.cam
+        # from devices.camera import hamamatsu_camera as self.cam

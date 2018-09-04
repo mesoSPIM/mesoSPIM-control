@@ -81,8 +81,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # self.serial_thread.start()
 
         ''' Connecting the menu actions '''
-        self.actionClose.triggered.connect(lambda: self.close())
-        self.actionScriptWindow.triggered.connect(self.create_script_window)
+        self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
         ''' Connecting the buttons and other GUI elements'''
         self.LiveButton.clicked.connect(lambda: self.sig_live.emit())
