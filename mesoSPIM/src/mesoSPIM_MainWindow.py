@@ -67,19 +67,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core = mesoSPIM_Core(self.cfg, self)
         self.core.moveToThread(self.core_thread)
 
-        # ''' Set the Camera thread up '''
-        # self.camera_thread = QtCore.QThread()
-        # self.camera_worker = mesoSPIM_Camera()
-        # self.camera_worker.moveToThread(self.camera_thread)
-        #
-        # ''' Set the serial thread up '''
-        # self.serial_thread = QtCore.QThread()
-        # self.serial_worker = mesoSPIM_Serial(config)
-        # self.serial_worker.moveToThread(self.serial_thread)
-
-        # self.camera_thread.start()
-        # self.serial_thread.start()
-
         ''' Connecting the menu actions '''
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
