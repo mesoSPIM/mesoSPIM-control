@@ -66,7 +66,7 @@ class LudlFilterwheel:
         else:
             raise ValueError('Filter designation not in the configuration')
 
-    def move_filter(self, filter, wait_until_done=False):
+    def set_filter(self, filter, wait_until_done=False):
         '''
         Moves filter using the pyserial command set.
 

@@ -19,7 +19,7 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
         self.zoom_factor = 3
 
         self.setWindowTitle('mesoSPIM Script Editor')
-        self.setGeometry(100,100,700,1000)
+        self.setGeometry(1500,500,700,1000)
 
         self.LoadScriptButton = QtWidgets.QPushButton('Load Script')
         self.LoadScriptButton.clicked.connect(self.load_script)
@@ -78,7 +78,7 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
     def save_script(self):
         ''' Save a script '''
         current_path = os.path.abspath('./scripts')
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',current_path,'.py')
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',current_path)
 
         ''' To avoid crashes, continue only when a file has been selected:'''
         if path:

@@ -19,13 +19,14 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 # from nidaqmx.types import CtrTime
 
 ''' Import mesoSPIM modules '''
-from .mesoSPIM_State import mesoSPIM_State
-from .devices.cameras.mesoSPIM_Camera import mesoSPIM_Camera
+# from .mesoSPIM_State import mesoSPIM_State
+# from .devices.cameras.mesoSPIM_Camera import mesoSPIM_Camera
+from .mesoSPIM_Serial import mesoSPIM_Serial
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
 
-    Signals it can send: 
+    Signals it can send:
 
     '''
 
@@ -35,16 +36,20 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_state_updated = QtCore.pyqtSignal()
 
+    sig_state_request = QtCore.pyqtSignal(dict)
+    sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
+
     def __init__(self, config, parent):
         super().__init__()
 
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
+        self.state = parent.state
         self.state_mutex = parent.state_mutex
         self.cfg = self.parent.cfg
 
         ''' The signal-slot switchboard '''
-        self.parent.sig_live.connect(lambda: self.set_filter('515LP'))
+        self.parent.sig_live.connect(lambda: print('Live'))
         self.parent.sig_state_request.connect(self.state_request_handler)
 
         self.parent.sig_execute_script.connect(self.execute_script)
@@ -54,10 +59,11 @@ class mesoSPIM_Core(QtCore.QObject):
         # self.camera_worker = mesoSPIM_Camera()
         # self.camera_worker.moveToThread(self.camera_thread)
         #
-        # ''' Set the serial thread up '''
-        # self.serial_thread = QtCore.QThread()
-        # self.serial_worker = mesoSPIM_Serial(config)
-        # self.serial_worker.moveToThread(self.serial_thread)
+        ''' Set the serial thread up '''
+        self.serial_thread = QtCore.QThread()
+        self.serial_worker = mesoSPIM_Serial(self)
+        self.serial_worker.moveToThread(self.serial_thread)
+        self.serial_worker.sig_state_updated.connect(self.sig_state_updated.emit)
 
         # self.camera_thread.start()
         # self.serial_thread.start()
@@ -83,7 +89,7 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            print('State request: Key: ', key, ' Value: ', value)
+            print('Core Thread: State request: Key: ', key, ' Value: ', value)
             '''
             The request handling is done with exec() to write fewer lines of
             code.
@@ -105,9 +111,9 @@ class mesoSPIM_Core(QtCore.QObject):
         with QtCore.QMutexLocker(self.parent.state_mutex):
             if key in self.parent.state:
                 self.parent.state[key]=value
-                self.sig_state_updated.emit()
             else:
                 print('Set state parameters failed: Key ', key, 'not in state dictionary!')
+        self.sig_state_updated.emit()
 
     def set_state_parameters(self, dict):
         '''
@@ -120,9 +126,9 @@ class mesoSPIM_Core(QtCore.QObject):
             for key, value in dict:
                 if key in self.parent.state:
                     self.parent.state[key]=value
-                    self.sig_state_updated.emit()
                 else:
                     print('Set state parameters failed: Key ', key, 'not in state dictionary!')
+        self.sig_state_updated.emit()
 
     def get_state_parameter(self, key):
         with QtCore.QMutexLocker(self.parent.state_mutex):
@@ -132,11 +138,19 @@ class mesoSPIM_Core(QtCore.QObject):
                 print('Getting state parameters failed: Key ', key, 'not in state dictionary!')
 
     def set_filter(self, filter, wait_until_done=False):
-        print('Setting filter')
-        self.set_state_parameter('filter',filter)
-        print('Filter set')
+        if wait_until_done:
+            self.sig_state_request_and_wait_until_done.emit({'filter' : filter})
+        else:
+            self.sig_state_request.emit({'filter' : filter})
+            print('Core thread: Signal emitted: ', filter)
 
     def set_zoom(self, zoom, wait_until_done=False):
+        if wait_until_done:
+            self.sig_state_request_and_wait_until_done.emit({'zoom' : zoom})
+        else:
+            self.sig_state_request.emit({'zoom' : zoom})
+
+
         print('Setting zoom')
         self.set_state_parameter('zoom',zoom)
         print('Zoom set')
@@ -162,9 +176,10 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
         self.set_state_parameter('state','running_script')
+
         try:
             exec(script)
         except:
             traceback.print_exc()
-        self.sig_finished.emit()
         self.set_state_parameter('state','idle')
+        self.sig_finished.emit()

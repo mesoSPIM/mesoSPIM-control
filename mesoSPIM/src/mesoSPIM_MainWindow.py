@@ -100,6 +100,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Start the threads '''
         self.core_thread.start()
 
+        ''' For scripting and acquisitions, the GUI will update itself regularily from the state to keep track of changesself.
+        For this, a QTimer is used. This should be improved.
+        '''
+        # self.update_gui_from_state_timer = QtCore.QTimer(self)
+        # self.update_gui_from_state_timer.timeout.connect(self.update_gui_from_state)
+
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
         have truly finished their life.
@@ -170,21 +176,29 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
         self.enable_external_gui_updates = True
+        self.block_signals_from_controls(True)
         self.sig_execute_script.emit(script)
 
+    def block_signals_from_controls(self, bool):
+        self.FilterComboBox.blockSignals(bool)
+        self.ZoomComboBox.blockSignals(bool)
+        self.ShutterComboBox.blockSignals(bool)
+        self.LaserComboBox.blockSignals(bool)
+        self.LaserIntensitySlider.blockSignals(bool)
+
     def update_gui_from_state(self):
-        sender = self.sender()
-        print(sender)
-        print(self.enable_external_gui_updates)
+        # sender = self.sender()
+        # print(sender)
+        # print(self.enable_external_gui_updates)
         if self.enable_external_gui_updates is True:
-            self.ControlGroupBox.blockSignals(True)
+            # self.ControlGroupBox.blockSignals(True)
             with QtCore.QMutexLocker(self.state_mutex):
                 self.FilterComboBox.setCurrentText(self.state['filter'])
                 self.ZoomComboBox.setCurrentText(self.state['zoom'])
                 self.ShutterComboBox.setCurrentText(self.state['shutterconfig'])
                 self.LaserComboBox.setCurrentText(self.state['laser'])
                 self.LaserIntensitySlider.setValue(self.state['intensity'])
-            self.ControlGroupBox.blockSignals(False)
+            # self.ControlGroupBox.blockSignals(False)
             # also for self.tabWidget
 
     def disable_gui(self):
@@ -192,3 +206,4 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def enable_gui(self):
         self.enable_external_gui_updates = False
+        self.block_signals_from_controls(False)

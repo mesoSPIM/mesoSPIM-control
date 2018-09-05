@@ -79,6 +79,7 @@ camera_parameters = {'x_pixels' : 2048,
 '''
 Stage configuration
 '''
+stage_parameters = {'stage_type' : 'PI'}
 
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
@@ -103,7 +104,8 @@ pi_parameters = {'controllername' : 'C-884',
 Filterwheel configuration
 '''
 
-filterwheel_parameters = {'COMport' : 'COM10'}
+filterwheel_parameters = {'filterwheel_type' : 'Ludl',
+                          'COMport' : 'COM10'}
 
 # Ludl marking 10 = position 0
 filterdict = {'Empty-Alignment' : 0,
@@ -120,7 +122,8 @@ filterdict = {'Empty-Alignment' : 0,
 '''
 Zoom configuration
 '''
-zoom_parameters = {'servo_id' :  4,
+zoom_parameters = {'zoom_type' : 'Dynamixel'
+                   'servo_id' :  4,
                    'COMport' : 'COM38',
                    'baudrate' : 1000000}
 
