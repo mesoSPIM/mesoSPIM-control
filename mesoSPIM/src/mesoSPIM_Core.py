@@ -164,11 +164,15 @@ class mesoSPIM_Core(QtCore.QObject):
         if state == 'live':
             print('Going live')
             self.set_state_parameter('state','live')
+        if state == 'idle':
+            print('Core: Stopping requested')
+            self.stop()
 
     def stop(self):
         self.stopflag = True
         ''' This stopflag is a bit risky, needs to be updated'''
         self.set_state_parameter('state','idle')
+        self.sig_finished.emit()
 
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:

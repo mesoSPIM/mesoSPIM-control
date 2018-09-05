@@ -62,13 +62,27 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
         if button_id == 14:
             self.decrement_combobox(self.parent.ZoomComboBox)
 
+        ''' Shutter buttons '''
+        if button_id == 17:
+            self.set_combobox_to_string(self.parent.ShutterComboBox, 'Both')
+
+        if button_id == 18:
+            self.set_combobox_to_string(self.parent.ShutterComboBox, 'Both')
+
+        if button_id == 19:
+            self.set_combobox_to_string(self.parent.ShutterComboBox, 'Left')
+
+        if button_id == 20:
+            self.set_combobox_to_string(self.parent.ShutterComboBox, 'Right')
+
         ''' Live button '''
         if button_id == 21:
             current_state = self.parent.get_state_parameter('state')
+            print('Current state: ',current_state)
             if current_state == 'live':
-                self.parent.StopButton.clicked.emit(False)
+                self.parent.StopButton.clicked.emit(True)
             elif current_state == 'idle':
-                self.parent.LiveButton.clicked.emit(False)
+                self.parent.LiveButton.clicked.emit(True)
 
         ''' Increase & decrease laser intensity '''
         if button_id == 26:
@@ -86,6 +100,12 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
 
     def set_combobox_to_index(self, combobox, index):
         if index < combobox.count():
+            combobox.setCurrentIndex(index)
+
+    def set_combobox_to_string(self, combobox, string):
+        index = combobox.findText(string)
+        print('Index: ', index)
+        if index != -1:
             combobox.setCurrentIndex(index)
 
     def increment_combobox(self, combobox):
@@ -107,7 +127,7 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
         n = event_devider
         '''
         if self.SliderChangeCount % event_devider == 0:
-            value = self.slider.value()
+            value = slider.value()
             value = value + 1
 
             if value != 100:
@@ -123,7 +143,7 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
         self.SliderChangeCount += 1
 
         if self.SliderChangeCount % event_devider == 0:
-            value = self.slider.value()
+            value = slider.value()
             value = value - 1
 
             if value != 0:
@@ -135,9 +155,37 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
     def mode_handler(self, str):
         print('New joystick mode: ', str)
 
+        if str == '123':
+            self.parent.display_status_message('Joystick Mode: XY Mode')
+        elif str == '456':
+            self.parent.display_status_message('Joystick Mode: ZF Mode')
+        else:
+            self.parent.display_status_message('Joystick Mode: Undefined')
+
     @QtCore.pyqtSlot(int, int)
     def axis_handler(self, axis_id, value):
         print('Axis: ', axis_id, ',Value: ', value)
+
+        ''' '''
+        value = value - 128
+
+        if axis_id == 0:
+            self.parent.sig_move_relative.emit({'x_rel':value/5})
+        elif axis_id == 1:
+            self.parent.sig_move_relative.emit({'y_rel':value/5})
+        elif axis_id == 3:
+            ''' Some FarmSimulatorSidePanel have a bug which lets them
+            send axis 2 and axis 3 (both rotation motions) at the same time.
+            The following is intended to prevent this to affect the microscope:
+            '''
+            if self.joystick.mode == '123':
+                pass
+            else:
+                self.parent.sig_move_relative.emit({'f_rel':value/30})
+        elif axis_id == 4:
+            self.parent.sig_move_relative.emit({'f_rel': value/5})
+        elif axis_id == 5:
+            self.parent.sig_move_relative.emit({'z_rel': value/5})
 
 
 

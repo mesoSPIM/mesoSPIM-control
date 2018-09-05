@@ -137,6 +137,18 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         if self.group_25to29_string != '00000000':
             index = self.group_25to29_string.find('1')
             if index == 0:
+                '''
+                29 is the mode changing button, so the corresponding
+                signal should be emitted as well:
+                '''
+                print('self mode: ', self.mode)
+                if self.mode == '123':
+                    self.mode = '456'
+                    self.sig_mode_changed.emit(self.mode)
+                elif self.mode == '456':
+                    self.mode = '123'
+                    self.sig_mode_changed.emit(self.mode)
+
                 self.sig_button_pressed.emit(29)
             elif index == 4:
                 self.sig_button_pressed.emit(28)
@@ -161,6 +173,7 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         value = data[data_group]
         if value != 128:
             if self.mode != axis_group:
+                self.mode = axis_group
                 self.sig_mode_changed.emit(axis_group)
 
             if value-128 == -128 or value-128 == 127:
@@ -169,7 +182,7 @@ class FarmSimulatorSidePanel(QtCore.QObject):
                 ''' Start timers. Because this is executed from
                 another thread, a signal has to be used here.'''
                 self.sig_start_timer.emit(axis_id)
-                self.sig_axis_moved.emit(axis_id, value)
+                self.sig_axis_moved.emit(axis_id-1, value)
             else:
                 self.sig_stop_timer.emit(axis_id)
-                self.sig_axis_moved.emit(axis_id, value)
+                self.sig_axis_moved.emit(axis_id-1, value)

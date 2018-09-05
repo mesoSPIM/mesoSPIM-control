@@ -107,7 +107,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
 
         self.LiveButton.clicked.connect(self.live)
-        self.StopButton.clicked.connect(self.sig_stop.emit)
+        self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
         self.StopButton.clicked.connect(lambda: print('Stopping'))
 
         ''' Connecting the microscope controls '''
@@ -191,6 +191,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                     self.sig_state_updated.emit()
                 else:
                     print('Set state parameters failed: Key ', key, 'not in state dictionary!')
+
+    @QtCore.pyqtSlot(str)
+    def display_status_message(self, string, time=0):
+        '''
+        Displays a message in the status bar for a time in ms
+
+        If time=0, the message will stay.
+        '''
+
+        if time == 0:
+            self.statusBar().showMessage(string)
+        else:
+            self.statusBar().showMessage(string, time)
 
     def pos2str(self, position):
         ''' Little helper method for converting positions to strings '''
