@@ -14,6 +14,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 
 ''' Import mesoSPIM modules '''
 from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
+from .devices.zoom.mesoSPIM_Zoom import Dynamixel_Zoom
 # from .mesoSPIM_State import mesoSPIM_State
 
 class mesoSPIM_Serial(QtCore.QObject):
@@ -39,7 +40,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
-            self.zoom = 
+            self.zoom = Dynamixel_Zoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
 
 
     @QtCore.pyqtSlot(dict)
@@ -55,6 +56,11 @@ class mesoSPIM_Serial(QtCore.QObject):
                     self.set_filter(value, wait_until_done)
                 else:
                     self.set_filter(value)
+            if key == 'zoom':
+                if wait_until_done:
+                    self.set_zoom(value, wait_until_done)
+                else:
+                    self.set_zoom(value)
 
 
     def set_state_parameter(self, key, value):
@@ -83,7 +89,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     def set_zoom(self, zoom, wait_until_done=False):
         if wait_until_done:
-
+            self.zoom.set_zoom(zoom, wait_until_done=True)
         else:
-
+            self.zoom.set_zoom(zoom, wait_until_done=False)
         self.set_state_parameter('zoom',zoom)

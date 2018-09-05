@@ -142,18 +142,12 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request_and_wait_until_done.emit({'filter' : filter})
         else:
             self.sig_state_request.emit({'filter' : filter})
-            print('Core thread: Signal emitted: ', filter)
 
     def set_zoom(self, zoom, wait_until_done=False):
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'zoom' : zoom})
         else:
             self.sig_state_request.emit({'zoom' : zoom})
-
-
-        print('Setting zoom')
-        self.set_state_parameter('zoom',zoom)
-        print('Zoom set')
 
     def set_laser(self, laser):
         print('Setting laser')

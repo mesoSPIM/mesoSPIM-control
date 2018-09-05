@@ -8,6 +8,7 @@ mesoSPIM/legacy/*
 /log/*
 tmp/*
 /tmp/*
+mesoSPIM/src/devices/zoom/dynamixel/*
 .idea
 prototypes/orcas/*.tif
 *.bin

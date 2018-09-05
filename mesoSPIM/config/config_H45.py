@@ -122,7 +122,7 @@ filterdict = {'Empty-Alignment' : 0,
 '''
 Zoom configuration
 '''
-zoom_parameters = {'zoom_type' : 'Dynamixel'
+zoom_parameters = {'zoom_type' : 'Dynamixel',
                    'servo_id' :  4,
                    'COMport' : 'COM38',
                    'baudrate' : 1000000}
