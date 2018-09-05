@@ -15,6 +15,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 ''' Import mesoSPIM modules '''
 from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 from .devices.zoom.mesoSPIM_Zoom import Dynamixel_Zoom
+from .devices.stages.mesoSPIM_Stages import mesoSPIM_PIstage
 # from .mesoSPIM_State import mesoSPIM_State
 
 class mesoSPIM_Serial(QtCore.QObject):
@@ -22,6 +23,16 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_finished = QtCore.pyqtSignal()
 
     sig_state_updated = QtCore.pyqtSignal()
+
+    sig_position = QtCore.pyqtSignal(dict)
+
+    sig_move_relative = QtCore.pyqtSignal(dict)
+    sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
+    sig_move_absolute = QtCore.pyqtSignal(dict)
+    sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
+    sig_zero = QtCore.pyqtSignal(list)
+    sig_unzero = QtCore.pyqtSignal(list)
+    sig_stop_movement = QtCore.pyqtSignal()
 
     def __init__(self, parent):
         super().__init__()
@@ -41,6 +52,20 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
             self.zoom = Dynamixel_Zoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
+
+        ''' Attaching the stage '''
+        if self.cfg.stage_parameters['stage_type'] == 'PI':
+            self.stage = mesoSPIM_PIstage(self)
+            self.stage.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+
+        ''' Wiring signals through to child objects '''
+        self.parent.sig_move_relative.connect(lambda dict: self.sig_move_relative.emit(dict))
+        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.sig_move_absolute_and_wait_until_done.emit(dict))
+        self.parent.sig_move_absolute.connect(lambda dict: self.sig_move_absolute.emit(dict))
+        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.sig_move_absolute_and_wait_until_done.emit(dict))
+        self.parent.sig_zero.connect(lambda list: self.sig_zero.emit(list))
+        self.parent.sig_unzero.connect(lambda list: self.sig_unzero.emit(list))
+        self.parent.sig_stop_movement.connect(lambda: self.sig_stop_movement.emit())
 
 
     @QtCore.pyqtSlot(dict)

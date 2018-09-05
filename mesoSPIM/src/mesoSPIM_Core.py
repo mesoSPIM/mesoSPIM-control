@@ -30,14 +30,23 @@ class mesoSPIM_Core(QtCore.QObject):
 
     '''
 
-
-
     sig_finished = QtCore.pyqtSignal()
 
     sig_state_updated = QtCore.pyqtSignal()
 
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
+
+    ''' Movement-related signals: '''
+    sig_position = QtCore.pyqtSignal(dict)
+
+    sig_move_relative = QtCore.pyqtSignal(dict)
+    sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
+    sig_move_absolute = QtCore.pyqtSignal(dict)
+    sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
+    sig_zero = QtCore.pyqtSignal(list)
+    sig_unzero = QtCore.pyqtSignal(list)
+    sig_stop_movement = QtCore.pyqtSignal()
 
     def __init__(self, config, parent):
         super().__init__()
@@ -64,6 +73,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.serial_worker = mesoSPIM_Serial(self)
         self.serial_worker.moveToThread(self.serial_thread)
         self.serial_worker.sig_state_updated.connect(self.sig_state_updated.emit)
+        self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
 
         # self.camera_thread.start()
         # self.serial_thread.start()

@@ -9,6 +9,7 @@ mesoSPIM/legacy/*
 tmp/*
 /tmp/*
 mesoSPIM/src/devices/zoom/dynamixel/*
+mesoSPIM/PI_GCS2_DLL_x64.dll
 .idea
 prototypes/orcas/*.tif
 *.bin

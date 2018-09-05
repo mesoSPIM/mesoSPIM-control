@@ -30,6 +30,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     sig_execute_script = QtCore.pyqtSignal(str)
 
+    sig_move_relative = QtCore.pyqtSignal(dict)
+    sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
+    sig_move_absolute = QtCore.pyqtSignal(dict)
+    sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
+    sig_zero = QtCore.pyqtSignal(list)
+    sig_unzero = QtCore.pyqtSignal(list)
+    sig_stop_movement = QtCore.pyqtSignal()
+
     def __init__(self, config=None):
         super().__init__()
 
@@ -73,6 +81,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Connecting the buttons and other GUI elements'''
         self.LiveButton.clicked.connect(lambda: self.sig_live.emit())
 
+
+        ''' Connecting the movement buttons '''
+
+
         self.FilterComboBox.addItems(self.cfg.filterdict.keys())
         self.FilterComboBox.currentTextChanged.connect(lambda: self.sig_state_request.emit({'filter':self.FilterComboBox.currentText()}))
         self.FilterComboBox.setCurrentText(config.startup['filter'])
@@ -96,15 +108,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_finished.connect(lambda: self.sig_finished.emit())
         self.core.sig_finished.connect(self.enable_gui)
         self.core.sig_state_updated.connect(self.update_gui_from_state)
+        self.core.sig_position.connect(self.update_position_indicators)
 
         ''' Start the threads '''
         self.core_thread.start()
 
-        ''' For scripting and acquisitions, the GUI will update itself regularily from the state to keep track of changesself.
-        For this, a QTimer is used. This should be improved.
-        '''
-        # self.update_gui_from_state_timer = QtCore.QTimer(self)
-        # self.update_gui_from_state_timer.timeout.connect(self.update_gui_from_state)
+
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -155,6 +164,20 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                     self.sig_state_updated.emit()
                 else:
                     print('Set state parameters failed: Key ', key, 'not in state dictionary!')
+
+    def pos2str(self, position):
+        ''' Little helper method for converting positions to strings '''
+
+        ''' Show 2 decimal places '''
+        return '%.2f' % position
+
+    @QtCore.pyqtSlot(dict)
+    def update_position_indicators(self, dict):
+        self.X_Position_Indicator.setText(self.pos2str(dict['x_pos'])+' µm')
+        self.Y_Position_Indicator.setText(self.pos2str(dict['y_pos'])+' µm')
+        self.Z_Position_Indicator.setText(self.pos2str(dict['z_pos'])+' µm')
+        self.Focus_Position_Indicator.setText(self.pos2str(dict['f_pos'])+' µm')
+        self.Rotation_Position_Indicator.setText(self.pos2str(dict['theta_pos'])+'°')
 
     def create_script_window(self):
         '''
