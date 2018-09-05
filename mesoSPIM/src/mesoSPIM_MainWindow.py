@@ -12,15 +12,17 @@ from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow
 
-from .mesoSPIM_State import mesoSPIM_State
+# from .mesoSPIM_State import mesoSPIM_State
 from .mesoSPIM_Core import mesoSPIM_Core
+from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
     Main application window which instantiates worker objects and moves them
     to a thread.
     '''
-    sig_live = QtCore.pyqtSignal()
+    # sig_live = QtCore.pyqtSignal()
+    sig_stop = QtCore.pyqtSignal()
 
     sig_finished = QtCore.pyqtSignal()
 
@@ -34,9 +36,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
     sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
-    sig_zero = QtCore.pyqtSignal(list)
-    sig_unzero = QtCore.pyqtSignal(list)
+    sig_zero_axes = QtCore.pyqtSignal(list)
+    sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
+    sig_load_sample = QtCore.pyqtSignal()
+    sig_unload_sample = QtCore.pyqtSignal()
 
     def __init__(self, config=None):
         super().__init__()
@@ -58,7 +62,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
 
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
-        self.setWindowTitle('Thread Template')
+        self.setWindowTitle('mesoSPIM Main Window')
 
         self.camera_window = mesoSPIM_CameraWindow()
         self.camera_window.show()
@@ -78,13 +82,35 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Connecting the menu actions '''
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
-        ''' Connecting the buttons and other GUI elements'''
-        self.LiveButton.clicked.connect(lambda: self.sig_live.emit())
+        ''' Connecting the movement & zero buttons '''
+        self.xPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': self.xyzIncrementSpinbox.value()}))
+        self.xMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': -self.xyzIncrementSpinbox.value()}))
+        self.yPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': self.xyzIncrementSpinbox.value()}))
+        self.yMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': -self.xyzIncrementSpinbox.value()}))
+        self.zPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': self.xyzIncrementSpinbox.value()}))
+        self.zMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': -self.xyzIncrementSpinbox.value()}))
+        self.focusPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': self.focusIncrementSpinbox.value()}))
+        self.focusMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': -self.focusIncrementSpinbox.value()}))
+        self.rotPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': self.rotIncrementSpinbox.value()}))
+        self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
 
+        self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
-        ''' Connecting the movement buttons '''
+        self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
+        self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
+        self.zZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['z']) if bool is True else self.sig_unzero_axes.emit(['z']))
+        # self.xyzZeroButton.clicked.connect(lambda bool: self.sig_zero.emit(['x','y','z']) if bool is True else self.sig_unzero.emit(['x','y','z']))
+        self.focusZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['f']) if bool is True else self.sig_unzero_axes.emit(['f']))
+        self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
+        #
+        self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
+        self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
 
+        self.LiveButton.clicked.connect(self.live)
+        self.StopButton.clicked.connect(self.sig_stop.emit)
+        self.StopButton.clicked.connect(lambda: print('Stopping'))
 
+        ''' Connecting the microscope controls '''
         self.FilterComboBox.addItems(self.cfg.filterdict.keys())
         self.FilterComboBox.currentTextChanged.connect(lambda: self.sig_state_request.emit({'filter':self.FilterComboBox.currentText()}))
         self.FilterComboBox.setCurrentText(config.startup['filter'])
@@ -113,7 +139,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Start the threads '''
         self.core_thread.start()
 
-
+        ''' Setting up the joystick '''
+        self.joystick = mesoSPIM_JoystickHandler(self)
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -145,8 +172,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             value (str, float, int): Value to set
         '''
         with QtCore.QMutexLocker(self.state_mutex):
-            if key in self.parent.state:
-                self.parent.state[key]=value
+            if key in self.state:
+                self.state[key]=value
             else:
                 print('Set state parameters failed: Key ', key, 'not in state dictionary!')
 
@@ -159,8 +186,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         with QtCore.QMutexLocker(self.parent.state_mutex):
             for key, value in dict:
-                if key in self.parent.state:
-                    self.parent.state[key]=value
+                if key in self.state:
+                    self.state[key]=value
                     self.sig_state_updated.emit()
                 else:
                     print('Set state parameters failed: Key ', key, 'not in state dictionary!')
@@ -178,6 +205,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.Z_Position_Indicator.setText(self.pos2str(dict['z_pos'])+' µm')
         self.Focus_Position_Indicator.setText(self.pos2str(dict['f_pos'])+' µm')
         self.Rotation_Position_Indicator.setText(self.pos2str(dict['theta_pos'])+'°')
+
+        ''' Update position state '''
+        self.set_state_parameter('position', dict)
 
     def create_script_window(self):
         '''
@@ -223,6 +253,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.LaserIntensitySlider.setValue(self.state['intensity'])
             # self.ControlGroupBox.blockSignals(False)
             # also for self.tabWidget
+
+    def live(self):
+        print('Going live')
+        self.sig_state_request.emit({'state':'live'})
 
     def disable_gui(self):
         pass

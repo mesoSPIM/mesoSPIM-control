@@ -24,12 +24,12 @@ class FarmSimulatorSidePanel(QtCore.QObject):
 
     '''
 
-    button_pressed = QtCore.pyqtSignal(int) # <-- allows handling of buttons
-    axis_moved = QtCore.pyqtSignal(int, int) # <-- axis, value
-    mode_changed = QtCore.pyqtSignal(str) # <-- Modal switching (XY/ZF mode)
+    sig_button_pressed = QtCore.pyqtSignal(int) # <-- allows handling of buttons
+    sig_axis_moved = QtCore.pyqtSignal(int, int) # <-- axis, value
+    sig_mode_changed = QtCore.pyqtSignal(str) # <-- Modal switching (XY/ZF mode)
 
-    start_timer =  QtCore.pyqtSignal(int) # <-- timer id, value to emit
-    stop_timer = QtCore.pyqtSignal(int) # <-- timer id
+    sig_start_timer =  QtCore.pyqtSignal(int) # <-- timer id, value to emit
+    sig_stop_timer = QtCore.pyqtSignal(int) # <-- timer id
 
     def __init__(self):
         super().__init__()
@@ -41,10 +41,10 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         self.joystick.set_raw_data_handler(self.farm_panel_handler)
 
         self.mode = 'undefined'
-        self.mode_changed.emit(self.mode)
+        self.sig_mode_changed.emit(self.mode)
 
-        self.start_timer.connect(self.start_axis_timer)
-        self.stop_timer.connect(self.stop_axis_timer)
+        self.sig_start_timer.connect(self.start_axis_timer)
+        self.sig_stop_timer.connect(self.stop_axis_timer)
 
         '''
         One problem with the joystick is that it stops sending packages when the
@@ -68,12 +68,12 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         self.axis5_value = 0
         self.axis6_value = 0
 
-        self.axis1_timer.timeout.connect(lambda: self.axis_moved.emit(1, self.axis1_value))
-        self.axis2_timer.timeout.connect(lambda: self.axis_moved.emit(2, self.axis2_value))
-        self.axis3_timer.timeout.connect(lambda: self.axis_moved.emit(3, self.axis3_value))
-        self.axis4_timer.timeout.connect(lambda: self.axis_moved.emit(4, self.axis4_value))
-        self.axis5_timer.timeout.connect(lambda: self.axis_moved.emit(5, self.axis5_value))
-        self.axis6_timer.timeout.connect(lambda: self.axis_moved.emit(6, self.axis6_value))
+        self.axis1_timer.timeout.connect(lambda: self.sig_axis_moved.emit(1, self.axis1_value))
+        self.axis2_timer.timeout.connect(lambda: self.sig_axis_moved.emit(2, self.axis2_value))
+        self.axis3_timer.timeout.connect(lambda: self.sig_axis_moved.emit(3, self.axis3_value))
+        self.axis4_timer.timeout.connect(lambda: self.sig_axis_moved.emit(4, self.axis4_value))
+        self.axis5_timer.timeout.connect(lambda: self.sig_axis_moved.emit(5, self.axis5_value))
+        self.axis6_timer.timeout.connect(lambda: self.sig_axis_moved.emit(6, self.axis6_value))
 
     def start_axis_timer(self, axis):
         value = exec('self.axis'+str(axis)+'_value')
@@ -115,21 +115,21 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         '''Catch only events which are different from Off-events'''
         if self.group_1to8_string != '00000000':
             button = 8 - self.group_1to8_string.find('1')
-            self.button_pressed.emit(button)
+            self.sig_button_pressed.emit(button)
 
         self.group_9to16 = data[2]
         self.group_9to16_string = self.get_bin(self.group_9to16,8)
         '''Catch only events which are different from Off-events'''
         if self.group_9to16_string != '00000000':
             button = 16 - self.group_9to16_string.find('1')
-            self.button_pressed.emit(button)
+            self.sig_button_pressed.emit(button)
 
         self.group_17to24 = data[3]
         self.group_17to24_string = self.get_bin(self.group_17to24,8)
         '''Catch only events which are different from Off-events'''
         if self.group_17to24_string != '00000000':
             button = 24 - self.group_17to24_string.find('1')
-            self.button_pressed.emit(button)
+            self.sig_button_pressed.emit(button)
 
         self.group_25to29 = data[4]
         self.group_25to29_string = self.get_bin(self.group_25to29,8)
@@ -137,12 +137,12 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         if self.group_25to29_string != '00000000':
             index = self.group_25to29_string.find('1')
             if index == 0:
-                self.button_pressed.emit(29)
+                self.sig_button_pressed.emit(29)
             elif index == 4:
-                self.button_pressed.emit(28)
+                self.sig_button_pressed.emit(28)
             else:
                 button = 32-index
-                self.button_pressed.emit(button)
+                self.sig_button_pressed.emit(button)
 
         '''Joystick handling:
 
@@ -161,15 +161,15 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         value = data[data_group]
         if value != 128:
             if self.mode != axis_group:
-                self.mode_changed.emit(axis_group)
+                self.sig_mode_changed.emit(axis_group)
 
             if value-128 == -128 or value-128 == 127:
                 ''' Assign a certain axis the min or max value '''
                 exec('self.axis'+str(axis_id)+'_value = value')
                 ''' Start timers. Because this is executed from
                 another thread, a signal has to be used here.'''
-                self.start_timer.emit(axis_id)
-                self.axis_moved.emit(axis_id, value)
+                self.sig_start_timer.emit(axis_id)
+                self.sig_axis_moved.emit(axis_id, value)
             else:
-                self.stop_timer.emit(axis_id)
-                self.axis_moved.emit(axis_id, value)
+                self.sig_stop_timer.emit(axis_id)
+                self.sig_axis_moved.emit(axis_id, value)

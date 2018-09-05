@@ -44,8 +44,10 @@ class mesoSPIM_PIstage(QtCore.QObject):
         self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
         self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict, time: self.move_absolute(dict, wait_until_done=True), type=3)
         self.parent.sig_stop_movement.connect(self.stop)
-        self.parent.sig_zero.connect(self.zero)
-        self.parent.sig_unzero.connect(self.unzero)
+        self.parent.sig_zero_axes.connect(self.zero_axes)
+        self.parent.sig_unzero_axes.connect(self.unzero_axes)
+        self.parent.sig_load_sample.connect(self.load_sample)
+        self.parent.sig_unload_sample.connect(self.unload_sample)
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -135,10 +137,14 @@ class mesoSPIM_PIstage(QtCore.QObject):
         pitools.startup(self.pidevice, stages=self.pi_stages)
 
         ''' Stage 5 referencing hack '''
+        print('Referencing status 3: ', self.pidevice.qFRF(3))
+        print('Referencing status 5: ', self.pidevice.qFRF(5))
         self.pidevice.FRF(5)
         print('M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
         print('M-406 Emergency referencing hack done')
+        print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
+        print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
 
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
@@ -274,7 +280,6 @@ class mesoSPIM_PIstage(QtCore.QObject):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!',1000)
 
-
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
             y_abs = y_abs - self.int_y_pos_offset
@@ -283,7 +288,7 @@ class mesoSPIM_PIstage(QtCore.QObject):
                 y_abs= y_abs/1000
                 self.pidevice.MOV({2 : y_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!',1000)
+                self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!',1000)
 
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
@@ -320,19 +325,27 @@ class mesoSPIM_PIstage(QtCore.QObject):
     def stop(self):
         self.pidevice.STP(noraise=True)
 
-    def zero(self, list):
+    def zero_axes(self, list):
         for axis in list:
             try:
                 exec('self.int_'+axis+'_pos_offset = -self.'+axis+'_pos')
             except:
                 print('Zeroing of axis: ', axis, 'failed')
 
-    def unzero(self, list):
+    def unzero_axes(self, list):
         for axis in list:
             try:
                 exec('self.int_'+axis+'_pos_offset = 0')
             except:
                 print('Unzeroing of axis: ', axis, 'failed')
+
+    def load_sample(self):
+        y_abs = self.cfg.stage_parameters['y_load_position']/1000
+        self.pidevice.MOV({2 : y_abs})
+
+    def unload_sample(self):
+        y_abs = self.cfg.stage_parameters['y_unload_position']/1000
+        self.pidevice.MOV({2 : y_abs})
 
     def block_till_controller_is_ready(self):
         '''

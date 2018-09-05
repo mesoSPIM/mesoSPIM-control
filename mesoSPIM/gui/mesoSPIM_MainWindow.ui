@@ -41,7 +41,7 @@
      </font>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -116,6 +116,9 @@
           <width>80</width>
           <height>80</height>
          </size>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
         </property>
         <property name="autoRepeat">
          <bool>true</bool>
@@ -250,6 +253,9 @@
          <string>ZERO
  XY</string>
         </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
        </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_6">
@@ -363,33 +369,10 @@
          <string>ZERO
  Z</string>
         </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
        </widget>
-      </widget>
-      <widget class="QPushButton" name="xyzZeroButton">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="geometry">
-        <rect>
-         <x>400</x>
-         <y>440</y>
-         <width>131</width>
-         <height>81</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <family>MS Shell Dlg 2</family>
-         <pointsize>16</pointsize>
-         <weight>50</weight>
-         <italic>false</italic>
-         <bold>false</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>ZERO
- XYZ</string>
-       </property>
       </widget>
       <widget class="QPushButton" name="xyzLoadButton">
        <property name="enabled">
@@ -558,6 +541,9 @@
        <property name="text">
         <string>ZERO
  F</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
        </property>
       </widget>
       <widget class="QPushButton" name="focusMinusButton">
@@ -798,7 +784,11 @@
         </font>
        </property>
        <property name="text">
-        <string>ZERO</string>
+        <string>ZERO 
+ ROT</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
        </property>
       </widget>
      </widget>

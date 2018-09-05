@@ -44,9 +44,11 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
     sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
-    sig_zero = QtCore.pyqtSignal(list)
-    sig_unzero = QtCore.pyqtSignal(list)
+    sig_zero_axes = QtCore.pyqtSignal(list)
+    sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
+    sig_load_sample = QtCore.pyqtSignal()
+    sig_unload_sample = QtCore.pyqtSignal()
 
     def __init__(self, config, parent):
         super().__init__()
@@ -58,10 +60,19 @@ class mesoSPIM_Core(QtCore.QObject):
         self.cfg = self.parent.cfg
 
         ''' The signal-slot switchboard '''
-        self.parent.sig_live.connect(lambda: print('Live'))
         self.parent.sig_state_request.connect(self.state_request_handler)
 
         self.parent.sig_execute_script.connect(self.execute_script)
+
+        self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
+        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True))
+        self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
+        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True))
+        self.parent.sig_zero_axes.connect(lambda list: self.zero_axes(list))
+        self.parent.sig_unzero_axes.connect(lambda list: self.unzero_axes(list))
+        self.parent.sig_stop_movement.connect(self.stop_movement)
+        self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
+        self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
 
         # ''' Set the Camera thread up '''
         # self.camera_thread = QtCore.QThread()
@@ -80,20 +91,22 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.set_state_parameter('state','idle')
 
+        self.stopflag = False
+
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
         have truly finished their life.
 
         Make sure to keep this up to date with the number of threads
         '''
-        # try:
-        #     self.camera_thread.quit()
-        #     self.serial_thread.quit()
-        #
-        #     self.camera_thread.wait()
-        #     self.serial_thread.wait()
-        # except:
-        #     pass
+        try:
+            # self.camera_thread.quit()
+            self.serial_thread.quit()
+
+            # self.camera_thread.wait()
+            self.serial_thread.wait()
+        except:
+            pass
 
 
     @QtCore.pyqtSlot(dict)
@@ -104,7 +117,7 @@ class mesoSPIM_Core(QtCore.QObject):
             The request handling is done with exec() to write fewer lines of
             code.
             '''
-            if key in ('filter','zoom','laser','intensity','shutterconfig'):
+            if key in ('filter','zoom','laser','intensity','shutterconfig','state'):
                 exec('self.set_'+key+'(value)')
 
 
@@ -147,6 +160,16 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 print('Getting state parameters failed: Key ', key, 'not in state dictionary!')
 
+    def set_state(self, state):
+        if state == 'live':
+            print('Going live')
+            self.set_state_parameter('state','live')
+
+    def stop(self):
+        self.stopflag = True
+        ''' This stopflag is a bit risky, needs to be updated'''
+        self.set_state_parameter('state','idle')
+
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'filter' : filter})
@@ -173,6 +196,27 @@ class mesoSPIM_Core(QtCore.QObject):
         print('Setting intensity')
         self.set_state_parameter('intensity',intensity)
         print('Intensity set')
+
+    def move_relative(self, dict, wait_until_done=False):
+        if wait_until_done:
+            self.sig_move_relative_and_wait_until_done.emit(dict)
+        else:
+            self.sig_move_relative.emit(dict)
+
+    def move_absolute(self, dict, wait_until_done=False):
+        if wait_until_done:
+            self.sig_move_absolute_and_wait_until_done.emit(dict)
+        else:
+            self.sig_move_absolute.emit(dict)
+
+    def zero_axes(self, list):
+        self.sig_zero_axes.emit(list)
+
+    def unzero_axes(self, list):
+        self.sig_unzero_axes.emit(list)
+
+    def stop_movement(self):
+        self.sig_stop_movement.emit()
 
     def live(self):
         pass

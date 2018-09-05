@@ -30,9 +30,11 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
     sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
-    sig_zero = QtCore.pyqtSignal(list)
-    sig_unzero = QtCore.pyqtSignal(list)
+    sig_zero_axes = QtCore.pyqtSignal(list)
+    sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
+    sig_load_sample = QtCore.pyqtSignal()
+    sig_unload_sample = QtCore.pyqtSignal()
 
     def __init__(self, parent):
         super().__init__()
@@ -63,9 +65,11 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.sig_move_absolute_and_wait_until_done.emit(dict))
         self.parent.sig_move_absolute.connect(lambda dict: self.sig_move_absolute.emit(dict))
         self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.sig_move_absolute_and_wait_until_done.emit(dict))
-        self.parent.sig_zero.connect(lambda list: self.sig_zero.emit(list))
-        self.parent.sig_unzero.connect(lambda list: self.sig_unzero.emit(list))
+        self.parent.sig_zero_axes.connect(lambda list: self.sig_zero_axes.emit(list))
+        self.parent.sig_unzero_axes.connect(lambda list: self.sig_unzero_axes.emit(list))
         self.parent.sig_stop_movement.connect(lambda: self.sig_stop_movement.emit())
+        self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
+        self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
 
 
     @QtCore.pyqtSlot(dict)
