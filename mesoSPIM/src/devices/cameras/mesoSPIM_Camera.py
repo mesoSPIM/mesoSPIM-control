@@ -10,6 +10,8 @@ from .hamamatsu import hamamatsu_camera as cam
 class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     sig_camera_status = QtCore.pyqtSignal(str)
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
+    sig_finished = QtCore.pyqtSignal()
+    sig_state_updated = QtCore.pyqtSignal()
 
     def __init__(self, parent = None):
         super().__init__()
@@ -99,7 +101,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     def set_state(self, requested_state):
         if requested_state == 'live':
             self.live()
-        elif request_state == 'idle':
+        elif requested_state == 'idle':
             self.stop()
 
     def open(self):
@@ -169,7 +171,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
                 i += 1
 
-                self.sig_camera_status.emit(i)
+                self.sig_camera_status.emit(str(i))
 
                 QtWidgets.QApplication.processEvents()
 
