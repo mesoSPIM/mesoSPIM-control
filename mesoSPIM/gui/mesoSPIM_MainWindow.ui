@@ -2851,7 +2851,7 @@ MOVEMENT </string>
  Selected Acquisition</string>
     </property>
    </widget>
-   <widget class="QProgressBar" name="acquisitionProgressBar">
+   <widget class="QProgressBar" name="AcquisitionProgressBar">
     <property name="geometry">
      <rect>
       <x>290</x>
@@ -2881,7 +2881,7 @@ MOVEMENT </string>
      <string>%p%</string>
     </property>
    </widget>
-   <widget class="QProgressBar" name="totalProgressBar">
+   <widget class="QProgressBar" name="TotalProgressBar">
     <property name="geometry">
      <rect>
       <x>290</x>

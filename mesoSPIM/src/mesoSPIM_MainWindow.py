@@ -87,6 +87,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_finished.connect(self.enable_gui)
         self.core.sig_state_updated.connect(self.update_gui_from_state)
         self.core.sig_position.connect(self.update_position_indicators)
+        self.core.sig_progress.connect(self.update_progressbars)
 
         ''' Start the thread '''
         self.core_thread.start()
@@ -181,6 +182,25 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Update position state '''
         self.set_state_parameter('position', dict)
+
+    @QtCore.pyqtSlot(dict)
+    def update_progressbars(self,dict):
+        cur_acq = dict['current_acq']
+        tot_acqs = dict['total_acqs']
+        cur_image = dict['current_image_in_acq']
+        images_in_acq = dict['images_in_acq']
+        tot_images = dict['total_image_count']
+        image_count = dict['image_counter']
+
+        self.AcquisitionProgressBar.setValue(int((cur_image+1)/images_in_acq*100))
+        self.TotalProgressBar.setValue(int((image_count+1)/tot_images*100))
+
+        self.AcquisitionProgressBar.setFormat('%p% (Image '+ str(cur_image+1) +\
+                                        '/' + str(images_in_acq) + ')')
+        self.TotalProgressBar.setFormat('%p% (Acquisition '+ str(cur_acq+1) +\
+                                        '/' + str(tot_acqs) +\
+                                         ')' + ' (Image '+ str(image_count) +\
+                                        '/' + str(tot_images) + ')')
 
     def create_script_window(self):
         '''

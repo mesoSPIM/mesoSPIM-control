@@ -37,6 +37,8 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
 
+    sig_progress = QtCore.pyqtSignal(dict)
+
     ''' Movement-related signals: '''
     sig_position = QtCore.pyqtSignal(dict)
 
@@ -189,6 +191,23 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' This stopflag is a bit risky, needs to be updated'''
         self.set_state_parameter('state','idle')
         self.sig_finished.emit()
+
+    def send_progress(self,
+                      cur_acq,
+                      tot_acqs,
+                      cur_image,
+                      images_in_acq,
+                      total_image_count,
+                      image_counter):
+
+        dict = {'current_acq':cur_acq,
+                'total_acqs' :tot_acqs,
+                'current_image_in_acq':cur_image,
+                'images_in_acq': images_in_acq,
+                'total_image_count':total_image_count,
+                'image_counter':image_counter,
+        }
+        self.sig_progress.emit(dict)
 
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:
