@@ -112,23 +112,29 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Connecting the microscope controls '''
         self.FilterComboBox.addItems(self.cfg.filterdict.keys())
-        self.FilterComboBox.currentTextChanged.connect(lambda: self.sig_state_request.emit({'filter':self.FilterComboBox.currentText()}))
+        self.FilterComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'filter': currentText}))
         self.FilterComboBox.setCurrentText(config.startup['filter'])
 
         self.ZoomComboBox.addItems(self.cfg.zoomdict.keys())
-        self.ZoomComboBox.currentTextChanged.connect(lambda: self.sig_state_request.emit({'zoom':self.ZoomComboBox.currentText()}))
+        self.ZoomComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'zoom': currentText}))
         self.ZoomComboBox.setCurrentText(config.startup['zoom'])
 
         self.ShutterComboBox.addItems(self.cfg.shutteroptions)
-        self.ShutterComboBox.currentTextChanged.connect(lambda: self.sig_state_request.emit({'shutterconfig':self.ShutterComboBox.currentText()}))
+        self.ShutterComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'shutterconfig': currentText}))
         self.ShutterComboBox.setCurrentText(config.startup['shutterconfig'])
 
         self.LaserComboBox.addItems(self.cfg.laserdict.keys())
-        self.LaserComboBox.currentTextChanged.connect(lambda: self.sig_state_request.emit({'laser':self.LaserComboBox.currentText()}))
+        self.LaserComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'laser': currentText}))
         self.LaserComboBox.setCurrentText(config.startup['laser'])
 
-        self.LaserIntensitySlider.valueChanged.connect(lambda: self.sig_state_request.emit({'intensity':self.LaserIntensitySlider.value()}))
+        self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
         self.LaserIntensitySlider.setValue(config.startup['intensity'])
+
+        self.CameraExposureTimeSpinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'camera_exposure_time': currentValue/1000}))
+        self.CameraExposureTimeSpinbox.setValue(config.startup['camera_exposure_time']*1000)
+
+        self.CameraLineIntervalSpinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'camera_line_interval': currentValue/1000000}))
+        self.CameraLineIntervalSpinbox.setValue(config.startup['camera_line_interval']*1000000)
 
         ''' The signal switchboard '''
         self.core.sig_finished.connect(lambda: self.sig_finished.emit())
@@ -141,6 +147,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
+
+        ''' Connecting the camera frames (this is a deep connection and slightly
+        risky) It will break immediately when there is an API change.'''
+        try:
+            self.core.camera_worker.sig_camera_frame.connect(self.camera_window.set_image)
+            print('Camera connected successfully to the display window!')
+        except:
+            print('Warning: camera not connected to display!')
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -251,6 +265,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ShutterComboBox.blockSignals(bool)
         self.LaserComboBox.blockSignals(bool)
         self.LaserIntensitySlider.blockSignals(bool)
+        self.CameraExposureTimeSpinbox.blockSignals(bool)
+        self.CameraLineIntervalSpinbox.blockSignals(bool)
 
     def update_gui_from_state(self):
         # sender = self.sender()
@@ -264,6 +280,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.ShutterComboBox.setCurrentText(self.state['shutterconfig'])
                 self.LaserComboBox.setCurrentText(self.state['laser'])
                 self.LaserIntensitySlider.setValue(self.state['intensity'])
+                self.CameraExposureTimeSpinbox.setValue(self.state['camera_exposure_time'])
+                self.CameraLineIntervalSpinbox.setValue(self.state['camera_line_interval'])
             # self.ControlGroupBox.blockSignals(False)
             # also for self.tabWidget
 

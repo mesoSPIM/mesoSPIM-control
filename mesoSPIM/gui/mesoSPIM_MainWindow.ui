@@ -41,7 +41,7 @@
      </font>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -1277,9 +1277,9 @@ MOVEMENT </string>
         <string>Line Interval</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="exposure_Spinbox">
+      <widget class="QDoubleSpinBox" name="CameraExposureTimeSpinbox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -1305,7 +1305,7 @@ MOVEMENT </string>
         <double>20.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="line_interval_Spinbox">
+      <widget class="QDoubleSpinBox" name="CameraLineIntervalSpinbox">
        <property name="enabled">
         <bool>true</bool>
        </property>

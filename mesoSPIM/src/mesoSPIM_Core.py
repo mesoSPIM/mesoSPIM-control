@@ -20,7 +20,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 
 ''' Import mesoSPIM modules '''
 # from .mesoSPIM_State import mesoSPIM_State
-# from .devices.cameras.mesoSPIM_Camera import mesoSPIM_Camera
+from .devices.cameras.mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
 from .mesoSPIM_Serial import mesoSPIM_Serial
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -74,11 +74,11 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
 
-        # ''' Set the Camera thread up '''
-        # self.camera_thread = QtCore.QThread()
-        # self.camera_worker = mesoSPIM_Camera()
-        # self.camera_worker.moveToThread(self.camera_thread)
-        #
+        ''' Set the Camera thread up '''
+        self.camera_thread = QtCore.QThread()
+        self.camera_worker = mesoSPIM_HamamatsuCamera(self)
+        self.camera_worker.moveToThread(self.camera_thread)
+
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
@@ -86,8 +86,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.serial_worker.sig_state_updated.connect(self.sig_state_updated.emit)
         self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
 
-        # self.camera_thread.start()
-        # self.serial_thread.start()
+        ''' Start the threads '''
+        self.camera_thread.start()
+        self.serial_thread.start()
 
         self.set_state_parameter('state','idle')
 
@@ -100,10 +101,10 @@ class mesoSPIM_Core(QtCore.QObject):
         Make sure to keep this up to date with the number of threads
         '''
         try:
-            # self.camera_thread.quit()
+            self.camera_thread.quit()
             self.serial_thread.quit()
 
-            # self.camera_thread.wait()
+            self.camera_thread.wait()
             self.serial_thread.wait()
         except:
             pass
@@ -117,7 +118,8 @@ class mesoSPIM_Core(QtCore.QObject):
             The request handling is done with exec() to write fewer lines of
             code.
             '''
-            if key in ('filter','zoom','laser','intensity','shutterconfig','state'):
+            if key in ('filter','zoom','laser','intensity','shutterconfig','state',
+                        'camera_exposure_time','camera_line_interval'):
                 exec('self.set_'+key+'(value)')
 
 
@@ -162,10 +164,12 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def set_state(self, state):
         if state == 'live':
-            print('Going live')
+            print('Core: Going live')
+            self.sig_state_request.emit({'state':'live'})
             self.set_state_parameter('state','live')
         if state == 'idle':
             print('Core: Stopping requested')
+            self.sig_state_request.emit({'state':'idle'})
             self.stop()
 
     def stop(self):
@@ -200,6 +204,12 @@ class mesoSPIM_Core(QtCore.QObject):
         print('Setting intensity')
         self.set_state_parameter('intensity',intensity)
         print('Intensity set')
+
+    def set_camera_exposure_time(self, time):
+        self.sig_state_request.emit({'camera_exposure_time' : time})
+
+    def set_camera_line_interval(self, time):
+        self.sig_state_request.emit({'camera_line_interval' : time})
 
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:
