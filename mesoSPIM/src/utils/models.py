@@ -16,7 +16,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     '''
     def __init__(self, table = None, parent = None):
         super().__init__(parent)
-
+        
         if table == None:
             self._table = AcquisitionList()
         else:

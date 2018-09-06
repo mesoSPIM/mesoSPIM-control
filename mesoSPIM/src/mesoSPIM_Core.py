@@ -21,7 +21,9 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 ''' Import mesoSPIM modules '''
 from .devices.shutters.NI_Shutter import NI_Shutter
 from .devices.cameras.mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
+from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 from .mesoSPIM_Serial import mesoSPIM_Serial
+from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
@@ -103,6 +105,9 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.shutter_left.close()
         self.shutter_right.close()
+
+        ''' Setting the laserenabler up '''
+        self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
 
         self.set_state_parameter('state','idle')
 
@@ -263,6 +268,10 @@ class mesoSPIM_Core(QtCore.QObject):
     def stop_movement(self):
         self.sig_stop_movement.emit()
 
+    '''
+    Execution code for major imaging modes starts here
+    '''
+
     def live(self):
         pass
 
@@ -276,3 +285,7 @@ class mesoSPIM_Core(QtCore.QObject):
             traceback.print_exc()
         self.set_state_parameter('state','idle')
         self.sig_finished.emit()
+
+    '''
+    Waveform-generation-related code starts here
+    '''
