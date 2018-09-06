@@ -18,16 +18,24 @@ class FarmSimulatorSidePanel(QtCore.QObject):
     The joystick is set up using the pyqinusb package by using an HidDeviceFilter
     for the side panel values.
 
+    Axis numbers are 0-indexed as per Python convention, i.e. the 6 axes are
+    designated "0" to "5".
+
+    Signals:
+        sig_button_pressed = QtCore.pyqtSignal(int) # <-- allows handling of buttons
+        sig_axis_moved = QtCore.pyqtSignal(int, int) # <-- axis, value
+        sig_mode_changed = QtCore.pyqtSignal(str) # <-- Modal switching (XY/ZF mode)
+        sig_start_timer =  QtCore.pyqtSignal(int) # <-- timer id, value to emit
+        sig_stop_timer = QtCore.pyqtSignal(int) # <-- timer id
+
     Attributes:
-        mode (str): Joysticks can have different modes (e.g. whether analog axes 1-3
-                    or 4-6 are selected). This is represented in this attribute.
+        mode (str): Joysticks can have different modes (e.g. whether analog axes 0-2
+                    or 3-5 are selected). This is represented in this attribute.
 
     '''
-
     sig_button_pressed = QtCore.pyqtSignal(int) # <-- allows handling of buttons
     sig_axis_moved = QtCore.pyqtSignal(int, int) # <-- axis, value
     sig_mode_changed = QtCore.pyqtSignal(str) # <-- Modal switching (XY/ZF mode)
-
     sig_start_timer =  QtCore.pyqtSignal(int) # <-- timer id, value to emit
     sig_stop_timer = QtCore.pyqtSignal(int) # <-- timer id
 
@@ -54,26 +62,26 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         joystick_timer_start/stop are helper methods.
         '''
         self.timeout_interval = 25
+        self.axis0_timer = QtCore.QTimer(self)
         self.axis1_timer = QtCore.QTimer(self)
         self.axis2_timer = QtCore.QTimer(self)
         self.axis3_timer = QtCore.QTimer(self)
         self.axis4_timer = QtCore.QTimer(self)
         self.axis5_timer = QtCore.QTimer(self)
-        self.axis6_timer = QtCore.QTimer(self)
 
+        self.axis0_value = 0
         self.axis1_value = 0
         self.axis2_value = 0
         self.axis3_value = 0
         self.axis4_value = 0
         self.axis5_value = 0
-        self.axis6_value = 0
 
+        self.axis0_timer.timeout.connect(lambda: self.sig_axis_moved.emit(0, self.axis0_value))
         self.axis1_timer.timeout.connect(lambda: self.sig_axis_moved.emit(1, self.axis1_value))
         self.axis2_timer.timeout.connect(lambda: self.sig_axis_moved.emit(2, self.axis2_value))
         self.axis3_timer.timeout.connect(lambda: self.sig_axis_moved.emit(3, self.axis3_value))
         self.axis4_timer.timeout.connect(lambda: self.sig_axis_moved.emit(4, self.axis4_value))
         self.axis5_timer.timeout.connect(lambda: self.sig_axis_moved.emit(5, self.axis5_value))
-        self.axis6_timer.timeout.connect(lambda: self.sig_axis_moved.emit(6, self.axis6_value))
 
     def start_axis_timer(self, axis):
         value = exec('self.axis'+str(axis)+'_value')
@@ -142,11 +150,11 @@ class FarmSimulatorSidePanel(QtCore.QObject):
                 signal should be emitted as well:
                 '''
                 print('self mode: ', self.mode)
-                if self.mode == '123':
-                    self.mode = '456'
+                if self.mode == '012':
+                    self.mode = '345'
                     self.sig_mode_changed.emit(self.mode)
-                elif self.mode == '456':
-                    self.mode = '123'
+                elif self.mode == '345':
+                    self.mode = '012'
                     self.sig_mode_changed.emit(self.mode)
 
                 self.sig_button_pressed.emit(29)
@@ -162,12 +170,12 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         started. This allows every new arriving HID package to stop the
         persistent sending of messages.
         '''
-        self.handle_axis_value_changes(1,'123',5,data)
-        self.handle_axis_value_changes(2,'123',6,data)
-        self.handle_axis_value_changes(3,'123',7,data)
-        self.handle_axis_value_changes(4,'456',8,data)
-        self.handle_axis_value_changes(5,'456',9,data)
-        self.handle_axis_value_changes(6,'456',10,data)
+        self.handle_axis_value_changes(0,'012',5,data)
+        self.handle_axis_value_changes(1,'012',6,data)
+        self.handle_axis_value_changes(2,'012',7,data)
+        self.handle_axis_value_changes(3,'345',8,data)
+        self.handle_axis_value_changes(4,'345',9,data)
+        self.handle_axis_value_changes(5,'345',10,data)
 
     def handle_axis_value_changes(self, axis_id, axis_group, data_group, data):
         value = data[data_group]
@@ -182,7 +190,7 @@ class FarmSimulatorSidePanel(QtCore.QObject):
                 ''' Start timers. Because this is executed from
                 another thread, a signal has to be used here.'''
                 self.sig_start_timer.emit(axis_id)
-                self.sig_axis_moved.emit(axis_id-1, value)
+                self.sig_axis_moved.emit(axis_id, value)
             else:
                 self.sig_stop_timer.emit(axis_id)
-                self.sig_axis_moved.emit(axis_id-1, value)
+                self.sig_axis_moved.emit(axis_id, value)

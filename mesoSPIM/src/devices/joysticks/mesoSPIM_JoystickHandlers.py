@@ -30,7 +30,7 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
     @QtCore.pyqtSlot(int)
     def button_handler(self, button_id):
         ''' Debugging print statement '''
-        print('Button pressed: ', button_id)
+        # print('Button pressed: ', button_id)
 
         ''' Laser switching buttons '''
         if button_id == 1:
@@ -104,7 +104,8 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
 
     def set_combobox_to_string(self, combobox, string):
         index = combobox.findText(string)
-        print('Index: ', index)
+        ''' Debugging print statement '''
+        # print('Index: ', index)
         if index != -1:
             combobox.setCurrentIndex(index)
 
@@ -153,18 +154,39 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def mode_handler(self, str):
-        print('New joystick mode: ', str)
+        '''
+        Helper method to handle mode changes of the joystick.
 
-        if str == '123':
+        The FarmSimulatorSidePanel has 6 movement axes, 0 to 2 in "blue"
+        LED mode (grey button on the joystick) and 3 to 5 in "red" mode.
+
+        When starting up, the mode is unknown and has to be found out by
+        registering which axes produce joystick events. 
+        '''
+
+        ''' Debugging print statement '''
+        # print('New joystick mode: ', str)
+
+        if str == '012':
             self.parent.display_status_message('Joystick Mode: XY Mode')
-        elif str == '456':
+        elif str == '345':
             self.parent.display_status_message('Joystick Mode: ZF Mode')
         else:
             self.parent.display_status_message('Joystick Mode: Undefined')
 
     @QtCore.pyqtSlot(int, int)
     def axis_handler(self, axis_id, value):
-        print('Axis: ', axis_id, ',Value: ', value)
+        ''' The axis handler deals with joystick movements.
+
+        The FarmSimulatorSidePanel has 6 movement axes, 0 to 2 in "blue"
+        LED mode (grey button on the joystick) and 3 to 5 in "red" mode.
+
+        When starting up, the mode is unknown and has to be found out by
+        registering which axes produce joystick events.
+        '''
+
+        ''' Debugging print statement '''
+        # print('Axis: ', axis_id, ',Value: ', value)
 
         ''' '''
         value = value - 128
@@ -186,7 +208,3 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
             self.parent.sig_move_relative.emit({'f_rel': value/5})
         elif axis_id == 5:
             self.parent.sig_move_relative.emit({'z_rel': value/5})
-
-
-
-    ### What needs to be done here
