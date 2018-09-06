@@ -79,18 +79,18 @@ camera_parameters = {'x_pixels' : 2048,
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'PI', # 'PI' or 'Debug'
+stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'Debug'
                     'startfocus' : 95000,
                     'y_load_position': 75000,
                     'y_unload_position': 40000,
                     'x_max' : 32000,
-                    'x_min' : 8500,
+                    'x_min' : -32000,
                     'y_max' : 99000,
-                    'y_min' : 0,
+                    'y_min' : -99000,
                     'z_max' : 41000,
-                    'z_min' : 1000,
+                    'z_min' : -41000,
                     'f_max' : 99000,
-                    'f_min' : 0,
+                    'f_min' : -99000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }

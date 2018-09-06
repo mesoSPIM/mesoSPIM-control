@@ -8,8 +8,9 @@ from PyQt5 import QtCore
 
 from pipython import GCSDevice, pitools
 
-class mesoSPIM_PIstage(QtCore.QObject):
+class mesoSPIM_Stage(QtCore.QObject):
     '''
+    DemoStage for a mesoSPIM microscope
 
     It is expected that the parent class has the following signals:
         sig_move_relative = pyqtSignal(dict)
@@ -112,6 +113,184 @@ class mesoSPIM_PIstage(QtCore.QObject):
         '''
         self.sig_status_message.connect(lambda string, time: print(string))
 
+    def set_state_parameter(self, key, value):
+        '''
+        Sets the state of the parent (in most cases, mesoSPIM_MainWindow)
+
+        In order to do this, a QMutexLocker from the parent has to be acquired
+
+        Args:
+            key (str): State dict key
+            value (str, float, int): Value to set
+        '''
+        with QtCore.QMutexLocker(self.parent.state_mutex):
+            if key in self.parent.state:
+                self.parent.state[key]=value
+                self.sig_state_updated.emit()
+            else:
+                print('Set state parameters failed: Key ', key, 'not in state dictionary!')
+
+    def create_position_dict(self):
+        self.position_dict = {'x_pos': self.x_pos,
+                              'y_pos': self.y_pos,
+                              'z_pos': self.z_pos,
+                              'f_pos': self.f_pos,
+                              'theta_pos': self.theta_pos,
+                              }
+
+    def create_internal_position_dict(self):
+        self.int_position_dict = {'x_pos': self.int_x_pos,
+                                  'y_pos': self.int_y_pos,
+                                  'z_pos': self.int_z_pos,
+                                  'f_pos': self.int_f_pos,
+                                  'theta_pos': self.int_theta_pos,
+                                  }
+
+    def report_position(self):
+        self.create_position_dict()
+
+        self.int_x_pos = self.x_pos + self.int_x_pos_offset
+        self.int_y_pos = self.y_pos + self.int_y_pos_offset
+        self.int_z_pos = self.z_pos + self.int_z_pos_offset
+        self.int_f_pos = self.f_pos + self.int_f_pos_offset
+        self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
+
+        self.create_internal_position_dict()
+
+        self.sig_position.emit(self.int_position_dict)
+
+    def move_relative(self, dict, wait_until_done=False):
+        ''' Move relative method '''
+        if 'x_rel' in dict:
+            x_rel = dict['x_rel']
+            if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
+                self.x_pos = self.x_pos + x_rel
+            else:
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
+
+        if 'y_rel' in dict:
+            y_rel = dict['y_rel']
+            if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
+                self.y_pos = self.y_pos + y_rel
+            else:
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
+
+        if 'z_rel' in dict:
+            z_rel = dict['z_rel']
+            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                self.z_pos = self.z_pos + z_rel
+            else:
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+
+        if 'theta_rel' in dict:
+            theta_rel = dict['theta_rel']
+            if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
+                self.theta_pos = self.theta_pos + theta_rel
+            else:
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
+
+        if 'f_rel' in dict:
+            f_rel = dict['f_rel']
+            if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
+                self.f_pos = self.f_pos + f_rel
+            else:
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            time.sleep(1)
+
+    def move_absolute(self, dict, wait_until_done=False):
+        ''' Move absolute method '''
+
+        if 'x_abs' in dict:
+            x_abs = dict['x_abs']
+            x_abs = x_abs - self.int_x_pos_offset
+            if self.x_min < x_abs and self.x_max > x_abs:
+                self.x_pos = x_abs
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!',1000)
+
+        if 'y_abs' in dict:
+            y_abs = dict['y_abs']
+            y_abs = y_abs - self.int_y_pos_offset
+            if self.y_min < y_abs and self.y_max > y_abs:
+                self.y_pos = y_abs
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!',1000)
+
+        if 'z_abs' in dict:
+            z_abs = dict['z_abs']
+            z_abs = z_abs - self.int_z_pos_offset
+            if self.z_min < z_abs and self.z_max > z_abs:
+                self.z_pos = z_abs
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!',1000)
+
+        if 'f_abs' in dict:
+            f_abs = dict['f_abs']
+            f_abs = f_abs - self.int_f_pos_offset
+            if self.f_min < f_abs and self.f_max > f_abs:
+                self.f_pos = f_abs
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!',1000)
+
+        if 'theta_abs' in dict:
+            theta_abs = dict['theta_abs']
+            theta_abs = theta_abs - self.int_theta_pos_offset
+            if self.theta_min < theta_abs and self.theta_max > theta_abs:
+                self.theta_pos = theta_abs
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            time.sleep(1)
+
+    def stop(self):
+        self.sig_status_message.emit('Stopped')
+
+    def zero_axes(self, list):
+        for axis in list:
+            try:
+                exec('self.int_'+axis+'_pos_offset = -self.'+axis+'_pos')
+            except:
+                print('Zeroing of axis: ', axis, 'failed')
+
+    def unzero_axes(self, list):
+        for axis in list:
+            try:
+                exec('self.int_'+axis+'_pos_offset = 0')
+            except:
+                print('Unzeroing of axis: ', axis, 'failed')
+
+    def load_sample(self):
+        self.y_pos = self.cfg.stage_parameters['y_load_position']
+
+    def unload_sample(self):
+        self.y_pos = self.cfg.stage_parameters['y_unload_position']
+
+class mesoSPIM_DemoStage(mesoSPIM_Stage):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+class mesoSPIM_PIstage(mesoSPIM_Stage):
+    '''
+
+    It is expected that the parent class has the following signals:
+        sig_move_relative = pyqtSignal(dict)
+        sig_move_relative_and_wait_until_done = pyqtSignal(dict)
+        sig_move_absolute = pyqtSignal(dict)
+        sig_move_absolute_and_wait_until_done = pyqtSignal(dict)
+        sig_zero = pyqtSignal(list)
+        sig_unzero = pyqtSignal(list)
+        sig_stop_movement = pyqtSignal()
+
+    Also contains a QTimer that regularily sends position updates, e.g
+    during the execution of movements.
+    '''
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
         '''
         PI-specific code
         '''
@@ -157,39 +336,6 @@ class mesoSPIM_PIstage(QtCore.QObject):
             print('Stage disconnected')
         except:
             print('Error while disconnecting the PI stage')
-
-    def set_state_parameter(self, key, value):
-        '''
-        Sets the state of the parent (in most cases, mesoSPIM_MainWindow)
-
-        In order to do this, a QMutexLocker from the parent has to be acquired
-
-        Args:
-            key (str): State dict key
-            value (str, float, int): Value to set
-        '''
-        with QtCore.QMutexLocker(self.parent.state_mutex):
-            if key in self.parent.state:
-                self.parent.state[key]=value
-                self.sig_state_updated.emit()
-            else:
-                print('Set state parameters failed: Key ', key, 'not in state dictionary!')
-
-    def create_position_dict(self):
-        self.position_dict = {'x_pos': self.x_pos,
-                              'y_pos': self.y_pos,
-                              'z_pos': self.z_pos,
-                              'f_pos': self.f_pos,
-                              'theta_pos': self.theta_pos,
-                              }
-
-    def create_internal_position_dict(self):
-        self.int_position_dict = {'x_pos': self.int_x_pos,
-                                  'y_pos': self.int_y_pos,
-                                  'z_pos': self.int_z_pos,
-                                  'f_pos': self.int_f_pos,
-                                  'theta_pos': self.int_theta_pos,
-                                  }
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -244,7 +390,6 @@ class mesoSPIM_PIstage(QtCore.QObject):
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
-                theta_rel = theta_rel/1000
                 self.pidevice.MVR({4 : theta_rel})
             else:
                 self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
@@ -324,20 +469,6 @@ class mesoSPIM_PIstage(QtCore.QObject):
 
     def stop(self):
         self.pidevice.STP(noraise=True)
-
-    def zero_axes(self, list):
-        for axis in list:
-            try:
-                exec('self.int_'+axis+'_pos_offset = -self.'+axis+'_pos')
-            except:
-                print('Zeroing of axis: ', axis, 'failed')
-
-    def unzero_axes(self, list):
-        for axis in list:
-            try:
-                exec('self.int_'+axis+'_pos_offset = 0')
-            except:
-                print('Unzeroing of axis: ', axis, 'failed')
 
     def load_sample(self):
         y_abs = self.cfg.stage_parameters['y_load_position']/1000

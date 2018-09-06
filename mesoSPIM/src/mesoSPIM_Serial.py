@@ -15,7 +15,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 ''' Import mesoSPIM modules '''
 from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 from .devices.zoom.mesoSPIM_Zoom import Dynamixel_Zoom
-from .devices.stages.mesoSPIM_Stages import mesoSPIM_PIstage
+from .devices.stages.mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_DemoStage
 # from .mesoSPIM_State import mesoSPIM_State
 
 class mesoSPIM_Serial(QtCore.QObject):
@@ -58,6 +58,9 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] == 'PI':
             self.stage = mesoSPIM_PIstage(self)
+            self.stage.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+        elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
+            self.stage = mesoSPIM_DemoStage(self)
             self.stage.sig_position.connect(lambda dict: self.sig_position.emit(dict))
 
         ''' Wiring signals through to child objects '''
