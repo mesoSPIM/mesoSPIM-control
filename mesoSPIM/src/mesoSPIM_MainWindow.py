@@ -79,62 +79,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core = mesoSPIM_Core(self.cfg, self)
         self.core.moveToThread(self.core_thread)
 
-        ''' Connecting the menu actions '''
-        self.openScriptEditorButton.clicked.connect(self.create_script_window)
-
-        ''' Connecting the movement & zero buttons '''
-        self.xPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': self.xyzIncrementSpinbox.value()}))
-        self.xMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': -self.xyzIncrementSpinbox.value()}))
-        self.yPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': self.xyzIncrementSpinbox.value()}))
-        self.yMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': -self.xyzIncrementSpinbox.value()}))
-        self.zPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': self.xyzIncrementSpinbox.value()}))
-        self.zMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': -self.xyzIncrementSpinbox.value()}))
-        self.focusPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': self.focusIncrementSpinbox.value()}))
-        self.focusMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': -self.focusIncrementSpinbox.value()}))
-        self.rotPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': self.rotIncrementSpinbox.value()}))
-        self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
-
-        self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
-
-        self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
-        self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
-        self.zZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['z']) if bool is True else self.sig_unzero_axes.emit(['z']))
-        # self.xyzZeroButton.clicked.connect(lambda bool: self.sig_zero.emit(['x','y','z']) if bool is True else self.sig_unzero.emit(['x','y','z']))
-        self.focusZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['f']) if bool is True else self.sig_unzero_axes.emit(['f']))
-        self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
-        #
-        self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
-        self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
-
-        self.LiveButton.clicked.connect(self.live)
-        self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
-        self.StopButton.clicked.connect(lambda: print('Stopping'))
-
-        ''' Connecting the microscope controls '''
-        self.FilterComboBox.addItems(self.cfg.filterdict.keys())
-        self.FilterComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'filter': currentText}))
-        self.FilterComboBox.setCurrentText(config.startup['filter'])
-
-        self.ZoomComboBox.addItems(self.cfg.zoomdict.keys())
-        self.ZoomComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'zoom': currentText}))
-        self.ZoomComboBox.setCurrentText(config.startup['zoom'])
-
-        self.ShutterComboBox.addItems(self.cfg.shutteroptions)
-        self.ShutterComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'shutterconfig': currentText}))
-        self.ShutterComboBox.setCurrentText(config.startup['shutterconfig'])
-
-        self.LaserComboBox.addItems(self.cfg.laserdict.keys())
-        self.LaserComboBox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({'laser': currentText}))
-        self.LaserComboBox.setCurrentText(config.startup['laser'])
-
-        self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
-        self.LaserIntensitySlider.setValue(config.startup['intensity'])
-
-        self.CameraExposureTimeSpinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'camera_exposure_time': currentValue/1000}))
-        self.CameraExposureTimeSpinbox.setValue(config.startup['camera_exposure_time']*1000)
-
-        self.CameraLineIntervalSpinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'camera_line_interval': currentValue/1000000}))
-        self.CameraLineIntervalSpinbox.setValue(config.startup['camera_line_interval']*1000000)
+        ''' Get buttons & connections ready '''
+        self.initialize_and_connect_widgets()
 
         ''' The signal switchboard '''
         self.core.sig_finished.connect(lambda: self.sig_finished.emit())
@@ -142,7 +88,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_state_updated.connect(self.update_gui_from_state)
         self.core.sig_position.connect(self.update_position_indicators)
 
-        ''' Start the threads '''
+        ''' Start the thread '''
         self.core_thread.start()
 
         ''' Setting up the joystick '''
@@ -249,6 +195,140 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         exec(windowstring+'.show()')
         exec(windowstring+'.sig_execute_script.connect(self.execute_script)')
         self.script_window_counter += 1
+
+    def initialize_and_connect_widgets(self):
+        ''' Connecting the menu actions '''
+        self.openScriptEditorButton.clicked.connect(self.create_script_window)
+
+        ''' Connecting the movement & zero buttons '''
+        self.xPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': self.xyzIncrementSpinbox.value()}))
+        self.xMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': -self.xyzIncrementSpinbox.value()}))
+        self.yPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': self.xyzIncrementSpinbox.value()}))
+        self.yMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': -self.xyzIncrementSpinbox.value()}))
+        self.zPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': self.xyzIncrementSpinbox.value()}))
+        self.zMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': -self.xyzIncrementSpinbox.value()}))
+        self.focusPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': self.focusIncrementSpinbox.value()}))
+        self.focusMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': -self.focusIncrementSpinbox.value()}))
+        self.rotPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': self.rotIncrementSpinbox.value()}))
+        self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
+
+        self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
+
+        self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
+        self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
+        self.zZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['z']) if bool is True else self.sig_unzero_axes.emit(['z']))
+        # self.xyzZeroButton.clicked.connect(lambda bool: self.sig_zero.emit(['x','y','z']) if bool is True else self.sig_unzero.emit(['x','y','z']))
+        self.focusZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['f']) if bool is True else self.sig_unzero_axes.emit(['f']))
+        self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
+        #
+        self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
+        self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
+
+        self.LiveButton.clicked.connect(self.live)
+        self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
+        self.StopButton.clicked.connect(lambda: print('Stopping'))
+
+        ''' Connecting the microscope controls '''
+        self.connect_combobox_to_state_parameter(self.FilterComboBox,self.cfg.filterdict.keys(),'filter')
+        self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
+        self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
+        self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
+
+        self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
+        self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
+
+        ''' Connecting camera parameter controls '''
+        self.connect_spinbox_to_state_parameter(self.CameraExposureTimeSpinbox,'camera_exposure_time',1000)
+        self.connect_spinbox_to_state_parameter(self.CameraLineIntervalSpinbox,'camera_line_interval',1000000)
+
+        ''' Connecting laser waveform controls '''
+        self.connect_spinbox_to_state_parameter(self.SweeptimeSpinBox,'sweeptime',1000)
+        self.connect_spinbox_to_state_parameter(self.LeftLaserPulseDelaySpinBox,'laser_l_delay_%')
+        self.connect_spinbox_to_state_parameter(self.RightLaserPulseDelaySpinBox,'laser_r_delay_%')
+        self.connect_spinbox_to_state_parameter(self.LeftLaserPulseLengthSpinBox,'laser_l_pulse_%')
+        self.connect_spinbox_to_state_parameter(self.RightLaserPulseLengthSpinBox,'laser_r_pulse_%')
+        self.connect_spinbox_to_state_parameter(self.LeftLaserPulseMaxAmplitudeSpinBox,'laser_l_max_amplitude_%')
+        self.connect_spinbox_to_state_parameter(self.RightLaserPulseMaxAmplitudeSpinBox,'laser_r_max_amplitude_%')
+
+        ''' Connecting Galvo controls '''
+        self.connect_spinbox_to_state_parameter(self.GalvoFrequencySpinBox,'galvo_r_frequency')
+        self.connect_spinbox_to_state_parameter(self.GalvoFrequencySpinBox,'galvo_l_frequency')
+        self.connect_spinbox_to_state_parameter(self.LeftGalvoAmplitudeSpinBox,'galvo_l_amplitude')
+        self.connect_spinbox_to_state_parameter(self.LeftGalvoAmplitudeSpinBox,'galvo_r_amplitude')
+        self.connect_spinbox_to_state_parameter(self.LeftGalvoPhaseSpinBox,'galvo_l_phase')
+        self.connect_spinbox_to_state_parameter(self.RightGalvoPhaseSpinBox,'galvo_r_phase')
+
+        ''' Connecting ETL controls '''
+        self.connect_spinbox_to_state_parameter(self.LeftETLOffsetSpinBox,'etl_l_offset')
+        self.connect_spinbox_to_state_parameter(self.RightETLOffsetSpinBox,'etl_r_offset')
+        self.connect_spinbox_to_state_parameter(self.LeftETLAmplitudeSpinBox,'etl_l_amplitude')
+        self.connect_spinbox_to_state_parameter(self.RightETLAmplitudeSpinBox,'etl_r_amplitude')
+        self.connect_spinbox_to_state_parameter(self.LeftETLDelaySpinBox,'etl_l_delay_%')
+        self.connect_spinbox_to_state_parameter(self.RightETLDelaySpinBox,'etl_r_delay_%')
+        self.connect_spinbox_to_state_parameter(self.LeftETLRampRisingSpinBox,'etl_l_ramp_rising_%')
+        self.connect_spinbox_to_state_parameter(self.RightETLRampRisingSpinBox, 'etl_r_ramp_rising_%')
+        self.connect_spinbox_to_state_parameter(self.LeftETLRampFallingSpinBox, 'etl_l_ramp_falling_%')
+        self.connect_spinbox_to_state_parameter(self.RightETLRampFallingSpinBox, 'etl_r_ramp_falling_%')
+
+        '''
+        LeftLaserPulseDelaySpinBox
+        RightLaserPulseDelaySpinBox
+        LeftLaserPulseLengthSpinBox
+        RightLaserPulseLengthSpinBox
+        LeftLaserPulseMaxAmplitude
+        RightLaserPulseMaxAmplitude
+
+        GalvoFrequencySpinBox
+        LeftGalvoOffsetSpinbox
+        RightGalvoOffsetSpinbox
+
+        LeftGalvoAmplitudeSpinBox
+        LeftGalvoPhaseSpinBox
+        RightGalvoPhaseSpinBox
+
+        LeftETLDelaySpinBox
+        RightETLDelaySpinBox
+        LeftETLRampRisingSpinbox
+        RightETLRampRisingSpinbox
+        LeftETLRampFallingSpinBox
+        RightETLRampFallingSpinBox
+
+        LeftETLOffsetSpinBox
+        RightETLOffsetSpinBox
+        LeftETLAmplitudeSpinBox
+        RightETLAmplitudeSpinBox
+        '''
+
+    def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter):
+        '''
+        Helper method to connect and initialize a combobox from the config
+
+        Args:
+            combobox (QtWidgets.QComboBox): Combobox in the GUI to be connected
+            option_list (list): List of selection options
+            state_parameter (str): State parameter (has to exist in the config)
+        '''
+        combobox.addItems(option_list)
+        combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}))
+        combobox.setCurrentText(self.cfg.startup[state_parameter])
+
+    def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
+        '''
+        Helper method to connect and initialize a spinbox from the config
+
+        Args:
+            spinbox (QtWidgets.QSpinBox or QtWidgets.QDoubleSpinbox): Spinbox in
+                    the GUI to be connected
+            state_parameter (str): State parameter (has to exist in the config)
+            conversion_factor (float): Conversion factor. If the config is in
+                                       seconds, the spinbox displays ms:
+                                       conversion_factor = 1000. If the config is
+                                       in seconds and the spinbox displays
+                                       microseconds: conversion_factor = 1000000
+        '''
+        spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}))
+        spinbox.setValue(self.cfg.startup[state_parameter]*conversion_factor)
+
 
     def request_state(self, keys, values):
         pass

@@ -859,7 +859,7 @@ MOVEMENT </string>
         <string>Amplitude</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="etl_l_offset_Spinbox">
+      <widget class="QDoubleSpinBox" name="LeftETLOffsetSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -913,7 +913,7 @@ MOVEMENT </string>
         <string>Right</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="etl_r_offset_Spinbox">
+      <widget class="QDoubleSpinBox" name="RightETLOffsetSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -941,7 +941,7 @@ MOVEMENT </string>
         <double>2.560000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="etl_l_amp_Spinbox">
+      <widget class="QDoubleSpinBox" name="LeftETLAmplitudeSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -969,7 +969,7 @@ MOVEMENT </string>
         <double>0.180000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="etl_r_amp_Spinbox">
+      <widget class="QDoubleSpinBox" name="RightETLAmplitudeSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -1210,9 +1210,9 @@ MOVEMENT </string>
       <property name="title">
        <string>Sweep</string>
       </property>
-      <widget class="QDoubleSpinBox" name="sweeptime_Spinbox">
+      <widget class="QDoubleSpinBox" name="SweeptimeSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -1356,7 +1356,7 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Delay (%)</string>
+        <string>Delay</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_39">
@@ -1369,20 +1369,23 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Pulse (%)</string>
+        <string>Pulse</string>
        </property>
       </widget>
       <widget class="QDoubleSpinBox" name="doubleSpinBox_23">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>40</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1396,15 +1399,18 @@ MOVEMENT </string>
       </widget>
       <widget class="QDoubleSpinBox" name="doubleSpinBox_24">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>80</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1432,7 +1438,7 @@ MOVEMENT </string>
       <widget class="QLabel" name="label_22">
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>20</y>
          <width>91</width>
          <height>31</height>
@@ -1445,7 +1451,7 @@ MOVEMENT </string>
       <widget class="QLabel" name="label_23">
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>20</y>
          <width>91</width>
          <height>31</height>
@@ -1465,20 +1471,23 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Delay (%)</string>
+        <string>Delay</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_25">
+      <widget class="QDoubleSpinBox" name="LeftLaserPulseDelaySpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>60</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1490,17 +1499,20 @@ MOVEMENT </string>
         <double>10.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_26">
+      <widget class="QDoubleSpinBox" name="RightLaserPulseDelaySpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>60</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1522,20 +1534,23 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Pulselength (%)</string>
+        <string>Pulselength</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_27">
+      <widget class="QDoubleSpinBox" name="LeftLaserPulseLengthSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>110</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1547,17 +1562,20 @@ MOVEMENT </string>
         <double>80.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_28">
+      <widget class="QDoubleSpinBox" name="RightLaserPulseLengthSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>110</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1595,20 +1613,23 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Max Amplitude (%)</string>
+        <string>Max Amplitude</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_44">
+      <widget class="QDoubleSpinBox" name="LeftLaserPulseMaxAmplitudeSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>160</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1620,17 +1641,20 @@ MOVEMENT </string>
         <double>80.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_45">
+      <widget class="QDoubleSpinBox" name="RightLaserPulseMaxAmplitudeSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>160</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -1671,13 +1695,13 @@ MOVEMENT </string>
         <string>Frequency</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="galvoFrequencySpinbox">
+      <widget class="QDoubleSpinBox" name="GalvoFrequencySpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>260</x>
+         <x>240</x>
          <y>30</y>
          <width>131</width>
          <height>31</height>
@@ -1702,7 +1726,7 @@ MOVEMENT </string>
       <widget class="QLabel" name="label_42">
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>70</y>
          <width>91</width>
          <height>31</height>
@@ -1715,7 +1739,7 @@ MOVEMENT </string>
       <widget class="QLabel" name="label_43">
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>70</y>
          <width>91</width>
          <height>31</height>
@@ -1751,13 +1775,13 @@ MOVEMENT </string>
         <string>Amplitude</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="galvo_left_amplitude_Spinbox">
+      <widget class="QDoubleSpinBox" name="LeftGalvoAmplitudeSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>260</x>
+         <x>240</x>
          <y>150</y>
          <width>131</width>
          <height>31</height>
@@ -1776,15 +1800,15 @@ MOVEMENT </string>
         <double>0.180000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="galvo_right_offset_Spinbox">
+      <widget class="QDoubleSpinBox" name="RightGalvoOffsetSpinbox">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>110</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
        </property>
@@ -1804,15 +1828,15 @@ MOVEMENT </string>
         <double>2.560000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="galvo_left_offset_Spinbox">
+      <widget class="QDoubleSpinBox" name="LeftGalvoOffsetSpinbox">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>110</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
        </property>
@@ -1845,15 +1869,15 @@ MOVEMENT </string>
         <string>Phase</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="galvo_left_phase_Spinbox">
+      <widget class="QDoubleSpinBox" name="LeftGalvoPhaseSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>190</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
        </property>
@@ -1867,15 +1891,15 @@ MOVEMENT </string>
         <double>2.520000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="galvo_right_phase_Spinbox">
+      <widget class="QDoubleSpinBox" name="RightGalvoPhaseSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>190</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
        </property>
@@ -1892,7 +1916,7 @@ MOVEMENT </string>
      </widget>
      <widget class="QGroupBox" name="groupBox_13">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -1931,17 +1955,23 @@ MOVEMENT </string>
         <string>Amplitude</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
+      <widget class="QDoubleSpinBox" name="LeftETLOffsetSpinBox2">
        <property name="enabled">
         <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>60</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> V</string>
+       </property>
+       <property name="decimals">
+        <number>3</number>
        </property>
        <property name="maximum">
         <double>5.000000000000000</double>
@@ -1956,7 +1986,7 @@ MOVEMENT </string>
       <widget class="QLabel" name="label_49">
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>20</y>
          <width>91</width>
          <height>31</height>
@@ -1969,7 +1999,7 @@ MOVEMENT </string>
       <widget class="QLabel" name="label_50">
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>20</y>
          <width>91</width>
          <height>31</height>
@@ -1979,17 +2009,23 @@ MOVEMENT </string>
         <string>Right</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_35">
+      <widget class="QDoubleSpinBox" name="RightETLOffsetSpinBox2">
        <property name="enabled">
         <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>60</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> V</string>
+       </property>
+       <property name="decimals">
+        <number>3</number>
        </property>
        <property name="maximum">
         <double>5.000000000000000</double>
@@ -2001,17 +2037,23 @@ MOVEMENT </string>
         <double>2.560000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_36">
+      <widget class="QDoubleSpinBox" name="LeftETLAmplitudeSpinBox2">
        <property name="enabled">
         <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>110</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> V</string>
+       </property>
+       <property name="decimals">
+        <number>3</number>
        </property>
        <property name="maximum">
         <double>2.000000000000000</double>
@@ -2023,17 +2065,23 @@ MOVEMENT </string>
         <double>0.180000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_37">
+      <widget class="QDoubleSpinBox" name="RightETLAmplitudeSpinBox2">
        <property name="enabled">
         <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>110</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> V</string>
+       </property>
+       <property name="decimals">
+        <number>3</number>
        </property>
        <property name="maximum">
         <double>2.000000000000000</double>
@@ -2055,7 +2103,7 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Delay (%)</string>
+        <string>Delay</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_53">
@@ -2068,7 +2116,7 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Ramp rising (%)</string>
+        <string>Ramp rising</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_54">
@@ -2081,20 +2129,23 @@ MOVEMENT </string>
         </rect>
        </property>
        <property name="text">
-        <string>Ramp falling (%)</string>
+        <string>Ramp falling</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_38">
+      <widget class="QDoubleSpinBox" name="RightETLDelaySpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>160</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -2106,17 +2157,20 @@ MOVEMENT </string>
         <double>10.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_39">
+      <widget class="QDoubleSpinBox" name="LeftETLDelaySpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>160</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -2128,17 +2182,20 @@ MOVEMENT </string>
         <double>10.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_40">
+      <widget class="QDoubleSpinBox" name="RightETLRampRisingSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>210</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -2150,17 +2207,20 @@ MOVEMENT </string>
         <double>10.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_41">
+      <widget class="QDoubleSpinBox" name="LeftETLRampRisingSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>210</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -2172,17 +2232,20 @@ MOVEMENT </string>
         <double>10.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_42">
+      <widget class="QDoubleSpinBox" name="RightETLRampFallingSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>330</x>
+         <x>310</x>
          <y>260</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -2194,17 +2257,20 @@ MOVEMENT </string>
         <double>10.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="doubleSpinBox_43">
+      <widget class="QDoubleSpinBox" name="LeftETLRampFallingSpinBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>190</x>
          <y>260</y>
-         <width>91</width>
+         <width>111</width>
          <height>31</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string> %</string>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
@@ -2861,5 +2927,70 @@ MOVEMENT </string>
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>LeftETLOffsetSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>LeftETLOffsetSpinBox2</receiver>
+   <slot>setValue(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>212</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>727</x>
+     <y>127</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>RightETLOffsetSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>RightETLOffsetSpinBox2</receiver>
+   <slot>setValue(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>332</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>837</x>
+     <y>127</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>LeftETLAmplitudeSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>LeftETLAmplitudeSpinBox2</receiver>
+   <slot>setValue(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>212</x>
+     <y>227</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>727</x>
+     <y>177</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>RightETLAmplitudeSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>RightETLAmplitudeSpinBox2</receiver>
+   <slot>setValue(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>332</x>
+     <y>227</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>837</x>
+     <y>177</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

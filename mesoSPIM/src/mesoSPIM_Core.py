@@ -19,7 +19,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 # from nidaqmx.types import CtrTime
 
 ''' Import mesoSPIM modules '''
-# from .mesoSPIM_State import mesoSPIM_State
+from .devices.shutters.NI_Shutter import NI_Shutter
 from .devices.cameras.mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
 from .mesoSPIM_Serial import mesoSPIM_Serial
 
@@ -59,6 +59,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state_mutex = parent.state_mutex
         self.cfg = self.parent.cfg
 
+        self.set_state_parameter('state','init')
+
         ''' The signal-slot switchboard '''
         self.parent.sig_state_request.connect(self.state_request_handler)
 
@@ -89,6 +91,16 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Start the threads '''
         self.camera_thread.start()
         self.serial_thread.start()
+
+        ''' Setting the shutters up '''
+        left_shutter_line = self.cfg.shutterdict['shutter_left']
+        right_shutter_line = self.cfg.shutterdict['shutter_right']
+
+        self.shutter_left = NI_Shutter(left_shutter_line)
+        self.shutter_right = NI_Shutter(right_shutter_line)
+
+        self.shutter_left.close()
+        self.shutter_right.close()
 
         self.set_state_parameter('state','idle')
 
