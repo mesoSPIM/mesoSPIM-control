@@ -9,6 +9,9 @@ from nidaqmx.constants import AcquisitionType, TaskMode
 from nidaqmx.constants import LineGrouping, DigitalWidthUnits
 from nidaqmx.types import CtrTime
 
+from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
+
+
 '''
 mesoSPIM State class
 '''

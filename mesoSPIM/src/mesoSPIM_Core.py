@@ -23,7 +23,6 @@ from .devices.shutters.NI_Shutter import NI_Shutter
 from .devices.cameras.mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 from .mesoSPIM_Serial import mesoSPIM_Serial
-from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
@@ -33,6 +32,8 @@ class mesoSPIM_Core(QtCore.QObject):
     '''
 
     sig_finished = QtCore.pyqtSignal()
+
+    sig_update_gui_from_state = QtCore.pyqtSignal(bool)
 
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
@@ -136,12 +137,23 @@ class mesoSPIM_Core(QtCore.QObject):
             if key in ('filter','zoom','laser','intensity','shutterconfig','state',
                         'camera_exposure_time','camera_line_interval'):
                 exec('self.set_'+key+'(value)')
+            if key in ('galvo_r_frequency','galvo_l_offset'):
+                exec('self.set_'+key+'(value)')
 
+    def set_state(self, state):
+        if state == 'live':
+            print('Core: Going live')
+            self.sig_state_request.emit({'state':'live'})
+            self.sig_state_model_request.emit({'state':'live'})
+        elif state == 'idle':
+            print('Core: Stopping requested')
+            self.sig_state_request.emit({'state':'idle'})
+            self.stop()
 
     def stop(self):
         self.stopflag = True
         ''' This stopflag is a bit risky, needs to be updated'''
-        self.set_state_parameter('state','idle')
+        self.sig_state_model_request.emit({'state':'idle'})
         self.sig_finished.emit()
 
     def send_progress(self,
@@ -160,6 +172,16 @@ class mesoSPIM_Core(QtCore.QObject):
                 'image_counter':image_counter,
         }
         self.sig_progress.emit(dict)
+
+    def set_galvo_r_frequency(self, freq):
+        print('Setting R Galvo freq to ', freq, ' Hz')
+        self.sig_state_model_request.emit({'galvo_r_frequency':freq})
+        print('R Galvo set to ', freq, ' Hz')
+
+    def set_galvo_l_offset(self, offset):
+        print('Setting L Galvo offset to ', offset, ' V')
+        self.sig_state_model_request.emit({'galvo_l_offset':offset})
+        print('L Galvo set to ', offset, ' V')
 
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:
@@ -224,6 +246,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
+        self.sig_update_gui_from_state.emit(True)
         self.sig_state_model_request.emit({'state':'running_script'})
 
         try:
@@ -232,6 +255,7 @@ class mesoSPIM_Core(QtCore.QObject):
             traceback.print_exc()
         self.sig_state_model_request.emit({'state':'idle'})       
         self.sig_finished.emit()
+        self.sig_update_gui_from_state.emit(False)
 
     '''
     Waveform-generation-related code starts here

@@ -23,7 +23,8 @@ class mesoSPIM_StateModel(QtCore.QObject):
         for key, value in dict.items():
             if key in self.state.keys():
                 self.state[key]=value
-                self.sig_state_model_updated.emit()
+                if key != 'position':
+                    self.sig_state_model_updated.emit()
             else:
                 raise NameError('StateModel: Key not found: ')
 

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>919</width>
+    <width>917</width>
     <height>1251</height>
    </rect>
   </property>
@@ -17,7 +17,7 @@
    <property name="enabled">
     <bool>true</bool>
    </property>
-   <widget class="QTabWidget" name="tabWidget">
+   <widget class="QTabWidget" name="TabWidget">
     <property name="enabled">
      <bool>true</bool>
     </property>
@@ -43,7 +43,7 @@
     <property name="currentIndex">
      <number>0</number>
     </property>
-    <widget class="QWidget" name="tab">
+    <widget class="QWidget" name="MovementTabWidget">
      <attribute name="title">
       <string>Movement</string>
      </attribute>
@@ -817,7 +817,7 @@ MOVEMENT </string>
       </property>
      </widget>
     </widget>
-    <widget class="QWidget" name="tab_3">
+    <widget class="QWidget" name="ETLTabWidget">
      <attribute name="title">
       <string>ETL</string>
      </attribute>
@@ -1162,7 +1162,7 @@ MOVEMENT </string>
       </property>
      </widget>
     </widget>
-    <widget class="QWidget" name="tab_2">
+    <widget class="QWidget" name="ScriptingTabWidget">
      <attribute name="title">
       <string>Scripting</string>
      </attribute>
@@ -1188,13 +1188,35 @@ MOVEMENT </string>
        <string>New Scripting Editor</string>
       </property>
      </widget>
+     <widget class="QPushButton" name="WidgetListPushButton">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>70</y>
+        <width>251</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>WidgetListButton</string>
+      </property>
+     </widget>
     </widget>
-    <widget class="QWidget" name="tab_4">
+    <widget class="QWidget" name="LogTabWidget">
      <attribute name="title">
       <string>Log</string>
      </attribute>
     </widget>
-    <widget class="QWidget" name="tab_7">
+    <widget class="QWidget" name="ParameterTabWidget">
      <attribute name="title">
       <string>Parameters</string>
      </attribute>
@@ -1277,7 +1299,7 @@ MOVEMENT </string>
         <string>Line Interval</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="CameraExposureTimeSpinbox">
+      <widget class="QDoubleSpinBox" name="CameraExposureTimeSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -1305,7 +1327,7 @@ MOVEMENT </string>
         <double>20.000000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="CameraLineIntervalSpinbox">
+      <widget class="QDoubleSpinBox" name="CameraLineIntervalSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -1800,7 +1822,7 @@ MOVEMENT </string>
         <double>0.180000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="RightGalvoOffsetSpinbox">
+      <widget class="QDoubleSpinBox" name="RightGalvoOffsetSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -1828,7 +1850,7 @@ MOVEMENT </string>
         <double>2.560000000000000</double>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="LeftGalvoOffsetSpinbox">
+      <widget class="QDoubleSpinBox" name="LeftGalvoOffsetSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -2284,7 +2306,7 @@ MOVEMENT </string>
       </widget>
      </widget>
     </widget>
-    <widget class="QWidget" name="tab_6">
+    <widget class="QWidget" name="AlignmentTabWidget">
      <attribute name="title">
       <string>Alignment</string>
      </attribute>
@@ -2336,9 +2358,9 @@ MOVEMENT </string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>770</y>
+      <y>860</y>
       <width>901</width>
-      <height>241</height>
+      <height>151</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -2355,78 +2377,6 @@ MOVEMENT </string>
     <property name="title">
      <string>Controls</string>
     </property>
-    <widget class="QLineEdit" name="Y_Position_Indicator">
-     <property name="geometry">
-      <rect>
-       <x>200</x>
-       <y>70</y>
-       <width>151</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="accessibleName">
-      <string>X</string>
-     </property>
-     <property name="text">
-      <string>9897</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_3">
-     <property name="geometry">
-      <rect>
-       <x>80</x>
-       <y>40</y>
-       <width>16</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="lineWidth">
-      <number>0</number>
-     </property>
-     <property name="text">
-      <string>X</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_12">
-     <property name="geometry">
-      <rect>
-       <x>460</x>
-       <y>40</y>
-       <width>16</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Z </string>
-     </property>
-    </widget>
     <widget class="QComboBox" name="FilterComboBox">
      <property name="enabled">
       <bool>true</bool>
@@ -2434,7 +2384,7 @@ MOVEMENT </string>
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>120</y>
+       <y>30</y>
        <width>471</width>
        <height>51</height>
       </rect>
@@ -2445,36 +2395,6 @@ MOVEMENT </string>
       </font>
      </property>
     </widget>
-    <widget class="QLineEdit" name="Rotation_Position_Indicator">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="geometry">
-      <rect>
-       <x>580</x>
-       <y>70</y>
-       <width>111</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="accessibleName">
-      <string>X</string>
-     </property>
-     <property name="text">
-      <string>180</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
     <widget class="QComboBox" name="LaserComboBox">
      <property name="enabled">
       <bool>true</bool>
@@ -2482,7 +2402,7 @@ MOVEMENT </string>
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>180</y>
+       <y>90</y>
        <width>261</width>
        <height>51</height>
       </rect>
@@ -2500,7 +2420,7 @@ MOVEMENT </string>
      <property name="geometry">
       <rect>
        <x>700</x>
-       <y>120</y>
+       <y>30</y>
        <width>191</width>
        <height>51</height>
       </rect>
@@ -2511,78 +2431,6 @@ MOVEMENT </string>
       </font>
      </property>
     </widget>
-    <widget class="QLineEdit" name="X_Position_Indicator">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>70</y>
-       <width>141</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="accessibleName">
-      <string>X</string>
-     </property>
-     <property name="text">
-      <string>9897</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_11">
-     <property name="geometry">
-      <rect>
-       <x>270</x>
-       <y>40</y>
-       <width>16</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Y</string>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="Z_Position_Indicator">
-     <property name="geometry">
-      <rect>
-       <x>390</x>
-       <y>70</y>
-       <width>141</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="accessibleName">
-      <string>X</string>
-     </property>
-     <property name="text">
-      <string>1557</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
     <widget class="QComboBox" name="ZoomComboBox">
      <property name="enabled">
       <bool>true</bool>
@@ -2590,7 +2438,7 @@ MOVEMENT </string>
      <property name="geometry">
       <rect>
        <x>490</x>
-       <y>120</y>
+       <y>30</y>
        <width>201</width>
        <height>51</height>
       </rect>
@@ -2601,29 +2449,11 @@ MOVEMENT </string>
       </font>
      </property>
     </widget>
-    <widget class="QLabel" name="label_5">
-     <property name="geometry">
-      <rect>
-       <x>610</x>
-       <y>40</y>
-       <width>61</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Angle</string>
-     </property>
-    </widget>
     <widget class="QSlider" name="LaserIntensitySlider">
      <property name="geometry">
       <rect>
        <x>280</x>
-       <y>180</y>
+       <y>90</y>
        <width>611</width>
        <height>51</height>
       </rect>
@@ -2654,51 +2484,6 @@ MOVEMENT </string>
      </property>
      <property name="tickInterval">
       <number>10</number>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="Focus_Position_Indicator">
-     <property name="geometry">
-      <rect>
-       <x>740</x>
-       <y>70</y>
-       <width>121</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="accessibleName">
-      <string>X</string>
-     </property>
-     <property name="text">
-      <string>659</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_4">
-     <property name="geometry">
-      <rect>
-       <x>770</x>
-       <y>40</y>
-       <width>61</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Focus</string>
      </property>
     </widget>
    </widget>
@@ -2900,6 +2685,243 @@ MOVEMENT </string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="Focus_Position_Indicator">
+    <property name="geometry">
+     <rect>
+      <x>750</x>
+      <y>810</y>
+      <width>121</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="accessibleName">
+     <string>X</string>
+    </property>
+    <property name="text">
+     <string>659</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="Z_Position_Indicator">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>810</y>
+      <width>141</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="accessibleName">
+     <string>X</string>
+    </property>
+    <property name="text">
+     <string>1557</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>780</y>
+      <width>16</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::NoFrame</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Plain</enum>
+    </property>
+    <property name="lineWidth">
+     <number>0</number>
+    </property>
+    <property name="text">
+     <string>X</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_11">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>780</y>
+      <width>16</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Y</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_5">
+    <property name="geometry">
+     <rect>
+      <x>620</x>
+      <y>780</y>
+      <width>61</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Angle</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="X_Position_Indicator">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>810</y>
+      <width>141</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="accessibleName">
+     <string>X</string>
+    </property>
+    <property name="text">
+     <string>9897</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="Rotation_Position_Indicator">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>590</x>
+      <y>810</y>
+      <width>111</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="accessibleName">
+     <string>X</string>
+    </property>
+    <property name="text">
+     <string>180</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_12">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>780</y>
+      <width>16</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Z </string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="Y_Position_Indicator">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>810</y>
+      <width>151</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="accessibleName">
+     <string>X</string>
+    </property>
+    <property name="text">
+     <string>9897</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>780</x>
+      <y>780</y>
+      <width>61</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Focus</string>
     </property>
    </widget>
   </widget>

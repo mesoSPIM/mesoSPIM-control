@@ -28,8 +28,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
         self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
 
-        self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
+        self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler)

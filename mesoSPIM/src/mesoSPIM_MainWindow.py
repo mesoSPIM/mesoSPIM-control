@@ -53,7 +53,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.cfg = config
         self.script_window_counter = 0
-        self.enable_external_gui_updates = False
+        self.update_gui_from_state_flag = False
 
         ''' Instantiate the one and only mesoSPIM state '''
         self.state_model = mesoSPIM_StateModel(self)
@@ -86,12 +86,20 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Get buttons & connections ready '''
         self.initialize_and_connect_widgets()
 
+        ''' Widget list for blockSignals during status updates '''
+        self.widgets_to_block = []
+        self.parent_widgets_to_block = [self.ETLTabWidget, self.ParameterTabWidget, self.ControlGroupBox]
+        self.create_widget_list(self.parent_widgets_to_block, self.widgets_to_block)
+
+        # self.WidgetListPushButton.clicked.connect(self.create_widget_list)
+
         ''' The signal switchboard '''
         self.core.sig_finished.connect(lambda: self.sig_finished.emit())
         self.core.sig_finished.connect(self.enable_gui)
 
         self.core.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
         self.core.sig_state_model_request.connect(self.update_position_indicators)
+        self.core.sig_update_gui_from_state.connect(self.set_update_gui_from_state_flag)
                 
         self.core.sig_progress.connect(self.update_progressbars)
 
@@ -121,16 +129,43 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         except:
             pass
 
-    def create_widget_list(self):
-        for widget in self.centralWidget.children():
-            if isinstance(widget, QtWidgets.QLineEdit):
-                print(f"Linedit: {widget.objectName()} - {widget.text()}")
+    def check_instances(self, widget):
+        ''' 
+        Method to check whether a widget belongs to one of the Qt Classes specified.
 
-            if isinstance(widget, QtWidgets.QCheckBox):
-                print(f"QCheckBox: {widget.objectName()} - {widget.text()}")
+        Args:
+            widget (QtWidgets.QWidget): Widget to check 
 
-            if isinstance(widget, QtWidgets.QPushbutton):
-                print(f"QPushbutton: {widget.objectName()} - {widget.text()}")
+        Returns:
+            return_value (bool): True if widget is in the list, False if not.
+        '''
+        if isinstance(widget, (QtWidgets.QSpinBox, 
+                                QtWidgets.QDoubleSpinBox,
+                                QtWidgets.QSlider,
+                                QtWidgets.QComboBox,
+                                QtWidgets.QPushButton)):
+            return True 
+        else:
+            return False
+
+    def create_widget_list(self, list, widget_list):
+        '''
+        Helper method to recursively loop through all the widgets in a list and 
+        their children.
+
+        Args:
+            list (list): List of QtWidgets.QWidget objects 
+        
+        '''
+        for widget in list:
+            if list != ([] or None):
+                if self.check_instances(widget):
+                    # print(widget.objectName())
+                    widget_list.append(widget)
+                list = widget.children()
+                self.create_widget_list(list, widget_list)
+            else:
+                return None
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
@@ -144,6 +179,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage(string)
         else:
             self.statusBar().showMessage(string, time)
+
+    def get_state_parameter(self, parameter_string):
+        '''
+        Helper method to get a parameter out of the state model:
+        '''
+        return self.state_model.state[parameter_string]
 
     def pos2str(self, position):
         ''' Little helper method for converting positions to strings '''
@@ -226,6 +267,45 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
         self.StopButton.clicked.connect(lambda: print('Stopping'))
 
+        self.widget_to_state_parameter_assignment=(
+            (self.FilterComboBox, 'filter',1),
+            (self.FilterComboBox, 'filter',1),
+            (self.ZoomComboBox, 'zoom',1),
+            (self.ShutterComboBox, 'shutterconfig',1),
+            (self.LaserComboBox, 'laser',1),
+            (self.LaserIntensitySlider, 'intensity',1),
+            (self.CameraExposureTimeSpinBox, 'camera_exposure_time',1000),
+            (self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
+            (self.SweeptimeSpinBox,'sweeptime',1000),
+            (self.LeftLaserPulseDelaySpinBox,'laser_l_delay_%',1),
+            (self.RightLaserPulseDelaySpinBox,'laser_r_delay_%',1),
+            (self.LeftLaserPulseLengthSpinBox,'laser_l_pulse_%',1),
+            (self.RightLaserPulseLengthSpinBox,'laser_r_pulse_%',1),
+            (self.LeftLaserPulseMaxAmplitudeSpinBox,'laser_l_max_amplitude_%',1),
+            (self.RightLaserPulseMaxAmplitudeSpinBox,'laser_r_max_amplitude_%',1),
+            (self.GalvoFrequencySpinBox,'galvo_r_frequency',1),
+            (self.GalvoFrequencySpinBox,'galvo_l_frequency',1),
+            (self.LeftGalvoAmplitudeSpinBox,'galvo_l_amplitude',1),
+            (self.LeftGalvoAmplitudeSpinBox,'galvo_r_amplitude',1),
+            (self.LeftGalvoPhaseSpinBox,'galvo_l_phase',1),
+            (self.RightGalvoPhaseSpinBox,'galvo_r_phase',1),
+            (self.LeftGalvoOffsetSpinBox, 'galvo_l_offset',1),
+            (self.RightGalvoOffsetSpinBox, 'galvo_r_offset',1),
+            (self.LeftETLOffsetSpinBox,'etl_l_offset',1),
+            (self.RightETLOffsetSpinBox,'etl_r_offset',1),
+            (self.LeftETLAmplitudeSpinBox,'etl_l_amplitude',1),
+            (self.RightETLAmplitudeSpinBox,'etl_r_amplitude',1),
+            (self.LeftETLDelaySpinBox,'etl_l_delay_%',1),
+            (self.RightETLDelaySpinBox,'etl_r_delay_%',1),
+            (self.LeftETLRampRisingSpinBox,'etl_l_ramp_rising_%',1),
+            (self.RightETLRampRisingSpinBox, 'etl_r_ramp_rising_%',1),
+            (self.LeftETLRampFallingSpinBox, 'etl_l_ramp_falling_%',1),
+            (self.RightETLRampFallingSpinBox, 'etl_r_ramp_falling_%',1)
+        )
+
+        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+            self.connect_widget_to_state_parameter(widget, state_parameter, conversion_factor)
+
         ''' Connecting the microscope controls '''
         self.connect_combobox_to_state_parameter(self.FilterComboBox,self.cfg.filterdict.keys(),'filter')
         self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
@@ -235,67 +315,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
 
-        ''' Connecting camera parameter controls '''
-        self.connect_spinbox_to_state_parameter(self.CameraExposureTimeSpinbox,'camera_exposure_time',1000)
-        self.connect_spinbox_to_state_parameter(self.CameraLineIntervalSpinbox,'camera_line_interval',1000000)
+        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+            self.connect_widget_to_state_parameter(widget, state_parameter, conversion_factor)
 
-        ''' Connecting laser waveform controls '''
-        self.connect_spinbox_to_state_parameter(self.SweeptimeSpinBox,'sweeptime',1000)
-        self.connect_spinbox_to_state_parameter(self.LeftLaserPulseDelaySpinBox,'laser_l_delay_%')
-        self.connect_spinbox_to_state_parameter(self.RightLaserPulseDelaySpinBox,'laser_r_delay_%')
-        self.connect_spinbox_to_state_parameter(self.LeftLaserPulseLengthSpinBox,'laser_l_pulse_%')
-        self.connect_spinbox_to_state_parameter(self.RightLaserPulseLengthSpinBox,'laser_r_pulse_%')
-        self.connect_spinbox_to_state_parameter(self.LeftLaserPulseMaxAmplitudeSpinBox,'laser_l_max_amplitude_%')
-        self.connect_spinbox_to_state_parameter(self.RightLaserPulseMaxAmplitudeSpinBox,'laser_r_max_amplitude_%')
-
-        ''' Connecting Galvo controls '''
-        self.connect_spinbox_to_state_parameter(self.GalvoFrequencySpinBox,'galvo_r_frequency')
-        self.connect_spinbox_to_state_parameter(self.GalvoFrequencySpinBox,'galvo_l_frequency')
-        self.connect_spinbox_to_state_parameter(self.LeftGalvoAmplitudeSpinBox,'galvo_l_amplitude')
-        self.connect_spinbox_to_state_parameter(self.LeftGalvoAmplitudeSpinBox,'galvo_r_amplitude')
-        self.connect_spinbox_to_state_parameter(self.LeftGalvoPhaseSpinBox,'galvo_l_phase')
-        self.connect_spinbox_to_state_parameter(self.RightGalvoPhaseSpinBox,'galvo_r_phase')
-
-        ''' Connecting ETL controls '''
-        self.connect_spinbox_to_state_parameter(self.LeftETLOffsetSpinBox,'etl_l_offset')
-        self.connect_spinbox_to_state_parameter(self.RightETLOffsetSpinBox,'etl_r_offset')
-        self.connect_spinbox_to_state_parameter(self.LeftETLAmplitudeSpinBox,'etl_l_amplitude')
-        self.connect_spinbox_to_state_parameter(self.RightETLAmplitudeSpinBox,'etl_r_amplitude')
-        self.connect_spinbox_to_state_parameter(self.LeftETLDelaySpinBox,'etl_l_delay_%')
-        self.connect_spinbox_to_state_parameter(self.RightETLDelaySpinBox,'etl_r_delay_%')
-        self.connect_spinbox_to_state_parameter(self.LeftETLRampRisingSpinBox,'etl_l_ramp_rising_%')
-        self.connect_spinbox_to_state_parameter(self.RightETLRampRisingSpinBox, 'etl_r_ramp_rising_%')
-        self.connect_spinbox_to_state_parameter(self.LeftETLRampFallingSpinBox, 'etl_l_ramp_falling_%')
-        self.connect_spinbox_to_state_parameter(self.RightETLRampFallingSpinBox, 'etl_r_ramp_falling_%')
-
+    def connect_widget_to_state_parameter(self, widget, state_parameter, conversion_factor):
         '''
-        LeftLaserPulseDelaySpinBox
-        RightLaserPulseDelaySpinBox
-        LeftLaserPulseLengthSpinBox
-        RightLaserPulseLengthSpinBox
-        LeftLaserPulseMaxAmplitude
-        RightLaserPulseMaxAmplitude
-
-        GalvoFrequencySpinBox
-        LeftGalvoOffsetSpinbox
-        RightGalvoOffsetSpinbox
-
-        LeftGalvoAmplitudeSpinBox
-        LeftGalvoPhaseSpinBox
-        RightGalvoPhaseSpinBox
-
-        LeftETLDelaySpinBox
-        RightETLDelaySpinBox
-        LeftETLRampRisingSpinbox
-        RightETLRampRisingSpinbox
-        LeftETLRampFallingSpinBox
-        RightETLRampFallingSpinBox
-
-        LeftETLOffsetSpinBox
-        RightETLOffsetSpinBox
-        LeftETLAmplitudeSpinBox
-        RightETLAmplitudeSpinBox
+        Helper method to (currently) connect spinboxes
         '''
+        if isinstance(widget,(QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+            self.connect_spinbox_to_state_parameter(widget, state_parameter, conversion_factor)
 
     def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter):
         '''
@@ -334,28 +362,41 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_execute_script.emit(script)
 
     def block_signals_from_controls(self, bool):
-        self.FilterComboBox.blockSignals(bool)
-        self.ZoomComboBox.blockSignals(bool)
-        self.ShutterComboBox.blockSignals(bool)
-        self.LaserComboBox.blockSignals(bool)
-        self.LaserIntensitySlider.blockSignals(bool)
-        self.CameraExposureTimeSpinbox.blockSignals(bool)
-        self.CameraLineIntervalSpinbox.blockSignals(bool)
+        '''
+        Helper method to allow blocking of signals from all kinds of controls.
+
+        Needs a list in self.widgets_to_block which has to be created during 
+        mesoSPIM_MainWindow.__init__()
+        
+        Args:
+            bool (bool): True if widgets are supposed to be blocked, False if unblocking is desired.
+        '''
+        for widget in self.widgets_to_block:
+            widget.blockSignals(bool)
+
+    def update_widget_from_state(self, widget, state_parameter_string, conversion_factor):
+        if isinstance(widget, QtWidgets.QComboBox):
+            widget.setCurrentText(self.get_state_parameter(state_parameter_string))
+        elif isinstance(widget, (QtWidgets.QSlider,QtWidgets.QDoubleSpinBox,QtWidgets.QSpinBox)):
+            widget.setValue(self.get_state_parameter(state_parameter_string)*conversion_factor)
+
+    @QtCore.pyqtSlot(bool)
+    def set_update_gui_from_state_flag(self, bool):
+        self.update_gui_from_state_flag = bool
+
 
     def update_gui_from_state(self):
-           
-        self.block_signals_from_controls(True)
-        with QtCore.QMutexLocker(self.state_model_mutex):
-            self.FilterComboBox.setCurrentText(self.state_model.state['filter'])
-            self.ZoomComboBox.setCurrentText(self.state_model.state['zoom'])
-            self.ShutterComboBox.setCurrentText(self.state_model.state['shutterconfig'])
-            self.LaserComboBox.setCurrentText(self.state_model.state['laser'])
-            self.LaserIntensitySlider.setValue(self.state_model.state['intensity'])
-            self.CameraExposureTimeSpinbox.setValue(self.state_model.state['camera_exposure_time'])
-            self.CameraLineIntervalSpinbox.setValue(self.state_model.state['camera_line_interval'])
-        self.block_signals_from_controls(False)
+        '''
+        Updates the GUI controls after a state_change
+        if the self.update_gui_from_state_flag is enabled.
+        '''
+        if self.update_gui_from_state_flag:
+            self.block_signals_from_controls(True)
+            with QtCore.QMutexLocker(self.state_model_mutex):
+                for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+                    self.update_widget_from_state(widget, state_parameter, conversion_factor)                
+            self.block_signals_from_controls(False)
         
-
     def live(self):
         print('Going live')
         self.sig_state_request.emit({'state':'live'})
