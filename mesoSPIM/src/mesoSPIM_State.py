@@ -1,8 +1,6 @@
 '''
 mesoSPIM State class
 '''
-import copy
-
 from PyQt5 import QtCore
 
 class mesoSPIM_StateModel(QtCore.QObject):
@@ -17,10 +15,10 @@ class mesoSPIM_StateModel(QtCore.QObject):
     def __init__(self, parent):
         super().__init__()
 
-        self.cfg = copy.deepcopy(parent.cfg)
-        self.state = copy.deepcopy(self.cfg.startup)
+        self.cfg = parent.cfg
+        self.state = self.cfg.startup
 
-    @QtCore.pyqtSignal(dict)
+    @QtCore.pyqtSlot(dict)
     def set_state(self, dict):
         for key, value in dict.items():
             if key in self.state.keys():

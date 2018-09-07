@@ -51,7 +51,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         Initial housekeeping
         '''
 
-        self.cfg = copy.deepcopy(config)
+        self.cfg = config
         self.script_window_counter = 0
         self.enable_external_gui_updates = False
 
