@@ -23,6 +23,7 @@ from .devices.shutters.NI_Shutter import NI_Shutter
 from .devices.cameras.mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 from .mesoSPIM_Serial import mesoSPIM_Serial
+from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
@@ -92,6 +93,13 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread.start()
         self.serial_thread.start()
 
+        ''' Setting waveform generation up '''
+        self.waveformer = mesoSPIM_WaveFormGenerator(self)
+        self.waveformer.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
+        self.waveformer.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
+        self.sig_state_request.connect(self.waveformer.state_request_handler)
+        self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
+
         ''' Setting the shutters up '''
         left_shutter_line = self.cfg.shutterdict['shutter_left']
         right_shutter_line = self.cfg.shutterdict['shutter_right']
@@ -134,11 +142,50 @@ class mesoSPIM_Core(QtCore.QObject):
             The request handling is done with exec() to write fewer lines of
             code.
             '''
-            if key in ('filter','zoom','laser','intensity','shutterconfig','state',
-                        'camera_exposure_time','camera_line_interval'):
+            if key in ('filter',
+                       'zoom',
+                       'laser',
+                       'intensity',
+                       'shutterconfig',
+                       'state',
+                       'camera_exposure_time',
+                       'camera_line_interval'):
                 exec('self.set_'+key+'(value)')
-            if key in ('galvo_r_frequency','galvo_l_offset'):
-                exec('self.set_'+key+'(value)')
+
+            elif key in ('samplerate',
+                       'sweeptime',
+                       'ETL_cfg_file',
+                       'intensity',
+                       'etl_l_delay_%',
+                       'etl_l_ramp_rising_%',
+                       'etl_l_ramp_falling_%',
+                       'etl_l_amplitude',
+                       'etl_l_offset',
+                       'etl_r_delay_%',
+                       'etl_r_ramp_rising_%',
+                       'etl_r_ramp_falling_%',
+                       'etl_r_amplitude',
+                       'etl_r_offset',
+                       'galvo_l_frequency',
+                       'galvo_l_amplitude',
+                       'galvo_l_offset',
+                       'galvo_l_duty_cycle',
+                       'galvo_l_phase',
+                       'galvo_r_frequency',
+                       'galvo_r_amplitude',
+                       'galvo_r_offset',
+                       'galvo_r_duty_cycle',
+                       'galvo_r_phase',
+                       'laser_l_delay_%',
+                       'laser_l_pulse_%',
+                       'laser_l_max_amplitude',
+                       'laser_r_delay_%',
+                       'laser_r_pulse_%',
+                       'laser_r_max_amplitude',
+                       'camera_delay_%',
+                       'camera_pulse_%'):
+                self.sig_state_request.emit({key : value})
+            
 
     def set_state(self, state):
         if state == 'live':
@@ -196,9 +243,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'zoom' : zoom})
 
     def set_laser(self, laser):
-        print('Setting laser')
-        self.sig_state_model_request.emit({'laser':laser})
-        print('Laser set')
+        self.sig_state_request.emit({'laser':laser})
 
     def set_shutterconfig(self, shutterconfig):
         print('Setting shutterconfig')
@@ -206,9 +251,7 @@ class mesoSPIM_Core(QtCore.QObject):
         print('Shutterconfig set')
 
     def set_intensity(self, intensity):
-        print('Setting intensity')
-        self.sig_state_model_request.emit({'intensity':intensity})
-        print('Intensity set')
+        self.sig_state_request.emit({'intensity':intensity})
 
     def set_camera_exposure_time(self, time):
         self.sig_state_request.emit({'camera_exposure_time' : time})
@@ -236,6 +279,38 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def stop_movement(self):
         self.sig_stop_movement.emit()
+
+
+    #  @pyqtSlot(str)
+    # def set_shutter_selection(self, shutterstring):
+
+    #     with QMutexLocker(state_mutex):
+    #         s.shutterconfig = shutterstring
+
+    # def open_shutters(self):
+    #     ''' Here, the possible values are hardcoded which is a DRY violation '''
+    #     with QMutexLocker(state_mutex):
+    #         shutterconfig = s.shutterconfig
+
+    #     if shutterconfig == 'Both':
+    #         self.shutter_left.open()
+    #         self.shutter_right.open()
+    #     elif shutterconfig == 'Left':
+    #         self.shutter_left.open()
+    #         self.shutter_right.close()
+    #     else:
+    #         self.shutter_right.open()
+    #         self.shutter_left.close()
+
+    #     with QMutexLocker(state_mutex):
+    #         s.shutterstate = True
+
+    # def close_shutters(self):
+    #     self.shutter_left.close()
+    #     self.shutter_right.close()
+
+    #     with QMutexLocker(state_mutex):
+    #         s.shutterstate = False
 
     '''
     Execution code for major imaging modes starts here
