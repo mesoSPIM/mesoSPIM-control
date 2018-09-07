@@ -22,9 +22,8 @@ class mesoSPIM_Serial(QtCore.QObject):
     '''This class handles mesoSPIM serial connections'''
     sig_finished = QtCore.pyqtSignal()
 
-    sig_state_updated = QtCore.pyqtSignal()
-
-    sig_position = QtCore.pyqtSignal(dict)
+    sig_state_request = QtCore.pyqtSignal(dict)
+    sig_state_model_request = QtCore.pyqtSignal(dict)
 
     sig_move_relative = QtCore.pyqtSignal(dict)
     sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
@@ -58,10 +57,10 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] == 'PI':
             self.stage = mesoSPIM_PIstage(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+            self.stage.sig_position.connect(lambda dict: self.sig_state_model_request.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+            self.stage.sig_position.connect(lambda dict: self.sig_state_model_request.emit({'position': dict}))
 
         ''' Wiring signals through to child objects '''
         self.parent.sig_move_relative.connect(lambda dict: self.sig_move_relative.emit(dict))
@@ -94,34 +93,16 @@ class mesoSPIM_Serial(QtCore.QObject):
                 else:
                     self.set_zoom(value)
 
-
-    def set_state_parameter(self, key, value):
-        '''
-        Sets the state of the parent (in most cases, mesoSPIM_MainWindow)
-
-        In order to do this, a QMutexLocker has to be acquired
-
-        Args:
-            key (str): State dict key
-            value (str, float, int): Value to set
-        '''
-        with QtCore.QMutexLocker(self.parent.state_mutex):
-            if key in self.parent.state:
-                self.parent.state[key]=value
-            else:
-                print('Set state parameters failed: Key ', key, 'not in state dictionary!')
-        self.sig_state_updated.emit()
-
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:
             self.filterwheel.set_filter(filter, wait_until_done=True)
         else:
             self.filterwheel.set_filter(filter, wait_until_done=False)
-        self.set_state_parameter('filter',filter)
+        self.sig_state_model_request.emit({'filter' : filter})
 
     def set_zoom(self, zoom, wait_until_done=False):
         if wait_until_done:
             self.zoom.set_zoom(zoom, wait_until_done=True)
         else:
             self.zoom.set_zoom(zoom, wait_until_done=False)
-        self.set_state_parameter('zoom',zoom)
+        self.sig_state_model_request.emit({'zoom' : zoom})    

@@ -12,7 +12,7 @@ from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow
 
-# from .mesoSPIM_State import mesoSPIM_State
+from .mesoSPIM_State import mesoSPIM_StateModel
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
@@ -29,6 +29,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_enable_gui = QtCore.pyqtSignal()
 
     sig_state_request = QtCore.pyqtSignal(dict)
+    sig_state_model_request = QtCore.pyqtSignal(dict)
+    sig_state_changed = QtCore.pyqtSignal(dict)
 
     sig_execute_script = QtCore.pyqtSignal(str)
 
@@ -49,13 +51,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         Initial housekeeping
         '''
 
-        self.cfg = config
+        self.cfg = copy.deepcopy(config)
         self.script_window_counter = 0
         self.enable_external_gui_updates = False
 
-        ''' Instantiate the one and only mesoSPIM state and get a mutex for it '''
-        self.state = copy.deepcopy(config.startup)
-        self.state_mutex = QtCore.QMutex()
+        ''' Instantiate the one and only mesoSPIM state '''
+        self.state_model = mesoSPIM_StateModel(self)
+        self.state_model_mutex = QtCore.QMutex()
+        self.sig_state_model_request.connect(self.state_model.set_state)
+        self.state_model.sig_state_model_updated.connect(self.update_gui_from_state)
 
         '''
         Setting up the user interface windows
@@ -85,8 +89,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' The signal switchboard '''
         self.core.sig_finished.connect(lambda: self.sig_finished.emit())
         self.core.sig_finished.connect(self.enable_gui)
-        self.core.sig_state_updated.connect(self.update_gui_from_state)
-        self.core.sig_position.connect(self.update_position_indicators)
+
+        self.core.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
+        self.core.sig_state_model_request.connect(self.update_position_indicators)
+                
         self.core.sig_progress.connect(self.update_progressbars)
 
         ''' Start the thread '''
@@ -115,43 +121,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         except:
             pass
 
-    def get_state_parameter(self, key):
-        with QtCore.QMutexLocker(self.state_mutex):
-            if key in self.state:
-                return self.state[key]
-            else:
-                print('Getting state parameters failed: Key ', key, 'not in state dictionary!')
+    def create_widget_list(self):
+        for widget in self.centralWidget.children():
+            if isinstance(widget, QtWidgets.QLineEdit):
+                print(f"Linedit: {widget.objectName()} - {widget.text()}")
 
-    def set_state_parameter(self, key, value):
-        '''
-        Sets the mesoSPIM state
+            if isinstance(widget, QtWidgets.QCheckBox):
+                print(f"QCheckBox: {widget.objectName()} - {widget.text()}")
 
-        In order to do this, a QMutexLocker has to be acquired
-
-        Args:
-            key (str): State dict key
-            value (str, float, int): Value to set
-        '''
-        with QtCore.QMutexLocker(self.state_mutex):
-            if key in self.state:
-                self.state[key]=value
-            else:
-                print('Set state parameters failed: Key ', key, 'not in state dictionary!')
-
-    def set_state_parameters(self, dict):
-        '''
-        Sets a whole dict of mesoSPIM state parameters:
-
-        Args:
-            dict (dict):
-        '''
-        with QtCore.QMutexLocker(self.parent.state_mutex):
-            for key, value in dict:
-                if key in self.state:
-                    self.state[key]=value
-                    self.sig_state_updated.emit()
-                else:
-                    print('Set state parameters failed: Key ', key, 'not in state dictionary!')
+            if isinstance(widget, QtWidgets.QPushbutton):
+                print(f"QPushbutton: {widget.objectName()} - {widget.text()}")
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
@@ -174,14 +153,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(dict)
     def update_position_indicators(self, dict):
-        self.X_Position_Indicator.setText(self.pos2str(dict['x_pos'])+' µm')
-        self.Y_Position_Indicator.setText(self.pos2str(dict['y_pos'])+' µm')
-        self.Z_Position_Indicator.setText(self.pos2str(dict['z_pos'])+' µm')
-        self.Focus_Position_Indicator.setText(self.pos2str(dict['f_pos'])+' µm')
-        self.Rotation_Position_Indicator.setText(self.pos2str(dict['theta_pos'])+'°')
-
-        ''' Update position state '''
-        self.set_state_parameter('position', dict)
+        for key, pos_dict in dict.items():
+            if key == 'position':
+                self.X_Position_Indicator.setText(self.pos2str(pos_dict['x_pos'])+' µm')
+                self.Y_Position_Indicator.setText(self.pos2str(pos_dict['y_pos'])+' µm')
+                self.Z_Position_Indicator.setText(self.pos2str(pos_dict['z_pos'])+' µm')
+                self.Focus_Position_Indicator.setText(self.pos2str(pos_dict['f_pos'])+' µm')
+                self.Rotation_Position_Indicator.setText(self.pos2str(pos_dict['theta_pos'])+'°')
 
     @QtCore.pyqtSlot(dict)
     def update_progressbars(self,dict):
@@ -349,14 +327,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}))
         spinbox.setValue(self.cfg.startup[state_parameter]*conversion_factor)
 
-
-    def request_state(self, keys, values):
-        pass
-
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
-        self.enable_external_gui_updates = True
-        self.block_signals_from_controls(True)
+        #self.enable_external_gui_updates = True
+        #self.block_signals_from_controls(True)
         self.sig_execute_script.emit(script)
 
     def block_signals_from_controls(self, bool):
@@ -369,21 +343,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.CameraLineIntervalSpinbox.blockSignals(bool)
 
     def update_gui_from_state(self):
-        # sender = self.sender()
-        # print(sender)
-        # print(self.enable_external_gui_updates)
-        if self.enable_external_gui_updates is True:
-            # self.ControlGroupBox.blockSignals(True)
-            with QtCore.QMutexLocker(self.state_mutex):
-                self.FilterComboBox.setCurrentText(self.state['filter'])
-                self.ZoomComboBox.setCurrentText(self.state['zoom'])
-                self.ShutterComboBox.setCurrentText(self.state['shutterconfig'])
-                self.LaserComboBox.setCurrentText(self.state['laser'])
-                self.LaserIntensitySlider.setValue(self.state['intensity'])
-                self.CameraExposureTimeSpinbox.setValue(self.state['camera_exposure_time'])
-                self.CameraLineIntervalSpinbox.setValue(self.state['camera_line_interval'])
-            # self.ControlGroupBox.blockSignals(False)
-            # also for self.tabWidget
+           
+        self.block_signals_from_controls(True)
+        with QtCore.QMutexLocker(self.state_model_mutex):
+            self.FilterComboBox.setCurrentText(self.state_model.state['filter'])
+            self.ZoomComboBox.setCurrentText(self.state_model.state['zoom'])
+            self.ShutterComboBox.setCurrentText(self.state_model.state['shutterconfig'])
+            self.LaserComboBox.setCurrentText(self.state_model.state['laser'])
+            self.LaserIntensitySlider.setValue(self.state_model.state['intensity'])
+            self.CameraExposureTimeSpinbox.setValue(self.state_model.state['camera_exposure_time'])
+            self.CameraLineIntervalSpinbox.setValue(self.state_model.state['camera_line_interval'])
+        self.block_signals_from_controls(False)
+        
 
     def live(self):
         print('Going live')

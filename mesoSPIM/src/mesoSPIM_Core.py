@@ -34,16 +34,13 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_finished = QtCore.pyqtSignal()
 
-    sig_state_updated = QtCore.pyqtSignal()
-
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
+    sig_state_model_request = QtCore.pyqtSignal(dict)
 
     sig_progress = QtCore.pyqtSignal(dict)
 
     ''' Movement-related signals: '''
-    sig_position = QtCore.pyqtSignal(dict)
-
     sig_move_relative = QtCore.pyqtSignal(dict)
     sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
@@ -84,13 +81,13 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread = QtCore.QThread()
         self.camera_worker = mesoSPIM_HamamatsuCamera(self)
         self.camera_worker.moveToThread(self.camera_thread)
+        self.camera_worker.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
 
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
         self.serial_worker.moveToThread(self.serial_thread)
-        self.serial_worker.sig_state_updated.connect(self.sig_state_updated.emit)
-        self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+        self.serial_worker.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -105,11 +102,12 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.shutter_left.close()
         self.shutter_right.close()
+        self.sig_state_model_request.emit({'shutterstate':False})
 
         ''' Setting the laserenabler up '''
         self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
 
-        self.set_state_parameter('state','idle')
+        self.sig_state_model_request.emit({'state':'idle'})
 
         self.stopflag = False
 

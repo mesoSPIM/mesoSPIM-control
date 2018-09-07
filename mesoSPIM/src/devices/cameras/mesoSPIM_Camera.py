@@ -11,7 +11,9 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     sig_camera_status = QtCore.pyqtSignal(str)
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
     sig_finished = QtCore.pyqtSignal()
+
     sig_state_updated = QtCore.pyqtSignal()
+    sig_state_model_request = QtCore.pyqtSignal(dict)
 
     def __init__(self, parent = None):
         super().__init__()
@@ -74,30 +76,6 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             if key in ('camera_exposure_time','camera_line_interval','state'):
                 exec('self.set_'+key+'(value)')
 
-    def set_state_parameter(self, key, value):
-        '''
-        Sets the state of the parent (in most cases, mesoSPIM_MainWindow)
-
-        In order to do this, a QMutexLocker has to be acquired
-
-        Args:
-            key (str): State dict key
-            value (str, float, int): Value to set
-        '''
-        with QtCore.QMutexLocker(self.parent.state_mutex):
-            if key in self.parent.state:
-                self.parent.state[key]=value
-            else:
-                print('Set state parameters failed: Key ', key, 'not in state dictionary!')
-        self.sig_state_updated.emit()
-
-    def get_state_parameter(self, key):
-        with QtCore.QMutexLocker(self.parent.state_mutex):
-            if key in self.parent.state:
-                return self.parent.state[key]
-            else:
-                print('Getting state parameter failed: Key ', key, 'not in state dictionary!')
-
     def set_state(self, requested_state):
         if requested_state == 'live':
             self.live()
@@ -124,7 +102,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         '''
         self.camera_exposure_time = time
         self.hcam.setPropertyValue("exposure_time", time)
-        self.set_state_parameter('camera_exposure_time', time)
+        self.sig_state_model_request.emit({'camera_exposure_time': time})
 
     def set_camera_line_interval(self, time):
         '''
@@ -135,8 +113,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         '''
         self.camera_line_interval = time
         self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
-        self.set_state_parameter('camera_line_interval', time)
-
+        self.sig_state_model_request.emit({'camera_line_interval': time})
+    
     def prepare_image_series(self):
         pass
 
@@ -160,7 +138,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
         i = 0
         while self.stopflag is False:
-            [frames, dims] = self.hcam.getFrames()
+            [frames, _] = self.hcam.getFrames()
 
             for aframe in frames:
                 image = aframe.getData()

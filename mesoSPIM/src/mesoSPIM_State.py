@@ -1,28 +1,37 @@
 '''
 mesoSPIM State class
 '''
+import copy
+
 from PyQt5 import QtCore
 
-class mesoSPIM_State(QtCore.QObject):
+class mesoSPIM_StateModel(QtCore.QObject):
     '''This class contains the microscope state
 
-    Here, we convert from a dictionary to a normal object
+    Any access to this global state should only be done via signals sent by 
+    the responsible class for actually causing that state change in hardware.
 
-    Any access to this global state should be locked via mutexes
-
-    TODO: Turn this into a singleton at some point, for now: Instantiate only once.
     '''
-    def __init__(self, cfg):
+    sig_state_model_updated = QtCore.pyqtSignal()
+
+    def __init__(self, parent):
         super().__init__()
 
-        self.state = cfg.startup
+        self.cfg = copy.deepcopy(parent.cfg)
+        self.state = copy.deepcopy(self.cfg.startup)
 
-    def set_state_parameter(self, key, value):
-        self[key] = value
+    @QtCore.pyqtSignal(dict)
+    def set_state(self, dict):
+        for key, value in dict.items():
+            if key in self.state.keys():
+                self.state[key]=value
+                self.sig_state_model_updated.emit()
+            else:
+                raise NameError('StateModel: Key not found: ')
+
 
     def get_state_parameter(self, key):
-
-        if key in self.state:
-            return self[key]
+        if key in self.state.keys():
+            return self.state[key]
         else:
             print('Key ', key, ' not in state dict')
