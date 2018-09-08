@@ -4,38 +4,6 @@ mesoSPIM State class
 import numpy as np
 from PyQt5 import QtCore
 
-class mesoSPIM_StateModel(QtCore.QObject):
-    '''This class contains the microscope state
-
-    Any access to this global state should only be done via signals sent by 
-    the responsible class for actually causing that state change in hardware.
-
-    '''
-    sig_state_model_updated = QtCore.pyqtSignal()
-
-    def __init__(self, parent):
-        super().__init__()
-
-        self.cfg = parent.cfg
-        self.state = self.cfg.startup
-
-    @QtCore.pyqtSlot(dict)
-    def set_state(self, dict):
-        for key, value in dict.items():
-            if key in self.state.keys():
-                self.state[key]=value
-                if key != 'position':
-                    self.sig_state_model_updated.emit()
-            else:
-                raise NameError('StateModel: Key not found: ')
-
-
-    def get_state_parameter(self, key):
-        if key in self.state.keys():
-            return self.state[key]
-        else:
-            print('Key ', key, ' not in state dict')
-
 class mesoSPIM_StateSingleton():
     '''
     Singleton object containing the whole mesoSPIM state.
@@ -110,10 +78,10 @@ class mesoSPIM_StateSingleton():
                             'galvo_r_phase' : np.pi/2,
                             'laser_l_delay_%' : 10,
                             'laser_l_pulse_%' : 87,
-                            'laser_l_max_amplitude' : 100,
+                            'laser_l_max_amplitude_%' : 100,
                             'laser_r_delay_%' : 10,
                             'laser_r_pulse_%' : 87,
-                            'laser_r_max_amplitude' : 100,
+                            'laser_r_max_amplitude_%' : 100,
                             'camera_delay_%' : 10,
                             'camera_pulse_%' : 1,
                             'camera_exposure_time':0.02,
@@ -129,7 +97,6 @@ class mesoSPIM_StateSingleton():
 
             After the state has been changed, the updated signal is emitted.
             '''
-            print('state: Setting item ')
             with QtCore.QMutexLocker(self.mutex):
                 self._state_dict.__setitem__(key, value)
             self.sig_updated.emit()
@@ -139,7 +106,7 @@ class mesoSPIM_StateSingleton():
             Custom __getitem__ method to allow mutexed access to 
             a state parameter.
 
-            To avoid the state being updated while a parameter is read
+            To avoid the state being updated while a parameter is read.
             '''
 
             with QtCore.QMutexLocker(self.mutex):
@@ -147,14 +114,15 @@ class mesoSPIM_StateSingleton():
 
         def set_parameters(self, dict):
             '''
-            Sometimes, a 
+            Sometimes, several parameters should be set at once 
+            without allowing the state being updated while a parameter is read.
             '''
             with QtCore.QMutexLocker(self.mutex):
                 for key, value in dict.items():
                     self._state_dict.__setitem__(key, value)
             self.sig_updated.emit()
 
-        def get_parameters(self, list):
+        def get_parameter_dict(self, list):
             '''
             For a list of keys, get a state dict with the current values back.
 
@@ -168,4 +136,21 @@ class mesoSPIM_StateSingleton():
                     return_dict[key] = self._state_dict.__getitem__(key)
             
             return return_dict
+
+        def get_parameter_list(self, list):
+            '''
+            For a list of keys, get a state list with the current values back.
+
+            This is especially useful for unpacking.
+
+            All the values are read out under a QMutexLocker so that 
+            the state cannot be updated at the same time.
+            '''
+            return_list = []
+
+            with QtCore.QMutexLocker(self.mutex):
+                for key in list:
+                    return_list.append(self._state_dict.__getitem__(key))
+            
+            return return_list
         

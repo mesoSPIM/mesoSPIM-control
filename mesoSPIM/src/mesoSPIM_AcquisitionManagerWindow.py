@@ -41,6 +41,8 @@ class MyStyle(QtWidgets.QProxyStyle):
 
 class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
+    
+
     model_changed = QtCore.pyqtSignal(AcquisitionModel)
 
     def __init__(self, parent=None):

@@ -12,7 +12,7 @@ from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow
 
-from .mesoSPIM_State import mesoSPIM_StateModel, mesoSPIM_StateSingleton
+from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
@@ -29,9 +29,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_enable_gui = QtCore.pyqtSignal()
 
     sig_state_request = QtCore.pyqtSignal(dict)
-    sig_state_model_request = QtCore.pyqtSignal(dict)
-    sig_state_changed = QtCore.pyqtSignal(dict)
-
+    
     sig_execute_script = QtCore.pyqtSignal(str)
 
     sig_move_relative = QtCore.pyqtSignal(dict)
@@ -58,11 +56,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
         self.state.sig_updated.connect(self.update_gui_from_state)
-
-        self.state_model = mesoSPIM_StateModel(self)
-        self.state_model_mutex = QtCore.QMutex()
-        self.sig_state_model_request.connect(self.state_model.set_state)
-        self.state_model.sig_state_model_updated.connect(self.update_gui_from_state)
 
         '''
         Setting up the user interface windows
@@ -99,9 +92,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' The signal switchboard '''
         self.core.sig_finished.connect(lambda: self.sig_finished.emit())
         self.core.sig_finished.connect(self.enable_gui)
-
-        self.core.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
-        self.core.sig_state_model_request.connect(self.update_position_indicators)
+        self.core.sig_position.connect(self.update_position_indicators)
         self.core.sig_update_gui_from_state.connect(self.set_update_gui_from_state_flag)
                 
         self.core.sig_progress.connect(self.update_progressbars)
@@ -182,15 +173,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage(string)
         else:
             self.statusBar().showMessage(string, time)
-
-    def get_state_parameter(self, parameter_string):
-        '''
-        Helper method to get a parameter out of the state model:
-        '''
-        if parameter_string == 'filter':
-            return self.state['filter']
-        else:
-            return self.state_model.state[parameter_string]
 
     def pos2str(self, position):
         ''' Little helper method for converting positions to strings '''
@@ -382,9 +364,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def update_widget_from_state(self, widget, state_parameter_string, conversion_factor):
         if isinstance(widget, QtWidgets.QComboBox):
-            widget.setCurrentText(self.get_state_parameter(state_parameter_string))
+            widget.setCurrentText(self.state[state_parameter_string])
         elif isinstance(widget, (QtWidgets.QSlider,QtWidgets.QDoubleSpinBox,QtWidgets.QSpinBox)):
-            widget.setValue(self.get_state_parameter(state_parameter_string)*conversion_factor)
+            widget.setValue(self.state[state_parameter_string]*conversion_factor)
 
     @QtCore.pyqtSlot(bool)
     def set_update_gui_from_state_flag(self, bool):
@@ -398,9 +380,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         if self.update_gui_from_state_flag:
             self.block_signals_from_controls(True)
-            with QtCore.QMutexLocker(self.state_model_mutex):
-                for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
-                    self.update_widget_from_state(widget, state_parameter, conversion_factor)                
+            for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+                self.update_widget_from_state(widget, state_parameter, conversion_factor)                
             self.block_signals_from_controls(False)
         
     def live(self):

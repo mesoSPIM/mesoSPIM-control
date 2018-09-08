@@ -19,8 +19,9 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 # from nidaqmx.types import CtrTime
 
 ''' Import mesoSPIM modules '''
+from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.shutters.NI_Shutter import NI_Shutter
-from .devices.cameras.mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
+from .mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
@@ -38,8 +39,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
-    sig_state_model_request = QtCore.pyqtSignal(dict)
-
+    sig_position = QtCore.pyqtSignal(dict)
+    
     sig_progress = QtCore.pyqtSignal(dict)
 
     ''' Movement-related signals: '''
@@ -60,7 +61,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent = parent
         self.cfg = self.parent.cfg
 
-        self.sig_state_model_request.emit({'state':'init'})
+        self.state = mesoSPIM_StateSingleton()
+        self.state['state']='init'
 
         ''' The signal-slot switchboard '''
         self.parent.sig_state_request.connect(self.state_request_handler)
@@ -81,13 +83,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread = QtCore.QThread()
         self.camera_worker = mesoSPIM_HamamatsuCamera(self)
         self.camera_worker.moveToThread(self.camera_thread)
-        self.camera_worker.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
 
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
         self.serial_worker.moveToThread(self.serial_thread)
-        self.serial_worker.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
+        self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -96,7 +97,6 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Setting waveform generation up '''
         self.waveformer = mesoSPIM_WaveFormGenerator(self)
         self.waveformer.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
-        self.waveformer.sig_state_model_request.connect(lambda dict: self.sig_state_model_request.emit(dict))
         self.sig_state_request.connect(self.waveformer.state_request_handler)
         self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
 
@@ -109,12 +109,12 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.shutter_left.close()
         self.shutter_right.close()
-        self.sig_state_model_request.emit({'shutterstate':False})
+        self.state['shutterstate'] = False
 
         ''' Setting the laserenabler up '''
         self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
 
-        self.sig_state_model_request.emit({'state':'idle'})
+        self.state['state']='idle'
 
         self.stopflag = False
 
@@ -190,8 +190,8 @@ class mesoSPIM_Core(QtCore.QObject):
     def set_state(self, state):
         if state == 'live':
             print('Core: Going live')
+            self.state['state']='live'
             self.sig_state_request.emit({'state':'live'})
-            self.sig_state_model_request.emit({'state':'live'})
         elif state == 'idle':
             print('Core: Stopping requested')
             self.sig_state_request.emit({'state':'idle'})
@@ -200,7 +200,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def stop(self):
         self.stopflag = True
         ''' This stopflag is a bit risky, needs to be updated'''
-        self.sig_state_model_request.emit({'state':'idle'})
+        self.state['state']='idle'
         self.sig_finished.emit()
 
     def send_progress(self,
@@ -220,16 +220,6 @@ class mesoSPIM_Core(QtCore.QObject):
         }
         self.sig_progress.emit(dict)
 
-    def set_galvo_r_frequency(self, freq):
-        print('Setting R Galvo freq to ', freq, ' Hz')
-        self.sig_state_model_request.emit({'galvo_r_frequency':freq})
-        print('R Galvo set to ', freq, ' Hz')
-
-    def set_galvo_l_offset(self, offset):
-        print('Setting L Galvo offset to ', offset, ' V')
-        self.sig_state_model_request.emit({'galvo_l_offset':offset})
-        print('L Galvo set to ', offset, ' V')
-
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'filter' : filter})
@@ -246,9 +236,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'laser':laser})
 
     def set_shutterconfig(self, shutterconfig):
-        print('Setting shutterconfig')
-        self.sig_state_model_request.emit({'shutterconfig':shutterconfig})
-        print('Shutterconfig set')
+        self.state['shutterconfig'] = shutterconfig
 
     def set_intensity(self, intensity):
         self.sig_state_request.emit({'intensity':intensity})
@@ -322,16 +310,11 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
         self.sig_update_gui_from_state.emit(True)
-        self.sig_state_model_request.emit({'state':'running_script'})
-
+        self.state['state']='running_script'
         try:
             exec(script)
         except:
             traceback.print_exc()
-        self.sig_state_model_request.emit({'state':'idle'})       
         self.sig_finished.emit()
+        self.state['state']='idle'
         self.sig_update_gui_from_state.emit(False)
-
-    '''
-    Waveform-generation-related code starts here
-    '''

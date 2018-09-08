@@ -10,6 +10,7 @@ import time
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
+    ''' Factory class for creating script windows '''
 
     sig_execute_script = QtCore.pyqtSignal(str)
 

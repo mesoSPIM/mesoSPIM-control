@@ -8,6 +8,8 @@ from PyQt5 import QtCore
 
 from pipython import GCSDevice, pitools
 
+from .mesoSPIM_State import mesoSPIM_StateSingleton
+
 class mesoSPIM_Stage(QtCore.QObject):
     '''
     DemoStage for a mesoSPIM microscope
@@ -32,6 +34,8 @@ class mesoSPIM_Stage(QtCore.QObject):
         super().__init__()
         self.parent = parent
         self.cfg = parent.cfg
+
+        self.state = mesoSPIM_StateSingleton()
 
         ''' The movement signals are emitted by the mesoSPIM_Core, which in turn
         instantiates the mesoSPIM_Serial thread.
@@ -113,23 +117,6 @@ class mesoSPIM_Stage(QtCore.QObject):
         '''
         self.sig_status_message.connect(lambda string, time: print(string))
 
-    def set_state_parameter(self, key, value):
-        '''
-        Sets the state of the parent (in most cases, mesoSPIM_MainWindow)
-
-        In order to do this, a QMutexLocker from the parent has to be acquired
-
-        Args:
-            key (str): State dict key
-            value (str, float, int): Value to set
-        '''
-        with QtCore.QMutexLocker(self.parent.state_mutex):
-            if key in self.parent.state:
-                self.parent.state[key]=value
-                self.sig_state_updated.emit()
-            else:
-                print('Set state parameters failed: Key ', key, 'not in state dictionary!')
-
     def create_position_dict(self):
         self.position_dict = {'x_pos': self.x_pos,
                               'y_pos': self.y_pos,
@@ -156,6 +143,8 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
+
+        self.state['position'] = self.int_position_dict
 
         self.sig_position.emit(self.int_position_dict)
 
@@ -355,6 +344,8 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
+
+        self.state['position'] = self.int_position_dict
 
         self.sig_position.emit(self.int_position_dict)
 

@@ -11,7 +11,7 @@ from nidaqmx.constants import LineGrouping, DigitalWidthUnits
 from nidaqmx.types import CtrTime
 
 '''mesoSPIM imports'''
-from .mesoSPIM_State import mesoSPIM_StateModel
+from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
 
 from PyQt5 import QtCore
@@ -23,17 +23,14 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     the responsible class for actually causing that state change in hardware.
 
     '''
-    sig_state_model_updated = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
-    sig_state_model_request = QtCore.pyqtSignal(dict)
 
     def __init__(self, parent):
         super().__init__()
 
         self.cfg = parent.cfg
 
-        self.s = mesoSPIM_StateModel(parent)
-        # state is now self.state_model.state
+        self.state = mesoSPIM_StateSingleton()
 
         self.create_waveforms()
 
@@ -75,26 +72,23 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'laser_r_max_amplitude',
                        'camera_delay_%',
                        'camera_pulse_%'):
-                self.s.state[key] = value
+                self.state[key] = value
                 self.create_waveforms()
-                self.sig_state_model_request.emit({key:value})
                 print('Waveform change')
             elif key in ('ETL_cfg_file'):
-                self.s.state[key] = value
-                self.update_etl_parameters_from_csv(value, self.s.state['laser'], self.s.state['zoom'])
-                self.sig_state_model_request.emit({key:value})
+                self.state[key] = value
+                self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
                 print('ETL CFG File changed')
             elif key in ('zoom'):
-                self.s.state[key] = value
                 self.update_etl_parameters_from_zoom(value)
                 print('zoom change')
             elif key in ('laser'):
-                self.s.state[key] = value
                 self.update_etl_parameters_from_laser(value)
                 print('laser change')
                        
     def calculate_samples(self):
-        self.samples = int(self.s.state['samplerate']*self.s.state['sweeptime'])
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
+        self.samples = int(samplerate*sweeptime)
     
     def create_waveforms(self):
         self.calculate_samples()
@@ -105,43 +99,68 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.create_laser_waveforms()
 
     def create_etl_waveforms(self):
-        self.etl_l_waveform = tunable_lens_ramp(samplerate = self.s.state['samplerate'],
-                                                sweeptime = self.s.state['sweeptime'],
-                                                delay = self.s.state['etl_l_delay_%'],
-                                                rise = self.s.state['etl_l_ramp_rising_%'],
-                                                fall = self.s.state['etl_l_ramp_falling_%'],
-                                                amplitude = self.s.state['etl_l_amplitude'],
-                                                offset = self.s.state['etl_l_offset'])
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
+        etl_l_delay, etl_l_ramp_rising, etl_l_ramp_falling, etl_l_amplitude, etl_l_offset =\
+        self.state.get_parameter_list(['etl_l_delay_%','etl_l_ramp_rising_%','etl_l_ramp_falling_%',
+        'etl_l_amplitude','etl_l_offset'])
+        etl_r_delay, etl_r_ramp_rising, etl_r_ramp_falling, etl_r_amplitude, etl_r_offset =\
+        self.state.get_parameter_list(['etl_r_delay_%','etl_r_ramp_rising_%','etl_r_ramp_falling_%',
+        'etl_r_amplitude','etl_r_offset'])
 
-        self.etl_r_waveform = tunable_lens_ramp(samplerate = self.s.state['samplerate'],
-                                                sweeptime = self.s.state['sweeptime'],
-                                                delay = self.s.state['etl_r_delay_%'],
-                                                rise = self.s.state['etl_r_ramp_rising_%'],
-                                                fall = self.s.state['etl_r_ramp_falling_%'],
-                                                amplitude = self.s.state['etl_r_amplitude'],
-                                                offset = self.s.state['etl_r_offset'])
+
+        self.etl_l_waveform = tunable_lens_ramp(samplerate = samplerate,
+                                                sweeptime = sweeptime,
+                                                delay = etl_l_delay,
+                                                rise = etl_l_ramp_rising,
+                                                fall = etl_l_ramp_falling,
+                                                amplitude = etl_l_amplitude,
+                                                offset = etl_l_offset)
+
+        self.etl_r_waveform = tunable_lens_ramp(samplerate = samplerate,
+                                                sweeptime = sweeptime,
+                                                delay = etl_r_delay,
+                                                rise = etl_r_ramp_rising,
+                                                fall = etl_r_ramp_falling,
+                                                amplitude = etl_r_amplitude,
+                                                offset = etl_r_offset)
 
     def create_galvo_waveforms(self):
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
+
+        galvo_l_frequency, galvo_l_amplitude, galvo_l_offset, galvo_l_duty_cycle, galvo_l_phase =\
+        self.state.get_parameter_list(['galvo_l_frequency', 'galvo_l_amplitude', 'galvo_l_offset', 
+        'galvo_l_duty_cycle', 'galvo_l_phase'])
+
+        galvo_r_frequency, galvo_r_amplitude, galvo_r_offset, galvo_r_duty_cycle, galvo_r_phase =\
+        self.state.get_parameter_list(['galvo_r_frequency', 'galvo_r_amplitude', 'galvo_r_offset', 
+        'galvo_r_duty_cycle', 'galvo_r_phase'])
+
         '''Create Galvo waveforms:'''
-        self.galvo_l_waveform = sawtooth(samplerate = self.s.state['samplerate'],
-                                         sweeptime = self.s.state['sweeptime'],
-                                         frequency = self.s.state['galvo_l_frequency'],
-                                         amplitude = self.s.state['galvo_l_amplitude'],
-                                         offset = self.s.state['galvo_l_offset'],
-                                         dutycycle = self.s.state['galvo_l_duty_cycle'],
-                                         phase = self.s.state['galvo_l_phase'])
+        self.galvo_l_waveform = sawtooth(samplerate = samplerate,
+                                         sweeptime = sweeptime,
+                                         frequency = galvo_l_frequency,
+                                         amplitude = galvo_l_amplitude,
+                                         offset = galvo_l_offset,
+                                         dutycycle = galvo_l_duty_cycle,
+                                         phase = galvo_l_phase)
 
         ''' Attention: Right Galvo gets the left frequency for now '''
 
-        self.galvo_r_waveform = sawtooth(samplerate = self.s.state['samplerate'],
-                                         sweeptime = self.s.state['sweeptime'],
-                                         frequency = self.s.state['galvo_l_frequency'],
-                                         amplitude = self.s.state['galvo_r_amplitude'],
-                                         offset = self.s.state['galvo_r_offset'],
-                                         dutycycle = self.s.state['galvo_r_duty_cycle'],
-                                         phase = self.s.state['galvo_r_phase'])
+        self.galvo_r_waveform = sawtooth(samplerate = samplerate,
+                                         sweeptime = sweeptime,
+                                         frequency = galvo_l_frequency,
+                                         amplitude = galvo_r_amplitude,
+                                         offset = galvo_r_offset,
+                                         dutycycle = galvo_r_duty_cycle,
+                                         phase = galvo_r_phase)
 
     def create_laser_waveforms(self):
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
+
+        laser_l_delay, laser_l_pulse, max_laser_voltage, intensity = \
+        self.state.get_parameter_list(['laser_l_delay_%','laser_l_pulse_%',
+        'max_laser_voltage','intensity'])
+
         '''Create zero waveforms for the lasers'''
         self.zero_waveform = np.zeros((self.samples))
 
@@ -149,17 +168,18 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''This could be improved: create a list with as many zero arrays as analog out lines for ETL and Lasers'''
         self.laser_waveform_list = [self.zero_waveform for i in self.cfg.laser_designation]
 
-        laser_voltage = self.s.state['max_laser_voltage'] * self.s.state['intensity'] / 100
+        ''' Conversion from % to V of the intensity:'''
+        laser_voltage = max_laser_voltage * intensity / 100
     
-        self.laser_template_waveform = single_pulse(samplerate = self.s.state['samplerate'],
-                                                    sweeptime = self.s.state['sweeptime'],
-                                                    delay=self.s.state['laser_l_delay_%'],
-                                                    pulsewidth=self.s.state['laser_l_pulse_%'],
-                                                    amplitude=laser_voltage,
-                                                    offset=0)
+        self.laser_template_waveform = single_pulse(samplerate = samplerate,
+                                                    sweeptime = sweeptime,
+                                                    delay = laser_l_delay,
+                                                    pulsewidth = laser_l_pulse,
+                                                    amplitude = laser_voltage,
+                                                    offset = 0)
 
         '''The key: replace the waveform in the waveform list with this new template'''
-        current_laser_index = self.cfg.laser_designation[self.s.state['laser']]
+        current_laser_index = self.cfg.laser_designation[self.state['laser']]
         self.laser_waveform_list[current_laser_index] = self.laser_template_waveform
         self.laser_waveforms = np.stack(self.laser_waveform_list)
 
@@ -178,14 +198,14 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     def update_etl_parameters_from_zoom(self, zoom):
         ''' Little helper method: Because the mesoSPIM core is not handling
         the serial Zoom connection. '''
-        laser = self.s.state['laser']
-        etl_cfg_file = self.s.state['ETL_cfg_file']       
+        laser = self.state['laser']
+        etl_cfg_file = self.state['ETL_cfg_file']       
         self.update_etl_parameters_from_csv(etl_cfg_file, laser, zoom)
 
     def update_etl_parameters_from_laser(self, laser):
         ''' Little helper method: Because laser changes need an ETL parameter update '''
-        zoom = self.s.state['zoom']
-        etl_cfg_file = self.s.state['ETL_cfg_file']       
+        zoom = self.state['zoom']
+        etl_cfg_file = self.state['ETL_cfg_file']       
         self.update_etl_parameters_from_csv(etl_cfg_file, laser, zoom)
 
     def update_etl_parameters_from_csv(self, cfg_path, laser, zoom):
@@ -225,17 +245,14 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                     etl_r_offset = float(row['ETL-Right-Offset'])
                     etl_r_amplitude = float(row['ETL-Right-Amp'])
 
-                    self.s.state['etl_l_offset'] = etl_l_offset
-                    self.s.state['etl_l_amplitude'] = etl_l_amplitude
-                    self.s.state['etl_r_offset'] = etl_r_offset
-                    self.s.state['etl_r_amplitude'] = etl_r_amplitude
-                        
+                    parameter_dict = {'etl_l_offset': etl_l_offset,
+                                      'etl_l_amplitude' : etl_l_amplitude,
+                                      'etl_r_offset' : etl_r_offset,
+                                      'etl_r_amplitude' : etl_r_amplitude}
+
                     '''  Now the GUI needs to be updated '''
                     self.sig_update_gui_from_state.emit(True)
-                    self.sig_state_model_request.emit({'etl_l_offset':etl_l_offset})
-                    self.sig_state_model_request.emit({'etl_l_amplitude':etl_l_amplitude})
-                    self.sig_state_model_request.emit({'etl_r_offset':etl_r_offset})
-                    self.sig_state_model_request.emit({'etl_r_amplitude':etl_r_amplitude})
+                    self.state.set_parameters(parameter_dict)
                     self.sig_update_gui_from_state.emit(False)
 
         '''Update waveforms with the new parameters'''
@@ -258,14 +275,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         Creates a temporary cfg file with the ending _tmp
 
         '''
-        etl_cfg_file = self.s.state['ETL_cfg_file']  
-        laser = self.s.state['laser']
-        zoom = self.s.state['zoom']
-        etl_l_offset = self.s.state['etl_l_offset'] 
-        etl_l_amplitude = self.s.state['etl_l_amplitude']
-        etl_r_offset = self.s.state['etl_r_offset']
-        etl_r_amplitude = self.s.state['etl_r_amplitude']
-       
+
+        etl_cfg_file, laser, zoom, etl_l_offset, etl_l_amplitude, etl_r_offset, etl_r_amplitude = \
+        self.state.get_parameter_list(['ETL_cfg_file', 'laser', 'zoom', 
+        'etl_l_offset', 'etl_l_amplitude', 'etl_r_offset','etl_r_amplitude'])
+               
         '''Temporary filepath'''
         tmp_etl_cfg_file = etl_cfg_file+'_tmp'
 
@@ -318,13 +332,12 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         - the ETL & Laser task (analog out) that controls all the laser intensities (Laser should only
           be on when the camera is acquiring) and the left/right ETL waveforms
         '''
-        self.calculate_samples()
         ah = self.cfg.acquisition_hardware
-        samplerate = self.s.state['samplerate']
+
+        self.calculate_samples()
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
         samples = self.samples
-        sweeptime = self.s.state['sweeptime']
-        camera_pulse_percent = self.s.state['camera_pulse_%']
-        camera_delay_percent = self.s.state['camera_delay_%']
+        camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%','camera_delay_%'])
 
         self.master_trigger_task = nidaqmx.Task()
         self.camera_trigger_task = nidaqmx.Task()

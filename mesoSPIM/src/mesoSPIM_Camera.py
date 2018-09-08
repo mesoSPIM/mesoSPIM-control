@@ -5,7 +5,9 @@ import numpy as np
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-from .hamamatsu import hamamatsu_camera as cam
+from .devices.cameras.hamamatsu import hamamatsu_camera as cam
+
+from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     sig_camera_status = QtCore.pyqtSignal(str)
@@ -13,13 +15,14 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     sig_finished = QtCore.pyqtSignal()
 
     sig_state_updated = QtCore.pyqtSignal()
-    sig_state_model_request = QtCore.pyqtSignal(dict)
 
     def __init__(self, parent = None):
         super().__init__()
 
         self.parent = parent
         self.cfg = parent.cfg
+
+        self.state = mesoSPIM_StateSingleton()
 
         self.stopflag = False
 
@@ -102,7 +105,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         '''
         self.camera_exposure_time = time
         self.hcam.setPropertyValue("exposure_time", time)
-        self.sig_state_model_request.emit({'camera_exposure_time': time})
+        self.state['camera_exposure_time'] = time
 
     def set_camera_line_interval(self, time):
         '''
@@ -113,7 +116,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         '''
         self.camera_line_interval = time
         self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
-        self.sig_state_model_request.emit({'camera_line_interval': time})
+        self.state['camera_line_interval'] = time
     
     def prepare_image_series(self):
         pass
