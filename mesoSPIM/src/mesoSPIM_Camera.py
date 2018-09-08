@@ -80,7 +80,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                 exec('self.set_'+key+'(value)')
 
     def set_state(self, requested_state):
-        if requested_state == 'live':
+        if requested_state == ('live' or 'run_selected_acquisition' or 'run_acquisition_list'):
             self.live()
         elif requested_state == 'idle':
             self.stop()

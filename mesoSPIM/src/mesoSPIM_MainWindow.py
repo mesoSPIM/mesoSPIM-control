@@ -384,12 +384,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.enable_stop_button(True)
 
     def run_selected_acquisition(self):
+        row = self.acquisition_manager_window.get_first_selected_row()
+        print('selected row:', row)
+        self.state['selected_row'] = row
         self.sig_state_request.emit({'state':'run_selected_acquisition'})
         self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)
         self.enable_gui(False)
 
     def run_acquisition_list(self):
+        self.state['selected_row'] = -1
         self.sig_state_request.emit({'state':'run_acquisition_list'})
         self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)

@@ -83,6 +83,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.update_etl_parameters_from_zoom(value)
                 print('zoom change')
             elif key in ('laser'):
+                self.state[key] = value
+                self.create_waveforms()
                 self.update_etl_parameters_from_laser(value)
                 print('laser change')
                        
@@ -365,7 +367,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'])
-        self.galvo_etl_task.timing.cfg_samp_clk_timing(s.samplerate,
+        self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                    sample_mode=AcquisitionType.FINITE,
                                                    samps_per_chan=samples)
         self.galvo_etl_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
@@ -373,8 +375,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''Housekeeping: Setting up the AO task for the ETL and lasers and setting the trigger input'''
         self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'])
         self.laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
-                                                       sample_mode=AcquisitionType.FINITE,
-                                                       samps_per_chan=samples)
+                                                    sample_mode=AcquisitionType.FINITE,
+                                                    samps_per_chan=samples)
         self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])    
     
     def write_waveforms_to_tasks(self):

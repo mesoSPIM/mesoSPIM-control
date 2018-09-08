@@ -26,6 +26,8 @@ from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
 
+from .utils.acquisitions import AcquisitionList
+
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
 
@@ -193,12 +195,14 @@ class mesoSPIM_Core(QtCore.QObject):
             self.live()
         
         elif state == 'run_selected_acquisition':
-            self.state['run_selected_acquisition']
+            self.state['state']= 'run_selected_acquisition'
             self.sig_state_request.emit({'state':'run_selected_acquisition'})
+            self.start(row = self.state['selected_row'])
 
         elif state == 'run_acquisition_list':
-            self.state['run_acquisition_list']
+            self.state['state'] = 'run_acquisition_list'
             self.sig_state_request.emit({'state':'run_acquisition_list'})
+            self.start(row = None)
 
         elif state == 'idle':
             print('Core: Stopping requested')
@@ -209,6 +213,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.stopflag = True
         ''' This stopflag is a bit risky, needs to be updated'''
         self.state['state']='idle'
+        self.sig_update_gui_from_state.emit(False)
         self.sig_finished.emit()
 
     def send_progress(self,
@@ -242,6 +247,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def set_laser(self, laser):
         self.sig_state_request.emit({'laser':laser})
+        self.laserenabler.enable(laser)
 
     def set_intensity(self, intensity):
         self.sig_state_request.emit({'intensity':intensity})
@@ -300,16 +306,158 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['shutterstate'] = False
 
     '''
-    Execution code for major imaging modes starts here
+    Sub-Imaging modes
     '''
-    
-    def live(self):
-        for i in range(25):
-            time.sleep(0.1)
-            QtWidgets.QApplication.processEvents()
+    def snap(self):
+        self.open_shutters()
+        self.snap_image()
+        self.close_shutters()
         self.sig_finished.emit()
 
+    def snap_image(self):
+        '''Snaps a single image after updating the waveforms.
+
+        Can be used in acquisitions where changing waveforms are required,
+        but there is additional overhead due to the need to write the
+        waveforms into the buffers of the NI cards.
+        '''
+
+        self.waveformer.create_tasks()
+        self.waveformer.write_waveforms_to_tasks()
+        self.waveformer.start_tasks()
+        self.waveformer.run_tasks()
+        self.waveformer.stop_tasks()
+        self.waveformer.close_tasks()
+
+    def prepare_image_series(self):
+        '''Prepares an image series without waveform update'''
+        self.waveformer.create_tasks()
+        self.waveformer.write_waveforms_to_tasks()
+
+    def snap_image_in_series(self):
+        '''Snaps and image from a series without waveform update'''
+        self.waveformer.start_tasks()
+        self.waveformer.run_tasks()
+        self.waveformer.stop_tasks()
+
+    def close_image_series(self):
+        '''Cleans up after series without waveform update'''
+        self.waveformer.close_tasks()
+
+    '''
+    Execution code for major imaging modes starts here
+    '''
+        
+    def live(self):
+        self.stopflag = False
+
+        self.open_shutters()
+        while self.stopflag is False:
+            ''' Needs update to use snap image in series '''
+            self.snap_image()
+
+            QtWidgets.QApplication.processEvents()
+
+            ''' How to handle a possible shutter switch?'''
+            self.open_shutters()
+
+        self.close_shutters()
+
+        self.sig_finished.emit()
+
+    def start(self, row=None):
+        self.stopflag = False
+
+        if row==None:
+            acq_list = self.state['acq_list']
+        else:
+            acquisition = self.state['acq_list'][row]
+            acq_list = AcquisitionList([acquisition])
+
+        if acq_list.has_rotation() == True:
+             print('Attention: Has rotation!')
+        
+        self.sig_update_gui_from_state.emit(True)
+        self.prepare_acquisition_list(acq_list)
+        self.run_acquisition_list(acq_list)
+        self.close_acquisition_list(acq_list)
+        self.sig_update_gui_from_state.emit(False)
+
+    def prepare_acquisition_list(self, acq_list):
+        '''
+        Housekeeping: Prepare the acquisition list
+        '''
+        self.image_count = 0
+        self.acquisition_count = 0
+        self.total_acquisition_count = len(acq_list)
+        self.total_image_count = acq_list.get_image_count()
+
+    def run_acquisition_list(self, acq_list):
+        for acq in acq_list:
+            name = acq['filename']
+            _time = int(acq.get_acquisition_time())
+            filter = acq['filter']
+            total_steps = acq.get_image_count()
+
+            displaystring = "Running acquisition with name: " + name + " for " + str(_time) + " seconds and filter:" + filter
+
+            # self.statusMessage.emit(displaystring)
+
+            self.prepare_acquisition(acq)
+            self.run_acquisition(acq)
+            self.close_acquisition(acq)
+
+    def close_acquisition_list(self, acq_list):
+        if not self.stopflag:
+            self.move_absolute(acq_list.get_startpoint())
+        self.sig_finished.emit()
+        
     
+    def prepare_acquisition(self, acq):
+        '''
+        Housekeeping: Preparre the acquisition
+        '''
+        print('Running Acquisition #', self.acquisition_count,
+                ' with Filename: ', acq['filename'])
+        #self.move_absolute(acq.get_startpoint())
+        self.move_absolute(acq.get_startpoint(), wait_until_done=True)
+        self.set_filter(acq['filter'])
+        # self.set_filter(acq['filter'], wait_until_done=True)
+        self.set_zoom(acq['zoom'])
+        self.set_intensity(acq['intensity'])
+        self.set_laser(acq['laser'])
+
+        # self.prepare_image_series()
+        time.sleep(1)
+
+    def run_acquisition(self, acq):
+        steps = acq.get_image_count()
+
+        self.open_shutters()
+        for i in range(steps):
+            if self.stopflag is True:
+                break
+            self.image_count += 1
+            # self.snap_image_in_series()
+            self.snap_image()
+            self.move_relative(acq.get_delta_z_dict())
+            # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
+            
+            QtWidgets.QApplication.processEvents()
+
+            self.send_progress(self.acquisition_count,
+                               self.total_acquisition_count,
+                               i,
+                               steps,
+                               self.total_image_count,
+                               self.image_count)
+        self.close_shutters()
+        
+
+    def close_acquisition(self, acq):
+        # self.close_image_series()
+        self.acquisition_count += 1
+  
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
         self.sig_update_gui_from_state.emit(True)

@@ -99,7 +99,8 @@ class Acquisition(indexed.IndexedOrderedDict):
 
         TODO: What if sweeptime changes?
         '''
-        return cfg.sweeptime * self.get_image_count()
+        sweeptime = 0.2
+        return sweeptime * self.get_image_count()
 
     def get_delta_z_dict(self):
         ''' Returns relative movement dict for z-steps '''

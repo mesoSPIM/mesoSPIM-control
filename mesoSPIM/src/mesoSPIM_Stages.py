@@ -186,7 +186,9 @@ class mesoSPIM_Stage(QtCore.QObject):
                 self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            time.sleep(1)
+            self.blockSignals(True)
+            time.sleep(0.02)
+            self.blockSignals(False)
 
     def move_absolute(self, dict, wait_until_done=False):
         ''' Move absolute method '''
@@ -232,7 +234,9 @@ class mesoSPIM_Stage(QtCore.QObject):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
 
         if wait_until_done == True:
+            self.blockSignals(True)
             time.sleep(1)
+            self.blockSignals(False)
 
     def stop(self):
         self.sig_status_message.emit('Stopped')
@@ -394,7 +398,9 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
                 self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
 
         if wait_until_done == True:
+            self.blockSignals(True)
             pitools.waitontarget(self.pidevice)
+            self.blockSignals(False)
 
     def move_absolute(self, dict, wait_until_done=False):
         '''
@@ -456,7 +462,9 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
 
         if wait_until_done == True:
+            self.blockSignals(True)
             pitools.waitontarget(self.pidevice)
+            self.blockSignals(False)
 
     def stop(self):
         self.pidevice.STP(noraise=True)

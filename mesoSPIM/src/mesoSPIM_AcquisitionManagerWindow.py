@@ -236,7 +236,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.table.openPersistentEditor(self.model.index(row, column))
 
     def set_state(self):
-        print('Acq Manager: State Updated')
+        # print('Acq Manager: State Updated')
         self.state['acq_list'] = self.model.get_acquisition_list()
         
     def enable_gui(self):
@@ -255,12 +255,14 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         path , _ = QtWidgets.QFileDialog.getSaveFileName(None,'Save Table')
         if path:
             self.model.saveModel(path)
+        self.set_state()
 
     def load_table(self):
         path , _ = QtWidgets.QFileDialog.getOpenFileName(None,'Load Table')
         if path:
             self.model.loadModel(path)
             self.update_persistent_editors()
+        self.set_state()
 
     def run_tiling_wizard(self):
         wizard = TilingWizard(self)
