@@ -63,7 +63,7 @@ class mesoSPIM_StateSingleton():
         return setattr(self.instance, name)
 
     class __StateObject(QtCore.QObject):
-        updated = QtCore.pyqtSignal()
+        sig_updated = QtCore.pyqtSignal()
         mutex = QtCore.QMutex()
 
         def __init__(self):
@@ -129,10 +129,10 @@ class mesoSPIM_StateSingleton():
 
             After the state has been changed, the updated signal is emitted.
             '''
-
+            print('state: Setting item ')
             with QtCore.QMutexLocker(self.mutex):
                 self._state_dict.__setitem__(key, value)
-                self.updated.emit()
+            self.sig_updated.emit()
 
         def __getitem__(self, key):
             '''
@@ -152,7 +152,7 @@ class mesoSPIM_StateSingleton():
             with QtCore.QMutexLocker(self.mutex):
                 for key, value in dict.items():
                     self._state_dict.__setitem__(key, value)
-                self.updated.emit()
+            self.sig_updated.emit()
 
         def get_parameters(self, list):
             '''

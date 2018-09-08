@@ -12,7 +12,7 @@ from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow
 
-from .mesoSPIM_State import mesoSPIM_StateModel
+from .mesoSPIM_State import mesoSPIM_StateModel, mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
@@ -56,6 +56,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.update_gui_from_state_flag = False
 
         ''' Instantiate the one and only mesoSPIM state '''
+        self.state = mesoSPIM_StateSingleton()
+        self.state.sig_updated.connect(self.update_gui_from_state)
+
         self.state_model = mesoSPIM_StateModel(self)
         self.state_model_mutex = QtCore.QMutex()
         self.sig_state_model_request.connect(self.state_model.set_state)
@@ -184,7 +187,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         Helper method to get a parameter out of the state model:
         '''
-        return self.state_model.state[parameter_string]
+        if parameter_string == 'filter':
+            return self.state['filter']
+        else:
+            return self.state_model.state[parameter_string]
 
     def pos2str(self, position):
         ''' Little helper method for converting positions to strings '''

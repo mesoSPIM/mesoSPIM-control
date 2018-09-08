@@ -13,6 +13,8 @@ import time
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 ''' Import mesoSPIM modules '''
+from .mesoSPIM_State import mesoSPIM_StateSingleton
+
 from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 from .devices.zoom.mesoSPIM_Zoom import Dynamixel_Zoom
 from .devices.stages.mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_DemoStage
@@ -41,6 +43,8 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
         self.cfg = parent.cfg
+
+        self.state = mesoSPIM_StateSingleton()
 
         ''' Handling of state changing requests '''
         self.parent.sig_state_request.connect(lambda dict: self.state_request_handler(dict, wait_until_done=False))
@@ -98,7 +102,10 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.filterwheel.set_filter(filter, wait_until_done=True)
         else:
             self.filterwheel.set_filter(filter, wait_until_done=False)
-        self.sig_state_model_request.emit({'filter' : filter})
+        # self.sig_state_model_request.emit({'filter' : filter})
+        print('Serial Thread: setting filter state')
+        self.state['filter'] = filter
+        print('Serial Thread: done setting filter state')
 
     def set_zoom(self, zoom, wait_until_done=False):
         if wait_until_done:
