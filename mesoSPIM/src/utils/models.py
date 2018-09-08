@@ -2,6 +2,8 @@ from PyQt5 import QtWidgets, QtGui, QtCore, QtDesigner
 
 from .acquisitions import Acquisition, AcquisitionList
 
+from ..mesoSPIM_State import mesoSPIM_StateSingleton
+
 import copy
 import pickle
 
@@ -25,13 +27,11 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         ''' Get the headers as the capitalized keys from the first acquisition '''
         self._headers = self._table.get_keylist()
 
+        self.state = mesoSPIM_StateSingleton()
+
         ''' Position dict '''
-        self.position = {'x_pos': 0,
-                        'y_pos': 0,
-                        'z_pos': 0,
-                        'theta_pos': 0,
-                        'f_pos': 0,
-                        }
+        self.position = self.state['position']
+        
 
     def rowCount(self, parent = QtCore.QModelIndex()):
         ''' Tells the view how many items this model contains '''

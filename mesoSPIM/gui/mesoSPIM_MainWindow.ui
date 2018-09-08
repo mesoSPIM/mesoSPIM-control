@@ -1188,28 +1188,6 @@ MOVEMENT </string>
        <string>New Scripting Editor</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="WidgetListPushButton">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>70</y>
-        <width>251</width>
-        <height>41</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <weight>50</weight>
-        <bold>false</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>WidgetListButton</string>
-      </property>
-     </widget>
     </widget>
     <widget class="QWidget" name="LogTabWidget">
      <attribute name="title">
@@ -1607,22 +1585,6 @@ MOVEMENT </string>
        </property>
        <property name="value">
         <double>80.000000000000000</double>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="checkBox_3">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>210</y>
-         <width>351</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Laser interleaving</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_51">
@@ -2506,6 +2468,9 @@ MOVEMENT </string>
     </property>
    </widget>
    <widget class="QPushButton" name="SnapButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>160</x>
@@ -2527,6 +2492,9 @@ MOVEMENT </string>
     </property>
    </widget>
    <widget class="QPushButton" name="StopButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>710</x>
@@ -2586,7 +2554,7 @@ MOVEMENT </string>
      <string>Live</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="AcquisitionButton_2">
+   <widget class="QPushButton" name="RunAcquisitionListButton">
     <property name="enabled">
      <bool>true</bool>
     </property>
@@ -2611,7 +2579,7 @@ MOVEMENT </string>
  Acquisition List</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="AcquisitionButton">
+   <widget class="QPushButton" name="RunSelectedAcquisitionButton">
     <property name="enabled">
      <bool>true</bool>
     </property>

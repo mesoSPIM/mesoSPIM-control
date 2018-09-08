@@ -4,6 +4,8 @@ mesoSPIM State class
 import numpy as np
 from PyQt5 import QtCore
 
+from .utils.acquisitions import AcquisitionList
+
 class mesoSPIM_StateSingleton():
     '''
     Singleton object containing the whole mesoSPIM state.
@@ -38,6 +40,7 @@ class mesoSPIM_StateSingleton():
             super().__init__()
             self._state_dict = {
                             'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
+                            'acq_list' : AcquisitionList(),
                             'samplerate' : 100000,
                             'sweeptime' : 0.2,
                             'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},

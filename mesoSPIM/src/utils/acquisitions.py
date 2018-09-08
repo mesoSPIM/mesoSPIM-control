@@ -96,27 +96,10 @@ class Acquisition(indexed.IndexedOrderedDict):
 
         Returns:
             float: Acquisition time in seconds
+
+        TODO: What if sweeptime changes?
         '''
         return cfg.sweeptime * self.get_image_count()
-
-    def get_zoom(self):
-        '''
-        Returns:
-            str: Zoom
-        '''
-        return self['zoom']
-
-    def get_filter(self):
-        return self['filter']
-
-    def get_laser(self):
-        return self['laser']
-
-    def get_intensity(self):
-        return self['intensity']
-
-    def get_filename(self):
-        return self['filename']
 
     def get_delta_z_dict(self):
         ''' Returns relative movement dict for z-steps '''

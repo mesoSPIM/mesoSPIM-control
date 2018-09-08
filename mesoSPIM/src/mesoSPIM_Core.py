@@ -186,12 +186,20 @@ class mesoSPIM_Core(QtCore.QObject):
                        'camera_pulse_%'):
                 self.sig_state_request.emit({key : value})
             
-
     def set_state(self, state):
         if state == 'live':
-            print('Core: Going live')
             self.state['state']='live'
             self.sig_state_request.emit({'state':'live'})
+            self.live()
+        
+        elif state == 'run_selected_acquisition':
+            self.state['run_selected_acquisition']
+            self.sig_state_request.emit({'state':'run_selected_acquisition'})
+
+        elif state == 'run_acquisition_list':
+            self.state['run_acquisition_list']
+            self.sig_state_request.emit({'state':'run_acquisition_list'})
+
         elif state == 'idle':
             print('Core: Stopping requested')
             self.sig_state_request.emit({'state':'idle'})
@@ -235,9 +243,6 @@ class mesoSPIM_Core(QtCore.QObject):
     def set_laser(self, laser):
         self.sig_state_request.emit({'laser':laser})
 
-    def set_shutterconfig(self, shutterconfig):
-        self.state['shutterconfig'] = shutterconfig
-
     def set_intensity(self, intensity):
         self.sig_state_request.emit({'intensity':intensity})
 
@@ -268,45 +273,43 @@ class mesoSPIM_Core(QtCore.QObject):
     def stop_movement(self):
         self.sig_stop_movement.emit()
 
+    def set_shutterconfig(self, shutterconfig):
+        self.state['shutterconfig'] = shutterconfig
 
-    #  @pyqtSlot(str)
-    # def set_shutter_selection(self, shutterstring):
+    def open_shutters(self):
+        shutterconfig = self.state['shutterconfig']
 
-    #     with QMutexLocker(state_mutex):
-    #         s.shutterconfig = shutterstring
+        if shutterconfig == 'Both':
+            self.shutter_left.open()
+            self.shutter_right.open()
+        elif shutterconfig == 'Left':
+            self.shutter_left.open()
+            self.shutter_right.close()
+        elif shutterconfig == 'Right':
+            self.shutter_right.open()
+            self.shutter_left.close()
+        else:
+            self.shutter_right.open()
+            self.shutter_left.open()
 
-    # def open_shutters(self):
-    #     ''' Here, the possible values are hardcoded which is a DRY violation '''
-    #     with QMutexLocker(state_mutex):
-    #         shutterconfig = s.shutterconfig
-
-    #     if shutterconfig == 'Both':
-    #         self.shutter_left.open()
-    #         self.shutter_right.open()
-    #     elif shutterconfig == 'Left':
-    #         self.shutter_left.open()
-    #         self.shutter_right.close()
-    #     else:
-    #         self.shutter_right.open()
-    #         self.shutter_left.close()
-
-    #     with QMutexLocker(state_mutex):
-    #         s.shutterstate = True
-
-    # def close_shutters(self):
-    #     self.shutter_left.close()
-    #     self.shutter_right.close()
-
-    #     with QMutexLocker(state_mutex):
-    #         s.shutterstate = False
+        self.state['shutterstate'] = True
+   
+    def close_shutters(self):
+        self.shutter_left.close()
+        self.shutter_right.close()
+        self.state['shutterstate'] = False
 
     '''
     Execution code for major imaging modes starts here
     '''
-
+    
     def live(self):
-        pass
+        for i in range(25):
+            time.sleep(0.1)
+            QtWidgets.QApplication.processEvents()
+        self.sig_finished.emit()
 
+    
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
         self.sig_update_gui_from_state.emit(True)

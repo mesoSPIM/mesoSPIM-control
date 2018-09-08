@@ -175,11 +175,12 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
 
     def set_model_data_from_button(self, editor, model, index):
         pos = 0 # replace by model.position['x_pos'] after inheriting
+        pos = round(pos, 2)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))
 
     def set_model_data_from_lineedit(self, editor, model, index):
-        model.setData(index, int(editor.lineEdit.text()))
+        model.setData(index, float(editor.lineEdit.text()))
 
 
 class MarkXPositionDelegate(MarkPositionDelegate):
@@ -187,7 +188,8 @@ class MarkXPositionDelegate(MarkPositionDelegate):
         super().__init__(parent)
 
     def set_model_data_from_button(self, editor, model, index):
-        pos = model.position['x_pos']
+        pos = model.state['position']['x_pos']
+        pos = round(pos, 2)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))
 
@@ -196,7 +198,8 @@ class MarkYPositionDelegate(MarkPositionDelegate):
         super().__init__(parent)
 
     def set_model_data_from_button(self, editor, model, index):
-        pos = model.position['y_pos']
+        pos = model.state['position']['y_pos']
+        pos = round(pos, 2)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))
 
@@ -205,7 +208,8 @@ class MarkZPositionDelegate(MarkPositionDelegate):
         super().__init__(parent)
 
     def set_model_data_from_button(self, editor, model, index):
-        pos = model.position['z_pos']
+        pos = model.state['position']['z_pos']
+        pos = round(pos, 2)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))
 
@@ -214,7 +218,8 @@ class MarkFocusPositionDelegate(MarkPositionDelegate):
         super().__init__(parent)
 
     def set_model_data_from_button(self, editor, model, index):
-        pos = model.position['f_pos']
+        pos = model.state['position']['f_pos']
+        pos = round(pos, 2)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))
 
@@ -223,6 +228,7 @@ class MarkRotationPositionDelegate(MarkPositionDelegate):
         super().__init__(parent)
 
     def set_model_data_from_button(self, editor, model, index):
-        pos = model.position['theta_pos']
+        pos = model.state['position']['theta_pos']
+        pos = round(pos, 2)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))

@@ -26,7 +26,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     sig_finished = QtCore.pyqtSignal()
 
-    sig_enable_gui = QtCore.pyqtSignal()
+    sig_enable_gui = QtCore.pyqtSignal(bool)
 
     sig_state_request = QtCore.pyqtSignal(dict)
     
@@ -87,13 +87,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.parent_widgets_to_block = [self.ETLTabWidget, self.ParameterTabWidget, self.ControlGroupBox]
         self.create_widget_list(self.parent_widgets_to_block, self.widgets_to_block)
 
-        # self.WidgetListPushButton.clicked.connect(self.create_widget_list)
-
         ''' The signal switchboard '''
-        self.core.sig_finished.connect(lambda: self.sig_finished.emit())
-        self.core.sig_finished.connect(self.enable_gui)
+        self.core.sig_finished.connect(self.finished)
         self.core.sig_position.connect(self.update_position_indicators)
-        self.core.sig_update_gui_from_state.connect(self.set_update_gui_from_state_flag)
+        self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
                 
         self.core.sig_progress.connect(self.update_progressbars)
 
@@ -251,7 +248,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
 
-        self.LiveButton.clicked.connect(self.live)
+        self.LiveButton.clicked.connect(self.run_live)
+        self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)
+        self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
         self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
         self.StopButton.clicked.connect(lambda: print('Stopping'))
 
@@ -345,8 +344,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
-        #self.enable_external_gui_updates = True
-        #self.block_signals_from_controls(True)
+        
         self.sig_execute_script.emit(script)
 
     def block_signals_from_controls(self, bool):
@@ -368,11 +366,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         elif isinstance(widget, (QtWidgets.QSlider,QtWidgets.QDoubleSpinBox,QtWidgets.QSpinBox)):
             widget.setValue(self.state[state_parameter_string]*conversion_factor)
 
-    @QtCore.pyqtSlot(bool)
-    def set_update_gui_from_state_flag(self, bool):
-        self.update_gui_from_state_flag = bool
-
-
     def update_gui_from_state(self):
         '''
         Updates the GUI controls after a state_change
@@ -383,14 +376,59 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
                 self.update_widget_from_state(widget, state_parameter, conversion_factor)                
             self.block_signals_from_controls(False)
-        
-    def live(self):
-        print('Going live')
+
+    def run_live(self):
         self.sig_state_request.emit({'state':'live'})
+        self.set_progressbars_to_busy()
+        self.enable_mode_control_buttons(False)
+        self.enable_stop_button(True)
 
-    def disable_gui(self):
-        pass
+    def run_selected_acquisition(self):
+        self.sig_state_request.emit({'state':'run_selected_acquisition'})
+        self.enable_gui_updates_from_state(True)
+        self.enable_stop_button(True)
+        self.enable_gui(False)
 
-    def enable_gui(self):
-        self.enable_external_gui_updates = False
-        self.block_signals_from_controls(False)
+    def run_acquisition_list(self):
+        self.sig_state_request.emit({'state':'run_acquisition_list'})
+        self.enable_gui_updates_from_state(True)
+        self.enable_stop_button(True)
+        self.enable_gui(False)
+
+    @QtCore.pyqtSlot(bool)
+    def enable_gui_updates_from_state(self, boolean):
+        self.update_gui_from_state_flag = boolean
+
+    def enable_stop_button(self, boolean):
+        self.StopButton.setEnabled(boolean)
+    
+    def enable_gui(self, boolean):
+        self.TabWidget.setEnabled(boolean)
+        self.ControlGroupBox.setEnabled(boolean)
+        self.sig_enable_gui.emit(boolean)
+
+    def enable_mode_control_buttons(self, boolean):
+        self.LiveButton.setEnabled(boolean)
+        self.RunSelectedAcquisitionButton.setEnabled(boolean)
+        self.RunAcquisitionListButton.setEnabled(boolean)
+
+    def finished(self):
+        self.enable_gui_updates_from_state(False)
+        self.enable_stop_button(False)
+        self.enable_mode_control_buttons(True)
+        self.enable_gui(True)
+        self.set_progressbars_to_standard()
+
+    def set_progressbars_to_busy(self):
+        '''If min and max of a progress bar are 0, it shows a "busy" indicator'''
+        self.AcquisitionProgressBar.setMinimum(0)
+        self.AcquisitionProgressBar.setMaximum(0)
+        self.TotalProgressBar.setMinimum(0)
+        self.TotalProgressBar.setMaximum(0)
+    
+    def set_progressbars_to_standard(self):
+        self.AcquisitionProgressBar.setMinimum(0)
+        self.AcquisitionProgressBar.setMaximum(100)
+        self.TotalProgressBar.setMinimum(0)
+        self.TotalProgressBar.setMaximum(100)
+   

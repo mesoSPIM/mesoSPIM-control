@@ -9,6 +9,8 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 ''' mesoSPIM imports '''
+from .mesoSPIM_State import mesoSPIM_StateSingleton
+
 from .utils.models import AcquisitionModel
 
 from .utils.delegates import (ComboDelegate,
@@ -41,8 +43,6 @@ class MyStyle(QtWidgets.QProxyStyle):
 
 class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
-    
-
     model_changed = QtCore.pyqtSignal(AcquisitionModel)
 
     def __init__(self, parent=None):
@@ -51,17 +51,22 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.parent = parent
         self.cfg = parent.cfg
 
+        self.state = mesoSPIM_StateSingleton()
+
         loadUi('gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
 
-        self.moveUpButton.clicked.connect(self.move_selected_row_up)
-        self.moveDownButton.clicked.connect(self.move_selected_row_down)
+        self.MoveUpButton.clicked.connect(self.move_selected_row_up)
+        self.MoveDownButton.clicked.connect(self.move_selected_row_down)
+
+        ''' Parent Enable / Disable GUI'''
+        self.parent.sig_enable_gui.connect(lambda boolean: self.setEnabled(boolean))
 
         ''' Setting the model up '''
         self.model = AcquisitionModel()
 
         self.table.setModel(self.model)
-        self.model.dataChanged.connect(self.update_model_data)
+        self.model.dataChanged.connect(self.set_state)
 
         ''' Table selection behavior '''
         self.table.setSelectionBehavior(self.table.SelectRows)
@@ -83,12 +88,18 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.update_persistent_editors()
 
-        self.addButton.clicked.connect(self.add_row)
-        self.deleteButton.clicked.connect(self.delete_row)
-        self.copyButton.clicked.connect(self.copy_row)
+        self.AddButton.clicked.connect(self.add_row)
+        self.DeleteButton.clicked.connect(self.delete_row)
+        self.CopyButton.clicked.connect(self.copy_row)
 
-        self.saveButton.clicked.connect(self.save_table)
-        self.loadButton.clicked.connect(self.load_table)
+        self.SaveButton.clicked.connect(self.save_table)
+        self.LoadButton.clicked.connect(self.load_table)
+
+    def enable(self):
+        self.setEnabled(True)
+
+    def disable(self):
+        self.setEnabled(False)
 
     def display_status_message(self, string, time=0):
         '''
@@ -134,7 +145,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     def add_row(self):
         self.model.insertRows(self.model.rowCount(),1)
-        self.update_model_data()
         self.update_persistent_editors()
 
     def delete_row(self):
@@ -147,13 +157,13 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 print('No row selected!')
         else:
             self.display_status_message("Can't delete last row!", 2)
-        self.update_model_data()
         self.update_persistent_editors()
 
     def copy_row(self):
         row = self.get_first_selected_row()
         if row is not None:
             self.model.copyRow(row)
+            self.update_persistent_editors()
         else:
             print('No row selected!')
 
@@ -163,6 +173,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row > 0:
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row-1)
                 self.set_selected_row(row-1)
+                self.update_persistent_editors()
         else:
             print('No row selected!')
 
@@ -172,6 +183,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row < self.model.rowCount():
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row+1)
                 self.set_selected_row(row+1)
+                self.update_persistent_editors()
         else:
             print('No row selected!')
 
@@ -223,16 +235,10 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             for column in self.persistent_editor_column_indices:
                 self.table.openPersistentEditor(self.model.index(row, column))
 
-    def update_model_data(self):
-        print('Model in GUI thread updated, sending signal')
-        self.model_changed.emit(self.model)
-
-    @QtCore.pyqtSlot(AcquisitionModel)
-    def update_model_from_worker(self, model):
-        print('Model in the Aquisition Manager updated via signal')
-        self.model = model
-        self.update_persistent_editors()
-
+    def set_state(self):
+        print('Acq Manager: State Updated')
+        self.state['acq_list'] = self.model.get_acquisition_list()
+        
     def enable_gui(self):
         ''' Enables all GUI controls, disables stop button '''
         self.table.setEnabled(True)
@@ -255,11 +261,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         if path:
             self.model.loadModel(path)
             self.update_persistent_editors()
-
-    def run_my_wizard(self):
-        wizard = MyWizard(self)
-
-        #print('Name: ', name, 'Email: ', email)
 
     def run_tiling_wizard(self):
         wizard = TilingWizard(self)

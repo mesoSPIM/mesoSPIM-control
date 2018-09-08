@@ -10,7 +10,7 @@ import time
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
-    ''' Factory class for creating script windows '''
+    ''' At some point: Change this into a Factory class for creating script windows '''
 
     sig_execute_script = QtCore.pyqtSignal(str)
 
@@ -23,10 +23,13 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
         self.setGeometry(1500,500,700,1000)
 
         self.LoadScriptButton = QtWidgets.QPushButton('Load Script')
+        self.LoadScriptButton.setStyleSheet('QPushButton{font-size: 21px}')
         self.LoadScriptButton.clicked.connect(self.load_script)
         self.SaveScriptButton = QtWidgets.QPushButton('Save Script')
+        self.SaveScriptButton.setStyleSheet('QPushButton{font-size: 21px}')
         self.SaveScriptButton.clicked.connect(self.save_script)
         self.ExecuteScriptButton = QtWidgets.QPushButton('Execute Script')
+        self.ExecuteScriptButton.setStyleSheet('QPushButton{font-size: 21px}')
         self.ExecuteScriptButton.clicked.connect(self.execute_script)
 
         self.Editor = QtWidgets.QPlainTextEdit()
@@ -45,20 +48,9 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
 
         ''' Connect parent signals '''
         if parent is not None:
-            self.parent.sig_enable_gui.connect(self.enable_gui)
-            self.parent.sig_finished.connect(self.enable_gui)
-
+            self.parent.sig_enable_gui.connect(lambda boolean: self.setEnabled(boolean))
+            
         self.show()
-
-    @QtCore.pyqtSlot()
-    def disable_gui(self):
-        self.setEnabled(False)
-        QtWidgets.QApplication.processEvents()
-
-    @QtCore.pyqtSlot()
-    def enable_gui(self):
-        self.setEnabled(True)
-        QtWidgets.QApplication.processEvents()
 
     def load_script(self):
         '''Load a script
@@ -94,7 +86,7 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
             ''' Allow this editor to be used as an stand-alone editor for testing '''
             exec(script)
         else:
-            self.disable_gui()
+            self.setEnabled(False)
             self.sig_execute_script.emit(script)
 
 def format(color, style=''):
