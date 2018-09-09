@@ -35,7 +35,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.parent = parent
         self.cfg = parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        #self.state = mesoSPIM_StateSingleton()
 
         ''' The movement signals are emitted by the mesoSPIM_Core, which in turn
         instantiates the mesoSPIM_Serial thread.
@@ -44,10 +44,10 @@ class mesoSPIM_Stage(QtCore.QObject):
         is slightly confusing and dirty.
         '''
 
-        self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
-        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True), type=3)
-        self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
-        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict, time: self.move_absolute(dict, wait_until_done=True), type=3)
+        # self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
+        # self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True), type=3)
+        # self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
+        # self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict, time: self.move_absolute(dict, wait_until_done=True), type=3)
         self.parent.sig_stop_movement.connect(self.stop)
         self.parent.sig_zero_axes.connect(self.zero_axes)
         self.parent.sig_unzero_axes.connect(self.unzero_axes)
@@ -144,7 +144,7 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         self.create_internal_position_dict()
 
-        self.state['position'] = self.int_position_dict
+        # self.state['position'] = self.int_position_dict
 
         self.sig_position.emit(self.int_position_dict)
 
@@ -186,9 +186,7 @@ class mesoSPIM_Stage(QtCore.QObject):
                 self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            self.blockSignals(True)
             time.sleep(0.02)
-            self.blockSignals(False)
 
     def move_absolute(self, dict, wait_until_done=False):
         ''' Move absolute method '''
@@ -234,9 +232,7 @@ class mesoSPIM_Stage(QtCore.QObject):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            self.blockSignals(True)
             time.sleep(1)
-            self.blockSignals(False)
 
     def stop(self):
         self.sig_status_message.emit('Stopped')
@@ -309,14 +305,14 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         pitools.startup(self.pidevice, stages=self.pi_stages)
 
         ''' Stage 5 referencing hack '''
-        print('Referencing status 3: ', self.pidevice.qFRF(3))
-        print('Referencing status 5: ', self.pidevice.qFRF(5))
+        # print('Referencing status 3: ', self.pidevice.qFRF(3))
+        # print('Referencing status 5: ', self.pidevice.qFRF(5))
         self.pidevice.FRF(5)
         print('M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
         print('M-406 Emergency referencing hack done')
-        print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
-        print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
+        # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
+        # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
 
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
@@ -349,7 +345,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
 
         self.create_internal_position_dict()
 
-        self.state['position'] = self.int_position_dict
+        # self.state['position'] = self.int_position_dict
 
         self.sig_position.emit(self.int_position_dict)
 
@@ -398,9 +394,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
                 self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            self.blockSignals(True)
             pitools.waitontarget(self.pidevice)
-            self.blockSignals(False)
 
     def move_absolute(self, dict, wait_until_done=False):
         '''
@@ -462,9 +456,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            self.blockSignals(True)
             pitools.waitontarget(self.pidevice)
-            self.blockSignals(False)
 
     def stop(self):
         self.pidevice.STP(noraise=True)

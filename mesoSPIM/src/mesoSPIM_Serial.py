@@ -28,10 +28,6 @@ class mesoSPIM_Serial(QtCore.QObject):
     
     sig_position = QtCore.pyqtSignal(dict)
 
-    sig_move_relative = QtCore.pyqtSignal(dict)
-    sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
-    sig_move_absolute = QtCore.pyqtSignal(dict)
-    sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_zero_axes = QtCore.pyqtSignal(list)
     sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
@@ -68,16 +64,17 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
 
         ''' Wiring signals through to child objects '''
-        self.parent.sig_move_relative.connect(lambda dict: self.sig_move_relative.emit(dict))
-        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.sig_move_absolute_and_wait_until_done.emit(dict))
-        self.parent.sig_move_absolute.connect(lambda dict: self.sig_move_absolute.emit(dict))
-        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.sig_move_absolute_and_wait_until_done.emit(dict))
+        self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
+        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True))
+
+        self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
+        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True))
+
         self.parent.sig_zero_axes.connect(lambda list: self.sig_zero_axes.emit(list))
         self.parent.sig_unzero_axes.connect(lambda list: self.sig_unzero_axes.emit(list))
         self.parent.sig_stop_movement.connect(lambda: self.sig_stop_movement.emit())
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
-
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
@@ -97,6 +94,18 @@ class mesoSPIM_Serial(QtCore.QObject):
                     self.set_zoom(value, wait_until_done)
                 else:
                     self.set_zoom(value)
+
+    def move_relative(self, dict, wait_until_done=False):
+        if wait_until_done:
+            self.stage.move_relative(dict, wait_until_done=True)
+        else:
+            self.stage.move_relative(dict)
+
+    def move_absolute(self, dict, wait_until_done=False):
+        if wait_until_done:
+            self.stage.move_absolute(dict, wait_until_done=True)
+        else:
+            self.stage.move_absolute(dict)
 
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:

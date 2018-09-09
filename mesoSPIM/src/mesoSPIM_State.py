@@ -157,4 +157,7 @@ class mesoSPIM_StateSingleton():
                     return_list.append(self._state_dict.__getitem__(key))
             
             return return_list
+
+        def block_signals(self, boolean):
+            self.blockSignals(boolean)
         

@@ -100,7 +100,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer = mesoSPIM_WaveFormGenerator(self)
         self.waveformer.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
         self.sig_state_request.connect(self.waveformer.state_request_handler)
-        self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
+        self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler, type=3)
 
         ''' Setting the shutters up '''
         left_shutter_line = self.cfg.shutterdict['shutter_left']
@@ -157,7 +157,6 @@ class mesoSPIM_Core(QtCore.QObject):
             elif key in ('samplerate',
                        'sweeptime',
                        'ETL_cfg_file',
-                       'intensity',
                        'etl_l_delay_%',
                        'etl_l_ramp_rising_%',
                        'etl_l_ramp_falling_%',
@@ -245,12 +244,18 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             self.sig_state_request.emit({'zoom' : zoom})
 
-    def set_laser(self, laser):
-        self.sig_state_request.emit({'laser':laser})
+    def set_laser(self, laser, wait_until_done=False):
         self.laserenabler.enable(laser)
+        if wait_until_done:
+            self.sig_state_request_and_wait_until_done.emit({'laser' : laser})
+        else: 
+            self.sig_state_request.emit({'laser':laser})
 
-    def set_intensity(self, intensity):
-        self.sig_state_request.emit({'intensity':intensity})
+    def set_intensity(self, intensity, wait_until_done=False):
+        if wait_until_done:
+            self.sig_state_request_and_wait_until_done.emit({'intensity': intensity})
+        else:
+            self.sig_state_request.emit({'intensity':intensity})
 
     def set_camera_exposure_time(self, time):
         self.sig_state_request.emit({'camera_exposure_time' : time})
@@ -412,36 +417,36 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_absolute(acq_list.get_startpoint())
         self.sig_finished.emit()
         
-    
     def prepare_acquisition(self, acq):
         '''
-        Housekeeping: Preparre the acquisition
+        Housekeeping: Prepare the acquisition
         '''
         print('Running Acquisition #', self.acquisition_count,
                 ' with Filename: ', acq['filename'])
         #self.move_absolute(acq.get_startpoint())
         self.move_absolute(acq.get_startpoint(), wait_until_done=True)
-        self.set_filter(acq['filter'])
-        # self.set_filter(acq['filter'], wait_until_done=True)
-        self.set_zoom(acq['zoom'])
-        self.set_intensity(acq['intensity'])
-        self.set_laser(acq['laser'])
-
-        # self.prepare_image_series()
-        time.sleep(1)
-
+        self.set_shutterconfig(acq['shutter'])
+        self.set_filter(acq['filter'], wait_until_done=True)
+        self.set_zoom(acq['zoom'], wait_until_done=True)
+        self.set_laser(acq['laser'], wait_until_done=True)
+        self.set_intensity(acq['intensity'], wait_until_done=True)
+        self.prepare_image_series()
+        
     def run_acquisition(self, acq):
         steps = acq.get_image_count()
 
         self.open_shutters()
         for i in range(steps):
             if self.stopflag is True:
+                self.close_image_series()
                 break
             self.image_count += 1
-            # self.snap_image_in_series()
-            self.snap_image()
-            self.move_relative(acq.get_delta_z_dict())
-            # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
+
+            self.snap_image_in_series()
+
+            # self.snap_image()
+            # self.move_relative(acq.get_delta_z_dict())
+            self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
             
             QtWidgets.QApplication.processEvents()
 
@@ -455,7 +460,9 @@ class mesoSPIM_Core(QtCore.QObject):
         
 
     def close_acquisition(self, acq):
-        # self.close_image_series()
+        if self.stopflag is not True:
+            self.move_absolute(acq.get_startpoint(), wait_until_done=True)
+            self.close_image_series()
         self.acquisition_count += 1
   
     @QtCore.pyqtSlot(str)
