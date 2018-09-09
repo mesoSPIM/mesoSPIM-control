@@ -120,3 +120,4 @@ class mesoSPIM_Serial(QtCore.QObject):
         else:
             self.zoom.set_zoom(zoom, wait_until_done=False)
         self.state['zoom'] = zoom
+        self.state['pixelsize'] = self.cfg.pixelsize[zoom]

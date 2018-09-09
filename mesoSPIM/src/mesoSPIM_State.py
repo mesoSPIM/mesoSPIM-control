@@ -46,7 +46,7 @@ class mesoSPIM_StateSingleton():
                             'sweeptime' : 0.2,
                             'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
                             'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
-                            'filepath' : '/tmp/file.raw',
+                            'filename' : 'file.raw',
                             'folder' : '/tmp/',
                             'file_prefix' : '',
                             'start_number' : 1,

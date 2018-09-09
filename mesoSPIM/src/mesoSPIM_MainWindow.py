@@ -255,7 +255,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
         self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
         self.StopButton.clicked.connect(lambda: print('Stopping'))
-
+        self.LightsheetSwitchingModeButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'lightsheet_alignment_mode'}))
+        self.VisualModeButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'visual_mode'}))
+        
         self.widget_to_state_parameter_assignment=(
             (self.FilterComboBox, 'filter',1),
             (self.FilterComboBox, 'filter',1),

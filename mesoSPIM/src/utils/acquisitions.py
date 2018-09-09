@@ -54,7 +54,11 @@ class Acquisition(indexed.IndexedOrderedDict):
                  shutter='Left',
                  folder='/tmp/',
                  filename='',
-                 comment=''):
+                 comment='',
+                 etl_l_offset = 0,
+                 etl_l_amplitude =0,
+                 etl_r_offset = 0,
+                 etl_r_amplitude = 0):
 
         super().__init__()
 
@@ -73,6 +77,10 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['folder']=folder
         self['filename']=filename
         self['comment']=comment
+        self['etl_l_offset']=etl_l_offset
+        self['etl_l_amplitude']=etl_l_amplitude
+        self['etl_r_offset']=etl_r_offset
+        self['etl_r_amplitude']=etl_r_amplitude
 
 
     def __setitem__(self, key, value):

@@ -37,6 +37,10 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler)
 
+        self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=3)
+        self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
+        self.parent.sig_end_image_series.connect(self.end_image_series, type=3)
+
         self.sig_camera_status.connect(lambda status: print(status))
 
         ''' Hamamatsu-specific code '''
@@ -118,14 +122,52 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
         self.state['camera_line_interval'] = time
     
-    def prepare_image_series(self):
-        pass
+    def prepare_image_series(self, acq):
+        '''
+        Row is a row in a AcquisitionList
+        '''
+        self.stopflag = False
+
+        ''' TODO: Needs cam delay, sweeptime, QTimer, line delay, exp_time '''
+
+        self.path = acq['folder']+acq['filename']
+        self.z_start = acq['z_start']
+        self.z_end = acq['z_end']
+        self.z_stepsize = acq['z_step']
+        self.z_planes = acq.get_image_count()
+
+        self.fsize = 2048*2048
+        self.max_frame = self.z_planes
+
+        self.xy_stack = np.memmap(self.path, mode = "write", dtype = np.uint16, shape = self.fsize * self.max_frame)
+        # self.xy_stack_tif = tf.memmap(tif_filename, shape=(self.max_frame, 2048, 2048), dtype = np.uint16)
+        # self.xz_stack = np.memmap(self.path[:-4]+'xz.raw', mode = "write", dtype = np.uint16, shape = 2048 * self.max_frame * 2048)
+        # self.yz_stack = np.memmap(self.path[:-4]+'yz.raw', mode = "write", dtype = np.uint16, shape = 2048 * self.max_frame * 2048)
+
+        self.hcam.startAcquisition()
+        self.cur_frame = 0
+        # print('Camera ready')
 
     def add_images_to_series(self):
-        pass
+        [frames, dims] = self.hcam.getFrames()
+        # tif_filename = ''
+        for aframe in frames:
+            if (self.cur_frame < self.max_frame):
+                image = aframe.getData()
+                image = np.reshape(image, (-1, 2048))
+                image = np.rot90(image)
+
+                self.sig_camera_frame.emit(image)
+
+                image = image.flatten()
+                self.xy_stack[self.cur_frame*self.fsize:(self.cur_frame+1)*self.fsize] = image
+            self.cur_frame += 1
 
     def end_image_series(self):
-        pass
+        del self.xy_stack
+        print("Saved", self.cur_frame, "frames")
+        self.hcam.stopAcquisition()
+        print('Acq finished')
 
     def snap_image(self):
         pass

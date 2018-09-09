@@ -2,7 +2,7 @@
 Core for the mesoSPIM project
 =============================
 '''
-
+import os
 import numpy as np
 import time
 from scipy import signal
@@ -26,7 +26,7 @@ from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
 
-from .utils.acquisitions import AcquisitionList
+from .utils.acquisitions import AcquisitionList, Acquisition
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
@@ -44,6 +44,11 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_position = QtCore.pyqtSignal(dict)
     
     sig_progress = QtCore.pyqtSignal(dict)
+
+    ''' Camera-related signals '''
+    sig_prepare_image_series = QtCore.pyqtSignal(Acquisition)
+    sig_add_images_to_image_series = QtCore.pyqtSignal()
+    sig_end_image_series = QtCore.pyqtSignal()
 
     ''' Movement-related signals: '''
     sig_move_relative = QtCore.pyqtSignal(dict)
@@ -207,6 +212,16 @@ class mesoSPIM_Core(QtCore.QObject):
             print('Core: Stopping requested')
             self.sig_state_request.emit({'state':'idle'})
             self.stop()
+
+        elif state == 'lightsheet_alignment_mode':
+            self.state['state'] = 'lightsheet_alignment_mode'
+            self.sig_state_request.emit({'state':'live'})
+            self.lightsheet_alignment_mode()
+
+        elif state == 'visual_mode':
+            self.state['state'] = 'visual_mode'
+            self.sig_state_request.emit({'state':'live'})
+            self.visual_mode()
 
     def stop(self):
         self.stopflag = True
@@ -430,6 +445,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_zoom(acq['zoom'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True)
         self.set_intensity(acq['intensity'], wait_until_done=True)
+        self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
         
     def run_acquisition(self, acq):
@@ -443,7 +459,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.image_count += 1
 
             self.snap_image_in_series()
-
+            self.sig_add_images_to_series.emit()
             # self.snap_image()
             # self.move_relative(acq.get_delta_z_dict())
             self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
@@ -463,6 +479,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if self.stopflag is not True:
             self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
+        self.sig_end_image_series.emit()
         self.acquisition_count += 1
   
     @QtCore.pyqtSlot(str)
@@ -476,3 +493,132 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_finished.emit()
         self.state['state']='idle'
         self.sig_update_gui_from_state.emit(False)
+
+    def lightsheet_alignment_mode(self):
+        '''Switches shutters after each image to allow coalignment of both lightsheets'''
+        self.stopflag = False
+        '''Needs more careful adjustment of the timing
+
+        TODO: There is no wait period to wait for the shutters to open. Nonetheless, the
+        visual of the mode impression is not too bad.
+        '''
+        while self.stopflag is False:
+            self.shutter_left.open()
+            self.snap_image()
+            self.shutter_left.close()
+            self.shutter_right.open()
+            self.snap_image()
+            self.shutter_right.close()
+            QApplication.processEvents()
+
+        self.close_shutters()
+        self.sig_finished.emit()
+
+    def visual_mode(self):
+        old_l_amp = self.state['etl_l_amplitude']
+        old_r_amp = self.state['etl_r_amplitude']
+        self.sig_state_request.emit({'etl_l_amplitude' : 0})
+        self.sig_state_request.emit({'etl_r_amplitude' : 0})
+
+        self.prepare_image_series()
+
+        self.stopflag = False
+
+        self.open_shutters()
+        while self.stopflag is False:
+            ''' Needs update to use snap image in series '''
+            self.snap_image_in_series()
+
+            QtWidgets.QApplication.processEvents()
+
+            ''' How to handle a possible shutter switch?'''
+            self.open_shutters()
+
+        self.close_image_series()
+        self.close_shutters()
+
+        self.sig_finished.emit()
+
+        self.sig_state_request.emit({'etl_l_amplitude' : old_l_amp})
+        self.sig_state_request.emit({'etl_r_amplitude' : old_r_amp})
+
+
+    # def create_filename(self):
+    #     path = ''
+        
+    #     ''' Create zero-padded suffix '''
+    #     string = '000000'
+    #     num_string = str(s.start_number)
+    #     s.file_suffix = string[:-len(num_string)]+num_string
+    #     s.start_number += 1
+
+    #     path = s.folder + '/' + s.file_prefix + '_' + s.file_suffix + '.raw'
+
+
+    #     ''' Check that filename does not exist: '''
+    #     if os.path.isfile(path):
+    #         print('Warning: File would be overwritten, stack stopped; choose another filename!')
+    #         return None
+            
+    #     else:
+    #         return filepath
+            
+
+    def write_line(self, file, key='', value=''):
+        ''' Little helper method to write a single line with a key and value for metadata
+
+        Adds a line break at the end.
+        '''
+        if key !='':
+            file.write('['+str(key)+'] '+str(value) + '\n')
+        else:
+            file.write('\n')
+
+    def write_metadata(self, path, acq):
+        '''
+        Writes a metadata.txt file
+
+        Path contains the file to be written
+        Filename
+        '''
+        metadata_path = path[:-4]
+        metadata_path = metadata_path + '_meta.txt'
+
+        with open(metadata_path,'w') as file:
+            self.write_line(file, 'Metadata for file', path)
+            self.write_line(file, 'z_stepsize', acq['z_step'])
+            self.write_line(file)
+            self.write_line(file, 'CFG')
+            self.write_line(file, 'Laser', acq['laser'])
+            self.write_line(file, 'Intensity (%)', acq['intensity'])
+            self.write_line(file, 'Zoom', acq['zoom'])
+            self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
+            self.write_line(file, 'Filter', acq['filter'])
+            self.write_line(file, 'Shutter', acq['shutter'])
+            self.write_line(file)
+            self.write_line(file, 'POSTION')
+            self.write_line(file, 'x_pos', acq['x_pos'])
+            self.write_line(file, 'y_pos', acq['y_pos'])
+            self.write_line(file, 'f_pos', acq['f_pos'])
+            self.write_line(file, 'z_start', acq['z_start'])
+            self.write_line(file, 'z_end', acq['z_end'])
+            self.write_line(file, 'z_stepsize', acq['z_step'])
+            self.write_line(file, 'z_planes', acq.get_image_count())
+            self.write_line(file)
+            self.write_line(file,'ETL PARAMETERS')
+            self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
+            self.write_line(file,'etl_l_offset', acq['etl_l_offset'])
+            self.write_line(file,'etl_l_amplitude',acq['etl_l_amplitude'])
+            self.write_line(file,'etl_r_offset',acq['etl_r_offset'])
+            self.write_line(file,'etl_r_amplitude',acq['etl_r_amplitude'])
+            self.write_line(file)
+            self.write_line(file, 'GALVO PARAMETERS')
+            self.write_line(file, 'galvo_l_frequency',self.state['galvo_l_frequency'])
+            self.write_line(file, 'galvo_l_amplitude',self.state['galvo_l_amplitude'])
+            self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
+            self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+            self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
+            self.write_line(file)
+            self.write_line(file, 'CAMERA PARAMETERS')
+            self.write_line(file, 'camera_exposure', self.state['camera_exposure'])
+            self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
