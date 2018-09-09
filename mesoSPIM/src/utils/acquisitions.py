@@ -52,7 +52,9 @@ class Acquisition(indexed.IndexedOrderedDict):
                  filter= '515LP',
                  zoom= '1x',
                  shutter='Left',
-                 filename=''):
+                 folder='/tmp/',
+                 filename='',
+                 comment=''):
 
         super().__init__()
 
@@ -68,7 +70,9 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['filter']=filter
         self['zoom']=zoom
         self['shutter']=shutter
+        self['folder']=folder
         self['filename']=filename
+        self['comment']=comment
 
 
     def __setitem__(self, key, value):
