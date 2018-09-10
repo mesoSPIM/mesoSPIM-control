@@ -52,9 +52,8 @@ class Acquisition(indexed.IndexedOrderedDict):
                  filter= '515LP',
                  zoom= '1x',
                  shutter='Left',
-                 folder='/tmp/',
-                 filename='',
-                 comment='',
+                 folder='E:/tmp/',
+                 filename='one.raw',
                  etl_l_offset = 0,
                  etl_l_amplitude =0,
                  etl_r_offset = 0,
@@ -76,7 +75,6 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['shutter']=shutter
         self['folder']=folder
         self['filename']=filename
-        self['comment']=comment
         self['etl_l_offset']=etl_l_offset
         self['etl_l_amplitude']=etl_l_amplitude
         self['etl_r_offset']=etl_r_offset

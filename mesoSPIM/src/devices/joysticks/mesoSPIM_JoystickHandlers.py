@@ -79,7 +79,7 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
         if button_id == 21:
             current_state = self.parent.get_state_parameter('state')
             print('Current state: ',current_state)
-            if current_state == 'live':
+            if current_state == ('live'):
                 self.parent.StopButton.clicked.emit(True)
             elif current_state == 'idle':
                 self.parent.LiveButton.clicked.emit(True)

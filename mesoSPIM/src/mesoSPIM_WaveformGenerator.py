@@ -1,6 +1,7 @@
 '''
 mesoSPIM Waveform Generator - Creates and allows control of waveform generation. 
 '''
+import os
 import numpy as np
 import csv
 
@@ -29,10 +30,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         super().__init__()
 
         self.cfg = parent.cfg
+        self.parent = parent
 
         self.state = mesoSPIM_StateSingleton()
 
         self.create_waveforms()
+
+        self.parent.sig_save_etl_config.connect(self.save_etl_parameters_to_csv)
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):

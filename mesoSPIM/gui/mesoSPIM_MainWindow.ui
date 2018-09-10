@@ -997,7 +997,7 @@ MOVEMENT </string>
         <double>0.170000000000000</double>
        </property>
       </widget>
-      <widget class="QPushButton" name="chooseETLcfgButton">
+      <widget class="QPushButton" name="ChooseETLcfgButton">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -1018,7 +1018,7 @@ MOVEMENT </string>
         <string>Choose ETL config file</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="SaveParametersButton">
+      <widget class="QPushButton" name="SaveETLParametersButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -1055,7 +1055,7 @@ MOVEMENT </string>
         <string>Increment</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="etl_increment_Spinbox">
+      <widget class="QDoubleSpinBox" name="ETLIncrementSpinBox">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -1112,7 +1112,7 @@ MOVEMENT </string>
         <string>Config File:</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="zeroRightETLButton">
+      <widget class="QPushButton" name="ZeroRightETLButton">
        <property name="geometry">
         <rect>
          <x>260</x>
@@ -1137,7 +1137,7 @@ MOVEMENT </string>
        </property>
       </widget>
      </widget>
-     <widget class="QPushButton" name="zeroLeftETLButton">
+     <widget class="QPushButton" name="ZeroLeftETLButton">
       <property name="geometry">
        <rect>
         <x>150</x>
@@ -2317,6 +2317,9 @@ MOVEMENT </string>
     </widget>
    </widget>
    <widget class="QGroupBox" name="ControlGroupBox">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>10</x>

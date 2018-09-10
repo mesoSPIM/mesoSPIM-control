@@ -61,6 +61,9 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
 
+    ''' ETL-related signals '''
+    sig_save_etl_config = QtCore.pyqtSignal()
+
     def __init__(self, config, parent):
         super().__init__()
 
@@ -85,6 +88,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_stop_movement.connect(self.stop_movement)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
+        self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
@@ -438,7 +442,6 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         print('Running Acquisition #', self.acquisition_count,
                 ' with Filename: ', acq['filename'])
-        #self.move_absolute(acq.get_startpoint())
         self.move_absolute(acq.get_startpoint(), wait_until_done=True)
         self.set_shutterconfig(acq['shutter'])
         self.set_filter(acq['filter'], wait_until_done=True)
@@ -447,6 +450,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
+        self.write_metadata(acq)
         
     def run_acquisition(self, acq):
         steps = acq.get_image_count()
@@ -455,16 +459,15 @@ class mesoSPIM_Core(QtCore.QObject):
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
+                self.sig_end_image_series.emit()
                 break
             self.image_count += 1
 
             self.snap_image_in_series()
-            self.sig_add_images_to_series.emit()
-            # self.snap_image()
-            # self.move_relative(acq.get_delta_z_dict())
+            self.sig_add_images_to_image_series.emit()
+            QtWidgets.QApplication.processEvents()
             self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
             
-            QtWidgets.QApplication.processEvents()
 
             self.send_progress(self.acquisition_count,
                                self.total_acquisition_count,
@@ -542,28 +545,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'etl_l_amplitude' : old_l_amp})
         self.sig_state_request.emit({'etl_r_amplitude' : old_r_amp})
 
-
-    # def create_filename(self):
-    #     path = ''
-        
-    #     ''' Create zero-padded suffix '''
-    #     string = '000000'
-    #     num_string = str(s.start_number)
-    #     s.file_suffix = string[:-len(num_string)]+num_string
-    #     s.start_number += 1
-
-    #     path = s.folder + '/' + s.file_prefix + '_' + s.file_suffix + '.raw'
-
-
-    #     ''' Check that filename does not exist: '''
-    #     if os.path.isfile(path):
-    #         print('Warning: File would be overwritten, stack stopped; choose another filename!')
-    #         return None
-            
-    #     else:
-    #         return filepath
-            
-
     def write_line(self, file, key='', value=''):
         ''' Little helper method to write a single line with a key and value for metadata
 
@@ -574,20 +555,25 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             file.write('\n')
 
-    def write_metadata(self, path, acq):
+    def write_metadata(self, acq):
         '''
         Writes a metadata.txt file
 
         Path contains the file to be written
-        Filename
         '''
-        metadata_path = path[:-4]
-        metadata_path = metadata_path + '_meta.txt'
+        path = acq['folder']+acq['filename']
+
+        metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
+
+        print('Metadata_path: ', metadata_path)
 
         with open(metadata_path,'w') as file:
             self.write_line(file, 'Metadata for file', path)
             self.write_line(file, 'z_stepsize', acq['z_step'])
             self.write_line(file)
+            # self.write_line(file, 'COMMENTS')
+            # self.write_line(file, 'Comment: ', acq(['comment']))
+            # self.write_line(file)
             self.write_line(file, 'CFG')
             self.write_line(file, 'Laser', acq['laser'])
             self.write_line(file, 'Intensity (%)', acq['intensity'])
@@ -605,12 +591,14 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'z_stepsize', acq['z_step'])
             self.write_line(file, 'z_planes', acq.get_image_count())
             self.write_line(file)
+
+            ''' Attention: change to true ETL values ASAP '''
             self.write_line(file,'ETL PARAMETERS')
             self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
-            self.write_line(file,'etl_l_offset', acq['etl_l_offset'])
-            self.write_line(file,'etl_l_amplitude',acq['etl_l_amplitude'])
-            self.write_line(file,'etl_r_offset',acq['etl_r_offset'])
-            self.write_line(file,'etl_r_amplitude',acq['etl_r_amplitude'])
+            self.write_line(file,'etl_l_offset', self.state['etl_l_offset'])
+            self.write_line(file,'etl_l_amplitude', self.state['etl_l_amplitude'])
+            self.write_line(file,'etl_r_offset', self.state['etl_r_offset'])
+            self.write_line(file,'etl_r_amplitude', self.state['etl_r_amplitude'])
             self.write_line(file)
             self.write_line(file, 'GALVO PARAMETERS')
             self.write_line(file, 'galvo_l_frequency',self.state['galvo_l_frequency'])
@@ -620,5 +608,5 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
             self.write_line(file)
             self.write_line(file, 'CAMERA PARAMETERS')
-            self.write_line(file, 'camera_exposure', self.state['camera_exposure'])
+            self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
             self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])

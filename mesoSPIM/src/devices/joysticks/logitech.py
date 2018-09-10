@@ -61,7 +61,7 @@ class FarmSimulatorSidePanel(QtCore.QObject):
 
         joystick_timer_start/stop are helper methods.
         '''
-        self.timeout_interval = 25
+        self.timeout_interval = 10
         self.axis0_timer = QtCore.QTimer(self)
         self.axis1_timer = QtCore.QTimer(self)
         self.axis2_timer = QtCore.QTimer(self)

@@ -42,6 +42,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
 
+    sig_save_etl_config = QtCore.pyqtSignal()
+
     def __init__(self, config=None):
         super().__init__()
 
@@ -119,6 +121,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.core_thread.wait()
         except:
             pass
+
+    def get_state_parameter(self, state_parameter):
+        return self.state[state_parameter]
 
     def check_instances(self, widget):
         ''' 
@@ -257,6 +262,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.StopButton.clicked.connect(lambda: print('Stopping'))
         self.LightsheetSwitchingModeButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'lightsheet_alignment_mode'}))
         self.VisualModeButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'visual_mode'}))
+
+        self.ETLIncrementSpinBox.valueChanged.connect(self.update_etl_increments)
+        self.ZeroLeftETLButton.toggled.connect(self.zero_left_etl)
+        self.ZeroRightETLButton.toggled.connect(self.zero_right_etl)
+
+        self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
+        self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
+
         
         self.widget_to_state_parameter_assignment=(
             (self.FilterComboBox, 'filter',1),
@@ -439,4 +452,50 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.AcquisitionProgressBar.setMaximum(100)
         self.TotalProgressBar.setMinimum(0)
         self.TotalProgressBar.setMaximum(100)
+
+    def update_etl_increments(self):
+        increment = self.ETLIncrementSpinBox.value()
+
+        self.LeftETLOffsetSpinBox.setSingleStep(increment)
+        self.RightETLOffsetSpinBox.setSingleStep(increment)
+        self.LeftETLAmplitudeSpinBox.setSingleStep(increment)
+        self.RightETLAmplitudeSpinBox.setSingleStep(increment)
    
+    def zero_left_etl(self):
+        ''' Zeros the amplitude of the left ETL for faster alignment '''
+        if self.ZeroLeftETLButton.isChecked():
+            self.ETL_L_amp_backup = self.LeftETLAmplitudeSpinBox.value()
+            self.LeftETLAmplitudeSpinBox.setValue(0)
+        else:
+            self.LeftETLAmplitudeSpinBox.setValue(self.ETL_L_amp_backup)
+
+    def zero_right_etl(self):
+        ''' Zeros the amplitude of the right ETL for faster alignment '''
+        if self.ZeroRightETLButton.isChecked():
+            self.ETL_R_amp_backup = self.RightETLAmplitudeSpinBox.value()
+            self.RightETLAmplitudeSpinBox.setValue(0)
+        else:
+            self.RightETLAmplitudeSpinBox.setValue(self.ETL_R_amp_backup)
+
+    def choose_etl_config(self):
+        ''' File dialog for choosing the config file
+
+        TODO: Check that this is really a .csv-File
+        '''
+        path , _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open csv File', self.state['ETL_cfg_file'])
+
+        ''' To avoid crashes, only set the cfg file when a file has been selected:'''
+        if path:
+            self.state['ETL_cfg_file'] = path
+            self.ETLconfigIndicator.setText(path)
+
+            print('Chosen ETL CFG file:', path)
+
+            self.sig_state_request.emit({'ETL_cfg_file' : path})
+
+    def save_etl_config(self):
+        ''' Save current ETL parameters into config
+        '''
+        self.sig_save_etl_config.emit()
+
+    
