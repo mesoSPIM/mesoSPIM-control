@@ -2,6 +2,7 @@
 mesoSPIM Camera class, intended to run in its own thread
 '''
 import os
+import time
 import numpy as np
 
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -39,7 +40,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.parent.sig_state_request.connect(self.state_request_handler)
 
         self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=3)
-        self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series, type=3)
+        self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
+        self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=3)
         self.parent.sig_end_image_series.connect(self.end_image_series, type=3)
 
         self.sig_camera_status.connect(lambda status: print(status))
@@ -131,7 +133,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
         ''' TODO: Needs cam delay, sweeptime, QTimer, line delay, exp_time '''
 
-        self.path = acq['folder']+acq['filename']
+        self.path = acq['folder']+'/'+acq['filename']
 
         print('camera path: ', self.path)
         self.z_start = acq['z_start']
@@ -148,34 +150,33 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         # self.yz_stack = np.memmap(self.path[:-4]+'yz.raw', mode = "write", dtype = np.uint16, shape = 2048 * self.max_frame * 2048)
 
         self.hcam.startAcquisition()
-        self.cur_frame = 0
+        self.cur_image = 0
 
     def add_images_to_series(self):
         print('Camera: Adding image started')
-        while self.stopflag is False:
-            [frames, dims] = self.hcam.getFrames()
-            print('Got frames: ', len(frames))
-            for aframe in frames:
-                if (self.cur_frame < self.max_frame):
-                    image = aframe.getData()
-                    print('Len image: ', len(image))
-                    image = np.reshape(image, (-1, 2048))
-                    image = np.rot90(image)
-                    self.sig_camera_frame.emit(image)
-                    # self.sig_camera_status.emit(str(self.cur_frame))
-                    # QtWidgets.QApplication.processEvents()
-                    # QtWidgets.QApplication.processEvents()
-                    image = image.flatten()
-                    self.xy_stack[self.cur_frame*self.fsize:(self.cur_frame+1)*self.fsize] = image
-                self.cur_frame += 1
+        time.sleep(0.01)
+
+        # if self.stopflag is False:
+        #     [frames, dims] = self.hcam.getFrames()
+        #     print('Got frames: ', len(frames))
+        #     for aframe in frames:
+        #         if (self.cur_image < self.max_frame):
+        #             image = aframe.getData()
+        #             print('Len image: ', len(image))
+        #             image = np.reshape(image, (-1, 2048))
+        #             image = np.rot90(image)
+        #             self.sig_camera_frame.emit(image)
+        #             image = image.flatten()
+        #             self.xy_stack[self.cur_frame*self.fsize:(self.cur_frame+1)*self.fsize] = image
+        #             self.cur_image += 1
         print('Camera: Adding image ended')
 
     def end_image_series(self):
         try:
-            del self.xy_stack
             self.hcam.stopAcquisition()
+            del self.xy_stack
             print('Acq finished')
-            print("Saved", self.cur_frame, "frames")
+            print("Saved", self.cur_image, "frames")
         except:
             print('Camera: Error when finishing acquisition.')
         self.sig_finished.emit()

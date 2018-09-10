@@ -96,6 +96,10 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.SaveButton.clicked.connect(self.save_table)
         self.LoadButton.clicked.connect(self.load_table)
 
+        self.MarkCurrentXYButton.clicked.connect(self.mark_current_xy_position)
+        self.MarkCurrentStateButton.clicked.connect(self.mark_current_state)
+        self.MarkCurrentETLParametersButton.clicked.connect(self.mark_current_etl_parameters)
+
     def enable(self):
         self.setEnabled(True)
 
@@ -206,7 +210,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                               'intensity' : 'SliderWithValueDelegate(self)',
                               'laser' : 'ComboDelegate(self,[key for key in self.cfg.laserdict.keys()])',
                               'zoom' : 'ComboDelegate(self,[key for key in self.cfg.zoomdict.keys()])',
-                              'shutter' : 'ComboDelegate(self,[key for key in self.cfg.shutteroptions])',
+                              'shutterconfig' : 'ComboDelegate(self,[key for key in self.cfg.shutteroptions])',
                               'folder' : 'ChooseFolderDelegate(self)',
                               }
 
@@ -268,3 +272,36 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     def run_tiling_wizard(self):
         wizard = TilingWizard(self)
+
+    def mark_current_xy_position(self):
+        row = self.get_first_selected_row()
+
+        if row is not None:
+            self.model.setDataFromState(row, 'x_pos')
+            self.model.setDataFromState(row, 'y_pos')
+        else:
+            print('No row selected!')
+
+    def mark_current_state(self):
+        row = self.get_first_selected_row()
+
+        if row is not None:
+            self.model.setDataFromState(row, 'filter')
+            self.model.setDataFromState(row, 'zoom')
+            self.model.setDataFromState(row, 'laser')
+            self.model.setDataFromState(row, 'intensity')
+        else:
+            print('No row selected!')
+
+    def mark_current_etl_parameters(self):
+        row = self.get_first_selected_row()
+
+        if row is not None:
+            self.model.setDataFromState(row, 'etl_l_offset')
+            self.model.setDataFromState(row, 'etl_l_amplitude')
+            self.model.setDataFromState(row, 'etl_r_offset')
+            self.model.setDataFromState(row, 'etl_r_amplitude')
+        else:
+            print('No row selected!')
+
+

@@ -65,6 +65,8 @@ class SliderWithValueDelegate(QtWidgets.QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         slider = SliderWithValue(parent)
         slider.valueChanged.connect(lambda: self.commitData.emit(self.sender()))
+        slider.setValue(int(index.model().data(index, role=QtCore.Qt.EditRole)))
+        slider.setText(index.model().data(index, role=QtCore.Qt.EditRole))
         return slider
 
     def setEditorData(self, editor, index):

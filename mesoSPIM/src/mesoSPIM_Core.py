@@ -42,12 +42,15 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_position = QtCore.pyqtSignal(dict)
+
+    sig_status_message = QtCore.pyqtSignal(str)
     
     sig_progress = QtCore.pyqtSignal(dict)
 
     ''' Camera-related signals '''
     sig_prepare_image_series = QtCore.pyqtSignal(Acquisition)
     sig_add_images_to_image_series = QtCore.pyqtSignal()
+    sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal()
     sig_end_image_series = QtCore.pyqtSignal()
 
     ''' Movement-related signals: '''
@@ -432,9 +435,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.close_acquisition(acq)
 
     def close_acquisition_list(self, acq_list):
+        self.sig_status_message.emit('Closing Acquisition List')
         if not self.stopflag:
             self.move_absolute(acq_list.get_startpoint())
-        self.sig_finished.emit()
+            self.sig_finished.emit()
         
     def prepare_acquisition(self, acq):
         '''
@@ -442,33 +446,39 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         print('Running Acquisition #', self.acquisition_count,
                 ' with Filename: ', acq['filename'])
+        self.sig_status_message.emit('Going to start position')
         self.move_absolute(acq.get_startpoint(), wait_until_done=True)
+        self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutter'])
         self.set_filter(acq['filter'], wait_until_done=True)
+        self.sig_status_message.emit('Setting Zoom')
         self.set_zoom(acq['zoom'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True)
         self.set_intensity(acq['intensity'], wait_until_done=True)
+        self.sig_status_message.emit('Preparing camera')
         self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
         self.write_metadata(acq)
         
     def run_acquisition(self, acq):
         steps = acq.get_image_count()
-
+        self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
+                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
                 self.sig_end_image_series.emit()
+                self.finished.emit()
                 break
             self.image_count += 1
 
             self.snap_image_in_series()
-            self.sig_add_images_to_image_series.emit()
-            QtWidgets.QApplication.processEvents()
             self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-            
+            # self.sig_add_images_to_image_series.emit()
 
+            QtWidgets.QApplication.processEvents()
+            
             self.send_progress(self.acquisition_count,
                                self.total_acquisition_count,
                                i,
@@ -479,9 +489,12 @@ class mesoSPIM_Core(QtCore.QObject):
         
 
     def close_acquisition(self, acq):
+        self.sig_status_message.emit('Closing Acquisition')
         if self.stopflag is not True:
+            #  self.sig_add_images_to_image_series_and_wait_until_done.emit()
             self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
+
         self.sig_end_image_series.emit()
         self.acquisition_count += 1
   
@@ -561,7 +574,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         Path contains the file to be written
         '''
-        path = acq['folder']+acq['filename']
+        path = acq['folder']+'/'+acq['filename']
 
         metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
 
@@ -570,6 +583,7 @@ class mesoSPIM_Core(QtCore.QObject):
         with open(metadata_path,'w') as file:
             self.write_line(file, 'Metadata for file', path)
             self.write_line(file, 'z_stepsize', acq['z_step'])
+            self.write_line(file, 'z_planes', acq['planes'])
             self.write_line(file)
             # self.write_line(file, 'COMMENTS')
             # self.write_line(file, 'Comment: ', acq(['comment']))

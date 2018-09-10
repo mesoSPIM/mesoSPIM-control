@@ -25,13 +25,11 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             self._table = table
 
         ''' Get the headers as the capitalized keys from the first acquisition '''
-        self._headers = self._table.get_keylist()
+        self._headers = self._table.get_capitalized_keylist()
 
         self.state = mesoSPIM_StateSingleton()
 
-        ''' Position dict '''
-        self.position = self.state['position']
-        
+        self.dataChanged.connect(self.updatePlanes)
 
     def rowCount(self, parent = QtCore.QModelIndex()):
         ''' Tells the view how many items this model contains '''
@@ -109,6 +107,38 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             except:
                 print('Data NOT changed')
                 return False
+
+    def setDataFromState(self, row, state_parameter):
+        column = self._table.get_keylist().index(state_parameter)
+
+        if state_parameter in ('x_pos','y_pos','z_pos'):
+            new_value = self.state['position'][state_parameter]
+        else:
+            new_value = self.state[state_parameter]
+
+        index = self.createIndex(row, column)
+
+        self.setData(index, new_value)        
+
+    def updatePlanes(self, index, index2):
+        ''' Checks if z_planes need to be updated and updates them'''
+        column = index.column()
+
+        keylist = self._table.get_keylist()
+
+        z_start_column = keylist.index('z_start')
+        z_end_column = keylist.index('z_end')
+        z_step_column = keylist.index('z_step')
+
+        if column in (z_start_column ,z_end_column, z_step_column):
+            row = index.row()
+            planes = self._table[row].get_planes()
+            planes_column = keylist.index('planes')
+
+            index = self.createIndex(row, planes_column)
+            self.setData(index, planes)
+        
+        
 
     def insertRows(self, position, rows, parent = QtCore.QModelIndex()):
         ''' Method to add entries to the model

@@ -68,6 +68,9 @@
        </item>
        <item row="1" column="0">
         <widget class="QPushButton" name="TilingWizardButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="font">
           <font>
            <pointsize>15</pointsize>
@@ -91,7 +94,7 @@
         </widget>
        </item>
        <item row="0" column="7">
-        <widget class="QPushButton" name="MarkCurrentXY">
+        <widget class="QPushButton" name="MarkCurrentXYButton">
          <property name="font">
           <font>
            <pointsize>15</pointsize>
@@ -127,7 +130,7 @@
         </widget>
        </item>
        <item row="0" column="8">
-        <widget class="QPushButton" name="MarkCurrentState">
+        <widget class="QPushButton" name="MarkCurrentStateButton">
          <property name="font">
           <font>
            <pointsize>15</pointsize>
@@ -176,6 +179,9 @@
        </item>
        <item row="1" column="8">
         <widget class="QPushButton" name="PreviewSelectionButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="font">
           <font>
            <pointsize>15</pointsize>
@@ -183,6 +189,33 @@
          </property>
          <property name="text">
           <string>Preview Selection</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="7">
+        <widget class="QPushButton" name="MarkCurrentETLParametersButton">
+         <property name="font">
+          <font>
+           <pointsize>15</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Mark Current ETL values</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="6">
+        <widget class="QCheckBox" name="checkBox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>15</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Update ETL after Zoom / Laser change</string>
          </property>
         </widget>
        </item>

@@ -93,7 +93,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_finished.connect(self.finished)
         self.core.sig_position.connect(self.update_position_indicators)
         self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
-                
+        self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
 
         ''' Start the thread '''

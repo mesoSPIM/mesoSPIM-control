@@ -44,15 +44,16 @@ class Acquisition(indexed.IndexedOrderedDict):
                  y_pos=0,
                  z_start=0,
                  z_end=100,
-                 z_step=1,
+                 z_step=10,
+                 planes=10,
                  theta_pos=0,
                  f_pos=0,
                  laser = '488 nm',
                  intensity=0,
                  filter= '515LP',
                  zoom= '1x',
-                 shutter='Left',
-                 folder='E:/tmp/',
+                 shutterconfig='Left',
+                 folder='E:/tmp',
                  filename='one.raw',
                  etl_l_offset = 0,
                  etl_l_amplitude =0,
@@ -66,13 +67,14 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['z_start']=z_start
         self['z_end']=z_end
         self['z_step']=z_step
+        self['planes']=planes
         self['rot']=theta_pos
         self['f_pos']=f_pos
         self['laser']=laser
         self['intensity']=intensity
         self['filter']=filter
         self['zoom']=zoom
-        self['shutter']=shutter
+        self['shutterconfig']=shutterconfig
         self['folder']=folder
         self['filename']=filename
         self['etl_l_offset']=etl_l_offset
@@ -89,6 +91,10 @@ class Acquisition(indexed.IndexedOrderedDict):
         return self.values()[index]
 
     def get_keylist(self):
+        ''' A list keys is returned for usage as a table header '''
+        return [key for key in self.keys()]
+
+    def get_capitalized_keylist(self):
         ''' Here, a list of capitalized keys is returned for usage as a table header '''
         return [key.capitalize() for key in self.keys()]
 
@@ -148,6 +154,11 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'f_abs': self['f_pos'],
                 }
 
+    def get_planes(self):
+        if self['z_step'] == 0:
+            return 1
+        else:
+            return abs(int((self['z_end']-self['z_start'])/self['z_step']))
 
 
 class AcquisitionList(list):
@@ -178,6 +189,9 @@ class AcquisitionList(list):
         if len(args) == 0:
             ''' Use a default acquistion '''
             self.append(Acquisition())
+
+    def get_capitalized_keylist(self):
+        return self[0].get_capitalized_keylist()
 
     def get_keylist(self):
         '''
