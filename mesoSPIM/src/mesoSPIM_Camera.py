@@ -190,8 +190,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                 # image = np.rot90(image)
 
                 if (num_frames == 1) and (self.cur_image % 2 == 0):
-                    # subimage = image[0:2048:4,0:2048:4]
-                    self.sig_camera_frame.emit(image)
+                    subimage = image[0:2048:4,0:2048:4]
+                    self.sig_camera_frame.emit(subimage)
 
                 # image = image.flatten()
 
