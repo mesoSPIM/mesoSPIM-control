@@ -471,9 +471,9 @@ class mesoSPIM_Core(QtCore.QObject):
                 break
 
             self.snap_image_in_series()
+            self.sig_add_images_to_image_series.emit()
             # self.sig_add_images_to_image_series_and_wait_until_done.emit()
             self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-            self.sig_add_images_to_image_series.emit()
             self.image_count += 1
 
             QtWidgets.QApplication.processEvents()

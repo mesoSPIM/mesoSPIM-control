@@ -162,19 +162,43 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     def add_images_to_series(self):
         print('Camera: Adding images started')
         
-        [frames, dims] = self.hcam.getFrames()
+        if self.cur_image + 1 < self.max_frame:
+            [frames, dims] = self.hcam.getFrames()
 
-        for aframe in frames:
-            
-            image = aframe.getData()
-            # image = np.reshape(image, (-1, 2048))
-            # image = np.rot90(image)
-            # if self.cur_image % 10 == 0:
-                # self.sig_camera_frame.emit(image)
-            # image = image.flatten()
-            self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
-            print('Done with image: #', self.cur_image)
-            self.cur_image += 1
+            # for aframe in frames:
+                
+            #     image = aframe.getData()
+            #     self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+
+            #     image = np.reshape(image, (-1, 2048))
+            #     # image = np.rot90(image)
+            #     self.sig_camera_frame.emit(image)
+            #     # ''' Creating a 512x512 subimage '''
+            #     # if self.cur_image % 20 == 0:
+            #     #     subimage = image[0:2048:4,0:2048:4]
+            #     #     self.sig_camera_frame.emit(subimage)
+            #     # image = image.flatten()
+            #     print('Done with image: #', self.cur_image)
+            #     self.cur_image += 1
+            num_frames = len(frames)
+            for aframe in frames:
+               
+                image = aframe.getData()
+                self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+
+                image = np.reshape(image, (-1, 2048))
+                # image = np.rot90(image)
+
+                if (num_frames == 1) and (self.cur_image % 2 == 0):
+                    # subimage = image[0:2048:4,0:2048:4]
+                    self.sig_camera_frame.emit(image)
+
+                # image = image.flatten()
+
+                print('Done with image: #', self.cur_image)
+                self.cur_image += 1
+
+            # self.sig_camera_frame.emit(image)
         
         print('Camera: Adding images ended')
 
@@ -203,8 +227,9 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         for aframe in frames:
             image = aframe.getData()
             image = np.reshape(image, (-1, 2048))
-            image = np.rot90(image)
+            # image = np.rot90(image)
 
+                 
             self.sig_camera_frame.emit(image)
             self.live_image_count += 1
             self.sig_camera_status.emit(str(self.live_image_count))
