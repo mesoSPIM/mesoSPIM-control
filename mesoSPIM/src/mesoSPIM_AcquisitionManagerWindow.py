@@ -21,7 +21,8 @@ from .utils.delegates import (ComboDelegate,
                         MarkFocusPositionDelegate,
                         ProgressBarDelegate,
                         ZstepSpinBoxDelegate,
-                        SliderWithValueDelegate)
+                        SliderWithValueDelegate,
+                        ChooseFolderDelegate)
 
 from .utils.widgets import MarkPositionWidget
 
@@ -206,6 +207,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                               'laser' : 'ComboDelegate(self,[key for key in self.cfg.laserdict.keys()])',
                               'zoom' : 'ComboDelegate(self,[key for key in self.cfg.zoomdict.keys()])',
                               'shutter' : 'ComboDelegate(self,[key for key in self.cfg.shutteroptions])',
+                              'folder' : 'ChooseFolderDelegate(self)',
                               }
 
         self.persistent_editor_column_indices=[]

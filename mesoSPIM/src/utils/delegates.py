@@ -232,3 +232,34 @@ class MarkRotationPositionDelegate(MarkPositionDelegate):
         pos = round(pos, 2)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))
+
+class ChooseFolderDelegate(QtWidgets.QItemDelegate):
+    '''
+    A delegate that has a button, in turn opening a set folder dialog 
+    and displaying the folder name.
+
+    '''
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.folder = ''
+
+    def createEditor(self, parent, option, index):
+        button = QtWidgets.QPushButton(parent)
+        button.setText('...')
+        button.clicked.connect(self.choose_folder_dialog)
+        return button
+    
+    def choose_folder_dialog(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
+        if path:
+            self.folder = path
+            self.commitData.emit(self.sender())
+
+    def setEditorData(self, editor, index):
+        editor.blockSignals(True)
+        editor.setText(str(index.model().data(index, role=QtCore.Qt.EditRole)))
+        editor.blockSignals(False)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, self.folder)
