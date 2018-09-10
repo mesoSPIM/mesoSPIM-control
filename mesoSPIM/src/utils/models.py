@@ -132,7 +132,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
         if column in (z_start_column ,z_end_column, z_step_column):
             row = index.row()
-            planes = self._table[row].get_planes()
+            planes = self._table[row].get_image_count()
             planes_column = keylist.index('planes')
 
             index = self.createIndex(row, planes_column)

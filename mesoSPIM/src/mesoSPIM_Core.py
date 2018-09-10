@@ -53,6 +53,10 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal()
     sig_end_image_series = QtCore.pyqtSignal()
 
+    sig_prepare_live = QtCore.pyqtSignal()
+    sig_get_live_image = QtCore.pyqtSignal()
+    sig_end_live = QtCore.pyqtSignal()
+
     ''' Movement-related signals: '''
     sig_move_relative = QtCore.pyqtSignal(dict)
     sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
@@ -377,11 +381,13 @@ class mesoSPIM_Core(QtCore.QObject):
         
     def live(self):
         self.stopflag = False
+        self.sig_prepare_live.emit()
 
         self.open_shutters()
         while self.stopflag is False:
             ''' Needs update to use snap image in series '''
             self.snap_image()
+            self.sig_get_live_image.emit()
 
             QtWidgets.QApplication.processEvents()
 
@@ -389,7 +395,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.open_shutters()
 
         self.close_shutters()
-
+        self.sig_end_live.emit()
         self.sig_finished.emit()
 
     def start(self, row=None):
@@ -421,18 +427,10 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
-            name = acq['filename']
-            _time = int(acq.get_acquisition_time())
-            filter = acq['filter']
-            total_steps = acq.get_image_count()
-
-            displaystring = "Running acquisition with name: " + name + " for " + str(_time) + " seconds and filter:" + filter
-
-            # self.statusMessage.emit(displaystring)
-
-            self.prepare_acquisition(acq)
-            self.run_acquisition(acq)
-            self.close_acquisition(acq)
+            if not self.stopflag:
+                self.prepare_acquisition(acq)
+                self.run_acquisition(acq)
+                self.close_acquisition(acq)
 
     def close_acquisition_list(self, acq_list):
         self.sig_status_message.emit('Closing Acquisition List')
@@ -449,7 +447,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Going to start position')
         self.move_absolute(acq.get_startpoint(), wait_until_done=True)
         self.sig_status_message.emit('Setting Filter & Shutter')
-        self.set_shutterconfig(acq['shutter'])
+        self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
         self.sig_status_message.emit('Setting Zoom')
         self.set_zoom(acq['zoom'], wait_until_done=True)
@@ -467,15 +465,16 @@ class mesoSPIM_Core(QtCore.QObject):
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
-                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
-                self.sig_end_image_series.emit()
-                self.finished.emit()
+                self.sig_add_images_to_image_series_and_wait_until_done.emit()
+                # self.sig_end_image_series.emit()
+                self.sig_finished.emit()
                 break
-            self.image_count += 1
 
             self.snap_image_in_series()
+            # self.sig_add_images_to_image_series_and_wait_until_done.emit()
             self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-            # self.sig_add_images_to_image_series.emit()
+            self.sig_add_images_to_image_series.emit()
+            self.image_count += 1
 
             QtWidgets.QApplication.processEvents()
             
@@ -487,11 +486,10 @@ class mesoSPIM_Core(QtCore.QObject):
                                self.image_count)
         self.close_shutters()
         
-
     def close_acquisition(self, acq):
         self.sig_status_message.emit('Closing Acquisition')
         if self.stopflag is not True:
-            #  self.sig_add_images_to_image_series_and_wait_until_done.emit()
+            # self.sig_add_images_to_image_series_and_wait_until_done.emit()
             self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
 
@@ -594,7 +592,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'Zoom', acq['zoom'])
             self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
             self.write_line(file, 'Filter', acq['filter'])
-            self.write_line(file, 'Shutter', acq['shutter'])
+            self.write_line(file, 'Shutter', acq['shutterconfig'])
             self.write_line(file)
             self.write_line(file, 'POSTION')
             self.write_line(file, 'x_pos', acq['x_pos'])

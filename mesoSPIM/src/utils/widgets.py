@@ -78,6 +78,6 @@ class SliderWithValue(QtWidgets.QWidget):
 
     def setValue(self, value):
         self.slider.setValue(value)
-
+        
     def value(self):
         return self.slider.value()

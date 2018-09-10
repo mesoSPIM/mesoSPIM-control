@@ -154,13 +154,6 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'f_abs': self['f_pos'],
                 }
 
-    def get_planes(self):
-        if self['z_step'] == 0:
-            return 1
-        else:
-            return abs(int((self['z_end']-self['z_start'])/self['z_step']))
-
-
 class AcquisitionList(list):
     '''
     Class for a list of acquisition objects
