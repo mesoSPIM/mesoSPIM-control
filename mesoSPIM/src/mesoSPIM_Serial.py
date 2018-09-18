@@ -65,10 +65,10 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Wiring signals through to child objects '''
         self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
-        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True))
+        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True), type=3)
 
         self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
-        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True))
+        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True), type=3)
 
         self.parent.sig_zero_axes.connect(lambda list: self.sig_zero_axes.emit(list))
         self.parent.sig_unzero_axes.connect(lambda list: self.sig_unzero_axes.emit(list))

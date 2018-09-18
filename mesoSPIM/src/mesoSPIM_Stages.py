@@ -44,10 +44,6 @@ class mesoSPIM_Stage(QtCore.QObject):
         is slightly confusing and dirty.
         '''
 
-        # self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
-        # self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True), type=3)
-        # self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
-        # self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict, time: self.move_absolute(dict, wait_until_done=True), type=3)
         self.parent.sig_stop_movement.connect(self.stop)
         self.parent.sig_zero_axes.connect(self.zero_axes)
         self.parent.sig_unzero_axes.connect(self.unzero_axes)
@@ -232,7 +228,7 @@ class mesoSPIM_Stage(QtCore.QObject):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            time.sleep(1)
+            time.sleep(3)
 
     def stop(self):
         self.sig_status_message.emit('Stopped')

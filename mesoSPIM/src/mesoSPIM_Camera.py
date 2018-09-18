@@ -161,47 +161,50 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.start_time = time.time()
 
     def add_images_to_series(self):
-        print('Camera: Adding images started')
         
-        if self.cur_image + 1 < self.max_frame:
-            [frames, dims] = self.hcam.getFrames()
+        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+        if self.stopflag is False:
+            print('Camera: Adding images started')
+            if self.cur_image + 1 < self.max_frame:
+                [frames, dims] = self.hcam.getFrames()
 
-            # for aframe in frames:
+                # for aframe in frames:
+                    
+                #     image = aframe.getData()
+                #     self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+
+                #     image = np.reshape(image, (-1, 2048))
+                #     # image = np.rot90(image)
+                #     self.sig_camera_frame.emit(image)
+                #     # ''' Creating a 512x512 subimage '''
+                #     # if self.cur_image % 20 == 0:
+                #     #     subimage = image[0:2048:4,0:2048:4]
+                #     #     self.sig_camera_frame.emit(subimage)
+                #     # image = image.flatten()
+                #     print('Done with image: #', self.cur_image)
+                #     self.cur_image += 1
+                num_frames = len(frames)
+                for aframe in frames:
                 
-            #     image = aframe.getData()
-            #     self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+                    image = aframe.getData()
+                    self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
 
-            #     image = np.reshape(image, (-1, 2048))
-            #     # image = np.rot90(image)
-            #     self.sig_camera_frame.emit(image)
-            #     # ''' Creating a 512x512 subimage '''
-            #     # if self.cur_image % 20 == 0:
-            #     #     subimage = image[0:2048:4,0:2048:4]
-            #     #     self.sig_camera_frame.emit(subimage)
-            #     # image = image.flatten()
-            #     print('Done with image: #', self.cur_image)
-            #     self.cur_image += 1
-            num_frames = len(frames)
-            for aframe in frames:
-               
-                image = aframe.getData()
-                self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+                    image = np.reshape(image, (-1, 2048))
+                    image = np.rot90(image)
 
-                image = np.reshape(image, (-1, 2048))
-                image = np.rot90(image)
+                    # if (num_frames == 1) and (self.cur_image % 2 == 0):
+                    #     subimage = image[0:2048:4,0:2048:4]
+                    #     self.sig_camera_frame.emit(subimage)
+                    
+                    # image = image.flatten()
+                    self.sig_camera_frame.emit(image)
+                    
+                    print('Done with image: #', self.cur_image)
+                    self.cur_image += 1
 
-                # if (num_frames == 1) and (self.cur_image % 2 == 0):
-                #     subimage = image[0:2048:4,0:2048:4]
-                #     self.sig_camera_frame.emit(subimage)
-                
-                # image = image.flatten()
-                self.sig_camera_frame.emit(image)
-
-                print('Done with image: #', self.cur_image)
-                self.cur_image += 1
-
-        
-        print('Camera: Adding images ended')
+            print('Camera: Adding images ended')
+        else:
+            print('Camera: Acquisition stop requested...')
 
     def end_image_series(self):
         try:

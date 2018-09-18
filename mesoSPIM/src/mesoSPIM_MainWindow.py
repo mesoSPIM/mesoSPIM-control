@@ -101,6 +101,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         
         try:
             current_thread = self.thread()
+            current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
             print('Window priority: ', current_thread.priority())
         except:
             print('Print window priority failed')

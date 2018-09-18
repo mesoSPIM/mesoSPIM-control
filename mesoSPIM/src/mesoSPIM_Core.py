@@ -466,21 +466,23 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
         for i in range(steps):
+            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
             if self.stopflag is True:
                 self.close_image_series()
-                self.sig_add_images_to_image_series_and_wait_until_done.emit()
-                # self.sig_end_image_series.emit()
+                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
                 self.sig_finished.emit()
                 break
 
             self.snap_image_in_series()
             self.sig_add_images_to_image_series.emit()
+            #time.sleep(0.02)
             # self.sig_add_images_to_image_series_and_wait_until_done.emit()
-            self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
+
+            # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
+            self.move_relative(acq.get_delta_z_dict())
+
             self.image_count += 1
 
-            QtWidgets.QApplication.processEvents()
-            
             self.send_progress(self.acquisition_count,
                                self.total_acquisition_count,
                                i,
