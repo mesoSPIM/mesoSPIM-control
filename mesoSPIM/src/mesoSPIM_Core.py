@@ -466,10 +466,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
         for i in range(steps):
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
             if self.stopflag is True:
                 self.close_image_series()
-                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
+                self.sig_end_image_series.emit()
                 self.sig_finished.emit()
                 break
 
@@ -481,6 +480,7 @@ class mesoSPIM_Core(QtCore.QObject):
             # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
             self.move_relative(acq.get_delta_z_dict())
 
+            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
             self.image_count += 1
 
             self.send_progress(self.acquisition_count,
@@ -493,12 +493,12 @@ class mesoSPIM_Core(QtCore.QObject):
         
     def close_acquisition(self, acq):
         self.sig_status_message.emit('Closing Acquisition')
-        if self.stopflag is not True:
-            # self.sig_add_images_to_image_series_and_wait_until_done.emit()
+        
+        if self.stopflag is False:
             self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
+            self.sig_end_image_series.emit()
 
-        self.sig_end_image_series.emit()
         self.acquisition_count += 1
   
     @QtCore.pyqtSlot(str)

@@ -162,7 +162,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
     def add_images_to_series(self):
         
-        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+        # QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
         if self.stopflag is False:
             print('Camera: Adding images started')
             if self.cur_image + 1 < self.max_frame:
