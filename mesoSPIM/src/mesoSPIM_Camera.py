@@ -158,6 +158,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.hcam.startAcquisition()
         self.cur_image = 0
         print('Cam: Finished Preparing Image Series')
+        self.start_time = time.time()
 
     def add_images_to_series(self):
         print('Camera: Adding images started')
@@ -187,18 +188,18 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                 self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
 
                 image = np.reshape(image, (-1, 2048))
-                # image = np.rot90(image)
+                image = np.rot90(image)
 
-                if (num_frames == 1) and (self.cur_image % 2 == 0):
-                    subimage = image[0:2048:4,0:2048:4]
-                    self.sig_camera_frame.emit(subimage)
-
+                # if (num_frames == 1) and (self.cur_image % 2 == 0):
+                #     subimage = image[0:2048:4,0:2048:4]
+                #     self.sig_camera_frame.emit(subimage)
+                
                 # image = image.flatten()
+                self.sig_camera_frame.emit(image)
 
                 print('Done with image: #', self.cur_image)
                 self.cur_image += 1
 
-            # self.sig_camera_frame.emit(image)
         
         print('Camera: Adding images ended')
 
@@ -207,9 +208,13 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             self.hcam.stopAcquisition()
             del self.xy_stack
             print('Acq finished')
-            print("Saved", self.cur_image, "frames")
+            print("Saved", self.cur_image + 1, "frames")
         except:
             print('Camera: Error when finishing acquisition.')
+
+        self.end_time =  time.time()
+        framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
+        print('Framerate: ', framerate)
         self.sig_finished.emit()
 
     def snap_image(self):
@@ -221,13 +226,15 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
         self.live_image_count = 0 
 
+        self.start_time = time.time()
+
     def get_live_image(self):
         [frames, _] = self.hcam.getFrames()
 
         for aframe in frames:
             image = aframe.getData()
             image = np.reshape(image, (-1, 2048))
-            # image = np.rot90(image)
+            image = np.rot90(image)
 
                  
             self.sig_camera_frame.emit(image)
@@ -236,37 +243,9 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
     def end_live(self):        
         self.hcam.stopAcquisition()
-
-    # def live(self):
-    #     '''
-    #     camera running in live mode
-    #     '''
-
-    #     self.stopflag = False
-    #     self.hcam.setACQMode(mode = "run_till_abort")
-    #     self.hcam.startAcquisition()
-
-    #     i = 0
-    #     while self.stopflag is False:
-    #         [frames, _] = self.hcam.getFrames()
-
-    #         for aframe in frames:
-    #             image = aframe.getData()
-    #             image = np.reshape(image, (-1, 2048))
-    #             image = np.rot90(image)
-
-    #             self.sig_camera_frame.emit(image)
-
-    #             i += 1
-
-    #             self.sig_camera_status.emit(str(i))
-
-    #             QtWidgets.QApplication.processEvents()
-
-    # def end_live(self):
-    #     self.hcam.stopAcquisition()
-
-        # self.sig_finished.emit()
+        self.end_time =  time.time()
+        framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
+        print('Framerate: ', framerate)
 
 # class mesoSPIM_DemoCamera(mesoSPIM_Camera):
 #     def __init__(self, config, parent = None):

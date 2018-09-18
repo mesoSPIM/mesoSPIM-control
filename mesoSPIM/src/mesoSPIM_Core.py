@@ -112,6 +112,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread.start()
         self.serial_thread.start()
 
+        print('Camera thread priority:', self.camera_thread.priority())
+        print('Serial thread priority:', self.serial_thread.priority())
+
         ''' Setting waveform generation up '''
         self.waveformer = mesoSPIM_WaveFormGenerator(self)
         self.waveformer.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))

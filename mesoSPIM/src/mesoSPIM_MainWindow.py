@@ -97,7 +97,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_progress.connect(self.update_progressbars)
 
         ''' Start the thread '''
-        self.core_thread.start()
+        self.core_thread.start(QtCore.QThread.HighPriority)
+        
+        try:
+            current_thread = self.thread()
+            print('Window priority: ', current_thread.priority())
+        except:
+            print('Print window priority failed')
+        print('Core priority: ', self.core_thread.priority())
 
         ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
