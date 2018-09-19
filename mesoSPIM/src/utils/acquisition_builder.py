@@ -56,8 +56,8 @@ class TilingAcquisitionListBuilder():
                                      intensity=self.dict['intensity'],
                                      filter=self.dict['filter'],
                                      zoom=self.dict['zoom'],
-                                     shutter=self.dict['shutter'],
-                                     filename='myFile'
+                                     shutterconfig=self.dict['shutterconfig'],
+                                     filename='tiling_file_'+str(i)+'_'+str(j)+'.raw'
                                      )
 
                 self.acq_prelist.append(acq)

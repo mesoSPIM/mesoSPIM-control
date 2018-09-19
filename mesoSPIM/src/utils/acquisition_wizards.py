@@ -31,6 +31,7 @@ class TilingWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
+        self.cfg = parent.cfg
         self.state = mesoSPIM_StateSingleton()
 
         ''' Instance variables '''
@@ -49,7 +50,7 @@ class TilingWizard(QtWidgets.QWizard):
         self.laser = ''
         self.intensity = 0
         self.filter = ''
-        self.shutter = ''
+        self.shutterconfig = ''
         self.theta_pos = 0
         self.f_pos = 0
         self.x_image_count = 1
@@ -102,10 +103,11 @@ class TilingWizard(QtWidgets.QWizard):
         self.y_image_count = int(np.rint(delta_y/self.y_offset))
 
     def update_fov(self):
-        zoom = self.zoom
-        index = self.parent.cfg.zoom_options.index(zoom)
-        self.x_fov = self.parent.cfg.zoom_options[index]
-        self.y_fov = self.parent.cfg.zoom_options[index]
+        pass
+        # zoom = self.zoom
+        # index = self.parent.cfg.zoom_options.index(zoom)
+        # self.x_fov = self.parent.cfg.zoom_options[index]
+        # self.y_fov = self.parent.cfg.zoom_options[index]
 
     def get_dict(self):
         return {'x_start' : self.x_start,
@@ -127,7 +129,7 @@ class TilingWizard(QtWidgets.QWizard):
                 'laser' : self.laser,
                 'intensity' : self.intensity,
                 'filter' : self.filter,
-                'shutter' : self.shutter,
+                'shutterconfig' : self.shutterconfig,
                 }
 
     def update_acquisition_list(self):
@@ -148,8 +150,7 @@ class TilingWelcomePage(QtWidgets.QWizardPage):
         super().__init__(parent)
 
         self.setTitle("Welcome to the tiling wizard")
-        self.setSubTitle("This wizard will guide you through the steps of \
-        creating a tiling acquisition.")
+        self.setSubTitle("This wizard will guide you through the steps of creating a tiling acquisition.")
 
 class ZeroingXYStagePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -168,10 +169,13 @@ class ZeroingXYStagePage(QtWidgets.QWizardPage):
 
         try:
             '''
+            Pretty dirty approach, reaching up through the hierarchy:
+
             The first level parent is the QWizard
             The second level parent is the Window - which can send zeroing signals
+            The third level is the mesoSPIM MainWindow
             '''
-            self.button.toggled.connect(parent.parent.zero_xy.emit)
+            self.button.toggled.connect(parent.parent.parent.sig_zero_axes.emit(['x','y']))
         except:
             print('Zeroing connection failed')
 
@@ -206,25 +210,12 @@ class DefineXYPositionPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def get_xy_start_position(self):
-        ''' parent.parent.model is the model
-        TODO: Has to be reimplemented
-
-        This is risky in case the API breaks. Here, submodules need
-        information about parent's parents - not that great.
-        '''
-        pass
-        # self.parent.x_start = self.parent.parent.model.position['x_pos']
-        # self.parent.y_start = self.parent.parent.model.position['y_pos']
+        self.parent.x_start = self.parent.state['position']['x_pos']
+        self.parent.y_start = self.parent.state['position']['x_pos']
 
     def get_xy_end_position(self):
-        ''' parent.parent.model is the model
-
-        This is risky in case the API breaks. Here, submodules need
-        information about parent's parents - not that great.
-        '''
-        pass
-        # self.parent.x_end = self.parent.parent.model.position['x_pos']
-        # self.parent.y_end = self.parent.parent.model.position['y_pos']
+        self.parent.x_start = self.parent.state['position']['x_pos']
+        self.parent.y_start = self.parent.state['position']['x_pos']
 
 class DefineXYStartPositionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -244,15 +235,8 @@ class DefineXYStartPositionPage(QtWidgets.QWizardPage):
                             )
 
     def get_xy_start_position(self):
-        ''' parent.parent.model is the model
-        TODO: Has to be reimplemented
-
-        This is risky in case the API breaks. Here, submodules need
-        information about parent's parents - not that great.
-        '''
-        pass
-        # self.parent.x_start = self.parent.parent.model.position['x_pos']
-        # self.parent.y_start = self.parent.parent.model.position['y_pos']
+        self.parent.x_start = self.parent.state['position']['x_pos']
+        self.parent.y_start = self.parent.state['position']['x_pos']
 
 class DefineXYEndPositionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -272,14 +256,8 @@ class DefineXYEndPositionPage(QtWidgets.QWizardPage):
                             )
 
     def get_xy_end_position(self):
-        ''' parent.parent.model is the model
-
-        This is risky in case the API breaks. Here, submodules need
-        information about parent's parents - not that great.
-        '''
-        pass
-        # self.parent.x_end = self.parent.parent.model.position['x_pos']
-        # self.parent.y_end = self.parent.parent.model.position['y_pos']
+        self.parent.x_start = self.parent.state['position']['x_pos']
+        self.parent.y_start = self.parent.state['position']['x_pos']
 
 class DefineZPositionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -333,30 +311,16 @@ class DefineZPositionPage(QtWidgets.QWizardPage):
                             )
 
     def update_z_start_position(self):
-        ''' parent.parent.model is the model
-
-        This is risky in case the API breaks. Here, submodules need
-        information about parent's parents - not that great.
-        '''
-        pass
-        # self.parent.z_start = self.parent.parent.model.position['z_pos']
-
+        self.parent.z_start = self.parent.state['position']['z_pos']
+    
     def update_z_end_position(self):
-        ''' parent.parent.model is the model
-
-        This is risky in case the API breaks. Here, submodules need
-        information about parent's parents - not that great.
-        '''
-        pass
-        # self.parent.z_end = self.parent.parent.model.position['z_pos']
+        self.parent.z_end = self.parent.state['position']['z_pos']
 
     def update_z_step(self):
-        pass
-        # self.parent.z_step = self.z_step_spinbox.value()
+        self.parent.z_step = self.z_step_spinbox.value()
 
     def update_focus_position(self):
-        pass
-        # self.parent.f_pos = self.parent.parent.model.position['f_pos']
+        self.parent.f_pos = self.parent.state['position']['f_pos']
 
 class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
     '''
@@ -373,11 +337,11 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
 
         self.zoomLabel = QtWidgets.QLabel('Zoom')
         self.zoomComboBox = QtWidgets.QComboBox(self)
-        self.zoomComboBox.addItems(sefl.parent.cfg.zoom_options)
+        self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
 
         self.laserLabel = QtWidgets.QLabel('Laser')
         self.laserComboBox = QtWidgets.QComboBox(self)
-        self.laserComboBox.addItems(sefl.parent.cfg.laser_options)
+        self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
 
         self.intensityLabel = QtWidgets.QLabel('Intensity')
         self.intensitySlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -386,11 +350,11 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
 
         self.filterLabel = QtWidgets.QLabel('Filter')
         self.filterComboBox = QtWidgets.QComboBox(self)
-        self.filterComboBox.addItems(sefl.parent.cfg.filter_options)
+        self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
 
         self.shutterLabel = QtWidgets.QLabel('Shutter')
         self.shutterComboBox = QtWidgets.QComboBox(self)
-        self.shutterComboBox.addItems(sefl.parent.cfg.shutter_options)
+        self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
 
         self.xyOffsetSpinBoxLabel = QtWidgets.QLabel('XY Offset')
         self.xyOffsetSpinBox = QtWidgets.QSpinBox(self)
@@ -425,14 +389,14 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         This method should be called when the "Next" Button is pressed
         '''
         self.parent.zoom = self.zoomComboBox.currentText()
-        self.parent.x_fov = self.parent.cfg.fov_options[self.zoomComboBox.currentIndex()]
-        self.parent.y_fov = self.parent.cfg.fov_options[self.zoomComboBox.currentIndex()]
+        # self.parent.x_fov = self.parent.cfg.fov_options[self.zoomComboBox.currentIndex()]
+        # self.parent.y_fov = self.parent.cfg.fov_options[self.zoomComboBox.currentIndex()]
         self.parent.x_offset = self.xyOffsetSpinBox.value()
         self.parent.y_offset = self.xyOffsetSpinBox.value()
         self.parent.laser = self.laserComboBox.currentText()
         self.parent.intensity = self.intensitySlider.value()
         self.parent.filter = self.filterComboBox.currentText()
-        self.parent.shutter = self.shutterComboBox.currentText()
+        self.parent.shutterconfig = self.shutterComboBox.currentText()
 
 class CheckTilingPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -483,8 +447,7 @@ class FinishedTilingPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Finished!")
-        self.setSubTitle("Attention: This will overwrite the \
-        Acquisition Table. Click 'Finished' to continue.")
+        self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue.")
 
     def validatePage(self):
         print('Update parent table')

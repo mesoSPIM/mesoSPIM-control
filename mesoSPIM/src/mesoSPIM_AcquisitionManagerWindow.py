@@ -101,6 +101,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.MarkCurrentETLParametersButton.clicked.connect(self.mark_current_etl_parameters)
         self.PreviewSelectionButton.clicked.connect(self.preview_acquisition)
 
+        self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
+
     def enable(self):
         self.setEnabled(True)
 

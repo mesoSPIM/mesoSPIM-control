@@ -470,6 +470,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
             self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
             self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
+            
             self.sig_update_gui_from_state.emit(False)
         
         self.state['state'] = 'idle'
@@ -495,10 +496,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
         self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
 
-
-        ''' TODO: Set up ETL and Galvo parameters '''
-
-        self.sig_status_message.emit('Preparing camera')
+        self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
         self.write_metadata(acq)
@@ -534,7 +532,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.close_shutters()
         
     def close_acquisition(self, acq):
-        self.sig_status_message.emit('Closing Acquisition')
+        self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
 
         if self.stopflag is False:
             self.move_absolute(acq.get_startpoint(), wait_until_done=True)
