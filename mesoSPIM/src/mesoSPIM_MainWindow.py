@@ -278,6 +278,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
+        self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
+
         
         self.widget_to_state_parameter_assignment=(
             (self.FilterComboBox, 'filter',1),
@@ -413,6 +415,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         print('selected row:', row)
         self.state['selected_row'] = row
         self.sig_state_request.emit({'state':'run_selected_acquisition'})
+        self.enable_mode_control_buttons(False)
         self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)
         self.enable_gui(False)
@@ -420,6 +423,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def run_acquisition_list(self):
         self.state['selected_row'] = -1
         self.sig_state_request.emit({'state':'run_acquisition_list'})
+        self.enable_mode_control_buttons(False)
         self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)
         self.enable_gui(False)
