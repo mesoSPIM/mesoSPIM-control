@@ -187,7 +187,6 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                 for aframe in frames:
                 
                     image = aframe.getData()
-                    self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
 
                     image = np.reshape(image, (-1, 2048))
                     image = np.rot90(image)
@@ -196,8 +195,9 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                     #     subimage = image[0:2048:4,0:2048:4]
                     #     self.sig_camera_frame.emit(subimage)
                     
-                    # image = image.flatten()
                     self.sig_camera_frame.emit(image)
+                    image = image.flatten()
+                    self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
                     
                     print('Done with image: #', self.cur_image)
                     self.cur_image += 1

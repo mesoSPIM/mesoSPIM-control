@@ -291,6 +291,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'zoom')
             self.model.setDataFromState(row, 'laser')
             self.model.setDataFromState(row, 'intensity')
+            self.model.setDataFromState(row, 'shutterconfig')
         else:
             print('No row selected!')
 
