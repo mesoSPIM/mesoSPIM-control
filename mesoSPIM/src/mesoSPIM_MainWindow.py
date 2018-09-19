@@ -268,8 +268,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
         self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
         self.StopButton.clicked.connect(lambda: print('Stopping'))
-        self.LightsheetSwitchingModeButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'lightsheet_alignment_mode'}))
-        self.VisualModeButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'visual_mode'}))
+        self.LightsheetSwitchingModeButton.clicked.connect(self.run_lightsheet_alignment_mode)
+        self.VisualModeButton.clicked.connect(self.run_visual_mode)
 
         self.ETLIncrementSpinBox.valueChanged.connect(self.update_etl_increments)
         self.ZeroLeftETLButton.toggled.connect(self.zero_left_etl)
@@ -428,6 +428,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.enable_stop_button(True)
         self.enable_gui(False)
 
+    def run_lightsheet_alignment_mode(self):
+        self.sig_state_request.emit({'state':'lightsheet_alignment_mode'})
+        self.set_progressbars_to_busy()
+        self.enable_mode_control_buttons(False)
+        self.enable_stop_button(True)
+    
+    def run_visual_mode(self):
+        self.sig_state_request.emit({'state':'visual_mode'})
+        self.set_progressbars_to_busy()
+        self.enable_mode_control_buttons(False)
+        self.enable_stop_button(True)
+
     @QtCore.pyqtSlot(bool)
     def enable_gui_updates_from_state(self, boolean):
         self.update_gui_from_state_flag = boolean
@@ -444,6 +456,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LiveButton.setEnabled(boolean)
         self.RunSelectedAcquisitionButton.setEnabled(boolean)
         self.RunAcquisitionListButton.setEnabled(boolean)
+        self.VisualModeButton.setEnabled(boolean)
+        self.LightsheetSwitchingModeButton.setEnabled(boolean)
 
     def finished(self):
         self.enable_gui_updates_from_state(False)

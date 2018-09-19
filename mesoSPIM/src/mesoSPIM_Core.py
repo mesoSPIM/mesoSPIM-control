@@ -415,13 +415,13 @@ class mesoSPIM_Core(QtCore.QObject):
             acq_list = AcquisitionList([acquisition])
 
         if acq_list.has_rotation() == True:
-             print('Attention: Has rotation!')
-        
-        self.sig_update_gui_from_state.emit(True)
-        self.prepare_acquisition_list(acq_list)
-        self.run_acquisition_list(acq_list)
-        self.close_acquisition_list(acq_list)
-        self.sig_update_gui_from_state.emit(False)
+             print('Attention: Has rotation! Acq List Stopped!')
+        else:
+            self.sig_update_gui_from_state.emit(True)
+            self.prepare_acquisition_list(acq_list)
+            self.run_acquisition_list(acq_list)
+            self.close_acquisition_list(acq_list)
+            self.sig_update_gui_from_state.emit(False)
 
     def prepare_acquisition_list(self, acq_list):
         '''
@@ -453,6 +453,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if row==None:
             print('No row selected!')
         else:
+            self.sig_update_gui_from_state.emit(True)
             acq = self.state['acq_list'][row]
 
             self.sig_status_message.emit('Going to start position')
@@ -464,7 +465,12 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_zoom(acq['zoom'], wait_until_done=False)
             self.set_laser(acq['laser'], wait_until_done=False)
             self.set_intensity(acq['intensity'], wait_until_done=True)
-            ''' TODO: Set up ETL and Galvo parameters '''
+
+            self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
+            self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
+            self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
+            self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
+            self.sig_update_gui_from_state.emit(False)
         
         self.state['state'] = 'idle'
         
@@ -483,6 +489,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_zoom(acq['zoom'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True)
         self.set_intensity(acq['intensity'], wait_until_done=True)
+
+        self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
+        self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
+        self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
+        self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
+
 
         ''' TODO: Set up ETL and Galvo parameters '''
 
@@ -546,6 +558,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def lightsheet_alignment_mode(self):
         '''Switches shutters after each image to allow coalignment of both lightsheets'''
         self.stopflag = False
+        self.sig_prepare_live.emit()
         '''Needs more careful adjustment of the timing
 
         TODO: There is no wait period to wait for the shutters to open. Nonetheless, the
@@ -554,13 +567,16 @@ class mesoSPIM_Core(QtCore.QObject):
         while self.stopflag is False:
             self.shutter_left.open()
             self.snap_image()
+            self.sig_get_live_image.emit()
             self.shutter_left.close()
             self.shutter_right.open()
             self.snap_image()
+            self.sig_get_live_image.emit()
             self.shutter_right.close()
-            QApplication.processEvents()
+            QtWidgets.QApplication.processEvents()
 
         self.close_shutters()
+        self.sig_end_live.emit()
         self.sig_finished.emit()
 
     def visual_mode(self):
@@ -568,23 +584,24 @@ class mesoSPIM_Core(QtCore.QObject):
         old_r_amp = self.state['etl_r_amplitude']
         self.sig_state_request.emit({'etl_l_amplitude' : 0})
         self.sig_state_request.emit({'etl_r_amplitude' : 0})
-
-        self.prepare_image_series()
+        time.sleep(0.05)
+       
+        self.sig_prepare_live.emit()
 
         self.stopflag = False
 
         self.open_shutters()
         while self.stopflag is False:
             ''' Needs update to use snap image in series '''
-            self.snap_image_in_series()
-
+            self.snap_image()
+            self.sig_get_live_image.emit()
             QtWidgets.QApplication.processEvents()
 
             ''' How to handle a possible shutter switch?'''
             self.open_shutters()
 
-        self.close_image_series()
         self.close_shutters()
+        self.sig_end_live.emit()
 
         self.sig_finished.emit()
 

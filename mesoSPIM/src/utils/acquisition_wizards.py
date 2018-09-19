@@ -15,6 +15,8 @@ from PyQt5.QtCore import pyqtProperty
 # from .config import config as cfg
 from .acquisition_builder import TilingAcquisitionListBuilder
 
+from ..mesoSPIM_State import mesoSPIM_StateSingleton
+
 class TilingWizard(QtWidgets.QWizard):
     '''
     Wizard to run
@@ -29,6 +31,7 @@ class TilingWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
+        self.state = mesoSPIM_StateSingleton()
 
         ''' Instance variables '''
         self.x_start = 0
