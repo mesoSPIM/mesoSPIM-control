@@ -222,6 +222,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'state':'run_acquisition_list'})
             self.start(row = None)
 
+        elif state == 'preview_acquisition':
+            self.state['state'] = 'preview_acquisition'
+            self.preview_acquisition()
+
         elif state == 'idle':
             print('Core: Stopping requested')
             self.sig_state_request.emit({'state':'idle'})
@@ -440,6 +444,29 @@ class mesoSPIM_Core(QtCore.QObject):
         if not self.stopflag:
             self.move_absolute(acq_list.get_startpoint())
             self.sig_finished.emit()
+
+    def preview_acquisition(self):
+        self.stopflag = False
+
+        row = self.state['selected_row']
+
+        if row==None:
+            print('No row selected!')
+        else:
+            acq = self.state['acq_list'][row]
+
+            self.sig_status_message.emit('Going to start position')
+            self.move_absolute(acq.get_startpoint(), wait_until_done=False)
+            self.sig_status_message.emit('Setting Filter & Shutter')
+            self.set_shutterconfig(acq['shutterconfig'])
+            self.set_filter(acq['filter'], wait_until_done=False)
+            self.sig_status_message.emit('Setting Zoom')
+            self.set_zoom(acq['zoom'], wait_until_done=False)
+            self.set_laser(acq['laser'], wait_until_done=False)
+            self.set_intensity(acq['intensity'], wait_until_done=True)
+            ''' TODO: Set up ETL and Galvo parameters '''
+        
+        self.state['state'] = 'idle'
         
     def prepare_acquisition(self, acq):
         '''
@@ -456,6 +483,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_zoom(acq['zoom'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True)
         self.set_intensity(acq['intensity'], wait_until_done=True)
+
+        ''' TODO: Set up ETL and Galvo parameters '''
+
         self.sig_status_message.emit('Preparing camera')
         self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
@@ -471,29 +501,29 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.sig_end_image_series.emit()
                 self.sig_finished.emit()
                 break
+            else:
+                self.snap_image_in_series()
+                self.sig_add_images_to_image_series.emit()
+                #time.sleep(0.02)
+                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
 
-            self.snap_image_in_series()
-            self.sig_add_images_to_image_series.emit()
-            #time.sleep(0.02)
-            # self.sig_add_images_to_image_series_and_wait_until_done.emit()
+                # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
+                self.move_relative(acq.get_delta_z_dict())
 
-            # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-            self.move_relative(acq.get_delta_z_dict())
+                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+                self.image_count += 1
 
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
-            self.image_count += 1
-
-            self.send_progress(self.acquisition_count,
-                               self.total_acquisition_count,
-                               i,
-                               steps,
-                               self.total_image_count,
-                               self.image_count)
+                self.send_progress(self.acquisition_count,
+                                   self.total_acquisition_count,
+                                   i,
+                                   steps,
+                                   self.total_image_count,
+                                   self.image_count)
         self.close_shutters()
         
     def close_acquisition(self, acq):
         self.sig_status_message.emit('Closing Acquisition')
-        
+
         if self.stopflag is False:
             self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()

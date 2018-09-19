@@ -99,6 +99,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.MarkCurrentXYButton.clicked.connect(self.mark_current_xy_position)
         self.MarkCurrentStateButton.clicked.connect(self.mark_current_state)
         self.MarkCurrentETLParametersButton.clicked.connect(self.mark_current_etl_parameters)
+        self.PreviewSelectionButton.clicked.connect(self.preview_acquisition)
 
     def enable(self):
         self.setEnabled(True)
@@ -302,6 +303,15 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'etl_r_offset')
             self.model.setDataFromState(row, 'etl_r_amplitude')
         else:
+            print('No row selected!')
+
+    def preview_acquisition(self):
+        row = self.get_first_selected_row()
+        print('selected row:', row)
+        if row is not None:
+            self.state['selected_row'] = row
+            self.parent.sig_state_request.emit({'state':'preview_acquisition'})
+        else: 
             print('No row selected!')
 
 
