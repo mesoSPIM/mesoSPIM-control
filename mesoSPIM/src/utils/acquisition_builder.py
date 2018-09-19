@@ -57,6 +57,7 @@ class TilingAcquisitionListBuilder():
                                      filter=self.dict['filter'],
                                      zoom=self.dict['zoom'],
                                      shutterconfig=self.dict['shutterconfig'],
+                                     folder=self.dict['folder'],
                                      filename='tiling_file_'+str(i)+'_'+str(j)+'.raw'
                                      )
 

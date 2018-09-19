@@ -55,6 +55,7 @@ class TilingWizard(QtWidgets.QWizard):
         self.f_pos = 0
         self.x_image_count = 1
         self.y_image_count = 1
+        self.folder = ''
 
         self.acquisition_time = 0
 
@@ -67,6 +68,7 @@ class TilingWizard(QtWidgets.QWizard):
         # self.addPage(DefineXYEndPositionPage(self))
         self.addPage(DefineZPositionPage(self))
         self.addPage(OtherAcquisitionParametersPage(self))
+        self.addPage(DefineFolderPage(self))
         self.addPage(CheckTilingPage(self))
         self.addPage(FinishedTilingPage(self))
 
@@ -130,6 +132,7 @@ class TilingWizard(QtWidgets.QWizard):
                 'intensity' : self.intensity,
                 'filter' : self.filter,
                 'shutterconfig' : self.shutterconfig,
+                'folder' : self.folder,
                 }
 
     def update_acquisition_list(self):
@@ -397,6 +400,34 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         self.parent.intensity = self.intensitySlider.value()
         self.parent.filter = self.filterComboBox.currentText()
         self.parent.shutterconfig = self.shutterComboBox.currentText()
+
+class DefineFolderPage(QtWidgets.QWizardPage):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+
+        self.setTitle("Select folder")
+        self.setSubTitle("Please select the folder in which the data should be saved.")
+
+        self.Button = QtWidgets.QPushButton('Select Folder')
+        self.Button.setCheckable(True)
+        self.Button.setChecked(False)
+        self.Button.toggled.connect(self.choose_folder)
+
+        self.TextEdit = QtWidgets.QLineEdit(self)
+
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.Button, 0, 0)
+        self.layout.addWidget(self.TextEdit, 1, 0)
+        self.setLayout(self.layout)
+
+    def choose_folder(self):
+        ''' File dialog for choosing the save folder '''
+
+        path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
+        if path:
+            self.parent.folder = path
+            self.TextEdit.setText(path)
 
 class CheckTilingPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
