@@ -27,6 +27,7 @@ from .utils.delegates import (ComboDelegate,
 from .utils.widgets import MarkPositionWidget
 
 from .utils.acquisition_wizards import TilingWizard
+from .utils.filename_wizard import FilenameWizard
 
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
@@ -108,7 +109,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.DeleteAllButton.clicked.connect(self.delete_all_rows)
         self.SetRotationPointButton.clicked.connect(lambda: print('Not implemented yet'))
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
-        self.FilenameWizardButton.clicked.connect(lambda: print('Not implemented yet'))
+        self.FilenameWizardButton.clicked.connect(self.generate_filenames)
 
     def enable(self):
         self.setEnabled(True)
@@ -345,4 +346,4 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.model.setData(index, path)
 
     def generate_filenames(self):
-        pass
+        wizard = FilenameWizard(self)

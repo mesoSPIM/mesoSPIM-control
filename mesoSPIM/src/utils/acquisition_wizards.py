@@ -7,8 +7,6 @@ Widgets that take user input and create acquisition lists
 import numpy as np
 import pprint
 
-from PyQt5 import QtWidgets, QtGui, QtCore
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
