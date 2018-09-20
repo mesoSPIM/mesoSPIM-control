@@ -287,3 +287,8 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         self.modelAboutToBeReset.emit()
         self._table = pickle.load(open(filename, "rb" ))
         self.modelReset.emit()
+
+    def deleteTable(self):
+        self.modelAboutToBeReset.emit()
+        self._table = AcquisitionList()
+        self.modelReset.emit()

@@ -63,6 +63,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         ''' Parent Enable / Disable GUI'''
         self.parent.sig_enable_gui.connect(lambda boolean: self.setEnabled(boolean))
 
+        self.statusBar = QtWidgets.QStatusBar()
+
         ''' Setting the model up '''
         self.model = AcquisitionModel()
 
@@ -103,6 +105,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
 
+        self.DeleteAllButton.clicked.connect(self.delete_all_rows)
+        self.SetRotationPointButton.clicked.connect(lambda: print('Not implemented yet'))
+        self.SetFoldersButton.clicked.connect(self.set_folder_names)
+        self.FilenameWizardButton.clicked.connect(lambda: print('Not implemented yet'))
+
     def enable(self):
         self.setEnabled(True)
 
@@ -117,9 +124,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         '''
 
         if time == 0:
-            self.statusBar().showMessage(string)
+            self.statusBar.showMessage(string)
         else:
-            self.statusBar().showMessage(string, time)
+            self.statusBar.showMessage(string, time)
 
     def get_first_selected_row(self):
         ''' Little helper method to provide the first row out of a selection range '''
@@ -166,6 +173,18 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         else:
             self.display_status_message("Can't delete last row!", 2)
         self.update_persistent_editors()
+
+    def delete_all_rows(self):
+        ''' 
+        Displays a warning that this will delete the entire table
+        and then proceeds to delete if the user clicks 'Yes'
+        '''
+        reply = QtWidgets.QMessageBox.warning(self,"mesoSPIM Warning",
+                'Do you want to delete the table?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No )
+        
+        if reply == QtWidgets.QMessageBox.Yes:
+            self.model.deleteTable()
 
     def copy_row(self):
         row = self.get_first_selected_row()
@@ -317,4 +336,13 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         else: 
             print('No row selected!')
 
+    def set_folder_names(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
+        if path:
+            column_index = self.model._table[0].keys().index('folder')
+            for row in range(0, self.model.rowCount()):
+                index = self.model.createIndex(row, column_index)
+                self.model.setData(index, path)
 
+    def generate_filenames(self):
+        pass
