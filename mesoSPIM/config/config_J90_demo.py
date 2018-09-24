@@ -5,42 +5,35 @@ Basic hardware configuration
 '''
 
 '''
-PXI6733 is responsible for the lasers
-PXI6259 is responsible for the shutters, ETL waveforms and galvo waveforms
+PXI6229_1 is responsible for the shutters, ETL waveforms and galvo waveforms
+PXI6229_2 is responsible for the laser(s)
 '''
 
-acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
-                        'camera_trigger_source' : '/PXI6259/PFI0',
-                        'camera_trigger_out_line' : '/PXI6259/ctr0',
-                        'galvo_etl_task_line' : 'PXI6259/ao0:3',
-                        'galvo_etl_task_trigger_source' : '/PXI6259/PFI0',
-                        'laser_task_line' :  'PXI6733/ao0:7',
-                        'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
-'''The laserdict contains the digital enable lines for the SOLE-6'''
-laserdict = {'405 nm': 'PXI6733/port0/line2',
-             '488 nm': 'PXI6733/port0/line3',
-             '515 nm': 'PXI6733/port0/line4',
-             '561 nm': 'PXI6733/port0/line5',
-             '594 nm': 'PXI6733/port0/line6',
-             '647 nm': 'PXI6733/port0/line7'}
+
+acquisition_hardware = {'master_trigger_out_line' : 'PXI_6229_1/port0/line1',
+                        'camera_trigger_source' : '/PXI_6229_1/PFI0',
+                        'camera_trigger_out_line' : '/PXI_6229_1/ctr0',
+                        'galvo_etl_task_line' : 'PXI_6229_1/ao0:3',
+                        'galvo_etl_task_trigger_source' : '/PXI_6229_1/PFI0',
+                        'laser_task_line' :  'PXI_6229_2/ao0:3',
+                        'laser_task_trigger_source' : '/PXI_6229_1/PFI0'}
+
+'''The laserdict contains the digital enable lines'''
+laserdict = {'488 nm': 'PXI_6229_2/port0/line3',
+             '515 nm': 'PXI_6229_2/port0/line4',}
 
 '''
 Assignment of the analog outputs of the Laser card to the channels
 The Empty slots are placeholders.
 '''
-laser_designation = {'405 nm' : 0,
-                     '488 nm' : 1,
-                     '515 nm' : 2,
-                     '561 nm' : 3,
-                     '594 nm' : 4,
-                     '647 nm' : 5,
-                     'Empty 0' : 6,
-                     'Empty 1' : 7
-                     }
+laser_designation = {'488 nm' : 0,
+                     '515 nm' : 1,
+                     'Empty 0' : 2,
+                     'Empty 1' : 3,}
 
 '''
-Assignment of the galvos and ETLs to the 6259 AO channels.
+Assignment of the galvos and ETLs to the 6229 AO channels.
 '''
 galvo_etl_designation = {'Galvo-L' : 0,
                          'Galvo-R' : 1,
@@ -52,8 +45,8 @@ galvo_etl_designation = {'Galvo-L' : 0,
 Shutter configuration
 '''
 
-shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
-              'shutter_right' : 'PXI6259/port2/line0'}
+shutterdict = {'shutter_left' : 'PXI_6229_1/port0/line0',
+              'shutter_right' : 'PXI_6229_1/port2/line0'}
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
 shutteroptions = ('Left','Right','Both')

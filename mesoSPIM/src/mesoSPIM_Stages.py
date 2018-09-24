@@ -6,8 +6,6 @@ import time
 
 from PyQt5 import QtCore
 
-from pipython import GCSDevice, pitools
-
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_Stage(QtCore.QObject):
@@ -279,6 +277,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         '''
         PI-specific code
         '''
+        from pipython import GCSDevice, pitools
 
         ''' Setting up the PI stages '''
         self.pi = self.cfg.pi_parameters

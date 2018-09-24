@@ -19,7 +19,7 @@ class DemoZoom():
                 time.sleep(1)
    
 
-class Dynamixel_Zoom:
+class DynamixelZoom:
     def __init__(self, zoomdict, COMport, identifier=2, baudrate=1000000):
         from .dynamixel import dynamixel_functions as dynamixel
 

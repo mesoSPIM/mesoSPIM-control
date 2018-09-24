@@ -16,7 +16,8 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
-from .devices.zoom.mesoSPIM_Zoom import Dynamixel_Zoom
+from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
+from .devices.zoom.mesoSPIM_Zoom import DynamixelZoom, DemoZoom
 from .mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_DemoStage
 # from .mesoSPIM_State import mesoSPIM_State
 
@@ -50,12 +51,14 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
             self.filterwheel = LudlFilterwheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
+        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DemoFilterWheel':
+            self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
 
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
-            self.zoom = Dynamixel_Zoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
+            self.zoom = DynamixelZoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
         elif self.cfg.zoom_parameters['zoom_type'] == 'DemoZoom':
-            self.zoom = Demo_Zoom(self.cfg.zoomdict)
+            self.zoom = DemoZoom(self.cfg.zoomdict)
 
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] == 'PI':
