@@ -6,45 +6,23 @@ Author: Fabian Voigt
 #TODO
 """
 
-from .dynamixel import dynamixel_functions as dynamixel
 import time
 
-# class Zoom:
-#     """Generic wrapper class for zoom systems
-#
-#     Takes a dictionary containing the Zoom-Setpoints/Command pairs and a dictionary
-#     containing configuration data as arguments for initialization.
-#
-#     """
-#
-#     def __init__(self, zoomdict, zoomconfig):
-#         self.zoomdict = zoomdict
-#         self.zoomconfig = zoomconfig
-#         self.zoomvalue = None # is not defined if zoom has not been changed at least once
-#         self.zoomcommand = None  # is not defined if zoom has not been changed at least once
-#
-#     def change_zoom(self, value):
-#         """Changes zoom after checking that the commanded value exists"""
-#         if value in self.zoomdict:
-#             self._zoom_to(value)
-#             self.zoomvalue = value
-#         else:
-#             print('Zoom value not in the configuration!')
-#
-#     def _zoom_to(self, value):
-#         """Method for changing zoom, can be overwritten by child classes"""
-#         print('changing zoom to: '+value)
-#
-#     def get_zoom(self):
-#         """Returns the value (String) of the current zoom setting"""
-#         return self.zoomvalue
-#
-#     def get_command(self):
-#         """Returns the commanded value (Integer, encodercounts) of the current zoom setting"""
-#         return self.zoomcommand
+class DemoZoom():
+    def __init__(self, zoomdict):
+        self.zoomdict = zoomdict
+
+    def set_zoom(self, zoom, wait_until_done=False):
+        if zoom in self.zoomdict:
+            print('Zoom set to: ', str(zoom))
+            if wait_until_done:
+                time.sleep(1)
+   
 
 class Dynamixel_Zoom:
     def __init__(self, zoomdict, COMport, identifier=2, baudrate=1000000):
+        from .dynamixel import dynamixel_functions as dynamixel
+
         self.zoomdict = zoomdict
         self.dynamixel = dynamixel
         self.id = identifier

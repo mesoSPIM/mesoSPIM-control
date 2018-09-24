@@ -54,6 +54,8 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
             self.zoom = Dynamixel_Zoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
+        elif self.cfg.zoom_parameters['zoom_type'] == 'DemoZoom':
+            self.zoom = Demo_Zoom(self.cfg.zoomdict)
 
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] == 'PI':
