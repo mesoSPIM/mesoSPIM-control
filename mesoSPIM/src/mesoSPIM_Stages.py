@@ -229,7 +229,7 @@ class mesoSPIM_Stage(QtCore.QObject):
             time.sleep(3)
 
     def stop(self):
-        self.sig_status_message.emit('Stopped')
+        self.sig_status_message.emit('Stopped',0)
 
     def zero_axes(self, list):
         for axis in list:
@@ -475,3 +475,157 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
                 blockflag = False
             else:
                 time.sleep(0.1)
+
+class mesoSPIM_GalilStages(mesoSPIM_Stage):
+    '''
+
+    It is expected that the parent class has the following signals:
+        sig_move_relative = pyqtSignal(dict)
+        sig_move_relative_and_wait_until_done = pyqtSignal(dict)
+        sig_move_absolute = pyqtSignal(dict)
+        sig_move_absolute_and_wait_until_done = pyqtSignal(dict)
+        sig_zero = pyqtSignal(list)
+        sig_unzero = pyqtSignal(list)
+        sig_stop_movement = pyqtSignal()
+
+    Also contains a QTimer that regularily sends position updates, e.g
+    during the execution of movements.
+    '''
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        '''
+        Galil-specific code
+        '''
+        from src.devices.stages.galil.galilcontrol import StageControlGalil
+      
+        self.x_encodercounts_per_um = self.cfg.xyz_galil_parameters['x_encodercounts_per_um']
+        self.y_encodercounts_per_um = self.cfg.xyz_galil_parameters['y_encodercounts_per_um']
+        self.z_encodercounts_per_um = self.cfg.xyz_galil_parameters['z_encodercounts_per_um']
+        self.f_encodercounts_per_um = self.cfg.f_galil_parameters['z_encodercounts_per_um']
+
+        ''' Setting up the Galil stages '''
+        self.xyz_stage = StageControlGalil(COMport = self.cfg.xyz_galil_parameters['COMport'],
+                                            x_encodercounts_per_um = self.x_encodercounts_per_um,
+                                            y_encodercounts_per_um = self.y_encodercounts_per_um, 
+                                            z_encodercounts_per_um = self.z_encodercounts_per_um)
+
+        self.f_stage = StageControlGalil(COMport = self.cfg.f_galil_parameters['COMport'],
+                                        x_encodercounts_per_um = 0,
+                                        y_encodercounts_per_um = 0,
+                                        z_encodercounts_per_um = self.f_encodercounts_per_um)
+
+        print('Galil: ', self.xyz_stage.read_position('x'))
+        print('Galil: ', self.xyz_stage.read_position('y'))
+        print('Galil: ', self.xyz_stage.read_position('z'))
+
+    def __del__(self):
+        try:
+            '''Close the Galil connection'''
+            self.xyz_stage.close_stage()
+            self.f_stage.close_stage()
+            print('Stages disconnected')
+        except:
+            print('Error while disconnecting the Galil stage')
+
+    def report_position(self):
+        self.x_pos = self.xyz_stage.read_position('x')
+        self.y_pos = self.xyz_stage.read_position('y')
+        self.z_pos = self.xyz_stage.read_position('z')
+        self.f_pos = self.f_stage.read_position('z')
+        self.theta_pos = 0
+
+        self.create_position_dict()
+
+        self.int_x_pos = self.x_pos + self.int_x_pos_offset
+        self.int_y_pos = self.y_pos + self.int_y_pos_offset
+        self.int_z_pos = self.z_pos + self.int_z_pos_offset
+        self.int_f_pos = self.f_pos + self.int_f_pos_offset
+        self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
+
+        self.create_internal_position_dict()
+
+        self.sig_position.emit(self.int_position_dict)
+
+    def move_relative(self, dict, wait_until_done=False):
+        ''' Galil move relative method
+
+        Lots of implementation details in here, should be replaced by a facade
+        '''
+        if 'x_rel' in dict:
+            x_rel = dict['x_rel']
+            if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
+                self.xyz_stage.move_relative(xrel = int(x_rel))
+            else:
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
+
+        if 'y_rel' in dict:
+            y_rel = dict['y_rel']
+            if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
+                self.xyz_stage.move_relative(yrel = int(y_rel))
+            else:
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
+
+        if 'z_rel' in dict:
+            z_rel = dict['z_rel']
+            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                self.xyz_stage.move_relative(zrel = int(z_rel))
+            else:
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+
+        if 'theta_rel' in dict:
+            theta_rel = dict['theta_rel']
+            if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
+               print('No rotation stage attached')
+            else:
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
+
+        if 'f_rel' in dict:
+            f_rel = dict['f_rel']
+            if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
+                self.f_stage.move_relative(zrel = f_rel)
+            else:
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            pass
+
+           
+    def move_absolute(self, dict, wait_until_done=False):
+        '''
+        Galil move absolute method
+
+        Lots of implementation details in here, should be replaced by a facade
+
+        '''
+        print(dict)
+
+        # if ('x_abs', 'y_abs', 'z_abs', 'f_abs') in dict:
+        x_abs = dict['x_abs']
+        x_abs = x_abs - self.int_x_pos_offset
+        y_abs = dict['y_abs']
+        y_abs = y_abs - self.int_y_pos_offset
+        z_abs = dict['z_abs']
+        z_abs = z_abs - self.int_z_pos_offset
+        f_abs = dict['f_abs']
+        f_abs = f_abs - self.int_f_pos_offset
+
+        self.xyz_stage.move_absolute(xabs=x_abs, yabs=y_abs, zabs=z_abs)
+        self.f_stage.move_absolute(zabs=f_abs)
+            
+        if wait_until_done == True:
+            self.xyz_stage.wait_until_done('XYZ')
+
+    # def stop(self):
+    #     # self.pidevice.STP(noraise=True)
+
+    # def load_sample(self):
+    #     y_abs = self.cfg.stage_parameters['y_load_position']/1000
+    #     # self.pidevice.MOV({2 : y_abs})
+
+    # def unload_sample(self):
+    #     y_abs = self.cfg.stage_parameters['y_unload_position']/1000
+    #     # self.pidevice.MOV({2 : y_abs})
+
+    

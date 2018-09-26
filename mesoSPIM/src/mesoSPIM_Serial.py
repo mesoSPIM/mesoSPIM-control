@@ -18,7 +18,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
 from .devices.zoom.mesoSPIM_Zoom import DynamixelZoom, DemoZoom
-from .mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_DemoStage
+from .mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_DemoStage, mesoSPIM_GalilStages
 # from .mesoSPIM_State import mesoSPIM_State
 
 class mesoSPIM_Serial(QtCore.QObject):
@@ -63,6 +63,9 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] == 'PI':
             self.stage = mesoSPIM_PIstage(self)
+            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+        elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
+            self.stage = mesoSPIM_GalilStages(self)
             self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)

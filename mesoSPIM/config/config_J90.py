@@ -74,7 +74,7 @@ camera_parameters = {'x_pixels' : 2048,
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'DemoStage' or 'GalilStage'
+stage_parameters = {'stage_type' : 'GalilStage', # 'PI' or 'DemoStage' or 'GalilStage'
                     'startfocus' : 95000,
                     'y_load_position': 75000,
                     'y_unload_position': 40000,

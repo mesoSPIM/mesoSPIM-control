@@ -2,7 +2,7 @@
 mesoSPIM Filterwheel classes
 ============================
 '''
-
+import time
 from PyQt5 import QtCore
 
 class mesoSPIM_DemoFilterWheel():
