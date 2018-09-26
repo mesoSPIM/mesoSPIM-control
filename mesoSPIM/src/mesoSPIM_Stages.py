@@ -279,6 +279,8 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         '''
         from pipython import GCSDevice, pitools
 
+        self.pitools = pitools
+
         ''' Setting up the PI stages '''
         self.pi = self.cfg.pi_parameters
 
@@ -389,7 +391,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
                 self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            pitools.waitontarget(self.pidevice)
+            self.pitools.waitontarget(self.pidevice)
 
     def move_absolute(self, dict, wait_until_done=False):
         '''
@@ -451,7 +453,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            pitools.waitontarget(self.pidevice)
+            self.pitools.waitontarget(self.pidevice)
 
     def stop(self):
         self.pidevice.STP(noraise=True)
@@ -499,7 +501,7 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         Galil-specific code
         '''
         from src.devices.stages.galil.galilcontrol import StageControlGalil
-      
+
         self.x_encodercounts_per_um = self.cfg.xyz_galil_parameters['x_encodercounts_per_um']
         self.y_encodercounts_per_um = self.cfg.xyz_galil_parameters['y_encodercounts_per_um']
         self.z_encodercounts_per_um = self.cfg.xyz_galil_parameters['z_encodercounts_per_um']
@@ -508,7 +510,7 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         ''' Setting up the Galil stages '''
         self.xyz_stage = StageControlGalil(COMport = self.cfg.xyz_galil_parameters['COMport'],
                                             x_encodercounts_per_um = self.x_encodercounts_per_um,
-                                            y_encodercounts_per_um = self.y_encodercounts_per_um, 
+                                            y_encodercounts_per_um = self.y_encodercounts_per_um,
                                             z_encodercounts_per_um = self.z_encodercounts_per_um)
 
         self.f_stage = StageControlGalil(COMport = self.cfg.f_galil_parameters['COMport'],
@@ -591,7 +593,7 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         if wait_until_done == True:
             pass
 
-           
+
     def move_absolute(self, dict, wait_until_done=False):
         '''
         Galil move absolute method
@@ -613,7 +615,7 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
 
         self.xyz_stage.move_absolute(xabs=x_abs, yabs=y_abs, zabs=z_abs)
         self.f_stage.move_absolute(zabs=f_abs)
-            
+
         if wait_until_done == True:
             self.xyz_stage.wait_until_done('XYZ')
 
@@ -627,5 +629,3 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
     # def unload_sample(self):
     #     y_abs = self.cfg.stage_parameters['y_unload_position']/1000
     #     # self.pidevice.MOV({2 : y_abs})
-
-    
