@@ -32,6 +32,7 @@ class FilenameWizard(QtWidgets.QWizard):
         self.setWindowTitle('Filename Wizard')
 
         self.addPage(FilenameWizardWelcomePage(self))
+        self.addPage(FilenameWizardCheckResultsPage(self))
         
         self.show()
 
@@ -60,7 +61,7 @@ class FilenameWizard(QtWidgets.QWizard):
         '''
         pass
 
-    
+
 
 class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -69,10 +70,10 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.setTitle("Autogenerate filenames")
         self.setSubTitle("Which properties would you like to use?")
 
-        self.LaserRadioButton = QtWidgets.QRadioButton('Laser', self)
-        self.FilterRadioButton = QtWidgets.QRadioButton('Filter', self)
-        self.ZoomRadioButton = QtWidgets.QRadioButton('Zoom', self)
-        self.ShutterRadioButton = QtWidgets.QRadioButton('Shutter', self)
+        self.LaserRadioButton = QtWidgets.QCheckBox('Laser', self)
+        self.FilterRadioButton = QtWidgets.QCheckBox('Filter', self)
+        self.ZoomRadioButton = QtWidgets.QCheckBox('Zoom', self)
+        self.ShutterRadioButton = QtWidgets.QCheckBox('Shutter', self)
 
         self.registerField('Laser',self.LaserRadioButton)
         self.registerField('Filter', self.FilterRadioButton)
@@ -82,6 +83,21 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.LaserRadioButton, 0, 0)
         self.layout.addWidget(self.FilterRadioButton, 1, 0)
+        self.layout.addWidget(self.ZoomRadioButton, 2, 0)
+        self.layout.addWidget(self.ShutterRadioButton, 3, 0)
         self.setLayout(self.layout)
 
+class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTitle('Check results')
+        self.setSubTitle('Please check if the following filenames are ok:')
+
+        self.TextEdit = QtWidgets.QPlainTextEdit(self)
+        self.TextEdit.setReadOnly(True)
+        self.TextEdit.setPlainText('Hello1 Hello2 \n Hello3')
+
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.TextEdit, 0, 0, 1, 1)
+        self.setLayout(self.layout)
 
