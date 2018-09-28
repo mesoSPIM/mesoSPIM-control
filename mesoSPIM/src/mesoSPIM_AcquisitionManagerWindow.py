@@ -22,7 +22,9 @@ from .utils.delegates import (ComboDelegate,
                         ProgressBarDelegate,
                         ZstepSpinBoxDelegate,
                         SliderWithValueDelegate,
-                        ChooseFolderDelegate)
+                        ChooseFolderDelegate,
+                        ETLSpinBoxDelegate,
+                        RotationSpinBoxDelegate)
 
 from .utils.widgets import MarkPositionWidget
 
@@ -228,6 +230,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                               'z_start' : 'MarkZPositionDelegate(self)',
                               'z_end' : 'MarkZPositionDelegate(self)',
                               'z_step' : 'ZstepSpinBoxDelegate(self)',
+                              'rot' : 'RotationSpinBoxDelegate(self)',
                               'f_pos' : 'MarkFocusPositionDelegate(self)',
                               'filter' : 'ComboDelegate(self,[key for key in self.cfg.filterdict.keys()])',
                               'intensity' : 'SliderWithValueDelegate(self)',
@@ -235,6 +238,10 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                               'zoom' : 'ComboDelegate(self,[key for key in self.cfg.zoomdict.keys()])',
                               'shutterconfig' : 'ComboDelegate(self,[key for key in self.cfg.shutteroptions])',
                               'folder' : 'ChooseFolderDelegate(self)',
+                              'etl_l_offset' : 'ETLSpinBoxDelegate(self)',
+                              'etl_l_amplitude' : 'ETLSpinBoxDelegate(self)',
+                              'etl_r_offset' : 'ETLSpinBoxDelegate(self)',
+                              'etl_r_amplitude' : 'ETLSpinBoxDelegate(self)',
                               }
 
         self.persistent_editor_column_indices=[]

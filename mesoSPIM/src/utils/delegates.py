@@ -104,6 +104,54 @@ class ProgressBarDelegate(QtWidgets.QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         model.setData(index, editor.value())
 
+class ETLSpinBoxDelegate(QtWidgets.QStyledItemDelegate):
+    ''' Delegate with Spinbox, very fine steps'''
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        spinbox = QtWidgets.QDoubleSpinBox(parent)
+        spinbox.setDecimals(3)
+        spinbox.setSingleStep(0.001)
+        spinbox.setMinimum(-5.0)
+        spinbox.setMaximum(5.0)
+        spinbox.setSuffix(' V')
+        spinbox.valueChanged.connect(lambda: self.commitData.emit(self.sender()))
+        spinbox.setAutoFillBackground(True)
+        return spinbox
+
+    def setEditorData(self, editor, index):
+        editor.blockSignals(True)
+        editor.setValue(index.model().data(index, role=QtCore.Qt.EditRole))
+        editor.blockSignals(False)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.value())
+
+class RotationSpinBoxDelegate(QtWidgets.QStyledItemDelegate):
+    ''' Delegate with Spinbox, very fine steps'''
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        spinbox = QtWidgets.QDoubleSpinBox(parent)
+        spinbox.setDecimals(1)
+        spinbox.setSingleStep(1)
+        spinbox.setMinimum(-360.0)
+        spinbox.setMaximum(360.0)
+        spinbox.setSuffix('°')
+        spinbox.valueChanged.connect(lambda: self.commitData.emit(self.sender()))
+        spinbox.setAutoFillBackground(True)
+        return spinbox
+
+    def setEditorData(self, editor, index):
+        editor.blockSignals(True)
+        editor.setValue(index.model().data(index, role=QtCore.Qt.EditRole))
+        editor.blockSignals(False)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.value())        
+
 class ZstepSpinBoxDelegate(QtWidgets.QStyledItemDelegate):
     ''' Delegate with Spinbox, Minimum value is 0 (no negative step sizes)'''
     def __init__(self, parent):
