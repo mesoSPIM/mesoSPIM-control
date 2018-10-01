@@ -597,8 +597,11 @@ class HamamatsuCamera(object):
         This will block waiting for at least one new frame.
         """
         # Wait for a new frame.
+        # paramstart = DCAMWAIT_START(
+        #         0, 0, DCAMCAP_EVENT_FRAMEREADY, DCAMWAIT_TIMEOUT_INFINITE)
         paramstart = DCAMWAIT_START(
-                0, 0, DCAMCAP_EVENT_FRAMEREADY, DCAMWAIT_TIMEOUT_INFINITE)
+                0, 0, DCAMCAP_EVENT_FRAMEREADY, 1000)
+
         paramstart.size = ctypes.sizeof(paramstart)
 
         self.checkStatus(dcam.dcamwait_start(self.wait_handle,
