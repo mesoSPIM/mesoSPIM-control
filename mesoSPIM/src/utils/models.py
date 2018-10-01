@@ -112,7 +112,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         column = self._table.get_keylist().index(state_parameter)
 
         if state_parameter in ('x_pos','y_pos','z_pos'):
-            new_value = self.state['position'][state_parameter]
+            new_value = round(self.state['position'][state_parameter],2)
         else:
             new_value = self.state[state_parameter]
 
