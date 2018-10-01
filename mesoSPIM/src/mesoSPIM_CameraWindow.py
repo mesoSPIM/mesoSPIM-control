@@ -66,3 +66,5 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     camera_window = mesoSPIM_CameraWindow()
     camera_window.show()
+
+    sys.exit(app.exec_())
