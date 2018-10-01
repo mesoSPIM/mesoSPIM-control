@@ -2,6 +2,7 @@
 mesoSPIM CameraWindow
 
 '''
+import sys
 import numpy as np
 
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -17,7 +18,10 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         super().__init__()
 
         '''Set up the UI'''
-        loadUi('gui/mesoSPIM_CameraWindow.ui', self)
+        if __name__ == '__main__':
+            loadUi('../gui/mesoSPIM_CameraWindow.ui', self)
+        else:
+            loadUi('gui/mesoSPIM_CameraWindow.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
 
         ''' Set histogram Range '''
@@ -57,3 +61,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     def set_image(self, image):
         self.graphicsView.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
         self.draw_crosshairs()
+
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    camera_window = mesoSPIM_CameraWindow()
+    camera_window.show()
