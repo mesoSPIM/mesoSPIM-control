@@ -188,6 +188,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         
         if reply == QtWidgets.QMessageBox.Yes:
             self.model.deleteTable()
+            self.update_persistent_editors()
 
     def copy_row(self):
         row = self.get_first_selected_row()
