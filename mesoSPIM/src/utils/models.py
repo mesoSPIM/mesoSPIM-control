@@ -255,11 +255,23 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         ''' Here, I assume that the filename is the name of the process'''
         return self._table[row]['filename']
 
+    def getFilenameColumn(self):
+        return self._headers.index('Filename')
+
     def getTime(self, row):
         return int(self._table[row].get_acquisition_time())
 
     def getFilter(self, row):
         return self._table[row]['filter']
+
+    def getLaser(self, row):
+        return self._table[row]['laser']
+
+    def getShutterconfig(self, row):
+        return self._table[row]['shutterconfig']
+
+    def getZoom(self, row):
+        return self._table[row]['zoom']
 
     def getImageCount(self, row):
         return self._table[row].get_image_count()
