@@ -156,6 +156,7 @@ class TilingWelcomePage(QtWidgets.QWizardPage):
 class ZeroingXYStagePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.parent = parent
 
         self.setTitle("Zero stage positions")
         self.setSubTitle("To aid in relative positioning, the stages have to be zeroed in XY")
@@ -176,7 +177,7 @@ class ZeroingXYStagePage(QtWidgets.QWizardPage):
             The second level parent is the Window - which can send zeroing signals
             The third level is the mesoSPIM MainWindow
             '''
-            self.button.toggled.connect(parent.parent.parent.sig_zero_axes.emit(['x','y']))
+            self.button.toggled.connect(lambda: self.parent.parent.parent.sig_zero_axes.emit(['x','y']))
         except:
             print('Zeroing connection failed')
 

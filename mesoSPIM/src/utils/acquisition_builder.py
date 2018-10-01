@@ -41,9 +41,9 @@ class TilingAcquisitionListBuilder():
         self.y_pos = self.dict['y_start']
 
         for i in range(0,self.dict['x_image_count']):
-            self.x_pos = self.dict['x_start'] + i * self.dict['x_offset']
+            self.x_pos = round(self.dict['x_start'] + i * self.dict['x_offset'],2)
             for j in range(0,self.dict['y_image_count']):
-                self.y_pos = self.dict['y_start'] + j * self.dict['y_offset']
+                self.y_pos = round(self.dict['y_start'] + j * self.dict['y_offset'],2)
 
                 acq = Acquisition(   x_pos=self.x_pos,
                                      y_pos=self.y_pos,
@@ -51,7 +51,7 @@ class TilingAcquisitionListBuilder():
                                      z_end=self.dict['z_end'],
                                      z_step=self.dict['z_step'],
                                      theta_pos=self.dict['theta_pos'],
-                                     f_pos=self.dict['f_pos'],
+                                     f_pos=round(self.dict['f_pos'],2),
                                      laser=self.dict['laser'],
                                      intensity=self.dict['intensity'],
                                      filter=self.dict['filter'],
