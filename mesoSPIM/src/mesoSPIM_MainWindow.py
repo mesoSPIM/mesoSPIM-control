@@ -280,7 +280,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
-        
         self.widget_to_state_parameter_assignment=(
             (self.FilterComboBox, 'filter',1),
             (self.FilterComboBox, 'filter',1),

@@ -183,6 +183,13 @@ class AcquisitionList(list):
             ''' Use a default acquistion '''
             self.append(Acquisition())
 
+        '''
+        In addition to the list of acquisition objects, the AcquisitionList also 
+        contains a rotation point that is save to rotate the sample to the target 
+        value.
+        '''
+        self.rotation_point = {'x_abs' : None, 'y_abs' : None, 'z_abs' : None}
+
     def get_capitalized_keylist(self):
         return self[0].get_capitalized_keylist()
 
@@ -215,6 +222,12 @@ class AcquisitionList(list):
 
     def get_startpoint(self):
         return self[0].get_startpoint()
+
+    def set_rotation_point(self, dict):
+        self.rotation_point = {'x_abs' : dict['x_abs'], 'y_abs' : dict['y_abs'], 'z_abs':dict['z_abs']}
+
+    def get_rotation_point(self):
+        return self.rotation_point
 
     def has_rotation(self):
         '''

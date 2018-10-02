@@ -139,6 +139,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.stopflag = False
 
+        self.acquisition_list_rotation_position = {}
+
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
         have truly finished their life.
@@ -412,16 +414,15 @@ class mesoSPIM_Core(QtCore.QObject):
             acq_list = self.state['acq_list']
         else:
             acquisition = self.state['acq_list'][row]
+            rotation_position = self.state['acq_list'].get_rotation_point()
             acq_list = AcquisitionList([acquisition])
+            acq_list.set_rotation_point(rotation_position)
 
-        if acq_list.has_rotation() == True:
-             print('Attention: Has rotation! Acq List Stopped!')
-        else:
-            self.sig_update_gui_from_state.emit(True)
-            self.prepare_acquisition_list(acq_list)
-            self.run_acquisition_list(acq_list)
-            self.close_acquisition_list(acq_list)
-            self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit(True)
+        self.prepare_acquisition_list(acq_list)
+        self.run_acquisition_list(acq_list)
+        self.close_acquisition_list(acq_list)
+        self.sig_update_gui_from_state.emit(False)
 
     def prepare_acquisition_list(self, acq_list):
         '''
@@ -431,6 +432,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acquisition_count = 0
         self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
+        self.acquisition_list_rotation_position =  acq_list.get_rotation_point()
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
@@ -442,6 +444,15 @@ class mesoSPIM_Core(QtCore.QObject):
     def close_acquisition_list(self, acq_list):
         self.sig_status_message.emit('Closing Acquisition List')
         if not self.stopflag:
+            current_rotation = self.state['position']['theta_pos']
+            startpoint = acq_list.get_startpoint()
+            target_rotation = startpoint['theta_abs']
+            rotation_position = acq_list.get_rotation_point()
+
+            if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+                self.move_absolute(rotation_position, wait_until_done=True)
+                self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+
             self.move_absolute(acq_list.get_startpoint())
             self.sig_finished.emit()
 
@@ -456,15 +467,29 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_update_gui_from_state.emit(True)
             acq = self.state['acq_list'][row]
 
+            rotation_position = self.state['acq_list'].get_rotation_point()
+
             self.sig_status_message.emit('Going to start position')
-            self.move_absolute(acq.get_startpoint(), wait_until_done=False)
+            
+            ''' Rotation handling goes here '''
+            current_rotation = self.state['position']['theta_pos']
+            startpoint = acq.get_startpoint()
+            target_rotation = startpoint['theta_abs']
+
+            ''' Check if sample has to be rotated, allow some tolerance '''
+            if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+                self.move_absolute(rotation_position, wait_until_done=True)
+                self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+
+            self.move_absolute(startpoint, wait_until_done=False)
+
             self.sig_status_message.emit('Setting Filter & Shutter')
             self.set_shutterconfig(acq['shutterconfig'])
             self.set_filter(acq['filter'], wait_until_done=False)
             self.sig_status_message.emit('Setting Zoom')
             self.set_zoom(acq['zoom'], wait_until_done=False)
-            self.set_laser(acq['laser'], wait_until_done=False)
             self.set_intensity(acq['intensity'], wait_until_done=True)
+            self.set_laser(acq['laser'], wait_until_done=False)
 
             self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
             self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
@@ -482,14 +507,32 @@ class mesoSPIM_Core(QtCore.QObject):
         print('Running Acquisition #', self.acquisition_count,
                 ' with Filename: ', acq['filename'])
         self.sig_status_message.emit('Going to start position')
-        self.move_absolute(acq.get_startpoint(), wait_until_done=True)
+        ''' Rotation handling goes here:
+
+        If target rotation different than current rotation:
+            - go to target position
+            - rotate to target angle
+            - 
+        
+        '''
+        current_rotation = self.state['position']['theta_pos']
+        startpoint = acq.get_startpoint()
+        target_rotation = startpoint['theta_abs']
+
+        ''' Check if sample has to be rotated, allow some tolerance '''
+        if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+            self.move_absolute(self.acquisition_list_rotation_position, wait_until_done=True)
+            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+
+        self.move_absolute(startpoint, wait_until_done=True)
+
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
         self.sig_status_message.emit('Setting Zoom')
         self.set_zoom(acq['zoom'], wait_until_done=True)
-        self.set_laser(acq['laser'], wait_until_done=True)
         self.set_intensity(acq['intensity'], wait_until_done=True)
+        self.set_laser(acq['laser'], wait_until_done=True)
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
