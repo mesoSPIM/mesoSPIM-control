@@ -329,8 +329,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
 
-        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
-            self.connect_widget_to_state_parameter(widget, state_parameter, conversion_factor)
 
     def connect_widget_to_state_parameter(self, widget, state_parameter, conversion_factor):
         '''
