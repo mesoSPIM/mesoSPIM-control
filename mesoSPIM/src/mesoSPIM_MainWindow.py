@@ -96,6 +96,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
 
+        self.core.sig_warning.connect(self.display_warning)
+
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
         
@@ -520,5 +522,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Save current ETL parameters into config
         '''
         self.sig_save_etl_config.emit()
+
+    def display_warning(self, string):
+        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
+                string, QtWidgets.QMessageBox.Ok)
+        
 
     

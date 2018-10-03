@@ -44,6 +44,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_position = QtCore.pyqtSignal(dict)
 
     sig_status_message = QtCore.pyqtSignal(str)
+    sig_warning = QtCore.pyqtSignal(str)
     
     sig_progress = QtCore.pyqtSignal(dict)
 
@@ -413,16 +414,25 @@ class mesoSPIM_Core(QtCore.QObject):
         if row==None:
             acq_list = self.state['acq_list']
         else:
-            acquisition = self.state['acq_list'][row]
-            rotation_position = self.state['acq_list'].get_rotation_point()
-            acq_list = AcquisitionList([acquisition])
-            acq_list.set_rotation_point(rotation_position)
+            acq_list = self.state['acq_list']
+            if acq_list.has_rotation() == True:
+                self.sig_warning.emit('Acquisition list contains rotation - stopping')
+                self.sig_finished.emit()
+            else:
+                acquisition = self.state['acq_list'][row]
+                rotation_position = self.state['acq_list'].get_rotation_point()
+                acq_list = AcquisitionList([acquisition])
+                acq_list.set_rotation_point(rotation_position)
 
-        self.sig_update_gui_from_state.emit(True)
-        self.prepare_acquisition_list(acq_list)
-        self.run_acquisition_list(acq_list)
-        self.close_acquisition_list(acq_list)
-        self.sig_update_gui_from_state.emit(False)
+        if acq_list.has_rotation() == True:
+            self.sig_warning.emit('Acquisition list contains rotation - stopping')
+            self.sig_finished.emit()
+        else:  
+            self.sig_update_gui_from_state.emit(True)
+            self.prepare_acquisition_list(acq_list)
+            self.run_acquisition_list(acq_list)
+            self.close_acquisition_list(acq_list)
+            self.sig_update_gui_from_state.emit(False)
 
     def prepare_acquisition_list(self, acq_list):
         '''
