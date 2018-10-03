@@ -449,9 +449,9 @@ class mesoSPIM_Core(QtCore.QObject):
             target_rotation = startpoint['theta_abs']
             rotation_position = acq_list.get_rotation_point()
 
-            if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-                self.move_absolute(rotation_position, wait_until_done=True)
-                self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+            # if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+            #     self.move_absolute(rotation_position, wait_until_done=True)
+            #     self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(acq_list.get_startpoint())
             self.sig_finished.emit()
@@ -477,9 +477,9 @@ class mesoSPIM_Core(QtCore.QObject):
             target_rotation = startpoint['theta_abs']
 
             ''' Check if sample has to be rotated, allow some tolerance '''
-            if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-                self.move_absolute(rotation_position, wait_until_done=True)
-                self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+            # if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+            #     self.move_absolute(rotation_position, wait_until_done=True)
+            #     self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(startpoint, wait_until_done=False)
 
@@ -520,9 +520,9 @@ class mesoSPIM_Core(QtCore.QObject):
         target_rotation = startpoint['theta_abs']
 
         ''' Check if sample has to be rotated, allow some tolerance '''
-        if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-            self.move_absolute(self.acquisition_list_rotation_position, wait_until_done=True)
-            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+        # if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+        #     self.move_absolute(self.acquisition_list_rotation_position, wait_until_done=True)
+        #     self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
         self.move_absolute(startpoint, wait_until_done=True)
 
