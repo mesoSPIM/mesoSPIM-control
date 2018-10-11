@@ -84,6 +84,12 @@ class FilenameWizard(QtWidgets.QWizard):
 
         for row in range(0, row_count):
             filename = ''
+
+            if self.field('Description'):
+                descriptionstring = self.field('Description')
+                filename += self.replace_spaces_with_underscores(descriptionstring)
+                filename += '_'
+
             if self.field('Laser'):
                 laserstring = self.parent.model.getLaser(row)
                 filename += self.replace_spaces_with_underscores(laserstring)
@@ -130,6 +136,11 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.setTitle("Autogenerate filenames")
         self.setSubTitle("Which properties would you like to use?")
 
+        self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ',self)
+        self.DescriptionLineEdit = QtWidgets.QLineEdit(self) 
+
+        self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
+
         self.LaserCheckBox = QtWidgets.QCheckBox('Laser', self)
         self.FilterCheckBox = QtWidgets.QCheckBox('Filter', self)
         self.ZoomCheckBox = QtWidgets.QCheckBox('Zoom', self)
@@ -145,6 +156,7 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
 
         self.StartNumberCheckBox.toggled.connect(lambda boolean: self.StartNumberSpinBox.setEnabled(boolean))
 
+        self.registerField('Description', self.DescriptionLineEdit)
         self.registerField('Laser',self.LaserCheckBox)
         self.registerField('Filter', self.FilterCheckBox)
         self.registerField('Zoom', self.ZoomCheckBox)
@@ -153,12 +165,14 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.registerField('StartNumberValue', self.StartNumberSpinBox)
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.LaserCheckBox, 0, 0)
-        self.layout.addWidget(self.FilterCheckBox, 1, 0)
-        self.layout.addWidget(self.ZoomCheckBox, 2, 0)
-        self.layout.addWidget(self.ShutterCheckBox, 3, 0)
-        self.layout.addWidget(self.StartNumberCheckBox, 4, 0)
-        self.layout.addWidget(self.StartNumberSpinBox, 4, 1)
+        self.layout.addWidget(self.DescriptionCheckBox, 0, 0)
+        self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
+        self.layout.addWidget(self.LaserCheckBox, 1, 0)
+        self.layout.addWidget(self.FilterCheckBox, 2, 0)
+        self.layout.addWidget(self.ZoomCheckBox, 3, 0)
+        self.layout.addWidget(self.ShutterCheckBox, 4, 0)
+        self.layout.addWidget(self.StartNumberCheckBox, 5, 0)
+        self.layout.addWidget(self.StartNumberSpinBox, 5, 1)
         self.setLayout(self.layout)
 
     def validatePage(self):
