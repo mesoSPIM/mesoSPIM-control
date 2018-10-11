@@ -29,8 +29,6 @@ class FilenameWizard(QtWidgets.QWizard):
         self.parent = parent
         self.state = mesoSPIM_StateSingleton()
 
-        self.filename_list = []
-
         self.setWindowTitle('Filename Wizard')
 
         self.addPage(FilenameWizardWelcomePage(self))
@@ -81,6 +79,8 @@ class FilenameWizard(QtWidgets.QWizard):
             start_number = 0
 
         start_number_string = str(start_number)
+
+        self.filename_list = []
 
         for row in range(0, row_count):
             filename = ''
@@ -187,6 +187,7 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
         for i in self.parent.filename_list:
             self.mystring += str(i)
             self.mystring += '\n'
-        self.TextEdit.setPlainText(self.mystring)
-        
-            
+        self.TextEdit.setPlainText(self.mystring)        
+
+    def cleanupPage(self):
+        self.mystring = ''
