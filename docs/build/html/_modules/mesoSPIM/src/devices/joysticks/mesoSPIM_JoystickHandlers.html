@@ -1,0 +1,294 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers &#8212; mesoSPIM Control 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Contains the joystick handlers</span>
+
+<span class="sd">Because the signals emitted can only be processed when a QEventLoop is running, you</span>
+<span class="sd">need something with an eventloop (e.g. a QApplication) even for testing.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">PyQt5</span> <span class="k">import</span> <span class="n">QtCore</span>
+
+<span class="kn">from</span> <span class="nn">.logitech</span> <span class="k">import</span> <span class="n">FarmSimulatorSidePanel</span>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler">[docs]</a><span class="k">class</span> <span class="nc">mesoSPIM_JoystickHandler</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># QtCore.QObject.__init__(self)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span>
+
+        <span class="sd">&#39;&#39;&#39; parent is the window &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joystick</span> <span class="o">=</span> <span class="n">FarmSimulatorSidePanel</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">sig_button_pressed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_handler</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">sig_mode_changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode_handler</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">sig_axis_moved</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis_handler</span><span class="p">)</span>
+
+        <span class="sd">&#39;&#39;&#39; &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SliderChangeCount</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.button_handler"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.button_handler">[docs]</a>    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">button_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">button_id</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Debugging print statement &#39;&#39;&#39;</span>
+        <span class="c1"># print(&#39;Button pressed: &#39;, button_id)</span>
+
+        <span class="sd">&#39;&#39;&#39; Laser switching buttons &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserComboBox</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserComboBox</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserComboBox</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserComboBox</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">7</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserComboBox</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserComboBox</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="sd">&#39;&#39;&#39; Load &amp; unload samples &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_unload_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_load_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+
+        <span class="sd">&#39;&#39;&#39; Filter &amp; Zoom Increments &amp; decrements &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">11</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">increment_combobox</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">FilterComboBox</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">12</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">decrement_combobox</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">FilterComboBox</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">13</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">increment_combobox</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ZoomComboBox</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">14</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">decrement_combobox</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ZoomComboBox</span><span class="p">)</span>
+
+        <span class="sd">&#39;&#39;&#39; Shutter buttons &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">17</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ShutterComboBox</span><span class="p">,</span> <span class="s1">&#39;Both&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">18</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ShutterComboBox</span><span class="p">,</span> <span class="s1">&#39;Both&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">19</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ShutterComboBox</span><span class="p">,</span> <span class="s1">&#39;Left&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">20</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_combobox_to_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ShutterComboBox</span><span class="p">,</span> <span class="s1">&#39;Right&#39;</span><span class="p">)</span>
+
+        <span class="sd">&#39;&#39;&#39; Live button &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">21</span><span class="p">:</span>
+            <span class="n">current_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">get_state_parameter</span><span class="p">(</span><span class="s1">&#39;state&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Current state: &#39;</span><span class="p">,</span><span class="n">current_state</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">current_state</span> <span class="o">==</span> <span class="p">(</span><span class="s1">&#39;live&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">StopButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">current_state</span> <span class="o">==</span> <span class="s1">&#39;idle&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LiveButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="sd">&#39;&#39;&#39; Increase &amp; decrease laser intensity &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">26</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">increase_slider</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserIntensitySlider</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">27</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">decrease_slider</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">LaserIntensitySlider</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="sd">&#39;&#39;&#39; Stop movement button &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">28</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_stop_movement</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">button_id</span> <span class="o">==</span> <span class="mi">29</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.set_combobox_to_index"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.set_combobox_to_index">[docs]</a>    <span class="k">def</span> <span class="nf">set_combobox_to_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">combobox</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">combobox</span><span class="o">.</span><span class="n">count</span><span class="p">():</span>
+            <span class="n">combobox</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.set_combobox_to_string"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.set_combobox_to_string">[docs]</a>    <span class="k">def</span> <span class="nf">set_combobox_to_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">combobox</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">combobox</span><span class="o">.</span><span class="n">findText</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="sd">&#39;&#39;&#39; Debugging print statement &#39;&#39;&#39;</span>
+        <span class="c1"># print(&#39;Index: &#39;, index)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">combobox</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.increment_combobox"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.increment_combobox">[docs]</a>    <span class="k">def</span> <span class="nf">increment_combobox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">combobox</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">combobox</span><span class="o">.</span><span class="n">currentIndex</span><span class="p">()</span>
+        <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">combobox</span><span class="o">.</span><span class="n">count</span><span class="p">():</span>
+            <span class="n">combobox</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.decrement_combobox"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.decrement_combobox">[docs]</a>    <span class="k">def</span> <span class="nf">decrement_combobox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">combobox</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">combobox</span><span class="o">.</span><span class="n">currentIndex</span><span class="p">()</span>
+        <span class="n">index</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">combobox</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.increase_slider"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.increase_slider">[docs]</a>    <span class="k">def</span> <span class="nf">increase_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slider</span><span class="p">,</span> <span class="n">event_devider</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SliderChangeCount</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="sd">&#39;&#39;&#39; To avoid events coming too quickly,</span>
+<span class="sd">        only every n-th event is causing a change if</span>
+<span class="sd">        n = event_devider</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SliderChangeCount</span> <span class="o">%</span> <span class="n">event_devider</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">value</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">100</span><span class="p">:</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.decrease_slider"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.decrease_slider">[docs]</a>    <span class="k">def</span> <span class="nf">decrease_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slider</span><span class="p">,</span> <span class="n">event_devider</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; To avoid events coming too quickly,</span>
+<span class="sd">        only every n-th event is causing a change if</span>
+<span class="sd">        n = event_devider</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SliderChangeCount</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SliderChangeCount</span> <span class="o">%</span> <span class="n">event_devider</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">value</span> <span class="o">-</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.mode_handler"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.mode_handler">[docs]</a>    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">mode_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Helper method to handle mode changes of the joystick.</span>
+
+<span class="sd">        The FarmSimulatorSidePanel has 6 movement axes, 0 to 2 in &quot;blue&quot;</span>
+<span class="sd">        LED mode (grey button on the joystick) and 3 to 5 in &quot;red&quot; mode.</span>
+
+<span class="sd">        When starting up, the mode is unknown and has to be found out by</span>
+<span class="sd">        registering which axes produce joystick events. </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="sd">&#39;&#39;&#39; Debugging print statement &#39;&#39;&#39;</span>
+        <span class="c1"># print(&#39;New joystick mode: &#39;, str)</span>
+
+        <span class="k">if</span> <span class="nb">str</span> <span class="o">==</span> <span class="s1">&#39;012&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">display_status_message</span><span class="p">(</span><span class="s1">&#39;Joystick Mode: XY Mode&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">str</span> <span class="o">==</span> <span class="s1">&#39;345&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">display_status_message</span><span class="p">(</span><span class="s1">&#39;Joystick Mode: ZF Mode&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">display_status_message</span><span class="p">(</span><span class="s1">&#39;Joystick Mode: Undefined&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="mesoSPIM_JoystickHandler.axis_handler"><a class="viewcode-back" href="../../../../../share/devices/joysticks.html#mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers.mesoSPIM_JoystickHandler.axis_handler">[docs]</a>    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">axis_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis_id</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; The axis handler deals with joystick movements.</span>
+
+<span class="sd">        The FarmSimulatorSidePanel has 6 movement axes, 0 to 2 in &quot;blue&quot;</span>
+<span class="sd">        LED mode (grey button on the joystick) and 3 to 5 in &quot;red&quot; mode.</span>
+
+<span class="sd">        When starting up, the mode is unknown and has to be found out by</span>
+<span class="sd">        registering which axes produce joystick events.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="sd">&#39;&#39;&#39; Debugging print statement &#39;&#39;&#39;</span>
+        <span class="c1"># print(&#39;Axis: &#39;, axis_id, &#39;,Value: &#39;, value)</span>
+
+        <span class="sd">&#39;&#39;&#39; &#39;&#39;&#39;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">value</span> <span class="o">-</span> <span class="mi">128</span>
+
+        <span class="k">if</span> <span class="n">axis_id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_move_relative</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;x_rel&#39;</span><span class="p">:</span><span class="n">value</span><span class="o">/</span><span class="mi">5</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">axis_id</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_move_relative</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;y_rel&#39;</span><span class="p">:</span><span class="n">value</span><span class="o">/</span><span class="mi">5</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">axis_id</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="sd">&#39;&#39;&#39; Some FarmSimulatorSidePanel have a bug which lets them</span>
+<span class="sd">            send axis 2 and axis 3 (both rotation motions) at the same time.</span>
+<span class="sd">            The following is intended to prevent this to affect the microscope:</span>
+<span class="sd">            &#39;&#39;&#39;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;123&#39;</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_move_relative</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;f_rel&#39;</span><span class="p">:</span><span class="n">value</span><span class="o">/</span><span class="mi">30</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">axis_id</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_move_relative</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;f_rel&#39;</span><span class="p">:</span> <span class="n">value</span><span class="o">/</span><span class="mi">5</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">axis_id</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_move_relative</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;z_rel&#39;</span><span class="p">:</span> <span class="n">value</span><span class="o">/</span><span class="mi">5</span><span class="p">})</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Fabian F. Voigt.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -4,7 +4,7 @@ The Joysticks module
 Joystick handlers
 -----------------
 
-.. automodule:: mesoSPIM.src.devices.joysticks.joystick_handlers
+.. automodule:: mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers
     :members:
     :undoc-members:
     :show-inheritance:
