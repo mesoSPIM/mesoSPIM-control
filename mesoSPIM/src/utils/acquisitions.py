@@ -6,6 +6,7 @@ Helper classes for mesoSPIM acquisitions
 '''
 
 import indexed
+import os.path
 
 class Acquisition(indexed.IndexedOrderedDict):
     '''
@@ -246,3 +247,39 @@ class AcquisitionList(list):
                 return True
                 break
         return False
+
+    def check_for_existing_filenames(self):
+        for i in range(len(self)):
+            filename = self[i]['folder']+'/'+self[i]['filename']
+            file_exists = os.path.isfile(filename)
+            if file_exists:
+                print('Attention: Existing file: ', filename)
+                return True 
+            else:
+                return False
+
+    def check_for_duplicated_filenames(self):
+        duplicates = []
+        filenames = []
+
+        ''' Create a list of full file paths'''
+        for i in range(len(self)):
+            filename = self[i]['folder']+'/'+self[i]['filename']
+            filenames.append(filename)
+
+        duplicates = self.get_duplicates_in_list(filenames)
+
+        if len(duplicates)==0:
+            return False 
+        else:
+            print('Attention: Duplicated filename: ', duplicates)
+            return True
+
+    def get_duplicates_in_list(self, list):
+        duplicates = []
+        unique = set(list)
+        for each in unique:
+            count = list.count(each)
+            if count > 1:
+                duplicates.append(each)
+        return duplicates

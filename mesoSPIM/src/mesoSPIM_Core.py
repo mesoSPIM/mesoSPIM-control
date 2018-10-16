@@ -416,7 +416,7 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             acq_list = self.state['acq_list']
             if acq_list.has_rotation() == True:
-                self.sig_warning.emit('Acquisition list contains rotation - stopping')
+                self.sig_warning.emit('Acquisition list contains rotation - stopping.')
                 self.sig_finished.emit()
             else:
                 acquisition = self.state['acq_list'][row]
@@ -427,7 +427,13 @@ class mesoSPIM_Core(QtCore.QObject):
         if acq_list.has_rotation() == True:
             self.sig_warning.emit('Acquisition list contains rotation - stopping')
             self.sig_finished.emit()
-        else:  
+        elif acq_list.check_for_existing_filenames() == True:
+            self.sig_warning.emit('One or more files in the acquisition list already exist - stopping.')
+            self.sig_finished.emit()
+        elif acq_list.check_for_duplicated_filenames() == True:
+            self.sig_warning.emit('One or more filenames in the acquisition list is duplicated - stopping.')
+            self.sig_finished.emit()
+        else:
             self.sig_update_gui_from_state.emit(True)
             self.prepare_acquisition_list(acq_list)
             self.run_acquisition_list(acq_list)
@@ -499,13 +505,13 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_status_message.emit('Setting Zoom')
             self.set_zoom(acq['zoom'], wait_until_done=False)
             self.set_intensity(acq['intensity'], wait_until_done=True)
-            self.set_laser(acq['laser'], wait_until_done=False)
+            self.set_laser(acq['laser'], wait_until_done=True)
 
             self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
             self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
             self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
             self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
-            
+
             self.sig_update_gui_from_state.emit(False)
         
         self.state['state'] = 'idle'
