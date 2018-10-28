@@ -5,39 +5,46 @@ Basic hardware configuration
 '''
 
 '''
-PXI6229_1 is responsible for the shutters, ETL waveforms and galvo waveforms
-PXI6229_2 is responsible for the laser(s)
+PXI6733 is responsible for the lasers
+PXI6259 is responsible for the shutters, ETL waveforms and galvo waveforms
 '''
 
+acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
+                        'camera_trigger_source' : '/PXI6259/PFI0',
+                        'camera_trigger_out_line' : '/PXI6259/ctr0',
+                        'galvo_etl_task_line' : 'PXI6259/ao0:3',
+                        'galvo_etl_task_trigger_source' : '/PXI6259/PFI0',
+                        'laser_task_line' :  'PXI6733/ao0:7',
+                        'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
+sidepanel = 'Demo' # FarmSimulator
 
-acquisition_hardware = {'master_trigger_out_line' : 'PXI_6229_1/port0/line1',
-                        'camera_trigger_source' : '/PXI_6229_1/PFI0',
-                        'camera_trigger_out_line' : '/PXI_6229_1/ctr0',
-                        'galvo_etl_task_line' : 'PXI_6229_1/ao0:3',
-                        'galvo_etl_task_trigger_source' : '/PXI_6229_1/PFI0',
-                        'laser_task_line' :  'PXI_6229_2/ao0:3',
-                        'laser_task_trigger_source' : '/PXI_6229_1/PFI0'}
+laser = 'Demo' # NI
 
-sidepanel = 'FarmSimulator' # Demo
-
-laser = 'NI' # Demo
-
-'''The laserdict contains the digital enable lines'''
-laserdict = {'488 nm': 'PXI_6229_2/port0/line3',
-             '515 nm': 'PXI_6229_2/port0/line4',}
+'''The laserdict contains the digital enable lines for the SOLE-6'''
+laserdict = {'405 nm': 'PXI6733/port0/line2',
+             '488 nm': 'PXI6733/port0/line3',
+             '515 nm': 'PXI6733/port0/line4',
+             '561 nm': 'PXI6733/port0/line5',
+             '594 nm': 'PXI6733/port0/line6',
+             '647 nm': 'PXI6733/port0/line7'}
 
 '''
 Assignment of the analog outputs of the Laser card to the channels
 The Empty slots are placeholders.
 '''
-laser_designation = {'488 nm' : 0,
-                     '515 nm' : 1,
-                     'Empty 0' : 2,
-                     'Empty 1' : 3,}
+laser_designation = {'405 nm' : 0,
+                     '488 nm' : 1,
+                     '515 nm' : 2,
+                     '561 nm' : 3,
+                     '594 nm' : 4,
+                     '647 nm' : 5,
+                     'Empty 0' : 6,
+                     'Empty 1' : 7
+                     }
 
 '''
-Assignment of the galvos and ETLs to the 6229 AO channels.
+Assignment of the galvos and ETLs to the 6259 AO channels.
 '''
 galvo_etl_designation = {'Galvo-L' : 0,
                          'Galvo-R' : 1,
@@ -49,9 +56,9 @@ galvo_etl_designation = {'Galvo-L' : 0,
 Shutter configuration
 '''
 
-shutter = 'NI' # Demo
-shutterdict = {'shutter_left' : 'PXI_6229_1/port0/line0',
-              'shutter_right' : 'PXI_6229_1/port2/line0'}
+shutter = 'Demo' # NI
+shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
+              'shutter_right' : 'PXI6259/port2/line0'}
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
 shutteroptions = ('Left','Right','Both')
@@ -59,7 +66,7 @@ shutteroptions = ('Left','Right','Both')
 '''
 Camera configuration
 '''
-camera = 'HamamatsuOrcaFlash' # 'Demo'
+camera = 'Demo' # 'HamamatsuOrcaFlash'
 
 camera_parameters = {'x_pixels' : 2048,
                      'y_pixels' : 2048,
@@ -79,18 +86,18 @@ camera_parameters = {'x_pixels' : 2048,
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'DemoStage' or 'GalilStage'
+stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'DemoStage'
                     'startfocus' : 95000,
                     'y_load_position': 75000,
                     'y_unload_position': 40000,
-                    'x_max' : 200000,
-                    'x_min' : -200000,
-                    'y_max' : 200000,
-                    'y_min' : -200000,
-                    'z_max' : 200000,
-                    'z_min' : -200000,
-                    'f_max' : 200000,
-                    'f_min' : -200000,
+                    'x_max' : 32000,
+                    'x_min' : -32000,
+                    'y_max' : 99000,
+                    'y_min' : -99000,
+                    'z_max' : 41000,
+                    'z_min' : -41000,
+                    'f_max' : 99000,
+                    'f_min' : -99000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -101,22 +108,11 @@ pi_parameters = {'controllername' : 'C-884',
                  'serialnum' : ('118015799'),
                  }
 
-xyz_galil_parameters = {'COMport' : 'COM9',
-                    'x_encodercounts_per_um' : 2,
-                    'y_encodercounts_per_um' : 2,
-                    'z_encodercounts_per_um' : 2}
-
-f_galil_parameters = {'COMport' : 'COM8',
-                    'x_encodercounts_per_um' : 0,
-                    'y_encodercounts_per_um' : 0,
-                    'z_encodercounts_per_um' : 2}                   
-
-
 '''
 Filterwheel configuration
 '''
 
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', #DemoFilterWheel
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel',
                           'COMport' : 'COM10'}
 
 # Ludl marking 10 = position 0
@@ -134,7 +130,7 @@ filterdict = {'Empty-Alignment' : 0,
 '''
 Zoom configuration
 '''
-zoom_parameters = {'zoom_type' : 'DemoZoom', #DemoZoom
+zoom_parameters = {'zoom_type' : 'DemoZoom',
                    'servo_id' :  4,
                    'COMport' : 'COM38',
                    'baudrate' : 1000000}

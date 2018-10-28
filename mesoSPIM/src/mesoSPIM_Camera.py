@@ -7,7 +7,12 @@ import numpy as np
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-from .devices.cameras.hamamatsu import hamamatsu_camera as cam
+from .devices.cameras.Demo_Camera import Demo_Camera
+
+try:
+    from .devices.cameras.hamamatsu import hamamatsu_camera as cam
+except:
+    pass
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
@@ -75,6 +80,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
             self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
             self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
+        elif self.cfg.camera == 'Demo':
+            self.hcam = Demo_Camera()
 
     def __del__(self):
         self.hcam.shutdown()

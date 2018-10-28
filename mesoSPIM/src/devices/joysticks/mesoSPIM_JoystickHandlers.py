@@ -6,8 +6,18 @@ need something with an eventloop (e.g. a QApplication) even for testing.
 '''
 from PyQt5 import QtCore
 
+from .Demo_SidePanel import Demo_SidePanel
 from .logitech import FarmSimulatorSidePanel
 
+class Demo_JoystickHandler(QtCore.QObject):
+    def __init__(self, parent = None):
+        super().__init__()
+        # QtCore.QObject.__init__(self)
+
+        self.parent = parent
+        self.cfg = parent.cfg
+
+    
 class mesoSPIM_JoystickHandler(QtCore.QObject):
 
     def __init__(self, parent = None):
@@ -18,11 +28,15 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
         self.cfg = parent.cfg
 
         ''' parent is the window '''
-        self.joystick = FarmSimulatorSidePanel()
 
-        self.joystick.sig_button_pressed.connect(self.button_handler)
-        self.joystick.sig_mode_changed.connect(self.mode_handler)
-        self.joystick.sig_axis_moved.connect(self.axis_handler)
+        if self.cfg.sidepanel == 'FarmSimulator':
+            self.joystick = FarmSimulatorSidePanel()
+
+            self.joystick.sig_button_pressed.connect(self.button_handler)
+            self.joystick.sig_mode_changed.connect(self.mode_handler)
+            self.joystick.sig_axis_moved.connect(self.axis_handler)
+        elif self.cfg.sidepanel == 'Demo':
+            self.joystick = Demo_SidePanel()
 
         ''' '''
         self.SliderChangeCount = 0

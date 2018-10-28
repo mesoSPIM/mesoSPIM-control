@@ -17,6 +17,10 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'laser_task_line' :  'PXI6733/ao0:7',
                         'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
+sidepanel = 'FarmSimulator' # Demo
+
+laser = 'NI' # Demo
+
 '''The laserdict contains the digital enable lines for the SOLE-6'''
 laserdict = {'405 nm': 'PXI6733/port0/line2',
              '488 nm': 'PXI6733/port0/line3',
@@ -52,6 +56,7 @@ galvo_etl_designation = {'Galvo-L' : 0,
 Shutter configuration
 '''
 
+shutter = 'NI' # Demo
 shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
               'shutter_right' : 'PXI6259/port2/line0'}
 
