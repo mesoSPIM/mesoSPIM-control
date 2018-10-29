@@ -186,9 +186,12 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent):
         super().__init__(parent)
 
+        self.model = parent.model
+
     def createEditor(self, parent, option, index):
         marker = MarkPositionWidget(parent)
         marker.pressed.connect(lambda: self.commitData.emit(self.sender()))
+        marker.lineEdit.editingFinished.connect(lambda: self.set_model_data_from_focus_change(marker, index))
         return marker
 
     def setEditorData(self, editor, index):
@@ -211,9 +214,7 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
         This means that I can differentiate whether an edit action
         was caused by the button press or editing the lineEdit
         '''
-        # print(self.sender())
-        # print(self.sender().__repr__)
-
+       
         if self.sender() is None:
             print(self.sender())
             self.set_model_data_from_lineedit(editor, model, index)
@@ -231,6 +232,9 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
 
     def set_model_data_from_lineedit(self, editor, model, index):
         model.setData(index, float(editor.lineEdit.text()))
+
+    def set_model_data_from_focus_change(self, editor, index):
+        self.model.setData(index, float(editor.lineEdit.text()))
 
 
 class MarkXPositionDelegate(MarkPositionDelegate):
