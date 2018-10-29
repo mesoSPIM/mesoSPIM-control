@@ -20,9 +20,15 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
+
+from .devices.shutters.Demo_Shutter import Demo_Shutter
 from .devices.shutters.NI_Shutter import NI_Shutter
+
 from .mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
+
+from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
+
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
 
@@ -126,15 +132,22 @@ class mesoSPIM_Core(QtCore.QObject):
         left_shutter_line = self.cfg.shutterdict['shutter_left']
         right_shutter_line = self.cfg.shutterdict['shutter_right']
 
-        self.shutter_left = NI_Shutter(left_shutter_line)
-        self.shutter_right = NI_Shutter(right_shutter_line)
+        if self.cfg.shutter == 'NI':
+            self.shutter_left = NI_Shutter(left_shutter_line)
+            self.shutter_right = NI_Shutter(right_shutter_line)
+        elif self.cfg.shutter == 'Demo':
+            self.shutter_left = Demo_Shutter(left_shutter_line)
+            self.shutter_right = Demo_Shutter(right_shutter_line)
 
         self.shutter_left.close()
         self.shutter_right.close()
         self.state['shutterstate'] = False
 
         ''' Setting the laserenabler up '''
-        self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
+        if self.cfg.laser == 'NI':
+            self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
+        elif self.cfg.laser == 'Demo':
+            self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.state['state']='idle'
 

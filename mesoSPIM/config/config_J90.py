@@ -19,6 +19,10 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI_6229_1/port0/line1',
                         'laser_task_line' :  'PXI_6229_2/ao0:3',
                         'laser_task_trigger_source' : '/PXI_6229_1/PFI0'}
 
+sidepanel = 'FarmSimulator' # Demo
+
+laser = 'NI' # Demo
+
 '''The laserdict contains the digital enable lines'''
 laserdict = {'488 nm': 'PXI_6229_2/port0/line3',
              '515 nm': 'PXI_6229_2/port0/line4',}
@@ -45,6 +49,7 @@ galvo_etl_designation = {'Galvo-L' : 0,
 Shutter configuration
 '''
 
+shutter = 'NI' # Demo
 shutterdict = {'shutter_left' : 'PXI_6229_1/port0/line0',
               'shutter_right' : 'PXI_6229_1/port2/line0'}
 
