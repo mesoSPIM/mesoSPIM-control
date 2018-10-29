@@ -71,6 +71,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
+        self.acquisition_manager_window.sig_warning.connect(self.display_warning)
 
         '''
         Setting up the threads

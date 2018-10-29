@@ -48,6 +48,7 @@ class MyStyle(QtWidgets.QProxyStyle):
 class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     model_changed = QtCore.pyqtSignal(AcquisitionModel)
+    sig_warning = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -297,9 +298,12 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def load_table(self):
         path , _ = QtWidgets.QFileDialog.getOpenFileName(None,'Load Table')
         if path:
-            self.model.loadModel(path)
-            self.update_persistent_editors()
-        self.set_state()
+            try:
+                self.model.loadModel(path)
+                self.update_persistent_editors()
+                self.set_state()
+            except:
+                self.sig_warning.emit('Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!')
 
     def run_tiling_wizard(self):
         wizard = TilingWizard(self)
