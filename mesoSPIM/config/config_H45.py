@@ -116,7 +116,7 @@ filterwheel_parameters = {'filterwheel_type' : 'Ludl',
                           'COMport' : 'COM10'}
 
 # Ludl marking 10 = position 0
-filterdict = {'Empty-Alignment' : 0,
+filterdict = {'Empty-Alignment' : 0, # Every config should contain this
               '405-488-647-Tripleblock' : 1,
               '405-488-561-640-Quadrupleblock' : 2,
               '464 482-35' : 3,

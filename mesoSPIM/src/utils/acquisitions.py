@@ -51,7 +51,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                  f_pos=0,
                  laser = '488 nm',
                  intensity=0,
-                 filter= '515LP',
+                 filter= 'Empty-Alignment',
                  zoom= '1x',
                  shutterconfig='Left',
                  folder='E:/tmp',
