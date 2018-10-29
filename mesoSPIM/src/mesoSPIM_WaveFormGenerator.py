@@ -42,6 +42,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
+        return
         for key, value in zip(dict.keys(),dict.values()):
             print('Waveform Generator: State request: Key: ', key, ' Value: ', value)
             '''
@@ -95,10 +96,12 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 print('laser change')
                        
     def calculate_samples(self):
+        return
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
         self.samples = int(samplerate*sweeptime)
     
     def create_waveforms(self):
+        return
         self.calculate_samples()
         self.create_etl_waveforms()
         self.create_galvo_waveforms()
@@ -107,6 +110,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.create_laser_waveforms()
 
     def create_etl_waveforms(self):
+        return
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
         etl_l_delay, etl_l_ramp_rising, etl_l_ramp_falling, etl_l_amplitude, etl_l_offset =\
         self.state.get_parameter_list(['etl_l_delay_%','etl_l_ramp_rising_%','etl_l_ramp_falling_%',
@@ -133,6 +137,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                 offset = etl_r_offset)
 
     def create_galvo_waveforms(self):
+        return
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
 
         galvo_l_frequency, galvo_l_amplitude, galvo_l_offset, galvo_l_duty_cycle, galvo_l_phase =\
@@ -163,6 +168,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                          phase = galvo_r_phase)
 
     def create_laser_waveforms(self):
+        return
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
 
         laser_l_delay, laser_l_pulse, max_laser_voltage, intensity = \
@@ -192,6 +198,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.laser_waveforms = np.stack(self.laser_waveform_list)
 
     def bundle_galvo_and_etl_waveforms(self):
+        return
         ''' Stacks the Galvo and ETL waveforms into a numpy array adequate for
         the NI cards.
 
@@ -204,6 +211,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                  self.etl_r_waveform))
 
     def update_etl_parameters_from_zoom(self, zoom):
+        return
         ''' Little helper method: Because the mesoSPIM core is not handling
         the serial Zoom connection. '''
         laser = self.state['laser']
@@ -211,12 +219,14 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.update_etl_parameters_from_csv(etl_cfg_file, laser, zoom)
 
     def update_etl_parameters_from_laser(self, laser):
+        return
         ''' Little helper method: Because laser changes need an ETL parameter update '''
         zoom = self.state['zoom']
         etl_cfg_file = self.state['ETL_cfg_file']       
         self.update_etl_parameters_from_csv(etl_cfg_file, laser, zoom)
 
     def update_etl_parameters_from_csv(self, cfg_path, laser, zoom):
+        return
         ''' Updates the internal ETL left/right offsets and amplitudes from the
         values in the ETL csv files
 
@@ -268,6 +278,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.create_waveforms()
 
     def save_etl_parameters_to_csv(self):
+        return
         ''' Saves the current ETL left/right offsets and amplitudes from the
         values to the ETL csv files
 
@@ -330,6 +341,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         os.rename(tmp_etl_cfg_file, etl_cfg_file)
 
     def create_tasks(self):
+        return
         '''Creates a total of four tasks for the mesoSPIM:
 
         These are:
@@ -386,11 +398,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])    
     
     def write_waveforms_to_tasks(self):
+        return
         '''Write the waveforms to the slave tasks'''
         self.galvo_etl_task.write(self.galvo_and_etl_waveforms)
         self.laser_task.write(self.laser_waveforms)
 
     def start_tasks(self):
+        return
         '''Starts the tasks for camera triggering and analog outputs
 
         If the tasks are configured to be triggered, they won't output any
@@ -401,6 +415,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.laser_task.start()
 
     def run_tasks(self):
+        return
         '''Runs the tasks for triggering, analog and counter outputs
 
         Firstly, the master trigger triggers all other task via a shared trigger
@@ -417,6 +432,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.camera_trigger_task.wait_until_done()
 
     def stop_tasks(self):
+        return
         '''Stops the tasks for triggering, analog and counter outputs'''
         self.galvo_etl_task.stop()
         self.laser_task.stop()
@@ -424,6 +440,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.master_trigger_task.stop()
 
     def close_tasks(self):
+        return
         '''Closes the tasks for triggering, analog and counter outputs.
 
         Tasks should only be closed are they are stopped.

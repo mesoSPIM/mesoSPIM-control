@@ -1,5 +1,6 @@
 '''
 mesoSPIM Camera class, intended to run in its own thread
+TODO: thread should be higher level?
 '''
 import os
 import time
@@ -7,24 +8,18 @@ import numpy as np
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-from .devices.cameras.Demo_Camera import Demo_Camera
+from .Camera import Camera
 
-try:
-    from .devices.cameras.hamamatsu import hamamatsu_camera as cam
-except:
-    pass
+from .devices.cameras.hamamatsu import hamamatsu_camera as cam
 
+# state should not be needed here?
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
-class mesoSPIM_HamamatsuCamera(QtCore.QObject):
-    sig_camera_status = QtCore.pyqtSignal(str)
-    sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
-    sig_finished = QtCore.pyqtSignal()
 
-    sig_state_updated = QtCore.pyqtSignal()
+class HamamatsuCamera(Camera):
 
     def __init__(self, parent = None):
-        super().__init__()
+        super().__init__(parent)
 
         self.parent = parent
         self.cfg = parent.cfg
@@ -41,61 +36,33 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
-        ''' Wiring signals '''
-        self.parent.sig_state_request.connect(self.state_request_handler)
-
-        self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=3)
-        self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
-        self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=3)
-        self.parent.sig_end_image_series.connect(self.end_image_series, type=3)
-
-        self.parent.sig_prepare_live.connect(self.prepare_live, type = 3)
-        self.parent.sig_get_live_image.connect(self.get_live_image)
-        self.parent.sig_end_live.connect(self.end_live, type=3)
-
-        self.sig_camera_status.connect(lambda status: print(status))
-
         ''' Hamamatsu-specific code '''
         self.camera_id = self.cfg.camera_parameters['camera_id']
 
-        if self.cfg.camera == 'HamamatsuOrcaFlash':
-            self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
-            ''' Debbuging information '''
-            print("camera 0 model:", self.hcam.getModelInfo(self.camera_id))
+        self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
+        ''' Debbuging information '''
+        print("camera 0 model:", self.hcam.getModelInfo(self.camera_id))
 
-            ''' Ideally, the Hamamatsu Camera properties should be set in this order '''
-            ''' mesoSPIM mode parameters '''
-            self.hcam.setPropertyValue("sensor_mode", self.cfg.camera_parameters['sensor_mode'])
+        ''' Ideally, the Hamamatsu Camera properties should be set in this order '''
+        ''' mesoSPIM mode parameters '''
+        self.hcam.setPropertyValue("sensor_mode", self.cfg.camera_parameters['sensor_mode'])
 
-            ''' mesoSPIM mode parameters: OLD '''
-            # self.hcam.setPropertyValue("sensor_mode", 12) # 12 for progressive
+        ''' mesoSPIM mode parameters: OLD '''
+        # self.hcam.setPropertyValue("sensor_mode", 12) # 12 for progressive
 
-            self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
-            self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
-            self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
-            self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
+        self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
+        self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
+        self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
+        self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
 
-            self.hcam.setPropertyValue("trigger_active", self.cfg.camera_parameters['trigger_active'])
-            self.hcam.setPropertyValue("trigger_mode", self.cfg.camera_parameters['trigger_mode']) # it is unclear if this is the external lightsheeet mode - how to check this?
-            self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
-            self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
-            self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
-        elif self.cfg.camera == 'Demo':
-            self.hcam = Demo_Camera()
+        self.hcam.setPropertyValue("trigger_active", self.cfg.camera_parameters['trigger_active'])
+        self.hcam.setPropertyValue("trigger_mode", self.cfg.camera_parameters['trigger_mode']) # it is unclear if this is the external lightsheeet mode - how to check this?
+        self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
+        self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
+        self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
 
     def __del__(self):
         self.hcam.shutdown()
-
-    @QtCore.pyqtSlot(dict)
-    def state_request_handler(self, dict):
-        for key, value in zip(dict.keys(),dict.values()):
-            print('Camera Thread: State request: Key: ', key, ' Value: ', value)
-            '''
-            The request handling is done with exec() to write fewer lines of
-            code.
-            '''
-            if key in ('camera_exposure_time','camera_line_interval','state'):
-                exec('self.set_'+key+'(value)')
 
     def set_state(self, requested_state):
         pass
@@ -256,7 +223,3 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.end_time =  time.time()
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
         print('Framerate: ', framerate)
-
-# class mesoSPIM_DemoCamera(mesoSPIM_Camera):
-#     def __init__(self, config, parent = None):
-#         super().__init__(config, parent)

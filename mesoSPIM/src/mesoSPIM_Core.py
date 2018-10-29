@@ -24,8 +24,6 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.shutters.Demo_Shutter import Demo_Shutter
 from .devices.shutters.NI_Shutter import NI_Shutter
 
-from .mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
-
 from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 
@@ -106,7 +104,16 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
-        self.camera_worker = mesoSPIM_HamamatsuCamera(self)
+        
+        if self.cfg.camera == 'HamamatsuOrcaFlash':
+            from .devices.cameras.HamamatsuCamera import HamamatsuCamera
+            
+            self.camera_worker = HamamatsuCamera(self)
+        elif self.cfg.camera == 'Demo':
+            from .devices.cameras.EmulatedCamera import EmulatedCamera
+
+            self.camera_worker = EmulatedCamera(self)
+
         self.camera_worker.moveToThread(self.camera_thread)
 
         ''' Set the serial thread up '''
@@ -411,7 +418,7 @@ class mesoSPIM_Core(QtCore.QObject):
             ''' Needs update to use snap image in series '''
             self.snap_image()
             self.sig_get_live_image.emit()
-
+            self.stopflag = True
             QtWidgets.QApplication.processEvents()
 
             ''' How to handle a possible shutter switch?'''
