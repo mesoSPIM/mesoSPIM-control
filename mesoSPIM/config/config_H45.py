@@ -84,7 +84,7 @@ Stage configuration
 stage_parameters = {'stage_type' : 'PI', # 'PI' or 'Debug'
                     'startfocus' : 95000,
                     'y_load_position': 75000,
-                    'y_unload_position': 40000,
+                    'y_unload_position': 10000,
                     'x_max' : 44000,
                     'x_min' : 1000,
                     'y_max' : 99000,
