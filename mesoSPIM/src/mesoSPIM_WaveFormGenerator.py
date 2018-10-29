@@ -33,10 +33,12 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.parent = parent
 
         self.state = mesoSPIM_StateSingleton()
-
-        self.create_waveforms()
-
         self.parent.sig_save_etl_config.connect(self.save_etl_parameters_to_csv)
+
+        cfg_file = self.cfg.startup['ETL_cfg_file']
+        self.state['ETL_cfg_file'] = cfg_file
+        self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
+
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
