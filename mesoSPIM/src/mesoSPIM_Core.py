@@ -483,6 +483,11 @@ class mesoSPIM_Core(QtCore.QObject):
             #     self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(acq_list.get_startpoint())
+            self.set_filter(acq_list[0]['filter'])
+            self.set_laser(acq_list[0]['laser'])
+            self.set_zoom(acq_list[0]['zoom'])
+            self.set_intensity(acq_list[0]['intensity'])
+            time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
             self.sig_finished.emit()
 
     def preview_acquisition(self):
