@@ -55,10 +55,6 @@ At time of writing that means the master trigger out (`PXI6259/port0/line1`) sho
 Use BNC T connectors to split each analog output line to both lasers. 
 * You will need to set the ThorLabs shutter controllers to run on TTL input mode. 
 
-
- a copy of the ZMB demo config file, which will have some devices running as dummy devices for testing. 
-Modify Fill out the parts which require real devices. and edit 
-
 #### Run the software.
 ```
 python mesoSPIM_Control.py
