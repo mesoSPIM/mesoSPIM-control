@@ -335,12 +335,11 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Define other parameters")
-        self.setSubTitle("Set zoom, shutter, laser, intensity")
 
         self.zoomLabel = QtWidgets.QLabel('Zoom')
         self.zoomComboBox = QtWidgets.QComboBox(self)
         self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
-
+       
         self.laserLabel = QtWidgets.QLabel('Laser')
         self.laserComboBox = QtWidgets.QComboBox(self)
         self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
@@ -380,6 +379,8 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.xyOffsetSpinBox, 5, 1)
         self.setLayout(self.layout)
 
+        self.update_page_from_state()
+
     def validatePage(self):
         ''' The done function should update all the parent parameters '''
         self.update_other_acquisition_parameters()
@@ -399,6 +400,16 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         self.parent.intensity = self.intensitySlider.value()
         self.parent.filter = self.filterComboBox.currentText()
         self.parent.shutterconfig = self.shutterComboBox.currentText()
+
+    def initializePage(self):
+        self.update_page_from_state()
+
+    def update_page_from_state(self):
+        self.zoomComboBox.setCurrentText(self.parent.state['zoom'])
+        self.laserComboBox.setCurrentText(self.parent.state['laser'])
+        self.intensitySlider.setValue(self.parent.state['intensity'])
+        self.filterComboBox.setCurrentText(self.parent.state['filter'])
+        self.shutterComboBox.setCurrentText(self.parent.state['shutterconfig'])
 
 class DefineFolderPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
