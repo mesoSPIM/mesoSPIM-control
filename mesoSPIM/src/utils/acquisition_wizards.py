@@ -54,6 +54,8 @@ class TilingWizard(QtWidgets.QWizard):
         self.x_image_count = 1
         self.y_image_count = 1
         self.folder = ''
+        self.delta_x = 0.0
+        self.delta_y = 0.0
 
         self.acquisition_time = 0
 
@@ -95,14 +97,32 @@ class TilingWizard(QtWidgets.QWizard):
         model.setTable(table)
 
     def update_image_counts(self):
-        ''' This needs some FOV information'''
-        delta_x = abs(self.x_end - self.x_start)
-        delta_y = abs(self.y_end - self.y_start)
+        ''' 
+        TODO: This needs some FOV information
+        '''
+        self.delta_x = abs(self.x_end - self.x_start)
+        self.delta_y = abs(self.y_end - self.y_start)
 
-        self.x_image_count = int(np.rint(delta_x/self.x_offset))
-        self.y_image_count = int(np.rint(delta_y/self.y_offset))
+        ''' Using the ceiling function to always create at least 1 image '''
+        self.x_image_count = int(np.ceil(self.delta_x/self.x_offset))
+        self.y_image_count = int(np.ceil(self.delta_y/self.y_offset))
 
+        ''' The first FOV is centered on the starting location -
+            therefore, add another image count to fully contain the end position
+            if necessary
+        '''
+        if self.delta_x % self.x_offset > self.x_offset/2:
+            self.x_image_count = self.x_image_count + 1
+        
+        if self.delta_y % self.y_offset > self.y_offset/2:
+            self.y_image_count = self.y_image_count + 1
+
+    
+
+       
     def update_fov(self):
+
+    
         pass
         # zoom = self.zoom
         # index = self.parent.cfg.zoom_options.index(zoom)
@@ -186,16 +206,16 @@ class DefineXYPositionPage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self.parent = parent
 
-        self.setTitle("Define top left XY Position")
-        self.setSubTitle("Move XY stages to the top left position")
+        self.setTitle("Define the corners of the tiling acquisition")
+        self.setSubTitle("Move XY stages to the starting corner position")
 
         self.button0 = QtWidgets.QPushButton(self)
-        self.button0.setText('Set XY (top left) startpoint')
+        self.button0.setText('Set XY Start Corner')
         self.button0.setCheckable(True)
         self.button0.toggled.connect(self.get_xy_start_position)
 
         self.button1 = QtWidgets.QPushButton(self)
-        self.button1.setText('Set XY (bottom right) endpoint')
+        self.button1.setText('Set XY End Corner')
         self.button1.setCheckable(True)
         self.button1.toggled.connect(self.get_xy_end_position)
 
