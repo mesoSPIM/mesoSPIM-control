@@ -91,7 +91,6 @@ class TilingWizard(QtWidgets.QWizard):
             # self.print_dict()
             self.update_model(self.parent.model, self.acq_list)
             ''' Update state with this new list '''
-            self.state['acq_list']=self.acq_list
             self.parent.update_persistent_editors()
             self.wizard_done.emit()
         else:
@@ -100,7 +99,14 @@ class TilingWizard(QtWidgets.QWizard):
         super().done(r)
 
     def update_model(self, model, table):
+        # if self.field('appendToTable'):
+        #     current_acq_list = self.state['acq_list'] 
+        #     new_acq_list = current_acq_list.append(table)
+        #     model.setTable(new_acq_list)
+        #     self.state['acq_list']=new_acq_list
+        # else:
         model.setTable(table)
+        self.state['acq_list']=self.acq_list
 
     def update_image_counts(self):
         ''' 
@@ -123,9 +129,7 @@ class TilingWizard(QtWidgets.QWizard):
         if self.delta_y % self.y_offset > self.y_offset/2:
             self.y_image_count = self.y_image_count + 1
 
-    
-
-       
+      
     def update_fov(self):
 
     
@@ -495,6 +499,15 @@ class FinishedTilingPage(QtWidgets.QWizardPage):
 
         self.setTitle("Finished!")
         self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue. To rename the files, use the filename wizard.")
+
+        # self.appendToTableCheckBox = QtWidgets.QCheckBox('Append to existing table?', self)
+
+        # self.registerField('appendToTable', self.appendToTableCheckBox)
+
+        # self.layout = QtWidgets.QGridLayout()
+        # self.layout.addWidget(self.appendToTableCheckBox, 0, 0)
+        # self.setLayout(self.layout)
+
 
     def validatePage(self):
         print('Update parent table')
