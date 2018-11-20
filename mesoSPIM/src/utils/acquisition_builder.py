@@ -63,6 +63,8 @@ class TilingAcquisitionListBuilder():
             for j in range(0,self.dict['y_image_count']):
                 self.y_pos = round(self.y_start + j * self.y_offset,2)
 
+
+
                 acq = Acquisition(   x_pos=self.x_pos,
                                      y_pos=self.y_pos,
                                      z_start=self.dict['z_start'],
@@ -82,6 +84,9 @@ class TilingAcquisitionListBuilder():
                                      etl_r_offset=self.dict['etl_r_offset'],
                                      etl_r_amplitude=self.dict['etl_r_amplitude'],
                                      )
+                ''' Update number of planes as this is not done by the acquisition 
+                object itself '''
+                acq['planes']=acq.get_image_count()
 
                 self.acq_prelist.append(acq)
 

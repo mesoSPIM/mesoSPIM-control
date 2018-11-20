@@ -90,6 +90,8 @@ class TilingWizard(QtWidgets.QWizard):
             print('Wizard was closed properly')
             # self.print_dict()
             self.update_model(self.parent.model, self.acq_list)
+            ''' Update state with this new list '''
+            self.state['acq_list']=self.acq_list
             self.parent.update_persistent_editors()
             self.wizard_done.emit()
         else:
@@ -249,11 +251,11 @@ class DefineXYPositionPage(QtWidgets.QWizardPage):
 
     def get_xy_start_position(self):
         self.parent.x_start = self.parent.state['position']['x_pos']
-        self.parent.y_start = self.parent.state['position']['x_pos']
-
+        self.parent.y_start = self.parent.state['position']['y_pos']
+        
     def get_xy_end_position(self):
         self.parent.x_end = self.parent.state['position']['x_pos']
-        self.parent.y_end = self.parent.state['position']['x_pos']
+        self.parent.y_end = self.parent.state['position']['y_pos']
 
 class DefineZPositionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -353,10 +355,10 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
 
         self.xyOffsetSpinBoxLabel = QtWidgets.QLabel('XY Offset')
         self.xyOffsetSpinBox = QtWidgets.QSpinBox(self)
-        self.xyOffsetSpinBox.setValue(500)
         self.xyOffsetSpinBox.setSuffix(' μm')
         self.xyOffsetSpinBox.setMinimum(1)
         self.xyOffsetSpinBox.setMaximum(20000)
+        self.xyOffsetSpinBox.setValue(500)
 
         self.ETLCheckBoxLabel = QtWidgets.QLabel('ETL')
         self.ETLCheckBox = QtWidgets.QCheckBox('Copy current ETL parameters', self)
@@ -450,9 +452,9 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.setTitle("Check Tiling Page")
         self.setSubTitle("Here are your parameters")
 
-        self.timeLabel = QtWidgets.QLabel('Acquisition Time:')
-        self.acqTime = QtWidgets.QLineEdit(self)
-        self.acqTime.setReadOnly(True)
+        # self.timeLabel = QtWidgets.QLabel('Acquisition Time:')
+        # self.acqTime = QtWidgets.QLineEdit(self)
+        # self.acqTime.setReadOnly(True)
 
         self.xFOVLabel = QtWidgets.QLabel('X FOVs:')
         self.xFOVs = QtWidgets.QLineEdit(self)
@@ -467,8 +469,8 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.Button.setChecked(False)
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.timeLabel, 0, 0)
-        self.layout.addWidget(self.acqTime, 0, 1)
+        # self.layout.addWidget(self.timeLabel, 0, 0)
+        # self.layout.addWidget(self.acqTime, 0, 1)
         self.layout.addWidget(self.xFOVLabel, 1, 0)
         self.layout.addWidget(self.xFOVs, 1, 1)
         self.layout.addWidget(self.yFOVLabel, 2, 0)
@@ -482,7 +484,7 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         ''' Here, the acquisition list is created for further checking'''
         self.parent.update_acquisition_list()
         # self.acqTime.setText(str(round(self.parent.acquisition_time,2))+' s')
-        self.acqTime.setText('Not implemented yet')
+        # self.acqTime.setText('Not implemented yet')
         self.xFOVs.setText(str(self.parent.x_image_count))
         self.yFOVs.setText(str(self.parent.y_image_count))
 
