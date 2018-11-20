@@ -76,7 +76,11 @@ class TilingAcquisitionListBuilder():
                                      zoom=self.dict['zoom'],
                                      shutterconfig=self.dict['shutterconfig'],
                                      folder=self.dict['folder'],
-                                     filename='tiling_file_'+str(i)+'_'+str(j)+'.raw'
+                                     filename='tiling_file_'+str(i)+'_'+str(j)+'.raw',
+                                     etl_l_offset=self.dict['etl_l_offset'],
+                                     etl_l_amplitude=self.dict['etl_l_amplitude'],
+                                     etl_r_offset=self.dict['etl_r_offset'],
+                                     etl_r_amplitude=self.dict['etl_r_amplitude'],
                                      )
 
                 self.acq_prelist.append(acq)
