@@ -57,10 +57,9 @@ class TilingWizard(QtWidgets.QWizard):
         self.delta_x = 0.0
         self.delta_y = 0.0
         self.etl_l_offset = 0.0
-        self.etl_l_amplitude =0.0
+        self.etl_l_amplitude = 0.0
         self.etl_r_offset = 0.0
         self.etl_r_amplitude = 0.0
-
 
         self.acquisition_time = 0
 
@@ -89,7 +88,7 @@ class TilingWizard(QtWidgets.QWizard):
             print("Wizard was canceled")
         if r == 1:
             print('Wizard was closed properly')
-            self.print_dict()
+            # self.print_dict()
             self.update_model(self.parent.model, self.acq_list)
             self.parent.update_persistent_editors()
             self.wizard_done.emit()
@@ -177,7 +176,7 @@ class TilingWizard(QtWidgets.QWizard):
         self.acq_list = TilingAcquisitionListBuilder(dict).get_acquisition_list()
         self.acquisition_time = self.acq_list.get_acquisition_time()
 
-        pprint.pprint(self.acq_list)
+        # pprint.pprint(self.acq_list)
 
     def print_dict(self):
         pprint.pprint(self.get_dict())
@@ -196,27 +195,27 @@ class ZeroingXYStagePage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Zero stage positions")
-        self.setSubTitle("To aid in relative positioning, the stages have to be zeroed in XY")
+        self.setSubTitle("To aid in relative positioning, it is recommended to zero the XY stages.")
 
-        self.button = QtWidgets.QPushButton(self)
-        self.button.setText('Zero XY stages')
-        self.button.setCheckable(True)
+        # self.button = QtWidgets.QPushButton(self)
+        # self.button.setText('Zero XY stages')
+        # self.button.setCheckable(True)
 
-        self.registerField('stages_zeroed*',
-                            self.button,
-                            )
+        # self.registerField('stages_zeroed*',
+        #                     self.button,
+        #                     )
 
-        try:
-            '''
-            Pretty dirty approach, reaching up through the hierarchy:
+        # try:
+        #     '''
+        #     Pretty dirty approach, reaching up through the hierarchy:
 
-            The first level parent is the QWizard
-            The second level parent is the Window - which can send zeroing signals
-            The third level is the mesoSPIM MainWindow
-            '''
-            self.button.toggled.connect(lambda: self.parent.parent.parent.sig_zero_axes.emit(['x','y']))
-        except:
-            print('Zeroing connection failed')
+        #     The first level parent is the QWizard
+        #     The second level parent is the Window - which can send zeroing signals
+        #     The third level is the mesoSPIM MainWindow
+        #     '''
+        #     self.button.toggled.connect(lambda: self.parent.parent.parent.sig_zero_axes.emit(['x','y']))
+        # except:
+        #     print('Zeroing connection failed')
 
 class DefineXYPositionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -253,50 +252,8 @@ class DefineXYPositionPage(QtWidgets.QWizardPage):
         self.parent.y_start = self.parent.state['position']['x_pos']
 
     def get_xy_end_position(self):
-        self.parent.x_start = self.parent.state['position']['x_pos']
-        self.parent.y_start = self.parent.state['position']['x_pos']
-
-# class DefineXYStartPositionPage(QtWidgets.QWizardPage):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-
-#         self.setTitle("Define top left XY Position")
-#         self.setSubTitle("Move XY stages to the top left position")
-
-#         self.button = QtWidgets.QPushButton(self)
-#         self.button.setText('Set XY (top left) startpoint')
-#         self.button.setCheckable(True)
-#         self.button.toggled.connect(self.get_xy_start_position)
-
-#         self.registerField('xy_start_position*',
-#                             self.button,
-#                             )
-
-#     def get_xy_start_position(self):
-#         self.parent.x_start = self.parent.state['position']['x_pos']
-#         self.parent.y_start = self.parent.state['position']['x_pos']
-
-# class DefineXYEndPositionPage(QtWidgets.QWizardPage):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-
-#         self.setTitle("Define top left XY Position")
-#         self.setSubTitle("Move XY stages to the bottom right position")
-
-#         self.button = QtWidgets.QPushButton(self)
-#         self.button.setText('Set XY (bottom right) endpoint')
-#         self.button.setCheckable(True)
-#         self.button.toggled.connect(self.get_xy_end_position)
-
-#         self.registerField('xy_end_position*',
-#                             self.button,
-#                             )
-
-#     def get_xy_end_position(self):
-#         self.parent.x_start = self.parent.state['position']['x_pos']
-#         self.parent.y_start = self.parent.state['position']['x_pos']
+        self.parent.x_end = self.parent.state['position']['x_pos']
+        self.parent.y_end = self.parent.state['position']['x_pos']
 
 class DefineZPositionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -396,7 +353,7 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
 
         self.xyOffsetSpinBoxLabel = QtWidgets.QLabel('XY Offset')
         self.xyOffsetSpinBox = QtWidgets.QSpinBox(self)
-        self.xyOffsetSpinBox.setValue(100)
+        self.xyOffsetSpinBox.setValue(500)
         self.xyOffsetSpinBox.setSuffix(' μm')
         self.xyOffsetSpinBox.setMinimum(1)
         self.xyOffsetSpinBox.setMaximum(20000)
@@ -524,7 +481,8 @@ class CheckTilingPage(QtWidgets.QWizardPage):
     def initializePage(self):
         ''' Here, the acquisition list is created for further checking'''
         self.parent.update_acquisition_list()
-        self.acqTime.setText(str(round(self.parent.acquisition_time,2))+' s')
+        # self.acqTime.setText(str(round(self.parent.acquisition_time,2))+' s')
+        self.acqTime.setText('Not implemented yet')
         self.xFOVs.setText(str(self.parent.x_image_count))
         self.yFOVs.setText(str(self.parent.y_image_count))
 
