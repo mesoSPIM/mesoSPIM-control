@@ -276,6 +276,12 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getImageCount(self, row):
         return self._table[row].get_image_count()
 
+    def getXPosition(self, row):
+        return self._table[row]['x_pos']
+
+    def getYPosition(self, row):
+        return self._table[row]['y_pos']
+
     def getTotalImageCount(self):
         ''' gets the total number of planes from the model '''
         return self._table.get_image_count()

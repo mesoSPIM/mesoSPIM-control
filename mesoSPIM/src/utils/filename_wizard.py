@@ -90,6 +90,13 @@ class FilenameWizard(QtWidgets.QWizard):
                 filename += self.replace_spaces_with_underscores(descriptionstring)
                 filename += '_'
 
+            if self.field('xyPosition'):
+                '''Round to nearest integer '''
+                x_position_string = str(int(round(self.parent.model.getXPosition(row))))
+                y_position_string = str(int(round(self.parent.model.getYPosition(row))))
+
+                filename += 'X' + x_position_string + '_' + 'Y' + y_position_string + '_'
+
             if self.field('Laser'):
                 laserstring = self.parent.model.getLaser(row)
                 filename += self.replace_spaces_with_underscores(laserstring)
@@ -141,6 +148,8 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
 
         self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
 
+        self.xyPositionCheckBox = QtWidgets.QCheckBox('XY Position')
+
         self.LaserCheckBox = QtWidgets.QCheckBox('Laser', self)
         self.FilterCheckBox = QtWidgets.QCheckBox('Filter', self)
         self.ZoomCheckBox = QtWidgets.QCheckBox('Zoom', self)
@@ -157,6 +166,7 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.StartNumberCheckBox.toggled.connect(lambda boolean: self.StartNumberSpinBox.setEnabled(boolean))
 
         self.registerField('Description', self.DescriptionLineEdit)
+        self.registerField('xyPosition', self.xyPositionCheckBox)
         self.registerField('Laser',self.LaserCheckBox)
         self.registerField('Filter', self.FilterCheckBox)
         self.registerField('Zoom', self.ZoomCheckBox)
@@ -164,15 +174,17 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.registerField('StartNumber', self.StartNumberCheckBox)
         self.registerField('StartNumberValue', self.StartNumberSpinBox)
 
+
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.DescriptionCheckBox, 0, 0)
         self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
-        self.layout.addWidget(self.LaserCheckBox, 1, 0)
-        self.layout.addWidget(self.FilterCheckBox, 2, 0)
-        self.layout.addWidget(self.ZoomCheckBox, 3, 0)
-        self.layout.addWidget(self.ShutterCheckBox, 4, 0)
-        self.layout.addWidget(self.StartNumberCheckBox, 5, 0)
-        self.layout.addWidget(self.StartNumberSpinBox, 5, 1)
+        self.layout.addWidget(self.xyPositionCheckBox, 1, 0)
+        self.layout.addWidget(self.LaserCheckBox, 2, 0)
+        self.layout.addWidget(self.FilterCheckBox, 3, 0)
+        self.layout.addWidget(self.ZoomCheckBox, 4, 0)
+        self.layout.addWidget(self.ShutterCheckBox, 5, 0)
+        self.layout.addWidget(self.StartNumberCheckBox, 6, 0)
+        self.layout.addWidget(self.StartNumberSpinBox, 6, 1)
         self.setLayout(self.layout)
 
     def validatePage(self):
