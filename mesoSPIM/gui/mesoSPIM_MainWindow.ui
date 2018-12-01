@@ -52,8 +52,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>924</width>
-         <height>1222</height>
+         <width>927</width>
+         <height>1224</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -673,7 +673,7 @@
              <rect>
               <x>10</x>
               <y>550</y>
-              <width>541</width>
+              <width>721</width>
               <height>151</height>
              </rect>
             </property>
@@ -830,6 +830,33 @@
               <bool>true</bool>
              </property>
             </widget>
+            <widget class="QPushButton" name="setRotationPointButton">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>550</x>
+               <y>40</y>
+               <width>151</width>
+               <height>101</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <weight>50</weight>
+               <italic>false</italic>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Set rotation 
+ point</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
            </widget>
            <widget class="QPushButton" name="xyzrotStopButton">
             <property name="enabled">
@@ -837,10 +864,10 @@
             </property>
             <property name="geometry">
              <rect>
-              <x>560</x>
-              <y>560</y>
+              <x>740</x>
+              <y>70</y>
               <width>171</width>
-              <height>141</height>
+              <height>451</height>
              </rect>
             </property>
             <property name="font">

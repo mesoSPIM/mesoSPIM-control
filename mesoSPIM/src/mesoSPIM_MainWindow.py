@@ -42,6 +42,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
 
+    sig_set_rotation_point = QtCore.pyqtSignal()
+
     sig_save_etl_config = QtCore.pyqtSignal()
 
     def __init__(self, config=None):
@@ -251,6 +253,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.zMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': -self.xyzIncrementSpinbox.value()}))
         self.focusPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': self.focusIncrementSpinbox.value()}))
         self.focusMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': -self.focusIncrementSpinbox.value()}))
+
         self.rotPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': self.rotIncrementSpinbox.value()}))
         self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
 
@@ -262,6 +265,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # self.xyzZeroButton.clicked.connect(lambda bool: self.sig_zero.emit(['x','y','z']) if bool is True else self.sig_unzero.emit(['x','y','z']))
         self.focusZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['f']) if bool is True else self.sig_unzero_axes.emit(['f']))
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
+        self.setRotationPointButton.clicked.connect(lambda bool: self.sig_set_rotation_point.emit() if bool is True)
         #
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)

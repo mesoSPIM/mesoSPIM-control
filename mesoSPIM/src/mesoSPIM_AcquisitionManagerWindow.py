@@ -67,6 +67,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         ''' Parent Enable / Disable GUI'''
         self.parent.sig_enable_gui.connect(lambda boolean: self.setEnabled(boolean))
 
+        ''' Other parent signals '''
+        self.parent.sig_set_rotation_point.connect(lamdba boolean: print('Setting rotation point:', boolean))
+        # self.parent.sig_set_rotation_point.connect(self.set_rotation_point)
+
+
         self.statusBar = QtWidgets.QStatusBar()
 
         ''' Setting the model up '''
