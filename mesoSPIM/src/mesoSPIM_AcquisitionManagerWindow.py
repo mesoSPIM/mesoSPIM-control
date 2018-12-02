@@ -68,7 +68,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.parent.sig_enable_gui.connect(lambda boolean: self.setEnabled(boolean))
 
         ''' Other parent signals '''
-        self.parent.sig_set_rotation_point.connect(lamdba boolean: print('Setting rotation point:', boolean))
+        self.parent.sig_set_rotation_point.connect(lambda bool: print('Setting rotation point:', bool))
         # self.parent.sig_set_rotation_point.connect(self.set_rotation_point)
 
 
@@ -115,7 +115,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
 
         self.DeleteAllButton.clicked.connect(self.delete_all_rows)
-        self.SetRotationPointButton.clicked.connect(self.set_rotation_point)
+        self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
         self.FilenameWizardButton.clicked.connect(self.generate_filenames)
 
@@ -379,3 +379,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.model._table.set_rotation_point(rotation_point_dict)
 
         print(rotation_point_dict)
+
+    def delete_rotation_point(self):
+        self.model._table.delete_rotation_point()

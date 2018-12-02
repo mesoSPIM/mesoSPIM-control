@@ -432,15 +432,17 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.sig_warning.emit('Acquisition list contains rotation - stopping.')
                 self.sig_finished.emit()
             else:
+                ''' Pick the selected row and assign the rotation point of the whole list to it'''
                 acquisition = self.state['acq_list'][row]
                 rotation_position = self.state['acq_list'].get_rotation_point()
                 acq_list = AcquisitionList([acquisition])
                 acq_list.set_rotation_point(rotation_position)
 
         if acq_list.has_rotation() == True:
-            self.sig_warning.emit('Acquisition list contains rotation - stopping')
-            self.sig_finished.emit()
-        elif acq_list.check_for_existing_filenames() == True:
+            if acq_list.get_rotation_point_status() is False:
+                self.sig_warning.emit('Acquisition list contains rotation - stopping')
+                self.sig_finished.emit()
+        if acq_list.check_for_existing_filenames() == True:
             self.sig_warning.emit('One or more files in the acquisition list already exist - stopping.')
             self.sig_finished.emit()
         elif acq_list.check_for_duplicated_filenames() == True:
@@ -478,9 +480,9 @@ class mesoSPIM_Core(QtCore.QObject):
             target_rotation = startpoint['theta_abs']
             rotation_position = acq_list.get_rotation_point()
 
-            # if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-            #     self.move_absolute(rotation_position, wait_until_done=True)
-            #     self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+            if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+                self.move_absolute(rotation_position, wait_until_done=True)
+                self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(acq_list.get_startpoint())
             self.set_filter(acq_list[0]['filter'])
@@ -511,9 +513,9 @@ class mesoSPIM_Core(QtCore.QObject):
             target_rotation = startpoint['theta_abs']
 
             ''' Check if sample has to be rotated, allow some tolerance '''
-            # if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-            #     self.move_absolute(rotation_position, wait_until_done=True)
-            #     self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+            if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+                self.move_absolute(rotation_position, wait_until_done=True)
+                self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(startpoint, wait_until_done=False)
 
@@ -554,9 +556,9 @@ class mesoSPIM_Core(QtCore.QObject):
         target_rotation = startpoint['theta_abs']
 
         ''' Check if sample has to be rotated, allow some tolerance '''
-        # if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-        #     self.move_absolute(self.acquisition_list_rotation_position, wait_until_done=True)
-        #     self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+        if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+            self.move_absolute(self.acquisition_list_rotation_position, wait_until_done=True)
+            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
         self.move_absolute(startpoint, wait_until_done=True)
 

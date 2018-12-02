@@ -227,6 +227,16 @@ class AcquisitionList(list):
     def set_rotation_point(self, dict):
         self.rotation_point = {'x_abs' : dict['x_abs'], 'y_abs' : dict['y_abs'], 'z_abs':dict['z_abs']}
 
+    def delete_rotation_point(self):
+        self.rotation_point = {'x_abs' : None, 'y_abs' : None, 'z_abs' : None}
+
+    def get_rotation_point_status(self):
+        ''' Returns True if an rotation point was set, otherwise False '''
+        if self.rotation_point['x_abs'] == None :
+            return False
+        else: 
+            return True
+
     def get_rotation_point(self):
         return self.rotation_point
 
