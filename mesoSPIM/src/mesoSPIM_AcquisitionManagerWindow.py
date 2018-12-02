@@ -67,11 +67,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         ''' Parent Enable / Disable GUI'''
         self.parent.sig_enable_gui.connect(lambda boolean: self.setEnabled(boolean))
 
-        ''' Other parent signals '''
-        self.parent.sig_set_rotation_point.connect(lambda bool: print('Setting rotation point:', bool))
-        # self.parent.sig_set_rotation_point.connect(self.set_rotation_point)
-
-
         self.statusBar = QtWidgets.QStatusBar()
 
         ''' Setting the model up '''
@@ -117,7 +112,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
 
         self.DeleteAllButton.clicked.connect(self.delete_all_rows)
-        self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
+        # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
         self.FilenameWizardButton.clicked.connect(self.generate_filenames)
 
@@ -379,21 +374,21 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def generate_filenames(self):
         wizard = FilenameWizard(self)
 
-    def set_rotation_point(self):
-        '''
-        Take current position and turn it into an rotation point
-        '''
-        pos_dict = self.state['position']
+    # def set_rotation_point(self):
+    #     '''
+    #     Take current position and turn it into an rotation point
+    #     '''
+    #     pos_dict = self.state['position']
 
-        rotation_point_dict = {'x_abs' : pos_dict['x_pos'],
-                               'y_abs' : pos_dict['y_pos'],
-                               'z_abs' : pos_dict['z_pos'],
-                                }
+    #     rotation_point_dict = {'x_abs' : pos_dict['x_pos'],
+    #                            'y_abs' : pos_dict['y_pos'],
+    #                            'z_abs' : pos_dict['z_pos'],
+    #                             }
 
-        self.model._table.set_rotation_point(rotation_point_dict)
+    #     self.model._table.set_rotation_point(rotation_point_dict)
 
-        print(rotation_point_dict)
+    #     print(rotation_point_dict)
 
-    def delete_rotation_point(self):
-        self.model._table.delete_rotation_point()
+    # def delete_rotation_point(self):
+    #     self.model._table.delete_rotation_point()
 

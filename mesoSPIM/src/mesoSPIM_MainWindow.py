@@ -42,7 +42,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
 
-    sig_set_rotation_point = QtCore.pyqtSignal()
+    sig_mark_rotation_position = QtCore.pyqtSignal()
+    sig_go_to_rotation_position = QtCore.pyqtSignal()
 
     sig_save_etl_config = QtCore.pyqtSignal()
 
@@ -258,6 +259,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
+        self.goToRotationPositionButton.clicked.connect(self.sig_go_to_rotation_position.emit)
+        self.markRotationPositionButton.clicked.connect(lambda bool: self.sig_mark_rotation_position.emit() if bool is True else print('Rotation point deactived'))
 
         self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
         self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
@@ -267,7 +270,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
-
+        
         self.LiveButton.clicked.connect(self.run_live)
         self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
@@ -343,6 +346,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter):
         '''
+        
         Helper method to connect and initialize a combobox from the config
 
         Args:

@@ -75,6 +75,10 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
 
+    sig_mark_rotation_position = QtCore.pyqtSignal()
+    sig_go_to_rotation_position = QtCore.pyqtSignal()
+    sig_go_to_rotation_position_and_wait_until_done = QtCore.pyqtSignal()
+
     ''' ETL-related signals '''
     sig_save_etl_config = QtCore.pyqtSignal()
 
@@ -102,6 +106,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_stop_movement.connect(self.stop_movement)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
+        self.parent.sig_mark_rotation_position.connect(self.sig_mark_rotation_position.emit)
+        self.parent.sig_go_to_rotation_position.connect(self.sig_go_to_rotation_position.emit)
+
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
 
         ''' Set the Camera thread up '''
@@ -428,20 +435,21 @@ class mesoSPIM_Core(QtCore.QObject):
             acq_list = self.state['acq_list']
         else:
             acq_list = self.state['acq_list']
-            if acq_list.has_rotation() == True:
-                self.sig_warning.emit('Acquisition list contains rotation - stopping.')
-                self.sig_finished.emit()
-            else:
-                ''' Pick the selected row and assign the rotation point of the whole list to it'''
-                acquisition = self.state['acq_list'][row]
-                rotation_position = self.state['acq_list'].get_rotation_point()
-                acq_list = AcquisitionList([acquisition])
-                acq_list.set_rotation_point(rotation_position)
+            # if acq_list.has_rotation() == True:
+            #     self.sig_warning.emit('Acquisition list contains rotation - stopping.')
+            #     self.sig_finished.emit()
+            # else:
+            ''' Pick the selected row and assign the rotation point of the whole list to it'''
+            acquisition = self.state['acq_list'][row]
+            # rotation_position = self.state['acq_list'].get_rotation_point()
+            acq_list = AcquisitionList([acquisition])
+            # acq_list.set_rotation_point(rotation_position)
 
-        if acq_list.has_rotation() == True:
-            if acq_list.get_rotation_point_status() is False:
-                self.sig_warning.emit('Acquisition list contains rotation - stopping')
-                self.sig_finished.emit()
+        # if acq_list.has_rotation() == True:
+        #     if acq_list.get_rotation_point_status() is False:
+        #         self.sig_warning.emit('Acquisition list contains rotation - stopping')
+        #         self.sig_finished.emit()
+
         if acq_list.check_for_existing_filenames() == True:
             self.sig_warning.emit('One or more files in the acquisition list already exist - stopping.')
             self.sig_finished.emit()
@@ -478,10 +486,12 @@ class mesoSPIM_Core(QtCore.QObject):
             current_rotation = self.state['position']['theta_pos']
             startpoint = acq_list.get_startpoint()
             target_rotation = startpoint['theta_abs']
-            rotation_position = acq_list.get_rotation_point()
+            # rotation_position = acq_list.get_rotation_point()
 
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-                self.move_absolute(rotation_position, wait_until_done=True)
+                ''' Go to rotation position '''
+                self.sig_go_to_rotation_position_and_wait_until_done.emit()
+                # self.move_absolute(rotation_position, wait_until_done=True)
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(acq_list.get_startpoint())
@@ -503,7 +513,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_update_gui_from_state.emit(True)
             acq = self.state['acq_list'][row]
 
-            rotation_position = self.state['acq_list'].get_rotation_point()
+            # rotation_position = self.state['acq_list'].get_rotation_point()
 
             self.sig_status_message.emit('Going to start position')
             
@@ -514,7 +524,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
             ''' Check if sample has to be rotated, allow some tolerance '''
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-                self.move_absolute(rotation_position, wait_until_done=True)
+                self.sig_go_to_rotation_position_and_wait_until_done.emit()
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(startpoint, wait_until_done=False)
@@ -557,7 +567,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-            self.move_absolute(self.acquisition_list_rotation_position, wait_until_done=True)
+            self.sig_go_to_rotation_position_and_wait_until_done.emit()
             self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
         self.move_absolute(startpoint, wait_until_done=True)
