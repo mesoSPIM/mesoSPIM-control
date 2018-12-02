@@ -111,8 +111,10 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def setDataFromState(self, row, state_parameter):
         column = self._table.get_keylist().index(state_parameter)
 
-        if state_parameter in ('x_pos','y_pos','z_pos'):
+        if state_parameter in ('x_pos','y_pos','z_pos','f_pos'):
             new_value = round(self.state['position'][state_parameter],2)
+        elif state_parameter == 'rot':
+            new_value = round(self.state['position']['theta_pos'],2)
         else:
             new_value = self.state[state_parameter]
 

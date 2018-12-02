@@ -108,6 +108,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.LoadButton.clicked.connect(self.load_table)
 
         self.MarkCurrentXYButton.clicked.connect(self.mark_current_xy_position)
+        self.MarkCurrentFocusButton.clicked.connect(self.mark_current_focus)
+        self.MarkCurrentRotationButton.clicked.connect(self.mark_current_rotation)
         self.MarkCurrentStateButton.clicked.connect(self.mark_current_state)
         self.MarkCurrentETLParametersButton.clicked.connect(self.mark_current_etl_parameters)
         self.PreviewSelectionButton.clicked.connect(self.preview_acquisition)
@@ -345,6 +347,18 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         else:
             print('No row selected!')
 
+    def mark_current_focus(self):
+        row = self.get_first_selected_row()
+
+        if row is not None:
+            self.model.setDataFromState(row, 'f_pos')
+
+    def mark_current_rotation(self):
+        row = self.get_first_selected_row()
+
+        if row is not None:
+            self.model.setDataFromState(row, 'rot')
+
     def preview_acquisition(self):
         row = self.get_first_selected_row()
         print('selected row:', row)
@@ -382,3 +396,4 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     def delete_rotation_point(self):
         self.model._table.delete_rotation_point()
+

@@ -614,7 +614,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
 
         if self.stopflag is False:
-            self.move_absolute(acq.get_startpoint(), wait_until_done=True)
+            # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
             self.sig_end_image_series.emit()
 
