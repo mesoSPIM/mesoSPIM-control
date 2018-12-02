@@ -20,6 +20,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -283,6 +284,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -516,9 +518,12 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
+
+    Todo: Rotation handling not implemented!
     '''
 
     def __init__(self, parent = None):
