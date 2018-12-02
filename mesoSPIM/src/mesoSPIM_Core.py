@@ -160,7 +160,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.stopflag = False
 
-        self.acquisition_list_rotation_position = {}
+        # self.acquisition_list_rotation_position = {}
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -471,7 +471,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acquisition_count = 0
         self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
-        self.acquisition_list_rotation_position =  acq_list.get_rotation_point()
+        # self.acquisition_list_rotation_position =  acq_list.get_rotation_point()
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
