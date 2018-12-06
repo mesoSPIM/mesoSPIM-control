@@ -260,7 +260,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
         self.goToRotationPositionButton.clicked.connect(self.sig_go_to_rotation_position.emit)
-        self.markRotationPositionButton.clicked.connect(lambda bool: self.sig_mark_rotation_position.emit() if bool is True else print('Rotation point deactived'))
+        self.markRotationPositionButton.clicked.connect(self.sig_mark_rotation_position.emit)
 
         self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
         self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
