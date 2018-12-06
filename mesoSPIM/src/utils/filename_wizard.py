@@ -46,10 +46,10 @@ class FilenameWizard(QtWidgets.QWizard):
             print("Wizard was canceled")
         if r == 1:
             print('Wizard was closed properly')
-            print('Laser selected: ', self.field('Laser'))
-            print('Filter selected: ', self.field('Filter'))
-            print('Zoom selected: ', self.field('Zoom'))
-            print('Shutter selected: ', self.field('Shutterconfig'))
+            # print('Laser selected: ', self.field('Laser'))
+            # print('Filter selected: ', self.field('Filter'))
+            # print('Zoom selected: ', self.field('Zoom'))
+            # print('Shutter selected: ', self.field('Shutterconfig'))
             self.update_filenames_in_model()
         else:
             print('Wizard provided return code: ', r)
@@ -96,6 +96,10 @@ class FilenameWizard(QtWidgets.QWizard):
                 y_position_string = str(int(round(self.parent.model.getYPosition(row))))
 
                 filename += 'X' + x_position_string + '_' + 'Y' + y_position_string + '_'
+
+            if self.field('rotationPosition'):
+                rot_position_string = str(int(round(self.parent.model.getRotationPosition(row))))
+                filename += 'rot_' + rot_position_string + '_'
 
             if self.field('Laser'):
                 laserstring = self.parent.model.getLaser(row)
@@ -149,6 +153,7 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
 
         self.xyPositionCheckBox = QtWidgets.QCheckBox('XY Position')
+        self.RotationPositionCheckBox = QtWidgets.QCheckBox('Rotation angle')
 
         self.LaserCheckBox = QtWidgets.QCheckBox('Laser', self)
         self.FilterCheckBox = QtWidgets.QCheckBox('Filter', self)
@@ -167,6 +172,7 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
 
         self.registerField('Description', self.DescriptionLineEdit)
         self.registerField('xyPosition', self.xyPositionCheckBox)
+        self.registerField('rotationPosition', self.RotationPositionCheckBox)
         self.registerField('Laser',self.LaserCheckBox)
         self.registerField('Filter', self.FilterCheckBox)
         self.registerField('Zoom', self.ZoomCheckBox)
@@ -179,12 +185,13 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.DescriptionCheckBox, 0, 0)
         self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
         self.layout.addWidget(self.xyPositionCheckBox, 1, 0)
-        self.layout.addWidget(self.LaserCheckBox, 2, 0)
-        self.layout.addWidget(self.FilterCheckBox, 3, 0)
-        self.layout.addWidget(self.ZoomCheckBox, 4, 0)
-        self.layout.addWidget(self.ShutterCheckBox, 5, 0)
-        self.layout.addWidget(self.StartNumberCheckBox, 6, 0)
-        self.layout.addWidget(self.StartNumberSpinBox, 6, 1)
+        self.layout.addWidget(self.RotationPositionCheckBox, 2, 0)
+        self.layout.addWidget(self.LaserCheckBox, 3, 0)
+        self.layout.addWidget(self.FilterCheckBox, 4, 0)
+        self.layout.addWidget(self.ZoomCheckBox, 5, 0)
+        self.layout.addWidget(self.ShutterCheckBox, 6, 0)
+        self.layout.addWidget(self.StartNumberCheckBox, 7, 0)
+        self.layout.addWidget(self.StartNumberSpinBox, 7, 1)
         self.setLayout(self.layout)
 
     def validatePage(self):

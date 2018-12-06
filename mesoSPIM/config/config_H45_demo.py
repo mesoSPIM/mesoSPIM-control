@@ -100,6 +100,9 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'DemoStage'
                     'f_min' : -99000,
                     'theta_max' : 999,
                     'theta_min' : -999,
+                    'x_rot_position': 22000,
+                    'y_rot_position': 30000,
+                    'z_rot_position': 22000,
                     }
 
 pi_parameters = {'controllername' : 'C-884',

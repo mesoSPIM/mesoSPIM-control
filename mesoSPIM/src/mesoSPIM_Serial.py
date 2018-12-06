@@ -34,7 +34,8 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_stop_movement = QtCore.pyqtSignal()
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
-
+    sig_mark_rotation_position = QtCore.pyqtSignal()
+    
     def __init__(self, parent):
         super().__init__()
 
@@ -84,6 +85,11 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
 
+        self.parent.sig_mark_rotation_position.connect(self.sig_mark_rotation_position.emit)
+        self.parent.sig_go_to_rotation_position.connect(lambda: self.go_to_rotation_position())
+        self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
+
+
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
         for key, value in zip(dict.keys(),dict.values()):
@@ -114,6 +120,12 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage.move_absolute(dict, wait_until_done=True)
         else:
             self.stage.move_absolute(dict)
+
+    def go_to_rotation_position(self, wait_until_done=False):
+        if wait_until_done:
+            self.stage.go_to_rotation_position(wait_until_done=True)
+        else:
+            self.stage.go_to_rotation_position()
 
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:

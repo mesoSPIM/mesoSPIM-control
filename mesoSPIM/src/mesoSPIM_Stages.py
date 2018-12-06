@@ -20,6 +20,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -47,6 +48,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.parent.sig_unzero_axes.connect(self.unzero_axes)
         self.parent.sig_load_sample.connect(self.load_sample)
         self.parent.sig_unload_sample.connect(self.unload_sample)
+        self.parent.sig_mark_rotation_position.connect(self.mark_rotation_position)
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -105,7 +107,9 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.f_min = self.cfg.stage_parameters['f_min']
         self.theta_max = self.cfg.stage_parameters['theta_max']
         self.theta_min = self.cfg.stage_parameters['theta_min']
-
+        self.x_rot_position = self.cfg.stage_parameters['x_rot_position']
+        self.y_rot_position = self.cfg.stage_parameters['y_rot_position']
+        self.z_rot_position = self.cfg.stage_parameters['z_rot_position']
         '''
         Debugging code
         '''
@@ -251,6 +255,20 @@ class mesoSPIM_Stage(QtCore.QObject):
     def unload_sample(self):
         self.y_pos = self.cfg.stage_parameters['y_unload_position']
 
+    def mark_rotation_position(self):
+        ''' Take the current position and mark it as rotation location '''
+        self.x_rot_position = self.x_pos
+        self.y_rot_position = self.y_pos
+        self.z_rot_position = self.z_pos
+        print('Marking Rotation Position')
+
+    def go_to_rotation_position(self, wait_until_done=False):
+        ''' Move to the proper rotation position 
+        
+        Not implemented in the default
+        '''
+        print('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
+
 class mesoSPIM_DemoStage(mesoSPIM_Stage):
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -266,6 +284,7 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -466,6 +485,16 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         y_abs = self.cfg.stage_parameters['y_unload_position']/1000
         self.pidevice.MOV({2 : y_abs})
 
+    def go_to_rotation_position(self, wait_until_done=False):
+        x_abs = self.x_rot_position/1000
+        y_abs = self.y_rot_position/1000
+        z_abs = self.z_rot_position/1000
+
+        self.pidevice.MOV({1 : x_abs, 2 : y_abs, 3 : z_abs})
+
+        if wait_until_done == True:
+            self.pitools.waitontarget(self.pidevice)
+
     def block_till_controller_is_ready(self):
         '''
         Blocks further execution (especially during referencing moves)
@@ -489,9 +518,12 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
+
+    Todo: Rotation handling not implemented!
     '''
 
     def __init__(self, parent = None):
