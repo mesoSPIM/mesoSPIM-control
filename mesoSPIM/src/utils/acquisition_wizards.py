@@ -178,6 +178,9 @@ class TilingWizard(QtWidgets.QWizard):
             self.etl_r_offset = self.state['etl_r_offset'] 
             self.etl_r_amplitude = self.state['etl_r_amplitude'] 
 
+        ''' Use the current rotation angle '''
+        self.theta_pos = self.state['position']['theta_pos']
+
         dict = self.get_dict()
         self.acq_list = TilingAcquisitionListBuilder(dict).get_acquisition_list()
         self.acquisition_time = self.acq_list.get_acquisition_time()
