@@ -115,7 +115,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread = QtCore.QThread()
         self.camera_worker = mesoSPIM_HamamatsuCamera(self)
         self.camera_worker.moveToThread(self.camera_thread)
-        self.camera_worker.waveformer.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
+        self.camera_worker.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
 
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
