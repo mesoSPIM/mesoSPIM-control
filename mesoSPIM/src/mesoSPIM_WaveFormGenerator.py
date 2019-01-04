@@ -78,7 +78,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'laser_r_max_amplitude',
                        'camera_delay_%',
                        'camera_pulse_%'):
+                ''' Notify GUI about the change '''
+                self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
+                self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
                 print('Waveform change')
             elif key in ('ETL_cfg_file'):

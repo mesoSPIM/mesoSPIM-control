@@ -80,7 +80,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>4</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -2017,55 +2017,15 @@ Position</string>
             <widget class="QLabel" name="label_47">
              <property name="geometry">
               <rect>
-               <x>10</x>
-               <y>60</y>
-               <width>131</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Offset</string>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_48">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>110</y>
-               <width>141</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Amplitude</string>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftETLOffsetSpinBox2">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="geometry">
-              <rect>
                <x>190</x>
-               <y>60</y>
-               <width>111</width>
-               <height>31</height>
+               <y>80</y>
+               <width>221</width>
+               <height>41</height>
               </rect>
              </property>
-             <property name="suffix">
-              <string> V</string>
-             </property>
-             <property name="decimals">
-              <number>3</number>
-             </property>
-             <property name="maximum">
-              <double>5.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.010000000000000</double>
-             </property>
-             <property name="value">
-              <double>2.520000000000000</double>
+             <property name="text">
+              <string>For offset &amp; amplitude see 
+ETL tab</string>
              </property>
             </widget>
             <widget class="QLabel" name="label_49">
@@ -2092,90 +2052,6 @@ Position</string>
              </property>
              <property name="text">
               <string>Right</string>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightETLOffsetSpinBox2">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>60</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="suffix">
-              <string> V</string>
-             </property>
-             <property name="decimals">
-              <number>3</number>
-             </property>
-             <property name="maximum">
-              <double>5.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.010000000000000</double>
-             </property>
-             <property name="value">
-              <double>2.560000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftETLAmplitudeSpinBox2">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>110</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="suffix">
-              <string> V</string>
-             </property>
-             <property name="decimals">
-              <number>3</number>
-             </property>
-             <property name="maximum">
-              <double>2.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.010000000000000</double>
-             </property>
-             <property name="value">
-              <double>0.180000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightETLAmplitudeSpinBox2">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>110</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="suffix">
-              <string> V</string>
-             </property>
-             <property name="decimals">
-              <number>3</number>
-             </property>
-             <property name="maximum">
-              <double>2.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.010000000000000</double>
-             </property>
-             <property name="value">
-              <double>0.170000000000000</double>
              </property>
             </widget>
             <widget class="QLabel" name="label_52">
@@ -2985,70 +2861,5 @@ Position</string>
   </action>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>LeftETLOffsetSpinBox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>LeftETLOffsetSpinBox2</receiver>
-   <slot>setValue(double)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>212</x>
-     <y>147</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>727</x>
-     <y>127</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>RightETLOffsetSpinBox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>RightETLOffsetSpinBox2</receiver>
-   <slot>setValue(double)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>332</x>
-     <y>147</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>837</x>
-     <y>127</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>LeftETLAmplitudeSpinBox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>LeftETLAmplitudeSpinBox2</receiver>
-   <slot>setValue(double)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>212</x>
-     <y>227</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>727</x>
-     <y>177</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>RightETLAmplitudeSpinBox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>RightETLAmplitudeSpinBox2</receiver>
-   <slot>setValue(double)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>332</x>
-     <y>227</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>837</x>
-     <y>177</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

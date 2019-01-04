@@ -21,6 +21,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
     sig_finished = QtCore.pyqtSignal()
 
+    sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+
     sig_state_updated = QtCore.pyqtSignal()
 
     def __init__(self, parent = None):
@@ -125,7 +127,9 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         '''
         self.camera_exposure_time = time
         self.hcam.setPropertyValue("exposure_time", time)
+        self.sig_update_gui_from_state.emit(True)
         self.state['camera_exposure_time'] = time
+        self.sig_update_gui_from_state.emit(False)
 
     def set_camera_line_interval(self, time):
         '''
@@ -136,7 +140,9 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         '''
         self.camera_line_interval = time
         self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
+        self.sig_update_gui_from_state.emit(True)
         self.state['camera_line_interval'] = time
+        self.sig_update_gui_from_state.emit(False)
     
     def prepare_image_series(self, acq):
         '''
