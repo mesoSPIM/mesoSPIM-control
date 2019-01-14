@@ -760,5 +760,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
             self.write_line(file)
             self.write_line(file, 'CAMERA PARAMETERS')
+            self.write_line(file, 'camera_type', self.cfg.camera)
             self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
             self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
+            self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
+            self.write_line(file, 'x_pixels',self.cfg.camera_parameters['y_pixels'])
+
