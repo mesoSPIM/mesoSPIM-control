@@ -1,6 +1,6 @@
 # mesoSPIM-control
 Code and documentation for the mesoSPIM light-sheet microscope software.
-The documentation of the microscope hardware information can be found [here](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation)
+The documentation of the microscope hardware information can be found [here](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
 
 ## Overview
 The Swiss mesoSPIM is a versatile light-sheet microscope for imaging
