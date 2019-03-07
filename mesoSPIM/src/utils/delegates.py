@@ -231,11 +231,16 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
         editor.lineEdit.setText(str(pos))
 
     def set_model_data_from_lineedit(self, editor, model, index):
-        model.setData(index, float(editor.lineEdit.text()))
+        try:
+            model.setData(index, float(editor.lineEdit.text()))
+        except:
+            model.setData(index, 0.0)
 
     def set_model_data_from_focus_change(self, editor, index):
-        self.model.setData(index, float(editor.lineEdit.text()))
-
+        try:
+            self.model.setData(index, float(editor.lineEdit.text()))
+        except:
+            self.model.setData(index, 0.0)
 
 class MarkXPositionDelegate(MarkPositionDelegate):
     def __init__(self, parent):
