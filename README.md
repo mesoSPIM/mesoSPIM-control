@@ -62,3 +62,6 @@ python mesoSPIM_Control.py
 ```
 After launch, it will prompt you for a configuration file. Please choose a file
 with demo devices (e.g. `DemoStage`) for testing.
+
+#### Documentation for users
+For instructions on how to use mesoSPIM-control, please check out the documentation [here](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation).
