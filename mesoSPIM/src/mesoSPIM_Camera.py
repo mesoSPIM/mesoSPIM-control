@@ -292,8 +292,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             image = np.reshape(image, (-1, 2048))
             image = np.rot90(image)
 
-            num_string = '000000'
             start_number = self.state['start_number']
+            num_string = '000000'
             filename = num_string[:-len(str(start_number))]+str(start_number) + '.tif'
 
             path = self.state['snap_folder']+'/'+filename
