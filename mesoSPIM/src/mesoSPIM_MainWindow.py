@@ -5,6 +5,8 @@ mesoSPIM MainWindow
 import sys
 import copy
 
+import time
+
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
@@ -272,6 +274,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
         
         self.LiveButton.clicked.connect(self.run_live)
+        self.SnapButton.clicked.connect(self.run_snap)
         self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
         self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
@@ -286,6 +289,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
+        self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
+        self.SnapFolderIndicator.setText(self.state['snap_folder'])
+        
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
         self.widget_to_state_parameter_assignment=(
@@ -410,6 +416,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.update_widget_from_state(widget, state_parameter, conversion_factor)                
             self.block_signals_from_controls(False)
 
+    def run_snap(self):
+        print('Snapping image')
+        self.sig_state_request.emit({'state':'snap'})
+        self.set_progressbars_to_busy()
+        self.enable_mode_control_buttons(False)
+        self.enable_stop_button(True)
+        
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
         self.set_progressbars_to_busy()
@@ -533,6 +546,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def display_warning(self, string):
         warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
                 string, QtWidgets.QMessageBox.Ok)
-        
+
+    def choose_snap_folder(self):
+        pass
+
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
+
+        if path:
+            self.state['snap_folder'] = path
+            self.SnapFolderIndicator.setText(path)
+
+            print('Chosen Snap Folder:', path)
+
+            #self.sig_state_request.emit({'ETL_cfg_file' : path})
+    
 
     

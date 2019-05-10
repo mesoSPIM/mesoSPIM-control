@@ -53,6 +53,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
         self.parent.sig_prepare_live.connect(self.prepare_live, type = 3)
         self.parent.sig_get_live_image.connect(self.get_live_image)
+        self.parent.sig_get_snap_image.connect(self.get_snap_image)
         self.parent.sig_end_live.connect(self.end_live, type=3)
 
         self.sig_camera_status.connect(lambda status: print(status))
@@ -262,6 +263,18 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.end_time =  time.time()
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
         print('Framerate: ', framerate)
+
+    def get_snap_image(self):
+        [frames, _] = self.hcam.getFrames()
+
+        for aframe in frames:
+            image = aframe.getData()
+            image = np.reshape(image, (-1, 2048))
+            image = np.rot90(image)
+                 
+            self.sig_camera_frame.emit(image)
+
+      
 
 # class mesoSPIM_DemoCamera(mesoSPIM_Camera):
 #     def __init__(self, config, parent = None):

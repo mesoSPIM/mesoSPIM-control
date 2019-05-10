@@ -62,6 +62,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_prepare_live = QtCore.pyqtSignal()
     sig_get_live_image = QtCore.pyqtSignal()
+    sig_get_snap_image = QtCore.pyqtSignal()
     sig_end_live = QtCore.pyqtSignal()
 
     ''' Movement-related signals: '''
@@ -235,6 +236,11 @@ class mesoSPIM_Core(QtCore.QObject):
             self.state['state']='live'
             self.sig_state_request.emit({'state':'live'})
             self.live()
+
+        if state == 'snap':
+            self.state['state']='snap'
+            self.sig_state_request.emit({'state':'snap'})
+            self.snap()
         
         elif state == 'run_selected_acquisition':
             self.state['state']= 'run_selected_acquisition'
@@ -371,10 +377,14 @@ class mesoSPIM_Core(QtCore.QObject):
     Sub-Imaging modes
     '''
     def snap(self):
+        self.sig_prepare_live.emit()
         self.open_shutters()
         self.snap_image()
+        self.sig_get_snap_image.emit()
         self.close_shutters()
+        self.sig_end_live.emit()
         self.sig_finished.emit()
+        QtWidgets.QApplication.processEvents()
 
     def snap_image(self):
         '''Snaps a single image after updating the waveforms.

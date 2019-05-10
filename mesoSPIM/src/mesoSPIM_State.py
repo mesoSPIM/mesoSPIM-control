@@ -48,6 +48,7 @@ class mesoSPIM_StateSingleton():
                             'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
                             'filename' : 'file.raw',
                             'folder' : '/tmp/',
+                            'snap_folder' : '/tmp/',
                             'file_prefix' : '',
                             'start_number' : 1,
                             'file_suffix' : '000001',
