@@ -1327,7 +1327,7 @@ Position</string>
               <string> ms</string>
              </property>
              <property name="minimum">
-              <double>100.000000000000000</double>
+              <double>10.000000000000000</double>
              </property>
              <property name="maximum">
               <double>1000.000000000000000</double>
@@ -1439,9 +1439,9 @@ Position</string>
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>550</y>
+              <y>470</y>
               <width>431</width>
-              <height>121</height>
+              <height>201</height>
              </rect>
             </property>
             <property name="title">
@@ -1463,17 +1463,42 @@ Position</string>
             <widget class="QLabel" name="label_39">
              <property name="geometry">
               <rect>
-               <x>10</x>
-               <y>80</y>
+               <x>200</x>
+               <y>40</y>
                <width>131</width>
                <height>31</height>
               </rect>
              </property>
              <property name="text">
-              <string>Pulse</string>
+              <string>Pulselength</string>
              </property>
             </widget>
-            <widget class="QDoubleSpinBox" name="doubleSpinBox_23">
+            <widget class="QDoubleSpinBox" name="CameraTriggerDelaySpinBox">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>70</x>
+               <y>40</y>
+               <width>111</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="suffix">
+              <string> %</string>
+             </property>
+             <property name="maximum">
+              <double>100.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="value">
+              <double>10.000000000000000</double>
+             </property>
+            </widget>
+            <widget class="QDoubleSpinBox" name="CameraTriggerPulseLengthSpinBox">
              <property name="enabled">
               <bool>true</bool>
              </property>
@@ -1495,122 +1520,31 @@ Position</string>
               <double>0.100000000000000</double>
              </property>
              <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="doubleSpinBox_24">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>80</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
               <double>80.000000000000000</double>
              </property>
             </widget>
-            <widget class="QGroupBox" name="groupBox_14">
+            <widget class="QComboBox" name="CameraSensorModeComboBox">
              <property name="geometry">
               <rect>
-               <x>0</x>
-               <y>0</y>
-               <width>431</width>
-               <height>121</height>
+               <x>150</x>
+               <y>80</y>
+               <width>271</width>
+               <height>31</height>
               </rect>
              </property>
-             <property name="title">
-              <string>Camera parameters</string>
+            </widget>
+            <widget class="QLabel" name="label_48">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>80</y>
+               <width>131</width>
+               <height>31</height>
+              </rect>
              </property>
-             <widget class="QLabel" name="label_48">
-              <property name="geometry">
-               <rect>
-                <x>10</x>
-                <y>40</y>
-                <width>131</width>
-                <height>31</height>
-               </rect>
-              </property>
-              <property name="text">
-               <string>Delay</string>
-              </property>
-             </widget>
-             <widget class="QLabel" name="label_55">
-              <property name="geometry">
-               <rect>
-                <x>10</x>
-                <y>80</y>
-                <width>131</width>
-                <height>31</height>
-               </rect>
-              </property>
-              <property name="text">
-               <string>Pulse</string>
-              </property>
-             </widget>
-             <widget class="QDoubleSpinBox" name="doubleSpinBox_25">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="geometry">
-               <rect>
-                <x>310</x>
-                <y>40</y>
-                <width>111</width>
-                <height>31</height>
-               </rect>
-              </property>
-              <property name="suffix">
-               <string> %</string>
-              </property>
-              <property name="maximum">
-               <double>100.000000000000000</double>
-              </property>
-              <property name="singleStep">
-               <double>0.100000000000000</double>
-              </property>
-              <property name="value">
-               <double>10.000000000000000</double>
-              </property>
-             </widget>
-             <widget class="QDoubleSpinBox" name="doubleSpinBox_26">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="geometry">
-               <rect>
-                <x>310</x>
-                <y>80</y>
-                <width>111</width>
-                <height>31</height>
-               </rect>
-              </property>
-              <property name="suffix">
-               <string> %</string>
-              </property>
-              <property name="maximum">
-               <double>100.000000000000000</double>
-              </property>
-              <property name="singleStep">
-               <double>0.100000000000000</double>
-              </property>
-              <property name="value">
-               <double>80.000000000000000</double>
-              </property>
-             </widget>
+             <property name="text">
+              <string>Sensor mode</string>
+             </property>
             </widget>
            </widget>
            <widget class="QGroupBox" name="groupBox_12">
@@ -1619,7 +1553,7 @@ Position</string>
               <x>10</x>
               <y>200</y>
               <width>431</width>
-              <height>351</height>
+              <height>261</height>
              </rect>
             </property>
             <property name="title">
@@ -1840,6 +1774,18 @@ Position</string>
               <double>80.000000000000000</double>
              </property>
             </widget>
+            <zorder>label_22</zorder>
+            <zorder>label_23</zorder>
+            <zorder>label_40</zorder>
+            <zorder>LeftLaserPulseDelaySpinBox</zorder>
+            <zorder>RightLaserPulseDelaySpinBox</zorder>
+            <zorder>label_41</zorder>
+            <zorder>LeftLaserPulseLengthSpinBox</zorder>
+            <zorder>RightLaserPulseLengthSpinBox</zorder>
+            <zorder>label_51</zorder>
+            <zorder>LeftLaserPulseMaxAmplitudeSpinBox</zorder>
+            <zorder>RightLaserPulseMaxAmplitudeSpinBox</zorder>
+            <zorder>groupBox_14</zorder>
            </widget>
            <widget class="QGroupBox" name="groupBox_7">
             <property name="enabled">

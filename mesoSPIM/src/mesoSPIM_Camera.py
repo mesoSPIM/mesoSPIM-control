@@ -5,6 +5,8 @@ import os
 import time
 import numpy as np
 
+import tifffile
+
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 from .devices.cameras.Demo_Camera import Demo_Camera
@@ -83,6 +85,16 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
             self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
             self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
+
+            # Diagnostic output 
+            self.hcam.setPropertyValue("output_trigger_active[0]",1) # {'EDGE': 1}
+            self.hcam.setPropertyValue("output_trigger_kind[0]",3) #  {'LOW': 1, 'EXPOSURE': 2, 'PROGRAMABLE': 3, 'TRIGGER READY': 4, 'HIGH': 5}
+            self.hcam.setPropertyValue("output_trigger_polarity[0]",2) # {'NEGATIVE': 1, 'POSITIVE': 2}
+            self.hcam.setPropertyValue("output_trigger_source[0]",4) # {'READOUT END': 2, 'VSYNC': 3, 'HSYNC': 4, 'TRIGGER': 6}
+
+            # Subarray Mode 
+            self.hcam.setPropertyValue("output_trigger_active[0]",1)
+
         elif self.cfg.camera == 'Demo':
             self.hcam = Demo_Camera()
 
@@ -97,7 +109,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             The request handling is done with exec() to write fewer lines of
             code.
             '''
-            if key in ('camera_exposure_time','camera_line_interval','state'):
+            if key in ('camera_exposure_time','camera_line_interval','state','camera_sensor_mode'):
                 exec('self.set_'+key+'(value)')
 
     def set_state(self, requested_state):
@@ -118,6 +130,14 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     def stop(self):
         ''' Stops acquisition '''
         self.stopflag = True
+
+    def set_camera_sensor_mode(self, mode):
+        if mode == 'Area':
+            self.hcam.setPropertyValue("sensor_mode", 1)
+        elif mode == 'ASLM':
+            self.hcam.setPropertyValue("sensor_mode", 12)
+        else:
+            print('Camera mode not support')
 
     def set_camera_exposure_time(self, time):
         '''
@@ -271,10 +291,25 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             image = aframe.getData()
             image = np.reshape(image, (-1, 2048))
             image = np.rot90(image)
-                 
+
+            num_string = '000000'
+            start_number = self.state['start_number']
+            filename = num_string[:-len(str(start_number))]+str(start_number) + '.tif'
+
+            path = self.state['snap_folder']+'/'+filename
+
+            #self.xy_image = np.memmap(path, mode = "write", dtype = np.uint16, shape = 2048*2048)
+            
             self.sig_camera_frame.emit(image)
 
-      
+            tifffile.imsave(path, image, photometric='minisblack')
+
+            #image = image.flatten()
+            #self.xy_image[0:2048*2048] = image
+
+            self.state['start_number'] = self.state['start_number'] + 1
+
+            #del self.xy_image
 
 # class mesoSPIM_DemoCamera(mesoSPIM_Camera):
 #     def __init__(self, config, parent = None):

@@ -303,6 +303,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.LaserIntensitySlider, 'intensity',1),
             (self.CameraExposureTimeSpinBox, 'camera_exposure_time',1000),
             (self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
+            (self.CameraTriggerDelaySpinBox,'camera_delay_%',1),
+            (self.CameraTriggerPulseLengthSpinBox, 'camera_pulse_%',1),
             (self.SweeptimeSpinBox,'sweeptime',1000),
             (self.LeftLaserPulseDelaySpinBox,'laser_l_delay_%',1),
             (self.RightLaserPulseDelaySpinBox,'laser_r_delay_%',1),
@@ -338,6 +340,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
         self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
         self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
+        self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
 
         self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])

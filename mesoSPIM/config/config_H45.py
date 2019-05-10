@@ -221,4 +221,5 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
+'camera_sensor_mode':'ASLM',
 }
