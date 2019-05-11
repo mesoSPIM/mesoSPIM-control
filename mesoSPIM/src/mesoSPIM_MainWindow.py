@@ -476,6 +476,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def enable_mode_control_buttons(self, boolean):
         self.LiveButton.setEnabled(boolean)
+        self.SnapButton.setEnabled(boolean)
         self.RunSelectedAcquisitionButton.setEnabled(boolean)
         self.RunAcquisitionListButton.setEnabled(boolean)
         self.VisualModeButton.setEnabled(boolean)
