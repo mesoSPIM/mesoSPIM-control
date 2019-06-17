@@ -9,8 +9,9 @@ import time
 import logging
 timestr = time.strftime("%Y%m%d-%H%M%S")
 logging_filename = timestr + '.log'
-logging.basicConfig(filename='log/'+logging_filename, level=logging.DEBUG, format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(module)s:%(message)s')
-logging.info('mesoSPIM-control started') 
+logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO, format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(thread)d:%(module)s:%(message)s')
+logger = logging.getLogger(__name__)
+logger.info('mesoSPIM-control started') 
 
 import os
 import sys
@@ -20,7 +21,7 @@ from PyQt5 import QtWidgets
 
 from src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
-logging.info('Modules loaded')
+logger.info('Modules loaded')
 
 def load_config():
     '''
@@ -40,7 +41,7 @@ def load_config():
         spec = importlib.util.spec_from_file_location('module.name', global_config_path)
         config = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config)
-        logging.info(f'Configuration file loaded: {global_config_path}')
+        logger.info(f'Configuration file loaded: {global_config_path}')
         return config
     else:
         ''' Application shutdown '''

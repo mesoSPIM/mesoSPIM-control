@@ -93,11 +93,11 @@ class mesoSPIM_Serial(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
         for key, value in zip(dict.keys(),dict.values()):
-            print('Serial thread: state request: Key: ', key, ' Value: ', value)
+            # print('Serial thread: state request: Key: ', key, ' Value: ', value)
             '''
             Here, the request handling is done with lots if 'ifs'
             '''
-            print('Key: ', key, ' Value: ', value)
+            # print('Key: ', key, ' Value: ', value)
             if key == 'filter':
                 if wait_until_done:
                     self.set_filter(value, wait_until_done)

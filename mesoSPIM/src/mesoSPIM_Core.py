@@ -9,6 +9,9 @@ from scipy import signal
 import csv
 import traceback
 
+import logging
+logger = logging.getLogger(__name__)
+
 '''PyQt5 Imports'''
 from PyQt5 import QtWidgets, QtCore, QtGui
 
@@ -127,8 +130,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread.start()
         self.serial_thread.start()
 
-        print('Camera thread priority:', self.camera_thread.priority())
-        print('Serial thread priority:', self.serial_thread.priority())
+        logger.info(f'Core: Camera Thread priority: {self.camera_thread.priority()}')
+        logger.info(f'Core: Serial Thread priority: {self.serial_thread.priority()}')
 
         ''' Setting waveform generation up '''
         self.waveformer = mesoSPIM_WaveFormGenerator(self)
@@ -182,7 +185,7 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            print('Core Thread: State request: Key: ', key, ' Value: ', value)
+            # print('Core Thread: State request: Key: ', key, ' Value: ', value)
             '''
             The request handling is done with exec() to write fewer lines of
             code.
@@ -251,7 +254,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.preview_acquisition()
 
         elif state == 'idle':
-            print('Core: Stopping requested')
+            # print('Core: Stopping requested')
             self.sig_state_request.emit({'state':'idle'})
             self.stop()
 
@@ -509,7 +512,8 @@ class mesoSPIM_Core(QtCore.QObject):
         row = self.state['selected_row']
 
         if row==None:
-            print('No row selected!')
+            pass
+            # print('No row selected!')
         else:
             self.sig_update_gui_from_state.emit(True)
             acq = self.state['acq_list'][row]
@@ -551,8 +555,8 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         Housekeeping: Prepare the acquisition
         '''
-        print('Running Acquisition #', self.acquisition_count,
-                ' with Filename: ', acq['filename'])
+        logger.info(f'Core: Running Acquisition #{self.acquisition_count} with Filename: {acq["filename"]}')
+        
         self.sig_status_message.emit('Going to start position')
         ''' Rotation handling goes here:
 
@@ -716,7 +720,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
 
-        print('Metadata_path: ', metadata_path)
+        # print('Metadata_path: ', metadata_path)
 
         with open(metadata_path,'w') as file:
             self.write_line(file, 'Metadata for file', path)

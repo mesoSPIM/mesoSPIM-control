@@ -3,6 +3,8 @@ mesoSPIM Stage classes
 ======================
 '''
 import time
+import logging
+logger = logging.getLogger(__name__)
 
 from PyQt5 import QtCore
 
@@ -324,9 +326,9 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         # print('Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Referencing status 5: ', self.pidevice.qFRF(5))
         self.pidevice.FRF(5)
-        print('M-406 Emergency referencing hack: Waiting for referencing move')
+        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
-        print('M-406 Emergency referencing hack done')
+        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack done')
         # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
 

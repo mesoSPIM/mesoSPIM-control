@@ -5,6 +5,9 @@ import os
 import numpy as np
 import csv
 
+import logging
+logger = logging.getLogger(__name__)
+
 '''National Instruments Imports'''
 import nidaqmx
 from nidaqmx.constants import AcquisitionType, TaskMode
@@ -43,7 +46,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            print('Waveform Generator: State request: Key: ', key, ' Value: ', value)
+            # print('Waveform Generator: State request: Key: ', key, ' Value: ', value)
             '''
             The request handling is done 
             '''
@@ -83,19 +86,19 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.state[key] = value
                 self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
-                print('Waveform change')
+                # print('Waveform change')
             elif key in ('ETL_cfg_file'):
                 self.state[key] = value
                 self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
-                print('ETL CFG File changed')
+                # print('ETL CFG File changed')
             elif key in ('zoom'):
                 self.update_etl_parameters_from_zoom(value)
-                print('zoom change')
+                #print('zoom change')
             elif key in ('laser'):
                 self.state[key] = value
                 self.create_waveforms()
                 self.update_etl_parameters_from_laser(value)
-                print('laser change')
+                #print('laser change')
                        
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
