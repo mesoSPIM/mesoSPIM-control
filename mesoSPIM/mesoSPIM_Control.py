@@ -4,6 +4,14 @@ mesoSPIM_control.py
 The core module of the mesoSPIM software
 '''
 
+''' Configuring the logging module before doing anything else'''
+import time
+import logging
+timestr = time.strftime("%Y%m%d-%H%M%S")
+logging_filename = timestr + '.log'
+logging.basicConfig(filename='log/'+logging_filename, level=logging.DEBUG, format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(module)s:%(message)s')
+logging.info('mesoSPIM-control started') 
+
 import os
 import sys
 import importlib.util
@@ -11,6 +19,8 @@ import importlib.util
 from PyQt5 import QtWidgets
 
 from src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
+
+logging.info('Modules loaded')
 
 def load_config():
     '''
@@ -30,6 +40,7 @@ def load_config():
         spec = importlib.util.spec_from_file_location('module.name', global_config_path)
         config = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config)
+        logging.info(f'Configuration file loaded: {global_config_path}')
         return config
     else:
         ''' Application shutdown '''
@@ -44,6 +55,7 @@ def main():
     """
     Main function
     """
+    logging.info('mesoSPIM Program started.')
     cfg = load_config()
     app = QtWidgets.QApplication(sys.argv)
     ex = mesoSPIM_MainWindow(cfg)

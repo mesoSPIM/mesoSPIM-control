@@ -3,11 +3,10 @@ __pycache__
 .ipynb_checkpoints
 /**/.ipynb_checkpoints
 **/*.ipynb_checkpoints/
-log/*
 mesoSPIM/legacy/*
-/log/*
 tmp/*
 /tmp/*
+*.log
 mesoSPIM/src/devices/zoom/dynamixel/*
 mesoSPIM/PI_GCS2_DLL_x64.dll
 .idea
@@ -23,3 +22,4 @@ mesoSPIM/src/devices/stages/galil/gclib\.py
 mesoSPIM/src/devices/stages/galil/gclib/__init__\.py
 
 mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
+
