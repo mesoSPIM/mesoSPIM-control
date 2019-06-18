@@ -114,10 +114,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
 
+        logger.info('Core internal thread affinity in init: '+str(id(self.thread())))
+
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
         self.camera_worker = mesoSPIM_HamamatsuCamera(self)
+        logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.moveToThread(self.camera_thread)
+        logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
 
         ''' Set the serial thread up '''
@@ -128,7 +132,11 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Start the threads '''
         self.camera_thread.start()
+        logger.info('Camera worker thread affinity after starting the thread? Answer:'+str(id(self.camera_worker.thread())))
         self.serial_thread.start()
+
+        logger.info('Camera thread running? Answer:'+str(self.camera_thread.isRunning()))
+        logger.info('Serial thread running? Answer:'+str(self.serial_thread.isRunning()))
 
         #logger.info(f'Core: Camera Thread priority: {self.camera_thread.priority()}')
         #logger.info(f'Core: Serial Thread priority: {self.serial_thread.priority()}')
@@ -240,6 +248,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.state['state']='live'
             self.sig_state_request.emit({'state':'live'})
             logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+            logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
             self.live()
         
         elif state == 'run_selected_acquisition':

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 from PyQt5 import QtCore
 
-from .mesoSPIM_State import mesoSPIM_StateSingleton
+# from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_Stage(QtCore.QObject):
     '''
@@ -152,6 +152,8 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.sig_position.emit(self.int_position_dict)
 
     def move_relative(self, dict, wait_until_done=False):
+        logger.info('Thread ID during move rel: '+str(int(QtCore.QThread.currentThreadId())))
+
         ''' Move relative method '''
         if 'x_rel' in dict:
             x_rel = dict['x_rel']

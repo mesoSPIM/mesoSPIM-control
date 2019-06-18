@@ -81,15 +81,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.show()
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
 
+        logger.info('Main Window thread affinity at Startup? Answer:'+str(id(self.thread())))
+
         '''
         Setting up the threads
         '''
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.info('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
 
         ''' Setting the mesoSPIM_Core thread up '''
         self.core_thread = QtCore.QThread()
+        '''Entry point: Work on thread affinity here'''
         self.core = mesoSPIM_Core(self.cfg, self)
+        logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
         self.core.moveToThread(self.core_thread)
+        logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
 
         ''' Get buttons & connections ready '''
         self.initialize_and_connect_widgets()
@@ -110,6 +116,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
+        logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
+
+        logger.info('Core thread running? Answer:'+str(self.core_thread.isRunning()))
         
         try:
             current_thread = self.thread()
