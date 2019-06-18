@@ -114,12 +114,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         try:
             current_thread = self.thread()
             current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
-            logger.info(f'Main Window: Thread priority: {current_thread.priority}')
+            #logger.info(f'Main Window: Thread priority: {current_thread.priority}')
             #print('Window priority: ', current_thread.priority())
         except:
             logger.debug(f'Main Window: Printing Thread priority failed.')
 
-        logger.info(f'Main Window: Core priority: {self.core_thread.priority()}')
+        #logger.info(f'Main Window: Core priority: {self.core_thread.priority()}')
         #print('Core priority: ', self.core_thread.priority())
 
         ''' Setting up the joystick '''
@@ -434,6 +434,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
+        ''' Logging code to check the thread ID during live'''
+        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)

@@ -130,8 +130,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread.start()
         self.serial_thread.start()
 
-        logger.info(f'Core: Camera Thread priority: {self.camera_thread.priority()}')
-        logger.info(f'Core: Serial Thread priority: {self.serial_thread.priority()}')
+        #logger.info(f'Core: Camera Thread priority: {self.camera_thread.priority()}')
+        #logger.info(f'Core: Serial Thread priority: {self.serial_thread.priority()}')
 
         ''' Setting waveform generation up '''
         self.waveformer = mesoSPIM_WaveFormGenerator(self)

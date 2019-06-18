@@ -101,6 +101,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.create_waveforms()
                 self.update_etl_parameters_from_laser(value)
                 #print('laser change')
+                
             # Log Thread ID during Live: just debugging code
             elif key == 'state':
                 if value == 'live':

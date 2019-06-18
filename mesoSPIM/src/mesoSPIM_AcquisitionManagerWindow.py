@@ -5,6 +5,9 @@ mesoSPIM Acquisition Manager Window
 import os
 import sys
 
+import logging
+logger = logging.getLogger(__name__)
+
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
@@ -115,6 +118,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
         self.FilenameWizardButton.clicked.connect(self.generate_filenames)
+
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
 
     def enable(self):
         self.setEnabled(True)

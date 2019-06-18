@@ -5,6 +5,9 @@ mesoSPIM CameraWindow
 import sys
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
+
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
@@ -39,6 +42,9 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.hLine = pg.InfiniteLine(pos=1024, angle=0, movable=False, pen=self.crosspen)
         self.graphicsView.addItem(self.vLine, ignoreBounds=True)
         self.graphicsView.addItem(self.hLine, ignoreBounds=True)
+
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
