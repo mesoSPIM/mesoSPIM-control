@@ -21,6 +21,9 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
+from .utils.demo_threads1 import mesoSPIM_DemoThread
+
+
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
     Main application window which instantiates worker objects and moves them
@@ -52,6 +55,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     sig_save_etl_config = QtCore.pyqtSignal()
 
+    sig_poke_demo_thread = QtCore.pyqtSignal()
+
     def __init__(self, config=None):
         super().__init__()
 
@@ -81,7 +86,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.show()
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
 
-        logger.info('Main Window thread affinity at Startup? Answer:'+str(id(self.thread())))
+        ''' Get the demo thread set up and start it '''
+        self.demo_thread = QtCore.QThread()
+        self.demo_worker = mesoSPIM_DemoThread()
+        self.sig_poke_demo_thread.connect(self.demo_worker.report_thread_id)
+        self.demo_worker.moveToThread(self.demo_thread)
+        self.demo_thread.start(QtCore.QThread.HighPriority)
+        #logger.info('Main Window thread affinity at Startup? Answer:'+str(id(self.thread())))
 
         '''
         Setting up the threads
@@ -93,9 +104,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core_thread = QtCore.QThread()
         '''Entry point: Work on thread affinity here'''
         self.core = mesoSPIM_Core(self.cfg, self)
-        logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
+        #logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
         self.core.moveToThread(self.core_thread)
-        logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
+        #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
 
         ''' Get buttons & connections ready '''
         self.initialize_and_connect_widgets()
@@ -114,11 +125,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.core.sig_warning.connect(self.display_warning)
 
+        ''' Connecting the camera frames (this is a deep connection and slightly
+        risky) It will break immediately when there is an API change.'''
+        try:
+            self.core.camera_worker.sig_camera_frame.connect(self.camera_window.set_image)
+            # print('Camera connected successfully to the display window!')
+        except:
+            logger.warning(f'Main Window: Camera not connected to display!', exc_info=True)
+
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
-        logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
 
-        logger.info('Core thread running? Answer:'+str(self.core_thread.isRunning()))
+
+        #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
+
+        #logger.info('Core thread running? Answer:'+str(self.core_thread.isRunning()))
         
         try:
             current_thread = self.thread()
@@ -134,13 +155,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
 
-        ''' Connecting the camera frames (this is a deep connection and slightly
-        risky) It will break immediately when there is an API change.'''
-        try:
-            self.core.camera_worker.sig_camera_frame.connect(self.camera_window.set_image)
-            # print('Camera connected successfully to the display window!')
-        except:
-            logger.warning(f'Main Window: Camera not connected to display!', exc_info=True)
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -445,6 +459,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_state_request.emit({'state':'live'})
         ''' Logging code to check the thread ID during live'''
         logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+        self.sig_poke_demo_thread.emit()
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)

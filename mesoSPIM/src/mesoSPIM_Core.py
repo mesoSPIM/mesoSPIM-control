@@ -37,6 +37,8 @@ from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 
+from .utils.demo_threads import mesoSPIM_DemoThread
+
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
 
@@ -85,6 +87,8 @@ class mesoSPIM_Core(QtCore.QObject):
     ''' ETL-related signals '''
     sig_save_etl_config = QtCore.pyqtSignal()
 
+    sig_poke_demo_thread = QtCore.pyqtSignal()
+
     def __init__(self, config, parent):
         super().__init__()
 
@@ -114,29 +118,36 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
 
-        logger.info('Core internal thread affinity in init: '+str(id(self.thread())))
+        #logger.info('Core internal thread affinity in init: '+str(id(self.thread())))
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
         self.camera_worker = mesoSPIM_HamamatsuCamera(self)
-        logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
-        self.camera_worker.moveToThread(self.camera_thread)
-        logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
+        #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
+        self.camera_worker.moveToThread(self.camera_thread)
+        #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
 
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
-        self.serial_worker.moveToThread(self.serial_thread)
         self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+        self.serial_worker.moveToThread(self.serial_thread)
 
         ''' Start the threads '''
         self.camera_thread.start()
-        logger.info('Camera worker thread affinity after starting the thread? Answer:'+str(id(self.camera_worker.thread())))
+        #logger.info('Camera worker thread affinity after starting the thread? Answer:'+str(id(self.camera_worker.thread())))
         self.serial_thread.start()
 
-        logger.info('Camera thread running? Answer:'+str(self.camera_thread.isRunning()))
-        logger.info('Serial thread running? Answer:'+str(self.serial_thread.isRunning()))
+        ''' Get the demo thread set up and start it '''
+        self.demo_thread = QtCore.QThread()
+        self.demo_worker = mesoSPIM_DemoThread()
+        self.sig_poke_demo_thread.connect(self.demo_worker.report_thread_id)
+        self.demo_worker.moveToThread(self.demo_thread)
+        self.demo_thread.start()
+
+        #logger.info('Camera thread running? Answer:'+str(self.camera_thread.isRunning()))
+        #logger.info('Serial thread running? Answer:'+str(self.serial_thread.isRunning()))
 
         #logger.info(f'Core: Camera Thread priority: {self.camera_thread.priority()}')
         #logger.info(f'Core: Serial Thread priority: {self.serial_thread.priority()}')
@@ -248,7 +259,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.state['state']='live'
             self.sig_state_request.emit({'state':'live'})
             logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
-            logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
+            self.sig_poke_demo_thread.emit()
+            #logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
             self.live()
         
         elif state == 'run_selected_acquisition':
