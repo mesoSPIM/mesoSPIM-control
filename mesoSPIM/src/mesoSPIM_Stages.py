@@ -3,6 +3,7 @@ mesoSPIM Stage classes
 ======================
 '''
 import time
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,8 @@ class mesoSPIM_Stage(QtCore.QObject):
         Debugging code
         '''
         self.sig_status_message.connect(lambda string, time: print(string))
+
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def create_position_dict(self):
         self.position_dict = {'x_pos': self.x_pos,

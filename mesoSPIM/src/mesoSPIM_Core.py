@@ -164,6 +164,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.stopflag = False
 
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
         # self.acquisition_list_rotation_position = {}
 
     def __del__(self):
@@ -237,6 +239,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if state == 'live':
             self.state['state']='live'
             self.sig_state_request.emit({'state':'live'})
+            logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
             self.live()
         
         elif state == 'run_selected_acquisition':

@@ -89,6 +89,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         elif self.cfg.camera == 'Demo':
             self.hcam = Demo_Camera()
 
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
     def __del__(self):
         self.hcam.shutdown()
 
@@ -102,6 +104,10 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             '''
             if key in ('camera_exposure_time','camera_line_interval','state'):
                 exec('self.set_'+key+'(value)')
+            # Log Thread ID during Live: just debugging code
+            elif key == 'state':
+                if value == 'live':
+                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def set_state(self, requested_state):
         pass
@@ -253,6 +259,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
         self.start_time = time.time()
         logger.info('Camera: Preparing Live Mode')
+        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def get_live_image(self):
         [frames, _] = self.hcam.getFrames()

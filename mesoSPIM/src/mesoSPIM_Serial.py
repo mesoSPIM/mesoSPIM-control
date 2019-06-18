@@ -9,6 +9,9 @@ filter wheels, zoom systems etc.
 import numpy as np
 import time
 
+import logging
+logger = logging.getLogger(__name__)
+
 '''PyQt5 Imports'''
 from PyQt5 import QtWidgets, QtCore, QtGui
 
@@ -89,6 +92,8 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_go_to_rotation_position.connect(lambda: self.go_to_rotation_position())
         self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
 
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
@@ -108,6 +113,10 @@ class mesoSPIM_Serial(QtCore.QObject):
                     self.set_zoom(value, wait_until_done)
                 else:
                     self.set_zoom(value)
+            # Log Thread ID during Live: just debugging code
+            if key == 'state':
+                if value == 'live':
+                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:

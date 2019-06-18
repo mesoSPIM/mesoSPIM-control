@@ -6,6 +6,7 @@ import sys
 import copy
 
 import time
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         Setting up the threads
         '''
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
         ''' Setting the mesoSPIM_Core thread up '''
         self.core_thread = QtCore.QThread()

@@ -41,6 +41,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         cfg_file = self.cfg.startup['ETL_cfg_file']
         self.state['ETL_cfg_file'] = cfg_file
         self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
+        
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
 
     @QtCore.pyqtSlot(dict)
@@ -99,6 +101,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.create_waveforms()
                 self.update_etl_parameters_from_laser(value)
                 #print('laser change')
+            # Log Thread ID during Live: just debugging code
+            elif key == 'state':
+                if value == 'live':
+                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
                        
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
