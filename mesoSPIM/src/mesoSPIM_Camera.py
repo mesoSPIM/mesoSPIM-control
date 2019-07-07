@@ -187,8 +187,11 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         #print('Cam: Finished Preparing Image Series')
         self.start_time = time.time()
 
+    #@QtCore.pyqtSlot()
     def add_images_to_series(self):
-        
+        if self.cur_image == 0:
+            logger.info('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
+
         # QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
         if self.stopflag is False:
             # print('Camera: Adding images started')
