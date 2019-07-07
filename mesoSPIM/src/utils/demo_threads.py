@@ -1,5 +1,6 @@
 import logging 
 logger = logging.getLogger(__name__)
+import time
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 
@@ -9,6 +10,8 @@ class mesoSPIM_DemoThread(QtCore.QObject):
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
+    @QtCore.pyqtSlot()
     def report_thread_id(self):
         logger.info('Thread ID while running: '+str(int(QtCore.QThread.currentThreadId())))
+
 

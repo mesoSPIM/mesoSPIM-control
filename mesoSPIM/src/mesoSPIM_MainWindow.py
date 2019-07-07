@@ -21,7 +21,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
-from .utils.demo_threads1 import mesoSPIM_DemoThread
+from .utils.demo_threads import mesoSPIM_DemoThread
 
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
@@ -135,6 +135,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
+
+        ''' Create a demo thread '''
+        self.main_demo_thread = QtCore.QThread()
+        self.main_demo_worker = mesoSPIM_DemoThread()
+        self.sig_poke_demo_thread.connect(self.main_demo_worker.report_thread_id)
+        self.main_demo_worker.moveToThread(self.main_demo_thread)
+        self.main_demo_thread.start(QtCore.QThread.HighPriority)
 
 
         #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
