@@ -47,6 +47,10 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
+        self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
+        self.camera_display_snap_subsampling = self.cfg.startup['camera_display_snap_subsampling'] 
+        self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
+
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler)
 
@@ -103,7 +107,12 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             The request handling is done with exec() to write fewer lines of
             code.
             '''
-            if key in ('camera_exposure_time','camera_line_interval','state'):
+            if key in ('camera_exposure_time',
+                        'camera_line_interval',
+                        'state',
+                        'camera_display_live_subsampling',
+                        'camera_display_snap_subsampling',
+                        'camera_display_acquisition_subsampling'):
                 exec('self.set_'+key+'(value)')
             # Log Thread ID during Live: just debugging code
             elif key == 'state':
@@ -154,6 +163,15 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.sig_update_gui_from_state.emit(True)
         self.state['camera_line_interval'] = time
         self.sig_update_gui_from_state.emit(False)
+
+    def set_camera_display_live_subsampling(self, factor):
+        self.camera_display_live_subsampling = factor
+
+    def set_camera_display_snap_subsampling(self, factor):
+        self.camera_display_snap_subsampling = factor 
+
+    def set_camera_display_acquisition_subsampling(self, factor):
+        self.camera_display_acquisition_subsampling = factor
     
     @QtCore.pyqtSlot(Acquisition)
     def prepare_image_series(self, acq):
@@ -225,7 +243,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                     #     subimage = image[0:2048:4,0:2048:4]
                     #     self.sig_camera_frame.emit(subimage)
                     
-                    self.sig_camera_frame.emit(image)
+                    self.sig_camera_frame.emit(image[0:2048:self.camera_display_acquisition_subsampling,0:2048:self.camera_display_acquisition_subsampling])
                     image = image.flatten()
                     self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
                     
@@ -278,8 +296,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             image = np.reshape(image, (-1, 2048))
             image = np.rot90(image)
 
-                 
-            self.sig_camera_frame.emit(image)
+            self.sig_camera_frame.emit(image[0:2048:self.camera_display_live_subsampling,0:2048:self.camera_display_live_subsampling])     
             self.live_image_count += 1
             #self.sig_camera_status.emit(str(self.live_image_count))
 

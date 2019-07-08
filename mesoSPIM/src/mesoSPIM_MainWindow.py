@@ -79,7 +79,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle('mesoSPIM Main Window')
 
-        self.camera_window = mesoSPIM_CameraWindow()
+        self.camera_window = mesoSPIM_CameraWindow(self)
         self.camera_window.show()
 
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
@@ -362,15 +362,22 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.connect_widget_to_state_parameter(widget, state_parameter, conversion_factor)
 
         ''' Connecting the microscope controls '''
+
+        ''' List for subsampling factors - comboboxes need a list of strings'''
+        subsampling_list = [str(i) for i in self.cfg.camera_parameters['subsampling']]
+
         self.connect_combobox_to_state_parameter(self.FilterComboBox,self.cfg.filterdict.keys(),'filter')
         self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
         self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
         self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
+        self.connect_combobox_to_state_parameter(self.LiveSubSamplingComboBox,subsampling_list,'camera_display_live_subsampling', int_conversion = True)
+        self.connect_combobox_to_state_parameter(self.SnapSubSamplingComboBox,subsampling_list,'camera_display_snap_subsampling', int_conversion = True)
+        self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
         # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
+
 
         self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
-
 
     def connect_widget_to_state_parameter(self, widget, state_parameter, conversion_factor):
         '''
@@ -379,7 +386,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if isinstance(widget,(QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
             self.connect_spinbox_to_state_parameter(widget, state_parameter, conversion_factor)
 
-    def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter):
+    def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter, int_conversion = False):
         '''
         
         Helper method to connect and initialize a combobox from the config
@@ -390,8 +397,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             state_parameter (str): State parameter (has to exist in the config)
         '''
         combobox.addItems(option_list)
-        combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}))
-        combobox.setCurrentText(self.cfg.startup[state_parameter])
+        if int_conversion == False:
+            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}))
+            combobox.setCurrentText(self.cfg.startup[state_parameter])
+        else:
+            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}))
+            combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
         '''

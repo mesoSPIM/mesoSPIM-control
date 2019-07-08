@@ -121,7 +121,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
-        logger.info('Thread ID during relative movement: '+str(int(QtCore.QThread.currentThreadId())))
+        # logger.info('Thread ID during relative movement: '+str(int(QtCore.QThread.currentThreadId())))
 
         # logger.info('Thread ID during move rel: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:

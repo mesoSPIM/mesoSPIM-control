@@ -72,6 +72,7 @@ camera_parameters = {'x_pixels' : 2048,
                      'y_pixels' : 2048,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
                      'camera_id' : 0,
                      'sensor_mode' : 12,    # 12 for progressive
                      'defect_correct_mode': 2,
@@ -220,4 +221,7 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
+'camera_display_live_subsampling': 1, 
+'camera_display_snap_subsampling': 1, 
+'camera_display_acquisition_subsampling': 2,
 }

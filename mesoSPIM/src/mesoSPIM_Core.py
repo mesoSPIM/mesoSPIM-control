@@ -255,7 +255,10 @@ class mesoSPIM_Core(QtCore.QObject):
                        'laser_r_pulse_%',
                        'laser_r_max_amplitude',
                        'camera_delay_%',
-                       'camera_pulse_%'):
+                       'camera_pulse_%',
+                       'camera_display_live_subsampling',
+                       'camera_display_snap_subsampling',
+                       'camera_display_acquisition_subsampling'):
                 self.sig_state_request.emit({key : value})
             
     def set_state(self, state):
