@@ -33,6 +33,7 @@ from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
+# from .mesoSPIM_DemoSerial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
@@ -102,12 +103,12 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.parent.sig_execute_script.connect(self.execute_script)
 
-        self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
-        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True))
-        self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
-        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True))
-        self.parent.sig_zero_axes.connect(lambda list: self.zero_axes(list))
-        self.parent.sig_unzero_axes.connect(lambda list: self.unzero_axes(list))
+        self.parent.sig_move_relative.connect(self.move_relative)
+        # self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True))
+        self.parent.sig_move_absolute.connect(self.move_absolute)
+        # self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True))
+        self.parent.sig_zero_axes.connect(self.zero_axes)
+        self.parent.sig_unzero_axes.connect(self.unzero_axes)
         self.parent.sig_stop_movement.connect(self.stop_movement)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
@@ -123,17 +124,22 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_worker = mesoSPIM_HamamatsuCamera(self)
         #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.moveToThread(self.camera_thread)
-        self.camera_worker.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
+        self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
-
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
         self.serial_worker.moveToThread(self.serial_thread)
-        # self.serial_worker.filterwheel.moveToThread(self.serial_thread)
-        # self.serial_worker.zoom.moveToThread(self.serial_thread)
-        # self.serial_worker.stage.moveToThread(self.serial_thread)
-        self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+        
+        #self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
+        self.serial_worker.sig_position.connect(self.sig_position.emit)
+        
+        # ''' Setting another demo thread up '''
+        # self.demo_thread = QtCore.QThread()
+        # self.demo_worker = mesoSPIM_DemoThread()
+        # self.sig_state_request.connect(self.demo_worker.report_thread_id)
+        # self.demo_worker.moveToThread(self.demo_thread)
+        # self.demo_thread.start()
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -141,11 +147,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.serial_thread.start()
 
         # ''' Get the demo thread set up and start it '''
-        # self.demo_thread = QtCore.QThread()
-        # self.demo_worker = mesoSPIM_DemoThread()
-        # self.sig_poke_demo_thread.connect(self.demo_worker.report_thread_id)
-        # self.demo_worker.moveToThread(self.demo_thread)
-        # self.demo_thread.start()
 
         #logger.info('Camera thread running? Answer:'+str(self.camera_thread.isRunning()))
         #logger.info('Serial thread running? Answer:'+str(self.serial_thread.isRunning()))
@@ -155,7 +156,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Setting waveform generation up '''
         self.waveformer = mesoSPIM_WaveFormGenerator(self)
-        self.waveformer.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
+        self.waveformer.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.sig_state_request.connect(self.waveformer.state_request_handler)
         self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
         ''' If this line is activated while the waveformer and the core live in the same thread, a deadlock results '''
@@ -318,18 +319,21 @@ class mesoSPIM_Core(QtCore.QObject):
         }
         self.sig_progress.emit(dict)
 
+    @QtCore.pyqtSlot(dict)
     def set_filter(self, filter, wait_until_done=False):
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'filter' : filter})
         else:
             self.sig_state_request.emit({'filter' : filter})
 
+    @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=False):
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'zoom' : zoom})
         else:
             self.sig_state_request.emit({'zoom' : zoom})
 
+    @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False):
         self.laserenabler.enable(laser)
         if wait_until_done:
@@ -337,42 +341,56 @@ class mesoSPIM_Core(QtCore.QObject):
         else: 
             self.sig_state_request.emit({'laser':laser})
 
+    @QtCore.pyqtSlot(str)
     def set_intensity(self, intensity, wait_until_done=False):
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'intensity': intensity})
         else:
             self.sig_state_request.emit({'intensity':intensity})
 
+    @QtCore.pyqtSlot(float)
     def set_camera_exposure_time(self, time):
         self.sig_state_request.emit({'camera_exposure_time' : time})
 
+    @QtCore.pyqtSlot(float)
     def set_camera_line_interval(self, time):
         self.sig_state_request.emit({'camera_line_interval' : time})
 
+    @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:
             self.sig_move_relative_and_wait_until_done.emit(dict)
         else:
             self.sig_move_relative.emit(dict)
 
+    # @QtCore.pyqtSlot(dict)
+    # def move_relative_and_wait_until_done(self, dict):
+    #     self.move_relative(dict, wait_until_done=True)
+
+    @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
         if wait_until_done:
             self.sig_move_absolute_and_wait_until_done.emit(dict)
         else:
             self.sig_move_absolute.emit(dict)
 
+    @QtCore.pyqtSlot(list)
     def zero_axes(self, list):
         self.sig_zero_axes.emit(list)
 
+    @QtCore.pyqtSlot(list)
     def unzero_axes(self, list):
         self.sig_unzero_axes.emit(list)
 
+    @QtCore.pyqtSlot()
     def stop_movement(self):
         self.sig_stop_movement.emit()
 
+    @QtCore.pyqtSlot(str)
     def set_shutterconfig(self, shutterconfig):
         self.state['shutterconfig'] = shutterconfig
-
+    
+    @QtCore.pyqtSlot()
     def open_shutters(self):
         shutterconfig = self.state['shutterconfig']
 
@@ -390,7 +408,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.shutter_left.open()
 
         self.state['shutterstate'] = True
-   
+    
+    @QtCore.pyqtSlot()
     def close_shutters(self):
         self.shutter_left.close()
         self.shutter_right.close()

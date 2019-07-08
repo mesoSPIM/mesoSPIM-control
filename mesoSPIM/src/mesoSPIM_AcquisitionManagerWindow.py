@@ -362,7 +362,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     def preview_acquisition(self):
         row = self.get_first_selected_row()
-        print('selected row:', row)
+        # print('selected row:', row)
         if row is not None:
             self.state['selected_row'] = row
             self.parent.sig_state_request.emit({'state':'preview_acquisition'})

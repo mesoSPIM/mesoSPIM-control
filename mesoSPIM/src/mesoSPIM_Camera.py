@@ -21,7 +21,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .utils.acquisitions import AcquisitionList, Acquisition
 
 class mesoSPIM_HamamatsuCamera(QtCore.QObject):
-    sig_camera_status = QtCore.pyqtSignal(str)
+    # sig_camera_status = QtCore.pyqtSignal(str)
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
     sig_finished = QtCore.pyqtSignal()
 
@@ -59,7 +59,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.parent.sig_get_live_image.connect(self.get_live_image)
         self.parent.sig_end_live.connect(self.end_live, type=3)
 
-        self.sig_camera_status.connect(lambda status: print(status))
+        # self.sig_camera_status.connect(lambda status: print(status))
 
         ''' Hamamatsu-specific code '''
         self.camera_id = self.cfg.camera_parameters['camera_id']

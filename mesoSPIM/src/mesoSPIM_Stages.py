@@ -116,7 +116,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         '''
         Debugging code
         '''
-        self.sig_status_message.connect(lambda string, time: print(string))
+        # self.sig_status_message.connect(lambda string, time: print(string))
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 

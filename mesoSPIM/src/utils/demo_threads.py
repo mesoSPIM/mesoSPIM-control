@@ -8,10 +8,10 @@ class mesoSPIM_DemoThread(QtCore.QObject):
     def __init__(self):
         super().__init__()
 
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.info('Demo Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     @QtCore.pyqtSlot()
     def report_thread_id(self):
-        logger.info('Thread ID while running: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.info('Demo Thread ID while running: '+str(int(QtCore.QThread.currentThreadId())))
 
 

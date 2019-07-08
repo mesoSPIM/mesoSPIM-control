@@ -41,9 +41,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_execute_script = QtCore.pyqtSignal(str)
 
     sig_move_relative = QtCore.pyqtSignal(dict)
-    sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
+    # sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
-    sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
+    # sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_zero_axes = QtCore.pyqtSignal(list)
     sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
@@ -98,7 +98,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core = mesoSPIM_Core(self.cfg, self)
         #logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
         self.core.moveToThread(self.core_thread)
-        
+
         self.core.waveformer.moveToThread(self.core_thread)
         #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
 
@@ -128,17 +128,20 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             logger.warning(f'Main Window: Camera not connected to display!', exc_info=True)
 
         ''' Start the thread '''
+        #self.core_thread.start(QtCore.QThread.HighPriority)
         self.core_thread.start(QtCore.QThread.HighPriority)
-
+        logger.info(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
         #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
 
         #logger.info('Core thread running? Answer:'+str(self.core_thread.isRunning()))
         
         try:
-            current_thread = self.thread()
-            current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
-            #logger.info(f'Main Window: Thread priority: {current_thread.priority}')
-            #print('Window priority: ', current_thread.priority())
+            self.thread().setPriority(QtCore.QThread.HighestPriority)
+            #current_thread = self.thread()
+            #current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
+            #current_thread.setPriority(4)
+            #logger.info(f'Main Window: Thread priority: {str(current_thread.priority())}')
+            logger.info('Main Window Thread priority: '+str(self.thread().priority()))
         except:
             logger.debug(f'Main Window: Printing Thread priority failed.')
 
@@ -501,7 +504,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def enable_mode_control_buttons(self, boolean):
         self.LiveButton.setEnabled(boolean)
-        self.SnapButton.setEnabled(boolean)
+        #self.SnapButton.setEnabled(boolean)
         self.RunSelectedAcquisitionButton.setEnabled(boolean)
         self.RunAcquisitionListButton.setEnabled(boolean)
         self.VisualModeButton.setEnabled(boolean)
