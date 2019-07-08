@@ -118,32 +118,42 @@ class mesoSPIM_Serial(QtCore.QObject):
                 if value == 'live':
                     logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
+    @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
+        logger.info('Thread ID during relative movement: '+str(int(QtCore.QThread.currentThreadId())))
+
+        # logger.info('Thread ID during move rel: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.stage.move_relative(dict, wait_until_done=True)
         else:
             self.stage.move_relative(dict)
 
+    @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
         if wait_until_done:
             self.stage.move_absolute(dict, wait_until_done=True)
         else:
             self.stage.move_absolute(dict)
 
+    @QtCore.pyqtSlot()
     def go_to_rotation_position(self, wait_until_done=False):
         if wait_until_done:
             self.stage.go_to_rotation_position(wait_until_done=True)
         else:
             self.stage.go_to_rotation_position()
 
+    @QtCore.pyqtSlot(str)
     def set_filter(self, filter, wait_until_done=False):
+        logger.info('Thread ID during set filter: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.filterwheel.set_filter(filter, wait_until_done=True)
         else:
             self.filterwheel.set_filter(filter, wait_until_done=False)
         self.state['filter'] = filter
 
+    @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=False):
+        logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.zoom.set_zoom(zoom, wait_until_done=True)
         else:

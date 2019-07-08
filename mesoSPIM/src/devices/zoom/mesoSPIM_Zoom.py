@@ -8,8 +8,11 @@ Author: Fabian Voigt
 
 import time
 
-class DemoZoom():
+from PyQt5 import QtWidgets, QtCore, QtGui
+
+class DemoZoom(QtCore.QObject):
     def __init__(self, zoomdict):
+        super().__init__()
         self.zoomdict = zoomdict
 
     def set_zoom(self, zoom, wait_until_done=False):
@@ -19,8 +22,9 @@ class DemoZoom():
                 time.sleep(1)
    
 
-class DynamixelZoom:
+class DynamixelZoom(QtCore.QObject):
     def __init__(self, zoomdict, COMport, identifier=2, baudrate=1000000):
+        super().__init__()
         from .dynamixel import dynamixel_functions as dynamixel
 
         self.zoomdict = zoomdict

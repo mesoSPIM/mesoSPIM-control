@@ -280,6 +280,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         self.create_waveforms()
 
+    @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):
         ''' Saves the current ETL left/right offsets and amplitudes from the
         values to the ETL csv files

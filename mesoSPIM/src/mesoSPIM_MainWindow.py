@@ -86,14 +86,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.show()
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
 
-        ''' Get the demo thread set up and start it '''
-        self.demo_thread = QtCore.QThread()
-        self.demo_worker = mesoSPIM_DemoThread()
-        self.sig_poke_demo_thread.connect(self.demo_worker.report_thread_id)
-        self.demo_worker.moveToThread(self.demo_thread)
-        self.demo_thread.start(QtCore.QThread.HighPriority)
-        #logger.info('Main Window thread affinity at Startup? Answer:'+str(id(self.thread())))
-
         '''
         Setting up the threads
         '''
@@ -106,6 +98,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core = mesoSPIM_Core(self.cfg, self)
         #logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
         self.core.moveToThread(self.core_thread)
+        
+        self.core.waveformer.moveToThread(self.core_thread)
         #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
 
         ''' Get buttons & connections ready '''
@@ -135,14 +129,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
-
-        ''' Create a demo thread '''
-        self.main_demo_thread = QtCore.QThread()
-        self.main_demo_worker = mesoSPIM_DemoThread()
-        self.sig_poke_demo_thread.connect(self.main_demo_worker.report_thread_id)
-        self.main_demo_worker.moveToThread(self.main_demo_thread)
-        self.main_demo_thread.start(QtCore.QThread.HighPriority)
-
 
         #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
 

@@ -87,8 +87,6 @@ class mesoSPIM_Core(QtCore.QObject):
     ''' ETL-related signals '''
     sig_save_etl_config = QtCore.pyqtSignal()
 
-    sig_poke_demo_thread = QtCore.pyqtSignal()
-
     def __init__(self, config, parent):
         super().__init__()
 
@@ -124,27 +122,30 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread = QtCore.QThread()
         self.camera_worker = mesoSPIM_HamamatsuCamera(self)
         #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
-        self.camera_worker.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
         self.camera_worker.moveToThread(self.camera_thread)
+        self.camera_worker.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
         #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
 
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
-        self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
         self.serial_worker.moveToThread(self.serial_thread)
+        # self.serial_worker.filterwheel.moveToThread(self.serial_thread)
+        # self.serial_worker.zoom.moveToThread(self.serial_thread)
+        # self.serial_worker.stage.moveToThread(self.serial_thread)
+        self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
 
         ''' Start the threads '''
         self.camera_thread.start()
         #logger.info('Camera worker thread affinity after starting the thread? Answer:'+str(id(self.camera_worker.thread())))
         self.serial_thread.start()
 
-        ''' Get the demo thread set up and start it '''
-        self.demo_thread = QtCore.QThread()
-        self.demo_worker = mesoSPIM_DemoThread()
-        self.sig_poke_demo_thread.connect(self.demo_worker.report_thread_id)
-        self.demo_worker.moveToThread(self.demo_thread)
-        self.demo_thread.start()
+        # ''' Get the demo thread set up and start it '''
+        # self.demo_thread = QtCore.QThread()
+        # self.demo_worker = mesoSPIM_DemoThread()
+        # self.sig_poke_demo_thread.connect(self.demo_worker.report_thread_id)
+        # self.demo_worker.moveToThread(self.demo_thread)
+        # self.demo_thread.start()
 
         #logger.info('Camera thread running? Answer:'+str(self.camera_thread.isRunning()))
         #logger.info('Serial thread running? Answer:'+str(self.serial_thread.isRunning()))
@@ -156,7 +157,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer = mesoSPIM_WaveFormGenerator(self)
         self.waveformer.sig_update_gui_from_state.connect(lambda flag: self.sig_update_gui_from_state.emit(flag))
         self.sig_state_request.connect(self.waveformer.state_request_handler)
-        self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler, type=3)
+        self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
+        ''' If this line is activated while the waveformer and the core live in the same thread, a deadlock results '''
+        #self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler, type=3)
 
         ''' Setting the shutters up '''
         left_shutter_line = self.cfg.shutterdict['shutter_left']
@@ -259,7 +262,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.state['state']='live'
             self.sig_state_request.emit({'state':'live'})
             logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
-            self.sig_poke_demo_thread.emit()
             #logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
             self.live()
         

@@ -151,9 +151,8 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         self.sig_position.emit(self.int_position_dict)
 
+    # @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
-        logger.info('Thread ID during move rel: '+str(int(QtCore.QThread.currentThreadId())))
-
         ''' Move relative method '''
         if 'x_rel' in dict:
             x_rel = dict['x_rel']
@@ -193,6 +192,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         if wait_until_done == True:
             time.sleep(0.02)
 
+    # @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
         ''' Move absolute method '''
 
@@ -239,6 +239,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         if wait_until_done == True:
             time.sleep(3)
 
+    @QtCore.pyqtSlot()
     def stop(self):
         self.sig_status_message.emit('Stopped',0)
 
