@@ -116,7 +116,7 @@ Filterwheel configuration
 '''
 
 filterwheel_parameters = {'filterwheel_type' : 'Ludl',
-                          'COMport' : 'COM10'}
+                          'COMport' : 'COM47'}
 
 # Ludl marking 10 = position 0
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
