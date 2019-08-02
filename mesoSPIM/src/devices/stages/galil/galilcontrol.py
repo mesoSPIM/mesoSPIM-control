@@ -8,7 +8,7 @@ Author: Fabian Voigt
 import copy
 import time
 
-from .gclib import gclib
+import gclib
 
 class StageControlGalil:
     '''
