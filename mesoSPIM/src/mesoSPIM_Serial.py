@@ -111,6 +111,8 @@ class mesoSPIM_Serial(QtCore.QObject):
                     self.set_zoom(value, wait_until_done)
                 else:
                     self.set_zoom(value)
+            if key == 'stage_program':
+                self.execute_stage_program()
 
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:
@@ -144,3 +146,6 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.zoom.set_zoom(zoom, wait_until_done=False)
         self.state['zoom'] = zoom
         self.state['pixelsize'] = self.cfg.pixelsize[zoom]
+
+    def execute_stage_program(self):
+        self.stage.execute_program()

@@ -17,7 +17,7 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'laser_task_line' :  'PXI6733/ao0:7',
                         'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
-sidepanel = 'FarmSimulator' # Demo
+sidepanel = 'Demo' # FarmSimulator
 
 laser = 'NI' # Demo
 
@@ -88,21 +88,21 @@ Stage configuration
 '''
 stage_parameters = {'stage_type' : 'PI_f_rot_and_Galil_xyz', # 'PI' or 'Debug'
                     'startfocus' : 95000,
-                    'y_load_position': 75000,
-                    'y_unload_position': 10000,
-                    'x_max' : 100000,
-                    'x_min' : -100000,
-                    'y_max' : 200000,
-                    'y_min' : -200000,
-                    'z_max' : 100000,
-                    'z_min' : -100000,
+                    'y_load_position': -32000,
+                    'y_unload_position': -90000,
+                    'x_max' : 51000,
+                    'x_min' : -46000,
+                    'y_max' : 0,
+                    'y_min' : -160000,
+                    'z_max' : -2000,
+                    'z_min' : -97000,
                     'f_max' : 99000,
                     'f_min' : 0,
                     'theta_max' : 999,
                     'theta_min' : -999,
-                    'x_rot_position': 50000,
-                    'y_rot_position': 50000,
-                    'z_rot_position': 50000,
+                    'x_rot_position': 0,
+                    'y_rot_position': -58000,
+                    'z_rot_position': -35000,
                     }
 
 xyz_galil_parameters = {'COMport' : 'COM48',

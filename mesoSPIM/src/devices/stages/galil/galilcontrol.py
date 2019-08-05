@@ -7,6 +7,7 @@ Author: Fabian Voigt
 """
 import copy
 import time
+import traceback
 
 import gclib
 
@@ -109,17 +110,17 @@ class StageControlGalil:
         Values are taken from the default (delivery) settings of the Galil controller.
         '''
         if abs(xrel) > 250:
-            self.g.GCommand('SPX=2500')
+            self.g.GCommand('SPX=5000')
         else:
             self.g.GCommand('SPX=20000')
 
         if abs(yrel) > 250:
-            self.g.GCommand('SPY=2500')
+            self.g.GCommand('SPY=5000')
         else:
             self.g.GCommand('SPY=20000')
 
         if abs(zrel) > 250:
-            self.g.GCommand('SPZ=2500')
+            self.g.GCommand('SPZ=5000')
         else:
             self.g.GCommand('SPZ=50000')
 
@@ -143,40 +144,58 @@ class StageControlGalil:
 
         There is also no speed control apart from some z adaptation
         '''
-        position = self.read_z_position_um()
-        if abs(zabs-position) > 250:
-            self.g.GCommand('SPZ=2500')
-        else:
-            self.g.GCommand('SPZ=50000')
 
         # Send movement commands
         if xabs != None:
+            ''' Adapt speed to distance '''
+            position = self.read_x_position_um()
+            if abs(xabs-position) > 250:
+                self.g.GCommand('SPX=5000')
+            else:
+                self.g.GCommand('SPX=50000')
+
             string = 'PAX='+str(int(xabs*self.x_encodercounts_per_um))
             print(string)
             self.g.GCommand(string)  
+            self.xpos = xabs
                
-        if yabs != None: 
+        if yabs != None:
+            ''' Adapt speed to distance '''
+            position = self.read_y_position_um()
+            if abs(yabs-position) > 250:
+                self.g.GCommand('SPY=5000')
+            else:
+                self.g.GCommand('SPY=50000')
+
             string = 'PAY='+str(int(yabs*self.y_encodercounts_per_um))
             print(string)   
             self.g.GCommand(string)  
+            self.ypos = yabs
                
         if zabs != None:
+            ''' Adapt speed to distance '''
+            position = self.read_z_position_um()
+            if abs(zabs-position) > 250:
+                self.g.GCommand('SPZ=5000')
+            else:
+                self.g.GCommand('SPZ=50000')
+
             string = 'PAZ='+str(int(zabs*self.z_encodercounts_per_um))
             print(string)
             self.g.GCommand(string)
-                    
-        self.g.GCommand('BG')
-        # Update internal values
-        self.xpos = xabs
-        self.ypos = yabs
-        self.zpos = zabs
+            self.zpos = zabs
+        
+        try:
+            self.g.GCommand('BG')
+        except:
+            print('Error occured')
 
     def move_absolute_in_z(self, zabs):
         '''get current position and adapt speed accordingly'''
 
         position = self.read_z_position_um()
         if abs(zabs-position) > 250:
-            self.g.GCommand('SPZ=2500')
+            self.g.GCommand('SPZ=5000')
         else:
             self.g.GCommand('SPZ=50000')
 
@@ -211,5 +230,12 @@ class StageControlGalil:
         else:
             self.g.GCommand('DCZ='+str(int(acceleration)))
 
+    def stop_all_movements(self):
+        self.g.GCommand('ST')
+
     def wait_until_done(self, axis):
         self.g.GMotionComplete(axis.upper())
+
+    def execute_program(self):
+        '''Executes program stored on the Galil controller'''
+        self.g.GCommand('XQ')

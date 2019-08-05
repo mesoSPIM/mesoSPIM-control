@@ -705,10 +705,12 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
                                         y_encodercounts_per_um = 0,
                                         z_encodercounts_per_um = self.f_encodercounts_per_um)
         '''
-
+        
+        '''
         print('Galil: ', self.xyz_stage.read_position('x'))
         print('Galil: ', self.xyz_stage.read_position('y'))
         print('Galil: ', self.xyz_stage.read_position('z'))
+        '''
 
         ''' PI-specific code '''
         from pipython import GCSDevice, pitools
@@ -821,7 +823,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
                 self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
 
         if wait_until_done == True:
-            ''' TBD: does not account for galil stages '''
+            self.xyz_stage.wait_until_done('XYZ')
             self.pitools.waitontarget(self.pidevice)
 
 
@@ -833,17 +835,30 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
 
         '''
         print(dict)
+        if 'x_abs' or 'y_abs' or 'z_abs' in dict:
+            if 'x_abs' in dict:
+                x_abs = dict['x_abs']
+                x_abs = x_abs - self.int_x_pos_offset
+            else:
+                x_abs = None
 
-        # if ('x_abs', 'y_abs', 'z_abs', 'f_abs') in dict:
-        x_abs = dict['x_abs']
-        x_abs = x_abs - self.int_x_pos_offset
-        y_abs = dict['y_abs']
-        y_abs = y_abs - self.int_y_pos_offset
-        z_abs = dict['z_abs']
-        z_abs = z_abs - self.int_z_pos_offset
+            if 'y_abs' in dict:
+                y_abs = dict['y_abs']
+                y_abs = y_abs - self.int_y_pos_offset
+            else:
+                y_abs = None
+            
+            if 'z_abs' in dict:
+                z_abs = dict['z_abs']
+                z_abs = z_abs - self.int_z_pos_offset
+            else:
+                z_abs = None
+
+            self.xyz_stage.move_absolute(xabs=x_abs,yabs=y_abs,zabs=z_abs)
+
+        if wait_until_done == True:
+            self.xyz_stage.wait_until_done('XYZ')
         
-        self.xyz_stage.move_absolute(xabs=x_abs, yabs=y_abs, zabs=z_abs)
-
         if 'f_abs' in dict:
             f_abs = dict['f_abs']
             f_abs = f_abs - self.int_f_pos_offset
@@ -863,39 +878,23 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
 
-        # self.f_stage.move_absolute(zabs=f_abs)
-
         if wait_until_done == True:
-            self.xyz_stage.wait_until_done('XYZ')
+            self.pitools.waitontarget(self.pidevice)
 
     def stop(self):
+        self.xyz_stage.stop_all_movements()
         self.pidevice.STP(noraise=True)
 
     def load_sample(self):
-        print('load_sample not implemented')
-        pass
-    #    y_abs = self.cfg.stage_parameters['y_load_position']/1000
-    #    # self.pidevice.MOV({2 : y_abs})
+        self.xyz_stage.move_absolute(xabs=self.int_x_pos, yabs=self.cfg.stage_parameters['y_load_position'], zabs=self.int_z_pos)
 
     def unload_sample(self):
-        print('unload sample not implemented')
-        pass
-    #  y_abs = self.cfg.stage_parameters['y_unload_position']/1000
-    #     # self.pidevice.MOV({2 : y_abs})
-
+        self.xyz_stage.move_absolute(xabs=self.int_x_pos, yabs=self.cfg.stage_parameters['y_unload_position'], zabs=self.int_z_pos)
+        
     def go_to_rotation_position(self, wait_until_done=False):
-        print('rotation position not implmented')
-        pass
-        '''
-        x_abs = self.x_rot_position/1000
-        y_abs = self.y_rot_position/1000
-        z_abs = self.z_rot_position/1000
-
-        self.pidevice.MOV({1 : x_abs, 2 : y_abs, 3 : z_abs})
-
+        self.xyz_stage.move_absolute(xabs=self.x_rot_position, yabs=self.y_rot_position, zabs=self.z_rot_position)
         if wait_until_done == True:
-            self.pitools.waitontarget(self.pidevice)
-        '''
+            self.xyz_stage.wait_until_done('XYZ')
 
     def block_till_controller_is_ready(self):
         '''
@@ -908,3 +907,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
                 blockflag = False
             else:
                 time.sleep(0.1)
+
+    def execute_program(self):
+        '''Executes program stored on the Galil controller'''
+        self.xyz_stage.execute_program()
