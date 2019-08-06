@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from PyQt5 import QtCore
+from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 # from .mesoSPIM_State import mesoSPIM_StateSingleton
 
@@ -693,6 +694,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
     def __init__(self, parent = None):
         super().__init__(parent)
 
+        self.state = mesoSPIM_StateSingleton()
         '''
         Galil-specific code
         '''
@@ -771,9 +773,15 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
 
+        '''
+        Ugly workaround to deal with non-responding stage 
+        position reports: Do not update positions in 
+        exceptional circumstances. 
+        '''
         self.x_pos = self.xyz_stage.read_position('x')
         self.y_pos = self.xyz_stage.read_position('y')
         self.z_pos = self.xyz_stage.read_position('z')
+        
         self.f_pos = round(positions['5']*1000,2)
         self.theta_pos = positions['6']
 
@@ -788,6 +796,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         self.create_internal_position_dict()
 
         self.sig_position.emit(self.int_position_dict)
+        print(self.int_position_dict)
 
     def move_relative(self, dict, wait_until_done=False):
         ''' Galil move relative method

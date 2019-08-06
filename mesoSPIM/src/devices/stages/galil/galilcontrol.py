@@ -9,9 +9,14 @@ import copy
 import time
 import traceback
 
+from PyQt5 import QtWidgets, QtCore, QtGui
+
 import gclib
 
-class StageControlGalil:
+import logging
+logger = logging.getLogger(__name__)
+
+class StageControlGalil(QtCore.QObject):
     '''
     Class to control the Galil stage with 3 axes
 
@@ -28,10 +33,12 @@ class StageControlGalil:
                  x_encodercounts_per_um = 0,
                  y_encodercounts_per_um = 2,
                  z_encodercounts_per_um = 2):
+        super().__init__()
 
         self.xpos = 0
         self.ypos = 0
         self.zpos = 0
+        self.initflag = True
         self.x_encodercounts_per_um = x_encodercounts_per_um
         self.y_encodercounts_per_um = y_encodercounts_per_um
         self.z_encodercounts_per_um = z_encodercounts_per_um
@@ -50,6 +57,11 @@ class StageControlGalil:
         #self.g.GCommand('DPY=0')
         #self.g.GCommand('DPZ=0')
 
+        self.read_position('x')
+        self.read_position('y')
+        self.read_position('z')
+        self.initflag = False
+
     def close_stage(self):
         self.g.GClose()
 
@@ -64,24 +76,42 @@ class StageControlGalil:
         '''Float and try & except added here to solve weird bug with
 
         "ValueError: invalid literal for int() with base 10: '' "
-
+        Returning a large negative value as an error signal
         '''
         if self.axisstring == 'x':
             try:
-                return int(float(self.position)) / self.x_encodercounts_per_um
-            except:
-                return 0
+                xpos = int(float(self.position)) / self.x_encodercounts_per_um
+                if abs(self.xpos - xpos) < 2000 or self.initflag == True:
+                    self.xpos = xpos
+                    return self.xpos
+                else:
+                    return self.xpos
+            except Exception as error:
+                logger.exception(error)
+                return self.xpos
         elif self.axisstring == 'y':
             try:
-                return int(float(self.position)) / self.y_encodercounts_per_um
-            except:
-                return 0
+                ypos = int(float(self.position)) / self.y_encodercounts_per_um
+                if abs(self.ypos - ypos) < 2000 or self.initflag == True:
+                    self.ypos = ypos
+                    return self.ypos
+                else:
+                    return self.ypos
+            except Exception as error:
+                logger.exception(error)
+                return self.ypos
         else:
             try:
-                return int(float(self.position)) / self.z_encodercounts_per_um
-            except:
-                return 0
-
+                zpos = int(float(self.position)) / self.z_encodercounts_per_um
+                if abs(self.zpos - zpos) < 2000 or self.initflag == True:
+                    self.zpos = zpos
+                    return self.zpos
+                else:
+                    return self.zpos
+            except Exception as error:
+                logger.exception(error)
+                return self.zpos
+        
     def read_x_position_um(self):
         return self.read_position('x')
 
