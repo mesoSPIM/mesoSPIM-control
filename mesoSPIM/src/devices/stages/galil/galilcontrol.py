@@ -232,6 +232,10 @@ class StageControlGalil:
 
     def stop_all_movements(self):
         self.g.GCommand('ST')
+        '''After ST, also program execution stops -- this is risky, here it 
+        is assumed that any program runs only the handcontroller and does 
+        not induce any movement.'''
+        self.execute_program()
 
     def wait_until_done(self, axis):
         self.g.GMotionComplete(axis.upper())
