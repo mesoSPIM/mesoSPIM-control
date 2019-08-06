@@ -4,9 +4,12 @@ mesoSPIM Stage classes
 '''
 import time
 
+import logging
+logger = logging.getLogger(__name__)
+
 from PyQt5 import QtCore
 
-from .mesoSPIM_State import mesoSPIM_StateSingleton
+# from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_Stage(QtCore.QObject):
     '''
@@ -113,7 +116,9 @@ class mesoSPIM_Stage(QtCore.QObject):
         '''
         Debugging code
         '''
-        self.sig_status_message.connect(lambda string, time: print(string))
+        # self.sig_status_message.connect(lambda string, time: print(string))
+
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def create_position_dict(self):
         self.position_dict = {'x_pos': self.x_pos,
@@ -146,6 +151,7 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         self.sig_position.emit(self.int_position_dict)
 
+    # @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
         ''' Move relative method '''
         if 'x_rel' in dict:
@@ -186,6 +192,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         if wait_until_done == True:
             time.sleep(0.02)
 
+    # @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
         ''' Move absolute method '''
 
@@ -232,6 +239,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         if wait_until_done == True:
             time.sleep(3)
 
+    @QtCore.pyqtSlot()
     def stop(self):
         self.sig_status_message.emit('Stopped',0)
 
@@ -324,9 +332,9 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         # print('Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Referencing status 5: ', self.pidevice.qFRF(5))
         self.pidevice.FRF(5)
-        print('M-406 Emergency referencing hack: Waiting for referencing move')
+        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
-        print('M-406 Emergency referencing hack done')
+        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack done')
         # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
 

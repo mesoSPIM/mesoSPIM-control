@@ -5,6 +5,9 @@ import os
 import numpy as np
 import csv
 
+import logging
+logger = logging.getLogger(__name__)
+
 '''National Instruments Imports'''
 import nidaqmx
 from nidaqmx.constants import AcquisitionType, TaskMode
@@ -38,6 +41,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         cfg_file = self.cfg.startup['ETL_cfg_file']
         self.state['ETL_cfg_file'] = cfg_file
         self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
+        
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
         self.state['galvo_l_amplitude'] = self.cfg.startup['galvo_l_amplitude']
         self.state['galvo_r_amplitude'] = self.cfg.startup['galvo_r_amplitude']
@@ -49,7 +54,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            print('Waveform Generator: State request: Key: ', key, ' Value: ', value)
+            # print('Waveform Generator: State request: Key: ', key, ' Value: ', value)
             '''
             The request handling is done 
             '''
@@ -89,19 +94,24 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.state[key] = value
                 self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
-                print('Waveform change')
+                # print('Waveform change')
             elif key in ('ETL_cfg_file'):
                 self.state[key] = value
                 self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
-                print('ETL CFG File changed')
+                # print('ETL CFG File changed')
             elif key in ('zoom'):
                 self.update_etl_parameters_from_zoom(value)
-                print('zoom change')
+                #print('zoom change')
             elif key in ('laser'):
                 self.state[key] = value
                 self.create_waveforms()
                 self.update_etl_parameters_from_laser(value)
-                print('laser change')
+                #print('laser change')
+                
+            # Log Thread ID during Live: just debugging code
+            elif key == 'state':
+                if value == 'live':
+                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
                        
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
@@ -276,6 +286,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         self.create_waveforms()
 
+    @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):
         ''' Saves the current ETL left/right offsets and amplitudes from the
         values to the ETL csv files

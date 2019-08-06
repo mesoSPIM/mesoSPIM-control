@@ -5,6 +5,9 @@ import os
 import time
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
+
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 from .devices.cameras.Demo_Camera import Demo_Camera
@@ -15,9 +18,10 @@ except:
     pass
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
+from .utils.acquisitions import AcquisitionList, Acquisition
 
 class mesoSPIM_HamamatsuCamera(QtCore.QObject):
-    sig_camera_status = QtCore.pyqtSignal(str)
+    # sig_camera_status = QtCore.pyqtSignal(str)
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
     sig_finished = QtCore.pyqtSignal()
 
@@ -43,6 +47,10 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
+        self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
+        self.camera_display_snap_subsampling = self.cfg.startup['camera_display_snap_subsampling'] 
+        self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
+
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler)
 
@@ -55,7 +63,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.parent.sig_get_live_image.connect(self.get_live_image)
         self.parent.sig_end_live.connect(self.end_live, type=3)
 
-        self.sig_camera_status.connect(lambda status: print(status))
+        # self.sig_camera_status.connect(lambda status: print(status))
 
         ''' Hamamatsu-specific code '''
         self.camera_id = self.cfg.camera_parameters['camera_id']
@@ -63,7 +71,8 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         if self.cfg.camera == 'HamamatsuOrcaFlash':
             self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
             ''' Debbuging information '''
-            print("camera 0 model:", self.hcam.getModelInfo(self.camera_id))
+            logger.info(f'Hamamatsu Camera model: {self.hcam.getModelInfo(self.camera_id)}')
+            #print("camera 0 model:", self.hcam.getModelInfo(self.camera_id))
 
             ''' Ideally, the Hamamatsu Camera properties should be set in this order '''
             ''' mesoSPIM mode parameters '''
@@ -85,19 +94,30 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         elif self.cfg.camera == 'Demo':
             self.hcam = Demo_Camera()
 
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
     def __del__(self):
         self.hcam.shutdown()
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            print('Camera Thread: State request: Key: ', key, ' Value: ', value)
+            # print('Camera Thread: State request: Key: ', key, ' Value: ', value)
             '''
             The request handling is done with exec() to write fewer lines of
             code.
             '''
-            if key in ('camera_exposure_time','camera_line_interval','state'):
+            if key in ('camera_exposure_time',
+                        'camera_line_interval',
+                        'state',
+                        'camera_display_live_subsampling',
+                        'camera_display_snap_subsampling',
+                        'camera_display_acquisition_subsampling'):
                 exec('self.set_'+key+'(value)')
+            # Log Thread ID during Live: just debugging code
+            elif key == 'state':
+                if value == 'live':
+                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def set_state(self, requested_state):
         pass
@@ -143,19 +163,30 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.sig_update_gui_from_state.emit(True)
         self.state['camera_line_interval'] = time
         self.sig_update_gui_from_state.emit(False)
+
+    def set_camera_display_live_subsampling(self, factor):
+        self.camera_display_live_subsampling = factor
+
+    def set_camera_display_snap_subsampling(self, factor):
+        self.camera_display_snap_subsampling = factor 
+
+    def set_camera_display_acquisition_subsampling(self, factor):
+        self.camera_display_acquisition_subsampling = factor
     
+    @QtCore.pyqtSlot(Acquisition)
     def prepare_image_series(self, acq):
         '''
         Row is a row in a AcquisitionList
         '''
-        print('Cam: Preparing Image Series')
+        logger.info('Camera: Preparing Image Series')
+        #print('Cam: Preparing Image Series')
         self.stopflag = False
 
         ''' TODO: Needs cam delay, sweeptime, QTimer, line delay, exp_time '''
 
         self.path = acq['folder']+'/'+acq['filename']
 
-        print('camera path: ', self.path)
+        logger.info(f'Camera: Save path: {self.path}')
         self.z_start = acq['z_start']
         self.z_end = acq['z_end']
         self.z_stepsize = acq['z_step']
@@ -170,14 +201,18 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
         self.hcam.startAcquisition()
         self.cur_image = 0
-        print('Cam: Finished Preparing Image Series')
+        logger.info(f'Camera: Finished Preparing Image Series')
+        #print('Cam: Finished Preparing Image Series')
         self.start_time = time.time()
 
+    @QtCore.pyqtSlot()
     def add_images_to_series(self):
-        
+        if self.cur_image == 0:
+            logger.info('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
+
         # QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
         if self.stopflag is False:
-            print('Camera: Adding images started')
+            # print('Camera: Adding images started')
             if self.cur_image + 1 < self.max_frame:
                 [frames, dims] = self.hcam.getFrames()
 
@@ -208,34 +243,40 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                     #     subimage = image[0:2048:4,0:2048:4]
                     #     self.sig_camera_frame.emit(subimage)
                     
-                    self.sig_camera_frame.emit(image)
+                    self.sig_camera_frame.emit(image[0:2048:self.camera_display_acquisition_subsampling,0:2048:self.camera_display_acquisition_subsampling])
                     image = image.flatten()
                     self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
                     
-                    print('Done with image: #', self.cur_image)
+                    #print('Done with image: #', self.cur_image)
                     self.cur_image += 1
 
-            print('Camera: Adding images ended')
+            #print('Camera: Adding images ended')
         else:
-            print('Camera: Acquisition stop requested...')
+            pass
+            #print('Camera: Acquisition stop requested...')
 
+    @QtCore.pyqtSlot()
     def end_image_series(self):
         try:
             self.hcam.stopAcquisition()
             del self.xy_stack
-            print('Acq finished')
-            print("Saved", self.cur_image + 1, "frames")
+            #print('Acq finished')
+            #print("Saved", self.cur_image + 1, "frames")
         except:
-            print('Camera: Error when finishing acquisition.')
+            pass
+            #print('Camera: Error when finishing acquisition.')
 
         self.end_time =  time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
-        print('Framerate: ', framerate)
+        logger.info(f'Camera: Framerate: {framerate}')
+        #print('Framerate: ', framerate)
         self.sig_finished.emit()
 
+    @QtCore.pyqtSlot()
     def snap_image(self):
         pass
 
+    @QtCore.pyqtSlot()
     def prepare_live(self):
         self.hcam.setACQMode(mode = "run_till_abort")
         self.hcam.startAcquisition()
@@ -243,7 +284,10 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.live_image_count = 0 
 
         self.start_time = time.time()
+        logger.info('Camera: Preparing Live Mode')
+        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
+    @QtCore.pyqtSlot()
     def get_live_image(self):
         [frames, _] = self.hcam.getFrames()
 
@@ -252,16 +296,17 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             image = np.reshape(image, (-1, 2048))
             image = np.rot90(image)
 
-                 
-            self.sig_camera_frame.emit(image)
+            self.sig_camera_frame.emit(image[0:2048:self.camera_display_live_subsampling,0:2048:self.camera_display_live_subsampling])     
             self.live_image_count += 1
-            self.sig_camera_status.emit(str(self.live_image_count))
+            #self.sig_camera_status.emit(str(self.live_image_count))
 
+    @QtCore.pyqtSlot()
     def end_live(self):        
         self.hcam.stopAcquisition()
         self.end_time =  time.time()
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
-        print('Framerate: ', framerate)
+        logger.info(f'Camera: Finished Live Mode: Framerate: {framerate}')
+        
 
 # class mesoSPIM_DemoCamera(mesoSPIM_Camera):
 #     def __init__(self, config, parent = None):

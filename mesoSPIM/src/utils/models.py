@@ -102,10 +102,10 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
                 '''
                 self._table[row][self._table[row].keys()[column]] = value
                 self.dataChanged.emit(index, index)
-                print('Data changed')
+                #print('Data changed')
                 return True
             except:
-                print('Data NOT changed')
+                #print('Data NOT changed')
                 return False
 
     def setDataFromState(self, row, state_parameter):
@@ -188,7 +188,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         Here, the model needs to provide a serialization of the entries
         in a QMimeData object
         '''
-        print('MimeData called')
+        #print('MimeData called')
         mimeData = super().mimeData(indices)
 
         # print(indices[0].row())
@@ -204,25 +204,27 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
         Always move the entire row, and don't allow column "shifting"
         '''
-        print('MimeData dropped')
+        #print('MimeData dropped')
         if action == QtCore.Qt.MoveAction:
-            print('Row: ', row)
-            print('Col: ', col)
-            print('Data:', data.text())
-            print('HTML:', data.html())
+            pass
+            #print('Row: ', row)
+            #print('Col: ', col)
+            #print('Data:', data.text())
+            #print('HTML:', data.html())
             # print()
             # self.insertRow(row)
             # print('Data methods: ', dir(data))
             # return super().dropMimeData(data, action, row, col, parent)
         if action == QtCore.Qt.CopyAction:
-            print('Copy action detected.')
+            #print('Copy action detected.')
+            pass
 
         return True
 
     def moveRows(self, source_parent, source_row, count, destination_parent, destination_row):
         self.rowsAboutToBeMoved.emit(source_parent, source_row, source_row+count-1, destination_parent, destination_row)
 
-        print('Moving rows: ', source_row, ' #Rows ', count, ' to destination ', destination_row)
+        #print('Moving rows: ', source_row, ' #Rows ', count, ' to destination ', destination_row)
 
         extracted_list = []
         try:
@@ -242,7 +244,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             self.send_data_changed()
             return True
         except:
-            print('moveRows failed')
+            #print('moveRows failed')
             return False
 
         self.rowsMoved.emit(source_parent, source_row, source_row+count-1, destination_parent, destination_row)

@@ -9,6 +9,9 @@ filter wheels, zoom systems etc.
 import numpy as np
 import time
 
+import logging
+logger = logging.getLogger(__name__)
+
 '''PyQt5 Imports'''
 from PyQt5 import QtWidgets, QtCore, QtGui
 
@@ -46,7 +49,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.state = mesoSPIM_StateSingleton()
 
         ''' Handling of state changing requests '''
-        self.parent.sig_state_request.connect(lambda dict: self.state_request_handler(dict, wait_until_done=False))
+        self.parent.sig_state_request.connect(self.state_request_handler)
         self.parent.sig_state_request_and_wait_until_done.connect(lambda dict: self.state_request_handler(dict, wait_until_done=True), type=3)
 
         ''' Attaching the filterwheel '''
@@ -64,7 +67,6 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] == 'PI':
             self.stage = mesoSPIM_PIstage(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
             self.stage = mesoSPIM_GalilStages(self)
             self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
@@ -73,34 +75,39 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+        try:
+            self.stage.sig_position.connect(self.report_position)
+        except:
+            print('Stage not initalized! Please check the configuratio file')
 
         ''' Wiring signals through to child objects '''
-        self.parent.sig_move_relative.connect(lambda dict: self.move_relative(dict))
+        self.parent.sig_move_relative.connect(self.move_relative)
         self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True), type=3)
 
-        self.parent.sig_move_absolute.connect(lambda dict: self.move_absolute(dict))
+        self.parent.sig_move_absolute.connect(self.move_absolute)
         self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True), type=3)
 
-        self.parent.sig_zero_axes.connect(lambda list: self.sig_zero_axes.emit(list))
-        self.parent.sig_unzero_axes.connect(lambda list: self.sig_unzero_axes.emit(list))
-        self.parent.sig_stop_movement.connect(lambda: self.sig_stop_movement.emit())
+        self.parent.sig_zero_axes.connect(self.sig_zero_axes.emit)
+        self.parent.sig_unzero_axes.connect(self.sig_unzero_axes.emit)
+        self.parent.sig_stop_movement.connect(self.sig_stop_movement.emit)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
 
         self.parent.sig_mark_rotation_position.connect(self.sig_mark_rotation_position.emit)
-        self.parent.sig_go_to_rotation_position.connect(lambda: self.go_to_rotation_position())
+        self.parent.sig_go_to_rotation_position.connect(self.go_to_rotation_position)
         self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
+
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
         for key, value in zip(dict.keys(),dict.values()):
-            print('Serial thread: state request: Key: ', key, ' Value: ', value)
+            # print('Serial thread: state request: Key: ', key, ' Value: ', value)
             '''
             Here, the request handling is done with lots if 'ifs'
             '''
-            print('Key: ', key, ' Value: ', value)
+            # print('Key: ', key, ' Value: ', value)
             if key == 'filter':
                 if wait_until_done:
                     self.set_filter(value, wait_until_done)
@@ -113,33 +120,51 @@ class mesoSPIM_Serial(QtCore.QObject):
                     self.set_zoom(value)
             if key == 'stage_program':
                 self.execute_stage_program()
+            # Log Thread ID during Live: just debugging code
+            if key == 'state':
+                if value == 'live':
+                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
+    @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
+        # logger.info('Thread ID during relative movement: '+str(int(QtCore.QThread.currentThreadId())))
+
+        # logger.info('Thread ID during move rel: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.stage.move_relative(dict, wait_until_done=True)
         else:
             self.stage.move_relative(dict)
 
+    @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
         if wait_until_done:
             self.stage.move_absolute(dict, wait_until_done=True)
         else:
             self.stage.move_absolute(dict)
 
+    @QtCore.pyqtSlot(dict)
+    def report_position(self, dict):
+        self.sig_position.emit({'position': dict})
+
+    @QtCore.pyqtSlot()
     def go_to_rotation_position(self, wait_until_done=False):
         if wait_until_done:
             self.stage.go_to_rotation_position(wait_until_done=True)
         else:
             self.stage.go_to_rotation_position()
 
+    @QtCore.pyqtSlot(str)
     def set_filter(self, filter, wait_until_done=False):
+        logger.info('Thread ID during set filter: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.filterwheel.set_filter(filter, wait_until_done=True)
         else:
             self.filterwheel.set_filter(filter, wait_until_done=False)
         self.state['filter'] = filter
 
+    @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=False):
+        logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.zoom.set_zoom(zoom, wait_until_done=True)
         else:
