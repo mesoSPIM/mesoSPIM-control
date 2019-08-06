@@ -765,4 +765,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
             self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
             self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
+        
+    def execute_galil_program(self):
+        '''Little helper method to execute the program loaded onto the Galil stage: 
+        allows hand controller to operate'''
+        self.sig_state_request.emit({'stage_program' : 'execute'})
 

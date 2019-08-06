@@ -17,7 +17,7 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'laser_task_line' :  'PXI6733/ao0:7',
                         'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
-sidepanel = 'Demo' # FarmSimulator
+sidepanel = 'FarmSimulator' # Demo
 
 laser = 'NI' # Demo
 
@@ -86,32 +86,27 @@ camera_parameters = {'x_pixels' : 2048,
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'PI_f_rot_and_Galil_xyz', # 'PI' or 'Debug'
+stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'DemoStage'
                     'startfocus' : 95000,
-                    'y_load_position': -40000,
-                    'y_unload_position': -90000,
-                    'x_max' : 51000,
-                    'x_min' : -46000,
-                    'y_max' : 0,
-                    'y_min' : -160000,
-                    'z_max' : -2000,
-                    'z_min' : -97000,
+                    'y_load_position': 75000,
+                    'y_unload_position': 40000,
+                    'x_max' : 32000,
+                    'x_min' : -32000,
+                    'y_max' : 99000,
+                    'y_min' : -99000,
+                    'z_max' : 41000,
+                    'z_min' : -41000,
                     'f_max' : 99000,
-                    'f_min' : 0,
+                    'f_min' : -99000,
                     'theta_max' : 999,
                     'theta_min' : -999,
-                    'x_rot_position': 0,
-                    'y_rot_position': -58000,
-                    'z_rot_position': -35000,
+                    'x_rot_position': 22000,
+                    'y_rot_position': 30000,
+                    'z_rot_position': 22000,
                     }
 
-xyz_galil_parameters = {'COMport' : 'COM48',
-                    'x_encodercounts_per_um' : 2,
-                    'y_encodercounts_per_um' : 2,
-                    'z_encodercounts_per_um' : 2}
-
 pi_parameters = {'controllername' : 'C-884',
-                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','M-061.PD'),
+                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
                  }
@@ -124,7 +119,7 @@ filterwheel_parameters = {'filterwheel_type' : 'Ludl',
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
-filterdict = {'Empty-Alignment' : 0, # Every config should contain this
+filterdict = {'Empty-Alignment' : 0,
               '405-488-647-Tripleblock' : 1,
               '405-488-561-640-Quadrupleblock' : 2,
               '464 482-35' : 3,
@@ -206,12 +201,12 @@ startup = {
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
-'galvo_l_amplitude' : 2.5,
+'galvo_l_amplitude' : 6,
 'galvo_l_offset' : 0,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 2.5,
+'galvo_r_amplitude' : 6,
 'galvo_r_offset' : 0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
