@@ -49,7 +49,10 @@ class StageControlGalil(QtCore.QObject):
 
         self.g = gclib.py()
         #Typical connectionstring: 'COM1 --baud 19200 --subscribe ALL --timeout 60000'
-        self.connectionstring = self.COMport + ' --baud ' + self.baudrate + ' --subscribe ALL --timeout ' + self.timeout
+        #self.connectionstring = self.COMport + ' --baud ' + self.baudrate + ' --subscribe ALL --timeout ' + self.timeout
+        '''Dirty hack to get IP connection going:'''
+        self.connectionstring = self.COMport + ' --direct'
+
         self.g.GOpen(self.connectionstring)
 
         # Set absolute position to zero - risky at the limits of the movement range...
@@ -72,7 +75,10 @@ class StageControlGalil(QtCore.QObject):
     def read_position(self, axis):
         self.axisstring = copy.copy(axis)
         self.axis = axis.capitalize()
-        self.position = self.g.GCommand('RP'+self.axis)
+        try:
+            self.position = self.g.GCommand('RP'+self.axis)
+        except Exception as error:
+            logger.exception(error)
         '''Float and try & except added here to solve weird bug with
 
         "ValueError: invalid literal for int() with base 10: '' "
@@ -155,10 +161,14 @@ class StageControlGalil(QtCore.QObject):
             self.g.GCommand('SPZ=50000')
 
         # Send movement commands
-        self.g.GCommand('PRX='+str(int(xrel*self.x_encodercounts_per_um)))
-        self.g.GCommand('PRY='+str(int(yrel*self.y_encodercounts_per_um)))
-        self.g.GCommand('PRZ='+str(int(zrel*self.z_encodercounts_per_um)))
-        self.g.GCommand('BG')
+        try:
+            '''z command comes first so that there is no slice loss '''
+            self.g.GCommand('PRZ='+str(int(zrel*self.z_encodercounts_per_um)))
+            self.g.GCommand('PRX='+str(int(xrel*self.x_encodercounts_per_um)))
+            self.g.GCommand('PRY='+str(int(yrel*self.y_encodercounts_per_um)))
+            self.g.GCommand('BG')
+        except Exception as error:
+            logger.exception(error)
 
         # Update internal values
         self.xpos += xrel
@@ -185,7 +195,7 @@ class StageControlGalil(QtCore.QObject):
                 self.g.GCommand('SPX=50000')
 
             string = 'PAX='+str(int(xabs*self.x_encodercounts_per_um))
-            print(string)
+            #print(string)
             self.g.GCommand(string)  
             self.xpos = xabs
                
@@ -198,7 +208,7 @@ class StageControlGalil(QtCore.QObject):
                 self.g.GCommand('SPY=50000')
 
             string = 'PAY='+str(int(yabs*self.y_encodercounts_per_um))
-            print(string)   
+            #print(string)   
             self.g.GCommand(string)  
             self.ypos = yabs
                
@@ -211,7 +221,7 @@ class StageControlGalil(QtCore.QObject):
                 self.g.GCommand('SPZ=50000')
 
             string = 'PAZ='+str(int(zabs*self.z_encodercounts_per_um))
-            print(string)
+            #print(string)
             self.g.GCommand(string)
             self.zpos = zabs
         

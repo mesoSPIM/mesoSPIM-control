@@ -106,7 +106,7 @@ stage_parameters = {'stage_type' : 'PI_f_rot_and_Galil_xyz', # 'PI' or 'Debug'
                     'z_rot_position': -35000,
                     }
 
-xyz_galil_parameters = {'COMport' : 'COM48',
+xyz_galil_parameters = {'COMport' : '192.168.1.43',#'COM48'
                     'x_encodercounts_per_um' : 2,
                     'y_encodercounts_per_um' : 2,
                     'z_encodercounts_per_um' : 2}

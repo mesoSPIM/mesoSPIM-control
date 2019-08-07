@@ -249,14 +249,14 @@ class mesoSPIM_Stage(QtCore.QObject):
             try:
                 exec('self.int_'+axis+'_pos_offset = -self.'+axis+'_pos')
             except:
-                print('Zeroing of axis: ', axis, 'failed')
+                logger.info('Zeroing of axis: ', axis, 'failed')
 
     def unzero_axes(self, list):
         for axis in list:
             try:
                 exec('self.int_'+axis+'_pos_offset = 0')
             except:
-                print('Unzeroing of axis: ', axis, 'failed')
+                logger.info('Unzeroing of axis: ', axis, 'failed')
 
     def load_sample(self):
         self.y_pos = self.cfg.stage_parameters['y_load_position']
@@ -269,7 +269,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.x_rot_position = self.x_pos
         self.y_rot_position = self.y_pos
         self.z_rot_position = self.z_pos
-        print('Marking Rotation Position')
+        logger.info('Marking new rotation position (absolute coordinates): X: ', self.x_pos, ' Y: ', self.y_pos, ' Z: ', self.z_pos)
 
     def go_to_rotation_position(self, wait_until_done=False):
         ''' Move to the proper rotation position 
@@ -277,6 +277,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         Not implemented in the default
         '''
         print('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
+        logger.info('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
 
 class mesoSPIM_DemoStage(mesoSPIM_Stage):
     def __init__(self, parent = None):
@@ -347,9 +348,9 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         try:
             '''Close the PI connection'''
             self.pidevice.unload()
-            print('Stage disconnected')
+            logger.info('Stage disconnected')
         except:
-            print('Error while disconnecting the PI stage')
+            logger.info('Error while disconnecting the PI stage')
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -558,19 +559,20 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
                                         x_encodercounts_per_um = 0,
                                         y_encodercounts_per_um = 0,
                                         z_encodercounts_per_um = self.f_encodercounts_per_um)
-
+        '''
         print('Galil: ', self.xyz_stage.read_position('x'))
         print('Galil: ', self.xyz_stage.read_position('y'))
         print('Galil: ', self.xyz_stage.read_position('z'))
+        '''
 
     def __del__(self):
         try:
             '''Close the Galil connection'''
             self.xyz_stage.close_stage()
             self.f_stage.close_stage()
-            print('Stages disconnected')
+            logger.info('Galil stages disconnected')
         except:
-            print('Error while disconnecting the Galil stage')
+            logger.info('Error while disconnecting the Galil stage')
 
     def report_position(self):
         self.x_pos = self.xyz_stage.read_position('x')
@@ -622,7 +624,7 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                print('No rotation stage attached')
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
+               self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
@@ -642,7 +644,7 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
-        print(dict)
+        #print(dict)
 
         # if ('x_abs', 'y_abs', 'z_abs', 'f_abs') in dict:
         x_abs = dict['x_abs']
@@ -694,7 +696,11 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
     def __init__(self, parent = None):
         super().__init__(parent)
 
-        self.state = mesoSPIM_StateSingleton()
+        #self.state = mesoSPIM_StateSingleton()
+
+        self.pos_timer = QtCore.QTimer(self)
+        self.pos_timer.timeout.connect(self.report_position)
+        self.pos_timer.start(50)
         '''
         Galil-specific code
         '''
@@ -752,8 +758,10 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         # print('Referencing status 5: ', self.pidevice.qFRF(5))
         self.pidevice.FRF(5)
         print('M-406 Emergency referencing hack: Waiting for referencing move')
+        logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
         print('M-406 Emergency referencing hack done')
+        logger.info('M-406 Emergency referencing hack done')
         # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
 
@@ -766,9 +774,9 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
             '''Close the Galil connection'''
             self.xyz_stage.close_stage()
             self.f_stage.close_stage()
-            print('Stages disconnected')
+            logger.info('Galil stages disconnected')
         except:
-            print('Error while disconnecting the Galil stage')
+            logger.info('Error while disconnecting the Galil stages')
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -796,7 +804,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         self.create_internal_position_dict()
 
         self.sig_position.emit(self.int_position_dict)
-        print(self.int_position_dict)
+        #print(self.int_position_dict)
 
     def move_relative(self, dict, wait_until_done=False):
         ''' Galil move relative method
@@ -851,7 +859,6 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
-        print(dict)
         if 'x_abs' or 'y_abs' or 'z_abs' in dict:
             if 'x_abs' in dict:
                 x_abs = dict['x_abs']
