@@ -46,6 +46,7 @@ class StageControlGalil(QtCore.QObject):
         self.COMport = COMport
         self.baudrate = baudrate
         self.timeout = timeout # in ms
+        self.speed = 5000
 
         self.g = gclib.py()
         #Typical connectionstring: 'COM1 --baud 19200 --subscribe ALL --timeout 60000'
@@ -71,6 +72,21 @@ class StageControlGalil(QtCore.QObject):
     def stage_info(self):
         self.message = self.g.GInfo()
         return self.message
+
+    def read_position_new(self):
+        ''' Reads XYZ positions at once and returns a list of position coordinates'''
+        position = self.g.GCommand('RP')
+        position_list = position.split(',')
+        try:
+            position_value_list = [int(float(i)) for i in position_list]
+        except:
+            position_value_list = [0,0,0]
+            
+        position_value_list[0] = position_value_list[0] / self.x_encodercounts_per_um
+        position_value_list[1] = position_value_list[1] / self.y_encodercounts_per_um
+        position_value_list[2] = position_value_list[2] / self.z_encodercounts_per_um
+        
+        return position_value_list
 
     def read_position(self, axis):
         self.axisstring = copy.copy(axis)
@@ -144,8 +160,14 @@ class StageControlGalil(QtCore.QObject):
         Movements larger than 250 microns should be slower
 
         Values are taken from the default (delivery) settings of the Galil controller.
+
+        1. Lower speed if the distance is too large 
+        2. Send a single movement commands
+
+        Ideas:
+        * Only send speed command if the speed is different from the set one 
         '''
-        if abs(xrel) > 250:
+        if abs(xrel) > 250: 
             self.g.GCommand('SPX=5000')
         else:
             self.g.GCommand('SPX=20000')
@@ -161,11 +183,10 @@ class StageControlGalil(QtCore.QObject):
             self.g.GCommand('SPZ=50000')
 
         # Send movement commands
+        commandstring = 'PR'+str(int(xrel*self.x_encodercounts_per_um))+','+ str(int(yrel*self.y_encodercounts_per_um))+','+ str(int(zrel*self.z_encodercounts_per_um))
+
         try:
-            '''z command comes first so that there is no slice loss '''
-            self.g.GCommand('PRZ='+str(int(zrel*self.z_encodercounts_per_um)))
-            self.g.GCommand('PRX='+str(int(xrel*self.x_encodercounts_per_um)))
-            self.g.GCommand('PRY='+str(int(yrel*self.y_encodercounts_per_um)))
+            self.g.GCommand(commandstring)
             self.g.GCommand('BG')
         except Exception as error:
             logger.exception(error)
@@ -176,13 +197,17 @@ class StageControlGalil(QtCore.QObject):
         self.zpos += zrel
 
     def move_absolute(self, xabs = None, yabs = None, zabs = None):
-        '''Move absolution function, implementation is ugly.
+        '''Move absolute function, implementation is ugly.
 
         The default none as an argument is dangerous. Very dangerous:
         If you run move_absolute once with e.g. zabs = 0, the others get
         nonetype which leads to type erros
 
         There is also no speed control apart from some z adaptation
+
+        1. Read current postion to calculate distance 
+        2. Lower speed if the distance is too large 
+        3. Send a single movement command
         '''
 
         # Send movement commands
