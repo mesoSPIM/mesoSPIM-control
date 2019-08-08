@@ -18,293 +18,289 @@ logger = logging.getLogger(__name__)
 
 class StageControlGalil(QtCore.QObject):
     '''
-    Class to control the Galil stage with 3 axes
-
-    TODO
-    * correct tracking of the internal and external absolute positions: Do everything via the Galil controller
-    * is it truly a good idea to set the stage to zero for each new instantiation?
-
+    Class to control a Galil mechanical stage controller
+    
+    Inherits from QtCore.QObject so it can be moved to a QThread.
+    
+    Note:
+        The encodercounts should be specfified such that: Position in um = encoderposition * encodercounts
+        or Position in degrees = encoderposition * encodercounts
+        
+    Args:
+        port (str): Either a COMport designation ("COM42") or a IP address "192.168.1.42"
+        encodercounts (list of int): Conversion factor from unit of interest
+            
+    Examples:
+        my_stage = StageControlGalil('COM19', [2,2,2])
+        my_stage2 = StageControlGalil('192.168.1.45', [2,2,2])
+    
+    Todo
+        * correct tracking of the internal and external absolute positions: Do everything via the Galil controller
+        * is it truly a good idea to set the stage to zero for each new instantiation?
+    
     '''
 
-    def __init__(self,
-                 COMport,
-                 baudrate='19200',
-                 timeout='60000',
-                 x_encodercounts_per_um = 0,
-                 y_encodercounts_per_um = 2,
-                 z_encodercounts_per_um = 2):
+    def __init__(self,port,encodercounts = [2,2,2]):
         super().__init__()
-
-        self.xpos = 0
-        self.ypos = 0
-        self.zpos = 0
-        self.initflag = True
-        self.x_encodercounts_per_um = x_encodercounts_per_um
-        self.y_encodercounts_per_um = y_encodercounts_per_um
-        self.z_encodercounts_per_um = z_encodercounts_per_um
-        self.unit = 'micron'
-        self.COMport = COMport
-        self.baudrate = baudrate
-        self.timeout = timeout # in ms
-        self.speed = 5000
-
+        
+        self.port = port
+        self.encodercounts = encodercounts
+        '''The number of '''
+        self.num_axes = len(encodercounts)
+        
         self.g = gclib.py()
-        #Typical connectionstring: 'COM1 --baud 19200 --subscribe ALL --timeout 60000'
-        #self.connectionstring = self.COMport + ' --baud ' + self.baudrate + ' --subscribe ALL --timeout ' + self.timeout
-        '''Dirty hack to get IP connection going:'''
-        self.connectionstring = self.COMport + ' --direct'
-
-        self.g.GOpen(self.connectionstring)
-
-        # Set absolute position to zero - risky at the limits of the movement range...
-        #self.g.GCommand('DPX=0')
-        #self.g.GCommand('DPY=0')
-        #self.g.GCommand('DPZ=0')
-
+        
+        '''Opens connection to the stage controller'''
+        if port[0:3] == 'COM':
+            self.port = port
+            self.baudrate = '19200'
+            self.timeout = '60000'
+            self.connectionstring = self.COMport + ' --baud ' + self.baudrate + ' --subscribe ALL --timeout ' + self.timeout
+            self.g.GOpen(self.connectionstring)
+        else:
+            '''Assumes Ethernet connection'''
+            self.connectionstring = self.port + ' --direct'
+            self.g.GOpen(self.connectionstring)
+        
+        '''To address the stages for commands, the list of axes designations needs 
+        to be truncated.'''
+        _axisstring = 'ABCDEFGH'
+        self._axistring = _axisstring[0:self.num_axes]  
+        
+        '''Create an default position list with the right length'''
+        self.positions = [0 for i in range(self.num_axes)]
+        self.read_position()
+        
+        self.initflag = True
+        self.unit = 'micron'
+        self.speed = 5000
+        self.slow_speed = 5000
+        self.fast_speed = 20000
+        '''
         self.read_position('x')
         self.read_position('y')
         self.read_position('z')
+        '''
         self.initflag = False
 
-    def close_stage(self):
+    def close(self):
+        '''Closes connection to the stage'''
         self.g.GClose()
 
-    def stage_info(self):
-        self.message = self.g.GInfo()
-        return self.message
-
-    def read_position_new(self):
-        ''' Reads XYZ positions at once and returns a list of position coordinates'''
-        position = self.g.GCommand('RP')
+    def controller_info(self):
+        '''Returns COM port/IP adress, DMC version and serial number of the controller'''
+        return self.g.GInfo()
+    
+    def _send_command(self, command):
+        '''Sends a command to the controller
+        
+        Try-except block included to catch errors - this is dangerous - no checking of success 
+        
+        Args:
+            command (str): Command string to be sent
+            
+        Returns:
+            answer (str): Answer by the controller
+        '''
+        try:
+            return self.g.GCommand(command)
+        except Exception as error:
+            logger.exception(error)
+            
+    def stop(self, restart_programs=False):
+        '''Stops movement on all axes by sending ST to the controller
+        
+        After ST, also program execution stops -- using the restart_programs 
+        flag, they can be restarted this is risky, here it 
+        is assumed that any program runs only the handcontroller and does 
+        not induce any movement.
+        '''
+        self._send_command('ST')
+        if restart_programs == True:
+            self.execute_program()
+    
+    def execute_program(self):
+        self._send_command('XQ')
+            
+    def wait_until_done(self, axis):
+        '''Requires X,Y,Z or A,B,C etc..'''
+        self.g.GMotionComplete(axis.upper())
+        
+    def read_position(self):
+        '''Reports position from the stages 
+        
+        Notes:
+            Updates internal position list self.positions as well.
+        
+        Returns:
+            positions (list): list of positions 
+        
+        '''
+        position = self._send_command('RP')
         position_list = position.split(',')
         try:
-            position_value_list = [int(float(i)) for i in position_list]
-        except:
-            position_value_list = [0,0,0]
+            position_list = [int(float(i)) for i in position_list]
+            self.positions = [item[0]/item[1] for item in zip(position_list,self.encodercounts)]
+        except Exception as error:
+            logger.exception(error)
+
+        return self.positions
+    
+    def move_relative(self, motion_dict):
+        '''Command for relative motion 
+        
+        Args:
+            motion_dict (dict): Dictionary in the form {1: 4000, 2:-234}, in general {axis_id:requested_position} 
+                                with axis_id (int) and requested_position (int).
+        Returns:
+            Carries out motion
+        '''
+        
+        ''' Set speed according to requested distance unless it has been set before '''
+        if any(abs(distance)>250 for distance in motion_dict.values()):
+            if self.speed != self.slow_speed:
+                self.set_speed(self.slow_speed)
+        else:
+            if self.speed != self.fast_speed:
+                self.set_speed(self.fast_speed)
+                
+        ''' Convert um to encodercounts '''
+        command_list = self._convert_dict_to_sorted_list(motion_dict, self.num_axes)
+        encoder_command_list = [i[0]*i[1] for i in zip(command_list, self.encodercounts)]
+                
+        ''' Create command string and initiate movement 
+        
+        Zero padding is important here as the non-commanded axes should stay where they are,
+        otherwise previous relative motion commands are retained and possibly excuted 
+        again after the 'BG' command ist sent.
+        '''                
+        command_string = self._convert_sorted_list_to_galil_string(encoder_command_list, zero_padding=True)
+        self._send_command('PR'+command_string)
+        self._send_command('BG')         
+    
+    def move_absolute(self, motion_dict):
+        ''' Command for absolute motion 
+        
+        Args:
+            motion_dict (dict): Dictionary in the form {1: 4000, 2:-234}, in general {axis_id:requested_position} 
+                                with axis_id (int) and requested_position (int).
+        
+        '''
+        
+        ''' Set speed according to requested distance unless it has been set before '''
+        current_positions = self.read_position()
+        requested_positions = self._convert_dict_to_sorted_list(motion_dict, self.num_axes)
+        ''' Set requested positions to current value to make the list difference zero
+        Otherwise, the distances are not detected correctly
+        '''
+        requested_positions = [pos[0] if pos[0] != 0 else pos[1] for pos in zip(requested_positions,current_positions)]
+        position_differences = self._list_difference(requested_positions,current_positions)    
+        if any(abs(distance)>250 for distance in position_differences):
+            if self.speed != self.slow_speed:
+                self.set_speed(self.slow_speed)
+        else:
+            if self.speed != self.fast_speed:
+                self.set_speed(self.fast_speed)
+                
+        ''' Convert um to encodercounts '''
+        command_list = self._convert_dict_to_sorted_list(motion_dict, self.num_axes)
+        encoder_command_list = [i[0]*i[1] for i in zip(command_list, self.encodercounts)]
+                
+        ''' Carry out motion 
+        
+        Removing zero padding is important here as the non-commanded axes should stay where they are,
+        otherwise they move to position 0.
+        '''
+        command_string = self._convert_sorted_list_to_galil_string(encoder_command_list, zero_padding=False)
+        self._send_command('PA'+command_string)
+        self._send_command('BG')         
+    
+    def set_speed(self, speed):
+        '''Sets speed for all axes to the requested value 
+        
+        Args:
+            speed (int): speed value 
+        
+        '''
+        list_axes = [i+1 for i in range(self.num_axes)]
+        command_dict = {i : speed for i in list_axes}
+        command_string = self._convert_dict_to_galil_string(command_dict, self.num_axes)
+        self._send_command('SP'+command_string)
+        self.speed = speed
+        
+    def get_speed(self):
+        return self.speed
+    
+    def _convert_dict_to_galil_string(self, command_dict, length, zero_padding=False):
+        '''Converts a dict of the form {1: 4000, 3:-234} into a string '4000,,-234'
+        which can be combined with a command ('RP4000,,-234') and sent to the stage controller.
+
+        Args:
+            command_dict (dict): Command dictionary in the form {key (int): command value (int)}
+            length (int): Length of output items
+            zero_padding (bool): Indicates whether the values between commas should be filled with zeros
+
+        Returns:
+            galil_string (str): String with values between separating commas
+        '''
+        keylist = list(command_dict.keys())
+        keylist.sort()
+
+        galil_string = ''
+
+        for i in range(length):
+            if i+1 in keylist:
+                galil_string += str(command_dict[i+1])
+                galil_string += ','
+            else:
+                if zero_padding == True:
+                    galil_string += '0'
+                galil_string += ','
+        return galil_string    
+        
+    def _convert_sorted_list_to_galil_string(self, command_list, zero_padding=True):
+        '''Converts a list of the form [80,123,-53] into a string '80,123,-53'
+        which can be combined with a command ('RP80,123,-53') and sent to the stage controller.
+        
+        Notes:
+            If zero_padding is set to False, zeros are removed from the output: [80,0,-53] --> '80,,-53'
+
+        Args:
+            command_list (list): Command list in the form [80,123,-53]
+            length (int): Length of output items
+            zero_padding (bool): Indicates whether the values between commas should be filled with zeros
+
+        Returns:
+            galil_string (str): String with values between separating commas
+        '''
+        galil_string = ''
+        for i in range(len(command_list)):
+            if command_list[i] == 0 and zero_padding == False:
+                galil_string += ','
+            else:
+                galil_string += str(command_list[i])
+                galil_string += ','
             
-        position_value_list[0] = position_value_list[0] / self.x_encodercounts_per_um
-        position_value_list[1] = position_value_list[1] / self.y_encodercounts_per_um
-        position_value_list[2] = position_value_list[2] / self.z_encodercounts_per_um
+        return galil_string
+
+    def _convert_dict_to_sorted_list(self, input_dict, length):
+        '''Converts an input dictionary into a zero-padded list of a certain length
         
-        return position_value_list
-
-    def read_position(self, axis):
-        self.axisstring = copy.copy(axis)
-        self.axis = axis.capitalize()
-        try:
-            self.position = self.g.GCommand('RP'+self.axis)
-        except Exception as error:
-            logger.exception(error)
-        '''Float and try & except added here to solve weird bug with
-
-        "ValueError: invalid literal for int() with base 10: '' "
-        Returning a large negative value as an error signal
+        Args:
+            input_dict (dict): Input dictionary in the form {key (int): value (int)} .
+            length (int): Number of elements required in the output list.
+        Returns:
+            List with n = length sorted elements which are sorted
         '''
-        if self.axisstring == 'x':
-            try:
-                xpos = int(float(self.position)) / self.x_encodercounts_per_um
-                if abs(self.xpos - xpos) < 2000 or self.initflag == True:
-                    self.xpos = xpos
-                    return self.xpos
-                else:
-                    return self.xpos
-            except Exception as error:
-                logger.exception(error)
-                return self.xpos
-        elif self.axisstring == 'y':
-            try:
-                ypos = int(float(self.position)) / self.y_encodercounts_per_um
-                if abs(self.ypos - ypos) < 2000 or self.initflag == True:
-                    self.ypos = ypos
-                    return self.ypos
-                else:
-                    return self.ypos
-            except Exception as error:
-                logger.exception(error)
-                return self.ypos
-        else:
-            try:
-                zpos = int(float(self.position)) / self.z_encodercounts_per_um
-                if abs(self.zpos - zpos) < 2000 or self.initflag == True:
-                    self.zpos = zpos
-                    return self.zpos
-                else:
-                    return self.zpos
-            except Exception as error:
-                logger.exception(error)
-                return self.zpos
+        keylist = list(input_dict.keys())
+        keylist.sort()
+        return [input_dict[i+1] if i+1 in keylist else 0 for i in range(length)]
+    
+    def _list_difference(self, list1, list2):
+        '''Returns the element-wise difference of two lists of the same length
         
-    def read_x_position_um(self):
-        return self.read_position('x')
-
-    def read_y_position_um(self):
-        return self.read_position('y')
-
-    def read_z_position_um(self):
-        return self.read_position('z')
-
-    def set_axis_to_zero(self, axis):
-        if axis == 'x':
-            self.xpos = 0
-        elif axis == 'y':
-            self.ypos = 0
-        else:
-            self.zpos = 0
-
-        self.axis = axis.capitalize()
-        self.g.GCommand('DP'+self.axis+'=0')
-
-    def move_relative(self, xrel = 0, yrel = 0, zrel = 0):
-        '''Move relative method
-
-        Movements larger than 250 microns should be slower
-
-        Values are taken from the default (delivery) settings of the Galil controller.
-
-        1. Lower speed if the distance is too large 
-        2. Send a single movement commands
-
-        Ideas:
-        * Only send speed command if the speed is different from the set one 
+        Args:
+            list1 (list): First list of values
+            list2 (list): Second list of values
         '''
-        if abs(xrel) > 250: 
-            self.g.GCommand('SPX=5000')
-        else:
-            self.g.GCommand('SPX=20000')
-
-        if abs(yrel) > 250:
-            self.g.GCommand('SPY=5000')
-        else:
-            self.g.GCommand('SPY=20000')
-
-        if abs(zrel) > 250:
-            self.g.GCommand('SPZ=5000')
-        else:
-            self.g.GCommand('SPZ=50000')
-
-        # Send movement commands
-        commandstring = 'PR'+str(int(xrel*self.x_encodercounts_per_um))+','+ str(int(yrel*self.y_encodercounts_per_um))+','+ str(int(zrel*self.z_encodercounts_per_um))
-
-        try:
-            self.g.GCommand(commandstring)
-            self.g.GCommand('BG')
-        except Exception as error:
-            logger.exception(error)
-
-        # Update internal values
-        self.xpos += xrel
-        self.ypos += yrel
-        self.zpos += zrel
-
-    def move_absolute(self, xabs = None, yabs = None, zabs = None):
-        '''Move absolute function, implementation is ugly.
-
-        The default none as an argument is dangerous. Very dangerous:
-        If you run move_absolute once with e.g. zabs = 0, the others get
-        nonetype which leads to type erros
-
-        There is also no speed control apart from some z adaptation
-
-        1. Read current postion to calculate distance 
-        2. Lower speed if the distance is too large 
-        3. Send a single movement command
-        '''
-
-        # Send movement commands
-        if xabs != None:
-            ''' Adapt speed to distance '''
-            position = self.read_x_position_um()
-            if abs(xabs-position) > 250:
-                self.g.GCommand('SPX=5000')
-            else:
-                self.g.GCommand('SPX=50000')
-
-            string = 'PAX='+str(int(xabs*self.x_encodercounts_per_um))
-            #print(string)
-            self.g.GCommand(string)  
-            self.xpos = xabs
-               
-        if yabs != None:
-            ''' Adapt speed to distance '''
-            position = self.read_y_position_um()
-            if abs(yabs-position) > 250:
-                self.g.GCommand('SPY=5000')
-            else:
-                self.g.GCommand('SPY=50000')
-
-            string = 'PAY='+str(int(yabs*self.y_encodercounts_per_um))
-            #print(string)   
-            self.g.GCommand(string)  
-            self.ypos = yabs
-               
-        if zabs != None:
-            ''' Adapt speed to distance '''
-            position = self.read_z_position_um()
-            if abs(zabs-position) > 250:
-                self.g.GCommand('SPZ=5000')
-            else:
-                self.g.GCommand('SPZ=50000')
-
-            string = 'PAZ='+str(int(zabs*self.z_encodercounts_per_um))
-            #print(string)
-            self.g.GCommand(string)
-            self.zpos = zabs
-        
-        try:
-            self.g.GCommand('BG')
-        except:
-            print('Error occured')
-
-    def move_absolute_in_z(self, zabs):
-        '''get current position and adapt speed accordingly'''
-
-        position = self.read_z_position_um()
-        if abs(zabs-position) > 250:
-            self.g.GCommand('SPZ=5000')
-        else:
-            self.g.GCommand('SPZ=50000')
-
-        self.g.GCommand('PAZ='+str(int(zabs*self.z_encodercounts_per_um)))
-        self.g.GCommand('BG')
-        self.zpos = zabs
-
-    def set_speed(self, axis, speed):
-        '''Sets the movement speed via the Galil SP command'''
-        if axis == 'x':
-            self.g.GCommand('SPX='+str(int(speed)))
-        elif axis == 'y':
-            self.g.GCommand('SPY='+str(int(speed)))
-        else:
-            self.g.GCommand('SPZ='+str(int(speed)))
-
-    def set_acceleration(self, axis, acceleration):
-        '''Sets the acceleration via the Galil AC command'''
-        if axis == 'x':
-            self.g.GCommand('ACX='+str(int(acceleration)))
-        elif axis == 'y':
-            self.g.GCommand('ACY='+str(int(acceleration)))
-        else:
-            self.g.GCommand('ACZ='+str(int(acceleration)))
-
-    def set_deceleration(self, axis, deceleration):
-        '''Sets the deceleration via the Galil DC command'''
-        if axis == 'x':
-            self.g.GCommand('DCX='+str(int(acceleration)))
-        elif axis == 'y':
-            self.g.GCommand('DCY='+str(int(acceleration)))
-        else:
-            self.g.GCommand('DCZ='+str(int(acceleration)))
-
-    def stop_all_movements(self):
-        self.g.GCommand('ST')
-        '''After ST, also program execution stops -- this is risky, here it 
-        is assumed that any program runs only the handcontroller and does 
-        not induce any movement.'''
-        self.execute_program()
-
-    def wait_until_done(self, axis):
-        self.g.GMotionComplete(axis.upper())
-
-    def execute_program(self):
-        '''Executes program stored on the Galil controller'''
-        self.g.GCommand('XQ')
+        return [i[0]-i[1] for i in zip(list1, list2)]

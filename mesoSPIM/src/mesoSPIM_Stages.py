@@ -711,10 +711,8 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         self.z_encodercounts_per_um = self.cfg.xyz_galil_parameters['z_encodercounts_per_um']
 
         ''' Setting up the Galil stages '''
-        self.xyz_stage = StageControlGalil(COMport = self.cfg.xyz_galil_parameters['COMport'],
-                                            x_encodercounts_per_um = self.x_encodercounts_per_um,
-                                            y_encodercounts_per_um = self.y_encodercounts_per_um,
-                                            z_encodercounts_per_um = self.z_encodercounts_per_um)
+        self.xyz_stage = StageControlGalil(self.cfg.xyz_galil_parameters['port'],[self.x_encodercounts_per_um,
+                                                self.y_encodercounts_per_um,self.z_encodercounts_per_um])
         '''
         self.f_stage = StageControlGalil(COMport = self.cfg.f_galil_parameters['COMport'],
                                         x_encodercounts_per_um = 0,
@@ -772,7 +770,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
     def __del__(self):
         try:
             '''Close the Galil connection'''
-            self.xyz_stage.close_stage()
+            self.xyz_stage.close()
             self.f_stage.close_stage()
             logger.info('Galil stages disconnected')
         except:
@@ -786,10 +784,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         position reports: Do not update positions in 
         exceptional circumstances. 
         '''
-        self.x_pos = self.xyz_stage.read_position('x')
-        self.y_pos = self.xyz_stage.read_position('y')
-        self.z_pos = self.xyz_stage.read_position('z')
-        
+        self.x_pos, self.y_pos, self.z_pos  = self.xyz_stage.read_position()
         self.f_pos = round(positions['5']*1000,2)
         self.theta_pos = positions['6']
 
@@ -811,26 +806,31 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
 
         Lots of implementation details in here, should be replaced by a facade
         '''
+        xyz_motion_dict = {}
+
         if 'x_rel' in dict:
             x_rel = dict['x_rel']
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
-                self.xyz_stage.move_relative(xrel = int(x_rel))
+                xyz_motion_dict.update({1:int(x_rel)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
-                self.xyz_stage.move_relative(yrel = int(y_rel))
+                xyz_motion_dict.update({2:int(y_rel)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
-                self.xyz_stage.move_relative(zrel = int(z_rel))
+                xyz_motion_dict.update({3:int(z_rel)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+        
+        if xyz_motion_dict != {}:
+            self.xyz_stage.move_relative(xyz_motion_dict)
 
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
@@ -859,27 +859,27 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
+        xyz_motion_dict = {}
+
         if 'x_abs' or 'y_abs' or 'z_abs' in dict:
             if 'x_abs' in dict:
                 x_abs = dict['x_abs']
                 x_abs = x_abs - self.int_x_pos_offset
-            else:
-                x_abs = None
+                xyz_motion_dict.update({1:x_abs})
 
             if 'y_abs' in dict:
                 y_abs = dict['y_abs']
                 y_abs = y_abs - self.int_y_pos_offset
-            else:
-                y_abs = None
-            
+                xyz_motion_dict.update({2:y_abs})
+                        
             if 'z_abs' in dict:
                 z_abs = dict['z_abs']
                 z_abs = z_abs - self.int_z_pos_offset
-            else:
-                z_abs = None
-
-            self.xyz_stage.move_absolute(xabs=x_abs,yabs=y_abs,zabs=z_abs)
-
+                xyz_motion_dict.update({3:z_abs})
+        
+        if xyz_motion_dict != {}:
+            self.xyz_stage.move_absolute(xyz_motion_dict)
+        
         if wait_until_done == True:
             self.xyz_stage.wait_until_done('XYZ')
         
@@ -906,17 +906,17 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
             self.pitools.waitontarget(self.pidevice)
 
     def stop(self):
-        self.xyz_stage.stop_all_movements()
+        self.xyz_stage.stop(restart_programs=True)
         self.pidevice.STP(noraise=True)
 
     def load_sample(self):
-        self.xyz_stage.move_absolute(xabs=self.int_x_pos, yabs=self.cfg.stage_parameters['y_load_position'], zabs=self.int_z_pos)
+        self.xyz_stage.move_absolute({1:self.int_x_pos, 2:self.cfg.stage_parameters['y_load_position'], 3:self.int_z_pos})
 
     def unload_sample(self):
-        self.xyz_stage.move_absolute(xabs=self.int_x_pos, yabs=self.cfg.stage_parameters['y_unload_position'], zabs=self.int_z_pos)
+        self.xyz_stage.move_absolute({1:self.int_x_pos, 2:self.cfg.stage_parameters['y_unload_position'], 3:self.int_z_pos})
         
     def go_to_rotation_position(self, wait_until_done=False):
-        self.xyz_stage.move_absolute(xabs=self.x_rot_position, yabs=self.y_rot_position, zabs=self.z_rot_position)
+        self.xyz_stage.move_absolute({1:self.x_rot_position, 2:self.y_rot_position, 3:self.z_rot_position})
         if wait_until_done == True:
             self.xyz_stage.wait_until_done('XYZ')
 
