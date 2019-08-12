@@ -52,6 +52,29 @@ def load_config():
 
     sys.exit(cfg_app.exec_())
 
+def stage_referencing_check(cfg):
+    '''
+    Due to problems with some PI stages loosing reference information
+    after restarting the mesoSPIM software, some stage configurations require
+    a reference movement to be carried out before starting the rest of the softwareself.
+
+    As reference movements can damage the instrument, this function warns users
+    about this problem by message boxes and asks them to reach a safe state.
+    '''
+    if cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
+        warning = QtWidgets.QMessageBox.warning(None,'Rotation reference movement necessary!',
+                'Please move the XYZ stage to position where sample rotation is safe!',
+                QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Ok)
+        if warning == QtWidgets.QMessageBox.Cancel:
+            shutdown_message = QtWidgets.QMessageBox.warning(None,'Shutdown warning',
+                    'No reference movement - shutting down!',
+                    QtWidgets.QMessageBox.Ok)
+            sys.exit()
+        else:
+            return True
+    else:
+        return True
+
 def main():
     """
     Main function
@@ -59,6 +82,7 @@ def main():
     logging.info('mesoSPIM Program started.')
     cfg = load_config()
     app = QtWidgets.QApplication(sys.argv)
+    stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
 
