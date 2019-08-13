@@ -88,7 +88,7 @@ camera_parameters = {'x_pixels' : 2048,
 Stage configuration
 '''
 stage_parameters = {'stage_type' : 'PI_rot_and_Galil_xyzf', # 'PI' or 'Debug'
-                    'startfocus' : -50000,
+                    'startfocus' : -10000,
                     'y_load_position': -40000,
                     'y_unload_position': -90000,
                     'x_max' : 51000,
