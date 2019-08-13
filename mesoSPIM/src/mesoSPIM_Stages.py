@@ -1177,13 +1177,13 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         self.pidevice.STP(noraise=True)
 
     def load_sample(self):
-        self.xyz_stage.move_absolute({1:self.int_x_pos, 2:self.cfg.stage_parameters['y_load_position'], 3:self.int_z_pos})
+        self.move_absolute({'y_abs':self.cfg.stage_parameters['y_load_position']})
 
     def unload_sample(self):
-        self.xyz_stage.move_absolute({1:self.int_x_pos, 2:self.cfg.stage_parameters['y_unload_position'], 3:self.int_z_pos})
+        self.move_absolute({'y_abs':self.cfg.stage_parameters['y_unload_position']})
         
     def go_to_rotation_position(self, wait_until_done=False):
-        self.xyz_stage.move_absolute({1:self.x_rot_position, 2:self.y_rot_position, 3:self.z_rot_position})
+        self.move_absolute({'x_abs':self.x_rot_position, 'y_abs':self.y_rot_position, 'z_abs':self.z_rot_position})
         if wait_until_done == True:
             self.xyz_stage.wait_until_done('XYZ')
 
