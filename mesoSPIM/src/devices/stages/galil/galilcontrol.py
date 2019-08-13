@@ -76,6 +76,7 @@ class StageControlGalil(QtCore.QObject):
         self.speed = 5000
         self.slow_speed = 5000
         self.fast_speed = 20000
+        self.set_speed(self.slow_speed)
         '''
         self.read_position('x')
         self.read_position('y')
