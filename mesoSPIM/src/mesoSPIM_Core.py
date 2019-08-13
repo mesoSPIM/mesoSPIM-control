@@ -140,6 +140,10 @@ class mesoSPIM_Core(QtCore.QObject):
         # self.sig_state_request.connect(self.demo_worker.report_thread_id)
         # self.demo_worker.moveToThread(self.demo_thread)
         # self.demo_thread.start()
+        ''' HICKUP DEBUGGING '''
+        self.z_start_measured = 0.0
+        self.z_end_measured = 0.0
+        self.hickup_delta_z = 0.0
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -534,6 +538,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def close_acquisition_list(self, acq_list):
         self.sig_status_message.emit('Closing Acquisition List')
+        
         if not self.stopflag:
             current_rotation = self.state['position']['theta_pos']
             startpoint = acq_list.get_startpoint()
@@ -641,6 +646,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
+        
+        ''' HICKUP DEBUGGING: Measure z position '''
+        self.z_start_measured = self.state['position']['z_pos']
+
         self.write_metadata(acq)
         
     def run_acquisition(self, acq):
@@ -674,6 +683,11 @@ class mesoSPIM_Core(QtCore.QObject):
         self.close_shutters()
         
     def close_acquisition(self, acq):
+        ''' HICKUP DEBUGGING '''
+        self.z_end_measured = self.state['position']['z_pos']
+        self.collect_troubleshooting_data(acq)
+        self.append_troubleshooting_info_to_metadata(acq)
+
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
 
         if self.stopflag is False:
@@ -823,3 +837,28 @@ class mesoSPIM_Core(QtCore.QObject):
         allows hand controller to operate'''
         self.sig_state_request.emit({'stage_program' : 'execute'})
 
+        ''' HICKUP DEBUGGING '''
+
+    def collect_troubleshooting_data(self, acq):
+        self.hickup_delta_z = self.z_end_measured - acq['z_end']
+        print('HICKUP Difference: ', self.hickup_delta_z)
+
+    def append_troubleshooting_info_to_metadata(self, acq):
+        '''
+        Appends a metadata.txt file
+
+        Path contains the file to be written
+        '''
+        path = acq['folder']+'/'+acq['filename']
+
+        metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
+
+        with open(metadata_path,'a') as file:
+            ''' Adding troubleshooting information '''
+            self.write_line(file)
+            self.write_line(file, 'TROUBLESHOOTING INFORMATION')
+            self.write_line(file, 'delta_z end to start after acq', str(self.hickup_delta_z) )
+            self.write_line(file, 'z_start expected', acq['z_start'])
+            self.write_line(file, 'z_start measured', str(self.z_start_measured))
+            self.write_line(file, 'z_end expected', acq['z_end'])
+            self.write_line(file, 'z_end measured', str(self.z_end_measured))
