@@ -1441,17 +1441,22 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         self.pidevice.STP(noraise=True)
 
     def load_sample(self):
-        self.move_absolute({'y_abs':self.cfg.stage_parameters['y_load_position']})
-
+        self.xyf_stage.move_absolute({2:self.cfg.stage_parameters['y_load_position']})
+        
     def unload_sample(self):
-        self.move_absolute({'y_abs':self.cfg.stage_parameters['y_unload_position']})
+        self.xyf_stage.move_absolute({2:self.cfg.stage_parameters['y_unload_position']})
         
     def go_to_rotation_position(self, wait_until_done=False):
+        ''' This has to be done in absolute coordinates of the stages to avoid problems with the 
+        internal position offset (when the stage is zeroed). '''
+        xy_motion_dict = {1:self.x_rot_position, 2: self.y_rot_position}
+        self.xyf_stage.move_absolute(xy_motion_dict)
+        self.pidevice.MOV({2 : self.z_rot_position/1000})
+        
         if wait_until_done == True:
-            self.move_absolute({'x_abs':self.x_rot_position, 'y_abs':self.y_rot_position, 'z_abs':self.z_rot_position}, wait_until_done=True)
-        else:
-             self.move_absolute({'x_abs':self.x_rot_position, 'y_abs':self.y_rot_position, 'z_abs':self.z_rot_position})
-
+            self.xyf_stage.wait_until_done('XYZ')
+            self.pitools.waitontarget(self.pidevice)
+    
     def block_till_controller_is_ready(self):
         '''
         Blocks further execution (especially during referencing moves)
