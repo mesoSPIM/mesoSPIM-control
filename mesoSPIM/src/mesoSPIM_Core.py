@@ -583,7 +583,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.sig_status_message.emit('Rotating sample')
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
-            self.sig_status_message.emit('Setting Filter'')
+            self.sig_status_message.emit('Setting Filter')
             self.set_filter(acq['filter'], wait_until_done=True)
 
             self.sig_status_message.emit('Going to start position')
