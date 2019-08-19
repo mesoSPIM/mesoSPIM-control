@@ -45,7 +45,7 @@ class LudlFilterwheel(QtCore.QObject):
         self.double_wheel = False
 
         ''' Delay in s for the wait until done function '''
-        self.wait_until_done_delay = 1
+        self.wait_until_done_delay = 0.5
 
         """
         If the first entry of the filterdict has a tuple

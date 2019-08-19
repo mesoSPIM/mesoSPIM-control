@@ -570,11 +570,7 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             self.sig_update_gui_from_state.emit(True)
             acq = self.state['acq_list'][row]
-
-            # rotation_position = self.state['acq_list'].get_rotation_point()
-
-            self.sig_status_message.emit('Going to start position')
-            
+                  
             ''' Rotation handling goes here '''
             current_rotation = self.state['position']['theta_pos']
             startpoint = acq.get_startpoint()
@@ -582,15 +578,20 @@ class mesoSPIM_Core(QtCore.QObject):
 
             ''' Check if sample has to be rotated, allow some tolerance '''
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+                self.sig_status_message.emit('Going to rotation position')
                 self.sig_go_to_rotation_position_and_wait_until_done.emit()
+                self.sig_status_message.emit('Rotating sample')
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
+            self.sig_status_message.emit('Setting Filter'')
+            self.set_filter(acq['filter'], wait_until_done=True)
+
+            self.sig_status_message.emit('Going to start position')
             self.move_absolute(startpoint, wait_until_done=False)
 
-            self.sig_status_message.emit('Setting Filter & Shutter')
+            self.sig_status_message.emit('Setting Shutter')
             self.set_shutterconfig(acq['shutterconfig'])
-            self.set_filter(acq['filter'], wait_until_done=False)
-            self.sig_status_message.emit('Setting Zoom')
+            self.sig_status_message.emit('Setting Zoom & Laser')
             self.set_zoom(acq['zoom'], wait_until_done=False)
             self.set_intensity(acq['intensity'], wait_until_done=True)
             self.set_laser(acq['laser'], wait_until_done=True)
@@ -601,6 +602,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
 
             self.sig_update_gui_from_state.emit(False)
+            self.sig_status_message.emit('Ready for preview...')
         
         self.state['state'] = 'idle'
         
