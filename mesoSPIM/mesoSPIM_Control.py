@@ -61,9 +61,9 @@ def stage_referencing_check(cfg):
     As reference movements can damage the instrument, this function warns users
     about this problem by message boxes and asks them to reach a safe state.
     '''
-    if cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
-        warning = QtWidgets.QMessageBox.warning(None,'Rotation reference movement necessary!',
-                'Please move the XYZ stage to position where sample rotation is safe!',
+    if cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
+        warning = QtWidgets.QMessageBox.warning(None,'Sample z reference movement necessary!',
+                'Please move the XYZ stage to position where a reference z movement (to the midpoint of the movement range) is safe!',
                 QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Ok)
         if warning == QtWidgets.QMessageBox.Cancel:
             shutdown_message = QtWidgets.QMessageBox.warning(None,'Shutdown warning',

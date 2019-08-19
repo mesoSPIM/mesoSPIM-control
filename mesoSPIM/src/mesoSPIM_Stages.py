@@ -1283,12 +1283,11 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         pitools.startup(self.pidevice, stages=self.pi_stages)
         
         #self.pidevice.FRF(1)
+        print('M-406 Emergency referencing hack: Waiting for referencing move')
+        logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
         self.pidevice.FRF(2)
-        print('M-061 Emergency referencing hack: Waiting for referencing move')
-        logger.info('M-061 Emergency referencing hack: Waiting for referencing move')
-        #self.block_till_controller_is_ready()
-        print('M-061 Emergency referencing hack done')
-        logger.info('M-061 Emergency referencing hack done')
+        print('M-406 Emergency referencing hack done')
+        logger.info('M-406 Emergency referencing hack done')
        
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
