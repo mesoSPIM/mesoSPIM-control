@@ -1439,9 +1439,9 @@ Position</string>
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>550</y>
+              <y>430</y>
               <width>431</width>
-              <height>121</height>
+              <height>111</height>
              </rect>
             </property>
             <property name="title">
@@ -1451,7 +1451,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>40</y>
+               <y>30</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -1464,7 +1464,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>80</y>
+               <y>70</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -1480,7 +1480,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>310</x>
-               <y>40</y>
+               <y>30</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -1505,7 +1505,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>310</x>
-               <y>80</y>
+               <y>70</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -1530,7 +1530,7 @@ Position</string>
               <x>10</x>
               <y>200</y>
               <width>431</width>
-              <height>351</height>
+              <height>221</height>
              </rect>
             </property>
             <property name="title">
@@ -1761,7 +1761,7 @@ Position</string>
               <x>450</x>
               <y>320</y>
               <width>431</width>
-              <height>231</height>
+              <height>221</height>
              </rect>
             </property>
             <property name="title">
@@ -1812,7 +1812,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>190</x>
-               <y>70</y>
+               <y>60</y>
                <width>91</width>
                <height>31</height>
               </rect>
@@ -1825,7 +1825,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>310</x>
-               <y>70</y>
+               <y>60</y>
                <width>91</width>
                <height>31</height>
               </rect>
@@ -1838,7 +1838,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>110</y>
+               <y>100</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -1851,7 +1851,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>150</y>
+               <y>140</y>
                <width>141</width>
                <height>31</height>
               </rect>
@@ -1867,7 +1867,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>240</x>
-               <y>150</y>
+               <y>140</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -1892,7 +1892,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>310</x>
-               <y>110</y>
+               <y>100</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -1920,7 +1920,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>190</x>
-               <y>110</y>
+               <y>100</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -1945,7 +1945,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>190</y>
+               <y>180</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -1961,7 +1961,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>190</x>
-               <y>190</y>
+               <y>180</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -1983,7 +1983,7 @@ Position</string>
              <property name="geometry">
               <rect>
                <x>310</x>
-               <y>190</y>
+               <y>180</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -2241,6 +2241,91 @@ ETL tab</string>
              </property>
              <property name="value">
               <double>10.000000000000000</double>
+             </property>
+            </widget>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_3">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>550</y>
+              <width>431</width>
+              <height>151</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string>Display Subsampling</string>
+            </property>
+            <widget class="QComboBox" name="LiveSubSamplingComboBox">
+             <property name="geometry">
+              <rect>
+               <x>310</x>
+               <y>30</y>
+               <width>111</width>
+               <height>31</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_48">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>30</y>
+               <width>191</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>During Live display:</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_55">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>70</y>
+               <width>221</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>When Snapping Images:</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_56">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>110</y>
+               <width>201</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>During Acquisitions:</string>
+             </property>
+            </widget>
+            <widget class="QComboBox" name="SnapSubSamplingComboBox">
+             <property name="geometry">
+              <rect>
+               <x>310</x>
+               <y>70</y>
+               <width>111</width>
+               <height>31</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
+             <property name="geometry">
+              <rect>
+               <x>310</x>
+               <y>110</y>
+               <width>111</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="currentIndex">
+              <number>-1</number>
              </property>
             </widget>
            </widget>

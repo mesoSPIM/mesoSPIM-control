@@ -3,10 +3,13 @@ mesoSPIM Filterwheel classes
 ============================
 '''
 import time
-from PyQt5 import QtCore
 
-class mesoSPIM_DemoFilterWheel():
+'''PyQt5 Imports'''
+from PyQt5 import QtWidgets, QtCore, QtGui
+
+class mesoSPIM_DemoFilterWheel(QtCore.QObject):
     def __init__(self, filterdict):
+        super().__init__()
         self.filterdict = filterdict
 
     def _check_if_filter_in_filterdict(self, filter):

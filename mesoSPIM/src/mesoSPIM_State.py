@@ -89,7 +89,11 @@ class mesoSPIM_StateSingleton():
                             'camera_delay_%' : 10,
                             'camera_pulse_%' : 1,
                             'camera_exposure_time':0.02,
-                            'camera_line_interval':0.000075,}
+                            'camera_line_interval':0.000075,
+                            'camera_display_live_subsampling': 1, 
+                            'camera_display_snap_subsampling': 1, 
+                            'camera_display_acquisition_subsampling': 2,
+                            }
 
         def __len__(self):
             return len(self._state_dict) 

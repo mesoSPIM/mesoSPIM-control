@@ -10,8 +10,10 @@ import serial as Serial
 import io as Io
 import time
 
+'''PyQt5 Imports'''
+from PyQt5 import QtWidgets, QtCore, QtGui
 
-class LudlFilterwheel:
+class LudlFilterwheel(QtCore.QObject):
 
     """ Class to control a 10-position Ludl filterwheel
 
@@ -35,13 +37,15 @@ class LudlFilterwheel:
     """
 
     def __init__(self, COMport, filterdict, baudrate=9600):
+        super().__init__()
+
         self.COMport = COMport
         self.baudrate = baudrate
         self.filterdict = filterdict
         self.double_wheel = False
 
         ''' Delay in s for the wait until done function '''
-        self.wait_until_done_delay = 1
+        self.wait_until_done_delay = 0.5
 
         """
         If the first entry of the filterdict has a tuple

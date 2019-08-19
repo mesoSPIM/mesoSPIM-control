@@ -72,6 +72,7 @@ camera_parameters = {'x_pixels' : 2048,
                      'y_pixels' : 2048,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
                      'camera_id' : 0,
                      'sensor_mode' : 12,    # 12 for progressive
                      'defect_correct_mode': 2,
@@ -86,35 +87,49 @@ camera_parameters = {'x_pixels' : 2048,
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'PI_f_rot_and_Galil_xyz', # 'PI' or 'Debug'
-                    'startfocus' : 95000,
-                    'y_load_position': -40000,
-                    'y_unload_position': -90000,
+stage_parameters = {'stage_type' : 'PI_rotz_and_Galil_xyf', # 'PI' or 'Debug'
+                    'startfocus' : -10000,
+                    'y_load_position': -86000,
+                    'y_unload_position': -120000,
                     'x_max' : 51000,
                     'x_min' : -46000,
                     'y_max' : 0,
                     'y_min' : -160000,
-                    'z_max' : -2000,
-                    'z_min' : -97000,
+                    'z_max' : 99000,
+                    'z_min' : -99000,
                     'f_max' : 99000,
-                    'f_min' : 0,
+                    'f_min' : -99000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     'x_rot_position': 0,
-                    'y_rot_position': -58000,
-                    'z_rot_position': -35000,
+                    'y_rot_position': -121000,
+                    'z_rot_position': 66000,
                     }
 
-xyz_galil_parameters = {'COMport' : 'COM48',
-                    'x_encodercounts_per_um' : 2,
-                    'y_encodercounts_per_um' : 2,
-                    'z_encodercounts_per_um' : 2}
+'''Sample XYZ controller'''                    
+xyf_galil_parameters = {'port' : '192.168.1.43',#'or COM48'
+                        'x_encodercounts_per_um' : 2,
+                        'y_encodercounts_per_um' : 2,
+                        'f_encodercounts_per_um' : 2
+                        }
 
+'''PI Rotation + z controller'''
+pi_parameters = {'controllername' : 'C-884',
+                'stages' : ('M-061.PD','M-406.4PD'),
+                'refmode' : ('FRF',),
+                'serialnum' : ('118015799'), #0185500834
+                'velocity': {0: 22.5, 1: 2}, # in mm/s or °/s
+                }
+
+'''
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','M-061.PD'),
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
                  }
+'''
+
+
 
 '''
 Filterwheel configuration
@@ -225,4 +240,7 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
+'camera_display_live_subsampling': 1, 
+'camera_display_snap_subsampling': 1, 
+'camera_display_acquisition_subsampling': 2,
 }
