@@ -751,6 +751,9 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
 
+        ''' Setting PI velocities '''
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
+
         ''' Stage 5 referencing hack '''
         # print('Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Referencing status 5: ', self.pidevice.qFRF(5))
@@ -1022,6 +1025,9 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
         
+        ''' Setting PI velocities '''
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
+
         self.pidevice.FRF(1)
         print('M-061 Emergency referencing hack: Waiting for referencing move')
         logger.info('M-061 Emergency referencing hack: Waiting for referencing move')

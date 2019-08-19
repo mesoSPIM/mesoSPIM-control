@@ -89,8 +89,8 @@ Stage configuration
 '''
 stage_parameters = {'stage_type' : 'PI_rotz_and_Galil_xyf', # 'PI' or 'Debug'
                     'startfocus' : -10000,
-                    'y_load_position': -40000,
-                    'y_unload_position': -90000,
+                    'y_load_position': -86000,
+                    'y_unload_position': -120000,
                     'x_max' : 51000,
                     'x_min' : -46000,
                     'y_max' : 0,
@@ -102,22 +102,24 @@ stage_parameters = {'stage_type' : 'PI_rotz_and_Galil_xyf', # 'PI' or 'Debug'
                     'theta_max' : 999,
                     'theta_min' : -999,
                     'x_rot_position': 0,
-                    'y_rot_position': -58000,
-                    'z_rot_position': 50000,
+                    'y_rot_position': -121000,
+                    'z_rot_position': 66000,
                     }
 
 '''Sample XYZ controller'''                    
 xyf_galil_parameters = {'port' : '192.168.1.43',#'or COM48'
-                    'x_encodercounts_per_um' : 2,
-                    'y_encodercounts_per_um' : 2,
-                    'f_encodercounts_per_um' : 2}
+                        'x_encodercounts_per_um' : 2,
+                        'y_encodercounts_per_um' : 2,
+                        'f_encodercounts_per_um' : 2
+                        }
 
 '''PI Rotation + z controller'''
 pi_parameters = {'controllername' : 'C-884',
-'stages' : ('M-061.PD','M-406.4PD'),
-'refmode' : ('FRF',),
-'serialnum' : ('118015799'), #0185500834
-}
+                'stages' : ('M-061.PD','M-406.4PD'),
+                'refmode' : ('FRF',),
+                'serialnum' : ('118015799'), #0185500834
+                'velocity': {0: 22.5, 1: 2}, # in mm/s or °/s
+                }
 
 '''
 pi_parameters = {'controllername' : 'C-884',
