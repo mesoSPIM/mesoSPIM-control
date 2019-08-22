@@ -241,7 +241,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                               'z_end' : 'MarkZPositionDelegate(self)',
                               'z_step' : 'ZstepSpinBoxDelegate(self)',
                               'rot' : 'RotationSpinBoxDelegate(self)',
-                              'f_pos' : 'MarkFocusPositionDelegate(self)',
+                              'f_start' : 'MarkFocusPositionDelegate(self)',
+                              'f_end' : 'MarkFocusPositionDelegate(self)',
                               'filter' : 'ComboDelegate(self,[key for key in self.cfg.filterdict.keys()])',
                               'intensity' : 'SliderWithValueDelegate(self)',
                               'laser' : 'ComboDelegate(self,[key for key in self.cfg.laserdict.keys()])',
@@ -349,10 +350,20 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             print('No row selected!')
 
     def mark_current_focus(self):
+        ''' Marks both foci start focus '''
         row = self.get_first_selected_row()
 
         if row is not None:
-            self.model.setDataFromState(row, 'f_pos')
+            f_pos = self.state['position']['f_pos']
+            ''' Set f_start and f_end to the same values '''
+            column_index0 = self.model._table[0].keys().index('f_start')
+            index0 = self.model.createIndex(row, column_index0)
+            column_index1 = self.model._table[0].keys().index('f_end')
+            index1 = self.model.createIndex(row, column_index1)
+
+            self.model.setData(index0, f_pos)
+            self.model.setData(index1, f_pos)
+            
 
     def mark_current_rotation(self):
         row = self.get_first_selected_row()
