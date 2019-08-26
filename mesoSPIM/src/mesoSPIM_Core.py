@@ -68,6 +68,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_prepare_live = QtCore.pyqtSignal()
     sig_get_live_image = QtCore.pyqtSignal()
+    sig_get_snap_image = QtCore.pyqtSignal()
     sig_end_live = QtCore.pyqtSignal()
 
     ''' Movement-related signals: '''
@@ -263,6 +264,9 @@ class mesoSPIM_Core(QtCore.QObject):
                        'camera_display_live_subsampling',
                        'camera_display_snap_subsampling',
                        'camera_display_acquisition_subsampling'):
+                       'camera_pulse_%',
+                       'camera_sensor_mode',
+                       ):
                 self.sig_state_request.emit({key : value})
             
     def set_state(self, state):
@@ -272,6 +276,11 @@ class mesoSPIM_Core(QtCore.QObject):
             logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
             #logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
             self.live()
+
+        if state == 'snap':
+            self.state['state']='snap'
+            self.sig_state_request.emit({'state':'snap'})
+            self.snap()
         
         elif state == 'run_selected_acquisition':
             self.state['state']= 'run_selected_acquisition'
@@ -426,10 +435,21 @@ class mesoSPIM_Core(QtCore.QObject):
     Sub-Imaging modes
     '''
     def snap(self):
+        self.sig_prepare_live.emit()
         self.open_shutters()
         self.snap_image()
+        self.sig_get_snap_image.emit()
         self.close_shutters()
+
+        ''' Doubled code'''
+        start_number = self.state['start_number']
+        num_string = '000000'
+        filename = num_string[:-len(str(start_number))]+str(start_number)
+        self.write_snap_metadata(filename)
+
+        self.sig_end_live.emit()
         self.sig_finished.emit()
+        QtWidgets.QApplication.processEvents()
 
     def snap_image(self):
         '''Snaps a single image after updating the waveforms.
@@ -839,7 +859,50 @@ class mesoSPIM_Core(QtCore.QObject):
         allows hand controller to operate'''
         self.sig_state_request.emit({'stage_program' : 'execute'})
 
+    def write_snap_metadata(self, filename):
+            path = self.state['snap_folder']+'/'+filename
         ''' HICKUP DEBUGGING '''
+
+            metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
+
+            with open(metadata_path,'w') as file:
+                self.write_line(file, 'CFG')
+                self.write_line(file, 'Laser', self.state['laser'])
+                self.write_line(file, 'Intensity (%)', self.state['intensity'])
+                self.write_line(file, 'Zoom', self.state['zoom'])
+                self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
+                self.write_line(file, 'Filter', self.state['filter'])
+                self.write_line(file, 'Shutter', self.state['shutterconfig'])
+                self.write_line(file)
+                self.write_line(file, 'POSITION')
+                self.write_line(file, 'x_pos', self.state['position']['x_pos'])
+                self.write_line(file, 'y_pos', self.state['position']['y_pos'])
+                self.write_line(file, 'z_pos', self.state['position']['z_pos'])
+                self.write_line(file, 'f_pos', self.state['position']['f_pos'])
+                self.write_line(file)
+
+                ''' Attention: change to true ETL values ASAP '''
+                self.write_line(file,'ETL PARAMETERS')
+                self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
+                self.write_line(file,'etl_l_offset', self.state['etl_l_offset'])
+                self.write_line(file,'etl_l_amplitude', self.state['etl_l_amplitude'])
+                self.write_line(file,'etl_r_offset', self.state['etl_r_offset'])
+                self.write_line(file,'etl_r_amplitude', self.state['etl_r_amplitude'])
+                self.write_line(file)
+                self.write_line(file, 'GALVO PARAMETERS')
+                self.write_line(file, 'galvo_l_frequency',self.state['galvo_l_frequency'])
+                self.write_line(file, 'galvo_l_amplitude',self.state['galvo_l_amplitude'])
+                self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
+                self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+                self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
+                self.write_line(file)
+                self.write_line(file, 'CAMERA PARAMETERS')
+                self.write_line(file, 'camera_type', self.cfg.camera)
+                self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
+                self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
+                self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
+                self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
+
 
     def collect_troubleshooting_data(self, acq):
         self.hickup_delta_z = self.z_end_measured - acq['z_end']

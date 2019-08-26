@@ -5,6 +5,8 @@ import os
 import time
 import numpy as np
 
+import tifffile
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -261,6 +263,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
         self.parent.sig_prepare_live.connect(self.prepare_live, type = 3)
         self.parent.sig_get_live_image.connect(self.get_live_image)
+        self.parent.sig_get_snap_image.connect(self.get_snap_image)
         self.parent.sig_end_live.connect(self.end_live, type=3)
 
         ''' Initialize camera '''
@@ -322,10 +325,43 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     def close(self):
         self.hcam.shutdown()
 
+    @QtCore.pyqtSlot(dict)
+    def state_request_handler(self, dict):
+        for key, value in zip(dict.keys(),dict.values()):
+            print('Camera Thread: State request: Key: ', key, ' Value: ', value)
+            '''
+            The request handling is done with exec() to write fewer lines of
+            code.
+            '''
+            if key in ('camera_exposure_time','camera_line_interval','state','camera_sensor_mode'):
+                exec('self.set_'+key+'(value)')
+
+    def set_state(self, requested_state):
+        pass
+
+        # if requested_state == ('live' or 'run_selected_acquisition' or 'run_acquisition_list'):
+        #     self.live()
+        # elif requested_state == 'idle':
+        #     self.stop()
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
     @QtCore.pyqtSlot()
     def stop(self):
         ''' Stops acquisition '''
         self.stopflag = True
+
+    def set_camera_sensor_mode(self, mode):
+        if mode == 'Area':
+            self.hcam.setPropertyValue("sensor_mode", 1)
+        elif mode == 'ASLM':
+            self.hcam.setPropertyValue("sensor_mode", 12)
+        else:
+            print('Camera mode not support')
 
     def set_camera_exposure_time(self, time):
         '''
@@ -496,3 +532,34 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
         logger.info(f'Camera: Finished Live Mode: Framerate: {framerate}')
         
+
+    def get_snap_image(self):
+        [frames, _] = self.hcam.getFrames()
+
+        for aframe in frames:
+            image = aframe.getData()
+            image = np.reshape(image, (-1, 2048))
+            image = np.rot90(image)
+
+            start_number = self.state['start_number']
+            num_string = '000000'
+            filename = num_string[:-len(str(start_number))]+str(start_number) + '.tif'
+
+            path = self.state['snap_folder']+'/'+filename
+
+            #self.xy_image = np.memmap(path, mode = "write", dtype = np.uint16, shape = 2048*2048)
+            
+            self.sig_camera_frame.emit(image)
+
+            tifffile.imsave(path, image, photometric='minisblack')
+
+            #image = image.flatten()
+            #self.xy_image[0:2048*2048] = image
+
+            self.state['start_number'] = self.state['start_number'] + 1
+
+            #del self.xy_image
+
+# class mesoSPIM_DemoCamera(mesoSPIM_Camera):
+#     def __init__(self, config, parent = None):
+#         super().__init__(config, parent)

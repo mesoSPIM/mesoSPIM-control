@@ -315,8 +315,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
-        # self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
-        # self.SnapFolderIndicator.setText(self.state['snap_folder'])
+        self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
+        self.SnapFolderIndicator.setText(self.state['snap_folder'])
         
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
@@ -329,8 +329,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.LaserIntensitySlider, 'intensity',1),
             (self.CameraExposureTimeSpinBox, 'camera_exposure_time',1000),
             (self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
-            # (self.CameraTriggerDelaySpinBox,'camera_delay_%',1),
-            # (self.CameraTriggerPulseLengthSpinBox, 'camera_pulse_%',1),
+            (self.CameraTriggerDelaySpinBox,'camera_delay_%',1),
+            (self.CameraTriggerPulseLengthSpinBox, 'camera_pulse_%',1),
             (self.SweeptimeSpinBox,'sweeptime',1000),
             (self.LeftLaserPulseDelaySpinBox,'laser_l_delay_%',1),
             (self.RightLaserPulseDelaySpinBox,'laser_r_delay_%',1),
@@ -370,6 +370,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
         self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
         self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
+        self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.LiveSubSamplingComboBox,subsampling_list,'camera_display_live_subsampling', int_conversion = True)
         self.connect_combobox_to_state_parameter(self.SnapSubSamplingComboBox,subsampling_list,'camera_display_snap_subsampling', int_conversion = True)
         self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
@@ -457,6 +458,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.block_signals_from_controls(False)
 
     def run_snap(self):
+        print('Snapping image')
         self.sig_state_request.emit({'state':'snap'})
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
@@ -515,7 +517,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def enable_mode_control_buttons(self, boolean):
         self.LiveButton.setEnabled(boolean)
-        #self.SnapButton.setEnabled(boolean)
+        self.SnapButton.setEnabled(boolean)
         self.RunSelectedAcquisitionButton.setEnabled(boolean)
         self.RunAcquisitionListButton.setEnabled(boolean)
         self.VisualModeButton.setEnabled(boolean)
@@ -593,12 +595,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def choose_snap_folder(self):
         pass
 
-        # path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
 
-        # if path:
-        #     self.state['snap_folder'] = path
-        #     self.SnapFolderIndicator.setText(path)
+        if path:
+            self.state['snap_folder'] = path
+            self.SnapFolderIndicator.setText(path)
 
-        #     logger.info(f'Main Window: Chosen Snap Folder: {path}')    
+            print('Chosen Snap Folder:', path)
+
+            #self.sig_state_request.emit({'ETL_cfg_file' : path})
+    
 
     

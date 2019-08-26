@@ -198,6 +198,7 @@ startup = {
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'filepath' : '/tmp/file.raw',
 'folder' : '/tmp/',
+'snap_folder' : '/tmp/',
 'file_prefix' : '',
 'start_number' : 1,
 'file_suffix' : '000001',
@@ -243,4 +244,5 @@ startup = {
 'camera_display_live_subsampling': 1, 
 'camera_display_snap_subsampling': 1, 
 'camera_display_acquisition_subsampling': 2,
+'camera_sensor_mode':'ASLM',
 }
