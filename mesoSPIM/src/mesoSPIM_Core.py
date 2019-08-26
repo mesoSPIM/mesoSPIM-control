@@ -27,7 +27,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.shutters.Demo_Shutter import Demo_Shutter
 from .devices.shutters.NI_Shutter import NI_Shutter
 
-from .mesoSPIM_Camera import mesoSPIM_HamamatsuCamera
+from .mesoSPIM_Camera import mesoSPIM_HamamatsuCamera, mesoSPIM_Camera
 
 from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
@@ -122,7 +122,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
-        self.camera_worker = mesoSPIM_HamamatsuCamera(self)
+        #self.camera_worker = mesoSPIM_HamamatsuCamera(self)
+        self.camera_worker = mesoSPIM_Camera(self)
         #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)

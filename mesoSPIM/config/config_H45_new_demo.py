@@ -88,7 +88,7 @@ camera_parameters = {'x_pixels' : 2048,
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'PI_rotz_and_Galil_xyf', # 'PI' or 'Debug'
+stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'Debug'
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -136,7 +136,7 @@ pi_parameters = {'controllername' : 'C-884',
 Filterwheel configuration
 '''
 
-filterwheel_parameters = {'filterwheel_type' : 'Ludl',
+filterwheel_parameters = {'filterwheel_type' : 'Ludl', 
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
