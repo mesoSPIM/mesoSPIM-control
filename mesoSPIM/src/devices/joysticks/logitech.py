@@ -9,8 +9,6 @@ you need something with an eventloop (e.g. a QApplication) even for testing.
 '''
 from PyQt5 import QtCore
 
-import pywinusb.hid as hid
-
 class FarmSimulatorSidePanel(QtCore.QObject):
     '''
 
@@ -41,6 +39,9 @@ class FarmSimulatorSidePanel(QtCore.QObject):
 
     def __init__(self):
         super().__init__()
+
+        import pywinusb.hid as hid
+
         self.hid_filter = hid.HidDeviceFilter(vendor_id = 0x0738, product_id = 0x2218)
         self.hid_device = self.hid_filter.get_devices()
         self.joystick = self.hid_device[0]

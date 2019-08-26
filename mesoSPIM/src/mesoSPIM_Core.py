@@ -34,7 +34,7 @@ from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
 # from .mesoSPIM_DemoSerial import mesoSPIM_Serial
-from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator
+from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 
@@ -161,7 +161,11 @@ class mesoSPIM_Core(QtCore.QObject):
         #logger.info(f'Core: Serial Thread priority: {self.serial_thread.priority()}')
 
         ''' Setting waveform generation up '''
-        self.waveformer = mesoSPIM_WaveFormGenerator(self)
+        if self.cfg.waveformgeneration == 'NI':
+            self.waveformer = mesoSPIM_WaveFormGenerator(self)
+        elif self.cfg.waveformgeneration == 'DemoWaveFormGeneration':
+            self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
+
         self.waveformer.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.sig_state_request.connect(self.waveformer.state_request_handler)
         self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)

@@ -9,6 +9,8 @@ PXI6733 is responsible for the lasers
 PXI6259 is responsible for the shutters, ETL waveforms and galvo waveforms
 '''
 
+waveformgeneration = 'DemoWaveFormGeneration'
+
 acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'camera_trigger_source' : '/PXI6259/PFI0',
                         'camera_trigger_out_line' : '/PXI6259/ctr0',
@@ -19,7 +21,7 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
 
 sidepanel = 'Demo' # FarmSimulator
 
-laser = 'NI' # Demo
+laser = 'Demo' # Demo
 
 '''The laserdict contains the digital enable lines for the SOLE-6'''
 laserdict = {'405 nm': 'PXI6733/port0/line2',
@@ -56,7 +58,7 @@ galvo_etl_designation = {'Galvo-L' : 0,
 Shutter configuration
 '''
 
-shutter = 'NI' # Demo
+shutter = 'Demo' # Demo
 shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
               'shutter_right' : 'PXI6259/port2/line0'}
 
@@ -69,8 +71,8 @@ Camera configuration
 # camera = 'HamamatsuOrcaFlash' # 'DemoCamera'
 camera = 'DemoCamera'
 
-camera_parameters = {'x_pixels' : 2048,
-                     'y_pixels' : 2048,
+camera_parameters = {'x_pixels' : 1024,
+                     'y_pixels' : 1024,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
@@ -107,7 +109,7 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'Debug'
                     'z_rot_position': 66000,
                     }
 
-'''Sample XYZ controller'''                    
+'''Sample XYZ controller'''
 xyf_galil_parameters = {'port' : '192.168.1.43',#'or COM48'
                         'x_encodercounts_per_um' : 2,
                         'y_encodercounts_per_um' : 2,
@@ -136,7 +138,7 @@ pi_parameters = {'controllername' : 'C-884',
 Filterwheel configuration
 '''
 
-filterwheel_parameters = {'filterwheel_type' : 'Ludl', 
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel',
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
@@ -154,7 +156,7 @@ filterdict = {'Empty-Alignment' : 0, # Every config should contain this
 '''
 Zoom configuration
 '''
-zoom_parameters = {'zoom_type' : 'Dynamixel',
+zoom_parameters = {'zoom_type' : 'DemoZoom',
                    'servo_id' :  4,
                    'COMport' : 'COM38',
                    'baudrate' : 1000000}
@@ -241,8 +243,8 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
-'camera_display_live_subsampling': 1, 
-'camera_display_snap_subsampling': 1, 
+'camera_display_live_subsampling': 1,
+'camera_display_snap_subsampling': 1,
 'camera_display_acquisition_subsampling': 2,
 'camera_sensor_mode':'ASLM',
 }
