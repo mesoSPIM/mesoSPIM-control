@@ -482,8 +482,7 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         try:
             self.hcam.stopAcquisition()
             del self.xy_stack
-            #print('Acq finished')
-            #print("Saved", self.cur_image + 1, "frames")
+            
         except:
             pass
             #print('Camera: Error when finishing acquisition.')
@@ -491,12 +490,25 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.end_time =  time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
         logger.info(f'Camera: Framerate: {framerate}')
-        #print('Framerate: ', framerate)
         self.sig_finished.emit()
 
     @QtCore.pyqtSlot()
     def snap_image(self):
-        pass
+        [frames, _] = self.hcam.getFrames()
+
+        for aframe in frames:
+            image = aframe.getData()
+            image = np.reshape(image, (-1, 2048))
+            image = np.rot90(image)
+
+            timestr = time.strftime("%Y%m%d-%H%M%S")
+            filename = timestr + '.tif'
+
+            path = self.state['snap_folder']+'/'+filename
+         
+            self.sig_camera_frame.emit(image)
+
+            tifffile.imsave(path, image, photometric='minisblack')
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
@@ -529,22 +541,4 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
         logger.info(f'Camera: Finished Live Mode: Framerate: {framerate}')
         
-
-    def get_snap_image(self):
-        [frames, _] = self.hcam.getFrames()
-
-        for aframe in frames:
-            image = aframe.getData()
-            image = np.reshape(image, (-1, 2048))
-            image = np.rot90(image)
-
-            timestr = time.strftime("%Y%m%d-%H%M%S")
-            filename = timestr + '.tif'
-
-            path = self.state['snap_folder']+'/'+filename
-         
-            self.sig_camera_frame.emit(image)
-
-            tifffile.imsave(path, image, photometric='minisblack')
-
             
