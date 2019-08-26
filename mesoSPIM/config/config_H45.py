@@ -65,9 +65,7 @@ shutteroptions = ('Left','Right','Both')
 
 '''
 Camera configuration
-'''
-# camera = 'HamamatsuOrcaFlash' # 'DemoCamera'
-camera = 'DemoCamera'
+camera = 'HamamatsuOrcaFlash' # 'DemoCamera'
 
 camera_parameters = {'x_pixels' : 2048,
                      'y_pixels' : 2048,
@@ -84,6 +82,16 @@ camera_parameters = {'x_pixels' : 2048,
                      'trigger_polarity' : 2, # positive pulse
                      'trigger_source' : 2, # external
                     }
+'''
+
+camera = 'PhotometricsIris15' # 'DemoCamera'
+
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
+                     'x_pixel_size_in_microns' : 4.25,
+                     'y_pixel_size_in_microns' : 4.25,
+                     'subsampling' : [1,2,4],
+                     }
 
 '''
 Stage configuration

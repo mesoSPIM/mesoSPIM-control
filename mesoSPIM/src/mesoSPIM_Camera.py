@@ -41,6 +41,9 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
         self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
 
+        self.camera_line_interval = self.cfg.startup['camera_line_interval']
+        self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
+
         self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
         self.camera_display_snap_subsampling = self.cfg.startup['camera_display_snap_subsampling'] 
         self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
@@ -60,7 +63,9 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         ''' Set up the camera '''
         if self.cfg.camera == 'HamamatsuOrcaFlash':
-            self.camera = mesoSPIM_HamamatsuCamera(self)
+            self.camera = mesoSPIM_HamamatsuCamera2(self)
+        elif self.cfg.camera == 'PhotometricsIris15':
+            self.camera = mesoSPIM_PhotometricsCamera(self)
         elif self.cfg.camera == 'DemoCamera':
             self.camera = mesoSPIM_DemoCamera(self)
         
@@ -72,6 +77,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         except Exception as error:
             logger.info('Error while closing the camera:', str(error))
 
+    @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
             # print('Camera Thread: State request: Key: ', key, ' Value: ', value)
@@ -93,6 +99,11 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     def set_state(self, value):
         pass
+
+    @QtCore.pyqtSlot()
+    def stop(self):
+        ''' Stops acquisition '''
+        self.stopflag = True
 
     def set_camera_exposure_time(self, time):
         '''
@@ -166,6 +177,7 @@ class mesoSPIM_Camera(QtCore.QObject):
             if self.cur_image + 1 < self.max_frame:
                 images = self.camera.get_images_in_series()
                 for image in images:
+                    image = np.rot90(image)
                     self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,0:self.y_pixels:self.camera_display_acquisition_subsampling])
                     image = image.flatten()
                     self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
@@ -242,6 +254,9 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         self.y_pixels = self.cfg.camera_parameters['y_pixels']
         self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
         self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
+
+        self.camera_line_interval = self.cfg.startup['camera_line_interval']
+        self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
     
     def open_camera(self):
         pass
@@ -289,23 +304,114 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
     def close_camera(self):
         logger.info('Closed Demo Camera')
 
+    def _create_random_image(self):
+        return np.random.randint(low=0, high=2**16, size=(self.x_pixels,self.y_pixels), dtype='l')
+
     def get_images_in_series(self):
-        return [np.random.randint(low=0, high=2**16, size=(self.x_pixels,self.y_pixels), dtype='l')]
+        return [self._create_random_image()]
 
     def get_image(self):
-        '''Should return a single numpy array'''
-        image = np.random.randint(low=0, high=2**16, size=(self.x_pixels,self.y_pixels), dtype='l')
-        return image
+        return self._create_random_image()
+        
+    def get_live_image(self):
+        return [self._create_random_image()]
+        
+class mesoSPIM_HamamatsuCamera2(mesoSPIM_GenericCamera):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
+    def open_camera(self):
+        ''' Hamamatsu-specific code '''
+        self.camera_id = self.cfg.camera_parameters['camera_id']
+        
+        from .devices.cameras.hamamatsu import hamamatsu_camera as cam
+        # if self.cfg.camera == 'HamamatsuOrcaFlash':
+        self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
+        ''' Debbuging information '''
+        logger.info(f'Initialized Hamamatsu camera model: {self.hcam.getModelInfo(self.camera_id)}')
+
+        ''' Ideally, the Hamamatsu Camera properties should be set in this order '''
+        ''' mesoSPIM mode parameters '''
+        self.hcam.setPropertyValue("sensor_mode", self.cfg.camera_parameters['sensor_mode'])
+
+        self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
+        self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
+        self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
+        self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
+
+        self.hcam.setPropertyValue("trigger_active", self.cfg.camera_parameters['trigger_active'])
+        self.hcam.setPropertyValue("trigger_mode", self.cfg.camera_parameters['trigger_mode']) # it is unclear if this is the external lightsheeet mode - how to check this?
+        self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
+        self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
+        self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
+
+    def close_camera(self):
+        self.hcam.shutdown()
+
+    def set_camera_sensor_mode(self, mode):
+        if mode == 'Area':
+            self.hcam.setPropertyValue("sensor_mode", 1)
+        elif mode == 'ASLM':
+            self.hcam.setPropertyValue("sensor_mode", 12)
+        else:
+            print('Camera mode not supported')
+
+    def set_exposure_time(self, time):
+        self.hcam.setPropertyValue("exposure_time", time)
+    
+    def set_line_interval(self, time):
+        self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
+    
+    def initialize_image_series(self):
+        self.hcam.startAcquisition()
+
+    def get_images_in_series(self):
+        [frames, _] = self.hcam.getFrames()
+        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        return images  
+
+    def close_image_series(self):
+        self.hcam.stopAcquisition()
+    
+    def get_image(self):
+        [frames, _] = self.hcam.getFrames()
+        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        return images[0]
+
+    def initialize_live_mode(self):
+        self.hcam.setACQMode(mode = "run_till_abort")
+        self.hcam.startAcquisition()
 
     def get_live_image(self):
-        return [np.random.randint(low=0, high=2**16, size=(self.x_pixels,self.y_pixels), dtype='l')]
+        [frames, _] = self.hcam.getFrames()
+        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        return images 
 
+    def close_live_mode(self):
+        self.hcam.stopAcquisition()
 
-class mesoSPIM_PhotometricsCamera(QtCore.QObject):
+class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
+        super().__init__(parent)
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
+    def open_camera(self):
         from pyvcam import pvc
         from pyvcam import constants as const
         from pyvcam.camera import Camera
+
+        self.const = const
+        self.pvc = pvc
+
+        pvc.init_pvcam()
+        self.pvcam = [cam for cam in Camera.detect_camera()][0]
+
+        self.pvcam.open()
+        self.pvcam.speed_table_index = 0
+        self.pvcam.exp_mode = "Ext Trig Internal"
+
+        self.pvcam.set_param(param_id = self.const.PARAM_SCAN_MODE, value = 0)
         '''
         pvc.init_pvcam()
         self.cam = [cam for cam in Camera.detect_camera()][0]
@@ -319,14 +425,19 @@ class mesoSPIM_PhotometricsCamera(QtCore.QObject):
         self.cam.set_param(param_id = PARAM_SCAN_LINE_DELAY, value = 4)
         '''
 
-    def __del__(self):
-        self.cam.close()
-        pvc.uninit_pvcam()
+    def close_camera(self):
+        self.pvcam.close()
+        self.pvc.uninit_pvcam()
 
     def get_image(self):
         '''Exposure time in ms'''
-        image = self.cam.get_frame(exp_time=20)
+        return self.pvcam.get_frame(exp_time=self.camera_exposure_time*1000)
 
+    def get_images_in_series(self):
+        return [self.pvcam.get_frame(exp_time=self.camera_exposure_time*1000)]
+
+    def get_live_image(self):
+        return [self.pvcam.get_frame(exp_time=self.camera_exposure_time*1000)]
 
 class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
@@ -424,16 +535,6 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
 
     def close_camera(self):
         self.hcam.shutdown()
-
-    @QtCore.pyqtSlot(dict)
-    def state_request_handler(self, dict):
-        for key, value in zip(dict.keys(),dict.values()):
-            '''
-            The request handling is done with exec() to write fewer lines of
-            code.
-            '''
-            if key in ('camera_exposure_time','camera_line_interval','state','camera_sensor_mode'):
-                exec('self.set_'+key+'(value)')
 
     def set_state(self, requested_state):
         pass
