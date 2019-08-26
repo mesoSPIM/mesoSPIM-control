@@ -263,8 +263,7 @@ class mesoSPIM_Core(QtCore.QObject):
                        'camera_pulse_%',
                        'camera_display_live_subsampling',
                        'camera_display_snap_subsampling',
-                       'camera_display_acquisition_subsampling'):
-                       'camera_pulse_%',
+                       'camera_display_acquisition_subsampling',
                        'camera_sensor_mode',
                        ):
                 self.sig_state_request.emit({key : value})
@@ -442,9 +441,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.close_shutters()
 
         ''' Doubled code'''
-        start_number = self.state['start_number']
-        num_string = '000000'
-        filename = num_string[:-len(str(start_number))]+str(start_number)
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        filename = timestr + '.tif'
+        
         self.write_snap_metadata(filename)
 
         self.sig_end_live.emit()
@@ -861,7 +860,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def write_snap_metadata(self, filename):
             path = self.state['snap_folder']+'/'+filename
-        ''' HICKUP DEBUGGING '''
 
             metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
 
@@ -903,6 +901,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
                 self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
 
+    ''' HICKUP DEBUGGING '''
 
     def collect_troubleshooting_data(self, acq):
         self.hickup_delta_z = self.z_end_measured - acq['z_end']

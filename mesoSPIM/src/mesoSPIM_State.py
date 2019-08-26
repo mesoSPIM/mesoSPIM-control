@@ -50,7 +50,6 @@ class mesoSPIM_StateSingleton():
                             'folder' : '/tmp/',
                             'snap_folder' : '/tmp/',
                             'file_prefix' : '',
-                            'start_number' : 1,
                             'file_suffix' : '000001',
                             'zoom' : '1x',
                             'pixelsize' : 6.55,
@@ -94,10 +93,8 @@ class mesoSPIM_StateSingleton():
                             'camera_display_live_subsampling': 1, 
                             'camera_display_snap_subsampling': 1, 
                             'camera_display_acquisition_subsampling': 2,
-                            }
-                            'camera_line_interval':0.000075,
                             'camera_sensor_mode':'ASLM',
-                            'camera_slit_size':64,}
+                            }
 
         def __len__(self):
             return len(self._state_dict) 

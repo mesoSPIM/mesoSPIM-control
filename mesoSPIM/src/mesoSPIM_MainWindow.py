@@ -458,7 +458,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.block_signals_from_controls(False)
 
     def run_snap(self):
-        print('Snapping image')
         self.sig_state_request.emit({'state':'snap'})
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)

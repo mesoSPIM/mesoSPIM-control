@@ -200,7 +200,6 @@ startup = {
 'folder' : '/tmp/',
 'snap_folder' : '/tmp/',
 'file_prefix' : '',
-'start_number' : 1,
 'file_suffix' : '000001',
 'zoom' : '1x',
 'pixelsize' : 6.55,

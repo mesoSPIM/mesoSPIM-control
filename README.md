@@ -37,6 +37,7 @@ In addition (for Anaconda), the following packages need to be installed:
 * pyqtgraph  (`python -m pip install pyqtgraph`)
 * pywinusb  (`python -m pip install pywinusb`)
 * PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`)
+* tifffile (`python -m pip install tifffile`)
 
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`

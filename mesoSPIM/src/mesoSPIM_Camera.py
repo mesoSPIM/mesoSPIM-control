@@ -267,12 +267,12 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
         self.parent.sig_end_live.connect(self.end_live, type=3)
 
         ''' Initialize camera '''
-        self.open()
-        
+        self.open_camera()
+                
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def __del__(self):
-        self.close()
+        self.close_camera()
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -294,41 +294,38 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
                 if value == 'live':
                     logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
-    def open(self):
+    def open_camera(self):
         ''' Hamamatsu-specific code '''
         self.camera_id = self.cfg.camera_parameters['camera_id']
 
-        if self.cfg.camera == 'HamamatsuOrcaFlash':
-            self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
-            ''' Debbuging information '''
-            logger.info(f'Hamamatsu Camera model: {self.hcam.getModelInfo(self.camera_id)}')
-            #print("camera 0 model:", self.hcam.getModelInfo(self.camera_id))
+        # if self.cfg.camera == 'HamamatsuOrcaFlash':
+        self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
+        ''' Debbuging information '''
+        logger.info(f'Hamamatsu Camera model: {self.hcam.getModelInfo(self.camera_id)}')
+        #print("camera 0 model:", self.hcam.getModelInfo(self.camera_id))
 
-            ''' Ideally, the Hamamatsu Camera properties should be set in this order '''
-            ''' mesoSPIM mode parameters '''
-            self.hcam.setPropertyValue("sensor_mode", self.cfg.camera_parameters['sensor_mode'])
+        ''' Ideally, the Hamamatsu Camera properties should be set in this order '''
+        ''' mesoSPIM mode parameters '''
+        self.hcam.setPropertyValue("sensor_mode", self.cfg.camera_parameters['sensor_mode'])
 
-            ''' mesoSPIM mode parameters: OLD '''
-            # self.hcam.setPropertyValue("sensor_mode", 12) # 12 for progressive
+        self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
+        self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
+        self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
+        self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
 
-            self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
-            self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
-            self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
-            self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
+        self.hcam.setPropertyValue("trigger_active", self.cfg.camera_parameters['trigger_active'])
+        self.hcam.setPropertyValue("trigger_mode", self.cfg.camera_parameters['trigger_mode']) # it is unclear if this is the external lightsheeet mode - how to check this?
+        self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
+        self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
+        self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
 
-            self.hcam.setPropertyValue("trigger_active", self.cfg.camera_parameters['trigger_active'])
-            self.hcam.setPropertyValue("trigger_mode", self.cfg.camera_parameters['trigger_mode']) # it is unclear if this is the external lightsheeet mode - how to check this?
-            self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
-            self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
-            self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
-
-    def close(self):
+    def close_camera(self):
         self.hcam.shutdown()
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            print('Camera Thread: State request: Key: ', key, ' Value: ', value)
+            # print('Camera Thread: State request: Key: ', key, ' Value: ', value)
             '''
             The request handling is done with exec() to write fewer lines of
             code.
@@ -541,25 +538,13 @@ class mesoSPIM_HamamatsuCamera(QtCore.QObject):
             image = np.reshape(image, (-1, 2048))
             image = np.rot90(image)
 
-            start_number = self.state['start_number']
-            num_string = '000000'
-            filename = num_string[:-len(str(start_number))]+str(start_number) + '.tif'
+            timestr = time.strftime("%Y%m%d-%H%M%S")
+            filename = timestr + '.tif'
 
             path = self.state['snap_folder']+'/'+filename
-
-            #self.xy_image = np.memmap(path, mode = "write", dtype = np.uint16, shape = 2048*2048)
-            
+         
             self.sig_camera_frame.emit(image)
 
             tifffile.imsave(path, image, photometric='minisblack')
 
-            #image = image.flatten()
-            #self.xy_image[0:2048*2048] = image
-
-            self.state['start_number'] = self.state['start_number'] + 1
-
-            #del self.xy_image
-
-# class mesoSPIM_DemoCamera(mesoSPIM_Camera):
-#     def __init__(self, config, parent = None):
-#         super().__init__(config, parent)
+            
