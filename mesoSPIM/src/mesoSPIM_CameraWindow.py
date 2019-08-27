@@ -44,11 +44,13 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
+        ''' Debugging info
 
         logger.info('x_image_width: '+str(self.x_image_width))
         logger.info('y_image_width: '+str(self.y_image_width))
         logger.info('x_image_width/2: '+str(self.x_image_width/2))
         logger.info('y_image_width/2: '+str(self.y_image_width/2))
+        '''
 
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "r", 'width': 1})
@@ -89,10 +91,13 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.hLine.setPos(self.y_image_width/2) # Stating a single value works for orthogonal lines
             self.graphicsView.addItem(self.vLine, ignoreBounds=True)
             self.graphicsView.addItem(self.hLine, ignoreBounds=True)
+            ''' Debugging info
+            
             logger.info('x_image_width: '+str(self.x_image_width))
             logger.info('y_image_width: '+str(self.y_image_width))
             logger.info('x_image_width/2: '+str(self.x_image_width/2))
             logger.info('y_image_width/2: '+str(self.y_image_width/2))
+            '''
         else:
             self.draw_crosshairs()
 
