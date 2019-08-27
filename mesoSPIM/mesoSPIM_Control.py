@@ -85,6 +85,7 @@ def main():
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
+    ex.display_icons()
 
     sys.exit(app.exec_())
 
