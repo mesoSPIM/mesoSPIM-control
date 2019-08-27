@@ -419,9 +419,38 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 
         self.pvcam.open()
         self.pvcam.speed_table_index = 0
-        self.pvcam.exp_mode = "Ext Trig Internal"
+        self.pvcam.exp_mode = "Strobed"
 
-        self.pvcam.set_param(param_id = self.const.PARAM_SCAN_MODE, value = 0)
+        self.pvcam.set_param(param_id = self.const.PARAM_EXP_TIME, value = 20)
+
+        # Exposure mode options: {'Internal Trigger': 1792, 'Edge Trigger': 2304, 'Trigger first': 2048}
+        # self.pvcam.set_param(param_id = self.const.PARAM_EXPOSURE_MODE, value = 2304)
+
+        # Exposure out mode options: {'First Row': 0, 'All Rows': 1, 'Any Row': 2, 'Rolling Shutter': 3, 'Line Output': 4}
+        # self.pvcam.set_param(param_id = self.const.PARAM_EXPOSE_OUT_MODE, value = 3)
+
+        # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
+        self.pvcam.set_param(param_id = self.const.PARAM_SCAN_MODE, value = 1)
+        # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
+        self.pvcam.set_param(param_id = self.const.PARAM_SCAN_DIRECTION, value = 1)
+        # 10.26 us x factor 
+        # factor = 6 equals 71.82 us
+        self.pvcam.set_param(param_id = self.const.PARAM_SCAN_LINE_DELAY, value = 6)
+        
+        self.pvcam.set_param(param_id = self.const.PARAM_EXP_TIME, value = 20000)
+
+        logger.info('Exposure time: '+str(self.pvcam.get_param(param_id = self.const.PARAM_EXP_TIME)))
+        logger.info('Exposure time resolution: '+str(self.pvcam.get_param(param_id = self.const.PARAM_EXP_RES)))
+        logger.info('Exposure mode: '+str(self.pvcam.get_param(param_id = self.const.PARAM_EXPOSURE_MODE)))
+        logger.info('Exposure mode options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_EXPOSURE_MODE)))
+        logger.info('Exposure out mode: '+str(self.pvcam.get_param(param_id = self.const.PARAM_EXPOSE_OUT_MODE)))
+        logger.info('Exposure out mode options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_EXPOSE_OUT_MODE)))
+        logger.info('Scan mode: '+str(self.pvcam.get_param(param_id = self.const.PARAM_SCAN_MODE)))
+        logger.info('Scan mode options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_SCAN_MODE)))
+        logger.info('Scan direction: '+str(self.pvcam.get_param(param_id = self.const.PARAM_SCAN_DIRECTION)))
+        logger.info('Scan direction options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_SCAN_DIRECTION)))
+        logger.info('Line delay: '+str(self.pvcam.get_param(param_id = self.const.PARAM_SCAN_LINE_DELAY)))
+        logger.info('Line time: '+str(self.pvcam.get_param(param_id = self.const.PARAM_SCAN_LINE_TIME)))
         '''
         pvc.init_pvcam()
         self.cam = [cam for cam in Camera.detect_camera()][0]
@@ -434,6 +463,10 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 
         self.cam.set_param(param_id = PARAM_SCAN_LINE_DELAY, value = 4)
         '''
+    '''
+    def set_exposure_time(self, time):
+        self.pvcam.set_param(param_id = self.const.PARAM_EXP_TIME, value = int(time*1000))
+    '''
 
     def close_camera(self):
         self.pvcam.close()
@@ -441,13 +474,16 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 
     def get_image(self):
         '''Exposure time in ms'''
-        return self.pvcam.get_frame(exp_time=self.camera_exposure_time*1000)
+        logger.info('Exposure time: '+str(self.camera_exposure_time*1000))
+        return self.pvcam.get_frame()
 
     def get_images_in_series(self):
-        return [self.pvcam.get_frame(exp_time=self.camera_exposure_time*1000)]
+        logger.info('Exposure time: '+str(self.camera_exposure_time*1000))
+        return [self.pvcam.get_frame()]
 
     def get_live_image(self):
-        return [self.pvcam.get_frame(exp_time=self.camera_exposure_time*1000)]
+        logger.info('Exposure time: '+str(self.camera_exposure_time*1000))
+        return [self.pvcam.get_frame()]
 
 class mesoSPIM_HamamatsuCamera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
