@@ -125,7 +125,7 @@ camera_parameters = {'x_pixels' : 2048,
 
 
 '''
-camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsCamera'
+camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsIris15'
 
 camera_parameters = {'x_pixels' : 1024,
                      'y_pixels' : 1024,
