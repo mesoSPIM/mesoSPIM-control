@@ -4,7 +4,8 @@ import numpy as np
 mesoSPIM configuration file.
 
 Use this file as a starting point to set up all mesoSPIM hardware by replacing the 'Demo' designations 
-with real hardware.  
+with real hardware one-by-one. Make sure to rename your new configuration file to a different filename
+(The extension has to be .py).
 '''
 
 '''
@@ -174,21 +175,6 @@ pi_parameters = {'controllername' : 'C-884',
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'), 
 '''
-
-'''Sample XYZ controller'''
-xyf_galil_parameters = {'port' : '192.168.1.43',# 'or COM48'
-                        'x_encodercounts_per_um' : 2,
-                        'y_encodercounts_per_um' : 2,
-                        'f_encodercounts_per_um' : 2
-                        }
-
-'''PI Rotation + z controller'''
-pi_parameters = {'controllername' : 'C-884',
-                'stages' : ('M-061.PD','M-406.4PD'),
-                'refmode' : ('FRF',),
-                'serialnum' : ('118015799'), #0185500834
-                'velocity': {0: 22.5, 1: 2}, # in mm/s or °/s
-                }
 
 '''
 Filterwheel configuration
