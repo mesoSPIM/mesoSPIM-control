@@ -695,7 +695,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 # self.sig_add_images_to_image_series_and_wait_until_done.emit()
 
                 # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-                self.move_relative(acq.get_delta_z_dict())
+                self.move_relative(acq.get_delta_dict())
 
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
                 self.image_count += 1
@@ -829,7 +829,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'POSITION')
             self.write_line(file, 'x_pos', acq['x_pos'])
             self.write_line(file, 'y_pos', acq['y_pos'])
-            self.write_line(file, 'f_pos', acq['f_pos'])
+            self.write_line(file, 'f_start', acq['f_start'])
+            self.write_line(file, 'f_end', acq['f_end'])
             self.write_line(file, 'z_start', acq['z_start'])
             self.write_line(file, 'z_end', acq['z_end'])
             self.write_line(file, 'z_stepsize', acq['z_step'])

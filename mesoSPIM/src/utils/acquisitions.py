@@ -48,7 +48,8 @@ class Acquisition(indexed.IndexedOrderedDict):
                  z_step=10,
                  planes=10,
                  theta_pos=0,
-                 f_pos=0,
+                 f_start=0,
+                 f_end=0,
                  laser = '488 nm',
                  intensity=0,
                  filter= 'Empty-Alignment',
@@ -70,7 +71,8 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['z_step']=z_step
         self['planes']=planes
         self['rot']=theta_pos
-        self['f_pos']=f_pos
+        self['f_start']=f_start
+        self['f_end']=f_end
         self['laser']=laser
         self['intensity']=intensity
         self['filter']=filter
@@ -103,9 +105,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         '''
         Method to return the number of planes in the acquisition
         '''
-        image_count = abs(int((self['z_end'] - self['z_start'])/self['z_step']))
-
-        return image_count
+        return abs(int((self['z_end'] - self['z_start'])/self['z_step']))
 
     def get_acquisition_time(self):
         '''
@@ -128,6 +128,23 @@ class Acquisition(indexed.IndexedOrderedDict):
 
         return {'z_rel' : z_rel}
 
+    def get_delta_dict(self):
+        ''' Returns relative movement dict for z-steps and f-steps'''
+
+        ''' Calculate z-step '''
+        if self['z_end'] > self['z_start']:
+            z_rel = abs(self['z_step'])
+        else:
+            z_rel = -abs(self['z_step'])
+
+        ''' Calculate f-step '''
+        image_count = self.get_image_count()
+        f_rel = abs(int((self['f_end'] - self['f_start'])/image_count))
+        if self['f_end'] < self['f_start']:
+            f_rel = -f_rel
+           
+        return {'z_rel' : z_rel, 'f_rel' : f_rel}
+
     def get_startpoint(self):
         '''
         Provides a dictionary with the startpoint coordinates
@@ -136,7 +153,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'y_abs': self['y_pos'],
                 'z_abs': self['z_start'],
                 'theta_abs': self['rot'],
-                'f_abs': self['f_pos'],
+                'f_abs': self['f_start'],
                 }
 
     def get_endpoint(self):
@@ -144,15 +161,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'y_abs': self['y_pos'],
                 'z_abs': self['z_end'],
                 'theta_abs': self['rot'],
-                'f_abs': self['f_pos'],
-                }
-
-    def get_midpoint(self):
-        return {'x_abs': self['x_pos'],
-                'y_abs': self['y_pos'],
-                'z_abs': int((self['z_end']-self['z_start'])/2),
-                'theta_abs': self['rot'],
-                'f_abs': self['f_pos'],
+                'f_abs': self['f_end'],
                 }
 
 class AcquisitionList(list):
