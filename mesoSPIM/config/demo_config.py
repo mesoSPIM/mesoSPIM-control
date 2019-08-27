@@ -1,15 +1,29 @@
 import numpy as np
 
 '''
-Basic hardware configuration
+mesoSPIM configuration file.
+
+Use this file as a starting point to set up all mesoSPIM hardware by replacing the 'Demo' designations 
+with real hardware.  
 '''
 
 '''
-PXI6733 is responsible for the lasers
+Waveform output for Galvos, ETLs etc.
+'''
+
+waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration' or 'NI'
+
+'''
+Card designations need to be the same as in NI MAX, if necessary, use NI MAX 
+to rename your cards correctly.
+
+A standard mesoSPIM configuration uses two cards:
+
+PXI6733 is responsible for the lasers (analog intensity control)
 PXI6259 is responsible for the shutters, ETL waveforms and galvo waveforms
-'''
 
-waveformgeneration = 'DemoWaveFormGeneration'
+
+'''
 
 acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'camera_trigger_source' : '/PXI6259/PFI0',
@@ -19,11 +33,20 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'laser_task_line' :  'PXI6733/ao0:7',
                         'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
-sidepanel = 'Demo' # FarmSimulator
+'''
+Human interface device (Joystick)
+'''
+sidepanel = 'Demo' #'Demo' or 'FarmSimulator'
 
-laser = 'Demo' # Demo
+'''
+Digital laser enable lines
+'''
 
-'''The laserdict contains the digital enable lines for the SOLE-6'''
+laser = 'Demo' # 'Demo' or 'NI'
+
+''' The laserdict keys are the laser designation that will be shown 
+in the user interface '''
+
 laserdict = {'405 nm': 'PXI6733/port0/line2',
              '488 nm': 'PXI6733/port0/line3',
              '515 nm': 'PXI6733/port0/line4',
@@ -35,6 +58,7 @@ laserdict = {'405 nm': 'PXI6733/port0/line2',
 Assignment of the analog outputs of the Laser card to the channels
 The Empty slots are placeholders.
 '''
+
 laser_designation = {'405 nm' : 0,
                      '488 nm' : 1,
                      '515 nm' : 2,
@@ -48,6 +72,7 @@ laser_designation = {'405 nm' : 0,
 '''
 Assignment of the galvos and ETLs to the 6259 AO channels.
 '''
+
 galvo_etl_designation = {'Galvo-L' : 0,
                          'Galvo-R' : 1,
                          'ETL-L' : 2,
@@ -58,7 +83,7 @@ galvo_etl_designation = {'Galvo-L' : 0,
 Shutter configuration
 '''
 
-shutter = 'Demo' # Demo
+shutter = 'Demo' # 'Demo' or 'NI'
 shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
               'shutter_right' : 'PXI6259/port2/line0'}
 
@@ -68,8 +93,20 @@ shutteroptions = ('Left','Right','Both')
 '''
 Camera configuration
 '''
-# camera = 'HamamatsuOrcaFlash' # 'DemoCamera'
-camera = 'DemoCamera'
+
+'''
+For a DemoCamera, only the following options are necessary
+(x_pixels and y_pixels can be chosen arbitrarily):
+
+camera_parameters = {'x_pixels' : 1024,
+                     'y_pixels' : 1024,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4]}
+
+
+'''
+camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsCamera'
 
 camera_parameters = {'x_pixels' : 1024,
                      'y_pixels' : 1024,
@@ -90,7 +127,15 @@ camera_parameters = {'x_pixels' : 1024,
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'Debug'
+
+'''
+The stage_parameter dictionary defines the general stage configuration, initial positions,
+and safety limits. The rotation position defines a XYZ position (in absolute coordinates)
+where sample rotation is safe. Additional hardware dictionaries (e.g. pi_parameters)
+define the stage configuration details.
+'''
+
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -109,8 +154,29 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'PI' or 'Debug'
                     'z_rot_position': 66000,
                     }
 
+'''
+Depending on the stage hardware, further dictionaries define further details of the stage configuration
+
+For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the 
+serialnumber with the one of your controller):
+
+pi_parameters = {'controllername' : 'C-884',
+                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
+                 'refmode' : ('FRF',),
+                 'serialnum' : ('118015797'),
+                 }
+
+For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the 
+serialnumber with the one of your controller):
+
+pi_parameters = {'controllername' : 'C-884',
+                 'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
+                 'refmode' : ('FRF',),
+                 'serialnum' : ('118015799'), 
+'''
+
 '''Sample XYZ controller'''
-xyf_galil_parameters = {'port' : '192.168.1.43',#'or COM48'
+xyf_galil_parameters = {'port' : '192.168.1.43',# 'or COM48'
                         'x_encodercounts_per_um' : 2,
                         'y_encodercounts_per_um' : 2,
                         'f_encodercounts_per_um' : 2
@@ -125,23 +191,23 @@ pi_parameters = {'controllername' : 'C-884',
                 }
 
 '''
-pi_parameters = {'controllername' : 'C-884',
-                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','M-061.PD'),
-                 'refmode' : ('FRF',),
-                 'serialnum' : ('118015799'),
-                 }
-'''
-
-
-
-'''
 Filterwheel configuration
 '''
 
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel',
+'''
+For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel, 
+a valid COMport is necessary. 
+'''
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
+
+'''
+
+A Ludl double filter wheel can be 
+'''
+
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
               '405-488-647-Tripleblock' : 1,
               '405-488-561-640-Quadrupleblock' : 2,
@@ -156,10 +222,20 @@ filterdict = {'Empty-Alignment' : 0, # Every config should contain this
 '''
 Zoom configuration
 '''
-zoom_parameters = {'zoom_type' : 'DemoZoom',
+
+'''
+For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom, 
+these values have to be there
+'''
+zoom_parameters = {'zoom_type' : 'DemoZoom', # 'DemoZoom' or 'Dynamixel'
                    'servo_id' :  4,
                    'COMport' : 'COM38',
                    'baudrate' : 1000000}
+
+'''
+The keys in the zoomdict define what zoom positions are displayed in the selection box 
+(combobox) in the user interface. 
+'''
 
 zoomdict = {'0.63x' : 3423,
             '0.8x' : 3071,
@@ -190,7 +266,13 @@ pixelsize = {'0.63x' : 10.52,
 '''
 Initial acquisition parameters
 
-This gets set up into the first microscope state
+Used as initial values after startup
+
+When setting up a new mesoSPIM, make sure that:
+* 'max_laser_voltage' is correct (5 V for Toptica MLEs, 10 V for Omicron SOLE)
+* 'galvo_l_amplitude' and 'galvo_r_amplitude' (in V) are correct (not above the max input allowed by your galvos)
+* all the filepaths exist
+* the initial filter exists in the filter dictionary above
 '''
 
 startup = {
