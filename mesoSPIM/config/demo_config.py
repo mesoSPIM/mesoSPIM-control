@@ -3,7 +3,7 @@ import numpy as np
 '''
 mesoSPIM configuration file.
 
-Use this file as a starting point to set up all mesoSPIM hardware by replacing the 'Demo' designations 
+Use this file as a starting point to set up all mesoSPIM hardware by replacing the 'Demo' designations
 with real hardware one-by-one. Make sure to rename your new configuration file to a different filename
 (The extension has to be .py).
 '''
@@ -15,7 +15,7 @@ Waveform output for Galvos, ETLs etc.
 waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration' or 'NI'
 
 '''
-Card designations need to be the same as in NI MAX, if necessary, use NI MAX 
+Card designations need to be the same as in NI MAX, if necessary, use NI MAX
 to rename your cards correctly.
 
 A standard mesoSPIM configuration uses two cards:
@@ -45,7 +45,7 @@ Digital laser enable lines
 
 laser = 'Demo' # 'Demo' or 'NI'
 
-''' The laserdict keys are the laser designation that will be shown 
+''' The laserdict keys are the laser designation that will be shown
 in the user interface '''
 
 laserdict = {'405 nm': 'PXI6733/port0/line2',
@@ -105,6 +105,24 @@ camera_parameters = {'x_pixels' : 1024,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4]}
 
+For a Hamamatsu Orca Flash 4.0 V2 or V3, the following parameters are necessary:
+
+camera_parameters = {'x_pixels' : 2048,
+                     'y_pixels' : 2048,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'camera_id' : 0,
+                     'sensor_mode' : 12,    # 12 for progressive
+                     'defect_correct_mode': 2,
+                     'binning' : '1x1',
+                     'readout_speed' : 1,
+                     'trigger_active' : 1,
+                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
+                     'trigger_polarity' : 2, # positive pulse
+                     'trigger_source' : 2, # external
+                    }
+
 
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsCamera'
@@ -158,7 +176,7 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or other c
 '''
 Depending on the stage hardware, further dictionaries define further details of the stage configuration
 
-For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the 
+For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the
 serialnumber with the one of your controller):
 
 pi_parameters = {'controllername' : 'C-884',
@@ -167,13 +185,13 @@ pi_parameters = {'controllername' : 'C-884',
                  'serialnum' : ('118015797'),
                  }
 
-For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the 
+For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
 serialnumber with the one of your controller):
 
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
-                 'serialnum' : ('118015799'), 
+                 'serialnum' : ('118015799'),
 '''
 
 '''
@@ -181,8 +199,8 @@ Filterwheel configuration
 '''
 
 '''
-For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel, 
-a valid COMport is necessary. 
+For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
+a valid COMport is necessary.
 '''
 filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
                           'COMport' : 'COM53'}
@@ -191,7 +209,7 @@ filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterW
 
 '''
 
-A Ludl double filter wheel can be 
+A Ludl double filter wheel can be
 '''
 
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
@@ -210,7 +228,7 @@ Zoom configuration
 '''
 
 '''
-For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom, 
+For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom,
 these values have to be there
 '''
 zoom_parameters = {'zoom_type' : 'DemoZoom', # 'DemoZoom' or 'Dynamixel'
@@ -219,8 +237,8 @@ zoom_parameters = {'zoom_type' : 'DemoZoom', # 'DemoZoom' or 'Dynamixel'
                    'baudrate' : 1000000}
 
 '''
-The keys in the zoomdict define what zoom positions are displayed in the selection box 
-(combobox) in the user interface. 
+The keys in the zoomdict define what zoom positions are displayed in the selection box
+(combobox) in the user interface.
 '''
 
 zoomdict = {'0.63x' : 3423,
