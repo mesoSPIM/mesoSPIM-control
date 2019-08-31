@@ -40,6 +40,8 @@ class TilingWizard(QtWidgets.QWizard):
         self.z_start = 0
         self.z_end = 0
         self.z_step = 1
+        self.f_start = 0
+        self.f_end = 0
         self.x_offset = 0
         self.y_offset = 0
         self.zoom = '1x'
@@ -148,7 +150,8 @@ class TilingWizard(QtWidgets.QWizard):
                 'z_end' : self.z_end,
                 'z_step' : self.z_step,
                 'theta_pos' : self.theta_pos,
-                'f_pos' : self.f_pos,
+                'f_start' : self.f_start,
+                'f_end' : self.f_end,
                 'x_offset' : self.x_offset,
                 'y_offset' : self.y_offset,
                 'x_fov' : self.x_fov,
@@ -290,17 +293,23 @@ class DefineZPositionPage(QtWidgets.QWizardPage):
         self.ZStepSpinBox.setMaximum(1000)
         self.ZStepSpinBox.valueChanged.connect(self.update_z_step)
 
-        self.FocusButton = QtWidgets.QPushButton(self)
-        self.FocusButton.setText('Set Focus')
-        self.FocusButton.setCheckable(True)
-        self.FocusButton.toggled.connect(self.update_focus_position)
+        self.StartFocusButton = QtWidgets.QPushButton(self)
+        self.StartFocusButton.setText('Set start focus')
+        self.StartFocusButton.setCheckable(True)
+        self.StartFocusButton.toggled.connect(self.update_start_focus_position)
+
+        self.EndFocusButton = QtWidgets.QPushButton(self)
+        self.EndFocusButton.setText('Set end focus')
+        self.EndFocusButton.setCheckable(True)
+        self.EndFocusButton.toggled.connect(self.update_end_focus_position)
 
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.ZStartButton, 0, 0)
         self.layout.addWidget(self.ZEndButton, 0, 1)
         self.layout.addWidget(self.ZSpinBoxLabel, 2, 0)
         self.layout.addWidget(self.ZStepSpinBox, 2, 1)
-        self.layout.addWidget(self.FocusButton, 3, 0)
+        self.layout.addWidget(self.StartFocusButton, 3, 0)
+        self.layout.addWidget(self.EndFocusButton, 4, 0)
         self.setLayout(self.layout)
 
         self.registerField('z_start_position*',
@@ -311,8 +320,12 @@ class DefineZPositionPage(QtWidgets.QWizardPage):
                             self.ZEndButton,
                             )
 
-        self.registerField('focus_position*',
-                            self.FocusButton,
+        self.registerField('start_focus_position*',
+                            self.StartFocusButton,
+                            )
+
+        self.registerField('end_focus_position*',
+                            self.EndFocusButton,
                             )
 
     def update_z_start_position(self):
@@ -324,8 +337,11 @@ class DefineZPositionPage(QtWidgets.QWizardPage):
     def update_z_step(self):
         self.parent.z_step = self.ZStepSpinBox.value()
 
-    def update_focus_position(self):
-        self.parent.f_pos = self.parent.state['position']['f_pos']
+    def update_start_focus_position(self):
+        self.parent.f_start = self.parent.state['position']['f_pos']
+
+    def update_end_focus_position(self):
+        self.parent.f_end = self.parent.state['position']['f_pos']
 
 class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
     '''
@@ -360,12 +376,19 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         self.shutterComboBox = QtWidgets.QComboBox(self)
         self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
 
-        self.xyOffsetSpinBoxLabel = QtWidgets.QLabel('XY Offset')
-        self.xyOffsetSpinBox = QtWidgets.QSpinBox(self)
-        self.xyOffsetSpinBox.setSuffix(' μm')
-        self.xyOffsetSpinBox.setMinimum(1)
-        self.xyOffsetSpinBox.setMaximum(20000)
-        self.xyOffsetSpinBox.setValue(500)
+        self.xOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
+        self.xOffsetSpinBox = QtWidgets.QSpinBox(self)
+        self.xOffsetSpinBox.setSuffix(' μm')
+        self.xOffsetSpinBox.setMinimum(1)
+        self.xOffsetSpinBox.setMaximum(20000)
+        self.xOffsetSpinBox.setValue(500)
+
+        self.yOffsetSpinBoxLabel = QtWidgets.QLabel('Y Offset')
+        self.yOffsetSpinBox = QtWidgets.QSpinBox(self)
+        self.yOffsetSpinBox.setSuffix(' μm')
+        self.yOffsetSpinBox.setMinimum(1)
+        self.yOffsetSpinBox.setMaximum(20000)
+        self.yOffsetSpinBox.setValue(500)
 
         self.ETLCheckBoxLabel = QtWidgets.QLabel('ETL')
         self.ETLCheckBox = QtWidgets.QCheckBox('Copy current ETL parameters', self)
@@ -382,10 +405,12 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.filterComboBox, 3, 1)
         self.layout.addWidget(self.shutterLabel, 4, 0)
         self.layout.addWidget(self.shutterComboBox, 4, 1)
-        self.layout.addWidget(self.xyOffsetSpinBoxLabel, 5, 0)
-        self.layout.addWidget(self.xyOffsetSpinBox, 5, 1)
-        self.layout.addWidget(self.ETLCheckBoxLabel, 6, 0)
-        self.layout.addWidget(self.ETLCheckBox, 6, 1)
+        self.layout.addWidget(self.xOffsetSpinBoxLabel, 5, 0)
+        self.layout.addWidget(self.xOffsetSpinBox, 5, 1)
+        self.layout.addWidget(self.yOffsetSpinBoxLabel, 6, 0)
+        self.layout.addWidget(self.yOffsetSpinBox, 6, 1)
+        self.layout.addWidget(self.ETLCheckBoxLabel, 7, 0)
+        self.layout.addWidget(self.ETLCheckBox, 7, 1)
 
         self.registerField('ETLCheckBox', self.ETLCheckBox)
 
@@ -406,8 +431,8 @@ class OtherAcquisitionParametersPage(QtWidgets.QWizardPage):
         self.parent.zoom = self.zoomComboBox.currentText()
         # self.parent.x_fov = self.parent.cfg.fov_options[self.zoomComboBox.currentIndex()]
         # self.parent.y_fov = self.parent.cfg.fov_options[self.zoomComboBox.currentIndex()]
-        self.parent.x_offset = self.xyOffsetSpinBox.value()
-        self.parent.y_offset = self.xyOffsetSpinBox.value()
+        self.parent.x_offset = self.xOffsetSpinBox.value()
+        self.parent.y_offset = self.yOffsetSpinBox.value()
         self.parent.laser = self.laserComboBox.currentText()
         self.parent.intensity = self.intensitySlider.value()
         self.parent.filter = self.filterComboBox.currentText()
