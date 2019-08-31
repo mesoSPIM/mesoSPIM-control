@@ -137,13 +137,14 @@ class Acquisition(indexed.IndexedOrderedDict):
         else:
             z_rel = -abs(self['z_step'])
 
-        ''' Calculate f-step '''
+        ''' Calculate f-step
         image_count = self.get_image_count()
         f_rel = abs((self['f_end'] - self['f_start'])/image_count)
         if self['f_end'] < self['f_start']:
             f_rel = -f_rel
-           
-        return {'z_rel' : z_rel, 'f_rel' : f_rel}
+        '''
+
+        return {'z_rel' : z_rel}
 
     def get_startpoint(self):
         '''
@@ -163,6 +164,45 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'theta_abs': self['rot'],
                 'f_abs': self['f_end'],
                 }
+
+    def get_focus_stepsize_generator(self):
+        ''''
+        Provides a generator object to correct rounding errors for focus tracking acquisitions.
+
+        The focus stage has to travel a shorter distance than the sample z-stage, ideally only
+        a fraction of the z-step size. However, due to the limited minimum step size of the focus stage,
+        rounding errors can accumulate over thousands of steps.
+
+        Therefore, the generator tracks the rounding error and applies correcting steps here and there
+        to minimize the error.
+
+        This assumes a minimum step size of around 0.1 micron that the focus stage is capable of.
+
+        This method contains lots of round functions to keep residual rounding errors at bay.
+        '''
+        steps = self.get_image_count()
+        f_step = abs((self['f_end'] - self['f_start'])/steps)
+        if self['f_end'] < self['f_start']:
+            f_step = -f_step
+
+        standard_f_step = round(f_step , 1) # Minimum step size: 0.1 micron
+        focus_error = 0
+        expected_focus = 0
+        focus = 0
+        for i in range(steps):
+            if abs(focus_error) < 0.1:
+                focus += standard_f_step
+                yield standard_f_step
+            else:
+                if focus_error < 0:
+                    focus += standard_f_step - 0.1
+                    yield round(standard_f_step - 0.1,1)
+                else:
+                    focus += standard_f_step + 0.1
+                    yield round(standard_f_step + 0.1,1)
+            focus = round(focus, 5)
+            expected_focus += f_step
+            focus_error = round(expected_focus - focus, 5)
 
 class AcquisitionList(list):
     '''
@@ -194,8 +234,8 @@ class AcquisitionList(list):
             self.append(Acquisition())
 
         # '''
-        # In addition to the list of acquisition objects, the AcquisitionList also 
-        # contains a rotation point that is save to rotate the sample to the target 
+        # In addition to the list of acquisition objects, the AcquisitionList also
+        # contains a rotation point that is save to rotate the sample to the target
         # value.
         # '''
         # self.rotation_point = {'x_abs' : None, 'y_abs' : None, 'z_abs' : None}
@@ -243,7 +283,7 @@ class AcquisitionList(list):
     #     ''' Returns True if an rotation point was set, otherwise False '''
     #     if self.rotation_point['x_abs'] == None :
     #         return False
-    #     else: 
+    #     else:
     #         return True
 
     # def get_rotation_point(self):
@@ -273,7 +313,7 @@ class AcquisitionList(list):
             file_exists = os.path.isfile(filename)
             if file_exists:
                 print('Attention: Existing file: ', filename)
-                return True 
+                return True
             else:
                 return False
 
@@ -289,7 +329,7 @@ class AcquisitionList(list):
         duplicates = self.get_duplicates_in_list(filenames)
 
         if len(duplicates)==0:
-            return False 
+            return False
         else:
             print('Attention: Duplicated filename: ', duplicates)
             return True
