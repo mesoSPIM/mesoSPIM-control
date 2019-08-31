@@ -160,7 +160,7 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or other c
                     'y_unload_position': -120000,
                     'x_max' : 51000,
                     'x_min' : -46000,
-                    'y_max' : 0,
+                    'y_max' : 160000,
                     'y_min' : -160000,
                     'z_max' : 99000,
                     'z_min' : -99000,
