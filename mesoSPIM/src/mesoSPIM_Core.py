@@ -711,6 +711,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def close_acquisition(self, acq):
         ''' HICKUP DEBUGGING '''
         self.z_end_measured = self.state['position']['z_pos']
+        self.f_end_measured = self.state['position']['f_pos']
         self.collect_troubleshooting_data(acq)
         self.append_troubleshooting_info_to_metadata(acq)
 
@@ -911,7 +912,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def collect_troubleshooting_data(self, acq):
         self.hickup_delta_z = self.z_end_measured - acq['z_end']
-        print('HICKUP Difference: ', self.hickup_delta_z)
+        self.hickup_delta_f = self.f_end_measured - acq['f_end']
+        # print('HICKUP Difference: ', self.hickup_delta_z)
 
     def append_troubleshooting_info_to_metadata(self, acq):
         '''
@@ -927,8 +929,11 @@ class mesoSPIM_Core(QtCore.QObject):
             ''' Adding troubleshooting information '''
             self.write_line(file)
             self.write_line(file, 'TROUBLESHOOTING INFORMATION')
-            self.write_line(file, 'delta_z end to start after acq', str(self.hickup_delta_z) )
+            self.write_line(file, 'Z_pos: delta_z end to start after acq', str(self.hickup_delta_z) )
             self.write_line(file, 'z_start expected', acq['z_start'])
             self.write_line(file, 'z_start measured', str(self.z_start_measured))
             self.write_line(file, 'z_end expected', acq['z_end'])
             self.write_line(file, 'z_end measured', str(self.z_end_measured))
+            self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
+            self.write_line(file, 'f_end expected', acq['f_end'])
+            self.write_line(file, 'f_end measured', str(self.f_end_measured))
