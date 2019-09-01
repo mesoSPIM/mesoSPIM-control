@@ -27,7 +27,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.shutters.Demo_Shutter import Demo_Shutter
 from .devices.shutters.NI_Shutter import NI_Shutter
 
-from .mesoSPIM_Camera import mesoSPIM_HamamatsuCamera, mesoSPIM_Camera
+from .mesoSPIM_Camera import mesoSPIM_Camera
 
 from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
