@@ -56,12 +56,12 @@ def stage_referencing_check(cfg):
     '''
     Due to problems with some PI stages loosing reference information
     after restarting the mesoSPIM software, some stage configurations require
-    a reference movement to be carried out before starting the rest of the softwareself.
+    a reference movement to be carried out before starting the rest of the software.
 
     As reference movements can damage the instrument, this function warns users
     about this problem by message boxes and asks them to reach a safe state.
     '''
-    if cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
+    if cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy' or cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
         warning = QtWidgets.QMessageBox.warning(None,'Sample z reference movement necessary!',
                 'Please move the XYZ stage to position where a reference z movement (to the midpoint of the movement range) is safe!',
                 QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Ok)
