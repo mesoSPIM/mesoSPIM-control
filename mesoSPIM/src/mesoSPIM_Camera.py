@@ -41,6 +41,13 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
         self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
 
+        self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
+        self.x_binning = int(self.binning_string[0])
+        self.y_binning = int(self.binning_string[2])
+
+        self.x_pixels = int(self.x_pixels / self.x_binning)
+        self.y_pixels = int(self.y_pixels / self.y_binning)
+
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
@@ -255,6 +262,13 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
         self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
 
+        self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
+        self.x_binning = int(self.binning_string[0])
+        self.y_binning = int(self.binning_string[2])
+
+        self.x_pixels = int(self.x_pixels / self.x_binning)
+        self.y_pixels = int(self.y_pixels / self.y_binning)
+
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
@@ -265,7 +279,7 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         pass
 
     def set_exposure_time(self, time):
-        pass
+        self.camera_exposure_time = time
 
     def set_line_interval(self, time):
         pass
