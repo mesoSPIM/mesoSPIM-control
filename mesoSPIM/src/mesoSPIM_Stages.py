@@ -1282,7 +1282,10 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
         
-        #self.pidevice.FRF(1)
+        ''' Setting PI velocities '''
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
+
+        ''' Reference movements '''
         print('M-406 Emergency referencing hack: Waiting for referencing move')
         logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
         self.pidevice.FRF(2)
@@ -1292,7 +1295,6 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
         self.xyf_stage.move_absolute({3: self.startfocus})
-        #self.pidevice.MOV(5,self.startfocus/1000)
 
     def __del__(self):
         try:
@@ -1473,6 +1475,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         '''Executes program stored on the Galil controller'''
         self.xyf_stage.execute_program()
 
+### Up for deletion --> also in mesoSPIM serial
 class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
     '''
     Expects following microscope configuration:
@@ -1812,6 +1815,9 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         pitools.startup(self.pidevice, stages=self.pi_stages, refmode=self.refmode)
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
+
+        ''' Setting PI velocities '''
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
         
         print('M-406 Emergency referencing hack: Waiting for referencing move')
         logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
