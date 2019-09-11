@@ -95,8 +95,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.selection_model = self.table.selectionModel()
         self.selection_mapper = QtWidgets.QDataWidgetMapper()
-
-        self.update_persistent_editors()
+        print(dir(self.selection_model))
+        #self.update_persistent_editors()
 
         self.AddButton.clicked.connect(self.add_row)
         self.DeleteButton.clicked.connect(self.delete_row)
@@ -277,10 +277,14 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         Go through all the rows and all necessary columns and
         open persistent editors.
         '''
+        try:
+            row = self.get_first_selected_row()
+        except:
+            row = self.model.rowCount()
 
-        for row in range(0, self.model.rowCount()):
-            for column in self.persistent_editor_column_indices:
-                self.table.openPersistentEditor(self.model.index(row, column))
+        #for row in range(0, self.model.rowCount()):
+        for column in self.persistent_editor_column_indices:
+            self.table.openPersistentEditor(self.model.index(row, column))
 
     def set_state(self):
         # print('Acq Manager: State Updated')

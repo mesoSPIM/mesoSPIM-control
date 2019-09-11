@@ -216,7 +216,7 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
         '''
        
         if self.sender() is None:
-            print(self.sender())
+            # print(self.sender())
             self.set_model_data_from_lineedit(editor, model, index)
         else:
             self.set_model_data_from_button(editor, model, index)
@@ -225,6 +225,8 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
         editor.setGeometry(option.rect)
 
     def set_model_data_from_button(self, editor, model, index):
+        print('Row: ', index.row())
+        print('Column: ', index.column())
         pos = 0 # replace by model.position['x_pos'] after inheriting
         pos = round(pos, 2)
         model.setData(index, pos)
@@ -232,6 +234,9 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
 
     def set_model_data_from_lineedit(self, editor, model, index):
         try:
+            print(self)
+            print('Via Lineedit: Row: ', index.row())
+            print('Via Column: Column: ', index.column())
             model.setData(index, float(editor.lineEdit.text()))
         except:
             model.setData(index, 0.0)
@@ -247,6 +252,7 @@ class MarkXPositionDelegate(MarkPositionDelegate):
         super().__init__(parent)
 
     def set_model_data_from_button(self, editor, model, index):
+        print(index)
         pos = model.state['position']['x_pos']
         pos = round(pos, 2)
         model.setData(index, pos)
@@ -267,6 +273,9 @@ class MarkZPositionDelegate(MarkPositionDelegate):
         super().__init__(parent)
 
     def set_model_data_from_button(self, editor, model, index):
+        print(self)
+        print('Via button: Row: ', index.row())
+        print('Via button: Column: ', index.column())
         pos = model.state['position']['z_pos']
         pos = round(pos, 2)
         model.setData(index, pos)
