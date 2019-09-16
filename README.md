@@ -28,7 +28,7 @@ mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/dow
 * scipy
 * ctypes
 * importlib
-* PyQt5
+* PyQt5 (if there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
 
 In addition (for Anaconda), the following packages need to be installed:
 * nidaqmx (`python -m pip install nidaqmx`)
