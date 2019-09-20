@@ -432,7 +432,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.pvcam = [cam for cam in Camera.detect_camera()][0]
 
         self.pvcam.open()
-        self.pvcam.speed_table_index = 0
+        self.pvcam.speed_table_index = self.cfg.camera_parameters['speed_table_index']
         self.pvcam.exp_mode = self.cfg.camera_parameters['exp_mode']
         
         logger.info('Camera Vendor Name: '+str(self.pvcam.get_param(param_id = self.const.PARAM_VENDOR_NAME)))
@@ -454,20 +454,34 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         # 10.26 us x factor 
         # factor = 6 equals 71.82 us
         self.pvcam.set_param(param_id = self.const.PARAM_SCAN_LINE_DELAY, value = self.cfg.camera_parameters['scan_line_delay'])
-        
+        self.pvcam.set_param(param_id = self.const.PARAM_READOUT_PORT, value = 1)
         ''' Setting Binning parameters: '''
         '''
         self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
         self.y_binning = int(self.binning_string[2])
         '''
-
         self.pvcam.binning = (self.x_binning, self.y_binning)
 
         #self.pvcam.set_param(param_id = self.const.PARAM_BINNING_PAR, value = self.y_binning)
         #self.pvcam.set_param(param_id = self.const.PARAM_BINNING_SER, value = self.x_binning)
 
-        '''
+        # print('Readout port: ', self.pvcam.readout_port)
+        
+        """ 
+        self.report_pvcam_parameter('PMODE',self.const.PARAM_PMODE)
+        self.report_pvcam_parameter('GAIN_INDEX',self.const.PARAM_GAIN_INDEX)
+        self.report_pvcam_parameter('GAIN_NAME',self.const.PARAM_GAIN_NAME)
+        self.report_pvcam_parameter('READOUT PORT',self.const.PARAM_READOUT_PORT)
+        self.report_pvcam_parameter('READOUT TIME',self.const.PARAM_READOUT_TIME)
+        self.report_pvcam_parameter('IMAGE FORMAT', self.const.PARAM_IMAGE_FORMAT)
+        self.report_pvcam_parameter('SPEED TABLE INDEX', self.const.PARAM_SPDTAB_INDEX)
+        self.report_pvcam_parameter('BIT DEPTH', self.const.PARAM_BIT_DEPTH)
+
+        
+        logger.info('P Mode: '+str(self.pvcam.get_param(param_id = self.const.PARAM_PMODE)))
+        logger.info('P Mode options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_PMODE)))
+        logger.info('Bit depth: '+str(self.pvcam.get_param(param_id = self.const.PARAM_BIT_DEPTH)))
         logger.info('Exposure time resolution: '+str(self.pvcam.get_param(param_id = self.const.PARAM_EXP_RES)))
         logger.info('Exposure time resolution options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_EXP_RES)))
         logger.info('Exposure mode: '+str(self.pvcam.get_param(param_id = self.const.PARAM_EXPOSURE_MODE)))
@@ -484,7 +498,20 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         logger.info('Binning SER options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_BINNING_SER)))
         logger.info('Binning PAR: '+str(self.pvcam.get_param(param_id = self.const.PARAM_BINNING_PAR)))
         logger.info('Binning PAR options: '+str(self.pvcam.read_enum(param_id = self.const.PARAM_BINNING_PAR)))
-        '''
+        """
+
+    def report_pvcam_parameter(self, description, parameter):
+        try:
+            logger.info(description+' '+str(self.pvcam.get_param(param_id = parameter)))
+            print(description+' '+str(self.pvcam.get_param(param_id = parameter)))
+        except:
+            pass
+        
+        try:
+            logger.info(description+' '+str(self.pvcam.read_enum(param_id = parameter)))
+            print(description+' '+str(str(self.pvcam.read_enum(param_id = parameter))))
+        except:
+            pass
         
     def close_camera(self):
         self.pvcam.close()
