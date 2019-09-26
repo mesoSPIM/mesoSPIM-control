@@ -95,8 +95,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.selection_model = self.table.selectionModel()
         self.selection_mapper = QtWidgets.QDataWidgetMapper()
-        print(dir(self.selection_model))
-        #self.update_persistent_editors()
 
         self.AddButton.clicked.connect(self.add_row)
         self.DeleteButton.clicked.connect(self.delete_row)
@@ -121,6 +119,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
+        self.selection_model.selectionChanged.connect(self.selected_row_changed)
 
     def enable(self):
         self.setEnabled(True)
@@ -170,9 +169,19 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         else:
             print('No row selected!')
 
+    def selected_row_changed(self, new_selection, old_selection):
+        if new_selection.indexes() != []:
+            new_row = new_selection.indexes()[0].row()
+            for column in self.persistent_editor_column_indices:
+                self.table.openPersistentEditor(self.model.index(new_row, column))
+
+        if old_selection.indexes() != []:
+            old_row = old_selection.indexes()[0].row()
+            for column in self.persistent_editor_column_indices:
+                self.table.closePersistentEditor(self.model.index(old_row, column))   
+
     def add_row(self):
         self.model.insertRows(self.model.rowCount(),1)
-        self.update_persistent_editors()
 
     def delete_row(self):
         ''' Deletes the selected row '''
@@ -184,7 +193,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 print('No row selected!')
         else:
             self.display_status_message("Can't delete last row!", 2)
-        self.update_persistent_editors()
 
     def delete_all_rows(self):
         ''' 
@@ -197,13 +205,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         
         if reply == QtWidgets.QMessageBox.Yes:
             self.model.deleteTable()
-            self.update_persistent_editors()
 
     def copy_row(self):
         row = self.get_first_selected_row()
         if row is not None:
             self.model.copyRow(row)
-            self.update_persistent_editors()
         else:
             print('No row selected!')
 
@@ -213,7 +219,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row > 0:
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row-1)
                 self.set_selected_row(row-1)
-                self.update_persistent_editors()
         else:
             print('No row selected!')
 
@@ -223,7 +228,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row < self.model.rowCount():
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row+1)
                 self.set_selected_row(row+1)
-                self.update_persistent_editors()
         else:
             print('No row selected!')
 
@@ -272,22 +276,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.persistent_editor_column_indices.append(column_index)
             exec(string_to_execute)
 
-    def update_persistent_editors(self):
-        '''
-        Go through all the rows and all necessary columns and
-        open persistent editors.
-        '''
-        try:
-            row = self.get_first_selected_row()
-        except:
-            row = self.model.rowCount()
-
-        #for row in range(0, self.model.rowCount()):
-        for column in self.persistent_editor_column_indices:
-            self.table.openPersistentEditor(self.model.index(row, column))
-
     def set_state(self):
-        # print('Acq Manager: State Updated')
         self.state['acq_list'] = self.model.get_acquisition_list()
         
     def enable_gui(self):
@@ -313,7 +302,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         if path:
             try:
                 self.model.loadModel(path)
-                self.update_persistent_editors()
                 self.set_state()
             except:
                 self.sig_warning.emit('Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!')
@@ -368,7 +356,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setData(index0, f_pos)
             self.model.setData(index1, f_pos)
             
-
     def mark_current_rotation(self):
         row = self.get_first_selected_row()
 
