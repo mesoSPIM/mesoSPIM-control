@@ -164,7 +164,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_filter(self, filter, wait_until_done=False):
-        logger.info('Thread ID during set filter: '+str(int(QtCore.QThread.currentThreadId())))
+        # logger.info('Thread ID during set filter: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.filterwheel.set_filter(filter, wait_until_done=True)
         else:
@@ -173,13 +173,15 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=False):
-        logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
+        # logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
+        ''' Here, the state parameters are set before sending the value to the zoom --
+        this is to avoid laggy update loops with the GUI.'''
+        self.state['zoom'] = zoom
+        self.state['pixelsize'] = self.cfg.pixelsize[zoom]
         if wait_until_done:
             self.zoom.set_zoom(zoom, wait_until_done=True)
         else:
             self.zoom.set_zoom(zoom, wait_until_done=False)
-        self.state['zoom'] = zoom
-        self.state['pixelsize'] = self.cfg.pixelsize[zoom]
 
     def execute_stage_program(self):
         self.stage.execute_program()

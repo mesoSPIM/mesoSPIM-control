@@ -8,6 +8,7 @@
 * **Bugfix:** Manually entering a value in a field in the Acquisition Manager table would change values in other rows as well if the row had been copied before.
 * **Bugfix:** Mark buttons and dropdown menus in the Acquisition Manager table slowed down the GUI when a lot of rows (>25) were present. As a fix, only the 
 selected row shows the menu.
+* **Bugfix:** Fixed #30: Zooming drop down menu often fails to update after a zoom
 
 ---
 
