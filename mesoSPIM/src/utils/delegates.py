@@ -216,7 +216,7 @@ class MarkPositionDelegate(QtWidgets.QStyledItemDelegate):
         '''
        
         if self.sender() is None:
-            print(self.sender())
+            # print(self.sender())
             self.set_model_data_from_lineedit(editor, model, index)
         else:
             self.set_model_data_from_button(editor, model, index)

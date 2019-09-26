@@ -44,7 +44,14 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         '''
 
         # What does | actually mean?
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
+        '''
+        Attention: Here, it is hardcoded that column 5 (# Planes is not editable) If acquistions.py changes, this will 
+        require a change here as well
+        '''
+        if index.column() == self._headers.index('Planes'):
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
+        else: 
+            return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
 
     def headerData(self, section, orientation, role):
         '''
