@@ -590,10 +590,10 @@ class mesoSPIM_Core(QtCore.QObject):
             ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
 
-            self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
-            self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
-            self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
-            self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
+            self.sig_state_request.emit({'etl_l_amplitude' : acq_list[0]['etl_l_amplitude']})
+            self.sig_state_request.emit({'etl_r_amplitude' : acq_list[0]['etl_r_amplitude']})
+            self.sig_state_request.emit({'etl_l_offset' : acq_list[0]['etl_l_offset']})
+            self.sig_state_request.emit({'etl_r_offset' : acq_list[0]['etl_r_offset']})
             self.set_intensity(acq_list[0]['intensity'])
             time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
             self.sig_finished.emit()
