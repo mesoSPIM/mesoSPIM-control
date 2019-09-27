@@ -154,6 +154,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
 
+        self.enable_gui_updates_from_state(False)
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -457,7 +458,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             widget.setCurrentText(self.state[state_parameter_string])
         elif isinstance(widget, (QtWidgets.QSlider,QtWidgets.QDoubleSpinBox,QtWidgets.QSpinBox)):
             widget.setValue(self.state[state_parameter_string]*conversion_factor)
-
+    
+    @QtCore.pyqtSlot()
     def update_gui_from_state(self):
         '''
         Updates the GUI controls after a state_change
