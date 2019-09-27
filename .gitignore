@@ -63,3 +63,5 @@ mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
 
 
 mesoSPIM/src/devices/zoom/dynamixel\.zip
+
+mesoSPIM/tmp/
