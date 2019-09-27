@@ -341,7 +341,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.LaserComboBox, 'laser',1),
             (self.LaserIntensitySlider, 'intensity',1),
             (self.CameraExposureTimeSpinBox, 'camera_exposure_time',1000),
-            (self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
+            #(self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
             (self.CameraTriggerDelaySpinBox,'camera_delay_%',1),
             (self.CameraTriggerPulseLengthSpinBox, 'camera_pulse_%',1),
             (self.SweeptimeSpinBox,'sweeptime',1000),
