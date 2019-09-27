@@ -347,19 +347,27 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'filter' : filter})
 
     @QtCore.pyqtSlot(dict)
-    def set_zoom(self, zoom, wait_until_done=False):
+    def set_zoom(self, zoom, wait_until_done=False, update_etl=True):
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'zoom' : zoom})
+            if update_etl:
+                self.sig_state_request_and_wait_until_done.emit({'set_etls_according_to_zoom' : zoom})
         else:
             self.sig_state_request.emit({'zoom' : zoom})
+            if update_etl:
+                self.sig_state_request.emit({'set_etls_according_to_zoom' : zoom})
 
     @QtCore.pyqtSlot(str)
-    def set_laser(self, laser, wait_until_done=False):
+    def set_laser(self, laser, wait_until_done=False, update_etl=True):
         self.laserenabler.enable(laser)
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'laser' : laser})
+            if update_etl:
+                self.sig_state_request_and_wait_until_done.emit({'set_etls_according_to_laser' : laser})
         else:
             self.sig_state_request.emit({'laser':laser})
+            if update_etl:
+                self.sig_state_request.emit({'set_etls_according_to_laser' : laser})
 
     @QtCore.pyqtSlot(str)
     def set_intensity(self, intensity, wait_until_done=False):
@@ -577,8 +585,15 @@ class mesoSPIM_Core(QtCore.QObject):
 
             self.move_absolute(acq_list.get_startpoint())
             self.set_filter(acq_list[0]['filter'])
-            self.set_laser(acq_list[0]['laser'])
-            self.set_zoom(acq_list[0]['zoom'])
+            self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
+            self.set_zoom(acq_list[0]['zoom'], wait_until_done=False, update_etl=False)
+            ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
+            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+
+            self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
+            self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
+            self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
+            self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
             self.set_intensity(acq_list[0]['intensity'])
             time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
             self.sig_finished.emit()
@@ -616,17 +631,19 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_status_message.emit('Setting Shutter')
             self.set_shutterconfig(acq['shutterconfig'])
             self.sig_status_message.emit('Setting Zoom & Laser')
-            self.set_zoom(acq['zoom'], wait_until_done=False)
+            self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
             self.set_intensity(acq['intensity'], wait_until_done=True)
-            self.set_laser(acq['laser'], wait_until_done=True)
+            self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
+            ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
+            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
 
             self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
             self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
             self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
             self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
 
-            self.sig_update_gui_from_state.emit(False)
             self.sig_status_message.emit('Ready for preview...')
+            self.sig_update_gui_from_state.emit(False)
 
         self.state['state'] = 'idle'
 
@@ -660,9 +677,11 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
         self.sig_status_message.emit('Setting Zoom')
-        self.set_zoom(acq['zoom'], wait_until_done=True)
+        self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=True)
-        self.set_laser(acq['laser'], wait_until_done=True)
+        self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
+        ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
+        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})

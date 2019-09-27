@@ -91,24 +91,27 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'camera_delay_%',
                        'camera_pulse_%'):
                 ''' Notify GUI about the change '''
-                self.sig_update_gui_from_state.emit(True)
+                #self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
-                self.sig_update_gui_from_state.emit(False)
+                #self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
                 # print('Waveform change')
             elif key in ('ETL_cfg_file'):
                 self.state[key] = value
                 self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
                 # print('ETL CFG File changed')
-            elif key in ('zoom'):
+            elif key in ('set_etls_according_to_zoom'):
                 self.update_etl_parameters_from_zoom(value)
                 #print('zoom change')
-            elif key in ('laser'):
-                self.state[key] = value
+            elif key in ('set_etls_according_to_laser'):
+                self.state['laser'] = value
                 self.create_waveforms()
                 self.update_etl_parameters_from_laser(value)
                 #print('laser change')
-
+            elif key in ('laser'):
+                self.state['laser'] = value
+                self.create_waveforms()
+                
             # Log Thread ID during Live: just debugging code
             elif key == 'state':
                 if value == 'live':
@@ -253,6 +256,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''
         # print('Updating ETL parameters from file:', cfg_path)
 
+        self.sig_update_gui_from_state.emit(True)
         with open(cfg_path) as file:
             reader = csv.DictReader(file,delimiter=';')
             #print('opened csv')
@@ -279,13 +283,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                       'etl_r_amplitude' : etl_r_amplitude}
 
                     '''  Now the GUI needs to be updated '''
-                    self.sig_update_gui_from_state.emit(True)
+                    # print('Parameters set from csv')
                     self.state.set_parameters(parameter_dict)
-                    self.sig_update_gui_from_state.emit(False)
 
         '''Update waveforms with the new parameters'''
 
         self.create_waveforms()
+        self.sig_update_gui_from_state.emit(False)
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):
@@ -524,9 +528,9 @@ class mesoSPIM_DemoWaveFormGenerator(QtCore.QObject):
                        'camera_delay_%',
                        'camera_pulse_%'):
                 ''' Notify GUI about the change '''
-                self.sig_update_gui_from_state.emit(True)
+                #self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
-                self.sig_update_gui_from_state.emit(False)
+                #self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
                 # print('Waveform change')
             elif key in ('ETL_cfg_file'):
