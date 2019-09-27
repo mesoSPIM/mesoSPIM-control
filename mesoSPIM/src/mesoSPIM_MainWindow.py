@@ -488,15 +488,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def run_selected_acquisition(self):
         row = self.acquisition_manager_window.get_first_selected_row()
-        # print('selected row:', row)
-        self.state['selected_row'] = row
-        self.sig_state_request.emit({'state':'run_selected_acquisition'})
-        self.enable_mode_control_buttons(False)
-        self.enable_gui_updates_from_state(True)
-        self.enable_stop_button(True)
-        self.enable_gui(False)
-        if sys.platform == 'win32':
-            self.win_taskbar_button.progress().setVisible(True)
+
+        if row == None:
+            self.display_warning('No row selected - stopping!')
+        else:
+            # print('selected row:', row)
+            self.state['selected_row'] = row
+            self.sig_state_request.emit({'state':'run_selected_acquisition'})
+            self.enable_mode_control_buttons(False)
+            self.enable_gui_updates_from_state(True)
+            self.enable_stop_button(True)
+            self.enable_gui(False)
+            if sys.platform == 'win32':
+                self.win_taskbar_button.progress().setVisible(True)
 
     def run_acquisition_list(self):
         self.state['selected_row'] = -1

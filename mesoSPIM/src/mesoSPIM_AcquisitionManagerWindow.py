@@ -167,7 +167,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         if row is not None:
             self.sig_start_selected.emit(row)
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
 
     def selected_row_changed(self, new_selection, old_selection):
         if new_selection.indexes() != []:
@@ -190,9 +190,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row is not None:
                 self.model.removeRows(row,1)
             else:
-                print('No row selected!')
+                self.display_no_row_selected_warning()
         else:
-            self.display_status_message("Can't delete last row!", 2)
+            self.display_warning("Can't delete last row!")
 
     def delete_all_rows(self):
         ''' 
@@ -211,7 +211,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         if row is not None:
             self.model.copyRow(row)
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
 
     def move_selected_row_up(self):
         row = self.get_first_selected_row()
@@ -220,7 +220,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row-1)
                 self.set_selected_row(row-1)
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
 
     def move_selected_row_down(self):
         row = self.get_first_selected_row()
@@ -229,7 +229,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row+1)
                 self.set_selected_row(row+1)
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
 
     def set_item_delegates(self):
         ''' Several columns should have certain delegates
@@ -316,7 +316,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'x_pos')
             self.model.setDataFromState(row, 'y_pos')
         else:
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_xy_position()
+            else:
+                self.display_no_row_selected_warning()
 
     def mark_current_state(self):
         row = self.get_first_selected_row()
@@ -328,7 +332,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'intensity')
             self.model.setDataFromState(row, 'shutterconfig')
         else:
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_state()
+            else:
+                self.display_no_row_selected_warning()
 
     def mark_current_etl_parameters(self):
         row = self.get_first_selected_row()
@@ -339,7 +347,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'etl_r_offset')
             self.model.setDataFromState(row, 'etl_r_amplitude')
         else:
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_etl_parameters()
+            else:
+                self.display_no_row_selected_warning()
 
     def mark_current_focus(self):
         ''' Marks both foci start focus '''
@@ -355,12 +367,26 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
             self.model.setData(index0, f_pos)
             self.model.setData(index1, f_pos)
+        
+        else:
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_focus()
+            else:
+                self.display_no_row_selected_warning()
             
     def mark_current_rotation(self):
         row = self.get_first_selected_row()
 
         if row is not None:
             self.model.setDataFromState(row, 'rot')
+
+        else:
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_rotation()
+            else:
+                self.display_no_row_selected_warning()
 
     def preview_acquisition(self):
         row = self.get_first_selected_row()
@@ -369,7 +395,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.state['selected_row'] = row
             self.parent.sig_state_request.emit({'state':'preview_acquisition'})
         else: 
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.preview_acquisition()
+            else:    
+                self.display_no_row_selected_warning()
 
     def set_folder_names(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
@@ -382,21 +412,12 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def generate_filenames(self):
         wizard = FilenameWizard(self)
 
-    # def set_rotation_point(self):
-    #     '''
-    #     Take current position and turn it into an rotation point
-    #     '''
-    #     pos_dict = self.state['position']
+    def display_no_row_selected_warning(self):
+        self.display_warning('No row selected!')
 
-    #     rotation_point_dict = {'x_abs' : pos_dict['x_pos'],
-    #                            'y_abs' : pos_dict['y_pos'],
-    #                            'z_abs' : pos_dict['z_pos'],
-    #                             }
+    def display_warning(self, string):
+        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
+                string, QtWidgets.QMessageBox.Ok) 
 
-    #     self.model._table.set_rotation_point(rotation_point_dict)
 
-    #     print(rotation_point_dict)
-
-    # def delete_rotation_point(self):
-    #     self.model._table.delete_rotation_point()
 
