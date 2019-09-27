@@ -123,6 +123,20 @@ camera_parameters = {'x_pixels' : 2048,
                      'trigger_source' : 2, # external
                     }
 
+For a Photometrics Iris 15, the following parameters are necessary:
+
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'speed_table_index': 0,
+                     'exp_mode' : 'Ext Trig Edge Rising', # Lots of options in PyVCAM --> see constants.py
+                     'binning' : '1x1',
+                     'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
+                     'scan_direction' : 1, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
+                     'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
+                    }
 
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsIris15'
