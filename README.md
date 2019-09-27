@@ -14,6 +14,7 @@ cleared tissue samples. It is compatible with all major clearing approaches - in
 
 #### Device drivers
 * [Hamamatsu DCAM API](https://dcam-api.com/) when using Hamamatsu Orca Flash 4.0 V2 or V3 sCMOS cameras. To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
+* [PVCAM and PVCAM-SDK](https://www.photometrics.com/support/software/) when using Photometrics cameras (under development). In addition, the `PyVCAM` Python package is necessary ([Link](https://github.com/Photometrics/PyVCAM)).
 * [Software for Physik Instrumente stages](https://www.physikinstrumente.com/en/products/motion-control-software/) if a PI stage is used. To test the stages, PI MicroMove can be used.
 * [Software for Steinmeyer Mechatronics / Feinmess stages using Galil drivers](http://www.galilmc.com/downloads/api) if such a stage is used. To test the stages, GalilTools can be used.
 * [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases) for Dynamixel Zoom servos. Make sure you download version 3.5.4 of the SDK.
@@ -38,6 +39,7 @@ In addition (for Anaconda), the following packages need to be installed:
 * pywinusb  (`python -m pip install pywinusb`)
 * PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`)
 * tifffile (`python -m pip install tifffile`)
+* ([PyVCAM when using Photometrics cameras](https://github.com/Photometrics/PyVCAM)
 
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`
