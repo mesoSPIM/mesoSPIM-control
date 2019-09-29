@@ -24,6 +24,7 @@ class FocusTrackingWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
+        self.cfg = parent.cfg
         self.state = mesoSPIM_StateSingleton()
 
         self.f_1 = 0
@@ -57,7 +58,11 @@ class FocusTrackingWizard(QtWidgets.QWizard):
         super().done(r)
 
     def calculate_f_pos(self, z_1, z_2, f_1, f_2, z):
-        return (f_2-f_1)/(z_2-z_1)*(z-z_1)+f_1
+        if z_2 == z_1:
+            ''' Avoid division by zero '''
+            return 0
+        else:
+            return (f_2-f_1)/(z_2-z_1)*(z-z_1)+f_1
     
     def update_focus_positions_in_model(self):
         row_count = self.parent.model.rowCount()
@@ -65,6 +70,8 @@ class FocusTrackingWizard(QtWidgets.QWizard):
         z_end_column = self.parent.model.getColumnByName('Z_end')
         f_start_column = self.parent.model.getColumnByName('F_start')
         f_end_column = self.parent.model.getColumnByName('F_end')
+        filter_column = self.parent.model.getColumnByName('Filter')
+        laser_column = self.parent.model.getColumnByName('Laser')
 
         for row in range(0, row_count):
             z_start = self.parent.model.getZStartPosition(row)
@@ -76,9 +83,27 @@ class FocusTrackingWizard(QtWidgets.QWizard):
             f_start_index = self.parent.model.createIndex(row, f_start_column)
             f_end_index = self.parent.model.createIndex(row, f_end_column)
 
-            self.parent.model.setData(f_start_index, f_start)
-            self.parent.model.setData(f_end_index, f_end)
+            if self.field('LaserEnabled'):
+                print('Laser is enabled')
+                if self.field('Laser') == 'All laser lines':
+                    print('All laser lines')
+                    self.parent.model.setData(f_start_index, f_start)
+                    self.parent.model.setData(f_end_index, f_end)
+                else: 
+                    print('Laserfield: ', self.field('Laser'))
+                    print('Laser in row: ', self.parent.model.getLaser(row))
+                    if self.field('Laser') == self.parent.model.getLaser(row):
+                        self.parent.model.setData(f_start_index, f_start)
+                        self.parent.model.setData(f_end_index, f_end)
 
+            elif self.field('FilterEnabled'):
+                if self.field('Filter') == 'All filters':
+                    self.parent.model.setData(f_start_index, f_start)
+                    self.parent.model.setData(f_end_index, f_end)
+                else:
+                    if self.field('Filter') == self.parent.model.getFilter(row):
+                        self.parent.model.setData(f_start_index, f_start)
+                        self.parent.model.setData(f_end_index, f_end)
             
 
 class FocusTrackingWizardWelcomePage(QtWidgets.QWizardPage):
@@ -87,7 +112,7 @@ class FocusTrackingWizardWelcomePage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Welcome to the focus tracking wizard!")
-        self.setSubTitle("This wizard allows you to set the correct focus start and end points by focusing manually at two reference points inside the sample. ATTENTION: All focus values will be overwritten!")
+        self.setSubTitle("This wizard allows you to set the correct focus start and end points by focusing manually at two reference points inside the sample. ATTENTION: In the last step, you can apply the focus range to selected channels and lasers!")
     
 class FocusTrackingWizardSetReferencePointsPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -136,18 +161,37 @@ class FocusTrackingWizardCheckResultsPage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self.parent = parent
 
-        self.setTitle('Finished!')
-        '''
-        self.setSubTitle('Please check if the following filenames are ok:')
+        self.setTitle('To which laser lines or filters should the focus settings be applied?')
 
-        self.TextEdit = QtWidgets.QPlainTextEdit(self)
-        self.TextEdit.setReadOnly(True)
+        self.laserCheckBox = QtWidgets.QCheckBox('Laser', self)
+        self.laserComboBox = QtWidgets.QComboBox(self)
+        self.laserComboBox.addItem('All laser lines')
+        self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
 
-        self.mystring = ''        
-        self.TextEdit.setPlainText(self.mystring)
+        self.filterCheckBox = QtWidgets.QCheckBox('Filter', self)
+        self.filterComboBox = QtWidgets.QComboBox(self)
+        self.filterComboBox.addItem('All filters')
+        self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
+
+        self.registerField('LaserEnabled',self.laserCheckBox)
+        self.registerField('FilterEnabled', self.filterCheckBox)
+        self.registerField('Laser',self.laserComboBox, 'currentText', self.laserComboBox.currentTextChanged)
+        self.registerField('Filter', self.filterComboBox, 'currentText', self.filterComboBox.currentTextChanged)
+
+        self.laserCheckBox.toggled.connect(lambda boolean: self.laserComboBox.setEnabled(boolean))
+        self.laserCheckBox.toggled.connect(lambda boolean: self.filterCheckBox.setChecked(not boolean))
+        self.filterCheckBox.toggled.connect(lambda boolean: self.filterComboBox.setEnabled(boolean))
+        self.filterCheckBox.toggled.connect(lambda boolean: self.laserCheckBox.setChecked(not boolean))
+
+        self.laserCheckBox.setChecked(True)
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.TextEdit, 0, 0, 1, 1)
+        self.layout.addWidget(self.laserCheckBox, 0, 0)
+        self.layout.addWidget(self.laserComboBox, 0, 1)
+        self.layout.addWidget(self.filterCheckBox, 1, 0)
+        self.layout.addWidget(self.filterComboBox, 1, 1)
         self.setLayout(self.layout)
-        '''
+
+
+        
     
