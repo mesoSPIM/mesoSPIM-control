@@ -34,6 +34,7 @@ from .utils.widgets import MarkPositionWidget
 from .utils.acquisition_wizards import TilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
+from .utils.image_processing_wizard import ImageProcessingWizard
 
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
@@ -114,6 +115,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
         self.FilenameWizardButton.clicked.connect(self.generate_filenames)
         self.FocusTrackingWizardButton.clicked.connect(self.run_focus_tracking_wizard)
+        self.ImageProcessingWizardButton.clicked.connect(self.run_image_processing_wizard)
 
         self.DeleteAllButton.clicked.connect(self.delete_all_rows)
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
@@ -313,6 +315,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     def run_focus_tracking_wizard(self):
         wizard = FocusTrackingWizard(self)
+
+    def run_image_processing_wizard(self):
+        wizard = ImageProcessingWizard(self)
 
     def mark_current_xy_position(self):
         row = self.get_first_selected_row()

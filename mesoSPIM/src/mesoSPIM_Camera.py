@@ -158,13 +158,17 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         ''' TODO: Needs cam delay, sweeptime, QTimer, line delay, exp_time '''
 
-        self.path = acq['folder']+'/'+acq['filename']
-
+        self.folder = acq['folder']
+        self.filename = acq['filename']
+        self.path = self.folder+'/'+self.filename
+        
         logger.info(f'Camera: Save path: {self.path}')
         self.z_start = acq['z_start']
         self.z_end = acq['z_end']
         self.z_stepsize = acq['z_step']
         self.max_frame = acq.get_image_count()
+
+        self.processing_options_string = acq['processing']
 
         self.fsize = self.x_pixels*self.y_pixels
 
@@ -192,6 +196,19 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def end_image_series(self):
+        if self.processing_options_string != '':
+            if self.processing_options_string == 'MAX':
+                print('Doing Max Projection')
+                logger.info('Camera: Started Max Projection of '+str(self.max_frame)+' Images')
+                stackview = self.xy_stack.view()
+                stackview.shape = (self.max_frame, self.x_pixels, self.y_pixels)
+                max_proj = np.max(stackview, axis=0)
+                filename = 'MAX_' +self.filename + '.tif'
+                path = self.folder+'/'+filename
+                tifffile.imsave(path, max_proj, photometric='minisblack')
+                logger.info('Camera: Saved Max Projection')
+                print('Done Doing Max Projection')
+
         try:
             self.camera.close_image_series()
             del self.xy_stack

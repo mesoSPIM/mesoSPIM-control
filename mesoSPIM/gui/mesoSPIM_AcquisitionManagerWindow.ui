@@ -276,6 +276,18 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="6">
+        <widget class="QPushButton" name="ImageProcessingWizardButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Image Processing Wizard</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
     </layout>
