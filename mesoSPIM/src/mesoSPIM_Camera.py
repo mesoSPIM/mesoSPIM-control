@@ -25,6 +25,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
     sig_finished = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+    sig_status_message = QtCore.pyqtSignal(str)
 
     def __init__(self, parent = None):
         super().__init__()
@@ -198,7 +199,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     def end_image_series(self):
         if self.processing_options_string != '':
             if self.processing_options_string == 'MAX':
-                print('Doing Max Projection')
+                self.sig_status_message.emit('Doing Max Projection')
                 logger.info('Camera: Started Max Projection of '+str(self.max_frame)+' Images')
                 stackview = self.xy_stack.view()
                 stackview.shape = (self.max_frame, self.x_pixels, self.y_pixels)
@@ -207,7 +208,7 @@ class mesoSPIM_Camera(QtCore.QObject):
                 path = self.folder+'/'+filename
                 tifffile.imsave(path, max_proj, photometric='minisblack')
                 logger.info('Camera: Saved Max Projection')
-                print('Done Doing Max Projection')
+                self.sig_status_message.emit('Done with image processing')
 
         try:
             self.camera.close_image_series()

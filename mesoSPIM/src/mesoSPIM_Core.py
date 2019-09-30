@@ -127,6 +127,7 @@ class mesoSPIM_Core(QtCore.QObject):
         #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
+        self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
         #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()
@@ -965,3 +966,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
             self.write_line(file, 'f_end expected', acq['f_end'])
             self.write_line(file, 'f_end measured', str(self.f_end_measured))
+
+    @QtCore.pyqtSlot(str)
+    def send_status_message_to_gui(self, string):
+        self.sig_status_message.emit(string)
+
