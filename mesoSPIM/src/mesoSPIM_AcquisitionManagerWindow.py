@@ -4,6 +4,7 @@ mesoSPIM Acquisition Manager Window
 '''
 import os
 import sys
+import time
 
 import logging
 logger = logging.getLogger(__name__)
@@ -35,6 +36,8 @@ from .utils.acquisition_wizards import TilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
+
+from .utils.bigdataviewer_xml_creator import mesoSPIM_XMLexporter
 
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
@@ -121,9 +124,14 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
 
+
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
+
+        '''XML writing testcode'''
+        self.GenerateXMLButton.clicked.connect(self.generate_xml)
+ 
 
     def enable(self):
         self.setEnabled(True)
@@ -428,6 +436,17 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def display_warning(self, string):
         warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
                 string, QtWidgets.QMessageBox.Ok) 
+
+    def generate_xml(self):
+        print('generating BDV XML')
+
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        filename = timestr + '.xml'
+
+        path = self.state['snap_folder']+'/'+filename
+
+        xml_exporter = mesoSPIM_XMLexporter(self) 
+        xml_exporter.generate_xml_from_acqlist(self.state['acq_list'],path)
 
 
 

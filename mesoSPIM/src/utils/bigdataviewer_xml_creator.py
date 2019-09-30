@@ -5,6 +5,8 @@ import os.path
 
 from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
+from lxml import etree
+
 class mesoSPIM_XMLexporter:
     '''
     Class to take a mesoSPIM acquisitionlist object and turn it into a Bigdataviewer/
@@ -26,12 +28,10 @@ class mesoSPIM_XMLexporter:
         * case: 
     '''
 
-    def __init__(self, parent=None, acqlist):
+    def __init__(self, parent=None):
         self.parent = parent
         self.state = mesoSPIM_StateSingleton()
         self.cfg = parent.cfg
-
-        self.acqlist = acqlist 
 
         self.xmlwriter = mesoSPIM_BDVXMLwriter()
 
@@ -39,20 +39,49 @@ class mesoSPIM_XMLexporter:
         self.z_size = 1
         self.length_unit = 'micron'
 
-    def generate_xml_from_acqlist(self, acqlist):
-        for acq in acqlist:
-            print('generating xml from acqlist')
+    def generate_xml_from_acqlist(self, acqlist, path):
+        channeldict = self.generate_channeldict(acqlist)
+        tiledict = self.generate_tiledict(acqlist)
+        illuminationdict = self.generate_illuminationdict(acqlist)
 
-    def generate_channellist(self, acqlist):
+        id = 0
+        for acq in acqlist:
+            channelstring = self.generate_channelstring(acq)
+            illuminationstring = self.generate_illuminationstring(acq)
+            tilestring = self.generate_tilestring(acq)
+            
+            self.xmlwriter.addviewsetup(id=str(id), 
+                                        name=str(acq['filename']),
+                                        size=self.create_size_string(acq),
+                                        vosize_unit = 'micron',
+                                        vosize = self.create_voxelsize_string(acq),
+                                        illumination = illuminationdict[illuminationstring],
+                                        channel = channeldict[channelstring],
+                                        tile = tiledict[tilestring],
+                                        angle = self.create_angle_string(acq))
+            
+            self.xmlwriter.write(path)
+
+    def generate_channeldict(self, acqlist):
         '''
-        Takes the acqlist and returns a list of channels 
+        Takes the acqlist and returns a dictionary of channels 
         Channels are defined as:
         * different lasers in different acqs are definitely different channels 
         * same lasers: check if filters are different --> if yes then channels 
         '''
-        pass 
+        channeldict = {}
+        c = 0
 
-    def generate_tilelist(self, acqlist):
+        for acq in acqlist:
+            channelstring = self.generate_channelstring(acq)
+            if not channelstring in channeldict:
+                channeldict.update({channelstring:str(c)})
+                c+=1
+
+        return channeldict
+        
+
+    def generate_tiledict(self, acqlist):
         '''
         Takes the acqlist and returns an assignment of 
 
@@ -67,8 +96,38 @@ class mesoSPIM_XMLexporter:
         Use this tilehash as keys for a dictionary 
         Later on, you can use it to assign tiles
         '''
-        pass
+        tiledict = {}
+        t=0
 
+        for acq in acqlist:
+            tilestring = self.generate_tilestring(acq)
+            if not tilestring in tiledict:
+                tiledict.update({tilestring:str(t)})
+                t+=1
+
+        return tiledict
+
+    def generate_illuminationdict(self, acqlist):
+        illuminationdict = {}
+        i = 0
+
+        for acq in acqlist:
+            illuminationstring = self.generate_illuminationstring(acq)
+            if not illuminationstring in illuminationdict:
+                illuminationdict.update({illuminationstring: str(i)})
+                i+=1
+
+        return illuminationdict            
+
+    def generate_channelstring(self, acq):
+        return str(acq['laser']) + ' ' + str(acq['filter'])
+
+    def generate_tilestring(self, acq):
+        return str(acq['x_pos'])+' '+str(acq['y_pos'])+' '+str(acq['z_start'])+' '+str(acq['rot'])
+
+    def generate_illuminationstring(self, acq):
+        return str(acq['shutterconfig'])
+    
     def write(self, path):
         self.xmlwriter.write(path)
 
@@ -76,8 +135,8 @@ class mesoSPIM_XMLexporter:
         ''' Creates the necessary XYZ #pixels string'''
 
         binning_string = self.cfg.camera_parameters['binning']
-        x_binning = int(self.binning_string[0])
-        y_binning = int(self.binning_string[2])
+        x_binning = int(binning_string[0])
+        y_binning = int(binning_string[2])
 
         y_pixels = int(self.cfg.camera_parameters['y_pixels'] / y_binning)
         x_pixels = int(self.cfg.camera_parameters['x_pixels'] / x_binning)
@@ -91,14 +150,14 @@ class mesoSPIM_XMLexporter:
         ''' Assumes square pixels'''
         self.xy_pixelsize = self.convert_zoom_to_pixelsize(acq['zoom'])
         self.z_pixelsize = acq['z_step']
-        return str(xy_pixelsize) + ' ' + str(xy_pixelsize) + ' ' + str(z_pixelsize)
+        return str(self.xy_pixelsize) + ' ' + str(self.xy_pixelsize) + ' ' + str(self.z_pixelsize)
 
     def convert_zoom_to_pixelsize(self, zoom):
         ''' Don't forget the binning!'''
         return self.cfg.pixelsize[zoom]
 
     def create_angle_string(self, acq):
-        return str(int(acq['angle']))
+        return str(int(acq['rot']))
 
     def create_calibration_string(self, acq):
         '''
@@ -143,7 +202,7 @@ class mesoSPIM_BDVXMLwriter:
 
     def write(self, path):
         # root = self.doc.getroot()
-        out = str(etree.tostring(self.xml, pretty_print=True, xml_declaration=True))
+        out = str(etree.tostring(self.xml, pretty_print=True, xml_declaration=False))
         
         with open(path, 'w') as file:
             file.write(out)
@@ -153,31 +212,31 @@ class mesoSPIM_BDVXMLwriter:
         image = etree.SubElement(self.ImageLoader, 'hdf5', type="relative")
         image.text = path
 
-    def addviewsetup(self, Id, name, size, vosize_unit, vosize, illumination, channel, tile, angle):
+    def addviewsetup(self, id, name, size, vosize_unit, vosize, illumination, channel, tile, angle):
         V = etree.SubElement(self.ViewSetups, 'ViewSetup')
 
         Id =  etree.SubElement(V, 'id')
-        Id.text = Id
-        name =  etree.SubElement(V, 'name')
-        name.text = name
-        size =  etree.SubElement(V, 'size')
-        size.text = ' '.join(size)
+        Id.text = str(id)
+        Name =  etree.SubElement(V, 'name')
+        Name.text = str(name)
+        Size =  etree.SubElement(V, 'size')
+        Size.text = str(size)
 
-        voxelSize =  etree.SubElement(V, 'voxelSize')
-        unit =  etree.SubElement(voxelSize, 'unit')
-        unit.text = vosize_unit
-        size =  etree.SubElement(voxelSize, 'size')
-        size.text = vosize
+        VoxelSize =  etree.SubElement(V, 'voxelSize')
+        Unit =  etree.SubElement(VoxelSize, 'unit')
+        Unit.text = str(vosize_unit)
+        Size =  etree.SubElement(VoxelSize, 'size')
+        Size.text = str(vosize)
 
-        attributes =  etree.SubElement(V, 'attributes')
-        Ilum =  etree.SubElement(attributes, 'illumination')
-        Ilum.text = illumination
-        Chan =  etree.SubElement(attributes, 'channel')
-        Chan.text = Chan
-        Tile =  etree.SubElement(attributes, 'tile')
-        Tile.text = tile
-        Ang =  etree.SubElement(attributes, 'angle')
-        Ang.text = angle
+        Attributes =  etree.SubElement(V, 'attributes')
+        Ilum =  etree.SubElement(Attributes, 'illumination')
+        Ilum.text = str(illumination)
+        Chan =  etree.SubElement(Attributes, 'channel')
+        Chan.text = str(channel)
+        Tile =  etree.SubElement(Attributes, 'tile')
+        Tile.text = str(tile)
+        Ang =  etree.SubElement(Attributes, 'angle')
+        Ang.text = str(angle)
 
     def setViewSize(self, Id, size):
         trigger = False
