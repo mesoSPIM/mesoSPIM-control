@@ -33,6 +33,7 @@ from .utils.delegates import (ComboDelegate,
 from .utils.widgets import MarkPositionWidget
 
 from .utils.acquisition_wizards import TilingWizard
+from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
@@ -319,7 +320,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.sig_warning.emit('Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!')
 
     def run_tiling_wizard(self):
-        wizard = TilingWizard(self)
+        wizard = MulticolorTilingWizard(self)
 
     def run_focus_tracking_wizard(self):
         wizard = FocusTrackingWizard(self)
