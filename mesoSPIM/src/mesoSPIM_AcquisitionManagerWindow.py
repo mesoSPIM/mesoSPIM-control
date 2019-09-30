@@ -443,8 +443,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         timestr = time.strftime("%Y%m%d-%H%M%S")
         filename = timestr + '.xml'
 
-        path = self.state['snap_folder']+'/'+filename
-
+        path = self.state['acq_list'][0]['folder']+'/'+filename
+        
         xml_exporter = mesoSPIM_XMLexporter(self) 
         xml_exporter.generate_xml_from_acqlist(self.state['acq_list'],path)
 

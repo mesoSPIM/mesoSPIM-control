@@ -93,7 +93,7 @@ class TilingWizard(QtWidgets.QWizard):
             # self.print_dict()
             self.update_model(self.parent.model, self.acq_list)
             ''' Update state with this new list '''
-            self.parent.update_persistent_editors()
+            # self.parent.update_persistent_editors()
             self.wizard_done.emit()
         else:
             print('Wizard provided return code: ', r)

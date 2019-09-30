@@ -57,12 +57,11 @@ class TilingAcquisitionListBuilder():
         '''
         Core loop: Create an acquisition list for all x & y values
         '''
-
+        tilecount = 0
         for i in range(0,self.dict['x_image_count']):
             self.x_pos = round(self.x_start + i * self.x_offset,2)
             for j in range(0,self.dict['y_image_count']):
                 self.y_pos = round(self.y_start + j * self.y_offset,2)
-
 
 
                 acq = Acquisition(   x_pos=self.x_pos,
@@ -79,7 +78,7 @@ class TilingAcquisitionListBuilder():
                                      zoom=self.dict['zoom'],
                                      shutterconfig=self.dict['shutterconfig'],
                                      folder=self.dict['folder'],
-                                     filename='tiling_file_'+str(i)+'_'+str(j)+'.raw',
+                                     filename='tiling_file_'+str(tilecount)+'.raw',
                                      etl_l_offset=self.dict['etl_l_offset'],
                                      etl_l_amplitude=self.dict['etl_l_amplitude'],
                                      etl_r_offset=self.dict['etl_r_offset'],
@@ -90,6 +89,7 @@ class TilingAcquisitionListBuilder():
                 acq['planes']=acq.get_image_count()
 
                 self.acq_prelist.append(acq)
+                tilecount += 1
 
     def get_acquisition_list(self):
         return AcquisitionList(self.acq_prelist)

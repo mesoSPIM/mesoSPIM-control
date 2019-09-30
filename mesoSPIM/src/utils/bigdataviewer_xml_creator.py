@@ -49,6 +49,7 @@ class mesoSPIM_XMLexporter:
             channelstring = self.generate_channelstring(acq)
             illuminationstring = self.generate_illuminationstring(acq)
             tilestring = self.generate_tilestring(acq)
+            calibrationstring = self.create_calibration_string(acq)
             
             self.xmlwriter.addviewsetup(id=str(id), 
                                         name=str(acq['filename']),
@@ -59,6 +60,8 @@ class mesoSPIM_XMLexporter:
                                         channel = channeldict[channelstring],
                                         tile = tiledict[tilestring],
                                         angle = self.create_angle_string(acq))
+
+            self.addCalibrationRegistration(tp='0', view=str(id), calibrationstring=calibrationstring)
             
             self.xmlwriter.write(path)
 
@@ -167,10 +170,15 @@ class mesoSPIM_XMLexporter:
 
         1.875 0.0 0.0 0.0 0.0 1.875 0.0 0.0 0.0 0.0 1.0 0.0
         '''
+        if self.xy_pixelsize > self.z_pixelsize:
+            factor = self.xy_pixelsize/self.z_pixelsize
+            calibration_string = str(factor) + ' 0.0 0.0 0.0 0.0 ' + str(factor) + ' 0.0 0.0 0.0 0.0 1.0 0.0'
+        elif self.xy_pixelsize < self.z_pixelsize:
+            factor = self.z_pixelsize/self.xy_pixelsize
+            calibration_string = str(factor) + '1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 '+ str(factor) +' 0.0'
+        else:
+            calibration_string = '1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0'
 
-        factor = self.xy_pixelsize/self.z_pixelsize
-
-        calibration_string = str(factor) + ' 0.0 0.0 0.0 0.0 ' + str(factor) + ' 0.0 0.0 0.0 0.0 1.0 0.0'
         return calibration_string
 
 class mesoSPIM_BDVXMLwriter:
@@ -190,7 +198,33 @@ class mesoSPIM_BDVXMLwriter:
         self.BasePath.text = "."
 
         self.SequenceDescription = etree.SubElement(self.xml, 'SequenceDescription')
-        self.ImageLoader = etree.SubElement(self.SequenceDescription, 'ImageLoader', format="bdv.hdf5")
+        self.ImageLoader = etree.SubElement(self.SequenceDescription, 'ImageLoader', format="spimreconstruction.stack.ij")
+        
+        self.ImageDirectory = etree.SubElement(self.ImageLoader, 'imagedirectory', type="relative")
+        '''
+        Layout entries according to: 
+        https://scijava.org/javadoc.scijava.org/Fiji/spim/fiji/spimdata/imgloaders/LegacyStackImgLoader.html
+
+        layoutTP - - 0 == one, 1 == one per file, 2 == all in one file
+        layoutChannels - - 0 == one, 1 == one per file, 2 == all in one file
+        layoutIllum - - 0 == one, 1 == one per file, 2 == all in one file
+        layoutAngles - - 0 == one, 1 == one per file, 2 == all in one file
+        '''
+
+        self.LayoutTimepoints = etree.SubElement(self.ImageLoader, 'layoutTimepoints')
+        self.LayoutTimepoints.text = "0"
+        self.LayoutChannels = etree.SubElement(self.ImageLoader, 'layoutChannels')
+        self.LayoutChannels.text = "0" # <-- has to be updated later on...
+        self.LayoutIlluminations = etree.SubElement(self.ImageLoader, 'layoutIlluminations')
+        self.LayoutIlluminations.text = "0" # <-- has to be updated later on...
+        self.LayoutAngles = etree.SubElement(self.ImageLoader, 'layoutAngles')
+        self.LayoutAngles.text = "0" # <-- has to be updated later on...
+        self.LayoutTiles = etree.SubElement(self.ImageLoader, 'layoutTiles')
+        self.LayoutTiles.text ="1"
+
+        self.Imglib2container = etree.SubElement(self.ImageLoader, 'imglib2container')
+        self.Imglib2container.text = "ArrayImgFactory"
+
 
         self.ViewSetups = etree.SubElement(self.SequenceDescription, 'ViewSetups')
         self.ViewRegistrations = etree.SubElement(self.xml, 'ViewRegistrations')
@@ -199,15 +233,16 @@ class mesoSPIM_BDVXMLwriter:
         etree.SubElement(self.xml, "BoundingBoxes")
         etree.SubElement(self.xml, "PointSpreadFunctions")
         etree.SubElement(self.xml, "StitchingResults")
+        etree.SubElement(self.xml, "IntensityAdjustments")
 
     def write(self, path):
-        # root = self.doc.getroot()
-        out = str(etree.tostring(self.xml, pretty_print=True, xml_declaration=False))
+        out = str(etree.tostring(self.xml, pretty_print=True, encoding=str))
+        # out = str(etree.tostring(self.xml, pretty_print=True, encoding='UTF-8'))
+        
         
         with open(path, 'w') as file:
             file.write(out)
         
-
     def addFile(self, path):
         image = etree.SubElement(self.ImageLoader, 'hdf5', type="relative")
         image.text = path
@@ -297,3 +332,11 @@ class mesoSPIM_BDVXMLwriter:
         name.text = "calibration"
         affine = etree.SubElement(VT, 'affine')
         affine.text = '1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0'
+
+    def addCalibrationRegistration(self, tp, view, calibrationstring):
+        V = etree.SubElement(self.ViewRegistrations, 'ViewRegistration', timepoint=str(tp), setup=str(view))
+        VT = etree.SubElement(V, 'ViewTransform', type="affine")
+        name = etree.SubElement(VT, 'Name')
+        name.text = "calibration"
+        affine = etree.SubElement(VT, 'affine')
+        affine.text = calibrationstring
