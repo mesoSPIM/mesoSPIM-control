@@ -268,14 +268,14 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.xOffsetSpinBox = QtWidgets.QSpinBox(self)
         self.xOffsetSpinBox.setSuffix(' μm')
         self.xOffsetSpinBox.setMinimum(1)
-        self.xOffsetSpinBox.setMaximum(20000)
+        self.xOffsetSpinBox.setMaximum(30000)
         self.xOffsetSpinBox.setValue(500)
 
         self.yOffsetSpinBoxLabel = QtWidgets.QLabel('Y Offset')
         self.yOffsetSpinBox = QtWidgets.QSpinBox(self)
         self.yOffsetSpinBox.setSuffix(' μm')
         self.yOffsetSpinBox.setMinimum(1)
-        self.yOffsetSpinBox.setMaximum(20000)
+        self.yOffsetSpinBox.setMaximum(30000)
         self.yOffsetSpinBox.setValue(500)
 
         self.shutterLabel = QtWidgets.QLabel('Shutter')
@@ -294,10 +294,10 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.shutterComboBox, 1, 1)
         self.layout.addWidget(self.xOffsetSpinBoxLabel, 2, 0)
         self.layout.addWidget(self.xOffsetSpinBox, 2, 1)
-        self.layout.addWidget(self.yOffsetSpinBoxLabel, 2, 0)
-        self.layout.addWidget(self.yOffsetSpinBox, 2, 1)
-        self.layout.addWidget(self.channelLabel, 3, 0)
-        self.layout.addWidget(self.channelSpinBox, 3, 1)
+        self.layout.addWidget(self.yOffsetSpinBoxLabel, 3, 0)
+        self.layout.addWidget(self.yOffsetSpinBox, 3, 1)
+        self.layout.addWidget(self.channelLabel, 4, 0)
+        self.layout.addWidget(self.channelSpinBox, 4, 1)
         self.setLayout(self.layout)
 
     def validatePage(self):
@@ -371,6 +371,12 @@ class GenericChannelPage(QtWidgets.QWizardPage):
         self.f_start = 0
         self.f_end = 0
 
+        self.copyCurrentStateLabel = QtWidgets.QLabel('Copy state:')
+
+        self.copyCurrentStateButton = QtWidgets.QPushButton(self)
+        self.copyCurrentStateButton.setText('Copy current laser, intensity and filter')
+        self.copyCurrentStateButton.clicked.connect(self.update_page_from_state)
+
         self.laserLabel = QtWidgets.QLabel('Laser')
         self.laserComboBox = QtWidgets.QComboBox(self)
         self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
@@ -388,15 +394,25 @@ class GenericChannelPage(QtWidgets.QWizardPage):
         self.ETLCheckBox = QtWidgets.QCheckBox('Copy current ETL parameters', self)
         self.ETLCheckBox.setChecked(True)
 
+        self.StartFocusLabel = QtWidgets.QLabel('Start focus')
         self.StartFocusButton = QtWidgets.QPushButton(self)
         self.StartFocusButton.setText('Set start focus')
         self.StartFocusButton.setCheckable(True)
         self.StartFocusButton.toggled.connect(self.update_start_focus_position)
 
+        self.EndFocusLabel = QtWidgets.QLabel('End focus')
         self.EndFocusButton = QtWidgets.QPushButton(self)
         self.EndFocusButton.setText('Set end focus')
         self.EndFocusButton.setCheckable(True)
         self.EndFocusButton.toggled.connect(self.update_end_focus_position)
+
+        self.GoToZStartButton = QtWidgets.QPushButton(self)
+        self.GoToZStartButton.setText('Go to Z start')
+        self.GoToZStartButton.clicked.connect(lambda: self.go_to_z_position(self.parent.z_start))
+
+        self.GoToZEndButton = QtWidgets.QPushButton(self)
+        self.GoToZEndButton.setText('Go to Z end')
+        self.GoToZEndButton.clicked.connect(lambda: self.go_to_z_position(self.parent.z_end))
 
         self.registerField('start_focus_position'+str(self.channel_id)+'*',
                             self.StartFocusButton,
@@ -407,16 +423,22 @@ class GenericChannelPage(QtWidgets.QWizardPage):
                             )
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.laserLabel, 0, 0)
-        self.layout.addWidget(self.laserComboBox, 0, 1)
-        self.layout.addWidget(self.intensityLabel, 1, 0)
-        self.layout.addWidget(self.intensitySlider, 1, 1)
-        self.layout.addWidget(self.filterLabel, 2, 0)
-        self.layout.addWidget(self.filterComboBox, 2, 1)
-        self.layout.addWidget(self.ETLCheckBoxLabel, 3, 0)
-        self.layout.addWidget(self.ETLCheckBox, 3, 1)
-        self.layout.addWidget(self.StartFocusButton, 4, 0)
-        self.layout.addWidget(self.EndFocusButton, 5, 0)
+        self.layout.addWidget(self.copyCurrentStateLabel, 0, 0, 1, 1)
+        self.layout.addWidget(self.copyCurrentStateButton, 0, 1, 1, 2)
+        self.layout.addWidget(self.laserLabel, 1, 0, 1, 1)
+        self.layout.addWidget(self.laserComboBox, 1, 1, 1, 2)
+        self.layout.addWidget(self.intensityLabel, 2, 0, 1, 1)
+        self.layout.addWidget(self.intensitySlider, 2, 1, 1, 2)
+        self.layout.addWidget(self.filterLabel, 3, 0, 1, 1)
+        self.layout.addWidget(self.filterComboBox, 3, 1, 1, 2)
+        self.layout.addWidget(self.ETLCheckBoxLabel, 4, 0, 1, 1)
+        self.layout.addWidget(self.ETLCheckBox, 4, 1, 1, 2)
+        self.layout.addWidget(self.StartFocusLabel, 5, 0, 1, 1)
+        self.layout.addWidget(self.StartFocusButton, 5, 1, 1, 1)
+        self.layout.addWidget(self.GoToZStartButton, 5, 2, 1, 1)
+        self.layout.addWidget(self.EndFocusLabel, 6, 0, 1, 1)
+        self.layout.addWidget(self.EndFocusButton, 6, 1, 1, 1)
+        self.layout.addWidget(self.GoToZEndButton, 6, 2, 1, 1)
         self.setLayout(self.layout)
 
     def initializePage(self):
@@ -432,6 +454,12 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
     def update_end_focus_position(self):
         self.f_end = self.parent.state['position']['f_pos']
+
+    def go_to_z_position(self, z):
+        self.parent.parent.parent.sig_move_absolute.emit({'z_abs':z})
+        #try:
+        #except:
+        #    print('Move absolute is not possible!')
 
     def validatePage(self):
         selectedIntensity =  self.intensitySlider.value()

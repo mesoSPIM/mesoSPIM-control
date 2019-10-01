@@ -58,6 +58,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     model_changed = QtCore.pyqtSignal(AcquisitionModel)
     sig_warning = QtCore.pyqtSignal(str)
+    sig_move_absolute = QtCore.pyqtSignal(dict)
 
     def __init__(self, parent=None):
         super().__init__()
