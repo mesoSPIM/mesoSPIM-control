@@ -95,6 +95,7 @@ class mesoSPIM_XMLexporter:
                                         angle = self.create_angle_string(acq))
 
             self.xmlwriter.addCalibrationRegistration(tp='0', view=str(id), calibrationstring=calibrationstring)
+            id += 1
         
         self.xmlwriter.addAttributes(illuminations=illuminationlist,
                                     channels=channellist,
