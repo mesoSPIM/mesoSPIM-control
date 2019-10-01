@@ -26,6 +26,7 @@ class mesoSPIM_XMLexporter:
         * different lasers are definitely different channels 
         * same lasers: check if filters are different --> if yes then channels 
         * case: 
+    * angles not supported
     '''
 
     def __init__(self, parent=None):
@@ -44,6 +45,38 @@ class mesoSPIM_XMLexporter:
         tiledict = self.generate_tiledict(acqlist)
         illuminationdict = self.generate_illuminationdict(acqlist)
 
+        num_channels = len(channeldict)
+        num_tiles = len(tiledict)
+        num_illuminations = len(illuminationdict)
+
+        if num_channels > 1:
+            layout_channels = 1
+        else:
+            layout_channels = 0 
+        
+        if num_tiles > 1:
+            layout_tiles = 1
+        else:
+            layout_tiles = 0
+
+        if num_illuminations > 1:
+            layout_illuminations = 1
+        else:
+            layout_illuminations = 0
+
+        channellist = [c for c in range(num_channels)]
+        illuminationlist = [i for i in range(num_illuminations)]
+        tilelist = [t for t in range(num_tiles)]
+        anglelist = [0]
+
+        self.xmlwriter.setLayout(filepattern='tiling_file_{x}_c{c}.raw.tif',
+                                timepoints=0,
+                                channels=layout_channels,
+                                illuminations=layout_illuminations,
+                                angles = 0,
+                                tiles = layout_tiles,
+                                imglibcontainer="ArrayImgFactory") #or CellImgFactory
+                                
         id = 0
         for acq in acqlist:
             channelstring = self.generate_channelstring(acq)
@@ -61,9 +94,16 @@ class mesoSPIM_XMLexporter:
                                         tile = tiledict[tilestring],
                                         angle = self.create_angle_string(acq))
 
-            self.addCalibrationRegistration(tp='0', view=str(id), calibrationstring=calibrationstring)
+            self.xmlwriter.addCalibrationRegistration(tp='0', view=str(id), calibrationstring=calibrationstring)
+        
+        self.xmlwriter.addAttributes(illuminations=illuminationlist,
+                                    channels=channellist,
+                                    tiles=tilelist,
+                                    angles=anglelist)
+
+        self.xmlwriter.addTimepoints('')
             
-            self.xmlwriter.write(path)
+        self.xmlwriter.write(path)
 
     def generate_channeldict(self, acqlist):
         '''
@@ -149,10 +189,13 @@ class mesoSPIM_XMLexporter:
         ''' X and Y flipped due to image rotation '''
         return str(y_pixels) + ' ' + str(x_pixels) + ' ' + str(z_pixels)
 
-    def create_voxelsize_string(self, acq):
-        ''' Assumes square pixels'''
+    def update_pixelsizes(self, acq):
         self.xy_pixelsize = self.convert_zoom_to_pixelsize(acq['zoom'])
         self.z_pixelsize = acq['z_step']
+
+    def create_voxelsize_string(self, acq):
+        ''' Assumes square pixels'''
+        self.update_pixelsizes(acq)
         return str(self.xy_pixelsize) + ' ' + str(self.xy_pixelsize) + ' ' + str(self.z_pixelsize)
 
     def convert_zoom_to_pixelsize(self, zoom):
@@ -168,14 +211,25 @@ class mesoSPIM_XMLexporter:
         Z:pixelsize: 8
         15/8 = 1.875
 
+        Result:
         1.875 0.0 0.0 0.0 0.0 1.875 0.0 0.0 0.0 0.0 1.0 0.0
+
+        if 
+        XY pixelsize: 8
+        Z:pixelsize: 15
+        15/8 = 1.875
+
+        Result:
+        1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.875 0.0
         '''
+        self.update_pixelsizes(acq)
+
         if self.xy_pixelsize > self.z_pixelsize:
             factor = self.xy_pixelsize/self.z_pixelsize
             calibration_string = str(factor) + ' 0.0 0.0 0.0 0.0 ' + str(factor) + ' 0.0 0.0 0.0 0.0 1.0 0.0'
         elif self.xy_pixelsize < self.z_pixelsize:
             factor = self.z_pixelsize/self.xy_pixelsize
-            calibration_string = str(factor) + '1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 '+ str(factor) +' 0.0'
+            calibration_string = '1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 '+ str(factor) +' 0.0'
         else:
             calibration_string = '1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0'
 
@@ -201,29 +255,7 @@ class mesoSPIM_BDVXMLwriter:
         self.ImageLoader = etree.SubElement(self.SequenceDescription, 'ImageLoader', format="spimreconstruction.stack.ij")
         
         self.ImageDirectory = etree.SubElement(self.ImageLoader, 'imagedirectory', type="relative")
-        '''
-        Layout entries according to: 
-        https://scijava.org/javadoc.scijava.org/Fiji/spim/fiji/spimdata/imgloaders/LegacyStackImgLoader.html
-
-        layoutTP - - 0 == one, 1 == one per file, 2 == all in one file
-        layoutChannels - - 0 == one, 1 == one per file, 2 == all in one file
-        layoutIllum - - 0 == one, 1 == one per file, 2 == all in one file
-        layoutAngles - - 0 == one, 1 == one per file, 2 == all in one file
-        '''
-
-        self.LayoutTimepoints = etree.SubElement(self.ImageLoader, 'layoutTimepoints')
-        self.LayoutTimepoints.text = "0"
-        self.LayoutChannels = etree.SubElement(self.ImageLoader, 'layoutChannels')
-        self.LayoutChannels.text = "0" # <-- has to be updated later on...
-        self.LayoutIlluminations = etree.SubElement(self.ImageLoader, 'layoutIlluminations')
-        self.LayoutIlluminations.text = "0" # <-- has to be updated later on...
-        self.LayoutAngles = etree.SubElement(self.ImageLoader, 'layoutAngles')
-        self.LayoutAngles.text = "0" # <-- has to be updated later on...
-        self.LayoutTiles = etree.SubElement(self.ImageLoader, 'layoutTiles')
-        self.LayoutTiles.text ="1"
-
-        self.Imglib2container = etree.SubElement(self.ImageLoader, 'imglib2container')
-        self.Imglib2container.text = "ArrayImgFactory"
+        
 
 
         self.ViewSetups = etree.SubElement(self.SequenceDescription, 'ViewSetups')
@@ -273,6 +305,32 @@ class mesoSPIM_BDVXMLwriter:
         Ang =  etree.SubElement(Attributes, 'angle')
         Ang.text = str(angle)
 
+    def setLayout(self, filepattern="tiling_file_{x}_c{c}.raw.tif", timepoints=0, channels=0, illuminations=0, angles=0, tiles=1,imglibcontainer="ArrayImgFactory"):
+        '''
+        Layout entries according to: 
+        https://scijava.org/javadoc.scijava.org/Fiji/spim/fiji/spimdata/imgloaders/LegacyStackImgLoader.html
+
+        layoutTP - - 0 == one, 1 == one per file, 2 == all in one file
+        layoutChannels - - 0 == one, 1 == one per file, 2 == all in one file
+        layoutIllum - - 0 == one, 1 == one per file, 2 == all in one file
+        layoutAngles - - 0 == one, 1 == one per file, 2 == all in one file
+        '''
+        self.FilePattern = etree.SubElement(self.ImageLoader,'filePattern')
+        self.FilePattern.text = filepattern
+        self.LayoutTimepoints = etree.SubElement(self.ImageLoader, 'layoutTimepoints')
+        self.LayoutTimepoints.text = str(timepoints)
+        self.LayoutChannels = etree.SubElement(self.ImageLoader, 'layoutChannels')
+        self.LayoutChannels.text = str(channels)
+        self.LayoutIlluminations = etree.SubElement(self.ImageLoader, 'layoutIlluminations')
+        self.LayoutIlluminations.text = str(illuminations)
+        self.LayoutAngles = etree.SubElement(self.ImageLoader, 'layoutAngles')
+        self.LayoutAngles.text = str(angles)
+        self.LayoutTiles = etree.SubElement(self.ImageLoader, 'layoutTiles')
+        self.LayoutTiles.text = str(tiles)
+
+        self.Imglib2container = etree.SubElement(self.ImageLoader, 'imglib2container')
+        self.Imglib2container.text = imglibcontainer
+
     def setViewSize(self, Id, size):
         trigger = False
         for child in self.ViewSetups:
@@ -295,30 +353,30 @@ class mesoSPIM_BDVXMLwriter:
         for illumination in illuminations:
             I = etree.SubElement(illum, 'Illumination')
             Id = etree.SubElement(I, 'id')
-            Id.text = illumination
+            Id.text = str(illumination)
             Name = etree.SubElement(I, 'name')
-            Name.text = illumination
+            Name.text = str(illumination)
 
         for channel in channels:
-            I = etree.SubElement(illum, 'Channel')
+            I = etree.SubElement(chan, 'Channel')
             Id = etree.SubElement(I, 'id')
-            Id.text = channel
+            Id.text = str(channel)
             Name = etree.SubElement(I, 'name')
-            Name.text = channel
+            Name.text = str(channel)
 
         for tile in tiles:
-            I = etree.SubElement(illum, 'Tile')
+            I = etree.SubElement(til, 'Tile')
             Id = etree.SubElement(I, 'id')
-            Id.text = tile
+            Id.text = str(tile)
             Name = etree.SubElement(I, 'name')
-            Name.text = tile
+            Name.text = str(tile)
 
         for angle in angles:
-            I = etree.SubElement(illum, 'Angle')
+            I = etree.SubElement(ang, 'Angle')
             Id = etree.SubElement(I, 'id')
-            Id.text = angle
+            Id.text = str(angle)
             Name = etree.SubElement(I, 'name')
-            Name.text = angle
+            Name.text = str(angle)
 
     def addTimepoints(self, timepoints):
         TP = etree.SubElement(self.SequenceDescription, 'Timepoints', type="pattern")
