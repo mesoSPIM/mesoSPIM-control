@@ -1817,7 +1817,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         pitools.startup(self.pidevice, stages=self.pi_stages)
 
         ''' Setting PI velocities '''
-        # self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
         
         print('M-406 Emergency referencing hack: Waiting for referencing move')
         logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
