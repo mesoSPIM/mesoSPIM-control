@@ -161,14 +161,14 @@ class FocusTrackingWizardCheckResultsPage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self.parent = parent
 
-        self.setTitle('To which laser lines or filters should the focus settings be applied?')
+        self.setTitle('To which acquisitions should the focus settings be applied?')
 
-        self.laserCheckBox = QtWidgets.QCheckBox('Laser', self)
+        self.laserCheckBox = QtWidgets.QCheckBox('Rows with laser set to: ', self)
         self.laserComboBox = QtWidgets.QComboBox(self)
         self.laserComboBox.addItem('All laser lines')
         self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
 
-        self.filterCheckBox = QtWidgets.QCheckBox('Filter', self)
+        self.filterCheckBox = QtWidgets.QCheckBox('Rows with filter set to:', self)
         self.filterComboBox = QtWidgets.QComboBox(self)
         self.filterComboBox.addItem('All filters')
         self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
@@ -184,6 +184,7 @@ class FocusTrackingWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.filterCheckBox.toggled.connect(lambda boolean: self.laserCheckBox.setChecked(not boolean))
 
         self.laserCheckBox.setChecked(True)
+        self.filterComboBox.setEnabled(False)
 
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.laserCheckBox, 0, 0)
@@ -191,6 +192,11 @@ class FocusTrackingWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.filterCheckBox, 1, 0)
         self.layout.addWidget(self.filterComboBox, 1, 1)
         self.setLayout(self.layout)
+
+    def initializePage(self):
+        self.laserComboBox.setCurrentText(self.parent.state['laser'])
+        self.filterComboBox.setCurrentText(self.parent.state['filter'])
+
 
 
         
