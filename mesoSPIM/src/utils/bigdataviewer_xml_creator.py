@@ -69,7 +69,7 @@ class mesoSPIM_XMLexporter:
         tilelist = [t for t in range(num_tiles)]
         anglelist = [0]
 
-        self.xmlwriter.setLayout(filepattern='tiling_file_{x}_c{c}.raw.tif',
+        self.xmlwriter.setLayout(filepattern='tiling_file_t{x}_c{c}.raw.tif',
                                 timepoints=0,
                                 channels=layout_channels,
                                 illuminations=layout_illuminations,
