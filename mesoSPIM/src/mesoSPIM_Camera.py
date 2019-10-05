@@ -197,18 +197,19 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def end_image_series(self):
-        if self.processing_options_string != '':
-            if self.processing_options_string == 'MAX':
-                self.sig_status_message.emit('Doing Max Projection')
-                logger.info('Camera: Started Max Projection of '+str(self.max_frame)+' Images')
-                stackview = self.xy_stack.view()
-                stackview.shape = (self.max_frame, self.x_pixels, self.y_pixels)
-                max_proj = np.max(stackview, axis=0)
-                filename = 'MAX_' +self.filename + '.tif'
-                path = self.folder+'/'+filename
-                tifffile.imsave(path, max_proj, photometric='minisblack')
-                logger.info('Camera: Saved Max Projection')
-                self.sig_status_message.emit('Done with image processing')
+        if self.stopflag is False:
+            if self.processing_options_string != '':
+                if self.processing_options_string == 'MAX':
+                    self.sig_status_message.emit('Doing Max Projection')
+                    logger.info('Camera: Started Max Projection of '+str(self.max_frame)+' Images')
+                    stackview = self.xy_stack.view()
+                    stackview.shape = (self.max_frame, self.x_pixels, self.y_pixels)
+                    max_proj = np.max(stackview, axis=0)
+                    filename = 'MAX_' +self.filename + '.tif'
+                    path = self.folder+'/'+filename
+                    tifffile.imsave(path, max_proj, photometric='minisblack')
+                    logger.info('Camera: Saved Max Projection')
+                    self.sig_status_message.emit('Done with image processing')
 
         try:
             self.camera.close_image_series()
