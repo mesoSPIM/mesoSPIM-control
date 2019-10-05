@@ -63,6 +63,18 @@ class FocusTrackingWizard(QtWidgets.QWizard):
             return 0
         else:
             return (f_2-f_1)/(z_2-z_1)*(z-z_1)+f_1
+
+    def convert_string_to_list(self, inputstring):
+        outputlist = []
+        for substring in inputstring.split(','):
+            newlist = substring.split('-')
+            if len(newlist) == 1:
+                output_values = [int(newlist[0])]
+            else:
+                output_values = [i for i in range(int(newlist[0]), int(newlist[1])+1, 1)]
+            outputlist.extend(output_values)
+        return outputlist       
+
     
     def update_focus_positions_in_model(self):
         row_count = self.parent.model.rowCount()
@@ -72,6 +84,9 @@ class FocusTrackingWizard(QtWidgets.QWizard):
         f_end_column = self.parent.model.getColumnByName('F_end')
         filter_column = self.parent.model.getColumnByName('Filter')
         laser_column = self.parent.model.getColumnByName('Laser')
+
+        if self.field('RowEnabled'):
+            row_list = self.convert_string_to_list(self.field('RowString'))
 
         for row in range(0, row_count):
             z_start = self.parent.model.getZStartPosition(row)
@@ -104,6 +119,11 @@ class FocusTrackingWizard(QtWidgets.QWizard):
                     if self.field('Filter') == self.parent.model.getFilter(row):
                         self.parent.model.setData(f_start_index, f_start)
                         self.parent.model.setData(f_end_index, f_end)
+
+            elif self.field('RowEnabled'):
+                if row in row_list:
+                    self.parent.model.setData(f_start_index, f_start)
+                    self.parent.model.setData(f_end_index, f_end)
             
 
 class FocusTrackingWizardWelcomePage(QtWidgets.QWizardPage):
@@ -173,29 +193,53 @@ class FocusTrackingWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.filterComboBox.addItem('All filters')
         self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
 
+        self.rowCheckBox = QtWidgets.QCheckBox('Specific rows (e.g. 0-2,5-7,10,13):',self)
+        self.rowLineEdit = QtWidgets.QLineEdit(self)
+        
         self.registerField('LaserEnabled',self.laserCheckBox)
         self.registerField('FilterEnabled', self.filterCheckBox)
+        self.registerField('RowEnabled', self.rowCheckBox)
         self.registerField('Laser',self.laserComboBox, 'currentText', self.laserComboBox.currentTextChanged)
         self.registerField('Filter', self.filterComboBox, 'currentText', self.filterComboBox.currentTextChanged)
+        self.registerField('RowString', self.rowLineEdit)
 
-        self.laserCheckBox.toggled.connect(lambda boolean: self.laserComboBox.setEnabled(boolean))
-        self.laserCheckBox.toggled.connect(lambda boolean: self.filterCheckBox.setChecked(not boolean))
-        self.filterCheckBox.toggled.connect(lambda boolean: self.filterComboBox.setEnabled(boolean))
-        self.filterCheckBox.toggled.connect(lambda boolean: self.laserCheckBox.setChecked(not boolean))
-
-        self.laserCheckBox.setChecked(True)
-        self.filterComboBox.setEnabled(False)
+        self.laserCheckBox.clicked.connect(lambda boolean: self.laserComboBox.setEnabled(boolean))
+        self.laserCheckBox.clicked.connect(lambda boolean: self.filterCheckBox.setChecked(not boolean))
+        self.laserCheckBox.clicked.connect(lambda boolean: self.filterComboBox.setEnabled(not boolean))
+        self.laserCheckBox.clicked.connect(lambda boolean: self.rowLineEdit.setEnabled(not boolean))
+        self.laserCheckBox.clicked.connect(lambda boolean: self.rowCheckBox.setChecked(not boolean))
+        
+        self.filterCheckBox.clicked.connect(lambda boolean: self.filterComboBox.setEnabled(boolean))
+        self.filterCheckBox.clicked.connect(lambda boolean: self.laserCheckBox.setChecked(not boolean))
+        self.filterCheckBox.clicked.connect(lambda boolean: self.laserComboBox.setEnabled(not boolean))
+        self.filterCheckBox.clicked.connect(lambda boolean: self.rowLineEdit.setEnabled(not boolean))
+        self.filterCheckBox.clicked.connect(lambda boolean: self.rowCheckBox.setChecked(not boolean))
+        
+        self.rowCheckBox.clicked.connect(lambda boolean: self.rowLineEdit.setEnabled(boolean))
+        self.rowCheckBox.clicked.connect(lambda boolean: self.laserComboBox.setEnabled(not boolean))
+        self.rowCheckBox.clicked.connect(lambda boolean: self.filterComboBox.setEnabled(not boolean))
+        self.rowCheckBox.clicked.connect(lambda boolean: self.laserCheckBox.setChecked(not boolean))
+        self.rowCheckBox.clicked.connect(lambda boolean: self.filterCheckBox.setChecked(not boolean))
 
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.laserCheckBox, 0, 0)
         self.layout.addWidget(self.laserComboBox, 0, 1)
         self.layout.addWidget(self.filterCheckBox, 1, 0)
         self.layout.addWidget(self.filterComboBox, 1, 1)
+        self.layout.addWidget(self.rowCheckBox, 2, 0)
+        self.layout.addWidget(self.rowLineEdit, 2, 1)
         self.setLayout(self.layout)
 
     def initializePage(self):
         self.laserComboBox.setCurrentText(self.parent.state['laser'])
         self.filterComboBox.setCurrentText(self.parent.state['filter'])
+
+        self.laserCheckBox.setChecked(True)
+        self.filterComboBox.setEnabled(False)
+        self.rowLineEdit.setEnabled(False)
+
+
+
 
 
 
