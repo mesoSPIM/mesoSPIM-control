@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>2108</width>
-    <height>367</height>
+    <height>376</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -54,66 +54,6 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="2">
-        <widget class="QPushButton" name="DeleteButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Delete</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="8">
-        <widget class="QPushButton" name="MarkCurrentStateButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Mark Current State</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QPushButton" name="CopyButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Copy</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="5">
-        <widget class="QPushButton" name="FilenameWizardButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Filename Wizard</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="4">
-        <widget class="QPushButton" name="SetFoldersButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Set Folders</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="2">
         <widget class="QPushButton" name="DeleteAllButton">
          <property name="font">
@@ -126,30 +66,27 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="9">
-        <widget class="QPushButton" name="MarkCurrentRotationButton">
+       <item row="0" column="2">
+        <widget class="QPushButton" name="DeleteButton">
          <property name="font">
           <font>
-           <pointsize>15</pointsize>
+           <pointsize>14</pointsize>
           </font>
          </property>
          <property name="text">
-          <string>Mark Current Rotation</string>
+          <string>Delete</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QPushButton" name="TilingWizardButton">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="CopyButton">
          <property name="font">
           <font>
-           <pointsize>15</pointsize>
+           <pointsize>14</pointsize>
           </font>
          </property>
          <property name="text">
-          <string>Tiling Wizard</string>
+          <string>Copy</string>
          </property>
         </widget>
        </item>
@@ -157,7 +94,7 @@
         <widget class="QPushButton" name="MoveUpButton">
          <property name="font">
           <font>
-           <pointsize>15</pointsize>
+           <pointsize>14</pointsize>
           </font>
          </property>
          <property name="text">
@@ -169,7 +106,7 @@
         <widget class="QPushButton" name="AddButton">
          <property name="font">
           <font>
-           <pointsize>15</pointsize>
+           <pointsize>14</pointsize>
           </font>
          </property>
          <property name="text">
@@ -177,11 +114,35 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="4">
+        <widget class="QPushButton" name="SaveButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Save</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="9">
+        <widget class="QPushButton" name="MarkCurrentRotationButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Mark Current Rotation</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="9">
         <widget class="QPushButton" name="MarkCurrentETLParametersButton">
          <property name="font">
           <font>
-           <pointsize>15</pointsize>
+           <pointsize>14</pointsize>
           </font>
          </property>
          <property name="text">
@@ -196,83 +157,11 @@
          </property>
          <property name="font">
           <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Preview Selection</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="5">
-        <widget class="QPushButton" name="LoadButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Load</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="7">
-        <widget class="QPushButton" name="MarkCurrentXYButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Mark Current XY</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QPushButton" name="SaveButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Save</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="3">
-        <widget class="QPushButton" name="MoveDownButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Move Down</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="8">
-        <widget class="QPushButton" name="MarkCurrentFocusButton">
-         <property name="font">
-          <font>
-           <pointsize>15</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Mark Current Focus</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="6">
-        <widget class="QPushButton" name="FocusTrackingWizardButton">
-         <property name="font">
-          <font>
            <pointsize>14</pointsize>
           </font>
          </property>
          <property name="text">
-          <string>Focus Tracking Wizard</string>
+          <string>Preview Selection</string>
          </property>
         </widget>
        </item>
@@ -288,7 +177,118 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="7">
+       <item row="1" column="6">
+        <widget class="QPushButton" name="FocusTrackingWizardButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Focus Tracking Wizard</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QPushButton" name="MoveDownButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Move Down</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="8">
+        <widget class="QPushButton" name="MarkCurrentStateButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Mark Current State</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="8">
+        <widget class="QPushButton" name="MarkCurrentFocusButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Mark Current Focus</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="8">
+        <widget class="QPushButton" name="MarkCurrentXYButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Mark Current XY</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="4">
+        <widget class="QPushButton" name="LoadButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Load</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="4">
+        <widget class="QPushButton" name="SetFoldersButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Set Folders</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="5">
+        <widget class="QPushButton" name="TilingWizardButton">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Tiling Wizard</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="5">
+        <widget class="QPushButton" name="FilenameWizardButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Filename Wizard</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="6">
         <widget class="QPushButton" name="GenerateXMLButton">
          <property name="font">
           <font>
@@ -297,6 +297,21 @@
          </property>
          <property name="text">
           <string>Generate XML</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QCheckBox" name="PreviewZCheckBox">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Preview: Move to Z start</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

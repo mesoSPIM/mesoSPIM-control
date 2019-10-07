@@ -413,7 +413,13 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         # print('selected row:', row)
         if row is not None:
             self.state['selected_row'] = row
-            self.parent.sig_state_request.emit({'state':'preview_acquisition'})
+            # Check if the z position should be updated
+            if self.PreviewZCheckBox.checkState():
+                # print('Checkbox checked')
+                self.parent.sig_state_request.emit({'state':'preview_acquisition_with_z_update'})
+            else:
+                # print('Checkbox not checked')
+                self.parent.sig_state_request.emit({'state':'preview_acquisition_without_z_update'})
         else: 
             if self.model.rowCount() == 1:
                 self.set_selected_row(0)

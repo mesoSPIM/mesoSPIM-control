@@ -297,9 +297,13 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'state':'run_acquisition_list'})
             self.start(row = None)
 
-        elif state == 'preview_acquisition':
+        elif state == 'preview_acquisition_with_z_update':
             self.state['state'] = 'preview_acquisition'
-            self.preview_acquisition()
+            self.preview_acquisition(z_update=True)
+
+        elif state == 'preview_acquisition_without_z_update':
+            self.state['state'] = 'preview_acquisition'
+            self.preview_acquisition(z_update=False)
 
         elif state == 'idle':
             # print('Core: Stopping requested')
@@ -599,7 +603,7 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
             self.sig_finished.emit()
 
-    def preview_acquisition(self):
+    def preview_acquisition(self, z_update=True):
         self.stopflag = False
 
         row = self.state['selected_row']
@@ -615,6 +619,10 @@ class mesoSPIM_Core(QtCore.QObject):
             current_rotation = self.state['position']['theta_pos']
             startpoint = acq.get_startpoint()
             target_rotation = startpoint['theta_abs']
+
+            ''' Remove z-coordinate from dict so that z is not updated during preview: '''
+            if z_update is False:
+                del startpoint['z_abs']
 
             ''' Check if sample has to be rotated, allow some tolerance '''
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
