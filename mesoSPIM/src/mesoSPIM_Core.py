@@ -297,9 +297,13 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'state':'run_acquisition_list'})
             self.start(row = None)
 
-        elif state == 'preview_acquisition':
+        elif state == 'preview_acquisition_with_z_update':
             self.state['state'] = 'preview_acquisition'
-            self.preview_acquisition()
+            self.preview_acquisition(z_update=True)
+
+        elif state == 'preview_acquisition_without_z_update':
+            self.state['state'] = 'preview_acquisition'
+            self.preview_acquisition(z_update=False)
 
         elif state == 'idle':
             # print('Core: Stopping requested')
@@ -599,7 +603,7 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
             self.sig_finished.emit()
 
-    def preview_acquisition(self):
+    def preview_acquisition(self, z_update=True):
         self.stopflag = False
 
         row = self.state['selected_row']
@@ -616,8 +620,19 @@ class mesoSPIM_Core(QtCore.QObject):
             startpoint = acq.get_startpoint()
             target_rotation = startpoint['theta_abs']
 
-            ''' Check if sample has to be rotated, allow some tolerance '''
+            ''' Create a flag when rotation is required: '''
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+                rotationflag = True 
+            else:
+                rotationflag = False
+
+            ''' Remove z-coordinate from dict so that z is not updated during preview: '''
+            if z_update is False:
+                if rotationflag: 
+                    del startpoint['z_abs']
+
+            ''' Check if sample has to be rotated, allow some tolerance '''
+            if rotationflag:
                 self.sig_status_message.emit('Going to rotation position')
                 self.sig_go_to_rotation_position_and_wait_until_done.emit()
                 self.sig_status_message.emit('Rotating sample')
