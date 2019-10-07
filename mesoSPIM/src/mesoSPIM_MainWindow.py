@@ -389,7 +389,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.SnapSubSamplingComboBox,subsampling_list,'camera_display_snap_subsampling', int_conversion = True)
         self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
         # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
-
+        self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
         self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])

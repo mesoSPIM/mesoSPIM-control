@@ -93,6 +93,7 @@ class mesoSPIM_StateSingleton():
                             'camera_display_live_subsampling': 1, 
                             'camera_display_snap_subsampling': 1, 
                             'camera_display_acquisition_subsampling': 2,
+                            'camera_binning':'1x1',
                             'camera_sensor_mode':'ASLM',
                             }
 

@@ -157,6 +157,8 @@ camera_parameters = {'x_pixels' : 1024,
                      'trigger_source' : 2, # external
                     }
 
+binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
+
 '''
 Stage configuration
 '''
@@ -346,5 +348,6 @@ startup = {
 'camera_display_live_subsampling': 1,
 'camera_display_snap_subsampling': 1,
 'camera_display_acquisition_subsampling': 2,
+'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
 }

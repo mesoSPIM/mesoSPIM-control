@@ -98,7 +98,8 @@ class mesoSPIM_Camera(QtCore.QObject):
                         'state',
                         'camera_display_live_subsampling',
                         'camera_display_snap_subsampling',
-                        'camera_display_acquisition_subsampling'):
+                        'camera_display_acquisition_subsampling',
+                        'camera_binning'):
                 exec('self.set_'+key+'(value)')
             # Log Thread ID during Live: just debugging code
             elif key == 'state':
@@ -147,6 +148,9 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     def set_camera_display_acquisition_subsampling(self, factor):
         self.camera_display_acquisition_subsampling = factor
+
+    def set_camera_binning(self, value):
+        self.camera.set_binning(value)
 
     @QtCore.pyqtSlot(Acquisition)
     def prepare_image_series(self, acq):
@@ -303,6 +307,12 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
     def set_line_interval(self, time):
         pass
 
+    def set_binning(self, binning_string):
+        self.x_binning = int(self.binning_string[0])
+        self.y_binning = int(self.binning_string[2])
+        self.x_pixels = int(self.x_pixels / self.x_binning)
+        self.y_pixels = int(self.y_pixels / self.y_binning)
+
     def initialize_image_series(self):
         pass
 
@@ -341,6 +351,14 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
 
     def close_camera(self):
         logger.info('Closed Demo Camera')
+    
+    def set_binning(self, binning_string):
+        self.x_binning = int(self.binning_string[0])
+        self.y_binning = int(self.binning_string[2])
+        self.x_pixels = int(self.x_pixels / self.x_binning)
+        self.y_pixels = int(self.y_pixels / self.y_binning)
+        self.line = np.linspace(0,6*np.pi,self.x_pixels)
+        self.line = 400*np.sin(self.line)+1200
 
     def _create_random_image(self):
         data = np.array([np.roll(self.line, 4*i+self.count) for i in range(0, self.y_pixels)])
@@ -405,6 +423,13 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def set_line_interval(self, time):
         self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
+
+    def set_binning(self, binningstring):
+        self.hcam.setPropertyValue("binning", binningstring)
+        self.x_binning = int(self.binning_string[0])
+        self.y_binning = int(self.binning_string[2])
+        self.x_pixels = int(self.x_pixels / self.x_binning)
+        self.y_pixels = int(self.y_pixels / self.y_binning)
 
     def initialize_image_series(self):
         self.hcam.startAcquisition()
@@ -541,6 +566,13 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 
     def set_line_interval(self, time):
         print('Setting line interval is not implemented, set the interval in the config file')
+
+    def set_binning(self, binningstring):
+        self.x_binning = int(self.binning_string[0])
+        self.y_binning = int(self.binning_string[2])
+        self.x_pixels = int(self.x_pixels / self.x_binning)
+        self.y_pixels = int(self.y_pixels / self.y_binning)
+        self.pvcam.binning = (self.x_binning, self.y_binning)
         
     def get_image(self):
         return self.pvcam.get_live_frame()
