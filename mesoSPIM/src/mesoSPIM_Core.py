@@ -430,17 +430,34 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def open_shutters(self):
+        '''Here the left/right mode is hacked in
+
+        If shutterswitch = True in the config:
+        Assumes that the shutter_left line is the general shutter 
+        and the shutter_right line is the left/right switch (Right==True)
+        '''
+
         shutterconfig = self.state['shutterconfig']
 
         if shutterconfig == 'Both':
-            self.shutter_left.open()
-            self.shutter_right.open()
+            if self.cfg.shutterswitch == False:
+                self.shutter_left.open()
+                self.shutter_right.open()
         elif shutterconfig == 'Left':
-            self.shutter_left.open()
-            self.shutter_right.close()
+            if self.cfg.shutterswitch == False:
+                self.shutter_left.open()
+                self.shutter_right.close()
+            else:
+                self.shutter_left.open() # open the general shutter
+                self.shutter_right.close() # set side-switch to false 
+
         elif shutterconfig == 'Right':
-            self.shutter_right.open()
-            self.shutter_left.close()
+            if self.cfg.shutterswitch == False:
+                self.shutter_right.open()
+                self.shutter_left.close()
+            else:
+                self.shutter_left.open() # open the general shutte
+                self.shutter_right.open() # set side-switch to true
         else:
             self.shutter_right.open()
             self.shutter_left.open()
