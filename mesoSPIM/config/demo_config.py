@@ -59,6 +59,7 @@ laserdict = {'405 nm': 'PXI6733/port0/line2',
 Assignment of the analog outputs of the Laser card to the channels
 The Empty slots are placeholders.
 '''
+laser_blanking = False
 
 laser_designation = {'405 nm' : 0,
                      '488 nm' : 1,
@@ -90,6 +91,7 @@ shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
 shutteroptions = ('Left','Right','Both')
+shutterswitch = False
 
 '''
 Camera configuration
