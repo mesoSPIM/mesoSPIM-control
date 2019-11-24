@@ -333,10 +333,12 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         ''' Stage 5 referencing hack '''
         # print('Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Referencing status 5: ', self.pidevice.qFRF(5))
-        self.pidevice.FRF(5)
-        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack: Waiting for referencing move')
+
+        ''' With this version, it is the first stage that needs to be referenced...'''
+        self.pidevice.FRF(1)
+        logger.info('mesoSPIM_Stages: M-112K033 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
-        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack done')
+        logger.info('mesoSPIM_Stages: M-112K033 Emergency referencing hack done')
         # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
 
