@@ -365,7 +365,11 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):
-        self.laserenabler.enable(laser)
+        '''Blanking: Enable only if blanking is off'''
+
+        if self.cfg.laser_blanking == False:
+            self.laserenabler.enable(laser)
+
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'laser' : laser})
             if update_etl:
@@ -479,10 +483,15 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
+        laser = self.state['laser']
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
         self.waveformer.stop_tasks()
         self.waveformer.close_tasks()
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.disable(laser)
 
     def prepare_image_series(self):
         '''Prepares an image series without waveform update'''
@@ -491,9 +500,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def snap_image_in_series(self):
         '''Snaps and image from a series without waveform update'''
+        laser = self.state['laser']
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
         self.waveformer.stop_tasks()
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.disable(laser)
 
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
