@@ -466,8 +466,17 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def close_shutters(self):
-        self.shutter_left.close()
-        self.shutter_right.close()
+        '''
+        If shutterswitch = True in the config:
+        Assumes that the shutter_left line is the general shutter 
+        and the shutter_right line is the left/right switch (Right==True)
+        '''
+        if self.cfg.shutterswitch == False:
+            self.shutter_left.close()
+            self.shutter_right.close()
+        else:
+            self.shutter_left.close()
+        
         self.state['shutterstate'] = False
 
     '''
