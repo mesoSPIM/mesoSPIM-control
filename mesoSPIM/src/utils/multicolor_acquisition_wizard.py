@@ -516,7 +516,7 @@ class ThirdChannelPage(GenericChannelPage):
         super().__init__(parent, 2)
 
     def nextId(self):
-        return self.parent.folder 
+        return self.parent.folderpage 
          
 class DefineFolderPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
