@@ -55,7 +55,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                  filter= 'Empty-Alignment',
                  zoom= '1x',
                  shutterconfig='Left',
-                 folder='./tmp',
+                 folder='tmp',
                  filename='one.raw',
                  etl_l_offset = 0,
                  etl_l_amplitude =0,
