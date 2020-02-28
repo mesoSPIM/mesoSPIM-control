@@ -629,8 +629,9 @@ class mesoSPIM_Core(QtCore.QObject):
 
             ''' Remove z-coordinate from dict so that z is not updated during preview: '''
             if z_update is False:
-                if rotationflag: 
-                    del startpoint['z_abs']
+                ''' If a rotation is necessary, z will be updated '''
+                if rotationflag == False: 
+                    del startpoint['z_abs']                
 
             ''' Check if sample has to be rotated, allow some tolerance '''
             if rotationflag:
