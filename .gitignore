@@ -4,8 +4,7 @@ __pycache__
 /**/.ipynb_checkpoints
 **/*.ipynb_checkpoints/
 mesoSPIM/legacy/*
-tmp/*
-/tmp/*
+
 *.log
 mesoSPIM/src/devices/zoom/dynamixel/*
 mesoSPIM/PI_GCS2_DLL_x64.dll
@@ -64,6 +63,7 @@ mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
 
 mesoSPIM/src/devices/zoom/dynamixel\.zip
 
-mesoSPIM/tmp/
-
 mesoSPIM/acq/
+
+mesoSPIM/tmp/
+!mesoSPIM/tmp/readme.txt
