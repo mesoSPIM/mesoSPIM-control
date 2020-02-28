@@ -362,8 +362,9 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
         self.line = 400*np.sin(self.line)+1200
 
     def _create_random_image(self):
-        data = np.array([np.roll(self.line, 4*i+self.count) for i in range(0, self.y_pixels)])
-        data = data + np.random.normal(size=(self.x_pixels, self.y_pixels))*100
+        data = np.array([np.roll(self.line, 4*i+self.count) for i in range(0, self.y_pixels)], dtype='uint16')
+        data = data + (np.random.normal(size=(self.x_pixels, self.y_pixels))*100)
+        data = np.around(data).astype('uint16')
         self.count += 20
         return data
 
