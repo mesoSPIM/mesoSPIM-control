@@ -44,7 +44,7 @@ In addition (for Anaconda), the following packages need to be installed:
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`
 * For Galil stages, copy `gclib.py` into `mesoSPIM/src/devices/stages/galil/gclib/gclib.py`
-* For zoom control via dynamixel servos, copy the dynamixel Python file `dynamixel_functions.py` into `mesoSPIM/src/devices/zoom/dynamixel/`
+* For zoom control via dynamixel servos, copy the dynamixel Python file `dynamixel_functions.py` into `mesoSPIM/src/devices/zoom/dynamixel/` You will also need to edit this file to point to the correct Dynamixel dll. You could copy these files into the `zoom/dynamixel` folder to keep things neatly in one place.
 
 #### Prepare a configuration file and wire the NI DAQ
 The configuration files are in the `config` directory.
