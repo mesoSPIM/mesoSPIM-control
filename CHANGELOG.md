@@ -13,6 +13,7 @@ to f_start and at z_end, the detection path focus is at z_end. This allows imagi
 * **New:** Better warnings if no row is selected while clicking Mark buttons.
 * **Bugfix:** Manually entering a value in a field in the Acquisition Manager table would change values in other rows as well if the row had been copied before.
 * **Bugfix:** Mark buttons and dropdown menus in the Acquisition Manager table slowed down the GUI when a lot of rows (>25) were present. As a fix, only the selected row shows the menu.
+* **Improvement:** The software now provides more verbose warnings when acquisitions cannot be started due to missing folders, duplicated filenames and already existing files.
 * **Bugfix #26:** Fixed: First row is selected by mark buttons by default if only a single row exists in the Acquisition Manager Table
 * **Bugfix #27:** Fixed: Entering text into boxes is a bit buggy
 * **Bugfix #30:** Fixed: Zooming drop down menu often fails to update after a zoom

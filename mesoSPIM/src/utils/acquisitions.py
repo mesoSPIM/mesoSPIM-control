@@ -310,16 +310,18 @@ class AcquisitionList(list):
         return False
 
     def check_for_existing_filenames(self):
+        ''' Returns a list of existing filenames '''
+        filename_list = []
         for i in range(len(self)):
             filename = self[i]['folder']+'/'+self[i]['filename']
             file_exists = os.path.isfile(filename)
             if file_exists:
-                print('Attention: Existing file: ', filename)
-                return True
-            else:
-                return False
+                filename_list.append(filename)
 
+        return filename_list 
+        
     def check_for_duplicated_filenames(self):
+        ''' Returns a list of duplicated filenames '''
         duplicates = []
         filenames = []
 
@@ -330,23 +332,17 @@ class AcquisitionList(list):
 
         duplicates = self.get_duplicates_in_list(filenames)
 
-        if len(duplicates)==0:
-            return False
-        else:
-            print('Attention: Duplicated filename: ', duplicates)
-            return True
+        return duplicates
 
     def check_for_nonexisting_folders(self):
-        ''' Return true if at least one folder out of the acquisition list does 
-        not exist'''
-
-        nonexisting_folders = False
+        ''' Returns a list of nonexisting folders '''
+        
+        nonexisting_folders = []
 
         for i in range(len(self)):
             folder = self[i]['folder']
             if not os.path.isdir(folder):
-                nonexisting_folders = True
-                print('Attention: Folder does not exist: ', folder)
+                nonexisting_folders.append(folder)
         
         return nonexisting_folders
 

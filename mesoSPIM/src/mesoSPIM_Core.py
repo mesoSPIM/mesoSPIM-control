@@ -543,14 +543,18 @@ class mesoSPIM_Core(QtCore.QObject):
         #     if acq_list.get_rotation_point_status() is False:
         #         self.sig_warning.emit('Acquisition list contains rotation - stopping')
         #         self.sig_finished.emit()
-        if acq_list.check_for_nonexisting_folders() == True:
-            self.sig_warning.emit('One or more folders in the acquisition list do not exist - stopping.')
+        nonexisting_folders_list = acq_list.check_for_nonexisting_folders()
+        filename_list = acq_list.check_for_existing_filenames()
+        duplicates_list = acq_list.check_for_duplicated_filenames()
+
+        if nonexisting_folders_list != []:
+            self.sig_warning.emit('The following folders do not exist - stopping! \n'+self.list_to_string_with_carriage_return(nonexisting_folders_list))
             self.sig_finished.emit()
-        elif acq_list.check_for_existing_filenames() == True:
-            self.sig_warning.emit('One or more files in the acquisition list already exist - stopping.')
+        elif filename_list != []:
+            self.sig_warning.emit('The following files already exist - stopping! \n'+self.list_to_string_with_carriage_return(filename_list))
             self.sig_finished.emit()
-        elif acq_list.check_for_duplicated_filenames() == True:
-            self.sig_warning.emit('One or more filenames in the acquisition list is duplicated - stopping.')
+        elif duplicates_list != []:
+            self.sig_warning.emit('The following filenames are duplicated - stopping! \n' +self.list_to_string_with_carriage_return(duplicates_list))
             self.sig_finished.emit()
         else:
             self.sig_update_gui_from_state.emit(True)
@@ -990,3 +994,8 @@ class mesoSPIM_Core(QtCore.QObject):
     def send_status_message_to_gui(self, string):
         self.sig_status_message.emit(string)
 
+    def list_to_string_with_carriage_return(self, input_list):
+        mystring = ''
+        for i in input_list:
+            mystring = mystring + ' \n ' + i    
+        return mystring
