@@ -132,7 +132,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
 
         '''XML writing testcode'''
-        self.GenerateXMLButton.clicked.connect(self.generate_xml)
+        # self.GenerateXMLButton.clicked.connect(self.generate_xml)
  
 
     def enable(self):
