@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
-if sys.platform == 'win32':
-    from PyQt5.QtWinExtras import QWinTaskbarButton
+''' Disabled taskbar button progress display due to problems with Anaconda default'''
+# if sys.platform == 'win32':
+#     from PyQt5.QtWinExtras import QWinTaskbarButton
 
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
@@ -170,10 +171,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
 
     def display_icons(self):
+        pass
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
             self.win_taskbar_button = QWinTaskbarButton(self)
             self.win_taskbar_button.setWindow(self.windowHandle())
             self.win_taskbar_button.progress().setVisible(False)
+        '''
 
     def get_state_parameter(self, state_parameter):
         return self.state[state_parameter]
@@ -259,8 +263,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.AcquisitionProgressBar.setValue(int((cur_image+1)/images_in_acq*100))
         self.TotalProgressBar.setValue(int((image_count+1)/tot_images*100))
 
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setValue(int((image_count+1)/tot_images*100))
+        '''
 
         self.AcquisitionProgressBar.setFormat('%p% (Image '+ str(cur_image+1) +\
                                         '/' + str(images_in_acq) + ')')
@@ -500,8 +506,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.enable_gui_updates_from_state(True)
             self.enable_stop_button(True)
             self.enable_gui(False)
+            ''' Disabled taskbar button progress display due to problems with Anaconda default
             if sys.platform == 'win32':
                 self.win_taskbar_button.progress().setVisible(True)
+            '''
 
     def run_acquisition_list(self):
         self.state['selected_row'] = -1
@@ -510,24 +518,30 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)
         self.enable_gui(False)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setVisible(True)
+        '''
 
     def run_lightsheet_alignment_mode(self):
         self.sig_state_request.emit({'state':'lightsheet_alignment_mode'})
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setVisible(False)
+        '''
     
     def run_visual_mode(self):
         self.sig_state_request.emit({'state':'visual_mode'})
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setVisible(False)
+        '''
 
     @QtCore.pyqtSlot(bool)
     def enable_gui_updates_from_state(self, boolean):
@@ -562,17 +576,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.AcquisitionProgressBar.setMaximum(0)
         self.TotalProgressBar.setMinimum(0)
         self.TotalProgressBar.setMaximum(0)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setVisible(False)
+        '''
     
     def set_progressbars_to_standard(self):
         self.AcquisitionProgressBar.setMinimum(0)
         self.AcquisitionProgressBar.setMaximum(100)
         self.TotalProgressBar.setMinimum(0)
         self.TotalProgressBar.setMaximum(100)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setValue(0)
             self.win_taskbar_button.progress().setVisible(False)
+        '''
 
     def update_etl_increments(self):
         increment = self.ETLIncrementSpinBox.value()
