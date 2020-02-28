@@ -190,7 +190,8 @@ class mesoSPIM_Camera(QtCore.QObject):
             logger.info('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
 
         if self.stopflag is False:
-            if self.cur_image + 1 < self.max_frame:
+            if self.cur_image < self.max_frame:
+                # logger.info('self.cur_image + 1: '+str(self.cur_image + 1))
                 images = self.camera.get_images_in_series()
                 for image in images:
                     image = np.rot90(image)
