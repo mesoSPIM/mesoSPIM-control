@@ -336,6 +336,20 @@ class AcquisitionList(list):
             print('Attention: Duplicated filename: ', duplicates)
             return True
 
+    def check_for_nonexisting_folders(self):
+        ''' Return true if at least one folder out of the acquisition list does 
+        not exist'''
+
+        nonexisting_folders = False
+
+        for i in range(len(self)):
+            folder = self[i]['folder']
+            if not os.path.isdir(folder):
+                nonexisting_folders = True
+                print('Attention: Folder does not exist: ', folder)
+        
+        return nonexisting_folders
+
     def get_duplicates_in_list(self, list):
         duplicates = []
         unique = set(list)

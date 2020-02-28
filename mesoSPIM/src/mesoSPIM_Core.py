@@ -543,8 +543,10 @@ class mesoSPIM_Core(QtCore.QObject):
         #     if acq_list.get_rotation_point_status() is False:
         #         self.sig_warning.emit('Acquisition list contains rotation - stopping')
         #         self.sig_finished.emit()
-
-        if acq_list.check_for_existing_filenames() == True:
+        if acq_list.check_for_nonexisting_folders() == True:
+            self.sig_warning.emit('One or more folders in the acquisition list do not exist - stopping.')
+            self.sig_finished.emit()
+        elif acq_list.check_for_existing_filenames() == True:
             self.sig_warning.emit('One or more files in the acquisition list already exist - stopping.')
             self.sig_finished.emit()
         elif acq_list.check_for_duplicated_filenames() == True:

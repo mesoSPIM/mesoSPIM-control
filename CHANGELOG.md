@@ -18,6 +18,7 @@ to f_start and at z_end, the detection path focus is at z_end. This allows imagi
 * **Bugfix #30:** Fixed: Zooming drop down menu often fails to update after a zoom
 * **Bugfix #31:** Fixed: `demo_config.py` now contains subsampling settings
 * **Bugfix #34:** Fixed: Last frame in a stack is blank due to an off-by-one error
+* **Bugfix #35:** Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist
 
 ---
 
