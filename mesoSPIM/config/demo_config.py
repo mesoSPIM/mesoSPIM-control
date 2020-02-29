@@ -1,12 +1,29 @@
 import numpy as np
 
 '''
-Basic hardware configuration
+mesoSPIM configuration file.
+
+Use this file as a starting point to set up all mesoSPIM hardware by replacing the 'Demo' designations
+with real hardware one-by-one. Make sure to rename your new configuration file to a different filename
+(The extension has to be .py).
 '''
 
 '''
-PXI6733 is responsible for the lasers
+Waveform output for Galvos, ETLs etc.
+'''
+
+waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration' or 'NI'
+
+'''
+Card designations need to be the same as in NI MAX, if necessary, use NI MAX
+to rename your cards correctly.
+
+A standard mesoSPIM configuration uses two cards:
+
+PXI6733 is responsible for the lasers (analog intensity control)
 PXI6259 is responsible for the shutters, ETL waveforms and galvo waveforms
+
+
 '''
 
 acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
@@ -17,11 +34,20 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'laser_task_line' :  'PXI6733/ao0:7',
                         'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
-sidepanel = 'Demo' # FarmSimulator
+'''
+Human interface device (Joystick)
+'''
+sidepanel = 'Demo' #'Demo' or 'FarmSimulator'
 
-laser = 'NI' # Demo
+'''
+Digital laser enable lines
+'''
 
-'''The laserdict contains the digital enable lines for the SOLE-6'''
+laser = 'Demo' # 'Demo' or 'NI'
+
+''' The laserdict keys are the laser designation that will be shown
+in the user interface '''
+
 laserdict = {'405 nm': 'PXI6733/port0/line2',
              '488 nm': 'PXI6733/port0/line3',
              '515 nm': 'PXI6733/port0/line4',
@@ -33,6 +59,7 @@ laserdict = {'405 nm': 'PXI6733/port0/line2',
 Assignment of the analog outputs of the Laser card to the channels
 The Empty slots are placeholders.
 '''
+
 laser_designation = {'405 nm' : 0,
                      '488 nm' : 1,
                      '515 nm' : 2,
@@ -46,6 +73,7 @@ laser_designation = {'405 nm' : 0,
 '''
 Assignment of the galvos and ETLs to the 6259 AO channels.
 '''
+
 galvo_etl_designation = {'Galvo-L' : 0,
                          'Galvo-R' : 1,
                          'ETL-L' : 2,
@@ -56,7 +84,7 @@ galvo_etl_designation = {'Galvo-L' : 0,
 Shutter configuration
 '''
 
-shutter = 'NI' # Demo
+shutter = 'Demo' # 'Demo' or 'NI'
 shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
               'shutter_right' : 'PXI6259/port2/line0'}
 
@@ -66,7 +94,18 @@ shutteroptions = ('Left','Right','Both')
 '''
 Camera configuration
 '''
-camera = 'HamamatsuOrcaFlash' # 'Demo'
+
+'''
+For a DemoCamera, only the following options are necessary
+(x_pixels and y_pixels can be chosen arbitrarily):
+
+camera_parameters = {'x_pixels' : 1024,
+                     'y_pixels' : 1024,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4]}
+
+For a Hamamatsu Orca Flash 4.0 V2 or V3, the following parameters are necessary:
 
 camera_parameters = {'x_pixels' : 2048,
                      'y_pixels' : 2048,
@@ -84,16 +123,60 @@ camera_parameters = {'x_pixels' : 2048,
                      'trigger_source' : 2, # external
                     }
 
+For a Photometrics Iris 15, the following parameters are necessary:
+
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'speed_table_index': 0,
+                     'exp_mode' : 'Ext Trig Edge Rising', # Lots of options in PyVCAM --> see constants.py
+                     'binning' : '1x1',
+                     'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
+                     'scan_direction' : 1, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
+                     'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
+                    }
+
+'''
+camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsIris15'
+
+camera_parameters = {'x_pixels' : 1024,
+                     'y_pixels' : 1024,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'camera_id' : 0,
+                     'sensor_mode' : 12,    # 12 for progressive
+                     'defect_correct_mode': 2,
+                     'binning' : '1x1',
+                     'readout_speed' : 1,
+                     'trigger_active' : 1,
+                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
+                     'trigger_polarity' : 2, # positive pulse
+                     'trigger_source' : 2, # external
+                    }
+
+binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
+
 '''
 Stage configuration
 '''
-stage_parameters = {'stage_type' : 'PI_rotz_and_Galil_xyf', # 'PI' or 'Debug'
+
+'''
+The stage_parameter dictionary defines the general stage configuration, initial positions,
+and safety limits. The rotation position defines a XYZ position (in absolute coordinates)
+where sample rotation is safe. Additional hardware dictionaries (e.g. pi_parameters)
+define the stage configuration details.
+'''
+
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
                     'x_max' : 51000,
                     'x_min' : -46000,
-                    'y_max' : 0,
+                    'y_max' : 160000,
                     'y_min' : -160000,
                     'z_max' : 99000,
                     'z_min' : -99000,
@@ -106,39 +189,45 @@ stage_parameters = {'stage_type' : 'PI_rotz_and_Galil_xyf', # 'PI' or 'Debug'
                     'z_rot_position': 66000,
                     }
 
-'''Sample XYZ controller'''                    
-xyf_galil_parameters = {'port' : '192.168.1.43',#'or COM48'
-                        'x_encodercounts_per_um' : 2,
-                        'y_encodercounts_per_um' : 2,
-                        'f_encodercounts_per_um' : 2
-                        }
-
-'''PI Rotation + z controller'''
-pi_parameters = {'controllername' : 'C-884',
-                'stages' : ('M-061.PD','M-406.4PD'),
-                'refmode' : ('FRF',),
-                'serialnum' : ('118015799'), #0185500834
-                'velocity': {0: 22.5, 1: 2}, # in mm/s or °/s
-                }
-
 '''
+Depending on the stage hardware, further dictionaries define further details of the stage configuration
+
+For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the
+serialnumber with the one of your controller):
+
 pi_parameters = {'controllername' : 'C-884',
-                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','M-061.PD'),
+                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
+                 'refmode' : ('FRF',),
+                 'serialnum' : ('118015797'),
+                 }
+
+For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
+serialnumber with the one of your controller):
+
+pi_parameters = {'controllername' : 'C-884',
+                 'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
-                 }
 '''
-
-
 
 '''
 Filterwheel configuration
 '''
 
-filterwheel_parameters = {'filterwheel_type' : 'Ludl',
+'''
+For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
+a valid COMport is necessary.
+'''
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
+
+'''
+
+A Ludl double filter wheel can be
+'''
+
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
               '405-488-647-Tripleblock' : 1,
               '405-488-561-640-Quadrupleblock' : 2,
@@ -153,10 +242,20 @@ filterdict = {'Empty-Alignment' : 0, # Every config should contain this
 '''
 Zoom configuration
 '''
-zoom_parameters = {'zoom_type' : 'Dynamixel',
+
+'''
+For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom,
+these values have to be there
+'''
+zoom_parameters = {'zoom_type' : 'DemoZoom', # 'DemoZoom' or 'Dynamixel'
                    'servo_id' :  4,
                    'COMport' : 'COM38',
                    'baudrate' : 1000000}
+
+'''
+The keys in the zoomdict define what zoom positions are displayed in the selection box
+(combobox) in the user interface.
+'''
 
 zoomdict = {'0.63x' : 3423,
             '0.8x' : 3071,
@@ -187,7 +286,13 @@ pixelsize = {'0.63x' : 10.52,
 '''
 Initial acquisition parameters
 
-This gets set up into the first microscope state
+Used as initial values after startup
+
+When setting up a new mesoSPIM, make sure that:
+* 'max_laser_voltage' is correct (5 V for Toptica MLEs, 10 V for Omicron SOLE)
+* 'galvo_l_amplitude' and 'galvo_r_amplitude' (in V) are correct (not above the max input allowed by your galvos)
+* all the filepaths exist
+* the initial filter exists in the filter dictionary above
 '''
 
 startup = {
@@ -198,8 +303,8 @@ startup = {
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'filepath' : '/tmp/file.raw',
 'folder' : '/tmp/',
+'snap_folder' : '/tmp/',
 'file_prefix' : '',
-'start_number' : 1,
 'file_suffix' : '000001',
 'zoom' : '1x',
 'pixelsize' : 6.55,
@@ -240,7 +345,9 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
-'camera_display_live_subsampling': 1, 
-'camera_display_snap_subsampling': 1, 
+'camera_display_live_subsampling': 1,
+'camera_display_snap_subsampling': 1,
 'camera_display_acquisition_subsampling': 2,
+'camera_binning':'1x1',
+'camera_sensor_mode':'ASLM',
 }
