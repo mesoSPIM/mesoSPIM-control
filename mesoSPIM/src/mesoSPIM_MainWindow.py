@@ -268,12 +268,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setValue(int((image_count+1)/tot_images*100))
         '''
 
-        self.AcquisitionProgressBar.setFormat('%p% (Image '+ str(cur_image+1) +\
-                                        '/' + str(images_in_acq) + ')')
-        self.TotalProgressBar.setFormat('%p% (Acquisition '+ str(cur_acq+1) +\
+        self.AcquisitionProgressBar.setFormat('%p% Image '+ str(cur_image+1) +\
+                                        '/' + str(images_in_acq) + ' ')
+        self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
                                         '/' + str(tot_acqs) +\
-                                         ')' + ' (Image '+ str(image_count) +\
-                                        '/' + str(tot_images) + ')')
+                                         ' ' + ' Image: '+ str(image_count) +\
+                                        '/' + str(tot_images) + ' ' +\
+                                            'Time: --:--:-- ' + \
+                                            'Remaining: --:--:--')
 
     def create_script_window(self):
         '''

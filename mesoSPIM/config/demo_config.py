@@ -160,6 +160,15 @@ camera_parameters = {'x_pixels' : 1024,
 binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
 
 '''
+Microscope frame rate for time prediction
+
+This is an average frame rate value used for initial predictions of the 
+acquistion time. In long acquisitions, this value will be updated from 
+the measured acquisition time. The log file contains measured frame rates for 
+'''
+average_frame_rate = 4.969
+
+'''
 Stage configuration
 '''
 
