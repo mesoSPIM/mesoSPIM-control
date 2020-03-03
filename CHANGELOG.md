@@ -13,18 +13,18 @@ from your microscope (are now logged in the metadata files after an acquisition)
 * :gem: **New: Multicolor tiling wizard**: The Tiling wizard can now support up to 3 color channels with different ETL parameters and focus tracking settings.
 * :gem: **New: Image Processing Wizard**: `mesoSPIM-control` now has an Image Processing Wizard (accessible via a button in the `Acquisition Manager`). Currently, this allows maximum projections to be generated automatically after acquisitions.  
 * :gem: **New: Support for Photometrics cameras**: Photometrics cameras are now supported if `PyVCAM` and the PVCAM-SDK are installed. Only the Iris 15 has been tested so far.
-* **New:** Removed unnecessary microscope and ETL configuration files cluttering the repository. Changed `.gitignore` correspondingly - future changes to configuration files. This addresses issue #16.
-* **Improvement:** The software now provides more verbose warnings when acquisitions cannot be started due to missing folders, duplicated filenames and already existing files.
-* **New:** Added a `CHANGELOG.md` file
-* **New:** Better warnings if no row is selected while clicking Mark buttons.
-* **Bugfix:** Manually entering a value in a field in the Acquisition Manager table would change values in other rows as well if the row had been copied before.
-* **Bugfix:** Mark buttons and dropdown menus in the Acquisition Manager table slowed down the GUI when a lot of rows (>25) were present. As a fix, only the selected row shows the menu.
-* **Bugfix #26:** Fixed: First row is selected by mark buttons by default if only a single row exists in the Acquisition Manager Table
-* **Bugfix #27:** Fixed: Entering text into boxes is a bit buggy
-* **Bugfix #30:** Fixed: Zooming drop down menu often fails to update after a zoom
-* **Bugfix #31:** Fixed: `demo_config.py` now contains subsampling settings
-* **Bugfix #34:** Fixed: Last frame in a stack is blank due to an off-by-one error
-* **Bugfix #35:** Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist
+* :sparkles: **Improvement:** Removed unnecessary microscope and ETL configuration files cluttering the repository. Changed `.gitignore` correspondingly - future changes to configuration files. This addresses issue #16.
+* :sparkles: **Improvement:** The software now provides more verbose warnings when acquisitions cannot be started due to missing folders, duplicated filenames and already existing files.
+* :sparkles: **Improvement:** Better warnings if no row is selected while clicking Mark buttons.
+* :sparkles: **New:** Added a `CHANGELOG.md` file
+* :bug: **Bugfix:** Manually entering a value in a field in the Acquisition Manager table would change values in other rows as well if the row had been copied before.
+* :bug: **Bugfix:** Mark buttons and dropdown menus in the Acquisition Manager table slowed down the GUI when a lot of rows (>25) were present. As a fix, only the selected row shows the menu.
+* :bug: **Bugfix #26:** Fixed: First row is selected by mark buttons by default if only a single row exists in the Acquisition Manager Table
+* :bug: **Bugfix #27:** Fixed: Entering text into boxes is a bit buggy
+* :bug: **Bugfix #30:** Fixed: Zooming drop down menu often fails to update after a zoom
+* :bug: **Bugfix #31:** Fixed: `demo_config.py` now contains subsampling settings
+* :bug: **Bugfix #34:** Fixed: Last frame in a stack is blank due to an off-by-one error
+* :bug: **Bugfix #35:** Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist
 
 ---
 
