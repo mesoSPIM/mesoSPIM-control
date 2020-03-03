@@ -143,10 +143,11 @@ class mesoSPIM_Core(QtCore.QObject):
         # self.sig_state_request.connect(self.demo_worker.report_thread_id)
         # self.demo_worker.moveToThread(self.demo_thread)
         # self.demo_thread.start()
-        ''' HICKUP DEBUGGING '''
-        self.z_start_measured = 0.0
-        self.z_end_measured = 0.0
-        self.hickup_delta_z = 0.0
+
+        # ''' HICKUP DEBUGGING '''
+        # self.z_start_measured = 0.0
+        # self.z_end_measured = 0.0
+        # self.hickup_delta_z = 0.0
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -684,6 +685,8 @@ class mesoSPIM_Core(QtCore.QObject):
         current_rotation = self.state['position']['theta_pos']
         startpoint = acq.get_startpoint()
         target_rotation = startpoint['theta_abs']
+        self.acq_start_time = time.time()
+        self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
@@ -713,8 +716,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
 
-        ''' HICKUP DEBUGGING: Measure z position '''
-        self.z_start_measured = self.state['position']['z_pos']
+        # ''' HICKUP DEBUGGING: Measure z position '''
+        # self.z_start_measured = self.state['position']['z_pos']
 
         self.write_metadata(acq)
 
@@ -722,6 +725,10 @@ class mesoSPIM_Core(QtCore.QObject):
         steps = acq.get_image_count()
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
+
+        self.image_acq_start_time = time.time()
+        self.image_acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
+
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
@@ -775,14 +782,19 @@ class mesoSPIM_Core(QtCore.QObject):
                                    self.image_count,
                                    convert_seconds_to_string(time_passed),
                                    convert_seconds_to_string(time_remaining))
+
+        self.image_acq_end_time = time.time()
+        self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+
         self.close_shutters()
 
     def close_acquisition(self, acq):
-        ''' HICKUP DEBUGGING '''
-        self.z_end_measured = self.state['position']['z_pos']
-        self.f_end_measured = self.state['position']['f_pos']
-        self.collect_troubleshooting_data(acq)
-        self.append_troubleshooting_info_to_metadata(acq)
+
+        # ''' HICKUP DEBUGGING '''
+        # self.z_end_measured = self.state['position']['z_pos']
+        # self.f_end_measured = self.state['position']['f_pos']
+        # self.collect_troubleshooting_data(acq)
+        # self.append_troubleshooting_info_to_metadata(acq)
 
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
 
@@ -791,6 +803,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.close_image_series()
             self.sig_end_image_series.emit()
 
+        self.acq_end_time = time.time()
+        self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+
+        self.append_timing_info_to_metadata(acq)
         self.acquisition_count += 1
 
     @QtCore.pyqtSlot(str)
@@ -977,14 +993,37 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
                 self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
 
-    ''' HICKUP DEBUGGING '''
+    # ''' HICKUP DEBUGGING '''
 
-    def collect_troubleshooting_data(self, acq):
-        self.hickup_delta_z = self.z_end_measured - acq['z_end']
-        self.hickup_delta_f = self.f_end_measured - acq['f_end']
-        # print('HICKUP Difference: ', self.hickup_delta_z)
+    # def collect_troubleshooting_data(self, acq):
+    #     self.hickup_delta_z = self.z_end_measured - acq['z_end']
+    #     self.hickup_delta_f = self.f_end_measured - acq['f_end']
+    #     # print('HICKUP Difference: ', self.hickup_delta_z)
 
-    def append_troubleshooting_info_to_metadata(self, acq):
+    # def append_troubleshooting_info_to_metadata(self, acq):
+    #     '''
+    #     Appends a metadata.txt file
+
+    #     Path contains the file to be written
+    #     '''
+    #     path = acq['folder']+'/'+acq['filename']
+
+    #     metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
+
+    #     with open(metadata_path,'a') as file:
+    #         ''' Adding troubleshooting information '''
+    #         self.write_line(file)
+    #         self.write_line(file, 'TROUBLESHOOTING INFORMATION')
+    #         self.write_line(file, 'Z_pos: delta_z end to start after acq', str(self.hickup_delta_z) )
+    #         self.write_line(file, 'z_start expected', acq['z_start'])
+    #         self.write_line(file, 'z_start measured', str(self.z_start_measured))
+    #         self.write_line(file, 'z_end expected', acq['z_end'])
+    #         self.write_line(file, 'z_end measured', str(self.z_end_measured))
+    #         self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
+    #         self.write_line(file, 'f_end expected', acq['f_end'])
+    #         self.write_line(file, 'f_end measured', str(self.f_end_measured))
+
+    def append_timing_info_to_metadata(self, acq):
         '''
         Appends a metadata.txt file
 
@@ -997,15 +1036,12 @@ class mesoSPIM_Core(QtCore.QObject):
         with open(metadata_path,'a') as file:
             ''' Adding troubleshooting information '''
             self.write_line(file)
-            self.write_line(file, 'TROUBLESHOOTING INFORMATION')
-            self.write_line(file, 'Z_pos: delta_z end to start after acq', str(self.hickup_delta_z) )
-            self.write_line(file, 'z_start expected', acq['z_start'])
-            self.write_line(file, 'z_start measured', str(self.z_start_measured))
-            self.write_line(file, 'z_end expected', acq['z_end'])
-            self.write_line(file, 'z_end measured', str(self.z_end_measured))
-            self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
-            self.write_line(file, 'f_end expected', acq['f_end'])
-            self.write_line(file, 'f_end measured', str(self.f_end_measured))
+            self.write_line(file, 'TIMING INFORMATION')
+            self.write_line(file, 'Started stack', self.acq_start_time_string )
+            self.write_line(file, 'Started taking images', self.image_acq_start_time_string )
+            self.write_line(file, 'Stopped taking images', self.image_acq_end_time_string )
+            self.write_line(file, 'Stopped stack', self.acq_end_time_string )
+            self.write_line(file, 'Frame rate:', str(acq.get_image_count()/(self.image_acq_end_time-self.image_acq_start_time)))
 
     @QtCore.pyqtSlot(str)
     def send_status_message_to_gui(self, string):
