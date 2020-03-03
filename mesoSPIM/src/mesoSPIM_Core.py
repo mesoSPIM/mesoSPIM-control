@@ -37,7 +37,7 @@ from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-
+from .utils.utility_functions import convert_seconds_to_string
 from .utils.demo_threads import mesoSPIM_DemoThread
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -197,6 +197,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state']='idle'
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
 
+        self.start_time = 0
+
         self.stopflag = False
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
@@ -335,7 +337,9 @@ class mesoSPIM_Core(QtCore.QObject):
                       cur_image,
                       images_in_acq,
                       total_image_count,
-                      image_counter):
+                      image_counter,
+                      time_passed_string,
+                      remaining_time_string):
 
         dict = {'current_acq':cur_acq,
                 'total_acqs' :tot_acqs,
@@ -343,6 +347,8 @@ class mesoSPIM_Core(QtCore.QObject):
                 'images_in_acq': images_in_acq,
                 'total_image_count':total_image_count,
                 'image_counter':image_counter,
+                'time_passed_string': time_passed_string,
+                'remaining_time_string': remaining_time_string,
         }
         self.sig_progress.emit(dict)
 
@@ -561,6 +567,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acquisition_count = 0
         self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
+        self.start_time = time.time()
+
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
@@ -739,12 +747,26 @@ class mesoSPIM_Core(QtCore.QObject):
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
                 self.image_count += 1
 
+                ''' Keep track of passed time and predict remaining time '''
+                time_passed = time.time() - self.start_time
+                time_remaining = self.state['predicted_acq_list_time'] - time_passed
+                self.state['remaining_acq_list_time'] = time_remaining
+                framerate = self.image_count / time_passed
+
+                ''' Every 100 images, update the predicted acquisition time '''
+                if self.image_count % 100 == 0:
+                    framerate = self.image_count / time_passed
+                    self.state['predicted_acq_list_time'] = self.total_image_count / framerate
+      
+
                 self.send_progress(self.acquisition_count,
                                    self.total_acquisition_count,
                                    i,
                                    steps,
                                    self.total_image_count,
-                                   self.image_count)
+                                   self.image_count,
+                                   convert_seconds_to_string(time_passed),
+                                   convert_seconds_to_string(time_remaining))
         self.close_shutters()
 
     def close_acquisition(self, acq):

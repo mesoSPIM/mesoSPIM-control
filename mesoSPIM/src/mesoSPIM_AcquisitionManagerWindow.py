@@ -134,6 +134,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
 
+        ''' Display initial time prediction '''
         self.update_acquisition_time_prediction()
 
         '''XML writing testcode'''

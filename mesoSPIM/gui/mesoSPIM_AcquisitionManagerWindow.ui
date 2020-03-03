@@ -338,7 +338,7 @@
           <string>Predicted acquisition time in hh:mm:ss.</string>
          </property>
          <property name="text">
-          <string>Predicted acquistion time:</string>
+          <string>Predicted time (HH:MM:SS):</string>
          </property>
         </widget>
        </item>

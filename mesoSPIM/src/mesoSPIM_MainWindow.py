@@ -259,6 +259,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         images_in_acq = dict['images_in_acq']
         tot_images = dict['total_image_count']
         image_count = dict['image_counter']
+        time_passed_string = dict['time_passed_string']
+        remaining_time_string = dict['remaining_time_string']
 
         self.AcquisitionProgressBar.setValue(int((cur_image+1)/images_in_acq*100))
         self.TotalProgressBar.setValue(int((image_count+1)/tot_images*100))
@@ -274,8 +276,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                         '/' + str(tot_acqs) +\
                                          ' ' + ' Image: '+ str(image_count) +\
                                         '/' + str(tot_images) + ' ' +\
-                                            'Time: --:--:-- ' + \
-                                            'Remaining: --:--:--')
+                                            'Time: ' + time_passed_string + \
+                                            ' Remaining: ' + remaining_time_string)
 
     def create_script_window(self):
         '''
