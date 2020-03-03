@@ -303,6 +303,45 @@
          </property>
         </widget>
        </item>
+       <item row="2" column="3">
+        <widget class="QLineEdit" name="AcquisitionTimeEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="acceptDrops">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Predicted acquisition time in hh:mm:ss.</string>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="label">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Predicted acquisition time in hh:mm:ss.</string>
+         </property>
+         <property name="text">
+          <string>Predicted acquistion time:</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
     </layout>

@@ -38,6 +38,8 @@ from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
 
+from .utils.utility_functions import convert_seconds_to_string
+
 from .utils.bigdataviewer_xml_creator import mesoSPIM_XMLexporter
 
 class MyStyle(QtWidgets.QProxyStyle):
@@ -84,6 +86,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.table.setModel(self.model)
         self.model.dataChanged.connect(self.set_state)
+        self.model.dataChanged.connect(self.update_acquisition_time_prediction)
 
         ''' Table selection behavior '''
         self.table.setSelectionBehavior(self.table.SelectRows)
@@ -130,6 +133,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
+
+        self.update_acquisition_time_prediction()
 
         '''XML writing testcode'''
         # self.GenerateXMLButton.clicked.connect(self.generate_xml)
@@ -290,6 +295,14 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.persistent_editor_column_indices.append(column_index)
             exec(string_to_execute)
 
+    def update_acquisition_time_prediction(self):
+        framerate = self.state['current_framerate']
+        total_time = self.state['acq_list'].get_acquisition_time(framerate)
+        self.state['predicted_acq_list_time'] = total_time
+        self.state['remaining_acq_list_time'] = total_time
+        time_string = convert_seconds_to_string(total_time)
+        self.AcquisitionTimeEdit.setText(time_string)
+
     def set_state(self):
         self.state['acq_list'] = self.model.get_acquisition_list()
         
@@ -317,6 +330,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             try:
                 self.model.loadModel(path)
                 self.set_state()
+                self.update_acquisition_time_prediction()
             except:
                 self.sig_warning.emit('Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!')
 

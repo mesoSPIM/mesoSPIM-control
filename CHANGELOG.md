@@ -1,5 +1,6 @@
 ## Version [0.1.3] - March XX, 2020
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
+* :warning: **There are new startup parameters in the config file - make sure to update your config files accordingly**. For example, `average_frame_rate` has been added.
 * :warning: **This release removes unnecessary configuration files from the public repository - make sure to back up your mesoSPIM & ETL configuration files beforehand. In addition, old example acquisition tables (in `mesoSPIM-control\mesoSPIM\acquisitions\`) are removed as well.** 
 * :gem: **New: Focus tracking** -- Different start and end focus positions can now be specified in the Acquisition Manager. When moving the sample to acquire the stack, the microscope changes focus according to a linear interpolation between these values. At z_start, the microscope moves the detection path 
 to f_start and at z_end, the detection path focus is at z_end. This allows imaging a liquid-filled sample cuvette without an immersion cuvette. The `Mark current focus` button changes both values at once. 

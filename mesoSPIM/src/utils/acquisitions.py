@@ -109,17 +109,19 @@ class Acquisition(indexed.IndexedOrderedDict):
         '''
         return abs(int((self['z_end'] - self['z_start'])/self['z_step']))
 
-    def get_acquisition_time(self):
+    def get_acquisition_time(self, framerate):
         '''
-        Method to return the time the acquisition will take
+        Method to return the time the acquisition will take at a certain 
+        framerate.
+
+        Args:
+            float: framerate Framerate of the microscope 
 
         Returns:
             float: Acquisition time in seconds
-
-        TODO: What if sweeptime changes?
         '''
-        sweeptime = 0.2
-        return sweeptime * self.get_image_count()
+
+        return self.get_image_count()/framerate
 
     def get_delta_z_dict(self):
         ''' Returns relative movement dict for z-steps '''
@@ -251,14 +253,14 @@ class AcquisitionList(list):
         '''
         return self[0].get_keylist()
 
-    def get_acquisition_time(self):
+    def get_acquisition_time(self, framerate):
         '''
         Returns total time in seconds of a list of acquisitions
         '''
         time = 0
 
         for i in range(len(self)):
-            time += self[i].get_acquisition_time()
+            time += self[i].get_acquisition_time(framerate)
 
         return time
 

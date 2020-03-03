@@ -195,6 +195,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.state['state']='idle'
+        self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
 
         self.stopflag = False
 
