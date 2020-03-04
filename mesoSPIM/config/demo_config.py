@@ -350,4 +350,5 @@ startup = {
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
+'average_frame_rate': 4.969,
 }

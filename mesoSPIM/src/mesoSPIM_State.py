@@ -95,6 +95,9 @@ class mesoSPIM_StateSingleton():
                             'camera_display_acquisition_subsampling': 2,
                             'camera_binning':'1x1',
                             'camera_sensor_mode':'ASLM',
+                            'current_framerate':3.8,
+                            'predicted_acq_list_time':1,
+                            'remaining_acq_list_time':1,
                             }
 
         def __len__(self):
