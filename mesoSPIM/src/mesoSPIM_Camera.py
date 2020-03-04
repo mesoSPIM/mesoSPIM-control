@@ -70,7 +70,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.parent.sig_end_live.connect(self.end_live, type=3)
 
         ''' Set up the camera '''
-        if self.cfg.camera == 'HamamatsuOrcaFlash':
+        if self.cfg.camera == 'HamamatsuOrca':
             self.camera = mesoSPIM_HamamatsuCamera(self)
         elif self.cfg.camera == 'PhotometricsIris15':
             self.camera = mesoSPIM_PhotometricsCamera(self)
@@ -389,7 +389,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
         self.camera_id = self.cfg.camera_parameters['camera_id']
 
         from .devices.cameras.hamamatsu import hamamatsu_camera as cam
-        # if self.cfg.camera == 'HamamatsuOrcaFlash':
+        # if self.cfg.camera == 'HamamatsuOrca':
         self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
         ''' Debbuging information '''
         logger.info(f'Initialized Hamamatsu camera model: {self.hcam.getModelInfo(self.camera_id)}')
