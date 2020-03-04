@@ -438,7 +438,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def get_images_in_series(self):
         [frames, _] = self.hcam.getFrames()
-        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        images = [np.reshape(aframe.getData(), (-1,self.x_pixels)) for aframe in frames]
         return images
 
     def close_image_series(self):
@@ -446,7 +446,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def get_image(self):
         [frames, _] = self.hcam.getFrames()
-        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        images = [np.reshape(aframe.getData(), (-1,self.x_pixels)) for aframe in frames]
         return images[0]
 
     def initialize_live_mode(self):
@@ -455,7 +455,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def get_live_image(self):
         [frames, _] = self.hcam.getFrames()
-        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        images = [np.reshape(aframe.getData(), (-1,self.x_pixels)) for aframe in frames]
         return images
 
     def close_live_mode(self):
