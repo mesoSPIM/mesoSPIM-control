@@ -37,7 +37,7 @@ from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-
+from .utils.utility_functions import convert_seconds_to_string
 from .utils.demo_threads import mesoSPIM_DemoThread
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -143,10 +143,11 @@ class mesoSPIM_Core(QtCore.QObject):
         # self.sig_state_request.connect(self.demo_worker.report_thread_id)
         # self.demo_worker.moveToThread(self.demo_thread)
         # self.demo_thread.start()
-        ''' HICKUP DEBUGGING '''
-        self.z_start_measured = 0.0
-        self.z_end_measured = 0.0
-        self.hickup_delta_z = 0.0
+
+        # ''' HICKUP DEBUGGING '''
+        # self.z_start_measured = 0.0
+        # self.z_end_measured = 0.0
+        # self.hickup_delta_z = 0.0
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -195,6 +196,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.state['state']='idle'
+        self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
+
+        self.start_time = 0
 
         self.stopflag = False
 
@@ -334,7 +338,9 @@ class mesoSPIM_Core(QtCore.QObject):
                       cur_image,
                       images_in_acq,
                       total_image_count,
-                      image_counter):
+                      image_counter,
+                      time_passed_string,
+                      remaining_time_string):
 
         dict = {'current_acq':cur_acq,
                 'total_acqs' :tot_acqs,
@@ -342,6 +348,8 @@ class mesoSPIM_Core(QtCore.QObject):
                 'images_in_acq': images_in_acq,
                 'total_image_count':total_image_count,
                 'image_counter':image_counter,
+                'time_passed_string': time_passed_string,
+                'remaining_time_string': remaining_time_string,
         }
         self.sig_progress.emit(dict)
 
@@ -529,20 +537,9 @@ class mesoSPIM_Core(QtCore.QObject):
             acq_list = self.state['acq_list']
         else:
             acq_list = self.state['acq_list']
-            # if acq_list.has_rotation() == True:
-            #     self.sig_warning.emit('Acquisition list contains rotation - stopping.')
-            #     self.sig_finished.emit()
-            # else:
-            ''' Pick the selected row and assign the rotation point of the whole list to it'''
             acquisition = self.state['acq_list'][row]
-            # rotation_position = self.state['acq_list'].get_rotation_point()
             acq_list = AcquisitionList([acquisition])
-            # acq_list.set_rotation_point(rotation_position)
-
-        # if acq_list.has_rotation() == True:
-        #     if acq_list.get_rotation_point_status() is False:
-        #         self.sig_warning.emit('Acquisition list contains rotation - stopping')
-        #         self.sig_finished.emit()
+            
         nonexisting_folders_list = acq_list.check_for_nonexisting_folders()
         filename_list = acq_list.check_for_existing_filenames()
         duplicates_list = acq_list.check_for_duplicated_filenames()
@@ -571,7 +568,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acquisition_count = 0
         self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
-        # self.acquisition_list_rotation_position =  acq_list.get_rotation_point()
+        self.start_time = time.time()
+
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
@@ -587,12 +585,10 @@ class mesoSPIM_Core(QtCore.QObject):
             current_rotation = self.state['position']['theta_pos']
             startpoint = acq_list.get_startpoint()
             target_rotation = startpoint['theta_abs']
-            # rotation_position = acq_list.get_rotation_point()
 
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
                 ''' Go to rotation position '''
                 self.sig_go_to_rotation_position_and_wait_until_done.emit()
-                # self.move_absolute(rotation_position, wait_until_done=True)
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.move_absolute(acq_list.get_startpoint())
@@ -689,6 +685,8 @@ class mesoSPIM_Core(QtCore.QObject):
         current_rotation = self.state['position']['theta_pos']
         startpoint = acq.get_startpoint()
         target_rotation = startpoint['theta_abs']
+        self.acq_start_time = time.time()
+        self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
@@ -718,8 +716,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_prepare_image_series.emit(acq)
         self.prepare_image_series()
 
-        ''' HICKUP DEBUGGING: Measure z position '''
-        self.z_start_measured = self.state['position']['z_pos']
+        # ''' HICKUP DEBUGGING: Measure z position '''
+        # self.z_start_measured = self.state['position']['z_pos']
 
         self.write_metadata(acq)
 
@@ -727,6 +725,10 @@ class mesoSPIM_Core(QtCore.QObject):
         steps = acq.get_image_count()
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
+
+        self.image_acq_start_time = time.time()
+        self.image_acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
+
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
@@ -752,20 +754,47 @@ class mesoSPIM_Core(QtCore.QObject):
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
                 self.image_count += 1
 
+                ''' Keep track of passed time and predict remaining time '''
+                time_passed = time.time() - self.start_time
+                time_remaining = self.state['predicted_acq_list_time'] - time_passed
+
+                ''' If the time to set up everything is longer than the predicted 
+                acq time, the remaining time turns negative - here a different 
+                calcuation should be employed here: '''
+                if time_remaining < 0:
+                    time_passed = time.time() - self.image_acq_start_time
+                    time_remaining = self.state['predicted_acq_list_time'] - time_passed
+
+                self.state['remaining_acq_list_time'] = time_remaining
+                framerate = self.image_count / time_passed
+
+                ''' Every 100 images, update the predicted acquisition time '''
+                if self.image_count % 100 == 0:
+                    framerate = self.image_count / time_passed
+                    self.state['predicted_acq_list_time'] = self.total_image_count / framerate
+      
+
                 self.send_progress(self.acquisition_count,
                                    self.total_acquisition_count,
                                    i,
                                    steps,
                                    self.total_image_count,
-                                   self.image_count)
+                                   self.image_count,
+                                   convert_seconds_to_string(time_passed),
+                                   convert_seconds_to_string(time_remaining))
+
+        self.image_acq_end_time = time.time()
+        self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+
         self.close_shutters()
 
     def close_acquisition(self, acq):
-        ''' HICKUP DEBUGGING '''
-        self.z_end_measured = self.state['position']['z_pos']
-        self.f_end_measured = self.state['position']['f_pos']
-        self.collect_troubleshooting_data(acq)
-        self.append_troubleshooting_info_to_metadata(acq)
+
+        # ''' HICKUP DEBUGGING '''
+        # self.z_end_measured = self.state['position']['z_pos']
+        # self.f_end_measured = self.state['position']['f_pos']
+        # self.collect_troubleshooting_data(acq)
+        # self.append_troubleshooting_info_to_metadata(acq)
 
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
 
@@ -774,6 +803,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.close_image_series()
             self.sig_end_image_series.emit()
 
+        self.acq_end_time = time.time()
+        self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+
+        self.append_timing_info_to_metadata(acq)
         self.acquisition_count += 1
 
     @QtCore.pyqtSlot(str)
@@ -960,14 +993,37 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
                 self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
 
-    ''' HICKUP DEBUGGING '''
+    # ''' HICKUP DEBUGGING '''
 
-    def collect_troubleshooting_data(self, acq):
-        self.hickup_delta_z = self.z_end_measured - acq['z_end']
-        self.hickup_delta_f = self.f_end_measured - acq['f_end']
-        # print('HICKUP Difference: ', self.hickup_delta_z)
+    # def collect_troubleshooting_data(self, acq):
+    #     self.hickup_delta_z = self.z_end_measured - acq['z_end']
+    #     self.hickup_delta_f = self.f_end_measured - acq['f_end']
+    #     # print('HICKUP Difference: ', self.hickup_delta_z)
 
-    def append_troubleshooting_info_to_metadata(self, acq):
+    # def append_troubleshooting_info_to_metadata(self, acq):
+    #     '''
+    #     Appends a metadata.txt file
+
+    #     Path contains the file to be written
+    #     '''
+    #     path = acq['folder']+'/'+acq['filename']
+
+    #     metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
+
+    #     with open(metadata_path,'a') as file:
+    #         ''' Adding troubleshooting information '''
+    #         self.write_line(file)
+    #         self.write_line(file, 'TROUBLESHOOTING INFORMATION')
+    #         self.write_line(file, 'Z_pos: delta_z end to start after acq', str(self.hickup_delta_z) )
+    #         self.write_line(file, 'z_start expected', acq['z_start'])
+    #         self.write_line(file, 'z_start measured', str(self.z_start_measured))
+    #         self.write_line(file, 'z_end expected', acq['z_end'])
+    #         self.write_line(file, 'z_end measured', str(self.z_end_measured))
+    #         self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
+    #         self.write_line(file, 'f_end expected', acq['f_end'])
+    #         self.write_line(file, 'f_end measured', str(self.f_end_measured))
+
+    def append_timing_info_to_metadata(self, acq):
         '''
         Appends a metadata.txt file
 
@@ -980,15 +1036,12 @@ class mesoSPIM_Core(QtCore.QObject):
         with open(metadata_path,'a') as file:
             ''' Adding troubleshooting information '''
             self.write_line(file)
-            self.write_line(file, 'TROUBLESHOOTING INFORMATION')
-            self.write_line(file, 'Z_pos: delta_z end to start after acq', str(self.hickup_delta_z) )
-            self.write_line(file, 'z_start expected', acq['z_start'])
-            self.write_line(file, 'z_start measured', str(self.z_start_measured))
-            self.write_line(file, 'z_end expected', acq['z_end'])
-            self.write_line(file, 'z_end measured', str(self.z_end_measured))
-            self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
-            self.write_line(file, 'f_end expected', acq['f_end'])
-            self.write_line(file, 'f_end measured', str(self.f_end_measured))
+            self.write_line(file, 'TIMING INFORMATION')
+            self.write_line(file, 'Started stack', self.acq_start_time_string )
+            self.write_line(file, 'Started taking images', self.image_acq_start_time_string )
+            self.write_line(file, 'Stopped taking images', self.image_acq_end_time_string )
+            self.write_line(file, 'Stopped stack', self.acq_end_time_string )
+            self.write_line(file, 'Frame rate:', str(acq.get_image_count()/(self.image_acq_end_time-self.image_acq_start_time)))
 
     @QtCore.pyqtSlot(str)
     def send_status_message_to_gui(self, string):

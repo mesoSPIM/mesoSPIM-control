@@ -61,8 +61,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Deletes all rows in the table</string>
+         </property>
          <property name="text">
-          <string>Delete all</string>
+          <string>Delete all Rows</string>
          </property>
         </widget>
        </item>
@@ -73,8 +76,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Deletes selected row</string>
+         </property>
          <property name="text">
-          <string>Delete</string>
+          <string>Delete Row</string>
          </property>
         </widget>
        </item>
@@ -85,8 +91,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Duplicates a row in the table</string>
+         </property>
          <property name="text">
-          <string>Copy</string>
+          <string>Duplicate Row</string>
          </property>
         </widget>
        </item>
@@ -97,8 +106,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Moves selected row up</string>
+         </property>
          <property name="text">
-          <string>Move Up</string>
+          <string>Move Row Up</string>
          </property>
         </widget>
        </item>
@@ -109,8 +121,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Adds another row to the table</string>
+         </property>
          <property name="text">
-          <string>Add</string>
+          <string>Add Row</string>
          </property>
         </widget>
        </item>
@@ -121,8 +136,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Saves the table</string>
+         </property>
          <property name="text">
-          <string>Save</string>
+          <string>Save Table</string>
          </property>
         </widget>
        </item>
@@ -132,6 +150,9 @@
           <font>
            <pointsize>14</pointsize>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Copies current sample rotation angle into the selected row.</string>
          </property>
          <property name="text">
           <string>Mark Current Rotation</string>
@@ -144,6 +165,9 @@
           <font>
            <pointsize>14</pointsize>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Copies current ETL values into the selected row.</string>
          </property>
          <property name="text">
           <string>Mark Current ETL values</string>
@@ -160,8 +184,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Preview acquisition: The microscope will move the to the starting location and set up everything (filters, lasers, ...).</string>
+         </property>
          <property name="text">
-          <string>Preview Selection</string>
+          <string>Preview Selected Row</string>
          </property>
         </widget>
        </item>
@@ -171,6 +198,9 @@
           <font>
            <pointsize>14</pointsize>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Generates Image Processing Options for the entire table.</string>
          </property>
          <property name="text">
           <string>Image Processing Wizard</string>
@@ -184,6 +214,9 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Generates start/end focus positions for the table.</string>
+         </property>
          <property name="text">
           <string>Focus Tracking Wizard</string>
          </property>
@@ -196,8 +229,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Moves selected row down</string>
+         </property>
          <property name="text">
-          <string>Move Down</string>
+          <string>Move Row Down</string>
          </property>
         </widget>
        </item>
@@ -207,6 +243,9 @@
           <font>
            <pointsize>14</pointsize>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Copies current laser, intensity, zoom &amp; filter settings into the selected row.</string>
          </property>
          <property name="text">
           <string>Mark Current State</string>
@@ -220,6 +259,9 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Copies the current focus into the selected row (Sets both start &amp; end focus).</string>
+         </property>
          <property name="text">
           <string>Mark Current Focus</string>
          </property>
@@ -231,6 +273,9 @@
           <font>
            <pointsize>14</pointsize>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Copies the current X &amp; Y position into the selected row.</string>
          </property>
          <property name="text">
           <string>Mark Current XY</string>
@@ -244,20 +289,11 @@
            <pointsize>14</pointsize>
           </font>
          </property>
-         <property name="text">
-          <string>Load</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="4">
-        <widget class="QPushButton" name="SetFoldersButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
+         <property name="toolTip">
+          <string>Loads a saved table.</string>
          </property>
          <property name="text">
-          <string>Set Folders</string>
+          <string>Load Table</string>
          </property>
         </widget>
        </item>
@@ -271,6 +307,9 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Generates a tiling acquisition through a series of steps.</string>
+         </property>
          <property name="text">
           <string>Tiling Wizard</string>
          </property>
@@ -282,6 +321,9 @@
           <font>
            <pointsize>14</pointsize>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Generates filenames for the entire table.</string>
          </property>
          <property name="text">
           <string>Filename Wizard</string>
@@ -295,11 +337,68 @@
            <pointsize>14</pointsize>
           </font>
          </property>
+         <property name="toolTip">
+          <string>If enabled, the sample will be moved to the z-starting location if &quot;Preview Selected Row&quot; is clicked.</string>
+         </property>
          <property name="text">
           <string>Preview: Move to Z start</string>
          </property>
          <property name="checked">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="3">
+        <widget class="QLineEdit" name="AcquisitionTimeEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="acceptDrops">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Predicted acquisition time in hh:mm:ss.</string>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="label">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Predicted acquisition time in hh:mm:ss.</string>
+         </property>
+         <property name="text">
+          <string>Predicted time (HH:MM:SS):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="5">
+        <widget class="QPushButton" name="SetFoldersButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Sets all the save folders for the entire table.</string>
+         </property>
+         <property name="text">
+          <string>Set Folders</string>
          </property>
         </widget>
        </item>

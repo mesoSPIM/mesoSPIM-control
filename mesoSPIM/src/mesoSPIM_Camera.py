@@ -70,7 +70,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.parent.sig_end_live.connect(self.end_live, type=3)
 
         ''' Set up the camera '''
-        if self.cfg.camera == 'HamamatsuOrcaFlash':
+        if self.cfg.camera == 'HamamatsuOrca':
             self.camera = mesoSPIM_HamamatsuCamera(self)
         elif self.cfg.camera == 'PhotometricsIris15':
             self.camera = mesoSPIM_PhotometricsCamera(self)
@@ -389,7 +389,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
         self.camera_id = self.cfg.camera_parameters['camera_id']
 
         from .devices.cameras.hamamatsu import hamamatsu_camera as cam
-        # if self.cfg.camera == 'HamamatsuOrcaFlash':
+        # if self.cfg.camera == 'HamamatsuOrca':
         self.hcam = cam.HamamatsuCameraMR(camera_id=self.camera_id)
         ''' Debbuging information '''
         logger.info(f'Initialized Hamamatsu camera model: {self.hcam.getModelInfo(self.camera_id)}')
@@ -438,7 +438,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def get_images_in_series(self):
         [frames, _] = self.hcam.getFrames()
-        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        images = [np.reshape(aframe.getData(), (-1,self.x_pixels)) for aframe in frames]
         return images
 
     def close_image_series(self):
@@ -446,7 +446,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def get_image(self):
         [frames, _] = self.hcam.getFrames()
-        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        images = [np.reshape(aframe.getData(), (-1,self.x_pixels)) for aframe in frames]
         return images[0]
 
     def initialize_live_mode(self):
@@ -455,7 +455,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def get_live_image(self):
         [frames, _] = self.hcam.getFrames()
-        images = [np.reshape(aframe.getData(), (-1,2048)) for aframe in frames]
+        images = [np.reshape(aframe.getData(), (-1,self.x_pixels)) for aframe in frames]
         return images
 
     def close_live_mode(self):
