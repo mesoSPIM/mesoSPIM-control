@@ -12,7 +12,8 @@ from your microscope (are now logged in the metadata files after an acquisition)
 * :gem: **New: Full demo mode - addresses #16**: `mesoSPIM-control` can now be run without any microscope hardware by using the `demo_config.py` configuration file. 
 * :gem: **New: Multicolor tiling wizard**: The Tiling wizard can now support up to 3 color channels with different ETL parameters and focus tracking settings.
 * :gem: **New: Image Processing Wizard**: `mesoSPIM-control` now has an Image Processing Wizard (accessible via a button in the `Acquisition Manager`). Currently, this allows maximum projections to be generated automatically after acquisitions.  
-* :gem: **New: Support for more cameras**: **Photometrics** cameras are now supported if `PyVCAM` and the PVCAM-SDK are installed. Only the Iris 15 has been tested so far. In addition, the **Hamamatsu Orca Fusion** is now supported. 
+* :gem: **New: Support for more cameras**: **Photometrics** cameras are now supported if `PyVCAM` and the PVCAM-SDK are installed. Only the Iris 15 has been tested so far. In addition, the **Hamamatsu Orca Fusion** is now supported.
+* :sparkles: **Improvement:** `Acquisition Manager`: Naming of buttons has been improved, in addition, **tooltips** have been added to improve usability. 
 * :sparkles: **Improvement:** Removed unnecessary microscope and ETL configuration files cluttering the repository. Changed `.gitignore` correspondingly - future changes to configuration files. This addresses issue #16.
 * :sparkles: **Improvement:** The software now provides more verbose warnings when acquisitions cannot be started due to missing folders, duplicated filenames and already existing files.
 * :sparkles: **Improvement:** Better warnings if no row is selected while clicking Mark buttons.
