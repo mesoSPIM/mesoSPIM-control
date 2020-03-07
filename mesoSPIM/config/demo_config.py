@@ -9,6 +9,11 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
+Dark mode: Renders the UI dark
+'''
+dark_mode = True
+
+'''
 Waveform output for Galvos, ETLs etc.
 '''
 
