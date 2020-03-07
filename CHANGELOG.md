@@ -1,5 +1,5 @@
 ## Version [0.1.4]
-* :gem: **New: Dark mode** If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed.
+* :gem: **New: Dark mode** -- If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
 
 ## Version [0.1.3] - March XX, 2020
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
