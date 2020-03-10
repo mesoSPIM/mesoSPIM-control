@@ -75,6 +75,11 @@ def stage_referencing_check(cfg):
     else:
         return True
 
+def dark_mode_check(cfg, app):
+    if cfg.dark_mode == True:
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
+
 def main():
     """
     Main function
@@ -82,6 +87,8 @@ def main():
     logging.info('mesoSPIM Program started.')
     cfg = load_config()
     app = QtWidgets.QApplication(sys.argv)
+    
+    dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
