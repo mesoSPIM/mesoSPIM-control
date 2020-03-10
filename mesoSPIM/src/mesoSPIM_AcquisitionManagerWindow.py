@@ -32,7 +32,6 @@ from .utils.delegates import (ComboDelegate,
 
 from .utils.widgets import MarkPositionWidget
 
-from .utils.acquisition_wizards import TilingWizard
 from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
