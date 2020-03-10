@@ -278,7 +278,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.overlapPercentageSpinBox.setSuffix(' %')
         self.overlapPercentageSpinBox.setMinimum(1)
         self.overlapPercentageSpinBox.setMaximum(50)
-        self.overlapPercentageSpinBox.setValue(10)
+        self.overlapPercentageSpinBox.setValue(20)
         self.overlapPercentageSpinBox.valueChanged.connect(self.update_x_and_y_offset)
 
         self.manualOverlapCheckBox = QtWidgets.QCheckBox('Set Offset Manually', self)
