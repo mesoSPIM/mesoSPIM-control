@@ -292,7 +292,8 @@ zoomdict = {'0.63x' : 3423,
             '5x' : 318,
             '6.3x' : 0}
 '''
-Pixelsize in micron
+Pixelsize in micron -- update these values with measured values from your instrument.
+These are used to calculate the FOV size & offset in the tiling wizard.
 '''
 pixelsize = {'0.63x' : 10.52,
             '0.8x' : 8.23,
@@ -305,6 +306,7 @@ pixelsize = {'0.63x' : 10.52,
             '4x' : 1.60,
             '5x' : 1.27,
             '6.3x' : 1.03}
+
 
 '''
 Initial acquisition parameters
