@@ -197,6 +197,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.state['state']='idle'
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
+        self.state['snap_folder'] = self.cfg.startup['snap_folder']
 
         self.start_time = 0
 
