@@ -39,8 +39,6 @@ from .utils.image_processing_wizard import ImageProcessingWizard
 
 from .utils.utility_functions import convert_seconds_to_string
 
-from .utils.bigdataviewer_xml_creator import mesoSPIM_XMLexporter
-
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
         '''
@@ -464,16 +462,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
                 string, QtWidgets.QMessageBox.Ok) 
 
-    def generate_xml(self):
-        print('generating BDV XML')
-
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        filename = timestr + '.xml'
-
-        path = self.state['acq_list'][0]['folder']+'/'+filename
-        
-        xml_exporter = mesoSPIM_XMLexporter(self) 
-        xml_exporter.generate_xml_from_acqlist(self.state['acq_list'],path)
 
 
 
