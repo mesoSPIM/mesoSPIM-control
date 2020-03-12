@@ -46,6 +46,8 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.x_offset = 0
         self.y_offset = 0
         self.zoom = '1x'
+        self.x_pixels = self.cfg.camera_parameters['x_pixels']
+        self.y_pixels = self.cfg.camera_parameters['y_pixels']
         self.x_fov = 1
         self.y_fov = 1
         self.channels = []
@@ -126,13 +128,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
             self.y_image_count = self.y_image_count + 1
 
       
-    def update_fov(self):
-        pass
-        # zoom = self.zoom
-        # index = self.parent.cfg.zoom_options.index(zoom)
-        # self.x_fov = self.parent.cfg.zoom_options[index]
-        # self.y_fov = self.parent.cfg.zoom_options[index]
-
     def get_dict(self):
         return {'x_start' : self.x_start,
                 'x_end' : self.x_end,
@@ -156,8 +151,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 
     def update_acquisition_list(self):
         self.update_image_counts()
-        self.update_fov()
-
+        
         ''' Use the current rotation angle '''
         self.theta_pos = self.state['position']['theta_pos']
 
@@ -260,9 +254,34 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
         self.setTitle("Define other parameters")
 
+        self.channelLabel = QtWidgets.QLabel('# Channels')
+        self.channelSpinBox = QtWidgets.QSpinBox(self)
+        self.channelSpinBox.setMinimum(1)
+        self.channelSpinBox.setMaximum(3)
+
         self.zoomLabel = QtWidgets.QLabel('Zoom')
         self.zoomComboBox = QtWidgets.QComboBox(self)
         self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
+        self.zoomComboBox.currentIndexChanged.connect(self.update_fov_size)
+
+        self.shutterLabel = QtWidgets.QLabel('Shutter')
+        self.shutterComboBox = QtWidgets.QComboBox(self)
+        self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+
+        self.fovSizeLabel = QtWidgets.QLabel('FOV Size X ⨉ Y:')
+        self.fovSizeLineEdit = QtWidgets.QLineEdit(self)
+        self.fovSizeLineEdit.setReadOnly(True)
+        
+        self.overlapPercentageCheckBox = QtWidgets.QCheckBox('Overlap %', self)
+        self.overlapLabel = QtWidgets.QLabel('Overlap in %')
+        self.overlapPercentageSpinBox = QtWidgets.QSpinBox(self)
+        self.overlapPercentageSpinBox.setSuffix(' %')
+        self.overlapPercentageSpinBox.setMinimum(1)
+        self.overlapPercentageSpinBox.setMaximum(50)
+        self.overlapPercentageSpinBox.setValue(20)
+        self.overlapPercentageSpinBox.valueChanged.connect(self.update_x_and_y_offset)
+
+        self.manualOverlapCheckBox = QtWidgets.QCheckBox('Set Offset Manually', self)
 
         self.xOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
         self.xOffsetSpinBox = QtWidgets.QSpinBox(self)
@@ -270,7 +289,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.xOffsetSpinBox.setMinimum(1)
         self.xOffsetSpinBox.setMaximum(30000)
         self.xOffsetSpinBox.setValue(500)
-
+        
         self.yOffsetSpinBoxLabel = QtWidgets.QLabel('Y Offset')
         self.yOffsetSpinBox = QtWidgets.QSpinBox(self)
         self.yOffsetSpinBox.setSuffix(' μm')
@@ -278,32 +297,65 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.yOffsetSpinBox.setMaximum(30000)
         self.yOffsetSpinBox.setValue(500)
 
-        self.shutterLabel = QtWidgets.QLabel('Shutter')
-        self.shutterComboBox = QtWidgets.QComboBox(self)
-        self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.overlapPercentageSpinBox.setEnabled(boolean))
+        self.overlapPercentageCheckBox.clicked.connect(self.update_x_and_y_offset)
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.xOffsetSpinBox.setEnabled(not boolean))
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.yOffsetSpinBox.setEnabled(not boolean))
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.manualOverlapCheckBox.setChecked(not boolean))
 
-        self.channelLabel = QtWidgets.QLabel('# Channels')
-        self.channelSpinBox = QtWidgets.QSpinBox(self)
-        self.channelSpinBox.setMinimum(1)
-        self.channelSpinBox.setMaximum(3)
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.overlapPercentageSpinBox.setEnabled(not boolean))
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.xOffsetSpinBox.setEnabled(boolean))
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.yOffsetSpinBox.setEnabled(boolean))
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.overlapPercentageCheckBox.setChecked(not boolean))
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.zoomLabel, 0, 0)
-        self.layout.addWidget(self.zoomComboBox, 0, 1)
-        self.layout.addWidget(self.shutterLabel, 1, 0)
-        self.layout.addWidget(self.shutterComboBox, 1, 1)
-        self.layout.addWidget(self.xOffsetSpinBoxLabel, 2, 0)
-        self.layout.addWidget(self.xOffsetSpinBox, 2, 1)
-        self.layout.addWidget(self.yOffsetSpinBoxLabel, 3, 0)
-        self.layout.addWidget(self.yOffsetSpinBox, 3, 1)
-        self.layout.addWidget(self.channelLabel, 4, 0)
-        self.layout.addWidget(self.channelSpinBox, 4, 1)
+        self.layout.addWidget(self.channelLabel, 0, 0)
+        self.layout.addWidget(self.channelSpinBox, 0, 1)
+        self.layout.addWidget(self.zoomLabel, 1, 0)
+        self.layout.addWidget(self.zoomComboBox, 1, 1)
+        self.layout.addWidget(self.shutterLabel, 2, 0)
+        self.layout.addWidget(self.shutterComboBox, 2, 1)
+        self.layout.addWidget(self.fovSizeLabel, 3, 0)
+        self.layout.addWidget(self.fovSizeLineEdit, 3, 1)
+        self.layout.addWidget(self.overlapPercentageCheckBox, 4, 0)
+        self.layout.addWidget(self.overlapLabel, 5, 0)
+        self.layout.addWidget(self.overlapPercentageSpinBox, 5, 1)
+        self.layout.addWidget(self.manualOverlapCheckBox, 6, 0)
+        self.layout.addWidget(self.xOffsetSpinBoxLabel, 7, 0)
+        self.layout.addWidget(self.xOffsetSpinBox, 7, 1)
+        self.layout.addWidget(self.yOffsetSpinBoxLabel, 8, 0)
+        self.layout.addWidget(self.yOffsetSpinBox, 8, 1)
         self.setLayout(self.layout)
 
     def validatePage(self):
         ''' The done function should update all the parent parameters '''
         self.update_other_acquisition_parameters()
         return True
+
+    @QtCore.pyqtSlot()
+    def update_fov_size(self):
+        ''' Should be invoked whenever the zoom selection is changed '''
+        new_zoom = self.zoomComboBox.currentText()
+        pixelsize_in_um = self.parent.cfg.pixelsize[new_zoom]
+        ''' X and Y are interchanged here to account for the camera rotation by 90°'''
+        new_x_fov_in_um = int(self.parent.y_pixels * pixelsize_in_um)
+        new_y_fov_in_um = int(self.parent.x_pixels * pixelsize_in_um)
+        self.parent.x_fov = new_x_fov_in_um
+        self.parent.y_fov = new_y_fov_in_um
+
+        self.fovSizeLineEdit.setText(str(new_x_fov_in_um)+' ⨉ '+str(new_y_fov_in_um) + ' μm²')
+
+        ''' If the zoom changes, the offset calculation should be redone'''
+        if self.overlapPercentageCheckBox.isChecked():
+            self.update_x_and_y_offset()
+
+    @QtCore.pyqtSlot()
+    def update_x_and_y_offset(self):
+        new_offset_percentage = self.overlapPercentageSpinBox.value()
+        x_offset = int(self.parent.x_fov * (1-new_offset_percentage / 100))
+        y_offset = int(self.parent.y_fov * (1-new_offset_percentage / 100))
+        self.xOffsetSpinBox.setValue(x_offset)
+        self.yOffsetSpinBox.setValue(y_offset)
 
     def update_other_acquisition_parameters(self):
         ''' Here, all the Tiling parameters are filled in the parent (TilingWizard)
@@ -318,7 +370,12 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
     def initializePage(self):
         self.update_page_from_state()
-
+        self.update_fov_size()
+        self.update_x_and_y_offset()
+        self.overlapPercentageCheckBox.setChecked(True)
+        self.xOffsetSpinBox.setEnabled(False)
+        self.yOffsetSpinBox.setEnabled(False)
+        
     def update_page_from_state(self):
         self.zoomComboBox.setCurrentText(self.parent.state['zoom'])
         self.shutterComboBox.setCurrentText(self.parent.state['shutterconfig'])
