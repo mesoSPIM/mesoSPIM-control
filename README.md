@@ -1,12 +1,16 @@
 # mesoSPIM-control
-Code and documentation for the mesoSPIM light-sheet microscope software.
-The documentation of the microscope hardware information can be found [here](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
+Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. Currently, more than 10 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
+
+Parts lists, drawings, and instructions for building a mesoSPIM can be found in the [mesoSPIM wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
 
 ## Overview
-The Swiss mesoSPIM is a versatile light-sheet microscope for imaging
+The mesoSPIM is a versatile light-sheet microscope for imaging
 cleared tissue samples. It is compatible with all major clearing approaches - including CLARITY - and optimized for quickly creating large-field-of-view overview datasets of whole mouse brains.
 
 ## Installation
+
+### :warning: Warning
+If you are updating `mesoSPIM-control` from a previous version: Please have a close look at the [Changelog](CHANGELOG.md) to avoid overwriting your configuration files.
 
 ### Prerequisites
 * Windows 7 or Windows 10
