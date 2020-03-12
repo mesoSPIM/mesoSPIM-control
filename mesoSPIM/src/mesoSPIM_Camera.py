@@ -1,6 +1,7 @@
 '''
 mesoSPIM Camera class, intended to run in its own thread
 '''
+
 import os
 import time
 import numpy as np
@@ -150,6 +151,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera_display_acquisition_subsampling = factor
 
     def set_camera_binning(self, value):
+        print('Setting camera binning: '+value)
         self.camera.set_binning(value)
 
     @QtCore.pyqtSlot(Acquisition)
@@ -309,10 +311,11 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         pass
 
     def set_binning(self, binning_string):
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
 
     def initialize_image_series(self):
         pass
@@ -338,14 +341,13 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         pass
 
 class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
-
     def __init__(self, parent = None):
         super().__init__(parent)
 
+        self.count = 0
+
         self.line = np.linspace(0,6*np.pi,self.x_pixels)
         self.line = 400*np.sin(self.line)+1200
-
-        self.count = 0
 
     def open_camera(self):
         logger.info('Initialized Demo Camera')
@@ -354,12 +356,13 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
         logger.info('Closed Demo Camera')
     
     def set_binning(self, binning_string):
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.line = np.linspace(0,6*np.pi,self.x_pixels)
         self.line = 400*np.sin(self.line)+1200
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
 
     def _create_random_image(self):
         data = np.array([np.roll(self.line, 4*i+self.count) for i in range(0, self.y_pixels)], dtype='uint16')
@@ -367,8 +370,6 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
         data = np.around(data).astype('uint16')
         self.count += 20
         return data
-
-        # return np.random.randint(low=0, high=2**16, size=(self.x_pixels,self.y_pixels), dtype='l')
 
     def get_images_in_series(self):
         return [self._create_random_image()]
@@ -428,10 +429,11 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def set_binning(self, binningstring):
         self.hcam.setPropertyValue("binning", binningstring)
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
 
     def initialize_image_series(self):
         self.hcam.startAcquisition()
@@ -570,11 +572,12 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         print('Setting line interval is not implemented, set the interval in the config file')
 
     def set_binning(self, binningstring):
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.pvcam.binning = (self.x_binning, self.y_binning)
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
         
     def get_image(self):
         return self.pvcam.get_live_frame()
