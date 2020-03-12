@@ -1,3 +1,9 @@
+## Version [0.1.4] - in development
+* :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
+* :sparkles: **Improved multicolor tiling wizard** The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.
+* :gem: **New: In progress: Writing HDF5** For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
+* :bug: **Bugfix:** Binning was not working properly with all cameras.
+
 ## Version [0.1.3] - March 13, 2020
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
 * :warning: **There are new startup parameters in the config file - make sure to update your config files accordingly**. For example, `average_frame_rate` has been added.

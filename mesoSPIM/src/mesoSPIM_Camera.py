@@ -19,6 +19,7 @@ except:
     logger.info('Error: Hamamatsu camera could not be imported')
 '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
+from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 from .utils.acquisitions import AcquisitionList, Acquisition
 
 class mesoSPIM_Camera(QtCore.QObject):
@@ -35,6 +36,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
+        self.image_writer = mesoSPIM_ImageWriter(self)
 
         self.stopflag = False
 
@@ -160,26 +162,12 @@ class mesoSPIM_Camera(QtCore.QObject):
         Row is a row in a AcquisitionList
         '''
         logger.info('Camera: Preparing Image Series')
-        #print('Cam: Preparing Image Series')
         self.stopflag = False
 
-        ''' TODO: Needs cam delay, sweeptime, QTimer, line delay, exp_time '''
+        self.image_writer.prepare_acquisition(acq)
 
-        self.folder = acq['folder']
-        self.filename = acq['filename']
-        self.path = self.folder+'/'+self.filename
-        
-        logger.info(f'Camera: Save path: {self.path}')
-        self.z_start = acq['z_start']
-        self.z_end = acq['z_end']
-        self.z_stepsize = acq['z_step']
         self.max_frame = acq.get_image_count()
-
         self.processing_options_string = acq['processing']
-
-        self.fsize = self.x_pixels*self.y_pixels
-
-        self.xy_stack = np.memmap(self.path, mode = "write", dtype = np.uint16, shape = self.fsize * self.max_frame)
 
         self.camera.initialize_image_series()
         self.cur_image = 0
@@ -193,13 +181,11 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
-                # logger.info('self.cur_image + 1: '+str(self.cur_image + 1))
                 images = self.camera.get_images_in_series()
                 for image in images:
                     image = np.rot90(image)
                     self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,0:self.y_pixels:self.camera_display_acquisition_subsampling])
-                    image = image.flatten()
-                    self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+                    self.image_writer.write_image(image)
                     self.cur_image += 1
 
     @QtCore.pyqtSlot()
@@ -207,6 +193,10 @@ class mesoSPIM_Camera(QtCore.QObject):
         if self.stopflag is False:
             if self.processing_options_string != '':
                 if self.processing_options_string == 'MAX':
+                    ''' Image processing needs to be reimplemented in an incremental fashion '''
+                    pass 
+
+                    '''
                     self.sig_status_message.emit('Doing Max Projection')
                     logger.info('Camera: Started Max Projection of '+str(self.max_frame)+' Images')
                     stackview = self.xy_stack.view()
@@ -217,12 +207,14 @@ class mesoSPIM_Camera(QtCore.QObject):
                     tifffile.imsave(path, max_proj, photometric='minisblack')
                     logger.info('Camera: Saved Max Projection')
                     self.sig_status_message.emit('Done with image processing')
+                    '''
 
         try:
             self.camera.close_image_series()
-            del self.xy_stack
         except:
-            pass
+            logger.warning('Camera: Image Series could not be closed')
+            
+        self.image_writer.end_acquisition()
 
         self.end_time =  time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
@@ -233,15 +225,8 @@ class mesoSPIM_Camera(QtCore.QObject):
     def snap_image(self):
         image = self.camera.get_image()
         image = np.rot90(image)
-
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        filename = timestr + '.tif'
-
-        path = self.state['snap_folder']+'/'+filename
-
         self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_snap_subsampling,0:self.y_pixels:self.camera_display_snap_subsampling])
-
-        tifffile.imsave(path, image, photometric='minisblack')
+        self.image_writer.write_snap_image(image)
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
@@ -360,6 +345,7 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
         self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
+        ''' Changing the number of pixels also affects the random image, so we need to update self.line '''
         self.line = np.linspace(0,6*np.pi,self.x_pixels)
         self.line = 400*np.sin(self.line)+1200
         self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
