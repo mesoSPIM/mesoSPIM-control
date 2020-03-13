@@ -44,7 +44,14 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         '''
 
         # What does | actually mean?
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
+        '''
+        Attention: Here, it is hardcoded that column 5 (# Planes is not editable) If acquistions.py changes, this will 
+        require a change here as well
+        '''
+        if index.column() == self._headers.index('Planes'):
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
+        else: 
+            return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
 
     def headerData(self, section, orientation, role):
         '''
@@ -262,6 +269,15 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getFilenameColumn(self):
         return self._headers.index('Filename')
 
+    def getStartFocusColumn(self):
+        return self._headers.index('F_start')
+
+    def getEndFocusColumn(self):
+        return self._headers.index('F_end')
+
+    def getColumnByName(self, name):
+        return self._headers.index(name)
+
     def getTime(self, row):
         return int(self._table[row].get_acquisition_time())
 
@@ -285,6 +301,12 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     def getYPosition(self, row):
         return self._table[row]['y_pos']
+
+    def getZStartPosition(self, row):
+        return self._table[row]['z_start']
+
+    def getZEndPosition(self, row):
+        return self._table[row]['z_end']
 
     def getRotationPosition(self, row):
         return self._table[row]['rot']

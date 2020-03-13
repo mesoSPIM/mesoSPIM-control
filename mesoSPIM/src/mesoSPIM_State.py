@@ -47,9 +47,9 @@ class mesoSPIM_StateSingleton():
                             'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
                             'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
                             'filename' : 'file.raw',
-                            'folder' : '/tmp/',
+                            'folder' : 'tmp',
+                            'snap_folder' : 'tmp',
                             'file_prefix' : '',
-                            'start_number' : 1,
                             'file_suffix' : '000001',
                             'zoom' : '1x',
                             'pixelsize' : 6.55,
@@ -93,6 +93,11 @@ class mesoSPIM_StateSingleton():
                             'camera_display_live_subsampling': 1, 
                             'camera_display_snap_subsampling': 1, 
                             'camera_display_acquisition_subsampling': 2,
+                            'camera_binning':'1x1',
+                            'camera_sensor_mode':'ASLM',
+                            'current_framerate':3.8,
+                            'predicted_acq_list_time':1,
+                            'remaining_acq_list_time':1,
                             }
 
         def __len__(self):

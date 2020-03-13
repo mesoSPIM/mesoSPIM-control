@@ -4,6 +4,7 @@ mesoSPIM Acquisition Manager Window
 '''
 import os
 import sys
+import time
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,7 +33,14 @@ from .utils.delegates import (ComboDelegate,
 from .utils.widgets import MarkPositionWidget
 
 from .utils.acquisition_wizards import TilingWizard
+from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from .utils.filename_wizard import FilenameWizard
+from .utils.focus_tracking_wizard import FocusTrackingWizard
+from .utils.image_processing_wizard import ImageProcessingWizard
+
+from .utils.utility_functions import convert_seconds_to_string
+
+from .utils.bigdataviewer_xml_creator import mesoSPIM_XMLexporter
 
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
@@ -52,6 +60,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     model_changed = QtCore.pyqtSignal(AcquisitionModel)
     sig_warning = QtCore.pyqtSignal(str)
+    sig_move_absolute = QtCore.pyqtSignal(dict)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -77,6 +86,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.table.setModel(self.model)
         self.model.dataChanged.connect(self.set_state)
+        self.model.dataChanged.connect(self.update_acquisition_time_prediction)
 
         ''' Table selection behavior '''
         self.table.setSelectionBehavior(self.table.SelectRows)
@@ -96,8 +106,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.selection_model = self.table.selectionModel()
         self.selection_mapper = QtWidgets.QDataWidgetMapper()
 
-        self.update_persistent_editors()
-
         self.AddButton.clicked.connect(self.add_row)
         self.DeleteButton.clicked.connect(self.delete_row)
         self.CopyButton.clicked.connect(self.copy_row)
@@ -113,14 +121,25 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.PreviewSelectionButton.clicked.connect(self.preview_acquisition)
 
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
+        self.FilenameWizardButton.clicked.connect(self.generate_filenames)
+        self.FocusTrackingWizardButton.clicked.connect(self.run_focus_tracking_wizard)
+        self.ImageProcessingWizardButton.clicked.connect(self.run_image_processing_wizard)
 
         self.DeleteAllButton.clicked.connect(self.delete_all_rows)
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
-        self.FilenameWizardButton.clicked.connect(self.generate_filenames)
+
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
+        self.selection_model.selectionChanged.connect(self.selected_row_changed)
+
+        ''' Display initial time prediction '''
+        self.update_acquisition_time_prediction()
+
+        '''XML writing testcode'''
+        # self.GenerateXMLButton.clicked.connect(self.generate_xml)
+ 
 
     def enable(self):
         self.setEnabled(True)
@@ -168,11 +187,21 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         if row is not None:
             self.sig_start_selected.emit(row)
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
+
+    def selected_row_changed(self, new_selection, old_selection):
+        if new_selection.indexes() != []:
+            new_row = new_selection.indexes()[0].row()
+            for column in self.persistent_editor_column_indices:
+                self.table.openPersistentEditor(self.model.index(new_row, column))
+
+        if old_selection.indexes() != []:
+            old_row = old_selection.indexes()[0].row()
+            for column in self.persistent_editor_column_indices:
+                self.table.closePersistentEditor(self.model.index(old_row, column))   
 
     def add_row(self):
         self.model.insertRows(self.model.rowCount(),1)
-        self.update_persistent_editors()
 
     def delete_row(self):
         ''' Deletes the selected row '''
@@ -181,10 +210,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row is not None:
                 self.model.removeRows(row,1)
             else:
-                print('No row selected!')
+                self.display_no_row_selected_warning()
         else:
-            self.display_status_message("Can't delete last row!", 2)
-        self.update_persistent_editors()
+            self.display_warning("Can't delete last row!")
 
     def delete_all_rows(self):
         ''' 
@@ -197,15 +225,13 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         
         if reply == QtWidgets.QMessageBox.Yes:
             self.model.deleteTable()
-            self.update_persistent_editors()
 
     def copy_row(self):
         row = self.get_first_selected_row()
         if row is not None:
             self.model.copyRow(row)
-            self.update_persistent_editors()
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
 
     def move_selected_row_up(self):
         row = self.get_first_selected_row()
@@ -213,9 +239,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row > 0:
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row-1)
                 self.set_selected_row(row-1)
-                self.update_persistent_editors()
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
 
     def move_selected_row_down(self):
         row = self.get_first_selected_row()
@@ -223,9 +248,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             if row < self.model.rowCount():
                 self.model.moveRow(QtCore.QModelIndex(),row,QtCore.QModelIndex(),row+1)
                 self.set_selected_row(row+1)
-                self.update_persistent_editors()
         else:
-            print('No row selected!')
+            self.display_no_row_selected_warning()
 
     def set_item_delegates(self):
         ''' Several columns should have certain delegates
@@ -241,7 +265,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                               'z_end' : 'MarkZPositionDelegate(self)',
                               'z_step' : 'ZstepSpinBoxDelegate(self)',
                               'rot' : 'RotationSpinBoxDelegate(self)',
-                              'f_pos' : 'MarkFocusPositionDelegate(self)',
+                              'f_start' : 'MarkFocusPositionDelegate(self)',
+                              'f_end' : 'MarkFocusPositionDelegate(self)',
                               'filter' : 'ComboDelegate(self,[key for key in self.cfg.filterdict.keys()])',
                               'intensity' : 'SliderWithValueDelegate(self)',
                               'laser' : 'ComboDelegate(self,[key for key in self.cfg.laserdict.keys()])',
@@ -271,18 +296,15 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.persistent_editor_column_indices.append(column_index)
             exec(string_to_execute)
 
-    def update_persistent_editors(self):
-        '''
-        Go through all the rows and all necessary columns and
-        open persistent editors.
-        '''
-
-        for row in range(0, self.model.rowCount()):
-            for column in self.persistent_editor_column_indices:
-                self.table.openPersistentEditor(self.model.index(row, column))
+    def update_acquisition_time_prediction(self):
+        framerate = self.state['current_framerate']
+        total_time = self.state['acq_list'].get_acquisition_time(framerate)
+        self.state['predicted_acq_list_time'] = total_time
+        self.state['remaining_acq_list_time'] = total_time
+        time_string = convert_seconds_to_string(total_time)
+        self.AcquisitionTimeEdit.setText(time_string)
 
     def set_state(self):
-        # print('Acq Manager: State Updated')
         self.state['acq_list'] = self.model.get_acquisition_list()
         
     def enable_gui(self):
@@ -308,13 +330,19 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         if path:
             try:
                 self.model.loadModel(path)
-                self.update_persistent_editors()
                 self.set_state()
+                self.update_acquisition_time_prediction()
             except:
                 self.sig_warning.emit('Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!')
 
     def run_tiling_wizard(self):
-        wizard = TilingWizard(self)
+        wizard = MulticolorTilingWizard(self)
+
+    def run_focus_tracking_wizard(self):
+        wizard = FocusTrackingWizard(self)
+
+    def run_image_processing_wizard(self):
+        wizard = ImageProcessingWizard(self)
 
     def mark_current_xy_position(self):
         row = self.get_first_selected_row()
@@ -323,7 +351,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'x_pos')
             self.model.setDataFromState(row, 'y_pos')
         else:
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_xy_position()
+            else:
+                self.display_no_row_selected_warning()
 
     def mark_current_state(self):
         row = self.get_first_selected_row()
@@ -335,7 +367,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'intensity')
             self.model.setDataFromState(row, 'shutterconfig')
         else:
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_state()
+            else:
+                self.display_no_row_selected_warning()
 
     def mark_current_etl_parameters(self):
         row = self.get_first_selected_row()
@@ -346,28 +382,65 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.model.setDataFromState(row, 'etl_r_offset')
             self.model.setDataFromState(row, 'etl_r_amplitude')
         else:
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_etl_parameters()
+            else:
+                self.display_no_row_selected_warning()
 
     def mark_current_focus(self):
+        ''' Marks both foci start focus '''
         row = self.get_first_selected_row()
 
         if row is not None:
-            self.model.setDataFromState(row, 'f_pos')
+            f_pos = self.state['position']['f_pos']
+            ''' Set f_start and f_end to the same values '''
+            column_index0 = self.model._table[0].keys().index('f_start')
+            index0 = self.model.createIndex(row, column_index0)
+            column_index1 = self.model._table[0].keys().index('f_end')
+            index1 = self.model.createIndex(row, column_index1)
 
+            self.model.setData(index0, f_pos)
+            self.model.setData(index1, f_pos)
+        
+        else:
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_focus()
+            else:
+                self.display_no_row_selected_warning()
+            
     def mark_current_rotation(self):
         row = self.get_first_selected_row()
 
         if row is not None:
             self.model.setDataFromState(row, 'rot')
 
+        else:
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.mark_current_rotation()
+            else:
+                self.display_no_row_selected_warning()
+
     def preview_acquisition(self):
         row = self.get_first_selected_row()
         # print('selected row:', row)
         if row is not None:
             self.state['selected_row'] = row
-            self.parent.sig_state_request.emit({'state':'preview_acquisition'})
+            # Check if the z position should be updated
+            if self.PreviewZCheckBox.checkState():
+                # print('Checkbox checked')
+                self.parent.sig_state_request.emit({'state':'preview_acquisition_with_z_update'})
+            else:
+                # print('Checkbox not checked')
+                self.parent.sig_state_request.emit({'state':'preview_acquisition_without_z_update'})
         else: 
-            print('No row selected!')
+            if self.model.rowCount() == 1:
+                self.set_selected_row(0)
+                self.preview_acquisition()
+            else:    
+                self.display_no_row_selected_warning()
 
     def set_folder_names(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
@@ -380,21 +453,23 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def generate_filenames(self):
         wizard = FilenameWizard(self)
 
-    # def set_rotation_point(self):
-    #     '''
-    #     Take current position and turn it into an rotation point
-    #     '''
-    #     pos_dict = self.state['position']
+    def display_no_row_selected_warning(self):
+        self.display_warning('No row selected!')
 
-    #     rotation_point_dict = {'x_abs' : pos_dict['x_pos'],
-    #                            'y_abs' : pos_dict['y_pos'],
-    #                            'z_abs' : pos_dict['z_pos'],
-    #                             }
+    def display_warning(self, string):
+        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
+                string, QtWidgets.QMessageBox.Ok) 
 
-    #     self.model._table.set_rotation_point(rotation_point_dict)
+    def generate_xml(self):
+        print('generating BDV XML')
 
-    #     print(rotation_point_dict)
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        filename = timestr + '.xml'
 
-    # def delete_rotation_point(self):
-    #     self.model._table.delete_rotation_point()
+        path = self.state['acq_list'][0]['folder']+'/'+filename
+        
+        xml_exporter = mesoSPIM_XMLexporter(self) 
+        xml_exporter.generate_xml_from_acqlist(self.state['acq_list'],path)
+
+
 

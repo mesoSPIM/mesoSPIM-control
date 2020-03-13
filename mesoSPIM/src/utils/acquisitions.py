@@ -48,18 +48,20 @@ class Acquisition(indexed.IndexedOrderedDict):
                  z_step=10,
                  planes=10,
                  theta_pos=0,
-                 f_pos=0,
+                 f_start=0,
+                 f_end=0,
                  laser = '488 nm',
                  intensity=0,
                  filter= 'Empty-Alignment',
                  zoom= '1x',
                  shutterconfig='Left',
-                 folder='E:/tmp',
+                 folder='tmp',
                  filename='one.raw',
                  etl_l_offset = 0,
                  etl_l_amplitude =0,
                  etl_r_offset = 0,
-                 etl_r_amplitude = 0):
+                 etl_r_amplitude = 0,
+                 processing = ''):
 
         super().__init__()
 
@@ -70,7 +72,8 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['z_step']=z_step
         self['planes']=planes
         self['rot']=theta_pos
-        self['f_pos']=f_pos
+        self['f_start']=f_start
+        self['f_end']=f_end
         self['laser']=laser
         self['intensity']=intensity
         self['filter']=filter
@@ -82,6 +85,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['etl_l_amplitude']=etl_l_amplitude
         self['etl_r_offset']=etl_r_offset
         self['etl_r_amplitude']=etl_r_amplitude
+        self['processing']=processing
 
 
     def __setitem__(self, key, value):
@@ -103,21 +107,21 @@ class Acquisition(indexed.IndexedOrderedDict):
         '''
         Method to return the number of planes in the acquisition
         '''
-        image_count = abs(int((self['z_end'] - self['z_start'])/self['z_step']))
+        return abs(int((self['z_end'] - self['z_start'])/self['z_step']))
 
-        return image_count
-
-    def get_acquisition_time(self):
+    def get_acquisition_time(self, framerate):
         '''
-        Method to return the time the acquisition will take
+        Method to return the time the acquisition will take at a certain 
+        framerate.
+
+        Args:
+            float: framerate Framerate of the microscope 
 
         Returns:
             float: Acquisition time in seconds
-
-        TODO: What if sweeptime changes?
         '''
-        sweeptime = 0.2
-        return sweeptime * self.get_image_count()
+
+        return self.get_image_count()/framerate
 
     def get_delta_z_dict(self):
         ''' Returns relative movement dict for z-steps '''
@@ -125,6 +129,24 @@ class Acquisition(indexed.IndexedOrderedDict):
             z_rel = abs(self['z_step'])
         else:
             z_rel = -abs(self['z_step'])
+
+        return {'z_rel' : z_rel}
+
+    def get_delta_dict(self):
+        ''' Returns relative movement dict for z-steps and f-steps'''
+
+        ''' Calculate z-step '''
+        if self['z_end'] > self['z_start']:
+            z_rel = abs(self['z_step'])
+        else:
+            z_rel = -abs(self['z_step'])
+
+        ''' Calculate f-step
+        image_count = self.get_image_count()
+        f_rel = abs((self['f_end'] - self['f_start'])/image_count)
+        if self['f_end'] < self['f_start']:
+            f_rel = -f_rel
+        '''
 
         return {'z_rel' : z_rel}
 
@@ -136,7 +158,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'y_abs': self['y_pos'],
                 'z_abs': self['z_start'],
                 'theta_abs': self['rot'],
-                'f_abs': self['f_pos'],
+                'f_abs': self['f_start'],
                 }
 
     def get_endpoint(self):
@@ -144,16 +166,47 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'y_abs': self['y_pos'],
                 'z_abs': self['z_end'],
                 'theta_abs': self['rot'],
-                'f_abs': self['f_pos'],
+                'f_abs': self['f_end'],
                 }
 
-    def get_midpoint(self):
-        return {'x_abs': self['x_pos'],
-                'y_abs': self['y_pos'],
-                'z_abs': int((self['z_end']-self['z_start'])/2),
-                'theta_abs': self['rot'],
-                'f_abs': self['f_pos'],
-                }
+    def get_focus_stepsize_generator(self):
+        ''''
+        Provides a generator object to correct rounding errors for focus tracking acquisitions.
+
+        The focus stage has to travel a shorter distance than the sample z-stage, ideally only
+        a fraction of the z-step size. However, due to the limited minimum step size of the focus stage,
+        rounding errors can accumulate over thousands of steps.
+
+        Therefore, the generator tracks the rounding error and applies correcting steps here and there
+        to minimize the error.
+
+        This assumes a minimum step size of around 0.1 micron that the focus stage is capable of.
+
+        This method contains lots of round functions to keep residual rounding errors at bay.
+        '''
+        steps = self.get_image_count()
+        f_step = abs((self['f_end'] - self['f_start'])/steps)
+        if self['f_end'] < self['f_start']:
+            f_step = -f_step
+
+        standard_f_step = round(f_step , 1) # Minimum step size: 0.1 micron
+        focus_error = 0
+        expected_focus = 0
+        focus = 0
+        for i in range(steps):
+            if abs(focus_error) < 0.1:
+                focus += standard_f_step
+                yield standard_f_step
+            else:
+                if focus_error < 0:
+                    focus += standard_f_step - 0.1
+                    yield round(standard_f_step - 0.1,1)
+                else:
+                    focus += standard_f_step + 0.1
+                    yield round(standard_f_step + 0.1,1)
+            focus = round(focus, 5)
+            expected_focus += f_step
+            focus_error = round(expected_focus - focus, 5)
 
 class AcquisitionList(list):
     '''
@@ -185,8 +238,8 @@ class AcquisitionList(list):
             self.append(Acquisition())
 
         # '''
-        # In addition to the list of acquisition objects, the AcquisitionList also 
-        # contains a rotation point that is save to rotate the sample to the target 
+        # In addition to the list of acquisition objects, the AcquisitionList also
+        # contains a rotation point that is save to rotate the sample to the target
         # value.
         # '''
         # self.rotation_point = {'x_abs' : None, 'y_abs' : None, 'z_abs' : None}
@@ -200,14 +253,14 @@ class AcquisitionList(list):
         '''
         return self[0].get_keylist()
 
-    def get_acquisition_time(self):
+    def get_acquisition_time(self, framerate):
         '''
         Returns total time in seconds of a list of acquisitions
         '''
         time = 0
 
         for i in range(len(self)):
-            time += self[i].get_acquisition_time()
+            time += self[i].get_acquisition_time(framerate)
 
         return time
 
@@ -234,7 +287,7 @@ class AcquisitionList(list):
     #     ''' Returns True if an rotation point was set, otherwise False '''
     #     if self.rotation_point['x_abs'] == None :
     #         return False
-    #     else: 
+    #     else:
     #         return True
 
     # def get_rotation_point(self):
@@ -259,16 +312,18 @@ class AcquisitionList(list):
         return False
 
     def check_for_existing_filenames(self):
+        ''' Returns a list of existing filenames '''
+        filename_list = []
         for i in range(len(self)):
             filename = self[i]['folder']+'/'+self[i]['filename']
             file_exists = os.path.isfile(filename)
             if file_exists:
-                print('Attention: Existing file: ', filename)
-                return True 
-            else:
-                return False
+                filename_list.append(filename)
 
+        return filename_list 
+        
     def check_for_duplicated_filenames(self):
+        ''' Returns a list of duplicated filenames '''
         duplicates = []
         filenames = []
 
@@ -279,11 +334,19 @@ class AcquisitionList(list):
 
         duplicates = self.get_duplicates_in_list(filenames)
 
-        if len(duplicates)==0:
-            return False 
-        else:
-            print('Attention: Duplicated filename: ', duplicates)
-            return True
+        return duplicates
+
+    def check_for_nonexisting_folders(self):
+        ''' Returns a list of nonexisting folders '''
+        
+        nonexisting_folders = []
+
+        for i in range(len(self)):
+            folder = self[i]['folder']
+            if not os.path.isdir(folder):
+                nonexisting_folders.append(folder)
+        
+        return nonexisting_folders
 
     def get_duplicates_in_list(self, list):
         duplicates = []

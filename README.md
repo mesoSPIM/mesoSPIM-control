@@ -1,12 +1,16 @@
 # mesoSPIM-control
-Code and documentation for the mesoSPIM light-sheet microscope software.
-The documentation of the microscope hardware information can be found [here](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
+Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. Currently, more than 10 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
+
+Parts lists, drawings, and instructions for building a mesoSPIM can be found in the [mesoSPIM wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
 
 ## Overview
-The Swiss mesoSPIM is a versatile light-sheet microscope for imaging
+The mesoSPIM is a versatile light-sheet microscope for imaging
 cleared tissue samples. It is compatible with all major clearing approaches - including CLARITY - and optimized for quickly creating large-field-of-view overview datasets of whole mouse brains.
 
 ## Installation
+
+### :warning: Warning
+If you are updating `mesoSPIM-control` from a previous version: Please have a close look at the [Changelog](CHANGELOG.md) to avoid overwriting your configuration files.
 
 ### Prerequisites
 * Windows 7 or Windows 10
@@ -14,7 +18,8 @@ cleared tissue samples. It is compatible with all major clearing approaches - in
 
 #### Device drivers
 * [Hamamatsu DCAM API](https://dcam-api.com/) when using Hamamatsu Orca Flash 4.0 V2 or V3 sCMOS cameras. To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
-* [Software for Physik Instrumente stages](https://www.physikinstrumente.com/en/products/motion-control-software/) if a PI stage is used. To test the stages, PI MicroMove can be used.
+* [PVCAM and PVCAM-SDK](https://www.photometrics.com/support/software/) when using Photometrics cameras (under development). In addition, the `PyVCAM` Python package is necessary ([Link](https://github.com/Photometrics/PyVCAM)).
+* [Software for Physik Instrumente stages](https://www.physikinstrumente.com/en/products/motion-control-software/) if a PI stage is used. To test the stages, PI MicroMove can be used. 
 * [Software for Steinmeyer Mechatronics / Feinmess stages using Galil drivers](http://www.galilmc.com/downloads/api) if such a stage is used. To test the stages, GalilTools can be used.
 * [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases) for Dynamixel Zoom servos. Make sure you download version 3.5.4 of the SDK.
 
@@ -28,7 +33,7 @@ mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/dow
 * scipy
 * ctypes
 * importlib
-* PyQt5
+* PyQt5 (if there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
 
 In addition (for Anaconda), the following packages need to be installed:
 * nidaqmx (`python -m pip install nidaqmx`)
@@ -36,7 +41,9 @@ In addition (for Anaconda), the following packages need to be installed:
 * serial (`python -m pip install pyserial`)
 * pyqtgraph  (`python -m pip install pyqtgraph`)
 * pywinusb  (`python -m pip install pywinusb`)
-* PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`)
+* PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`). You can also download PIPython [here](https://github.com/royerlab/pipython)
+* tifffile (`python -m pip install tifffile`)
+* ([PyVCAM when using Photometrics cameras](https://github.com/Photometrics/PyVCAM)
 
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`

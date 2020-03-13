@@ -1282,7 +1282,10 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
         
-        #self.pidevice.FRF(1)
+        ''' Setting PI velocities '''
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
+
+        ''' Reference movements '''
         print('M-406 Emergency referencing hack: Waiting for referencing move')
         logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
         self.pidevice.FRF(2)
@@ -1292,7 +1295,6 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
         self.xyf_stage.move_absolute({3: self.startfocus})
-        #self.pidevice.MOV(5,self.startfocus/1000)
 
     def __del__(self):
         try:
@@ -1472,3 +1474,552 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
     def execute_program(self):
         '''Executes program stored on the Galil controller'''
         self.xyf_stage.execute_program()
+
+### Up for deletion --> also in mesoSPIM serial
+class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
+    '''
+    Expects following microscope configuration:
+    
+    Sample XYZ movement: Galil controller with 3 axes 
+    F movement: Second Galil controller with a single axis 
+    Rotation: PI C-863 mercury controller
+
+    It is expected that the parent class has the following signals:
+        sig_move_relative = pyqtSignal(dict)
+        sig_move_relative_and_wait_until_done = pyqtSignal(dict)
+        sig_move_absolute = pyqtSignal(dict)
+        sig_move_absolute_and_wait_until_done = pyqtSignal(dict)
+        sig_zero = pyqtSignal(list)
+        sig_unzero = pyqtSignal(list)
+        sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
+
+    Also contains a QTimer that regularily sends position updates, e.g
+    during the execution of movements.
+   
+    '''
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        #self.state = mesoSPIM_StateSingleton()
+
+        self.pos_timer = QtCore.QTimer(self)
+        self.pos_timer.timeout.connect(self.report_position)
+        self.pos_timer.start(50)
+        '''
+        Galil-specific code
+        '''
+        from src.devices.stages.galil.galilcontrol import StageControlGalil
+
+        self.x_encodercounts_per_um = self.cfg.xyz_galil_parameters['x_encodercounts_per_um']
+        self.y_encodercounts_per_um = self.cfg.xyz_galil_parameters['y_encodercounts_per_um']
+        self.z_encodercounts_per_um = self.cfg.xyz_galil_parameters['z_encodercounts_per_um']
+        self.f_encodercounts_per_um = self.cfg.f_galil_parameters['f_encodercounts_per_um']
+
+        ''' Setting up the Galil stages: XYZ '''
+        self.xyz_stage = StageControlGalil(self.cfg.xyz_galil_parameters['port'],[self.x_encodercounts_per_um,
+                                                self.y_encodercounts_per_um,self.z_encodercounts_per_um])
+
+        ''' Setting up the Galil stages: F with two dummy axes.'''
+        self.f_stage = StageControlGalil(self.cfg.f_galil_parameters['port'],[self.x_encodercounts_per_um,
+                                                self.y_encodercounts_per_um,self.f_encodercounts_per_um])
+        '''
+        self.f_stage = StageControlGalil(COMport = self.cfg.f_galil_parameters['COMport'],
+                                        x_encodercounts_per_um = 0,
+                                        y_encodercounts_per_um = 0,
+                                        z_encodercounts_per_um = self.f_encodercounts_per_um)
+        '''
+        
+        '''
+        print('Galil: ', self.xyz_stage.read_position('x'))
+        print('Galil: ', self.xyz_stage.read_position('y'))
+        print('Galil: ', self.xyz_stage.read_position('z'))
+        '''
+
+        ''' PI-specific code '''
+        from pipython import GCSDevice, pitools
+
+        self.pitools = pitools
+
+        ''' Setting up the PI stages '''
+        self.pi = self.cfg.pi_parameters
+
+        self.controllername = self.cfg.pi_parameters['controllername']
+        self.pi_stages = self.cfg.pi_parameters['stages']
+        # ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE')
+        self.refmode = self.cfg.pi_parameters['refmode']
+        # self.serialnum = ('118015439')  # Wyss Geneva
+        self.serialnum = self.cfg.pi_parameters['serialnum']  # UZH Irchel H45
+
+        self.pidevice = GCSDevice(self.controllername)
+        self.pidevice.ConnectUSB(serialnum=self.serialnum)
+
+        ''' PI startup '''
+
+        ''' with refmode enabled: pretty dangerous
+        pitools.startup(self.pidevice, stages=self.pi_stages, refmode=self.refmode)
+        '''
+        pitools.startup(self.pidevice, stages=self.pi_stages)
+        
+        ''' Setting PI velocities '''
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
+
+        self.pidevice.FRF(1)
+        print('M-061 Emergency referencing hack: Waiting for referencing move')
+        logger.info('M-061 Emergency referencing hack: Waiting for referencing move')
+        self.block_till_controller_is_ready()
+        print('M-061 Emergency referencing hack done')
+        logger.info('M-061 Emergency referencing hack done')
+       
+        ''' Stage 5 close to good focus'''
+        self.startfocus = self.cfg.stage_parameters['startfocus']
+        self.f_stage.move_absolute({3: self.startfocus})
+        #self.pidevice.MOV(5,self.startfocus/1000)
+
+    def __del__(self):
+        try:
+            '''Close the Galil connection'''
+            self.xyz_stage.close()
+            self.f_stage.close_stage()
+            logger.info('Galil stages disconnected')
+        except:
+            logger.info('Error while disconnecting the Galil stages')
+
+    def report_position(self):
+        positions = self.pidevice.qPOS(self.pidevice.axes)
+
+        '''
+        Ugly workaround to deal with non-responding stage 
+        position reports: Do not update positions in 
+        exceptional circumstances. 
+        '''
+        try:
+            self.x_pos, self.y_pos, self.z_pos  = self.xyz_stage.read_position()
+            _ , _ , self.f_pos = self.f_stage.read_position()
+        except:
+            logger.info('Error while unpacking Galil stage position values')
+            
+            self.create_position_dict()
+            
+        self.theta_pos = positions['1']
+        
+        self.int_x_pos = self.x_pos + self.int_x_pos_offset
+        self.int_y_pos = self.y_pos + self.int_y_pos_offset
+        self.int_z_pos = self.z_pos + self.int_z_pos_offset
+        self.int_f_pos = self.f_pos + self.int_f_pos_offset
+        self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
+
+        self.create_internal_position_dict()
+
+        self.sig_position.emit(self.int_position_dict)
+        #print(self.int_position_dict)
+
+    def move_relative(self, dict, wait_until_done=False):
+        ''' Galil move relative method
+
+        Lots of implementation details in here, should be replaced by a facade
+        '''
+        xyz_motion_dict = {}
+
+        if 'x_rel' in dict:
+            x_rel = dict['x_rel']
+            if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
+                xyz_motion_dict.update({1:int(x_rel)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
+
+        if 'y_rel' in dict:
+            y_rel = dict['y_rel']
+            if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
+                xyz_motion_dict.update({2:int(y_rel)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
+
+        if 'z_rel' in dict:
+            z_rel = dict['z_rel']
+            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                xyz_motion_dict.update({3:int(z_rel)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+        
+        if xyz_motion_dict != {}:
+            self.xyz_stage.move_relative(xyz_motion_dict)
+
+        if 'theta_rel' in dict:
+            theta_rel = dict['theta_rel']
+            if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
+                self.pidevice.MVR({1 : theta_rel})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
+
+        if 'f_rel' in dict:
+            f_rel = dict['f_rel']
+            if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
+                self.f_stage.move_relative({3:int(f_rel)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            self.f_stage.wait_until_done('Z')
+            self.xyz_stage.wait_until_done('XYZ')
+            self.pitools.waitontarget(self.pidevice)
+
+
+    def move_absolute(self, dict, wait_until_done=False):
+        '''
+        Galil move absolute method
+
+        Lots of implementation details in here, should be replaced by a facade
+
+        '''
+        xyz_motion_dict = {}
+
+        if 'x_abs' or 'y_abs' or 'z_abs' in dict:
+            if 'x_abs' in dict:
+                x_abs = dict['x_abs']
+                x_abs = x_abs - self.int_x_pos_offset
+                xyz_motion_dict.update({1:x_abs})
+
+            if 'y_abs' in dict:
+                y_abs = dict['y_abs']
+                y_abs = y_abs - self.int_y_pos_offset
+                xyz_motion_dict.update({2:y_abs})
+                        
+            if 'z_abs' in dict:
+                z_abs = dict['z_abs']
+                z_abs = z_abs - self.int_z_pos_offset
+                xyz_motion_dict.update({3:z_abs})
+        
+        if xyz_motion_dict != {}:
+            self.xyz_stage.move_absolute(xyz_motion_dict)
+        
+        if wait_until_done == True:
+            self.xyz_stage.wait_until_done('XYZ')
+        
+        if 'f_abs' in dict:
+            f_abs = dict['f_abs']
+            f_abs = f_abs - self.int_f_pos_offset
+            if self.f_min < f_abs and self.f_max > f_abs:
+                ''' Conversion to mm and command emission'''
+                self.f_stage.move_absolute({3:int(f_abs)})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!',1000)
+
+        if 'theta_abs' in dict:
+            theta_abs = dict['theta_abs']
+            theta_abs = theta_abs - self.int_theta_pos_offset
+            if self.theta_min < theta_abs and self.theta_max > theta_abs:
+                ''' No Conversion to mm !!!! and command emission'''
+                self.pidevice.MOV({1 : theta_abs})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            self.pitools.waitontarget(self.pidevice)
+
+    def stop(self):
+        self.f_stage.stop(restart_programs=True)
+        self.xyz_stage.stop(restart_programs=True)
+        self.pidevice.STP(noraise=True)
+
+    def load_sample(self):
+        self.move_absolute({'y_abs':self.cfg.stage_parameters['y_load_position']})
+
+    def unload_sample(self):
+        self.move_absolute({'y_abs':self.cfg.stage_parameters['y_unload_position']})
+        
+    def go_to_rotation_position(self, wait_until_done=False):
+        self.move_absolute({'x_abs':self.x_rot_position, 'y_abs':self.y_rot_position, 'z_abs':self.z_rot_position})
+        if wait_until_done == True:
+            self.xyz_stage.wait_until_done('XYZ')
+
+    def block_till_controller_is_ready(self):
+        '''
+        Blocks further execution (especially during referencing moves)
+        till the PI controller returns ready
+        '''
+        blockflag = True
+        while blockflag:
+            if self.pidevice.IsControllerReady():
+                blockflag = False
+            else:
+                time.sleep(0.1)
+
+    def execute_program(self):
+        '''Executes program stored on the Galil controller'''
+        self.f_stage.execute_program()
+        self.xyz_stage.execute_program()
+
+class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
+    '''
+    Expects following microscope configuration:
+    
+    Sample XY movement: Galil controller with 2 axes 
+    Z-Movement, F-Movement and Rotation: PI C-884 mercury controller
+
+    It is expected that the parent class has the following signals:
+        sig_move_relative = pyqtSignal(dict)
+        sig_move_relative_and_wait_until_done = pyqtSignal(dict)
+        sig_move_absolute = pyqtSignal(dict)
+        sig_move_absolute_and_wait_until_done = pyqtSignal(dict)
+        sig_zero = pyqtSignal(list)
+        sig_unzero = pyqtSignal(list)
+        sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
+
+    Also contains a QTimer that regularily sends position updates, e.g
+    during the execution of movements.
+   
+    '''
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        self.pos_timer = QtCore.QTimer(self)
+        self.pos_timer.timeout.connect(self.report_position)
+        self.pos_timer.start(50)
+        '''
+        Galil-specific code
+        '''
+        from src.devices.stages.galil.galilcontrol import StageControlGalil
+
+        self.x_encodercounts_per_um = self.cfg.xy_galil_parameters['x_encodercounts_per_um']
+        self.y_encodercounts_per_um = self.cfg.xy_galil_parameters['y_encodercounts_per_um']
+
+        ''' Setting up the Galil stages: XYZ '''
+        self.xy_stage = StageControlGalil(self.cfg.xy_galil_parameters['port'],[self.x_encodercounts_per_um,
+                                                self.y_encodercounts_per_um])
+
+        ''' PI-specific code '''
+        from pipython import GCSDevice, pitools
+
+        self.pitools = pitools
+
+        ''' Setting up the PI stages '''
+        self.pi = self.cfg.pi_parameters
+
+        self.controllername = self.cfg.pi_parameters['controllername']
+        self.pi_stages = self.cfg.pi_parameters['stages']
+        # ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE')
+        self.refmode = self.cfg.pi_parameters['refmode']
+        # self.serialnum = ('118015439')  # Wyss Geneva
+        self.serialnum = self.cfg.pi_parameters['serialnum']  # UZH Irchel H45
+
+        self.pidevice = GCSDevice(self.controllername)
+        self.pidevice.ConnectUSB(serialnum=self.serialnum)
+
+        ''' PI startup '''
+
+        ''' with refmode enabled: pretty dangerous
+        pitools.startup(self.pidevice, stages=self.pi_stages, refmode=self.refmode)
+        '''
+        pitools.startup(self.pidevice, stages=self.pi_stages)
+
+        ''' Setting PI velocities '''
+        self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
+        
+        print('M-406 Emergency referencing hack: Waiting for referencing move')
+        logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
+        self.pidevice.FRF(2)
+        print('M-406 Emergency referencing hack done')
+        logger.info('M-406 Emergency referencing hack done')
+
+        print('M-605.2DD Emergency referencing hack: Waiting for referencing move')
+        logger.info('M-605.2DD  Emergency referencing hack: Waiting for referencing move')
+        self.pidevice.FRF(3)
+        print('M-605.2DD Emergency referencing hack done')
+        logger.info('M-605.2DD Emergency referencing hack done')
+
+        self.block_till_controller_is_ready()
+
+        ''' Stage 3 close to good focus'''
+        self.startfocus = self.cfg.stage_parameters['startfocus']
+        self.pidevice.MOV(3,self.startfocus/1000)
+
+    def __del__(self):
+        try:
+            '''Close the Galil connection'''
+            self.xy_stage.close()
+            logger.info('Galil stages disconnected')
+        except:
+            logger.info('Error while disconnecting the Galil stages')
+
+    def report_position(self):
+        positions = self.pidevice.qPOS(self.pidevice.axes)
+
+        '''
+        Ugly workaround to deal with non-responding stage 
+        position reports: Do not update positions in 
+        exceptional circumstances. 
+        '''
+        try:
+            self.x_pos, self.y_pos  = self.xy_stage.read_position()
+        except:
+            logger.info('Error while unpacking Galil stage position values')
+            
+        
+        self.f_pos = round(positions['3']*1000,2)
+        self.z_pos = round(positions['2']*1000,2)
+        self.theta_pos = positions['1']
+
+        self.create_position_dict()
+        
+        self.int_x_pos = self.x_pos + self.int_x_pos_offset
+        self.int_y_pos = self.y_pos + self.int_y_pos_offset
+        self.int_z_pos = self.z_pos + self.int_z_pos_offset
+        self.int_f_pos = self.f_pos + self.int_f_pos_offset
+        self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
+
+        self.create_internal_position_dict()
+
+        self.sig_position.emit(self.int_position_dict)
+        #print(self.int_position_dict)
+
+    def move_relative(self, dict, wait_until_done=False):
+        ''' Galil move relative method
+
+        Lots of implementation details in here, should be replaced by a facade
+        '''
+        xy_motion_dict = {}
+
+        if 'x_rel' in dict:
+            x_rel = dict['x_rel']
+            if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
+                xy_motion_dict.update({1:int(x_rel)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
+
+        if 'y_rel' in dict:
+            y_rel = dict['y_rel']
+            if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
+                xy_motion_dict.update({2:int(y_rel)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
+
+        if 'z_rel' in dict:
+            z_rel = dict['z_rel']
+            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                z_rel = z_rel/1000
+                self.pidevice.MVR({2 : z_rel})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+        
+        if 'theta_rel' in dict:
+            theta_rel = dict['theta_rel']
+            if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
+                self.pidevice.MVR({1 : theta_rel})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
+
+        if 'f_rel' in dict:
+            f_rel = dict['f_rel']
+            if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
+                f_rel = f_rel/1000
+                self.pidevice.MVR({3 : f_rel})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+
+        if xy_motion_dict != {}:
+            self.xy_stage.move_relative(xy_motion_dict)
+
+        if wait_until_done == True:
+            self.xy_stage.wait_until_done('XY')
+            self.pitools.waitontarget(self.pidevice)
+
+
+    def move_absolute(self, dict, wait_until_done=False):
+        '''
+        Galil move absolute method
+
+        Lots of implementation details in here, should be replaced by a facade
+
+        '''
+        xy_motion_dict = {}
+
+        if 'x_abs' or 'y_abs'in dict:
+            if 'x_abs' in dict:
+                x_abs = dict['x_abs']
+                x_abs = x_abs - self.int_x_pos_offset
+                xy_motion_dict.update({1:x_abs})
+
+            if 'y_abs' in dict:
+                y_abs = dict['y_abs']
+                y_abs = y_abs - self.int_y_pos_offset
+                xy_motion_dict.update({2:y_abs})
+                        
+        if xy_motion_dict != {}:
+            self.xy_stage.move_absolute(xy_motion_dict)
+        
+        if wait_until_done == True:
+            self.xy_stage.wait_until_done('XYZ')
+
+        if 'f_abs' in dict:
+            f_abs = dict['f_abs']
+            f_abs = f_abs - self.int_f_pos_offset
+            if self.f_min < f_abs and self.f_max > f_abs:
+                ''' Conversion to mm and command emission'''
+                f_abs= f_abs/1000
+                self.pidevice.MOV({3 : f_abs})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!',1000)
+        
+        if 'z_abs' in dict:
+            z_abs = dict['z_abs']
+            z_abs = z_abs - self.int_z_pos_offset
+            if self.z_min < z_abs and self.z_max > z_abs:
+                ''' Conversion to mm and command emission'''
+                z_abs= z_abs/1000
+                self.pidevice.MOV({2 : z_abs})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!',1000)
+
+        if 'theta_abs' in dict:
+            theta_abs = dict['theta_abs']
+            theta_abs = theta_abs - self.int_theta_pos_offset
+            if self.theta_min < theta_abs and self.theta_max > theta_abs:
+                ''' No Conversion to mm !!!! and command emission'''
+                self.pidevice.MOV({1 : theta_abs})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            self.xy_stage.wait_until_done('XY')
+            self.pitools.waitontarget(self.pidevice)
+
+    def stop(self):
+        self.xy_stage.stop(restart_programs=True)
+        self.pidevice.STP(noraise=True)
+
+    def load_sample(self):
+        self.xy_stage.move_absolute({2:self.cfg.stage_parameters['y_load_position']})
+        
+    def unload_sample(self):
+        self.xy_stage.move_absolute({2:self.cfg.stage_parameters['y_unload_position']})
+        
+    def go_to_rotation_position(self, wait_until_done=False):
+        ''' This has to be done in absolute coordinates of the stages to avoid problems with the 
+        internal position offset (when the stage is zeroed). '''
+        xy_motion_dict = {1:self.x_rot_position, 2: self.y_rot_position}
+        self.xy_stage.move_absolute(xy_motion_dict)
+        self.pidevice.MOV({2 : self.z_rot_position/1000})
+        
+        if wait_until_done == True:
+            self.xy_stage.wait_until_done('XY')
+            self.pitools.waitontarget(self.pidevice)
+    
+    def block_till_controller_is_ready(self):
+        '''
+        Blocks further execution (especially during referencing moves)
+        till the PI controller returns ready
+        '''
+        blockflag = True
+        while blockflag:
+            if self.pidevice.IsControllerReady():
+                blockflag = False
+            else:
+                time.sleep(0.1)
+
+    def execute_program(self):
+        '''Executes program stored on the Galil controller'''
+        self.xy_stage.execute_program()

@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
+''' Disabled taskbar button progress display due to problems with Anaconda default'''
+# if sys.platform == 'win32':
+#     from PyQt5.QtWinExtras import QWinTaskbarButton
+
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow
@@ -85,6 +89,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
+        self.acquisition_manager_window.sig_move_absolute.connect(self.sig_move_absolute.emit)
 
         '''
         Setting up the threads
@@ -151,6 +156,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
 
+        self.enable_gui_updates_from_state(False)
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -163,6 +169,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.core_thread.wait()
         except:
             pass
+
+    def display_icons(self):
+        pass
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
+        if sys.platform == 'win32':
+            self.win_taskbar_button = QWinTaskbarButton(self)
+            self.win_taskbar_button.setWindow(self.windowHandle())
+            self.win_taskbar_button.progress().setVisible(False)
+        '''
 
     def get_state_parameter(self, state_parameter):
         return self.state[state_parameter]
@@ -244,16 +259,25 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         images_in_acq = dict['images_in_acq']
         tot_images = dict['total_image_count']
         image_count = dict['image_counter']
+        time_passed_string = dict['time_passed_string']
+        remaining_time_string = dict['remaining_time_string']
 
         self.AcquisitionProgressBar.setValue(int((cur_image+1)/images_in_acq*100))
         self.TotalProgressBar.setValue(int((image_count+1)/tot_images*100))
 
-        self.AcquisitionProgressBar.setFormat('%p% (Image '+ str(cur_image+1) +\
-                                        '/' + str(images_in_acq) + ')')
-        self.TotalProgressBar.setFormat('%p% (Acquisition '+ str(cur_acq+1) +\
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
+        if sys.platform == 'win32':
+            self.win_taskbar_button.progress().setValue(int((image_count+1)/tot_images*100))
+        '''
+
+        self.AcquisitionProgressBar.setFormat('%p% Image '+ str(cur_image+1) +\
+                                        '/' + str(images_in_acq) + ' ')
+        self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
                                         '/' + str(tot_acqs) +\
-                                         ')' + ' (Image '+ str(image_count) +\
-                                        '/' + str(tot_images) + ')')
+                                         ' ' + ' Image: '+ str(image_count) +\
+                                        '/' + str(tot_images) + ' ' +\
+                                            'Time: ' + time_passed_string + \
+                                            ' Remaining: ' + remaining_time_string)
 
     def create_script_window(self):
         '''
@@ -315,8 +339,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
-        # self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
-        # self.SnapFolderIndicator.setText(self.state['snap_folder'])
+        self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
+        self.SnapFolderIndicator.setText(self.state['snap_folder'])
         
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
@@ -328,9 +352,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.LaserComboBox, 'laser',1),
             (self.LaserIntensitySlider, 'intensity',1),
             (self.CameraExposureTimeSpinBox, 'camera_exposure_time',1000),
-            (self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
-            # (self.CameraTriggerDelaySpinBox,'camera_delay_%',1),
-            # (self.CameraTriggerPulseLengthSpinBox, 'camera_pulse_%',1),
+            #(self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
+            (self.CameraTriggerDelaySpinBox,'camera_delay_%',1),
+            (self.CameraTriggerPulseLengthSpinBox, 'camera_pulse_%',1),
             (self.SweeptimeSpinBox,'sweeptime',1000),
             (self.LeftLaserPulseDelaySpinBox,'laser_l_delay_%',1),
             (self.RightLaserPulseDelaySpinBox,'laser_r_delay_%',1),
@@ -370,11 +394,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
         self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
         self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
+        # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.LiveSubSamplingComboBox,subsampling_list,'camera_display_live_subsampling', int_conversion = True)
         self.connect_combobox_to_state_parameter(self.SnapSubSamplingComboBox,subsampling_list,'camera_display_snap_subsampling', int_conversion = True)
         self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
         # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
-
+        self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
         self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
@@ -444,7 +469,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             widget.setCurrentText(self.state[state_parameter_string])
         elif isinstance(widget, (QtWidgets.QSlider,QtWidgets.QDoubleSpinBox,QtWidgets.QSpinBox)):
             widget.setValue(self.state[state_parameter_string]*conversion_factor)
-
+    
+    @QtCore.pyqtSlot()
     def update_gui_from_state(self):
         '''
         Updates the GUI controls after a state_change
@@ -473,13 +499,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def run_selected_acquisition(self):
         row = self.acquisition_manager_window.get_first_selected_row()
-        # print('selected row:', row)
-        self.state['selected_row'] = row
-        self.sig_state_request.emit({'state':'run_selected_acquisition'})
-        self.enable_mode_control_buttons(False)
-        self.enable_gui_updates_from_state(True)
-        self.enable_stop_button(True)
-        self.enable_gui(False)
+
+        if row == None:
+            self.display_warning('No row selected - stopping!')
+        else:
+            # print('selected row:', row)
+            self.state['selected_row'] = row
+            self.sig_state_request.emit({'state':'run_selected_acquisition'})
+            self.enable_mode_control_buttons(False)
+            self.enable_gui_updates_from_state(True)
+            self.enable_stop_button(True)
+            self.enable_gui(False)
+            ''' Disabled taskbar button progress display due to problems with Anaconda default
+            if sys.platform == 'win32':
+                self.win_taskbar_button.progress().setVisible(True)
+            '''
 
     def run_acquisition_list(self):
         self.state['selected_row'] = -1
@@ -488,18 +522,30 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)
         self.enable_gui(False)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
+        if sys.platform == 'win32':
+            self.win_taskbar_button.progress().setVisible(True)
+        '''
 
     def run_lightsheet_alignment_mode(self):
         self.sig_state_request.emit({'state':'lightsheet_alignment_mode'})
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
+        if sys.platform == 'win32':
+            self.win_taskbar_button.progress().setVisible(False)
+        '''
     
     def run_visual_mode(self):
         self.sig_state_request.emit({'state':'visual_mode'})
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
+        if sys.platform == 'win32':
+            self.win_taskbar_button.progress().setVisible(False)
+        '''
 
     @QtCore.pyqtSlot(bool)
     def enable_gui_updates_from_state(self, boolean):
@@ -515,7 +561,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def enable_mode_control_buttons(self, boolean):
         self.LiveButton.setEnabled(boolean)
-        #self.SnapButton.setEnabled(boolean)
+        self.SnapButton.setEnabled(boolean)
         self.RunSelectedAcquisitionButton.setEnabled(boolean)
         self.RunAcquisitionListButton.setEnabled(boolean)
         self.VisualModeButton.setEnabled(boolean)
@@ -534,12 +580,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.AcquisitionProgressBar.setMaximum(0)
         self.TotalProgressBar.setMinimum(0)
         self.TotalProgressBar.setMaximum(0)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
+        if sys.platform == 'win32':
+            self.win_taskbar_button.progress().setVisible(False)
+        '''
     
     def set_progressbars_to_standard(self):
         self.AcquisitionProgressBar.setMinimum(0)
         self.AcquisitionProgressBar.setMaximum(100)
         self.TotalProgressBar.setMinimum(0)
         self.TotalProgressBar.setMaximum(100)
+        ''' Disabled taskbar button progress display due to problems with Anaconda default
+        if sys.platform == 'win32':
+            self.win_taskbar_button.progress().setValue(0)
+            self.win_taskbar_button.progress().setVisible(False)
+        '''
 
     def update_etl_increments(self):
         increment = self.ETLIncrementSpinBox.value()
@@ -593,12 +648,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def choose_snap_folder(self):
         pass
 
-        # path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
 
-        # if path:
-        #     self.state['snap_folder'] = path
-        #     self.SnapFolderIndicator.setText(path)
+        if path:
+            self.state['snap_folder'] = path
+            self.SnapFolderIndicator.setText(path)
 
-        #     logger.info(f'Main Window: Chosen Snap Folder: {path}')    
+            print('Chosen Snap Folder:', path)
+
+            #self.sig_state_request.emit({'ETL_cfg_file' : path})
+    
 
     
