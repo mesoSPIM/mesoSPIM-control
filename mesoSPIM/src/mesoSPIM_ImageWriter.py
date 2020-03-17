@@ -41,7 +41,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         self.file_extension = ''
 
-    def prepare_acquisition(self, acq):
+    def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
         self.filename = acq['filename']
         self.path = self.folder+'/'+self.filename

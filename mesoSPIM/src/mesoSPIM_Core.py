@@ -575,7 +575,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
             if not self.stopflag:
-                self.prepare_acquisition(acq)
+                self.prepare_acquisition(acq, acq_list)
                 self.run_acquisition(acq)
                 self.close_acquisition(acq)
 
@@ -668,7 +668,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.state['state'] = 'idle'
 
-    def prepare_acquisition(self, acq):
+    def prepare_acquisition(self, acq, acq_list):
         '''
         Housekeeping: Prepare the acquisition
         '''
@@ -714,7 +714,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.f_step_generator = acq.get_focus_stepsize_generator()
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
-        self.sig_prepare_image_series.emit(acq)
+        self.sig_prepare_image_series.emit(acq, acq_list)
         self.prepare_image_series()
 
         # ''' HICKUP DEBUGGING: Measure z position '''
