@@ -40,6 +40,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
+        self.bdv_writer = None
 
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
@@ -60,35 +61,57 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.processing_options_string = acq['processing']
 
         if self.file_extension == '.h5':
-            ''' x and y need to be exchanged to account for the image rotation '''
+            # create writer object if the view is first in the list
+            if acq == acq_list[0]:
+                self.bdv_writer = npy2bdv.BdvWriter(self.path,
+                                                    nilluminations=acq_list.get_n_shutter_configs(),
+                                                    nchannels=acq_list.get_n_lasers(),
+                                                    nangles=acq_list.get_n_angles())
+            print(f"nilluminations={acq_list.get_n_shutter_configs()} \n" +
+                  f"nchannels={acq_list.get_n_lasers()}\n" +
+                  f"nangles={acq_list.get_n_angles()}\n")
+            # x and y need to be exchanged to account for the image rotation
             shape = (self.max_frame, self.y_pixels, self.x_pixels)
-            self.bdv_writer = npy2bdv.BdvWriter(self.path)
-            self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape, time=0, channel=0)
+            print(f"illumination={acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig')}")
+            print(f"channel={acq_list.find_value_index(acq['laser'], 'laser')}")
+            print(f"angle={acq_list.find_value_index(acq['rot'], 'rot')}")
+            self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
+                                        illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                        channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                        angle=acq_list.find_value_index(acq['rot'], 'rot')
+                                        )
+            print('finished appending view')
         else:
             self.fsize = self.x_pixels*self.y_pixels
             self.xy_stack = np.memmap(self.path, mode = "write", dtype = np.uint16, shape = self.fsize * self.max_frame)
     
         self.cur_image = 0
 
-    def write_image(self, image):
+    def write_image(self, image, acq, acq_list):
         if self.file_extension == '.h5':
-            self.bdv_writer.append_plane(image, self.cur_image)
+            self.bdv_writer.append_plane(plane=image, plane_index=self.cur_image,
+                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                         angle=acq_list.find_value_index(acq['rot'], 'rot')
+                                         )
+            print('finished appending plane')
         else:
             image = image.flatten()
             self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
 
         self.cur_image += 1
         
-    def end_acquisition(self):
+    def end_acquisition(self, acq, acq_list):
         if self.file_extension == '.h5':
-            try:
-                self.bdv_writer.write_xml_file()
-            except:
-                logger.warning('HDF5 XML could not be written')
-            try:
-                self.bdv_writer.close()
-            except:
-                logger.warning('HDF5 file could not be closed')
+            if acq == acq_list[-1]:
+                try:
+                    self.bdv_writer.write_xml_file()
+                except:
+                    logger.warning('HDF5 XML could not be written')
+                try:
+                    self.bdv_writer.close()
+                except:
+                    logger.warning('HDF5 file could not be closed')
         else:
             try:
                 del self.xy_stack
