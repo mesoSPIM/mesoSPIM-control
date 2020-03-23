@@ -5,16 +5,13 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 import os
 import time
 import numpy as np
-
 import tifffile
-
 import logging
 logger = logging.getLogger(__name__)
-
+import sys
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
-from .utils.acquisitions import AcquisitionList, Acquisition
 
 import npy2bdv
 
@@ -67,20 +64,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                                     nilluminations=acq_list.get_n_shutter_configs(),
                                                     nchannels=acq_list.get_n_lasers(),
                                                     nangles=acq_list.get_n_angles())
-            print(f"nilluminations={acq_list.get_n_shutter_configs()} \n" +
-                  f"nchannels={acq_list.get_n_lasers()}\n" +
-                  f"nangles={acq_list.get_n_angles()}\n")
             # x and y need to be exchanged to account for the image rotation
             shape = (self.max_frame, self.y_pixels, self.x_pixels)
-            print(f"illumination={acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig')}")
-            print(f"channel={acq_list.find_value_index(acq['laser'], 'laser')}")
-            print(f"angle={acq_list.find_value_index(acq['rot'], 'rot')}")
             self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
                                         angle=acq_list.find_value_index(acq['rot'], 'rot')
                                         )
-            print('finished appending view')
         else:
             self.fsize = self.x_pixels*self.y_pixels
             self.xy_stack = np.memmap(self.path, mode = "write", dtype = np.uint16, shape = self.fsize * self.max_frame)
@@ -94,7 +84,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                          channel=acq_list.find_value_index(acq['laser'], 'laser'),
                                          angle=acq_list.find_value_index(acq['rot'], 'rot')
                                          )
-            print('finished appending plane')
         else:
             image = image.flatten()
             self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
@@ -107,11 +96,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 try:
                     self.bdv_writer.write_xml_file()
                 except:
-                    logger.warning('HDF5 XML could not be written')
+                    logger.warning(f'HDF5 XML could not be written: {sys.exc_info()}')
                 try:
                     self.bdv_writer.close()
                 except:
-                    logger.warning('HDF5 file could not be closed')
+                    logger.warning(f'HDF5 file could not be closed: {sys.exc_info()}')
         else:
             try:
                 del self.xy_stack

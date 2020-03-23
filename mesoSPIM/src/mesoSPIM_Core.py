@@ -923,6 +923,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.write_line(self.metadata_file, 'z_end', acq['z_end'])
         self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
         self.write_line(self.metadata_file, 'z_planes', acq.get_image_count())
+        self.write_line(self.metadata_file, 'rot', acq['rot'])
         self.write_line(self.metadata_file)
 
         ''' Attention: change to true ETL values ASAP '''
