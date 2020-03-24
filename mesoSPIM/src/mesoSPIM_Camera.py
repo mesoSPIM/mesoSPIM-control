@@ -156,15 +156,15 @@ class mesoSPIM_Camera(QtCore.QObject):
         print('Setting camera binning: '+value)
         self.camera.set_binning(value)
 
-    @QtCore.pyqtSlot(Acquisition)
-    def prepare_image_series(self, acq):
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def prepare_image_series(self, acq, acq_list):
         '''
         Row is a row in a AcquisitionList
         '''
         logger.info('Camera: Preparing Image Series')
         self.stopflag = False
 
-        self.image_writer.prepare_acquisition(acq)
+        self.image_writer.prepare_acquisition(acq, acq_list)
 
         self.max_frame = acq.get_image_count()
         self.processing_options_string = acq['processing']
@@ -174,8 +174,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         logger.info(f'Camera: Finished Preparing Image Series')
         self.start_time = time.time()
 
-    @QtCore.pyqtSlot()
-    def add_images_to_series(self):
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
             logger.info('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
 
@@ -185,11 +185,11 @@ class mesoSPIM_Camera(QtCore.QObject):
                 for image in images:
                     image = np.rot90(image)
                     self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,0:self.y_pixels:self.camera_display_acquisition_subsampling])
-                    self.image_writer.write_image(image)
+                    self.image_writer.write_image(image, acq, acq_list)
                     self.cur_image += 1
 
-    @QtCore.pyqtSlot()
-    def end_image_series(self):
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def end_image_series(self, acq, acq_list):
         if self.stopflag is False:
             if self.processing_options_string != '':
                 if self.processing_options_string == 'MAX':
@@ -214,7 +214,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         except:
             logger.warning('Camera: Image Series could not be closed')
             
-        self.image_writer.end_acquisition()
+        self.image_writer.end_acquisition(acq, acq_list)
 
         self.end_time =  time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
