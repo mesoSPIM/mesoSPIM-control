@@ -20,8 +20,8 @@ class FilenameWizard(QtWidgets.QWizard):
     '''
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 5
-    (welcome, raw, individual_hdf5, single_hdf5, finished) = range(num_of_pages)
+    num_of_pages = 4
+    (welcome, raw, single_hdf5, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -35,9 +35,8 @@ class FilenameWizard(QtWidgets.QWizard):
 
         self.setPage(0, FilenameWizardWelcomePage(self))
         self.setPage(1, FilenameWizardRawSelectionPage(self))
-        self.setPage(2, FilenameWizardIndividualHDF5SelectionPage(self))
-        self.setPage(3, FilenameWizardSingleHDF5SelectionPage(self))
-        self.setPage(4, FilenameWizardCheckResultsPage(self))
+        self.setPage(2, FilenameWizardSingleHDF5SelectionPage(self))
+        self.setPage(3, FilenameWizardCheckResultsPage(self))
         
         self.show()
 
@@ -63,7 +62,7 @@ class FilenameWizard(QtWidgets.QWizard):
     def replace_dots_with_underscores(self, string):
         return string.replace('.','_')
 
-    def generate_filename_list(self, suffix):
+    def generate_filename_list(self, suffix, increment_number=True):
         '''
         Go through the model, entry for entry and populate the filenames
         '''
@@ -86,8 +85,8 @@ class FilenameWizard(QtWidgets.QWizard):
                 filename += self.replace_spaces_with_underscores(descriptionstring)
                 filename += '_'
 
-            if self.field('DescriptionHDF5Raw'):
-                descriptionstring = self.field('DescriptionHDF5Raw')
+            if self.field('DescriptionHDF5'):
+                descriptionstring = self.field('DescriptionHDF5')
                 filename += self.replace_spaces_with_underscores(descriptionstring)
                 filename += '_'
 
@@ -124,8 +123,9 @@ class FilenameWizard(QtWidgets.QWizard):
 
             file_suffix = num_string[:-len(start_number_string)]+start_number_string + '.' + suffix
 
-            start_number += 1
-            start_number_string = str(start_number)
+            if increment_number:
+                start_number += 1
+                start_number_string = str(start_number)
             
             filename += file_suffix
             
@@ -149,11 +149,11 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.setSubTitle("How would you like to save your data?")
 
         self.raw_string = 'Individual Raw Files: ~.raw'
-        self.individual_hdf5_string = 'Individual HDF5-Files: ~.h5'
+        self.single_hdf5_string = 'Single HDF5-File: ~.h5'
 
         self.SaveAsComboBoxLabel = QtWidgets.QLabel('Save as:')
         self.SaveAsComboBox = QtWidgets.QComboBox()
-        self.SaveAsComboBox.addItems([self.raw_string, self.individual_hdf5_string])
+        self.SaveAsComboBox.addItems([self.raw_string, self.single_hdf5_string])
         self.SaveAsComboBox.setCurrentIndex(0)
 
         self.registerField('SaveAs', self.SaveAsComboBox, 'currentIndex')
@@ -166,8 +166,8 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
     def nextId(self):
         if self.SaveAsComboBox.currentText() == self.raw_string: # is .raw
             return self.parent.raw 
-        elif self.SaveAsComboBox.currentText() == self.individual_hdf5_string: # is .h5 
-            return self.parent.individual_hdf5
+        elif self.SaveAsComboBox.currentText() == self.single_hdf5_string: # is .h5 
+            return self.parent.single_hdf5
 
 class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -210,33 +210,7 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def validatePage(self):
-        self.parent.generate_filename_list('h5')
-        return super().validatePage()
-
-    def nextId(self):
-        return self.parent.finished
-
-class FilenameWizardIndividualHDF5SelectionPage(QtWidgets.QWizardPage):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-
-        self.setTitle("Autogenerate hdf5 filenames")
-        self.setSubTitle("Which properties would you like to use?")
-
-        self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ',self)
-        self.DescriptionLineEdit = QtWidgets.QLineEdit(self) 
-        self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
-
-        self.registerField('DescriptionHDF5Raw', self.DescriptionLineEdit)
-
-        self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.DescriptionCheckBox, 0, 0)
-        self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
-        self.setLayout(self.layout)
-
-    def validatePage(self):
-        self.parent.generate_filename_list('h5')
+        self.parent.generate_filename_list('raw')
         return super().validatePage()
 
     def nextId(self):
@@ -247,8 +221,8 @@ class FilenameWizardSingleHDF5SelectionPage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self.parent = parent
 
-        self.setTitle("Autogenerate hdf5 filenames")
-        self.setSubTitle("Which properties would you like to use?")
+        self.setTitle("Autogenerate hdf5 filename")
+        self.setSubTitle("This replaces all filenames with a single hdf5 file. \n Which properties would you like to use?")
 
         self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ',self)
         self.DescriptionLineEdit = QtWidgets.QLineEdit(self) 
@@ -259,8 +233,10 @@ class FilenameWizardSingleHDF5SelectionPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
         self.setLayout(self.layout)
 
+        self.registerField('DescriptionHDF5', self.DescriptionLineEdit)
+
     def validatePage(self):
-        self.parent.generate_filename_list('h5')
+        self.parent.generate_filename_list('h5', increment_number=False)
         return super().validatePage()
 
     def nextId(self):
