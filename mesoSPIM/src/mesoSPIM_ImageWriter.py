@@ -9,7 +9,7 @@ import tifffile
 import logging
 logger = logging.getLogger(__name__)
 import sys
-from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5 import QtCore
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
@@ -26,8 +26,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
         self.y_pixels = self.cfg.camera_parameters['y_pixels']
-        self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
-        self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
 
         self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
@@ -63,13 +61,24 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.bdv_writer = npy2bdv.BdvWriter(self.path,
                                                     nilluminations=acq_list.get_n_shutter_configs(),
                                                     nchannels=acq_list.get_n_lasers(),
-                                                    nangles=acq_list.get_n_angles())
+                                                    nangles=acq_list.get_n_angles(),
+                                                    ntiles=acq_list.get_n_tiles())
             # x and y need to be exchanged to account for the image rotation
             shape = (self.max_frame, self.y_pixels, self.x_pixels)
+            affine_matrix = np.array(((1.0, 0.0, 0.0, acq['x_pos']),
+                                      (0.0, 1.0, 0.0, acq['y_pos']),
+                                      (0.0, 0.0, 1.0, acq['z_start'])))
+            px_size_um = self.cfg.pixelsize[acq['zoom']]
             self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                        angle=acq_list.find_value_index(acq['rot'], 'rot')
+                                        angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                        tile=acq_list.get_tile_index(acq),
+                                        voxel_units='um',
+                                        voxel_size_xyz=(px_size_um, px_size_um, acq['z_step']),
+                                        calibration=(1.0, 1.0, acq['z_step']/px_size_um),
+                                        m_affine=affine_matrix,
+                                        name_affine="Translation to Regular Grid"
                                         )
         else:
             self.fsize = self.x_pixels*self.y_pixels
@@ -82,7 +91,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.bdv_writer.append_plane(plane=image, plane_index=self.cur_image,
                                          illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                          channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                         angle=acq_list.find_value_index(acq['rot'], 'rot')
+                                         angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                         tile=acq_list.get_tile_index(acq)
                                          )
         else:
             image = image.flatten()
@@ -96,11 +106,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 try:
                     self.bdv_writer.write_xml_file()
                 except:
-                    logger.warning(f'HDF5 XML could not be written: {sys.exc_info()}')
+                    logger.error(f'HDF5 XML could not be written: {sys.exc_info()}')
                 try:
                     self.bdv_writer.close()
                 except:
-                    logger.warning(f'HDF5 file could not be closed: {sys.exc_info()}')
+                    logger.error(f'HDF5 file could not be closed: {sys.exc_info()}')
         else:
             try:
                 del self.xy_stack
