@@ -12,13 +12,24 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 import pyqtgraph as pg
-pg.setConfigOptions(imageAxisOrder='row-major')
-pg.setConfigOptions(foreground='k')
-pg.setConfigOptions(background='w')
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__()
+
+        self.parent = parent
+        self.cfg = parent.cfg
+
+        ''' Change the PyQtGraph-Options in White Mode'''
+        pg.setConfigOptions(imageAxisOrder='row-major')
+        if self.cfg.dark_mode == False:
+            pg.setConfigOptions(foreground='k')
+            pg.setConfigOptions(background='w')
+        else:
+            '''Set background to #19232D'''
+            background_color = pg.mkColor('#19232D')
+            pg.setConfigOptions(background=background_color)
+            pg.setConfigOptions(foreground='w')
 
         '''Set up the UI'''
         if __name__ == '__main__':
@@ -26,9 +37,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         else:
             loadUi('gui/mesoSPIM_CameraWindow.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
-
-        self.parent = parent
-        self.cfg = parent.cfg
 
 
 

@@ -65,5 +65,7 @@ mesoSPIM/src/devices/zoom/dynamixel\.zip
 
 mesoSPIM/acq/
 
+
+
 mesoSPIM/tmp/
 !mesoSPIM/tmp/readme.txt

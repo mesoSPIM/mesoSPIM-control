@@ -1,3 +1,15 @@
+## Version [0.1.4] - in development
+### Features & updates
+* :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. 
+For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
+* :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
+* :sparkles: **Improved multicolor tiling wizard** The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.
+* :bug: **Bugfix:** Binning was not working properly with all cameras.
+
+### Contributors 
+* Fabian Voigt (@ffvoigt)
+* Nikita Vladimirov (@nvladimus)
+
 ## Version [0.1.3] - March 13, 2020
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
 * :warning: **There are new startup parameters in the config file - make sure to update your config files accordingly**. For example, `average_frame_rate` has been added.
@@ -27,7 +39,7 @@ to f_start and at z_end, the detection path focus is at z_end. This allows imagi
 * :bug: **Bugfix #34:** Fixed: Last frame in a stack is blank due to an off-by-one error
 * :bug: **Bugfix #35:** Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist
 
----
+--
 
 ## Version [0.1.2] - August 19th, 2019
 * **New:** Logging is now supported. Logfiles go in the `log` folder. 

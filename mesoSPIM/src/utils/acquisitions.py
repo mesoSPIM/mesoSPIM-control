@@ -258,7 +258,6 @@ class AcquisitionList(list):
         Returns total time in seconds of a list of acquisitions
         '''
         time = 0
-
         for i in range(len(self)):
             time += self[i].get_acquisition_time(framerate)
 
@@ -324,23 +323,19 @@ class AcquisitionList(list):
         
     def check_for_duplicated_filenames(self):
         ''' Returns a list of duplicated filenames '''
-        duplicates = []
         filenames = []
-
-        ''' Create a list of full file paths'''
+        # Create a list of full file paths
         for i in range(len(self)):
-            filename = self[i]['folder']+'/'+self[i]['filename']
-            filenames.append(filename)
-
+            if self[i]['filename'][-3:] != '.h5':
+                filename = self[i]['folder']+'/'+self[i]['filename']
+                filenames.append(filename)
         duplicates = self.get_duplicates_in_list(filenames)
 
         return duplicates
 
     def check_for_nonexisting_folders(self):
         ''' Returns a list of nonexisting folders '''
-        
         nonexisting_folders = []
-
         for i in range(len(self)):
             folder = self[i]['folder']
             if not os.path.isdir(folder):
@@ -348,11 +343,67 @@ class AcquisitionList(list):
         
         return nonexisting_folders
 
-    def get_duplicates_in_list(self, list):
+    def get_duplicates_in_list(self, in_list):
         duplicates = []
-        unique = set(list)
+        unique = set(in_list)
         for each in unique:
-            count = list.count(each)
+            count = in_list.count(each)
             if count > 1:
                 duplicates.append(each)
         return duplicates
+
+    def get_n_shutter_configs(self):
+        """Get the number of unique shutter configs (1 or 2)"""
+        sconfig_list = [a['shutterconfig'] for a in self]
+        sconfig_set = set(sconfig_list)
+        return len(sconfig_set)
+
+    def get_n_angles(self):
+        """Get the number of unique angles"""
+        angle_list = [a['rot'] for a in self]
+        angle_set = set(angle_list)
+        return len(angle_set)
+
+    def get_n_lasers(self):
+        """Get the number of unique laser lines"""
+        laser_list = [a['laser'] for a in self]
+        laser_set = set(laser_list)
+        return len(laser_set)
+
+    def get_n_tiles(self):
+        """Get the number of tiles as unique (x,y,z_start,rot) combinations"""
+        tile_list = []
+        for a in self:
+            tile_str = f"{a['x_pos']}{a['y_pos']}{a['z_start']}{a['rot']}"
+            if not tile_str in tile_list:
+                tile_list.append(tile_str)
+        return len(tile_list)
+
+    def get_tile_index(self, acq):
+        """Get the the tile index for given acquisition"""
+        acq_str = f"{acq['x_pos']}{acq['y_pos']}{acq['z_start']}{acq['rot']}"
+        tile_list = []
+        for a in self:
+            tile_str = f"{a['x_pos']}{a['y_pos']}{a['z_start']}{a['rot']}"
+            if not tile_str in tile_list:
+                tile_list.append(tile_str)
+        return tile_list.index(acq_str)
+
+    def find_value_index(self, value='488 nm', keyword='laser'):
+        """Find the index of occurence in the list of unique elements. Non-unique elements are removed from the list.
+        Example:
+        al = AcquisitionList([Acquisition(), Acquisition(), Acquisition(), Acquisition()])
+        al[0]['laser'] = '488 nm' #
+        al[1]['laser'] = '488 nm' # gets removed because non-unique
+        al[2]['laser'] = '561 nm' #
+        al[3]['laser'] = '637 nm' #
+        al.find_value_index('488 nm', 'laser') # -> 0
+        al.find_value_index('561 nm', 'laser') # -> 1
+        al.find_value_index('637 nm', 'laser') # -> 2
+        """
+        unique_list = []
+        for a in self:
+            if a[keyword] not in unique_list:
+                unique_list.append(a[keyword])
+        assert value in unique_list, f"Value({value}) not found in list {unique_list}"
+        return unique_list.index(value)
