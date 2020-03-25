@@ -53,7 +53,7 @@
          <x>0</x>
          <y>0</y>
          <width>927</width>
-         <height>1224</height>
+         <height>1205</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -3351,6 +3351,46 @@ ETL tab</string>
     </font>
    </property>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>959</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionOpen_Camera_Window"/>
+    <addaction name="actionOpen_Acquisition_Manager"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuView"/>
+  </widget>
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
@@ -3364,6 +3404,38 @@ ETL tab</string>
   <action name="actionScriptWindow">
    <property name="text">
     <string>Script Window</string>
+   </property>
+  </action>
+  <action name="actionOpen_Camera_Window">
+   <property name="text">
+    <string>Open Camera Window</string>
+   </property>
+   <property name="toolTip">
+    <string>Opens a new Camera Window</string>
+   </property>
+  </action>
+  <action name="actionOpen_Acquisition_Manager">
+   <property name="text">
+    <string>Open Acquisition Manager</string>
+   </property>
+   <property name="toolTip">
+    <string>Opens a new Acquisition Manager</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="statusTip">
+    <string>Close mesoSPIM-control</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>
