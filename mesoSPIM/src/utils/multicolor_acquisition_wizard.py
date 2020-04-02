@@ -22,9 +22,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
     '''
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 10
+    num_of_pages = 11
     (welcome, zeroing, boundingbox, generalparameters, checktiling, channel1, 
-    channel2, channel3, folderpage, finished) = range(num_of_pages)
+    channel2, channel3, multiplexpage, folderpage, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -57,6 +57,8 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.folder = ''
         self.delta_x = 0.0
         self.delta_y = 0.0
+        self.LoopOrder = [0,1,2]
+        self.illumination = 0
         
         self.setWindowTitle('Tiling Wizard')
 
@@ -68,8 +70,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.setPage(5, FirstChannelPage(self))
         self.setPage(6, SecondChannelPage(self))
         self.setPage(7, ThirdChannelPage(self))
-        self.setPage(8, DefineFolderPage(self))
-        self.setPage(9, FinishedTilingPage(self))
+        self.setPage(8, MultiplexPage(self))
+        self.setPage(9, DefineFolderPage(self))
+        self.setPage(10, FinishedTilingPage(self))
 
         self.show()
 
@@ -152,6 +155,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
                 'shutterconfig' : self.shutterconfig,
                 'folder' : self.folder,
                 'channels' : self.channels,
+                'loop_order': self.LoopOrder,
+                'illumination': self.illumination,
+                'image_size': self.image_size
                 }
 
     def update_acquisition_list(self):
@@ -264,23 +270,31 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.zoomComboBox = QtWidgets.QComboBox(self)
         self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
 
-        self.xOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
-        self.xOffsetSpinBox = QtWidgets.QSpinBox(self)
-        self.xOffsetSpinBox.setSuffix(' μm')
-        self.xOffsetSpinBox.setMinimum(1)
-        self.xOffsetSpinBox.setMaximum(30000)
-        self.xOffsetSpinBox.setValue(500)
+        '''
+            06.02.2020 This part was changed by Tzu-Lun Ohn
+            The xOffset and yOffset were replaced to overlap to adapt to the habit of Ertürk's lab
+            Todo:
+            checked the overlap in LaVision: whether it is overlap on both side or one side
+        '''
+        self.xOverlapSpinBoxLabel = QtWidgets.QLabel('X Overlap')
+        self.xOverlapSpinBox = QtWidgets.QSpinBox(self)
+        self.xOverlapSpinBox.setSuffix(' %')
+        self.xOverlapSpinBox.setMinimum(0)
+        self.xOverlapSpinBox.setMaximum(99)
+        self.xOverlapSpinBox.setValue(10)
 
-        self.yOffsetSpinBoxLabel = QtWidgets.QLabel('Y Offset')
-        self.yOffsetSpinBox = QtWidgets.QSpinBox(self)
-        self.yOffsetSpinBox.setSuffix(' μm')
-        self.yOffsetSpinBox.setMinimum(1)
-        self.yOffsetSpinBox.setMaximum(30000)
-        self.yOffsetSpinBox.setValue(500)
+        self.yOverlapSpinBoxLabel = QtWidgets.QLabel('Y Overlap')
+        self.yOverlapSpinBox = QtWidgets.QSpinBox(self)
+        self.yOverlapSpinBox.setSuffix(' %')
+        self.yOverlapSpinBox.setMinimum(0)
+        self.yOverlapSpinBox.setMaximum(99)
+        self.yOverlapSpinBox.setValue(10)
 
-        self.shutterLabel = QtWidgets.QLabel('Shutter')
+        Illumination_methods = {'left': 0, 'right': 1,'interleaved' : 2, 'automatic determination' : 3} 
+
+        self.shutterLabel = QtWidgets.QLabel('Illumination method')
         self.shutterComboBox = QtWidgets.QComboBox(self)
-        self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+        self.shutterComboBox.addItems(Illumination_methods.keys())
 
         self.channelLabel = QtWidgets.QLabel('# Channels')
         self.channelSpinBox = QtWidgets.QSpinBox(self)
@@ -292,10 +306,10 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.zoomComboBox, 0, 1)
         self.layout.addWidget(self.shutterLabel, 1, 0)
         self.layout.addWidget(self.shutterComboBox, 1, 1)
-        self.layout.addWidget(self.xOffsetSpinBoxLabel, 2, 0)
-        self.layout.addWidget(self.xOffsetSpinBox, 2, 1)
-        self.layout.addWidget(self.yOffsetSpinBoxLabel, 3, 0)
-        self.layout.addWidget(self.yOffsetSpinBox, 3, 1)
+        self.layout.addWidget(self.xOverlapSpinBoxLabel, 2, 0)
+        self.layout.addWidget(self.xOverlapSpinBox, 2, 1)
+        self.layout.addWidget(self.yOverlapSpinBoxLabel, 3, 0)
+        self.layout.addWidget(self.yOverlapSpinBox, 3, 1)
         self.layout.addWidget(self.channelLabel, 4, 0)
         self.layout.addWidget(self.channelSpinBox, 4, 1)
         self.setLayout(self.layout)
@@ -311,10 +325,13 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         This method should be called when the "Next" Button is pressed
         '''
         self.parent.zoom = self.zoomComboBox.currentText()
-        self.parent.x_offset = self.xOffsetSpinBox.value()
-        self.parent.y_offset = self.yOffsetSpinBox.value()
+        self.parent.image_size = self.image_sizer()
+        self.parent.x_offset = round(self.parent.image_size[0] - self.xOverlapSpinBox.value()*self.parent.image_size[0]/100)
+        self.parent.y_offset = round(self.parent.image_size[1] - self.yOverlapSpinBox.value()*self.parent.image_size[1]/100)
         self.parent.shutterconfig = self.shutterComboBox.currentText()
         self.parent.channelcount = self.channelSpinBox.value()
+        self.parent.illumination = self. shutterComboBox.currentIndex()
+        
 
     def initializePage(self):
         self.update_page_from_state()
@@ -322,6 +339,28 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
     def update_page_from_state(self):
         self.zoomComboBox.setCurrentText(self.parent.state['zoom'])
         self.shutterComboBox.setCurrentText(self.parent.state['shutterconfig'])
+
+    def image_sizer(self):
+        cfg = self.parent.cfg
+        zoom_str = self.parent.zoom  
+        ints = zoom_str.find('.')
+        decimals = zoom_str.find('x')
+    
+        # This part is used to get the number of zoom from the string
+        if ints == -1:
+            zoom = int(zoom_str[0:decimals])
+        else:
+            zoom = int(zoom_str[0:ints])+int(zoom_str[ints+1:decimals])*10**(ints-decimals+1)
+
+        camera_pixel_size_x = cfg.camera_parameters['x_pixel_size_in_microns']
+        camera_pixel_size_y = cfg.camera_parameters['y_pixel_size_in_microns']
+        camera_pixel_number_x = cfg.camera_parameters['x_pixels']
+        camera_pixel_number_y = cfg.camera_parameters['y_pixels']
+        chip_size_x = camera_pixel_size_x * camera_pixel_number_x
+        chip_size_y = camera_pixel_size_y * camera_pixel_number_y
+        image_size = [chip_size_x/zoom, chip_size_y/zoom]
+    
+        return image_size
 
 class CheckTilingPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -497,7 +536,7 @@ class FirstChannelPage(GenericChannelPage):
 
     def nextId(self):
         if self.parent.channelcount == 1:
-            return self.parent.folderpage
+            return self.parent.multiplexpage
         else: 
             return self.parent.channel2 
 
@@ -507,7 +546,7 @@ class SecondChannelPage(GenericChannelPage):
 
     def nextId(self):
         if self.parent.channelcount == 2:
-            return self.parent.folderpage
+            return self.parent.multiplexpage
         else: 
             return self.parent.channel3 
 
@@ -516,8 +555,118 @@ class ThirdChannelPage(GenericChannelPage):
         super().__init__(parent, 2)
 
     def nextId(self):
-        return self.parent.folderpage 
-         
+        return self.parent.multiplexpage
+
+class MultiplexPage(QtWidgets.QWizardPage):
+    
+    def __init__(self,parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.setTitle("Multiplex choice")
+        self.setSubTitle("Please choose your looping order in the following drop-down menu")
+
+        self.current_ComboBox = {'please select' : 0, 'x move' : 1,'y move' : 2,'fluorescence channel' : 3}
+        
+        self.MultiplexComboBox1 = QtWidgets.QComboBox()
+        self.MultiplexComboBox1.addItems(self.current_ComboBox.keys())      
+        self.MultiplexComboBox1.setCurrentIndex(0) 
+
+        self.MultiplexComboBox2 = QtWidgets.QComboBox()        
+        self.MultiplexComboBox2.addItems(self.current_ComboBox.keys())
+        self.MultiplexComboBox2.setCurrentIndex(0) 
+        
+        self.MultiplexComboBox3 = QtWidgets.QComboBox()        
+        self.MultiplexComboBox3.addItems(self.current_ComboBox.keys())
+        self.MultiplexComboBox3.setCurrentIndex(0)
+        
+        self.MultiplexComboBox2.setDisabled(True) 
+        self.MultiplexComboBox3.setDisabled(True)
+
+        self.MultiplexComboBox1.currentIndexChanged.connect(lambda:self.update_dynamic_options(1))
+        self.MultiplexComboBox2.currentIndexChanged.connect(lambda:self.update_dynamic_options(2))
+        self.MultiplexComboBox3.currentIndexChanged.connect(lambda:self.update_dynamic_options(3))
+
+        self.Box1_Label = QtWidgets.QLabel('First iteration choice:')
+        self.Box1_Labe2 = QtWidgets.QLabel('Second iteration choice:')
+        self.Box1_Labe3 = QtWidgets.QLabel('Third iteration choice:')
+        self.UpdateButton = QtWidgets.QPushButton()
+        self.UpdateButton.setText("set iteration order")
+        self.UpdateButton.toggled.connect(self.update_Loop_Choice)
+        self.UpdateButton.setCheckable(True)
+        self.UpdateButton.setChecked(False)
+        self.UpdateButton.setDisabled(True)
+        self.registerField('LoopOrder*',self.UpdateButton)
+        
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.MultiplexComboBox1,0,1,1,2)
+        self.layout.addWidget(self.MultiplexComboBox2,2,1,1,2)
+        self.layout.addWidget(self.MultiplexComboBox3,4,1,1,2)
+        self.layout.addWidget(self.Box1_Label,0,0)
+        self.layout.addWidget(self.Box1_Labe2,2,0)
+        self.layout.addWidget(self.Box1_Labe3,4,0)
+        self.layout.addWidget(self.UpdateButton,6,2,1,2)
+        self.setLayout(self.layout)                 
+
+    def update_Loop_Choice(self):
+        Options = {'x move' : 0,'y move' : 1,'fluorescence channel' : 2}
+        Opt_1 = self.MultiplexComboBox1.currentText()
+        Opt_2 = self.MultiplexComboBox2.currentText()
+        Opt_3 = self.MultiplexComboBox3.currentText()
+        k1 = Options[Opt_1]
+        k2 = Options[Opt_2]
+        k3 = Options[Opt_3]
+        self.parent.LoopOrder = [k1,k2,k3]
+    
+    @QtCore.pyqtSlot()
+    def update_dynamic_options(self,ComboBoxNr):    
+        
+        Iteration_options = {'please select' : 0, 'x move' : 1,'y move' : 2,'fluorescence channel' : 3}
+
+        if ComboBoxNr == 1:
+            Options_ComboBox = Iteration_options
+            textStr = self.MultiplexComboBox1.currentText()
+        elif ComboBoxNr == 2:
+            Options_ComboBox = self.current_ComboBox
+            textStr = self.MultiplexComboBox2.currentText()
+        elif ComboBoxNr == 3:
+            textStr = self.MultiplexComboBox3.currentText()
+
+        if textStr == 'x move' and ComboBoxNr != 3:
+            del Options_ComboBox['x move']   
+        elif textStr == 'y move' and ComboBoxNr != 3:
+            del Options_ComboBox['y move']   
+        elif textStr == 'fluorescence channel' and ComboBoxNr != 3:
+            del Options_ComboBox['fluorescence channel']
+        elif textStr == "refresh options":
+            self.MultiplexComboBox1.setDisabled(False)
+            self.MultiplexComboBox1.blockSignals(True)
+            self.MultiplexComboBox1.clear()
+            self.MultiplexComboBox1.addItems(Iteration_options)
+            self.MultiplexComboBox1.blockSignals(False)
+            self.MultiplexComboBox3.setDisabled(True)
+            self.UpdateButton.setDisabled(True) 
+
+        if ComboBoxNr == 1:
+            self.MultiplexComboBox2.blockSignals(True)
+            self.MultiplexComboBox2.clear()
+            self.MultiplexComboBox2.addItems(Options_ComboBox.keys())
+            self.MultiplexComboBox2.blockSignals(False)
+            self.current_ComboBox = Options_ComboBox
+            self.MultiplexComboBox1.setDisabled(True)
+            self.MultiplexComboBox2.setDisabled(False)
+        elif ComboBoxNr == 2:
+            self.MultiplexComboBox3.blockSignals(True)
+            self.MultiplexComboBox3.clear()
+            del(Options_ComboBox['please select'])
+            self.MultiplexComboBox3.addItems(Options_ComboBox.keys())
+            self.MultiplexComboBox3.addItems({"refresh options" : 4})
+            #self.current_ComboBox = Options_ComboBox
+            self.MultiplexComboBox3.blockSignals(False)
+            self.MultiplexComboBox2.setDisabled(True)
+            self.MultiplexComboBox3.setDisabled(False)
+            self.UpdateButton.setDisabled(False)
+
+
 class DefineFolderPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -560,5 +709,5 @@ class FinishedTilingPage(QtWidgets.QWizardPage):
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    wizard = MyWizard()
+    wizard = MulticolorTilingWizard()
     sys.exit(app.exec_())
