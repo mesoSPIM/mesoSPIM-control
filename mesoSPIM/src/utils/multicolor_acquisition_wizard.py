@@ -59,12 +59,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.folder = ''
         self.delta_x = 0.0
         self.delta_y = 0.0
-<<<<<<< Updated upstream
-=======
         self.LoopOrder = [0,1,2]
         self.illumination = 0
         self.checked_tile = np.ones(0,dtype = bool)
->>>>>>> Stashed changes
         
         self.setWindowTitle('Tiling Wizard')
 
@@ -153,13 +150,10 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
                 'shutterconfig' : self.shutterconfig,
                 'folder' : self.folder,
                 'channels' : self.channels,
-<<<<<<< Updated upstream
-=======
                 'loop_order': self.LoopOrder,
                 'illumination': self.illumination,
                 'image_size': self.image_size,
                 'checked_tile': self.checked_tile
->>>>>>> Stashed changes
                 }
 
     def update_acquisition_list(self):
@@ -296,7 +290,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
         self.manualOverlapCheckBox = QtWidgets.QCheckBox('Set Offset Manually', self)
 
-        self.xOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
+        self.yOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
         self.xOffsetSpinBox = QtWidgets.QSpinBox(self)
         self.xOffsetSpinBox.setSuffix(' μm')
         self.xOffsetSpinBox.setMinimum(1)
@@ -660,10 +654,6 @@ class ThirdChannelPage(GenericChannelPage):
         super().__init__(parent, 2)
 
     def nextId(self):
-<<<<<<< Updated upstream
-        return self.parent.folderpage 
-         
-=======
         return self.parent.multiplexpage
 
 class MultiplexPage(QtWidgets.QWizardPage):    
@@ -775,7 +765,6 @@ class MultiplexPage(QtWidgets.QWizardPage):
             self.UpdateButton.setDisabled(False)
 
 
->>>>>>> Stashed changes
 class DefineFolderPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
