@@ -61,7 +61,8 @@ class Acquisition(indexed.IndexedOrderedDict):
                  etl_l_amplitude =0,
                  etl_r_offset = 0,
                  etl_r_amplitude = 0,
-                 processing = ''):
+                 processing = '',
+                 to_scan = True):
 
         super().__init__()
 

@@ -7,7 +7,7 @@ Widgets that take user input and create acquisition lists
 import numpy as np
 import pprint
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import pyqtProperty
 
 from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder
@@ -59,6 +59,12 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.folder = ''
         self.delta_x = 0.0
         self.delta_y = 0.0
+<<<<<<< Updated upstream
+=======
+        self.LoopOrder = [0,1,2]
+        self.illumination = 0
+        self.checked_tile = np.ones(0,dtype = bool)
+>>>>>>> Stashed changes
         
         self.setWindowTitle('Tiling Wizard')
 
@@ -147,6 +153,13 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
                 'shutterconfig' : self.shutterconfig,
                 'folder' : self.folder,
                 'channels' : self.channels,
+<<<<<<< Updated upstream
+=======
+                'loop_order': self.LoopOrder,
+                'illumination': self.illumination,
+                'image_size': self.image_size,
+                'checked_tile': self.checked_tile
+>>>>>>> Stashed changes
                 }
 
     def update_acquisition_list(self):
@@ -400,12 +413,18 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.Button.setCheckable(True)
         self.Button.setChecked(False)
 
+        self.smart_tiling_button = QtWidgets.QPushButton('Smart tiling')
+        self.smart_tiling_button.setCheckable(True)
+        self.smart_tiling_button.setChecked(False)
+        self.smart_tiling_button.toggled.connect(self.checked)
+
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.xFOVLabel, 1, 0)
         self.layout.addWidget(self.xFOVs, 1, 1)
         self.layout.addWidget(self.yFOVLabel, 2, 0)
         self.layout.addWidget(self.yFOVs, 2, 1)
         self.layout.addWidget(self.Button, 3, 1)
+        self.layout.addWidget(self.smart_tiling_button,3,0)
         self.setLayout(self.layout)
 
         self.registerField('finalCheck*',self.Button)
@@ -415,6 +434,74 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.parent.update_image_counts()
         self.xFOVs.setText(str(self.parent.x_image_count))
         self.yFOVs.setText(str(self.parent.y_image_count))
+
+    def checked(self):
+        if self.smart_tiling_button.isChecked() is False:
+            self.checked_tile = self.parent.checked_tile
+            self.parent.checked_tile = np.ones((self.parent.x_image_count,self.parent.y_image_count), dtype = bool)
+            print(self.parent.checked_tile)
+            self.newWidget.hide()
+        else:
+            if "first_toggle" in self.__dict__.keys():
+                self.newWidget.show()
+            else:    
+                self.smart_tiling_page()    
+    
+    def smart_tiling_page(self):
+        self.parent.checked_tile = np.ones((self.parent.x_image_count,self.parent.y_image_count), dtype = bool)
+        self.first_toggle = True
+        self.buttons = []
+
+        self.newWidget = QtWidgets.QWidget()
+        parent_x = self.parent.geometry().x()
+        parent_y = self.parent.geometry().y()
+        y_count = self.parent.y_image_count+2
+        x_count = self.parent.x_image_count+2
+        self.newWidget.setGeometry(parent_x-(x_count+1)*50, parent_y, x_count*50, y_count*50)
+        
+        for x in range(0,x_count):
+            for y in range(0,y_count):
+                if x < self.parent.x_image_count and y < self.parent.y_image_count:
+                    self.buttons.append(QtWidgets.QPushButton(str(x)+","+str(y),self.newWidget))                                      
+                    self.buttons[-1].setChecked(False)    
+                    self.buttons[-1].setCheckable(True)                    
+                    self.buttons[-1].clicked.connect(self.move_stage)
+                    self.buttons[-1].ind_x = x
+                    self.buttons[-1].ind_y = y
+                    self.buttons[-1].setGeometry(QtCore.QRect(50*(x+1),50*(y+1),50,50))
+
+        self.confirm_button = QtWidgets.QPushButton("make you selection",self.newWidget)
+        self.confirm_button.setGeometry(50,50*(y_count-1),50*self.parent.x_image_count,30)
+        self.confirm_button.clicked.connect(self.getCheckedTile)
+
+        self.description = QtWidgets.QLabel(self.newWidget)
+        self.description.setText("Select tiles which are not interesting\n, then these tiles will be skipped during tiling imaging")
+        self.description.setGeometry(10,10,50*x_count-10,40)
+
+        self.newWidget.show()
+        self.newWidget.update()
+
+    def move_stage(self):
+        theButton = self.sender()
+        if theButton.isChecked():
+            new_x = self.parent.x_start+(theButton.ind_x)*self.parent.x_offset
+            new_y = self.parent.x_start+(theButton.ind_y)*self.parent.y_offset
+            print("the stage will be sent to here (%d,%d)"% (new_x, new_y))
+            self.parent.parent.parent.sig_move_absolute.emit({'x_abs':new_x})
+            self.parent.parent.parent.sig_move_absolute.emit({'y_abs':new_y})
+        else:
+            print("stay here!")
+
+    def getCheckedTile(self):
+        n = 0      
+        for x in range(0,self.parent.x_image_count):
+            for y in range(0,self.parent.y_image_count):
+                if self.buttons[n].isChecked():
+                   self.parent.checked_tile[x,y] = False 
+                n = n+1
+        self.newWidget.hide()
+        print (self.parent.checked_tile)
+    
 
 class GenericChannelPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None, channel_id=0):
@@ -573,8 +660,122 @@ class ThirdChannelPage(GenericChannelPage):
         super().__init__(parent, 2)
 
     def nextId(self):
+<<<<<<< Updated upstream
         return self.parent.folderpage 
          
+=======
+        return self.parent.multiplexpage
+
+class MultiplexPage(QtWidgets.QWizardPage):    
+    def __init__(self,parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.setTitle("Multiplex choice")
+        self.setSubTitle("Please choose your looping order in the following drop-down menu")
+
+        self.current_ComboBox = {'please select' : 0, 'x move' : 1,'y move' : 2,'fluorescence channel' : 3}
+        
+        self.MultiplexComboBox1 = QtWidgets.QComboBox()
+        self.MultiplexComboBox1.addItems(self.current_ComboBox.keys())      
+        self.MultiplexComboBox1.setCurrentIndex(0) 
+
+        self.MultiplexComboBox2 = QtWidgets.QComboBox()        
+        self.MultiplexComboBox2.addItems(self.current_ComboBox.keys())
+        self.MultiplexComboBox2.setCurrentIndex(0) 
+        
+        self.MultiplexComboBox3 = QtWidgets.QComboBox()        
+        self.MultiplexComboBox3.addItems(self.current_ComboBox.keys())
+        self.MultiplexComboBox3.setCurrentIndex(0)
+        
+        self.MultiplexComboBox2.setDisabled(True) 
+        self.MultiplexComboBox3.setDisabled(True)
+
+        self.MultiplexComboBox1.currentIndexChanged.connect(lambda:self.update_dynamic_options(1))
+        self.MultiplexComboBox2.currentIndexChanged.connect(lambda:self.update_dynamic_options(2))
+        self.MultiplexComboBox3.currentIndexChanged.connect(lambda:self.update_dynamic_options(3))
+
+        self.Box1_Label = QtWidgets.QLabel('First iteration choice:')
+        self.Box1_Labe2 = QtWidgets.QLabel('Second iteration choice:')
+        self.Box1_Labe3 = QtWidgets.QLabel('Third iteration choice:')
+        self.UpdateButton = QtWidgets.QPushButton()
+        self.UpdateButton.setText("set iteration order")
+        self.UpdateButton.toggled.connect(self.update_Loop_Choice)
+        self.UpdateButton.setCheckable(True)
+        self.UpdateButton.setChecked(False)
+        self.UpdateButton.setDisabled(True)
+        self.registerField('LoopOrder*',self.UpdateButton)
+        
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.MultiplexComboBox1,0,1,1,2)
+        self.layout.addWidget(self.MultiplexComboBox2,2,1,1,2)
+        self.layout.addWidget(self.MultiplexComboBox3,4,1,1,2)
+        self.layout.addWidget(self.Box1_Label,0,0)
+        self.layout.addWidget(self.Box1_Labe2,2,0)
+        self.layout.addWidget(self.Box1_Labe3,4,0)
+        self.layout.addWidget(self.UpdateButton,6,2,1,2)
+        self.setLayout(self.layout)                 
+
+    def update_Loop_Choice(self):
+        Options = {'x move' : 0,'y move' : 1,'fluorescence channel' : 2}
+        Opt_1 = self.MultiplexComboBox1.currentText()
+        Opt_2 = self.MultiplexComboBox2.currentText()
+        Opt_3 = self.MultiplexComboBox3.currentText()
+        k1 = Options[Opt_1]
+        k2 = Options[Opt_2]
+        k3 = Options[Opt_3]
+        self.parent.LoopOrder = [k1,k2,k3]
+    
+    @QtCore.pyqtSlot()
+    def update_dynamic_options(self,ComboBoxNr):    
+        
+        Iteration_options = {'please select' : 0, 'x move' : 1,'y move' : 2,'fluorescence channel' : 3}
+
+        if ComboBoxNr == 1:
+            Options_ComboBox = Iteration_options
+            textStr = self.MultiplexComboBox1.currentText()
+        elif ComboBoxNr == 2:
+            Options_ComboBox = self.current_ComboBox
+            textStr = self.MultiplexComboBox2.currentText()
+        elif ComboBoxNr == 3:
+            textStr = self.MultiplexComboBox3.currentText()
+
+        if textStr == 'x move' and ComboBoxNr != 3:
+            del Options_ComboBox['x move']   
+        elif textStr == 'y move' and ComboBoxNr != 3:
+            del Options_ComboBox['y move']   
+        elif textStr == 'fluorescence channel' and ComboBoxNr != 3:
+            del Options_ComboBox['fluorescence channel']
+        elif textStr == "refresh options":
+            self.MultiplexComboBox1.setDisabled(False)
+            self.MultiplexComboBox1.blockSignals(True)
+            self.MultiplexComboBox1.clear()
+            self.MultiplexComboBox1.addItems(Iteration_options)
+            self.MultiplexComboBox1.blockSignals(False)
+            self.MultiplexComboBox3.setDisabled(True)
+            self.UpdateButton.setDisabled(True) 
+
+        if ComboBoxNr == 1:
+            self.MultiplexComboBox2.blockSignals(True)
+            self.MultiplexComboBox2.clear()
+            self.MultiplexComboBox2.addItems(Options_ComboBox.keys())
+            self.MultiplexComboBox2.blockSignals(False)
+            self.current_ComboBox = Options_ComboBox
+            self.MultiplexComboBox1.setDisabled(True)
+            self.MultiplexComboBox2.setDisabled(False)
+        elif ComboBoxNr == 2:
+            self.MultiplexComboBox3.blockSignals(True)
+            self.MultiplexComboBox3.clear()
+            del(Options_ComboBox['please select'])
+            self.MultiplexComboBox3.addItems(Options_ComboBox.keys())
+            self.MultiplexComboBox3.addItems({"refresh options" : 4})
+            #self.current_ComboBox = Options_ComboBox
+            self.MultiplexComboBox3.blockSignals(False)
+            self.MultiplexComboBox2.setDisabled(True)
+            self.MultiplexComboBox3.setDisabled(False)
+            self.UpdateButton.setDisabled(False)
+
+
+>>>>>>> Stashed changes
 class DefineFolderPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
