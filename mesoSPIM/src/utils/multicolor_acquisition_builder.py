@@ -60,49 +60,18 @@ class MulticolorTilingAcquisitionListBuilder():
         Core loop: Create an acquisition list for all x & y & channel values
         '''
         tilecount = 0
+        LoopOrderList = self.dict['loop_order']
+
+        if LoopOrderList[2] == 0:
+            range1 = range(0,self.dict['x_image_count'])
+            evalStr1 = 'self.x_pos = eval(\'round(self.x_start + i * self.x_offset,2)\')'        
+        elif LoopOrderList[2] == 1:
+            range1 = range(0,self.dict['y_image_count'])
+            evalStr1 = 'self.y_pos = eval(\'round(self.y_start + i * self.y_offset,2)\')'
+        elif LoopOrderList[2] == 2: 
+            range1 = range(0, len(self.dict['channels']))
+            evalStr1 = 'channeldict = Allchannel[i]'
         
-<<<<<<< Updated upstream
-        for i in range(0,self.dict['x_image_count']):
-            self.x_pos = round(self.x_start + i * self.x_offset,2)
-            
-            for j in range(0,self.dict['y_image_count']):
-                self.y_pos = round(self.y_start + j * self.y_offset,2)
-
-                channelcount = 0
-                for c in range(0, len(self.dict['channels'])):
-                    ''' Get a single channeldict out of the list of dicts '''
-                    channeldict = self.dict['channels'][c]
-
-                    acq = Acquisition(  x_pos=self.x_pos,
-                                        y_pos=self.y_pos,
-                                        z_start=self.dict['z_start'],
-                                        z_end=self.dict['z_end'],
-                                        z_step=self.dict['z_step'],
-                                        theta_pos=self.dict['theta_pos'],
-                                        f_start=round(channeldict['f_start'],2),
-                                        f_end=round(channeldict['f_end'],2),
-                                        laser=channeldict['laser'],
-                                        intensity=channeldict['intensity'],
-                                        filter=channeldict['filter'],
-                                        zoom=self.dict['zoom'],
-                                        shutterconfig=self.dict['shutterconfig'],
-                                        folder=self.dict['folder'],
-                                        filename='tiling_file_t'+str(tilecount)+'_c'+str(channelcount)+'.raw',
-                                        etl_l_offset=channeldict['etl_l_offset'],
-                                        etl_l_amplitude=channeldict['etl_l_amplitude'],
-                                        etl_r_offset=channeldict['etl_r_offset'],
-                                        etl_r_amplitude=channeldict['etl_r_amplitude'],
-                                        )
-                    ''' Update number of planes as this is not done by the acquisition 
-                    object itself '''
-                    acq['planes']=acq.get_image_count()
-
-                    self.acq_prelist.append(acq)
-
-                    channelcount +=1
-
-                tilecount += 1
-=======
         if LoopOrderList[1] == 0:
             range2 = range(0,self.dict['x_image_count'])
             evalStr2 = 'self.x_pos = eval(\'round(self.x_start + j * self.x_offset,2)\')'
@@ -160,8 +129,7 @@ class MulticolorTilingAcquisitionListBuilder():
                 for c in range3:
                     ''' Get a single channeldict out of the list of dicts '''
                     ldict['c'] = c
-                    exec(evalStr3,globals(),ldict)
-                    
+                    exec(evalStr3,globals(),ldict)                   
                     channeldict = ldict['channeldict']
                     
                     if self.dict['illumination'] == 3:
@@ -207,7 +175,21 @@ class MulticolorTilingAcquisitionListBuilder():
                         
 
                     tilecount += 1
->>>>>>> Stashed changes
 
     def get_acquisition_list(self):
         return AcquisitionList(self.acq_prelist)
+        
+    def determine_light_side(self):
+        x_fov = self.dict['x_fov']
+        print(x_fov)
+        x_start = self.x_pos - x_fov/2
+        x_end = self.x_pos + x_fov/2
+
+        if x_start*x_end >= 0 and self.x_pos > 0:
+            illumination_side = ["Right"]
+        elif x_start*x_end >= 0 and self.x_pos < 0:
+            illumination_side = ["Left"]
+        elif x_start*x_end < 0:
+            illumination_side = ["Left","Right"]
+    
+        return illumination_side

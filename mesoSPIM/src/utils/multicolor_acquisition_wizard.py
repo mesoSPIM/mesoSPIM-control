@@ -22,9 +22,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
     '''
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 10
+    num_of_pages = 11
     (welcome, zeroing, boundingbox, generalparameters, checktiling, channel1, 
-    channel2, channel3, folderpage, finished) = range(num_of_pages)
+    channel2, channel3, multiplexpage,folderpage, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -73,8 +73,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.setPage(5, FirstChannelPage(self))
         self.setPage(6, SecondChannelPage(self))
         self.setPage(7, ThirdChannelPage(self))
-        self.setPage(8, DefineFolderPage(self))
-        self.setPage(9, FinishedTilingPage(self))
+        self.setPage(8, MultiplexPage(self))
+        self.setPage(9, DefineFolderPage(self))
+        self.setPage(10, FinishedTilingPage(self))
 
         self.show()
 
@@ -152,7 +153,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
                 'channels' : self.channels,
                 'loop_order': self.LoopOrder,
                 'illumination': self.illumination,
-                'image_size': self.image_size,
                 'checked_tile': self.checked_tile
                 }
 
@@ -183,6 +183,11 @@ class ZeroingXYStagePage(QtWidgets.QWizardPage):
 
         self.setTitle("Zero stage positions")
         self.setSubTitle("To aid in relative positioning, it is recommended to zero the XY stages.")
+        self.auto_determine_label = QtWidgets.QLabel("If the automatic determination for illumination sides is going to be used,\n\
+please set the zero of x on the line (plane) which cuts the sample to two equal half.")
+        self.currentLayout = QtWidgets.QGridLayout()
+        self.currentLayout.addWidget(self.auto_determine_label,0,0,1,1)
+        self.setLayout(self.currentLayout)
 
 class DefineBoundingBoxPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -271,9 +276,12 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
         self.zoomComboBox.currentIndexChanged.connect(self.update_fov_size)
 
-        self.shutterLabel = QtWidgets.QLabel('Shutter')
+        illumination_methods = {'left': 0, 'right': 1,'interleaved' : 2, 'automatic determination' : 3} 
+
+        self.shutterLabel = QtWidgets.QLabel('Illumination')
         self.shutterComboBox = QtWidgets.QComboBox(self)
-        self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+        #self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+        self.shutterComboBox.addItems(illumination_methods.keys())
 
         self.fovSizeLabel = QtWidgets.QLabel('FOV Size X ⨉ Y:')
         self.fovSizeLineEdit = QtWidgets.QLineEdit(self)
@@ -290,7 +298,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
         self.manualOverlapCheckBox = QtWidgets.QCheckBox('Set Offset Manually', self)
 
-        self.yOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
+        self.xOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
         self.xOffsetSpinBox = QtWidgets.QSpinBox(self)
         self.xOffsetSpinBox.setSuffix(' μm')
         self.xOffsetSpinBox.setMinimum(1)
@@ -372,8 +380,9 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.parent.zoom = self.zoomComboBox.currentText()
         self.parent.x_offset = self.xOffsetSpinBox.value()
         self.parent.y_offset = self.yOffsetSpinBox.value()
-        self.parent.shutterconfig = self.shutterComboBox.currentText()
+        #self.parent.shutterconfig = self.shutterComboBox.currentText()
         self.parent.channelcount = self.channelSpinBox.value()
+        self.parent.illumination = self.shutterComboBox.currentIndex()
 
     def initializePage(self):
         self.update_page_from_state()
@@ -447,11 +456,19 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.buttons = []
 
         self.newWidget = QtWidgets.QWidget()
+        self.newWidget.setStyleSheet("""
+            QWidget{
+                border-radius: 0px;
+                min-width: 0px;    
+            }
+        """)
+        self.newWidget.setMinimumWidth(300)
         parent_x = self.parent.geometry().x()
         parent_y = self.parent.geometry().y()
         y_count = self.parent.y_image_count+2
         x_count = self.parent.x_image_count+2
         self.newWidget.setGeometry(parent_x-(x_count+1)*50, parent_y, x_count*50, y_count*50)
+        margin = (300 - self.parent.x_image_count*50)/2
         
         for x in range(0,x_count):
             for y in range(0,y_count):
@@ -462,19 +479,30 @@ class CheckTilingPage(QtWidgets.QWizardPage):
                     self.buttons[-1].clicked.connect(self.move_stage)
                     self.buttons[-1].ind_x = x
                     self.buttons[-1].ind_y = y
-                    self.buttons[-1].setGeometry(QtCore.QRect(50*(x+1),50*(y+1),50,50))
+                    if y_count*50 < 300:
+                        self.buttons[-1].setGeometry(QtCore.QRect(50*x+margin,50*(y+1),50,50))
+                    else:
+                        self.buttons[-1].setGeometry(QtCore.QRect(50*(x+1),50*(y+1),50,50))
+                    
 
-        self.confirm_button = QtWidgets.QPushButton("make you selection",self.newWidget)
-        self.confirm_button.setGeometry(50,50*(y_count-1),50*self.parent.x_image_count,30)
+        self.confirm_button = QtWidgets.QPushButton("make you selection",self.newWidget) 
+        self.confirm_button.setMinimumWidth(150)
+        self.confirm_button.setGeometry(-1,-1,50*self.parent.x_image_count,30)
         self.confirm_button.clicked.connect(self.getCheckedTile)
+        if y_count*50 < 300:
+            x_position = int(round((self.newWidget.width()-self.confirm_button.width())/2))
+            self.confirm_button.setGeometry(x_position,50*(y_count-1),50*self.parent.x_image_count,30)
+        else:
+            self.confirm_button.setGeometry(50,50*(y_count-1),50*self.parent.x_image_count,30)
+            pass    
 
         self.description = QtWidgets.QLabel(self.newWidget)
-        self.description.setText("Select tiles which are not interesting\n, then these tiles will be skipped during tiling imaging")
-        self.description.setGeometry(10,10,50*x_count-10,40)
+        self.description.setText("Select tiles which are not interesting, then these \ntiles will be skipped during tiling imaging")
+        self.description.setGeometry(10,10,300,40)
 
         self.newWidget.show()
         self.newWidget.update()
-
+    
     def move_stage(self):
         theButton = self.sender()
         if theButton.isChecked():
@@ -496,7 +524,11 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.newWidget.hide()
         print (self.parent.checked_tile)
     
-
+    def validatePage(self):
+        if "newWidget" in self.__dict__.keys():
+            self.newWidget.hide()
+        return True
+    
 class GenericChannelPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None, channel_id=0):
         super().__init__(parent)
@@ -645,7 +677,7 @@ class SecondChannelPage(GenericChannelPage):
 
     def nextId(self):
         if self.parent.channelcount == 2:
-            return self.parent.folderpage
+            return self.parent.multiplexpage
         else: 
             return self.parent.channel3 
 
