@@ -40,8 +40,6 @@ from .utils.image_processing_wizard import ImageProcessingWizard
 
 from .utils.utility_functions import convert_seconds_to_string
 
-from .utils.bigdataviewer_xml_creator import mesoSPIM_XMLexporter
-
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
         '''
