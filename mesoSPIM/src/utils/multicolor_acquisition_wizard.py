@@ -451,6 +451,10 @@ class CheckTilingPage(QtWidgets.QWizardPage):
                 self.smart_tiling_page()    
     
     def smart_tiling_page(self):
+        '''
+            Smart tiling will give users options to select the tiles which don't contain interesting information, and thereby
+            skipped their acquisitions.
+        '''
         self.parent.checked_tile = np.ones((self.parent.x_image_count,self.parent.y_image_count), dtype = bool)
         self.first_toggle = True
         self.buttons = []
@@ -462,6 +466,7 @@ class CheckTilingPage(QtWidgets.QWizardPage):
                 min-width: 0px;    
             }
         """)
+        
         self.newWidget.setMinimumWidth(300)
         parent_x = self.parent.geometry().x()
         parent_y = self.parent.geometry().y()
@@ -504,6 +509,10 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.newWidget.update()
     
     def move_stage(self):
+        '''
+        when a tile-button was pressed (from self.buttons[n]), the stage will move to the place where the tile is.
+        Users can observe whether this tile is interesting from the camera
+        '''
         theButton = self.sender()
         if theButton.isChecked():
             new_x = self.parent.x_start+(theButton.ind_x)*self.parent.x_offset
@@ -515,6 +524,10 @@ class CheckTilingPage(QtWidgets.QWizardPage):
             print("stay here!")
 
     def getCheckedTile(self):
+        '''
+        The true/false matrix of corresponding tiles will be returned and save in parent.checked_tile. The true/false element will 
+        be extracted and save to to_scan in the dict of Acquistion.
+        '''
         n = 0      
         for x in range(0,self.parent.x_image_count):
             for y in range(0,self.parent.y_image_count):

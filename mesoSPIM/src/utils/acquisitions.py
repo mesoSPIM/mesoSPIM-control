@@ -87,6 +87,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['etl_r_offset']=etl_r_offset
         self['etl_r_amplitude']=etl_r_amplitude
         self['processing']=processing
+        self['to_scan'] = to_scan
 
 
     def __setitem__(self, key, value):

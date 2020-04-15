@@ -574,9 +574,23 @@ class mesoSPIM_Core(QtCore.QObject):
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
             if not self.stopflag:
-                self.prepare_acquisition(acq)
-                self.run_acquisition(acq)
-                self.close_acquisition(acq)
+                if acq["to_scan"]:
+                    self.prepare_acquisition(acq)
+                    self.run_acquisition(acq)
+                    self.close_acquisition(acq)
+                else:
+                    path = acq["folder"]+"/"+acq["filename"]
+                    binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
+                    x_binning = int(binning_string[0])
+                    y_binning = int(binning_string[2])
+                    x_pixels = int(self.cfg.camera_parameters['x_pixels']/x_binning)
+                    y_pixels = int(self.cfg.camera_parameters['y_pixels']/y_binning)
+                    max_frame = acq.get_image_count()
+                    fsize = x_pixels*y_pixels                    
+                    xy_stack = np.memmap(path, mode = "write", dtype = np.uint16, shape = fsize * max_frame)
+                    xy_stack = np.zeros(shape = fsize * max_frame, dtype = np.uint16)
+                    self.write_metadata(acq)
+
 
     def close_acquisition_list(self, acq_list):
         self.sig_status_message.emit('Closing Acquisition List')
@@ -944,6 +958,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
             self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
             self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
+            self.write_line(file, 'is scanned', acq['to_scan'])
 
     def execute_galil_program(self):
         '''Little helper method to execute the program loaded onto the Galil stage:
@@ -992,6 +1007,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
                 self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
                 self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
+                
 
     # ''' HICKUP DEBUGGING '''
 
