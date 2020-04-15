@@ -241,7 +241,7 @@ Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
 a valid COMport is necessary.
 '''
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl' or 'Sutter'
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
