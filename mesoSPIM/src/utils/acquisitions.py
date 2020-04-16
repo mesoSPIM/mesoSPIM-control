@@ -272,7 +272,8 @@ class AcquisitionList(list):
         '''
         image_count = 0
         for i in range(len(self)):
-            image_count += self[i].get_image_count()
+            if self[i]["to_scan"]:
+                image_count += self[i].get_image_count()
 
         return image_count
 

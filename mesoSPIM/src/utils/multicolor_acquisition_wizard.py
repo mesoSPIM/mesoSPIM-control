@@ -444,11 +444,13 @@ class CheckTilingPage(QtWidgets.QWizardPage):
             self.parent.checked_tile = np.ones((self.parent.x_image_count,self.parent.y_image_count), dtype = bool)
             print(self.parent.checked_tile)
             self.newWidget.hide()
+            self.confirm_button.setChecked(True)
         else:
             if "first_toggle" in self.__dict__.keys():
                 self.newWidget.show()
             else:    
-                self.smart_tiling_page()    
+                self.smart_tiling_page()
+                    
     
     def smart_tiling_page(self):
         '''
@@ -458,7 +460,7 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.parent.checked_tile = np.ones((self.parent.x_image_count,self.parent.y_image_count), dtype = bool)
         self.first_toggle = True
         self.buttons = []
-
+        
         self.newWidget = QtWidgets.QWidget()
         self.newWidget.setStyleSheet("""
             QWidget{
@@ -466,7 +468,6 @@ class CheckTilingPage(QtWidgets.QWizardPage):
                 min-width: 0px;    
             }
         """)
-        
         self.newWidget.setMinimumWidth(300)
         parent_x = self.parent.geometry().x()
         parent_y = self.parent.geometry().y()
@@ -488,9 +489,9 @@ class CheckTilingPage(QtWidgets.QWizardPage):
                         self.buttons[-1].setGeometry(QtCore.QRect(50*x+margin,50*(y+1),50,50))
                     else:
                         self.buttons[-1].setGeometry(QtCore.QRect(50*(x+1),50*(y+1),50,50))
-                    
 
-        self.confirm_button = QtWidgets.QPushButton("make you selection",self.newWidget) 
+        self.confirm_button = QtWidgets.QPushButton("make you selection",self.newWidget)
+        self.registerField('SmartTilingCheck',self.confirm_button)             
         self.confirm_button.setMinimumWidth(150)
         self.confirm_button.setGeometry(-1,-1,50*self.parent.x_image_count,30)
         self.confirm_button.clicked.connect(self.getCheckedTile)
@@ -500,6 +501,7 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         else:
             self.confirm_button.setGeometry(50,50*(y_count-1),50*self.parent.x_image_count,30)
             pass    
+
 
         self.description = QtWidgets.QLabel(self.newWidget)
         self.description.setText("Select tiles which are not interesting, then these \ntiles will be skipped during tiling imaging")

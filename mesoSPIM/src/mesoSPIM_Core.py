@@ -566,7 +566,11 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         self.image_count = 0
         self.acquisition_count = 0
-        self.total_acquisition_count = len(acq_list)
+        self.total_acquisition_count = 0
+        for n in range(len(acq_list)):
+            if acq_list[n]['to_scan']:
+                self.total_acquisition_count += 1    
+        #self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
         self.start_time = time.time()
 
