@@ -735,7 +735,7 @@ class MultiplexPage(QtWidgets.QWizardPage):
         self.Box1_Labe2 = QtWidgets.QLabel('Second iteration choice:')
         self.Box1_Labe3 = QtWidgets.QLabel('Third iteration choice:')
         self.UpdateButton = QtWidgets.QPushButton()
-        self.UpdateButton.setText("set iteration order")
+        self.UpdateButton.setText("confirm you choice")
         self.UpdateButton.toggled.connect(self.update_Loop_Choice)
         self.UpdateButton.setCheckable(True)
         self.UpdateButton.setChecked(False)
