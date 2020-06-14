@@ -35,7 +35,7 @@ class StageControlASITango(QtCore.QObject):
         self.port = port
         self.baudrate = baudrate
         self.stage_assignment = stage_assigment
-        self.axis_list = [stage_assignment[i] for i in stage_assignment.keys()]
+        self.axis_list = [self.stage_assignment[i] for i in self.stage_assignment.keys()]
         self.axes = ''.join(self.axis_list) # String containing all axes
         self.num_axes = len(self.axes) # The number of axes
         
@@ -89,7 +89,10 @@ class StageControlASITango(QtCore.QObject):
         
     def wait_until_done(self, axis):
         '''Blocks if the stage is moving due to a serial command'''
-        pass
+
+        '''If the stage returns 'B', it is busy, if it returns 'N', it is done.'''
+        while self._send_command(b'/\r\n').decode('UTF-8') == 'B':
+            time.sleep(0.1)
         
     def read_position(self):
         '''Reports position from the stages 
@@ -101,12 +104,16 @@ class StageControlASITango(QtCore.QObject):
         command_string = 'W ' + self.axes + '\r\n'
         position_string = self._send_command(command_string.encode('UTF-8'))
         # Create a list of the form "['7835', '-38704', '0', '0', '-367586']", first element is the ack ':A' and gets discarded
-        position_list = position_string.decode('UTF-8').split()[1:] 
-        # conversion to um: internal unit is 1/10 um
-        position_list = [int(value)/10 for value in position_list] 
-        position_dict = {self.axes[i] : position_list[i] for i in range(self.num_axes)}
+        if position_string is not None:
+            position_list = position_string.decode('UTF-8').split()[1:]
+            ''' Only process position list if it contains all values'''
+            if len(position_list) == self.num_axes:
+                # conversion to um: internal unit is 1/10 um
+                position_list = [int(value)/10 for value in position_list] 
+                position_dict = {self.axes[i] : position_list[i] for i in range(self.num_axes)}
+                if position_dict is not None:
+                    return position_dict
         
-        return position_dict
             
     def move_relative(self, motion_dict):
         '''Command for relative motion 
@@ -121,6 +128,7 @@ class StageControlASITango(QtCore.QObject):
         for axis in motion_dict.keys():
             if self.axis_in_config_check(axis):
                 # Conversion um to 1/10 um for internal use requires *10
+                # TODO: This has to be taken into account for rotations: 90° = 90000 cts, command 9000
                 command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*10) 
                 
         if command_string != 'R':

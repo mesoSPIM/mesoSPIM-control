@@ -9,11 +9,6 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
-Dark mode: Renders the UI dark
-'''
-dark_mode = False
-
-'''
 Waveform output for Galvos, ETLs etc.
 '''
 
@@ -64,6 +59,7 @@ laserdict = {'405 nm': 'PXI6733/port0/line2',
 Assignment of the analog outputs of the Laser card to the channels
 The Empty slots are placeholders.
 '''
+laser_blanking = False
 
 laser_designation = {'405 nm' : 0,
                      '488 nm' : 1,
@@ -95,6 +91,7 @@ shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
 shutteroptions = ('Left','Right','Both')
+shutterswitch = False
 
 '''
 Camera configuration
@@ -128,24 +125,6 @@ camera_parameters = {'x_pixels' : 2048,
                      'trigger_source' : 2, # external
                     }
 
-For a Hamamatsu Orca Fusion, the following parameters are necessary:
-
-camera_parameters = {'x_pixels' : 2304,
-                     'y_pixels' : 2304,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
-                     'subsampling' : [1,2,4],
-                     'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
-                     'defect_correct_mode': 2,
-                     'binning' : '1x1',
-                     'readout_speed' : 1,
-                     'trigger_active' : 1,
-                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
-                     'trigger_polarity' : 2, # positive pulse
-                     'trigger_source' : 2, # external
-                    }
-
 For a Photometrics Iris 15, the following parameters are necessary:
 
 camera_parameters = {'x_pixels' : 5056,
@@ -162,7 +141,7 @@ camera_parameters = {'x_pixels' : 5056,
                     }
 
 '''
-camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'PhotometricsIris15'
+camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsIris15'
 
 camera_parameters = {'x_pixels' : 1024,
                      'y_pixels' : 1024,
@@ -193,7 +172,7 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage','PI','TangoASI' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -234,6 +213,17 @@ pi_parameters = {'controllername' : 'C-884',
 '''
 
 '''
+For a benchtop mesoSPIM with an ASI Tango controller, the following parameters are necessary.
+The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc) 
+which are the values of the dict.
+'''
+
+asi_parameters = {'COMport' : 'COM32',
+                  'baudrate' : 115200,
+                  'stage_assignment': {'x':'X', 'y':'V', 'z':'Z', 'theta':'T', 'f':'Y'},
+                  }
+
+'''
 Filterwheel configuration
 '''
 
@@ -241,7 +231,7 @@ Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
 a valid COMport is necessary.
 '''
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl' or 'Sutter'
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
@@ -292,8 +282,7 @@ zoomdict = {'0.63x' : 3423,
             '5x' : 318,
             '6.3x' : 0}
 '''
-Pixelsize in micron -- update these values with measured values from your instrument.
-These are used to calculate the FOV size & offset in the tiling wizard.
+Pixelsize in micron
 '''
 pixelsize = {'0.63x' : 10.52,
             '0.8x' : 8.23,
@@ -306,7 +295,6 @@ pixelsize = {'0.63x' : 10.52,
             '4x' : 1.60,
             '5x' : 1.27,
             '6.3x' : 1.03}
-
 
 '''
 Initial acquisition parameters
