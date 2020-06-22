@@ -26,7 +26,6 @@ class StageControlASITango(QtCore.QObject):
         V and W are 
 
         Internally, the 
-    
     '''
 
     def __init__(self, port, baudrate, stage_assigment):
@@ -42,7 +41,8 @@ class StageControlASITango(QtCore.QObject):
         self.position_dict = {axis : None for axis in self.axis_list} # create an empty position dict
                 
         '''Open connection to the stage controller'''
-        self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=1, xonxoff=False, stopbits=serial.STOPBITS_ONE)
+        self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=1
+    , xonxoff=False, stopbits=serial.STOPBITS_ONE)
 
     def close(self):
         '''Closes connection to the stage'''
@@ -59,7 +59,6 @@ class StageControlASITango(QtCore.QObject):
         Returns:
             answer (str): Answer by the controller. Will be in binary format and needs to be decoded if necessary.
         '''
-
         try:
             self.asi_connection.write(command)
             message = self.asi_connection.readline()
@@ -87,7 +86,7 @@ class StageControlASITango(QtCore.QObject):
         '''
         self._send_command(b'\\r\n')
         
-    def wait_until_done(self, axis):
+    def wait_until_done(self):
         '''Blocks if the stage is moving due to a serial command'''
 
         '''If the stage returns 'B', it is busy, if it returns 'N', it is done.'''
@@ -109,10 +108,16 @@ class StageControlASITango(QtCore.QObject):
             ''' Only process position list if it contains all values'''
             if len(position_list) == self.num_axes:
                 # conversion to um: internal unit is 1/10 um
-                position_list = [int(value)/10 for value in position_list] 
-                position_dict = {self.axes[i] : position_list[i] for i in range(self.num_axes)}
-                if position_dict is not None:
-                    return position_dict
+                try:
+                    position_list = [int(value)/10 for value in position_list] 
+                    position_dict = {self.axes[i] : position_list[i] for i in range(self.num_axes)}
+                    if position_dict is not None:
+                        self.position_dict = position_dict
+                        return position_dict
+                except:
+                    logger.info('Invalid position dict: ' + str(position_list))
+                    # return last position dict
+                    return self.position_dict
         
             
     def move_relative(self, motion_dict):

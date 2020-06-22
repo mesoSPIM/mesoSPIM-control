@@ -726,11 +726,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acq_start_time = time.time()
         self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
+        self.sig_status_message.emit('Going to start point')
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
             self.sig_go_to_rotation_position_and_wait_until_done.emit()
             self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
-
+        
         self.move_absolute(startpoint, wait_until_done=True)
 
         self.sig_status_message.emit('Setting Filter & Shutter')
