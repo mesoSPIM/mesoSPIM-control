@@ -64,6 +64,21 @@ class mesoSPIM_LaserEnabler:
         else:
             pass
 
+    def disable(self, laser):
+        '''Enables a single laser line. If another laser was on beforehand, this one is switched off.'''
+        if self._check_if_laser_in_laserdict(laser) == True:
+            #print(self.laserdict[laser])
+            self.cmd = self._build_cmd_int(laser)
+
+            with nidaqmx.Task() as task:
+                task.do_channels.add_do_chan(self.laserenable_device,line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+                task.write(0, auto_start=True)
+
+            # self.laserenablestate = laser
+            #print('enabled '+ laser)
+        else:
+            pass
+
     def enable_all(self):
         '''Enables all laser lines.'''
         with nidaqmx.Task() as task:

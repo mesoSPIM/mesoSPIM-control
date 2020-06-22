@@ -371,7 +371,11 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):
-        self.laserenabler.enable(laser)
+        '''Blanking: Enable only if blanking is off'''
+
+        if self.cfg.laser_blanking == False:
+            self.laserenabler.enable(laser)
+
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'laser' : laser})
             if update_etl:
@@ -432,17 +436,34 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def open_shutters(self):
+        '''Here the left/right mode is hacked in
+
+        If shutterswitch = True in the config:
+        Assumes that the shutter_left line is the general shutter 
+        and the shutter_right line is the left/right switch (Right==True)
+        '''
+
         shutterconfig = self.state['shutterconfig']
 
         if shutterconfig == 'Both':
-            self.shutter_left.open()
-            self.shutter_right.open()
+            if self.cfg.shutterswitch == False:
+                self.shutter_left.open()
+                self.shutter_right.open()
         elif shutterconfig == 'Left':
-            self.shutter_left.open()
-            self.shutter_right.close()
+            if self.cfg.shutterswitch == False:
+                self.shutter_left.open()
+                self.shutter_right.close()
+            else:
+                self.shutter_left.open() # open the general shutter
+                self.shutter_right.close() # set side-switch to false 
+
         elif shutterconfig == 'Right':
-            self.shutter_right.open()
-            self.shutter_left.close()
+            if self.cfg.shutterswitch == False:
+                self.shutter_right.open()
+                self.shutter_left.close()
+            else:
+                self.shutter_left.open() # open the general shutte
+                self.shutter_right.open() # set side-switch to true
         else:
             self.shutter_right.open()
             self.shutter_left.open()
@@ -451,8 +472,17 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def close_shutters(self):
-        self.shutter_left.close()
-        self.shutter_right.close()
+        '''
+        If shutterswitch = True in the config:
+        Assumes that the shutter_left line is the general shutter 
+        and the shutter_right line is the left/right switch (Right==True)
+        '''
+        if self.cfg.shutterswitch == False:
+            self.shutter_left.close()
+            self.shutter_right.close()
+        else:
+            self.shutter_left.close()
+        
         self.state['shutterstate'] = False
 
     '''
@@ -485,8 +515,13 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
+        laser = self.state['laser']
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.disable(laser)
         self.waveformer.stop_tasks()
         self.waveformer.close_tasks()
 
@@ -497,9 +532,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def snap_image_in_series(self):
         '''Snaps and image from a series without waveform update'''
+        laser = self.state['laser']
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
         self.waveformer.stop_tasks()
+        if self.cfg.laser_blanking == True:
+            self.laserenabler.disable(laser)
 
     def close_image_series(self):
         '''Cleans up after series without waveform update'''

@@ -20,6 +20,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 from .devices.filter_wheels.sutterLambdaControl import Lambda10B
+from .devices.filter_wheels.dynamixel_filterwheel import DynamixelFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
 from .devices.zoom.mesoSPIM_Zoom import DynamixelZoom, DemoZoom
 from .mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages, mesoSPIM_ASI_Tango_Stage
@@ -56,6 +57,8 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
             self.filterwheel = LudlFilterwheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
+        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DynamixelFilterWheel':
+            self.filterwheel = DynamixelFilterWheel(self.cfg.filterdict,self.cfg.filterpositiondict,self.cfg.filterwheel_parameters['COMport'],self.cfg.filterwheel_parameters['servo_id'], self.cfg.filterwheel_parameters['baudrate'])
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DemoFilterWheel':
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type']  == 'Sutter':
@@ -64,13 +67,15 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
-            self.zoom = DynamixelZoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
+            self.zoom = DynamixelZoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'], self.cfg.zoom_parameters['baudrate'])
         elif self.cfg.zoom_parameters['zoom_type'] == 'DemoZoom':
             self.zoom = DemoZoom(self.cfg.zoomdict)
 
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] == 'PI':
             self.stage = mesoSPIM_PIstage(self)
+        elif self.cfg.stage_parameters['stage_type'] == 'PIdemosetup':
+            self.stage = mesoSPIM_PI_demosetup_stage(self)
         elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
             self.stage = mesoSPIM_GalilStages(self)
             self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
