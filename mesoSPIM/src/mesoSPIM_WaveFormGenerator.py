@@ -51,6 +51,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state['galvo_r_frequency'] = self.cfg.startup['galvo_r_frequency']
         self.state['galvo_l_offset'] = self.cfg.startup['galvo_l_offset']
         self.state['galvo_r_offset'] = self.cfg.startup['galvo_r_offset']
+        self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
