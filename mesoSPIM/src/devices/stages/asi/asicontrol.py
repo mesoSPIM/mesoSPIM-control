@@ -44,11 +44,13 @@ class StageControlASITango(QtCore.QObject):
         self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=1
     , xonxoff=False, stopbits=serial.STOPBITS_ONE)
 
+        self.previous_command = ''
+
     def close(self):
         '''Closes connection to the stage'''
         self.asi_connection.close()
     
-    def _send_command(self, command):
+    def _send_command(self, command, delay=0.005):
         '''Sends a command to the controller
         
         Try-except block included to catch errors - this is dangerous - no checking of success 
@@ -60,12 +62,16 @@ class StageControlASITango(QtCore.QObject):
             answer (str): Answer by the controller. Will be in binary format and needs to be decoded if necessary.
         '''
         try:
+            # print(time.time(), ' ', command.decode('UTF-8'))
             self.asi_connection.write(command)
+            time.sleep(delay)
             message = self.asi_connection.readline()
+            time.sleep(delay)
             return message
         except Exception as error:
+            print(time.time(), ' Exception')
             logger.exception(error)
-            
+                        
     def axis_in_config_check(self, axis):
         '''
         Checks if a axis string is in self.axes
@@ -89,9 +95,17 @@ class StageControlASITango(QtCore.QObject):
     def wait_until_done(self):
         '''Blocks if the stage is moving due to a serial command'''
 
-        '''If the stage returns 'B', it is busy, if it returns 'N', it is done.'''
-        while self._send_command(b'/\r\n').decode('UTF-8') == 'B':
+        '''If the stage returns 'B'as the first letter, it is busy, if it returns 'N', it is done.
+        Only if the stage returns 'N' twice, it is not busy.
+        '''
+        self.stage_busy = True
+        while self.stage_busy is True:
+            message1 = self._send_command(b'/\r\n').decode('UTF-8')[0]
             time.sleep(0.1)
+            message2 = self._send_command(b'/\r\n').decode('UTF-8')[0]
+            time.sleep(0.1)
+            if message1 == 'N' and message2 == 'N':
+                self.stage_busy = False
         
     def read_position(self):
         '''Reports position from the stages 

@@ -2300,9 +2300,10 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
 
+        self.pos_timer.stop()
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
-        self.pos_timer.start(50)
+        self.pos_timer.start(500)
 
         logger.info('mesoSPIM_Stages: ASI stages initialized')
         
@@ -2371,7 +2372,8 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['theta']:int(theta_rel*1000)})
+                ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
+                motion_dict.update({self.mesoSPIM2ASIdict['theta']:int(theta_rel*100)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
 
@@ -2402,31 +2404,32 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
                 x_abs = dict['x_abs']
                 x_abs = x_abs - self.int_x_pos_offset
                 if self.x_min < x_abs and self.x_max > x_abs:
-                    motion_dict.update({self.mesoSPIM2ASIdict['x']:x_abs})
+                    motion_dict.update({self.mesoSPIM2ASIdict['x']:int(x_abs)})
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
             y_abs = y_abs - self.int_y_pos_offset
             if self.y_min < x_abs and self.y_max > x_abs:
-                motion_dict.update({self.mesoSPIM2ASIdict['y']:y_abs})
+                motion_dict.update({self.mesoSPIM2ASIdict['y']:int(y_abs)})
                     
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
             z_abs = z_abs - self.int_z_pos_offset
             if self.z_min < z_abs and self.z_max > z_abs:
-                motion_dict.update({self.mesoSPIM2ASIdict['z']:z_abs})
+                motion_dict.update({self.mesoSPIM2ASIdict['z']:int(z_abs)})
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs']
             f_abs = f_abs - self.int_f_pos_offset
             if self.f_min < f_abs and self.f_max > f_abs:
-                motion_dict.update({self.mesoSPIM2ASIdict['f']:f_abs})
+                motion_dict.update({self.mesoSPIM2ASIdict['f']:int(f_abs)})
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
             theta_abs = theta_abs - self.int_theta_pos_offset
             if self.theta_min < theta_abs and self.theta_max > theta_abs:
-                motion_dict.update({self.mesoSPIM2ASIdict['theta']:theta_abs*1000})
+                ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
+                motion_dict.update({self.mesoSPIM2ASIdict['theta']:int(theta_abs*100)})
         
         if motion_dict != {}:
             self.asi_stages.move_absolute(motion_dict)
@@ -2439,11 +2442,11 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
     def load_sample(self):
         y_abs = self.cfg.stage_parameters['y_load_position']
-        self.move_absolute({'y_abs':y_abs})
+        self.move_absolute({'y_abs':int(y_abs)})
 
     def unload_sample(self):
         y_abs = self.cfg.stage_parameters['y_unload_position']
-        self.move_absolute({'y_abs':y_abs})
+        self.move_absolute({'y_abs':int(y_abs)})
 
     def go_to_rotation_position(self, wait_until_done=False):
         x_abs = self.x_rot_position
