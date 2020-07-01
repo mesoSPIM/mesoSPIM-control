@@ -2408,7 +2408,7 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
             y_abs = y_abs - self.int_y_pos_offset
-            if self.y_min < x_abs and self.y_max > x_abs:
+            if self.y_min < y_abs and self.y_max > y_abs:
                 motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_abs, 1)})
                     
         if 'z_abs' in dict:
@@ -2441,11 +2441,11 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
     def load_sample(self):
         y_abs = self.cfg.stage_parameters['y_load_position']
-        self.move_absolute({'y_abs':int(y_abs)})
+        self.move_absolute({'y_abs':round(y_abs)})
 
     def unload_sample(self):
         y_abs = self.cfg.stage_parameters['y_unload_position']
-        self.move_absolute({'y_abs':int(y_abs)})
+        self.move_absolute({'y_abs':round(y_abs)})
 
     def go_to_rotation_position(self, wait_until_done=False):
         x_abs = self.x_rot_position
