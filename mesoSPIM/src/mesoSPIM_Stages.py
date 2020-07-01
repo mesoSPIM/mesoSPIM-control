@@ -2351,21 +2351,21 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         if 'x_rel' in dict:
             x_rel = dict['x_rel']
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['x']:int(x_rel)})
+                motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_rel, 1)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['y']:int(y_rel)})
+                motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_rel, 1)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['z']:int(z_rel)})
+                motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_rel, 1)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
         
@@ -2373,14 +2373,14 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
-                motion_dict.update({self.mesoSPIM2ASIdict['theta']:int(theta_rel*100)})
+                motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_rel*100)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
             if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['f']:int(f_rel)})
+                motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_rel, 1)})
             else:
                 self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
 
@@ -2399,37 +2399,36 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         motion_dict = {}
 
-        if 'x_abs' or 'y_abs' or 'z_abs' in dict:
-            if 'x_abs' in dict:
-                x_abs = dict['x_abs']
-                x_abs = x_abs - self.int_x_pos_offset
-                if self.x_min < x_abs and self.x_max > x_abs:
-                    motion_dict.update({self.mesoSPIM2ASIdict['x']:int(x_abs)})
+        if 'x_abs' in dict:
+            x_abs = dict['x_abs']
+            x_abs = x_abs - self.int_x_pos_offset
+            if self.x_min < x_abs and self.x_max > x_abs:
+                motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_abs, 1)})
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
             y_abs = y_abs - self.int_y_pos_offset
             if self.y_min < x_abs and self.y_max > x_abs:
-                motion_dict.update({self.mesoSPIM2ASIdict['y']:int(y_abs)})
+                motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_abs, 1)})
                     
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
             z_abs = z_abs - self.int_z_pos_offset
             if self.z_min < z_abs and self.z_max > z_abs:
-                motion_dict.update({self.mesoSPIM2ASIdict['z']:int(z_abs)})
+                motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_abs, 1)})
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs']
             f_abs = f_abs - self.int_f_pos_offset
             if self.f_min < f_abs and self.f_max > f_abs:
-                motion_dict.update({self.mesoSPIM2ASIdict['f']:int(f_abs)})
+                motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_abs, 1)})
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
             theta_abs = theta_abs - self.int_theta_pos_offset
             if self.theta_min < theta_abs and self.theta_max > theta_abs:
                 ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
-                motion_dict.update({self.mesoSPIM2ASIdict['theta']:int(theta_abs*100)})
+                motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_abs*100)})
         
         if motion_dict != {}:
             self.asi_stages.move_absolute(motion_dict)
