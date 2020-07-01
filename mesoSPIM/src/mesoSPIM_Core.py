@@ -874,10 +874,19 @@ class mesoSPIM_Core(QtCore.QObject):
             self.snap_image()
             self.sig_get_live_image.emit()
             self.shutter_left.close()
+            ''' Slow down switching to account for slow flip mirror '''
             self.shutter_right.open()
+            if self.cfg.shutterswitch is True:
+                time.sleep(0.25)
+                self.shutter_left.open()
             self.snap_image()
             self.sig_get_live_image.emit()
+            if self.cfg.shutterswitch is True:
+                self.shutter_left.close()
             self.shutter_right.close()
+            if self.cfg.shutterswitch is True:
+                time.sleep(0.25)
+
             QtWidgets.QApplication.processEvents()
 
         self.close_shutters()
