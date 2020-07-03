@@ -37,7 +37,7 @@ mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/dow
 
 In addition (for Anaconda), the following packages need to be installed:
 * nidaqmx (`python -m pip install nidaqmx`)
-* indexed (`python -m pip install indexed.py`)
+* indexed (`python -m pip install indexed`)
 * serial (`python -m pip install pyserial`)
 * pyqtgraph  (`python -m pip install pyqtgraph`)
 * pywinusb  (`python -m pip install pywinusb`)
