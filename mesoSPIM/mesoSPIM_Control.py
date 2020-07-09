@@ -91,7 +91,16 @@ def main():
 
     print('Done!')
 
-    sys.exit(app.exec_())
+    embed_console=False
+
+    if embed_console:
+        from traitlets.config import Config
+        cfg = Config()
+        cfg.InteractiveShellApp.gui = 'qt5'
+        import IPython
+        IPython.start_ipython(config=cfg, argv=[], user_ns=dict(mSpim=ex, app=app))
+    else:
+        sys.exit(app.exec_())
 
 if __name__ == '__main__':
     main()
