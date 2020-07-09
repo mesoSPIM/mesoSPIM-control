@@ -79,6 +79,8 @@ def main():
     """
     Main function
     """
+    print('Starting control software')
+
     logging.info('mesoSPIM Program started.')
     cfg = load_config()
     app = QtWidgets.QApplication(sys.argv)
@@ -86,6 +88,8 @@ def main():
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
     ex.display_icons()
+
+    print('Done!')
 
     sys.exit(app.exec_())
 
