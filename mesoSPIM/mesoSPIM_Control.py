@@ -12,6 +12,8 @@ __maintainer__ = "Fabian Voigt"
 ''' Configuring the logging module before doing anything else'''
 import time
 import logging
+import argparse
+import glob
 timestr = time.strftime("%Y%m%d-%H%M%S")
 logging_filename = timestr + '.log'
 logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO, format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(thread)d:%(module)s:%(name)s:%(message)s')
@@ -28,25 +30,20 @@ from src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
 logger.info('Modules loaded')
 
-def load_config():
+def load_config_UI(current_path):
     '''
-    Import microscope configuration at startup
+    Bring up a GUI that allows the user to select a microscope configuration to import
     '''
 
     ''' This needs an placeholder QApplication to work '''
     cfg_app = QtWidgets.QApplication(sys.argv)
-    current_path = os.path.abspath('./config')
 
     global_config_path = ''
     global_config_path , _ = QtWidgets.QFileDialog.getOpenFileName(None,\
     'Open microscope configuration file',current_path)
 
     if global_config_path != '':
-        ''' Using importlib to load the config file '''
-        spec = importlib.util.spec_from_file_location('module.name', global_config_path)
-        config = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(config)
-        logger.info(f'Configuration file loaded: {global_config_path}')
+        config = load_config_from_file(global_config_path)
         return config
     else:
         ''' Application shutdown '''
@@ -56,6 +53,16 @@ def load_config():
         sys.exit()
 
     sys.exit(cfg_app.exec_())
+
+def load_config_from_file(path_to_config):
+    '''
+    Load a microscope configuration from a file using importlib
+    '''
+    spec = importlib.util.spec_from_file_location('module.name', path_to_config)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    logger.info(f'Configuration file loaded: {path_to_config}')
+    return config
 
 def stage_referencing_check(cfg):
     '''
@@ -80,14 +87,39 @@ def stage_referencing_check(cfg):
     else:
         return True
 
-def main():
+def get_parser():
+    """
+    Parse command-line input arguments
+
+    :return: The argparse parser object
+    """
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('-C', '--console', action='store_true',  # store_true makes it False by default
+                        help='Start a ipython console')
+    parser.add_argument('-D', '--demo', action='store_true',
+                        help='Start in demo mode')
+    return parser
+
+def main(embed_console=False,demo_mode=False):
     """
     Main function
     """
     print('Starting control software')
 
     logging.info('mesoSPIM Program started.')
-    cfg = load_config()
+
+    # If the user asked for demo mode then start without bring up the file select UI
+    current_path = os.path.abspath('./config')
+    demo_fname = glob.glob(os.path.join(current_path,'demo*.py'));
+
+    if demo_mode & len(demo_fname)==1:
+        # If demo mode and only one demo file found
+        cfg = load_config_from_file(demo_fname[0])
+    else:
+        # Otherwise bring up the UI loader
+        cfg = load_config_UI(current_path)
+
     app = QtWidgets.QApplication(sys.argv)
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
@@ -95,8 +127,6 @@ def main():
     ex.display_icons()
 
     print('Done!')
-
-    embed_console=False
 
     if embed_console:
         from traitlets.config import Config
@@ -107,5 +137,12 @@ def main():
     else:
         sys.exit(app.exec_())
 
+
+def run():
+    args = get_parser().parse_args()
+    main(embed_console=args.console,demo_mode=args.demo)
+
+
+
 if __name__ == '__main__':
-    main()
+    run()
