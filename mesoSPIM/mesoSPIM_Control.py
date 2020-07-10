@@ -4,6 +4,11 @@ mesoSPIM_control.py
 The core module of the mesoSPIM software
 '''
 
+__author__ = "Fabian Voigt"
+__license__ = "GPL v3"
+__maintainer__ = "Fabian Voigt"
+
+
 ''' Configuring the logging module before doing anything else'''
 import time
 import logging
