@@ -129,8 +129,9 @@ def main(embed_console=False,demo_mode=False):
         # Strip the paths so when we remove "demo" files we do so based only on the file name itself
         strip_path = [tFile.replace(os.path.commonprefix(all_configs),'') for tFile in all_configs]
         all_configs_no_demo = list(filter(lambda tFile: str.find(tFile,'demo')<0, strip_path))
+
         # If only one file left, we load it
-        if len(all_configs_no_demo)==1:
+        if len(all_configs_no_demo)==1 and len(all_configs_no_demo[0])>0:
             cfg = load_config_from_file(os.path.join(current_path,all_configs_no_demo[0]))
             cfgLoaded = True
 
