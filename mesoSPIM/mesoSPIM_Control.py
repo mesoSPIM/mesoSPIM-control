@@ -109,14 +109,32 @@ def main(embed_console=False,demo_mode=False):
 
     logging.info('mesoSPIM Program started.')
 
-    # If the user asked for demo mode then start without bring up the file select UI
-    current_path = os.path.abspath('./config')
-    demo_fname = glob.glob(os.path.join(current_path,'demo*.py'));
+    # Load a configuration file according to the following rules:
+    # 1. If the user did not ask for demo mode and there is only one config file in the path then load that.
+    # 2. If the user did not ask for demo mode and there are multiple config files in the path, then bring up the UI loader.
+    # 3. If the user asked for demo mode and there is only one demo file in path: load it.
+    # 4. If the user asked for demo mode and there are multiple demo files in the path: bring up the UI loader
+    # 5. Otherwise bring up the UI loader
 
-    if demo_mode & len(demo_fname)==1:
-        # If demo mode and only one demo file found
-        cfg = load_config_from_file(demo_fname[0])
+    current_path = os.path.abspath('./config')
+
+    cfgLoaded = False
+    if demo_mode:
+        demo_fname = glob.glob(os.path.join(current_path,'*demo*.py'));
+        if len(demo_fname)==1:
+            cfg = load_config_from_file(demo_fname[0])
+            cfgLoaded = True
     else:
+        all_configs = glob.glob(os.path.join(current_path,'*.py')); # All possible config files
+        # Strip the paths so when we remove "demo" files we do so based only on the file name itself
+        strip_path = [tFile.replace(os.path.commonprefix(all_configs),'') for tFile in all_configs]
+        all_configs_no_demo = list(filter(lambda tFile: str.find(tFile,'demo')<0, strip_path))
+        # If only one file left, we load it
+        if len(all_configs_no_demo)==1:
+            cfg = load_config_from_file(os.path.join(current_path,all_configs_no_demo[0]))
+            cfgLoaded = True
+
+    if not cfgLoaded:
         # Otherwise bring up the UI loader
         cfg = load_config_UI(current_path)
 
