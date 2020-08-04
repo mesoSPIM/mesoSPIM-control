@@ -69,3 +69,4 @@ mesoSPIM/acq/
 
 mesoSPIM/tmp/
 !mesoSPIM/tmp/readme.txt
+*.dll
