@@ -11,6 +11,7 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 Waveform output for Galvos, ETLs etc.
 '''
+dark_mode = False 
 
 waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration' or 'NI'
 
