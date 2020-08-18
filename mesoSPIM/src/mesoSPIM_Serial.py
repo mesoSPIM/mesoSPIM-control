@@ -118,8 +118,10 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_go_to_rotation_position.connect(self.go_to_rotation_position)
         self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
 
+        logger.info('Thread at Startup: '+str(QtCore.QThread.currentThreadId()))
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
+        logger.info('Thread of serial object during startup: '+str(self.thread()))
+        logger.info('Thread of stage object during startup: '+str(self.stage.thread()))
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
@@ -145,6 +147,16 @@ class mesoSPIM_Serial(QtCore.QObject):
             if key == 'state':
                 if value == 'live':
                     logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+                    logger.info('Thread of serial object during live: '+str(self.thread()))
+                    logger.info('Thread of the stage object during live: '+str(self.stage.thread()))
+                    logger.info('Thread of the timer during live: '+str(self.stage.asi_pos_timer.thread()))
+                if value == 'snap':
+                    logger.info('Thread ID during snap: '+str(int(QtCore.QThread.currentThreadId())))
+                    logger.info('Thread of serial object during snap: '+str(self.thread()))
+                    logger.info('Thread of the stage object during snap: '+str(self.stage.thread()))
+                    logger.info('Thread of the timer during snap: '+str(self.stage.asi_pos_timer.thread()))
+                    # self.stage.start_timer()
+                    # self.stage.report_position()
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
