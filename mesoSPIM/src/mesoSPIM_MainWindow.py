@@ -217,7 +217,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             else:
                 return None
 
-    @QtCore.pyqtSlot(str)
+    @QtCore.pyqtSlot(str, int)
     def display_status_message(self, string, time=0):
         '''
         Displays a message in the status bar for a time in ms

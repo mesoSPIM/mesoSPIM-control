@@ -54,7 +54,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_position = QtCore.pyqtSignal(dict)
 
-    sig_status_message = QtCore.pyqtSignal(str)
+    sig_status_message = QtCore.pyqtSignal(str, int)
     sig_warning = QtCore.pyqtSignal(str)
 
     sig_progress = QtCore.pyqtSignal(dict)
@@ -623,7 +623,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.close_acquisition(acq, acq_list)
 
     def close_acquisition_list(self, acq_list):
-        self.sig_status_message.emit('Closing Acquisition List')
+        self.sig_status_message.emit('Closing Acquisition List',0)
 
         if not self.stopflag:
             current_rotation = self.state['position']['theta_pos']
@@ -681,20 +681,20 @@ class mesoSPIM_Core(QtCore.QObject):
 
             ''' Check if sample has to be rotated, allow some tolerance '''
             if rotationflag:
-                self.sig_status_message.emit('Going to rotation position')
+                self.sig_status_message.emit('Going to rotation position',0)
                 self.sig_go_to_rotation_position_and_wait_until_done.emit()
-                self.sig_status_message.emit('Rotating sample')
+                self.sig_status_message.emit('Rotating sample',0)
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
-            self.sig_status_message.emit('Setting Filter')
+            self.sig_status_message.emit('Setting Filter',0)
             self.set_filter(acq['filter'], wait_until_done=True)
 
-            self.sig_status_message.emit('Going to start position')
+            self.sig_status_message.emit('Going to start position',0)
             self.move_absolute(startpoint, wait_until_done=False)
 
-            self.sig_status_message.emit('Setting Shutter')
+            self.sig_status_message.emit('Setting Shutter',0)
             self.set_shutterconfig(acq['shutterconfig'])
-            self.sig_status_message.emit('Setting Zoom & Laser')
+            self.sig_status_message.emit('Setting Zoom & Laser',0)
             self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
             self.set_intensity(acq['intensity'], wait_until_done=True)
             self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
@@ -706,7 +706,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
             self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
 
-            self.sig_status_message.emit('Ready for preview...')
+            self.sig_status_message.emit('Ready for preview...',0)
             self.sig_update_gui_from_state.emit(False)
 
         self.state['state'] = 'idle'
@@ -717,7 +717,7 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         logger.info(f'Core: Running Acquisition #{self.acquisition_count} with Filename: {acq["filename"]}')
 
-        self.sig_status_message.emit('Going to start position')
+        self.sig_status_message.emit('Going to start position',0)
         ''' Rotation handling goes here:
 
         If target rotation different than current rotation:
@@ -732,7 +732,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acq_start_time = time.time()
         self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
-        self.sig_status_message.emit('Going to start point')
+        self.sig_status_message.emit('Going to start position',0)
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
             self.sig_go_to_rotation_position_and_wait_until_done.emit()
@@ -740,10 +740,10 @@ class mesoSPIM_Core(QtCore.QObject):
         
         self.move_absolute(startpoint, wait_until_done=True)
 
-        self.sig_status_message.emit('Setting Filter & Shutter')
+        self.sig_status_message.emit('Setting Filter & Shutter',0)
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
-        self.sig_status_message.emit('Setting Zoom')
+        self.sig_status_message.emit('Setting Zoom',0)
         self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
@@ -757,7 +757,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.f_step_generator = acq.get_focus_stepsize_generator()
 
-        self.sig_status_message.emit('Preparing camera: Allocating memory')
+        self.sig_status_message.emit('Preparing camera: Allocating memory',0)
         self.sig_prepare_image_series.emit(acq, acq_list)
         self.prepare_image_series()
 
@@ -768,7 +768,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def run_acquisition(self, acq, acq_list):
         steps = acq.get_image_count()
-        self.sig_status_message.emit('Running Acquisition')
+        self.sig_status_message.emit('Running Acquisition',0)
         self.open_shutters()
 
         self.image_acq_start_time = time.time()
@@ -841,7 +841,7 @@ class mesoSPIM_Core(QtCore.QObject):
         # self.collect_troubleshooting_data(acq)
         # self.append_troubleshooting_info_to_metadata(acq)
 
-        self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
+        self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory',0)
 
         if self.stopflag is False:
             # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
@@ -1107,9 +1107,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.write_line(file, 'Stopped stack', self.acq_end_time_string )
             self.write_line(file, 'Frame rate:', str(acq.get_image_count()/(self.image_acq_end_time-self.image_acq_start_time)))
 
-    @QtCore.pyqtSlot(str)
-    def send_status_message_to_gui(self, string):
-        self.sig_status_message.emit(string)
+    @QtCore.pyqtSlot(str, int)
+    def send_status_message_to_gui(self, string, time):
+        self.sig_status_message.emit(string, time)
 
     def list_to_string_with_carriage_return(self, input_list):
         mystring = ''

@@ -27,7 +27,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
     sig_finished = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
-    sig_status_message = QtCore.pyqtSignal(str)
+    sig_status_message = QtCore.pyqtSignal(str,int)
 
     def __init__(self, parent = None):
         super().__init__()

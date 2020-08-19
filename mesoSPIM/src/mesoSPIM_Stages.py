@@ -2301,10 +2301,11 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
 
+        self.pos_timer_polling_interval = 500  
         self.pos_timer.stop()
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
-        self.pos_timer.start(500)
+        self.pos_timer.start(self.pos_timer_polling_interval)
 
         logger.info('mesoSPIM_Stages: ASI stages initialized')
         
@@ -2313,6 +2314,8 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         self.asi_stages.move_absolute
 
         self.counter = 0
+        self.num_images_between_position_polls = 20 
+        self.running_acquisition_flag = False
 
     def __del__(self):
         try:
@@ -2351,11 +2354,16 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
             if self.pos_timer.isActive():
                 self.pos_timer.stop()
-            if self.counter % 10 == 0:
+            if self.counter % self.num_images_between_position_polls == 0:
                 self.report_position()
+            if self.running_acquisition_flag == False:
+                self.running_acquisition_flag = True 
+                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
         else:
+            self.running_acquisition_flag = False 
             if not self.pos_timer.isActive():
-                self.pos_timer.start(500)
+                self.pos_timer.start(self.pos_timer_polling_interval)
+
         self.counter += 1
        
     def move_relative(self, dict, wait_until_done=False):
@@ -2453,13 +2461,11 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
                 ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
                 motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_abs*100)})
         
-        self.pos_timer.stop()
         if motion_dict != {}:
             self.asi_stages.move_absolute(motion_dict)
         
         if wait_until_done == True:
             self.asi_stages.wait_until_done()
-        self.pos_timer.start(500)
         
     def stop(self):
         self.asi_stages.stop()
