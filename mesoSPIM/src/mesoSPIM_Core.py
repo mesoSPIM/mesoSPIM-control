@@ -119,6 +119,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         #logger.info('Core internal thread affinity in init: '+str(id(self.thread())))
 
+        logger.info('Thread of core object during startup: '+str(self.thread()))
+
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
         #self.camera_worker = mesoSPIM_HamamatsuCamera(self)
@@ -132,6 +134,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
         self.serial_worker.moveToThread(self.serial_thread)
+        ''' If the stage (including the timer) is not manually moved to the serial thread, it will execute within the mesoSPIM_Core event loop'''
+        self.serial_worker.stage.moveToThread(self.serial_thread)
+        #self.serial_worker.stage.pos_timer.moveToThread(self.serial_thread)
 
         #self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
         self.serial_worker.sig_position.connect(self.sig_position.emit)

@@ -93,11 +93,14 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'TangoASI':
             self.stage = mesoSPIM_ASI_Tango_Stage(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+            self.stage.sig_position.connect(self.report_position)
+            #self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
-        try:
             self.stage.sig_position.connect(self.report_position)
+        try:
+            pass
+            # self.stage.sig_position.connect(self.report_position)
         except:
             print('Stage not initalized! Please check the configuratio file')
 
@@ -122,6 +125,8 @@ class mesoSPIM_Serial(QtCore.QObject):
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         logger.info('Thread of serial object during startup: '+str(self.thread()))
         logger.info('Thread of stage object during startup: '+str(self.stage.thread()))
+        logger.info('Thread of the filterwheel object during startup: '+str(self.filterwheel.thread()))
+        logger.info('Thread of the zoom object during startup: '+str(self.zoom.thread()))
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
@@ -149,12 +154,16 @@ class mesoSPIM_Serial(QtCore.QObject):
                     logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
                     logger.info('Thread of serial object during live: '+str(self.thread()))
                     logger.info('Thread of the stage object during live: '+str(self.stage.thread()))
-                    logger.info('Thread of the timer during live: '+str(self.stage.asi_pos_timer.thread()))
+                    logger.info('Thread of the timer during live: '+str(self.stage.pos_timer.thread()))
+                    logger.info('Thread of the filterwheel object during live: '+str(self.filterwheel.thread()))
+                    logger.info('Thread of the zoom object during live: '+str(self.zoom.thread()))
                 if value == 'snap':
                     logger.info('Thread ID during snap: '+str(int(QtCore.QThread.currentThreadId())))
                     logger.info('Thread of serial object during snap: '+str(self.thread()))
                     logger.info('Thread of the stage object during snap: '+str(self.stage.thread()))
-                    logger.info('Thread of the timer during snap: '+str(self.stage.asi_pos_timer.thread()))
+                    logger.info('Thread of the timer during snap: '+str(self.stage.pos_timer.thread()))
+                    logger.info('Thread of the filterwheel object during snap: '+str(self.filterwheel.thread()))
+                    logger.info('Thread of the zoom object during snap: '+str(self.zoom.thread()))
                     # self.stage.start_timer()
                     # self.stage.report_position()
 

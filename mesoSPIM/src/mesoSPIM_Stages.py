@@ -2286,6 +2286,7 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
     def __init__(self, parent = None):
         super().__init__(parent)
 
+        self.state = mesoSPIM_StateSingleton()
         '''
         ASI-specific code
         '''
@@ -2310,6 +2311,8 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
         self.asi_stages.move_absolute
+
+        self.counter = 0
 
     def __del__(self):
         try:
@@ -2346,6 +2349,23 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         Lots of implementation details in here, should be replaced by a facade
         '''
+
+        '''
+        Report position 
+
+        '''
+        state = self.state['state']
+        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+            if self.pos_timer.isActive():
+                self.pos_timer.stop()
+            if self.counter % 8 == 0:
+                self.report_position()
+        else:
+            if not self.pos_timer.isActive():
+                self.pos_timer.start(500)
+
+        self.counter += 1
+
         motion_dict = {}
 
         if 'x_rel' in dict:
@@ -2396,6 +2416,17 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         Lots of implementation details in here, should be replaced by a facade
         '''
+        state = self.state['state']
+        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+            if self.pos_timer.isActive():
+                self.pos_timer.stop()
+            if self.counter % 8 == 0:
+                self.report_position()
+        else:
+            if not self.pos_timer.isActive():
+                self.pos_timer.start(500)
+
+        self.counter += 1
 
         motion_dict = {}
 
@@ -2430,11 +2461,13 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
                 ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
                 motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_abs*100)})
         
+        self.pos_timer.stop()
         if motion_dict != {}:
             self.asi_stages.move_absolute(motion_dict)
         
         if wait_until_done == True:
             self.asi_stages.wait_until_done()
+        self.pos_timer.start(500)
         
     def stop(self):
         self.asi_stages.stop()
