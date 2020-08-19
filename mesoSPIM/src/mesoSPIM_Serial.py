@@ -40,6 +40,8 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
+
+    sig_status_message = QtCore.pyqtSignal(str)
     
     def __init__(self, parent):
         super().__init__()
@@ -99,7 +101,7 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_DemoStage(self)
             self.stage.sig_position.connect(self.report_position)
         try:
-            pass
+            self.stage.sig_status_message.connect(self.send_status_message)
             # self.stage.sig_position.connect(self.report_position)
         except:
             print('Stage not initalized! Please check the configuratio file')
@@ -166,6 +168,10 @@ class mesoSPIM_Serial(QtCore.QObject):
                     logger.info('Thread of the zoom object during snap: '+str(self.zoom.thread()))
                     # self.stage.start_timer()
                     # self.stage.report_position()
+
+    @QtCore.pyqtSlot(str)
+    def send_status_message(self, string):
+        self.sig_status_message.emit(string)
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):

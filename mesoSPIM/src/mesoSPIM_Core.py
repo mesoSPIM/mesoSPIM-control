@@ -140,6 +140,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         #self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
         self.serial_worker.sig_position.connect(self.sig_position.emit)
+        self.serial_worker.sig_status_message.connect(self.send_status_message_to_gui)
 
         # ''' Setting another demo thread up '''
         # self.demo_thread = QtCore.QThread()
