@@ -2343,6 +2343,20 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
             self.sig_position.emit(self.int_position_dict)
 
+    def adapt_position_polling_interval_to_state(self):
+        ''' Helper method to avoid stage hickups with the ASI stages via a serial connection: 
+            During acquisitions, the stage is only polled in long intervals
+        '''
+        state = self.state['state']
+        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+            if self.pos_timer.isActive():
+                self.pos_timer.stop()
+            if self.counter % 10 == 0:
+                self.report_position()
+        else:
+            if not self.pos_timer.isActive():
+                self.pos_timer.start(500)
+        self.counter += 1
        
     def move_relative(self, dict, wait_until_done=False):
         ''' ASI move relative method
@@ -2354,17 +2368,7 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         Report position 
 
         '''
-        state = self.state['state']
-        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
-            if self.pos_timer.isActive():
-                self.pos_timer.stop()
-            if self.counter % 8 == 0:
-                self.report_position()
-        else:
-            if not self.pos_timer.isActive():
-                self.pos_timer.start(500)
-
-        self.counter += 1
+        self.adapt_position_polling_interval_to_state()
 
         motion_dict = {}
 
@@ -2416,18 +2420,6 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         Lots of implementation details in here, should be replaced by a facade
         '''
-        state = self.state['state']
-        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
-            if self.pos_timer.isActive():
-                self.pos_timer.stop()
-            if self.counter % 8 == 0:
-                self.report_position()
-        else:
-            if not self.pos_timer.isActive():
-                self.pos_timer.start(500)
-
-        self.counter += 1
-
         motion_dict = {}
 
         if 'x_abs' in dict:
