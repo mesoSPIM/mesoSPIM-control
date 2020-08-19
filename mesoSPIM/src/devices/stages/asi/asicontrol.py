@@ -69,8 +69,7 @@ class StageControlASITango(QtCore.QObject):
             time.sleep(delay)
             return message
         except Exception as error:
-            print(time.time(), ' Exception')
-            logger.exception(error)
+            logger.info('Serial exception of the ASI stage: ', error)
                         
     def axis_in_config_check(self, axis):
         '''
