@@ -90,7 +90,7 @@ class LudlFilterwheel(QtCore.QObject):
                                          stopbits=Serial.STOPBITS_TWO)
                 self.sio = Io.TextIOWrapper(Io.BufferedRWPair(self.ser, self.ser))
             except Serial.SerialException as e:
-                print(f"Serial connection to Ludl filter wheel failed: {e}")
+                print(f"ERROR: Serial connection to Ludl filter wheel failed: {e}")
                 if self.sio:
                     self.sio.flush()
                 if self.ser:
