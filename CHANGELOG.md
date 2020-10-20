@@ -1,6 +1,3 @@
-## Version [0.1.3.2] candidate
-* 🐛 :warning: Laser control voltage `max_laser_voltage` was always 10V, not updating from config file. This could damage some lasers that operate on lower command voltage.
-
 ## Version [0.1.3] - March 13, 2020
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
 * :warning: **There are new startup parameters in the config file - make sure to update your config files accordingly**. For example, `average_frame_rate` has been added.
