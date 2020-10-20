@@ -308,12 +308,11 @@ pixelsize = {'0.63x' : 10.52,
             '6.3x' : 1.03}
 
 '''
-HDF5 parameters, if this format is used for data saving (optional).
-Downsampling and compression slows down writing by 5x - 10x, use with caution.
+HDF5 parameters, when this format is used for data saving (optional).
 '''
-hdf5 = {'subsamp': ((1, 1, 1), (1, 4, 4)), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
-        'compression': 'gzip', # None, 'gzip', 'lzf'
-        'flip_xyz': (True, True, False) #match BigDataViewer coordinates to mesoSPIM axes.
+hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+        'compression': None, # None, 'gzip', 'lzf'
+        'flip_xyz': (True, True, False) # match BigDataViewer axes to mesoSPIM 
         }
 
 '''
