@@ -187,6 +187,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.shutter_left.close()
         self.shutter_right.close()
         self.state['shutterstate'] = False
+        self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
         ''' Setting the laserenabler up '''
         if self.cfg.laser == 'NI':
