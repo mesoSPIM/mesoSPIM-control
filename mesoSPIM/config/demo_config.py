@@ -307,6 +307,13 @@ pixelsize = {'0.63x' : 10.52,
             '5x' : 1.27,
             '6.3x' : 1.03}
 
+'''
+HDF5 parameters, when this format is used for data saving (optional).
+'''
+hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+        'compression': None, # None, 'gzip', 'lzf'
+        'flip_xyz': (True, True, False) # match BigDataViewer axes to mesoSPIM 
+        }
 
 '''
 Initial acquisition parameters

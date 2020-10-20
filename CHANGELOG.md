@@ -7,6 +7,7 @@ For this, the `npy2bdv` package by @nvladimus needs to be installed via `python 
 * :sparkles: **Improved multicolor tiling wizard** The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.
 * :bug: **Bugfix:** Binning was not working properly with all cameras.
 * :bug: **Bugfix:** Removed unnecessary imports.
+* :bug: **Bugfix:** Laser power setting `max_laser_voltage` was always 10V, ignoring the config file. This can damage some lasers that operate on lower command voltage.
 
 ### Contributors 
 * Fabian Voigt (@ffvoigt)
