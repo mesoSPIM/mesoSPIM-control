@@ -188,7 +188,7 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -226,6 +226,17 @@ pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
+
+For microscope configuration with three independent stage controller use these params:
+pi_parameters = {'stage_x' : ('L-509.20SD00'),
+                 'serialnum_x' : ('**********'),
+                 'stage_y' : ('L-509.40SD00'),
+                 'serialnum_y' : ('**********'),
+                 'stage_z' : ('L-509.20SD00'),
+                 'serialnum_z' : ('**********'),
+                 'controllername' : ('C-663'),
+                 'refmode' : ('FRF')
+                 }
 '''
 
 '''
