@@ -30,7 +30,7 @@
       <widget class="QComboBox" name="overlayCombo">
        <property name="minimumSize">
         <size>
-         <width>100</width>
+         <width>110</width>
          <height>0</height>
         </size>
        </property>
@@ -39,7 +39,7 @@
        </property>
        <item>
         <property name="text">
-         <string>Center cross</string>
+         <string>Overlay: none</string>
         </property>
        </item>
        <item>

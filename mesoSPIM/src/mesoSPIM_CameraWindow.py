@@ -51,13 +51,11 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
-        ''' Debugging info
 
-        logger.info('x_image_width: '+str(self.x_image_width))
-        logger.info('y_image_width: '+str(self.y_image_width))
-        logger.info('x_image_width/2: '+str(self.x_image_width/2))
-        logger.info('y_image_width/2: '+str(self.y_image_width/2))
-        '''
+        # Create overlay ROIs
+        self.roi_box = pg.RectROI((0,0), (100, 100))
+        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='g'), pg.TextItem(color='g', angle=90)
+        self.roi_box_props = {'x': self.x_image_width // 2, 'y': self.y_image_width // 2, 'w_um': 200, 'h_um': 200}
 
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "g", 'width': 1})
@@ -65,25 +63,37 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.hLine = pg.InfiniteLine(pos=self.y_image_width/2, angle=0, movable=False, pen=self.crosspen)
         self.graphicsView.addItem(self.vLine, ignoreBounds=True)
         self.graphicsView.addItem(self.hLine, ignoreBounds=True)
-        # print(self.vLine.getXPos())
-        # print(self.hLine.getYPos())
 
         # Set up CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.graphicsView.autoLevels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
+        #self.roi_box.sigRegionChangeFinished.connect(self.update_roi_box)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
+    def um2px(self, um):
+        '''Unit converter'''
+        return um/self.cfg.pixelsize[self.state['zoom']]
 
     @QtCore.pyqtSlot(str)
     def change_overlay(self, overlay_name):
         ''''Changes the image overlay'''
         if overlay_name == 'Resizable box':
-            print('Overlay changed to Resizable box')
-            self.roi_box_props = {'width_um': 200, 'height_um': 200}
-            roi_box = pg.RectROI([self.x_image_width // 2, self.y_image_width // 2],
-                                 [self.roi_box_props['width_um']/self.cfg.pixelsize[self.state['zoom']],
-                                  self.roi_box_props['height_um']/self.cfg.pixelsize[self.state['zoom']]])
-            self.graphicsView.addItem(roi_box)
+            self.update_roi_box()
+            self.graphicsView.addItem(self.roi_box)
+            self.graphicsView.addItem(self.roi_box_w_text)
+            self.graphicsView.addItem(self.roi_box_h_text)
+
+    @QtCore.pyqtSlot()
+    def update_roi_box(self):
+        self.roi_box.setPos((self.roi_box_props['x'], self.roi_box_props['y']))
+        self.roi_box.setSize((self.um2px(self.roi_box_props['w_um']), self.um2px(self.roi_box_props['h_um'])))
+        self.roi_box_w_text.setText(f"{self.roi_box_props['w_um']} um")
+        self.roi_box_w_text.setPos(self.roi_box_props['x'],
+                                   self.roi_box_props['y'] + self.um2px(self.roi_box_props['h_um']))
+        self.roi_box_h_text.setText(f"{self.roi_box_props['h_um']} um")
+        self.roi_box_h_text.setPos(self.roi_box_props['x'] + self.um2px(self.roi_box_props['h_um']),
+                                   self.roi_box_props['y'] + self.um2px(self.roi_box_props['h_um']))
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
