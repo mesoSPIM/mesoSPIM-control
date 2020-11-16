@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1114</width>
-    <height>1015</height>
+    <width>1200</width>
+    <height>1080</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,6 +16,53 @@
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
     <widget class="ImageView" name="graphicsView"/>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="adjustLevelsButton">
+       <property name="text">
+        <string>Adjust levels</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="overlayCombo">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Image overlay</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Center cross</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Resizable box</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>

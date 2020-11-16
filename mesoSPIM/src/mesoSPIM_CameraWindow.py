@@ -14,6 +14,8 @@ from PyQt5.uic import loadUi
 import pyqtgraph as pg
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
+    sig_change_overlay = QtCore.pyqtSignal(dict)
+
     def __init__(self, parent=None):
         super().__init__()
 
@@ -22,7 +24,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         ''' Change the PyQtGraph-Options in White Mode'''
         pg.setConfigOptions(imageAxisOrder='row-major')
-        if self.cfg.dark_mode == False:
+        if not self.cfg.dark_mode:
             pg.setConfigOptions(foreground='k')
             pg.setConfigOptions(background='w')
         else:
@@ -37,8 +39,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         else:
             loadUi('gui/mesoSPIM_CameraWindow.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
-
-
 
         ''' Set histogram Range '''
         self.graphicsView.setLevels(100,4000)
@@ -61,13 +61,16 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         '''
 
         ''' Initialize crosshairs '''
-        self.crosspen = pg.mkPen({'color': "r", 'width': 1})
+        self.crosspen = pg.mkPen({'color': "g", 'width': 1})
         self.vLine = pg.InfiniteLine(pos=self.x_image_width/2, angle=90, movable=False, pen=self.crosspen)
         self.hLine = pg.InfiniteLine(pos=self.y_image_width/2, angle=0, movable=False, pen=self.crosspen)
         self.graphicsView.addItem(self.vLine, ignoreBounds=True)
         self.graphicsView.addItem(self.hLine, ignoreBounds=True)
         # print(self.vLine.getXPos())
         # print(self.hLine.getYPos())
+
+        # Set up CameraWindow signals
+        self.adjustLevelsButton.clicked.connect(self.graphicsView.autoLevels)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
