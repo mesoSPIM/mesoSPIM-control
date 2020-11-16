@@ -10,17 +10,16 @@ logger = logging.getLogger(__name__)
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
-
 import pyqtgraph as pg
+from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
-    sig_change_overlay = QtCore.pyqtSignal(dict)
-
     def __init__(self, parent=None):
         super().__init__()
 
         self.parent = parent
         self.cfg = parent.cfg
+        self.state = mesoSPIM_StateSingleton()
 
         ''' Change the PyQtGraph-Options in White Mode'''
         pg.setConfigOptions(imageAxisOrder='row-major')
@@ -71,9 +70,20 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         # Set up CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.graphicsView.autoLevels)
+        self.overlayCombo.currentTextChanged.connect(self.change_overlay)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
+    @QtCore.pyqtSlot(str)
+    def change_overlay(self, overlay_name):
+        ''''Changes the image overlay'''
+        if overlay_name == 'Resizable box':
+            print('Overlay changed to Resizable box')
+            self.roi_box_props = {'width_um': 200, 'height_um': 200}
+            roi_box = pg.RectROI([self.x_image_width // 2, self.y_image_width // 2],
+                                 [self.roi_box_props['width_um']/self.cfg.pixelsize[self.state['zoom']],
+                                  self.roi_box_props['height_um']/self.cfg.pixelsize[self.state['zoom']]])
+            self.graphicsView.addItem(roi_box)
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
@@ -82,7 +92,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         If time=0, the message will stay.
         '''
-
         if time == 0:
             self.statusBar().showMessage(string)
         else:
