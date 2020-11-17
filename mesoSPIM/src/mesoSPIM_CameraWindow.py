@@ -53,9 +53,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
 
         # Create overlay ROIs
-        self.roi_box = pg.RectROI((0,0), (100, 100))
+        self.roi_box = pg.RectROI((self.x_image_width//2 - 50, self.y_image_width//2 - 50), (100, 100), centered=True)
         self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='g'), pg.TextItem(color='g', angle=90)
-        self.roi_box_props = {'x': self.x_image_width // 2, 'y': self.y_image_width // 2, 'w_um': 200, 'h_um': 200}
 
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "g", 'width': 1})
@@ -67,33 +66,35 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         # Set up CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.graphicsView.autoLevels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
-        #self.roi_box.sigRegionChangeFinished.connect(self.update_roi_box)
+        self.roi_box.sigRegionChangeFinished.connect(self.update_roi_labels)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def um2px(self, um):
         '''Unit converter'''
-        return um/self.cfg.pixelsize[self.state['zoom']]
+        return um / self.cfg.pixelsize[self.state['zoom']]
+
+    def px2um(self, px):
+        '''Unit converter'''
+        return px * self.cfg.pixelsize[self.state['zoom']]
 
     @QtCore.pyqtSlot(str)
     def change_overlay(self, overlay_name):
         ''''Changes the image overlay'''
         if overlay_name == 'Resizable box':
-            self.update_roi_box()
+            self.update_roi_labels()
             self.graphicsView.addItem(self.roi_box)
             self.graphicsView.addItem(self.roi_box_w_text)
             self.graphicsView.addItem(self.roi_box_h_text)
 
     @QtCore.pyqtSlot()
-    def update_roi_box(self):
-        self.roi_box.setPos((self.roi_box_props['x'], self.roi_box_props['y']))
-        self.roi_box.setSize((self.um2px(self.roi_box_props['w_um']), self.um2px(self.roi_box_props['h_um'])))
-        self.roi_box_w_text.setText(f"{self.roi_box_props['w_um']} um")
-        self.roi_box_w_text.setPos(self.roi_box_props['x'],
-                                   self.roi_box_props['y'] + self.um2px(self.roi_box_props['h_um']))
-        self.roi_box_h_text.setText(f"{self.roi_box_props['h_um']} um")
-        self.roi_box_h_text.setPos(self.roi_box_props['x'] + self.um2px(self.roi_box_props['h_um']),
-                                   self.roi_box_props['y'] + self.um2px(self.roi_box_props['h_um']))
+    def update_roi_labels(self):
+        w, h = self.roi_box.size()
+        x, y = self.roi_box.pos()
+        self.roi_box_w_text.setText(f"{int(self.px2um(w))} \u03BCm")
+        self.roi_box_h_text.setText(f"{int(self.px2um(h))} \u03BCm")
+        self.roi_box_w_text.setPos(x, y + h)
+        self.roi_box_h_text.setPos(x, y + h)
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
