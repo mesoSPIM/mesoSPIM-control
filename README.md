@@ -46,7 +46,8 @@ In addition (for Anaconda), the following packages need to be installed:
 * pywinusb  (`python -m pip install pywinusb`)
 * PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`). You can also download PIPython [here](https://github.com/royerlab/pipython)
 * tifffile (`python -m pip install tifffile`)
-* ([PyVCAM when using Photometrics cameras](https://github.com/Photometrics/PyVCAM)
+* [PyVCAM when using a Photometrics camera](https://github.com/Photometrics/PyVCAM)
+* pco (`python -m pip install pco`) when using a PCO camera ([Link](https://pypi.org/project/pco/)). A Version ≥0.1.3 is recommended.
 
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`
