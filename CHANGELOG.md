@@ -4,6 +4,7 @@
 * :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. 
 For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
 * :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
+* :gem: **New: Camera and Acquisition Manager Windows can be reopened** - A new menu allows the camera and acquisition manager windows to be reopened in case they get closed. The same menu bar allows exiting the program as well.
 * :gem: **Interactive IPython console** - If the software is launched via `python mesoSPIM-control.py -C`, an interactive IPython console is launched for debugging. Feature by @raacampbell.
 * :gem: **Command-line demo mode option** - If the software is launched via `python mesoSPIM-control.py -D`, it launches automatically into demo mode. Feature by @raacampbell.
 * :gem: **New: Support for PCO cameras** - PCO cameras with lightsheet mode are now supported. For this the `pco` Python package needs to be installed via `python -m pip install pco`. Currently, the only tested camera is the PCO panda 4.2 bi with lightsheet firmware.
