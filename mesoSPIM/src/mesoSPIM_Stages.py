@@ -330,18 +330,27 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
 
+        ''' Report reference status of all stages '''
+        for ii in range(1,len(self.pi_stages)+1):
+            tStage = self.pi_stages[ii-1];
+            if tStage == 'NOSTAGE':
+                continue
+
+            tState = self.pidevice.qFRF(ii)
+            if tState[ii]:
+                msg = 'referenced'
+            else:
+                msg = '*UNREFERENCED*'
+
+            logger.info( "Axis %d (%s) reference status: %s" % (ii, tStage, msg) )
+
+
         ''' Stage 5 referencing hack '''
-        # print('Referencing status 3: ', self.pidevice.qFRF(3))
-        # print('Referencing status 5: ', self.pidevice.qFRF(5))
-
-        ''' With this version, it is the first stage that needs to be referenced...'''
-        self.pidevice.FRF(1)
-        logger.info('mesoSPIM_Stages: Emergency referencing hack: Waiting for referencing move')
+        self.pidevice.FRF(5)
+        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
-        logger.info('mesoSPIM_Stages: Emergency referencing hack done')
-        # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
-        # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
-
+        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack done')
+        
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
         self.pidevice.MOV(5,self.startfocus/1000)
@@ -1021,6 +1030,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         pitools.startup(self.pidevice, stages=self.pi_stages, refmode=self.refmode)
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
+
 
         ''' Setting PI velocities '''
         self.pidevice.VEL(self.cfg.pi_parameters['velocity'])

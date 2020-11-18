@@ -33,6 +33,8 @@ mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/dow
 * scipy
 * ctypes
 * importlib
+* argparse
+* glob
 * PyQt5 (if there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
 
 In addition (for Anaconda), the following packages need to be installed:
@@ -44,7 +46,8 @@ In addition (for Anaconda), the following packages need to be installed:
 * pywinusb  (`python -m pip install pywinusb`)
 * PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`). You can also download PIPython [here](https://github.com/royerlab/pipython)
 * tifffile (`python -m pip install tifffile`)
-* ([PyVCAM when using Photometrics cameras](https://github.com/Photometrics/PyVCAM)
+* [PyVCAM when using a Photometrics camera](https://github.com/Photometrics/PyVCAM)
+* pco (`python -m pip install pco`) when using a PCO camera ([Link](https://pypi.org/project/pco/)). A Version ≥0.1.3 is recommended.
 
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`
@@ -68,8 +71,21 @@ Use BNC T connectors to split each analog output line to both lasers.
 ```
 python mesoSPIM_Control.py
 ```
-After launch, it will prompt you for a configuration file. Please choose a file
-with demo devices (e.g. `DemoStage`) for testing.
+The software will now start. If you have multiple configuration files you will be prompted to choose one. 
+
+For testing you can use demo mode:
+```
+python mesoSPIM_Control.py -D
+```
+
+Or select a "demo" file using the UI selector, should you have more than in your configuration directory. 
+
+You may also run the software with an interactive iPython console for de-bugging:
+```
+python mesoSPIM_Control.py -C
+```
+For example, executing `mSpim.state.__dict__` in this console will show the current mesoSPIM state. 
+
 
 #### Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation [here](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation).

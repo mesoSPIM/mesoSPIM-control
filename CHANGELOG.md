@@ -1,13 +1,17 @@
 ## Version [0.1.4] - in development
 ### Features & updates
+* :warning: :gem: **New handling of config files** - If there is a single config file (without a 'demo' prefix in the filename and apart from the `demo_config.py`-file) in the config folder, the software will automatically load this file. Otherwise, the config selection GUI is opened. This is especially helpful when operating a mesoSPIM with multiple users. Thanks to @raacampbell for this feature! 
 * :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. 
 For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
 * :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
-* :gem: **New: Support for ASI Tango controllers & stages** - ASI stages and controllers utilizing the Tango commands are now supported. Currently, only the benchtop mesoSPIM stage set (Dual-LS100-FTP, LS-50-AMCCH, LS-50-AMCLH, LS-50S-AMECH, C60-3060-SRS, TG8-BASIC & TGDCM2) is supported. 
+* :gem: **New: Camera and Acquisition Manager Windows can be reopened** - A new menu allows the camera and acquisition manager windows to be reopened in case they get closed. The same menu bar allows exiting the program as well.
+* :gem: **Interactive IPython console** - If the software is launched via `python mesoSPIM-control.py -C`, an interactive IPython console is launched for debugging. Feature by @raacampbell.
+* :gem: **Command-line demo mode option** - If the software is launched via `python mesoSPIM-control.py -D`, it launches automatically into demo mode. Feature by @raacampbell.
 * :gem: **New: Support for PCO cameras** - PCO cameras with lightsheet mode are now supported. For this the `pco` Python package needs to be installed via `python -m pip install pco`. Currently, the only tested camera is the PCO panda 4.2 bi with lightsheet firmware.
 * :gem: **New: Support for Sutter Lambda 10B Filter Controller** Thanks to Kevin Dean @AdvancedImagingUTSW, Sutter filter wheels are now supported.
-* :gem: **New: Support for PI stepper motor stages in a XYZ configuration** Thanks to @drchrisch, a mesoSPIM configuration ('PI_xyz') using stepper motor stages for sample movement is now supported. Please note that this is currently not supporting focus movements or sample rotations.
-* :sparkles: **Improved multicolor tiling wizard** The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.
+* :gem: **New: Support for Physik Instrumente stepper motor stages in a XYZ configuration** Thanks to @drchrisch, a mesoSPIM configuration ('PI_xyz') using stepper motor stages for sample movement is now supported. Please note that this is currently not supporting focus movements or sample rotations.
+* :sparkles: **Improvement:** **Updated multicolor tiling wizard** The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.
+* :sparkles: **Improvement:** **Physik Instrumente stages now report their referencing status after startup in the logfile** This allows for easier diagnosis of unreferenced stages during startup. Feature by @raacampbell.
 * :bug: **Bugfix:** Binning was not working properly with all cameras.
 * :bug: **Bugfix:** Removed unnecessary imports.
 * :bug: **Bugfix:** Laser power setting `max_laser_voltage` was always 10V, ignoring the config file. This can damage some lasers that operate on lower command voltage.
@@ -17,6 +21,7 @@ For this, the `npy2bdv` package by @nvladimus needs to be installed via `python 
 * Nikita Vladimirov (@nvladimus)
 * Kevin Dean (@AdvancedImagingUTSW)
 * Christian Schulze (@drchrisch)
+* Rob Campbell (@raacampbell)
 
 ## Version [0.1.3] - March 13, 2020
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
