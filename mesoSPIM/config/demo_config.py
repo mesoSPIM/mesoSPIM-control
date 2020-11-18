@@ -161,6 +161,20 @@ camera_parameters = {'x_pixels' : 5056,
                      'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
                     }
 
+For a PCO Panda 4.2 bi with Lightsheet-Firmware (allowing rolling shutter operation):
+
+camera_parameters = {'x_pixels' : 2048,
+                     'y_pixels' : 2048,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'binning' : '1x1',
+                     'trigger': 'external exposure start & software trigger',
+                     'exp_time': 20e-3, # 20 ms Exposure
+                     'line_interval': 75e-6, # 75 us Line delay
+                     'line_exposure_delay' : 266 # 266 lines = 20 ms / 75 us - parameter is not used during initialization
+                    }
+
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'PhotometricsIris15'
 
