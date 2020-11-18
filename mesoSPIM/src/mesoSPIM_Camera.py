@@ -612,9 +612,9 @@ class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
         line_time = self.cam.sdk.get_cmos_line_timing()['line time']
         lines_exposure = self.cam.sdk.get_cmos_line_exposure_delay()['lines exposure']
         t = self.cam.get_exposure_time()
-        print('Exposure Time: {:9.6f} s'.format(t))
-        print('Line Time: {:9.6f} s'.format(line_time))
-        print('Number of Lines: {:d}'.format(lines_exposure))
+        #print('Exposure Time: {:9.6f} s'.format(t))
+        #print('Line Time: {:9.6f} s'.format(line_time))
+        #print('Number of Lines: {:d}'.format(lines_exposure))
 
         self.cam.record(number_of_images=4, mode='fifo')
 
