@@ -187,7 +187,7 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or 'TangoASI' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,

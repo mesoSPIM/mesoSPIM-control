@@ -3,6 +3,7 @@
 * :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. 
 For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
 * :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
+* :gem: **New: Support for ASI Tango controllers & stages** - ASI stages and controllers utilizing the Tango commands are now supported. Currently, only the benchtop mesoSPIM stage set (Dual-LS100-FTP, LS-50-AMCCH, LS-50-AMCLH, LS-50S-AMECH, C60-3060-SRS, TG8-BASIC & TGDCM2) is supported. 
 * :gem: **New: Support for PCO cameras** - PCO cameras with lightsheet mode are now supported. For this the `pco` Python package needs to be installed via `python -m pip install pco`. Currently, the only tested camera is the PCO panda 4.2 bi with lightsheet firmware.
 * :gem: **New: Support for Sutter Lambda 10B Filter Controller** Thanks to Kevin Dean @AdvancedImagingUTSW, Sutter filter wheels are now supported.
 * :gem: **New: Support for PI stepper motor stages in a XYZ configuration** Thanks to @drchrisch, a mesoSPIM configuration ('PI_xyz') using stepper motor stages for sample movement is now supported. Please note that this is currently not supporting focus movements or sample rotations.
@@ -45,8 +46,6 @@ to f_start and at z_end, the detection path focus is at z_end. This allows imagi
 * :bug: **Bugfix #31:** Fixed: `demo_config.py` now contains subsampling settings
 * :bug: **Bugfix #34:** Fixed: Last frame in a stack is blank due to an off-by-one error
 * :bug: **Bugfix #35:** Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist
-
---
 
 ## Version [0.1.2] - August 19th, 2019
 * **New:** Logging is now supported. Logfiles go in the `log` folder. 
