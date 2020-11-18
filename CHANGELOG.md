@@ -4,6 +4,7 @@
 For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
 * :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
 * :gem: **New: Support for Sutter Lambda 10B Filter Controller** Thanks to Kevin Dean @AdvancedImagingUTSW, Sutter filter wheels are now supported.
+* :gem: **New: Support for PI stepper motor stages in a XYZ configuration** Thanks to @drchrisch, a mesoSPIM configuration ('PI_xyz') using stepper motor stages for sample movement is now supported. Please note that this is currently not supporting focus movements or sample rotations.
 * :sparkles: **Improved multicolor tiling wizard** The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.
 * :bug: **Bugfix:** Binning was not working properly with all cameras.
 * :bug: **Bugfix:** Removed unnecessary imports.
@@ -13,6 +14,7 @@ For this, the `npy2bdv` package by @nvladimus needs to be installed via `python 
 * Fabian Voigt (@ffvoigt)
 * Nikita Vladimirov (@nvladimus)
 * Kevin Dean (@AdvancedImagingUTSW)
+* Christian Schulze (@drchrisch)
 
 ## Version [0.1.3] - March 13, 2020
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
