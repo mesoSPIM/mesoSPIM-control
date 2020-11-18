@@ -83,6 +83,7 @@ You may also run the software with an interactive iPython console for de-bugging
 ```
 python mesoSPIM_Control.py -C
 ```
+For example, executing `mSpim.state.__dict__` in this console will show the current mesoSPIM state. 
 
 
 #### Documentation for users
