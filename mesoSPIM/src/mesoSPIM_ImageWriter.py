@@ -62,13 +62,17 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                                     nilluminations=acq_list.get_n_shutter_configs(),
                                                     nchannels=acq_list.get_n_lasers(),
                                                     nangles=acq_list.get_n_angles(),
-                                                    ntiles=acq_list.get_n_tiles())
+                                                    ntiles=acq_list.get_n_tiles(),
+                                                    blockdim=((1, 256, 256),),
+                                                    subsamp=self.cfg.hdf5['subsamp'],
+                                                    compression=self.cfg.hdf5['compression'])
             # x and y need to be exchanged to account for the image rotation
             shape = (self.max_frame, self.y_pixels, self.x_pixels)
             px_size_um = self.cfg.pixelsize[acq['zoom']]
-            affine_matrix = np.array(((1.0, 0.0, 0.0, acq['x_pos']/px_size_um),
-                                      (0.0, 1.0, 0.0, acq['y_pos']/px_size_um),
-                                      (0.0, 0.0, 1.0, acq['z_start']/acq['z_step'])))
+            sign_xyz = (1 - np.array(self.cfg.hdf5['flip_xyz'])) * 2 - 1
+            affine_matrix = np.array(((1.0, 0.0, 0.0, sign_xyz[0] * acq['x_pos']/px_size_um),
+                                      (0.0, 1.0, 0.0, sign_xyz[1] * acq['y_pos']/px_size_um),
+                                      (0.0, 0.0, 1.0, sign_xyz[2] * acq['z_start']/acq['z_step'])))
             self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
@@ -82,7 +86,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                         )
         else:
             self.fsize = self.x_pixels*self.y_pixels
-            self.xy_stack = np.memmap(self.path, mode = "write", dtype = np.uint16, shape = self.fsize * self.max_frame)
+            self.xy_stack = np.memmap(self.path, mode="write", dtype=np.uint16, shape=self.fsize * self.max_frame)
     
         self.cur_image = 0
 

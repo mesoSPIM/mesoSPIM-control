@@ -43,6 +43,7 @@ class LudlFilterwheel(QtCore.QObject):
         self.baudrate = baudrate
         self.filterdict = filterdict
         self.double_wheel = False
+        self.ser = self.sio = None
 
         ''' Delay in s for the wait until done function '''
         self.wait_until_done_delay = 0.5
@@ -80,13 +81,23 @@ class LudlFilterwheel(QtCore.QObject):
 
         '''
         if self._check_if_filter_in_filterdict(filter) is True:
-            self.ser = Serial.Serial(self.COMport,
-                                     self.baudrate,
-                                     parity=Serial.PARITY_NONE,
-                                     timeout=0,
-                                     xonxoff=False,
-                                     stopbits=Serial.STOPBITS_TWO)
-            self.sio = Io.TextIOWrapper(Io.BufferedRWPair(self.ser, self.ser))
+            try:
+                self.ser = Serial.Serial(self.COMport,
+                                         self.baudrate,
+                                         parity=Serial.PARITY_NONE,
+                                         timeout=0, write_timeout=0,
+                                         xonxoff=False,
+                                         stopbits=Serial.STOPBITS_TWO)
+                self.sio = Io.TextIOWrapper(Io.BufferedRWPair(self.ser, self.ser))
+            except Serial.SerialException as e:
+                print(f"ERROR: Serial connection to Ludl filter wheel failed: {e}")
+                if self.sio:
+                    self.sio.flush()
+                if self.ser:
+                    self.ser.close()
+                self.sio = self.ser = None
+                return
+                    
             """
             Check for double or single wheel
 
@@ -102,6 +113,7 @@ class LudlFilterwheel(QtCore.QObject):
                 self.sio.write(str(self.ludlstring))
                 self.sio.flush()
                 self.ser.close()
+                self.sio = self.ser = None
 
                 if wait_until_done:
                     ''' Wait a certain number of seconds. This is a hack
@@ -132,6 +144,7 @@ class LudlFilterwheel(QtCore.QObject):
                 self.sio.write(str(self.ludlstring1))
                 self.sio.flush()
                 self.ser.close()
+                self.sio = self.ser = None
 
                 if wait_until_done:
                     time.sleep(self.wait_until_done_delay)

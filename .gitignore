@@ -22,7 +22,7 @@ mesoSPIM/src/devices/stages/galil/gclib/__init__\.py
 
 mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
 
-mesoSPIM/config/*.py
+mesoSPIM/config/*
 !mesoSPIM/config/demo_config.py
 
 mesoSPIM/config/etl_parameters/*.*
