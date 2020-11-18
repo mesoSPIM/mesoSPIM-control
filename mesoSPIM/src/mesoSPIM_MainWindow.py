@@ -105,6 +105,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
 
         ''' Get buttons & connections ready '''
+        self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
 
         ''' Widget list for blockSignals during status updates '''
@@ -166,6 +167,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.core_thread.wait()
         except:
             pass
+
+    def close_app(self):
+        self.camera_window.close()
+        self.acquisition_manager_window.close()
+        self.close()
 
     def display_icons(self):
         pass
@@ -289,6 +295,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         exec(windowstring+'.show()')
         exec(windowstring+'.sig_execute_script.connect(self.execute_script)')
         self.script_window_counter += 1
+
+    def initialize_and_connect_menubar(self):
+        self.actionExit.triggered.connect(self.close_app)
+        self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
+        self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
+
 
     def initialize_and_connect_widgets(self):
         ''' Connecting the menu actions '''
