@@ -32,7 +32,6 @@ from .utils.delegates import (ComboDelegate,
 
 from .utils.widgets import MarkPositionWidget
 
-from .utils.acquisition_wizards import TilingWizard
 from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
@@ -96,6 +95,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.table.setDropIndicatorShown(True)
         self.table.setSortingEnabled(True)
 
+    
         self.set_item_delegates()
 
         ''' Set our custom style - this draws the drop indicator across the whole row '''
@@ -127,6 +127,10 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
 
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        self.table.horizontalHeader().setFont(font)
+        self.table.verticalHeader().setFont(font)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
@@ -458,16 +462,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
                 string, QtWidgets.QMessageBox.Ok) 
 
-    def generate_xml(self):
-        print('generating BDV XML')
-
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        filename = timestr + '.xml'
-
-        path = self.state['acq_list'][0]['folder']+'/'+filename
-        
-        xml_exporter = mesoSPIM_XMLexporter(self) 
-        xml_exporter.generate_xml_from_acqlist(self.state['acq_list'],path)
 
 
 

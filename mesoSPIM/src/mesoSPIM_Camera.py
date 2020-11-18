@@ -1,6 +1,7 @@
 '''
 mesoSPIM Camera class, intended to run in its own thread
 '''
+
 import os
 import time
 import numpy as np
@@ -18,6 +19,7 @@ except:
     logger.info('Error: Hamamatsu camera could not be imported')
 '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
+from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 from .utils.acquisitions import AcquisitionList, Acquisition
 
 class mesoSPIM_Camera(QtCore.QObject):
@@ -34,6 +36,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
+        self.image_writer = mesoSPIM_ImageWriter(self)
 
         self.stopflag = False
 
@@ -74,6 +77,8 @@ class mesoSPIM_Camera(QtCore.QObject):
             self.camera = mesoSPIM_HamamatsuCamera(self)
         elif self.cfg.camera == 'PhotometricsIris15':
             self.camera = mesoSPIM_PhotometricsCamera(self)
+        elif self.cfg.camera == 'PCO':
+            self.camera = mesoSPIM_PCOCamera(self)
         elif self.cfg.camera == 'DemoCamera':
             self.camera = mesoSPIM_DemoCamera(self)
 
@@ -150,61 +155,50 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera_display_acquisition_subsampling = factor
 
     def set_camera_binning(self, value):
+        print('Setting camera binning: '+value)
         self.camera.set_binning(value)
 
-    @QtCore.pyqtSlot(Acquisition)
-    def prepare_image_series(self, acq):
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def prepare_image_series(self, acq, acq_list):
         '''
         Row is a row in a AcquisitionList
         '''
         logger.info('Camera: Preparing Image Series')
-        #print('Cam: Preparing Image Series')
         self.stopflag = False
 
-        ''' TODO: Needs cam delay, sweeptime, QTimer, line delay, exp_time '''
+        self.image_writer.prepare_acquisition(acq, acq_list)
 
-        self.folder = acq['folder']
-        self.filename = acq['filename']
-        self.path = self.folder+'/'+self.filename
-        
-        logger.info(f'Camera: Save path: {self.path}')
-        self.z_start = acq['z_start']
-        self.z_end = acq['z_end']
-        self.z_stepsize = acq['z_step']
         self.max_frame = acq.get_image_count()
-
         self.processing_options_string = acq['processing']
-
-        self.fsize = self.x_pixels*self.y_pixels
-
-        self.xy_stack = np.memmap(self.path, mode = "write", dtype = np.uint16, shape = self.fsize * self.max_frame)
 
         self.camera.initialize_image_series()
         self.cur_image = 0
         logger.info(f'Camera: Finished Preparing Image Series')
         self.start_time = time.time()
 
-    @QtCore.pyqtSlot()
-    def add_images_to_series(self):
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
             logger.info('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
 
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
-                # logger.info('self.cur_image + 1: '+str(self.cur_image + 1))
                 images = self.camera.get_images_in_series()
                 for image in images:
                     image = np.rot90(image)
                     self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,0:self.y_pixels:self.camera_display_acquisition_subsampling])
-                    image = image.flatten()
-                    self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+                    self.image_writer.write_image(image, acq, acq_list)
                     self.cur_image += 1
 
-    @QtCore.pyqtSlot()
-    def end_image_series(self):
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def end_image_series(self, acq, acq_list):
         if self.stopflag is False:
             if self.processing_options_string != '':
                 if self.processing_options_string == 'MAX':
+                    ''' Image processing needs to be reimplemented in an incremental fashion '''
+                    pass 
+
+                    '''
                     self.sig_status_message.emit('Doing Max Projection')
                     logger.info('Camera: Started Max Projection of '+str(self.max_frame)+' Images')
                     stackview = self.xy_stack.view()
@@ -215,12 +209,14 @@ class mesoSPIM_Camera(QtCore.QObject):
                     tifffile.imsave(path, max_proj, photometric='minisblack')
                     logger.info('Camera: Saved Max Projection')
                     self.sig_status_message.emit('Done with image processing')
+                    '''
 
         try:
             self.camera.close_image_series()
-            del self.xy_stack
         except:
-            pass
+            logger.warning('Camera: Image Series could not be closed')
+            
+        self.image_writer.end_acquisition(acq, acq_list)
 
         self.end_time =  time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
@@ -231,15 +227,8 @@ class mesoSPIM_Camera(QtCore.QObject):
     def snap_image(self):
         image = self.camera.get_image()
         image = np.rot90(image)
-
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        filename = timestr + '.tif'
-
-        path = self.state['snap_folder']+'/'+filename
-
         self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_snap_subsampling,0:self.y_pixels:self.camera_display_snap_subsampling])
-
-        tifffile.imsave(path, image, photometric='minisblack')
+        self.image_writer.write_snap_image(image)
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
@@ -309,10 +298,11 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         pass
 
     def set_binning(self, binning_string):
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
 
     def initialize_image_series(self):
         pass
@@ -338,14 +328,13 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         pass
 
 class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
-
     def __init__(self, parent = None):
         super().__init__(parent)
 
+        self.count = 0
+
         self.line = np.linspace(0,6*np.pi,self.x_pixels)
         self.line = 400*np.sin(self.line)+1200
-
-        self.count = 0
 
     def open_camera(self):
         logger.info('Initialized Demo Camera')
@@ -354,12 +343,14 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
         logger.info('Closed Demo Camera')
     
     def set_binning(self, binning_string):
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
+        ''' Changing the number of pixels also affects the random image, so we need to update self.line '''
         self.line = np.linspace(0,6*np.pi,self.x_pixels)
         self.line = 400*np.sin(self.line)+1200
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
 
     def _create_random_image(self):
         data = np.array([np.roll(self.line, 4*i+self.count) for i in range(0, self.y_pixels)], dtype='uint16')
@@ -367,8 +358,6 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
         data = np.around(data).astype('uint16')
         self.count += 20
         return data
-
-        # return np.random.randint(low=0, high=2**16, size=(self.x_pixels,self.y_pixels), dtype='l')
 
     def get_images_in_series(self):
         return [self._create_random_image()]
@@ -428,10 +417,11 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def set_binning(self, binningstring):
         self.hcam.setPropertyValue("binning", binningstring)
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
 
     def initialize_image_series(self):
         self.hcam.startAcquisition()
@@ -570,11 +560,12 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         print('Setting line interval is not implemented, set the interval in the config file')
 
     def set_binning(self, binningstring):
-        self.x_binning = int(self.binning_string[0])
-        self.y_binning = int(self.binning_string[2])
+        self.x_binning = int(binning_string[0])
+        self.y_binning = int(binning_string[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.pvcam.binning = (self.x_binning, self.y_binning)
+        self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
         
     def get_image(self):
         return self.pvcam.get_live_frame()
@@ -601,5 +592,68 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 
     def close_live_mode(self):
         self.pvcam.stop_live()
+
+class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.info('PCO Cam initialized')
+    
+    def open_camera(self):
+        import pco
+        self.cam = pco.Camera() # no logging 
+        # self.cam = pco.Camera(debuglevel='verbose', timestamp='on')
+
+        self.cam.sdk.set_cmos_line_timing('on', self.cfg.camera_parameters['line_interval']) # 75 us delay
+        self.cam.set_exposure_time(self.cfg.camera_parameters['exp_time'])
+        # self.cam.sdk.set_cmos_line_exposure_delay(80, 0) # 266 lines = 20 ms / 75 us
+        self.cam.configuration = {'trigger' : self.cfg.camera_parameters['trigger']}
+
+        line_time = self.cam.sdk.get_cmos_line_timing()['line time']
+        lines_exposure = self.cam.sdk.get_cmos_line_exposure_delay()['lines exposure']
+        t = self.cam.get_exposure_time()
+        #print('Exposure Time: {:9.6f} s'.format(t))
+        #print('Line Time: {:9.6f} s'.format(line_time))
+        #print('Number of Lines: {:d}'.format(lines_exposure))
+
+        self.cam.record(number_of_images=4, mode='fifo')
+
+    def close_camera(self):
+        self.cam.stop()
+        self.cam.close()
+
+    def set_exposure_time(self, time):
+        self.cam.set_exposure_time(time)
+        self.camera_exposure_time = time
+        
+    def set_line_interval(self, time):
+        print('Setting line interval is not implemented, set the interval in the config file')
+        
+    def set_binning(self, binningstring):
+        pass
+                
+    def get_image(self):
+        image, meta = self.cam.image(image_number=-1)
+        return image
+        
+    def initialize_image_series(self):
+        pass
+    
+    def get_images_in_series(self):
+        image, meta = self.cam.image(image_number=-1)
+        return [image]
+
+    def close_image_series(self):
+        pass
+
+    def initialize_live_mode(self):
+        pass
+
+    def get_live_image(self):
+        image, meta = self.cam.image(image_number=-1)
+        return [image]
+
+    def close_live_mode(self):
+        pass
 
     

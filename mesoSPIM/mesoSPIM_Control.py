@@ -38,6 +38,8 @@ def load_config_UI(current_path):
     ''' This needs an placeholder QApplication to work '''
     cfg_app = QtWidgets.QApplication(sys.argv)
 
+    current_path = os.path.abspath('./config')
+
     global_config_path = ''
     global_config_path , _ = QtWidgets.QFileDialog.getOpenFileName(None,\
     'Open microscope configuration file',current_path)
@@ -100,6 +102,11 @@ def get_parser():
     parser.add_argument('-D', '--demo', action='store_true',
                         help='Start in demo mode')
     return parser
+  
+def dark_mode_check(cfg, app):
+    if cfg.dark_mode == True:
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
 def main(embed_console=False,demo_mode=False):
     """
@@ -140,6 +147,8 @@ def main(embed_console=False,demo_mode=False):
         cfg = load_config_UI(current_path)
 
     app = QtWidgets.QApplication(sys.argv)
+    
+    dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()

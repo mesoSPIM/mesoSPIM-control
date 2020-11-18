@@ -38,7 +38,6 @@ from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_Dem
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import convert_seconds_to_string
-from .utils.demo_threads import mesoSPIM_DemoThread
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM
@@ -61,10 +60,10 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_progress = QtCore.pyqtSignal(dict)
 
     ''' Camera-related signals '''
-    sig_prepare_image_series = QtCore.pyqtSignal(Acquisition)
-    sig_add_images_to_image_series = QtCore.pyqtSignal()
-    sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal()
-    sig_end_image_series = QtCore.pyqtSignal()
+    sig_prepare_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
+    sig_add_images_to_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
+    sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal(Acquisition, AcquisitionList)
+    sig_end_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
 
     sig_prepare_live = QtCore.pyqtSignal()
     sig_get_live_image = QtCore.pyqtSignal()
@@ -188,6 +187,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.shutter_left.close()
         self.shutter_right.close()
         self.state['shutterstate'] = False
+        self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
         ''' Setting the laserenabler up '''
         if self.cfg.laser == 'NI':
@@ -200,11 +200,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
 
         self.start_time = 0
-
         self.stopflag = False
-
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
+        self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
 
     def __del__(self):
@@ -575,9 +573,9 @@ class mesoSPIM_Core(QtCore.QObject):
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
             if not self.stopflag:
-                self.prepare_acquisition(acq)
-                self.run_acquisition(acq)
-                self.close_acquisition(acq)
+                self.prepare_acquisition(acq, acq_list)
+                self.run_acquisition(acq, acq_list)
+                self.close_acquisition(acq, acq_list)
 
     def close_acquisition_list(self, acq_list):
         self.sig_status_message.emit('Closing Acquisition List')
@@ -668,7 +666,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.state['state'] = 'idle'
 
-    def prepare_acquisition(self, acq):
+    def prepare_acquisition(self, acq, acq_list):
         '''
         Housekeeping: Prepare the acquisition
         '''
@@ -714,15 +712,15 @@ class mesoSPIM_Core(QtCore.QObject):
         self.f_step_generator = acq.get_focus_stepsize_generator()
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
-        self.sig_prepare_image_series.emit(acq)
+        self.sig_prepare_image_series.emit(acq, acq_list)
         self.prepare_image_series()
 
         # ''' HICKUP DEBUGGING: Measure z position '''
         # self.z_start_measured = self.state['position']['z_pos']
 
-        self.write_metadata(acq)
+        self.write_metadata(acq, acq_list)
 
-    def run_acquisition(self, acq):
+    def run_acquisition(self, acq, acq_list):
         steps = acq.get_image_count()
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
@@ -733,12 +731,12 @@ class mesoSPIM_Core(QtCore.QObject):
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
-                self.sig_end_image_series.emit()
+                self.sig_end_image_series.emit(acq, acq_list)
                 self.sig_finished.emit()
                 break
             else:
                 self.snap_image_in_series()
-                self.sig_add_images_to_image_series.emit()
+                self.sig_add_images_to_image_series.emit(acq, acq_list)
                 #time.sleep(0.02)
                 # self.sig_add_images_to_image_series_and_wait_until_done.emit()
 
@@ -789,7 +787,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.close_shutters()
 
-    def close_acquisition(self, acq):
+    def close_acquisition(self, acq, acq_list):
 
         # ''' HICKUP DEBUGGING '''
         # self.z_end_measured = self.state['position']['z_pos']
@@ -802,7 +800,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if self.stopflag is False:
             # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
-            self.sig_end_image_series.emit()
+            self.sig_end_image_series.emit(acq, acq_list)
 
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
@@ -885,66 +883,76 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             file.write('\n')
 
-    def write_metadata(self, acq):
+    def write_metadata(self, acq, acq_list):
         '''
         Writes a metadata.txt file
 
         Path contains the file to be written
         '''
-        path = acq['folder']+'/'+acq['filename']
+        path = acq['folder'] + '/' + acq['filename']
 
-        metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
+        metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
 
         # print('Metadata_path: ', metadata_path)
+        if acq['filename'][-3:] == '.h5':
+            if acq == acq_list[0]:
+                self.metadata_file = open(metadata_path, 'w')
+        else:
+            self.metadata_file = open(metadata_path, 'w')
+        self.write_line(self.metadata_file, 'Metadata for file', path)
+        self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
+        self.write_line(self.metadata_file, 'z_planes', acq['planes'])
+        self.write_line(self.metadata_file)
+        # self.write_line(file, 'COMMENTS')
+        # self.write_line(file, 'Comment: ', acq(['comment']))
+        # self.write_line(file)
+        self.write_line(self.metadata_file, 'CFG')
+        self.write_line(self.metadata_file, 'Laser', acq['laser'])
+        self.write_line(self.metadata_file, 'Intensity (%)', acq['intensity'])
+        self.write_line(self.metadata_file, 'Zoom', acq['zoom'])
+        self.write_line(self.metadata_file, 'Pixelsize in um', self.state['pixelsize'])
+        self.write_line(self.metadata_file, 'Filter', acq['filter'])
+        self.write_line(self.metadata_file, 'Shutter', acq['shutterconfig'])
+        self.write_line(self.metadata_file)
+        self.write_line(self.metadata_file, 'POSITION')
+        self.write_line(self.metadata_file, 'x_pos', acq['x_pos'])
+        self.write_line(self.metadata_file, 'y_pos', acq['y_pos'])
+        self.write_line(self.metadata_file, 'f_start', acq['f_start'])
+        self.write_line(self.metadata_file, 'f_end', acq['f_end'])
+        self.write_line(self.metadata_file, 'z_start', acq['z_start'])
+        self.write_line(self.metadata_file, 'z_end', acq['z_end'])
+        self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
+        self.write_line(self.metadata_file, 'z_planes', acq.get_image_count())
+        self.write_line(self.metadata_file, 'rot', acq['rot'])
+        self.write_line(self.metadata_file)
 
-        with open(metadata_path,'w') as file:
-            self.write_line(file, 'Metadata for file', path)
-            self.write_line(file, 'z_stepsize', acq['z_step'])
-            self.write_line(file, 'z_planes', acq['planes'])
-            self.write_line(file)
-            # self.write_line(file, 'COMMENTS')
-            # self.write_line(file, 'Comment: ', acq(['comment']))
-            # self.write_line(file)
-            self.write_line(file, 'CFG')
-            self.write_line(file, 'Laser', acq['laser'])
-            self.write_line(file, 'Intensity (%)', acq['intensity'])
-            self.write_line(file, 'Zoom', acq['zoom'])
-            self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
-            self.write_line(file, 'Filter', acq['filter'])
-            self.write_line(file, 'Shutter', acq['shutterconfig'])
-            self.write_line(file)
-            self.write_line(file, 'POSITION')
-            self.write_line(file, 'x_pos', acq['x_pos'])
-            self.write_line(file, 'y_pos', acq['y_pos'])
-            self.write_line(file, 'f_start', acq['f_start'])
-            self.write_line(file, 'f_end', acq['f_end'])
-            self.write_line(file, 'z_start', acq['z_start'])
-            self.write_line(file, 'z_end', acq['z_end'])
-            self.write_line(file, 'z_stepsize', acq['z_step'])
-            self.write_line(file, 'z_planes', acq.get_image_count())
-            self.write_line(file)
+        ''' Attention: change to true ETL values ASAP '''
+        self.write_line(self.metadata_file, 'ETL PARAMETERS')
+        self.write_line(self.metadata_file, 'ETL CFG File', self.state['ETL_cfg_file'])
+        self.write_line(self.metadata_file, 'etl_l_offset', self.state['etl_l_offset'])
+        self.write_line(self.metadata_file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
+        self.write_line(self.metadata_file, 'etl_r_offset', self.state['etl_r_offset'])
+        self.write_line(self.metadata_file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
+        self.write_line(self.metadata_file)
+        self.write_line(self.metadata_file, 'GALVO PARAMETERS')
+        self.write_line(self.metadata_file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
+        self.write_line(self.metadata_file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
+        self.write_line(self.metadata_file, 'galvo_l_offset', self.state['galvo_l_offset'])
+        self.write_line(self.metadata_file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+        self.write_line(self.metadata_file, 'galvo_r_offset', self.state['galvo_r_offset'])
+        self.write_line(self.metadata_file)
+        self.write_line(self.metadata_file, 'CAMERA PARAMETERS')
+        self.write_line(self.metadata_file, 'camera_type', self.cfg.camera)
+        self.write_line(self.metadata_file, 'camera_exposure', self.state['camera_exposure_time'])
+        self.write_line(self.metadata_file, 'camera_line_interval', self.state['camera_line_interval'])
+        self.write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
+        self.write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
 
-            ''' Attention: change to true ETL values ASAP '''
-            self.write_line(file,'ETL PARAMETERS')
-            self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
-            self.write_line(file,'etl_l_offset', self.state['etl_l_offset'])
-            self.write_line(file,'etl_l_amplitude', self.state['etl_l_amplitude'])
-            self.write_line(file,'etl_r_offset', self.state['etl_r_offset'])
-            self.write_line(file,'etl_r_amplitude', self.state['etl_r_amplitude'])
-            self.write_line(file)
-            self.write_line(file, 'GALVO PARAMETERS')
-            self.write_line(file, 'galvo_l_frequency',self.state['galvo_l_frequency'])
-            self.write_line(file, 'galvo_l_amplitude',self.state['galvo_l_amplitude'])
-            self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
-            self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
-            self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
-            self.write_line(file)
-            self.write_line(file, 'CAMERA PARAMETERS')
-            self.write_line(file, 'camera_type', self.cfg.camera)
-            self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
-            self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
-            self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
-            self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
+        if acq['filename'][-3:] == '.h5':
+            if acq == acq_list[-1]:
+                self.metadata_file.close()
+        else:
+            self.metadata_file.close()
 
     def execute_galil_program(self):
         '''Little helper method to execute the program loaded onto the Galil stage:

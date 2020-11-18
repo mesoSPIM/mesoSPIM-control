@@ -9,6 +9,11 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
+Dark mode: Renders the UI dark
+'''
+dark_mode = False
+
+'''
 Waveform output for Galvos, ETLs etc.
 '''
 
@@ -156,6 +161,20 @@ camera_parameters = {'x_pixels' : 5056,
                      'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
                     }
 
+For a PCO Panda 4.2 bi with Lightsheet-Firmware (allowing rolling shutter operation):
+
+camera_parameters = {'x_pixels' : 2048,
+                     'y_pixels' : 2048,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'binning' : '1x1',
+                     'trigger': 'external exposure start & software trigger',
+                     'exp_time': 20e-3, # 20 ms Exposure
+                     'line_interval': 75e-6, # 75 us Line delay
+                     'line_exposure_delay' : 266 # 266 lines = 20 ms / 75 us - parameter is not used during initialization
+                    }
+
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'PhotometricsIris15'
 
@@ -188,7 +207,7 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -226,6 +245,17 @@ pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
+
+For microscope configuration with three independent stage controller use these params:
+pi_parameters = {'stage_x' : ('L-509.20SD00'),
+                 'serialnum_x' : ('**********'),
+                 'stage_y' : ('L-509.40SD00'),
+                 'serialnum_y' : ('**********'),
+                 'stage_z' : ('L-509.20SD00'),
+                 'serialnum_z' : ('**********'),
+                 'controllername' : ('C-663'),
+                 'refmode' : ('FRF')
+                 }
 '''
 
 '''
@@ -236,7 +266,7 @@ Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
 a valid COMport is necessary.
 '''
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl' or 'Sutter'
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
@@ -287,7 +317,8 @@ zoomdict = {'0.63x' : 3423,
             '5x' : 318,
             '6.3x' : 0}
 '''
-Pixelsize in micron
+Pixelsize in micron -- update these values with measured values from your instrument.
+These are used to calculate the FOV size & offset in the tiling wizard.
 '''
 pixelsize = {'0.63x' : 10.52,
             '0.8x' : 8.23,
@@ -300,6 +331,14 @@ pixelsize = {'0.63x' : 10.52,
             '4x' : 1.60,
             '5x' : 1.27,
             '6.3x' : 1.03}
+
+'''
+HDF5 parameters, when this format is used for data saving (optional).
+'''
+hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+        'compression': None, # None, 'gzip', 'lzf'
+        'flip_xyz': (True, True, False) # match BigDataViewer axes to mesoSPIM 
+        }
 
 '''
 Initial acquisition parameters
