@@ -44,7 +44,7 @@
        </item>
        <item>
         <property name="text">
-         <string>Resizable box</string>
+         <string>Box roi</string>
         </property>
        </item>
       </widget>

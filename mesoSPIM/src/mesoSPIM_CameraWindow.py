@@ -52,10 +52,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
 
-        # Create overlay ROIs
-        self.roi_box = pg.RectROI((self.x_image_width//2 - 50, self.y_image_width//2 - 50), (100, 100), centered=True)
-        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='g'), pg.TextItem(color='g', angle=90)
-
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "g", 'width': 1})
         self.vLine = pg.InfiniteLine(pos=self.x_image_width/2, angle=90, movable=False, pen=self.crosspen)
@@ -63,16 +59,17 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.graphicsView.addItem(self.vLine, ignoreBounds=True)
         self.graphicsView.addItem(self.hLine, ignoreBounds=True)
 
+        # Create overlay ROIs
+        self.roi_box = pg.RectROI((self.x_image_width//2 - 50, self.y_image_width//2 - 50), (100, 100))
+        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='g'), pg.TextItem(color='g', angle=90)
+        self.roi_list = [self.roi_box, self.roi_box_w_text, self.roi_box_h_text]
+
         # Set up CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.graphicsView.autoLevels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
-        self.roi_box.sigRegionChangeFinished.connect(self.update_roi_labels)
+        self.roi_box.sigRegionChangeFinished.connect(self.update_box_roi_labels)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
-    def um2px(self, um):
-        '''Unit converter'''
-        return um / self.cfg.pixelsize[self.state['zoom']]
 
     def px2um(self, px):
         '''Unit converter'''
@@ -81,18 +78,20 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     @QtCore.pyqtSlot(str)
     def change_overlay(self, overlay_name):
         ''''Changes the image overlay'''
-        if overlay_name == 'Resizable box':
-            self.update_roi_labels()
-            self.graphicsView.addItem(self.roi_box)
-            self.graphicsView.addItem(self.roi_box_w_text)
-            self.graphicsView.addItem(self.roi_box_h_text)
+        if overlay_name == 'Box roi':
+            self.update_box_roi_labels()
+            for item in self.roi_list:
+                self.graphicsView.addItem(item)
+        elif overlay_name == 'Overlay: none':
+            for item in self.roi_list:
+                self.graphicsView.removeItem(item)
 
     @QtCore.pyqtSlot()
-    def update_roi_labels(self):
+    def update_box_roi_labels(self):
         w, h = self.roi_box.size()
         x, y = self.roi_box.pos()
-        self.roi_box_w_text.setText(f"{int(self.px2um(w))} \u03BCm")
-        self.roi_box_h_text.setText(f"{int(self.px2um(h))} \u03BCm")
+        self.roi_box_w_text.setText(f"{int(self.px2um(w)):,} \u03BCm")
+        self.roi_box_h_text.setText(f"{int(self.px2um(h)):,} \u03BCm")
         self.roi_box_w_text.setPos(x, y + h)
         self.roi_box_h_text.setPos(x, y + h)
 
