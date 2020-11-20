@@ -2348,13 +2348,13 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         logger.info('mesoSPIM_Stages: ASI stages initialized')
         
-        ''' Stage 5 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.asi_stages.move_absolute
-
         self.counter = 0
         self.num_images_between_position_polls = 20 
         self.running_acquisition_flag = False
+        
+        ''' Stage 5 close to good focus'''
+        self.startfocus = self.cfg.stage_parameters['startfocus']
+        self.move_absolute({'f_abs':self.startfocus})
 
     def __del__(self):
         try:
@@ -2393,11 +2393,13 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
             if self.pos_timer.isActive():
                 self.pos_timer.stop()
-            if self.counter % self.num_images_between_position_polls == 0:
-                self.report_position()
             if self.running_acquisition_flag == False:
                 self.running_acquisition_flag = True 
-                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
+                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!', 0)
+                # self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
+            if self.counter % self.num_images_between_position_polls == 0:
+                # self.report_position()
+                pass
         else:
             self.running_acquisition_flag = False 
             if not self.pos_timer.isActive():
@@ -2467,6 +2469,8 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         Lots of implementation details in here, should be replaced by a facade
         '''
+        self.adapt_position_polling_interval_to_state()
+
         motion_dict = {}
 
         if 'x_abs' in dict:
