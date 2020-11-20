@@ -61,7 +61,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         # Create overlay ROIs
         self.roi_box = pg.RectROI((self.x_image_width//2 - 50, self.y_image_width//2 - 50), (100, 100))
-        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='g'), pg.TextItem(color='r', angle=90)
+        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='r'), pg.TextItem(color='r', angle=90)
         self.roi_list = [self.roi_box, self.roi_box_w_text, self.roi_box_h_text]
 
         # Set up CameraWindow signals
