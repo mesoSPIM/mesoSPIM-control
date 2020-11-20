@@ -53,7 +53,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
 
         ''' Initialize crosshairs '''
-        self.crosspen = pg.mkPen({'color': "g", 'width': 1})
+        self.crosspen = pg.mkPen({'color': "r", 'width': 1})
         self.vLine = pg.InfiniteLine(pos=self.x_image_width/2, angle=90, movable=False, pen=self.crosspen)
         self.hLine = pg.InfiniteLine(pos=self.y_image_width/2, angle=0, movable=False, pen=self.crosspen)
         self.graphicsView.addItem(self.vLine, ignoreBounds=True)
