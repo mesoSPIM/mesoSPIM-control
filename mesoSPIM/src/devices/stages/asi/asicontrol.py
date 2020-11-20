@@ -67,6 +67,9 @@ class StageControlASITango(QtCore.QObject):
             time.sleep(delay)
             message = self.asi_connection.readline()
             time.sleep(delay)
+            ''' Logging of all serial connections '''
+            #logger.info('Serial sent: ' + str(command))
+            #logger.info('Serial recv: ' + str(message))
             return message
         except Exception as error:
             logger.info('Serial exception of the ASI stage: ' + str(error))
