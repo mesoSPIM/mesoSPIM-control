@@ -50,7 +50,7 @@ class StageControlASITango(QtCore.QObject):
         '''Closes connection to the stage'''
         self.asi_connection.close()
     
-    def _send_command(self, command, delay=0.005):
+    def _send_command(self, command, delay=0.01):
         '''Sends a command to the controller
         
         Try-except block included to catch errors - this is dangerous - no checking of success 
@@ -63,13 +63,13 @@ class StageControlASITango(QtCore.QObject):
         '''
         try:
             # print(time.time(), ' ', command.decode('UTF-8'))
+            start_time = time.time() 
             self.asi_connection.write(command)
             time.sleep(delay)
             message = self.asi_connection.readline()
-            time.sleep(delay)
+            response_time = time.time() 
             ''' Logging of all serial connections '''
-            #logger.info('Serial sent: ' + str(command))
-            #logger.info('Serial recv: ' + str(message))
+            logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Response time: ' + str(round(response_time-start_time, 6)))
             return message
         except Exception as error:
             logger.info('Serial exception of the ASI stage: ' + str(error))
