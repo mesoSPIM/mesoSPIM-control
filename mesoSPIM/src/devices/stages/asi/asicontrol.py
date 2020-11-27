@@ -30,7 +30,6 @@ class StageControlASITango(QtCore.QObject):
 
     def __init__(self, port, baudrate, stage_assigment):
         super().__init__()
-        
         self.port = port
         self.baudrate = baudrate
         self.stage_assignment = stage_assigment
@@ -68,8 +67,10 @@ class StageControlASITango(QtCore.QObject):
             time.sleep(delay)
             message = self.asi_connection.readline()
             response_time = time.time() 
-            ''' Logging of all serial connections '''
-            logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Response time: ' + str(round(response_time-start_time, 6)))
+            ''' Logging of serial connections if response >15 ms'''
+            delta_t = round(response_time - start_time, 6)
+            if delta_t > 0.015:
+                logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Position: ' + str(position) + ' Response time (>15 ms): ' + str(delta_t))
             return message
         except Exception as error:
             logger.info('Serial exception of the ASI stage: ' + str(error))
