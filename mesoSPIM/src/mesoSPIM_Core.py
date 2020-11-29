@@ -795,7 +795,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 if f_step != 0:
                     # print('F step: ', f_step)
                     move_dict.update({'f_rel':f_step})
-
+                
                 self.move_relative(move_dict)
 
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
