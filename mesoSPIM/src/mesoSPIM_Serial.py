@@ -42,6 +42,8 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_mark_rotation_position = QtCore.pyqtSignal()
 
     sig_status_message = QtCore.pyqtSignal(str, int)
+
+    sig_pause = QtCore.pyqtSignal(bool)
     
     def __init__(self, parent):
         super().__init__()
