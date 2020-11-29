@@ -2375,6 +2375,11 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
             self.sig_pause.emit(boolean)
 
+    @QtCore.pyqtSlot(dict)
+    def log_slice(self, dictionary):
+        slice = dictionary['current_image_in_acq']
+        self.asi_stages.current_z_slice = slice
+
     def report_position(self):
         position_dict = self.asi_stages.read_position()
         if position_dict is not None:

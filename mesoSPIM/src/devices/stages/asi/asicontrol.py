@@ -47,6 +47,8 @@ class StageControlASITango(QtCore.QObject):
 
         self.previous_command = ''
 
+        self.current_z_slice = 0
+
     def close(self):
         '''Closes connection to the stage'''
         self.asi_connection.close()
@@ -77,7 +79,7 @@ class StageControlASITango(QtCore.QObject):
             ''' Logging of serial connections if response >15 ms'''
             delta_t = round(response_time - start_time, 6)
             if delta_t > 0.015:
-                logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Position: ' + 'Not implemented yetIO' + ' Response time (>15 ms): ' + str(delta_t))
+                logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time (>15 ms): ' + str(delta_t))
             return message
         except Exception as error:
             logger.info('Serial exception of the ASI stage: ' + str(error))
