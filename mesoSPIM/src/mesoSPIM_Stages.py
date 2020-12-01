@@ -2569,7 +2569,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
     * ASI Z-Stage is equivalent to the mesoSPIM f-stage (focus)
 
     '''
-
+    sig_pause = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -2588,6 +2588,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
         self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
+        self.asi_stages.sig_pause.connect(self.pause)
 
         self.pos_timer_polling_interval = 500  
         self.pos_timer.stop()
@@ -2601,10 +2602,6 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         self.num_images_between_position_polls = 20 
         self.running_acquisition_flag = False
         
-        ''' Stage 5 close to good focus'''
-        #self.startfocus = self.cfg.stage_parameters['startfocus']
-        #self.move_absolute({'f_abs':self.startfocus})
-
     def __del__(self):
         try:
             '''Close the ASI connection'''
@@ -2612,6 +2609,17 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
             logger.info('ASI Stage disconnected')
         except:
             logger.info('Error while disconnecting the ASI stage')
+
+    @QtCore.pyqtSlot(bool)
+    def pause(self,boolean):
+        state = self.state['state']
+        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+            self.sig_pause.emit(boolean)
+
+    @QtCore.pyqtSlot(dict)
+    def log_slice(self, dictionary):
+        slice = dictionary['current_image_in_acq']
+        self.asi_stages.current_z_slice = slice
 
     def report_position(self):
         position_dict = self.asi_stages.read_position()
