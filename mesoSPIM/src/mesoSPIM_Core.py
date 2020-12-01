@@ -141,6 +141,7 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
         self.serial_worker.sig_position.connect(self.sig_position.emit)
         self.serial_worker.sig_status_message.connect(self.send_status_message_to_gui)
+        self.serial_worker.sig_pause.connect(self.pause)
 
         # ''' Setting another demo thread up '''
         # self.demo_thread = QtCore.QThread()
@@ -206,6 +207,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.start_time = 0
         self.stopflag = False
+        self.pauseflag = False
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
@@ -336,6 +338,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state']='idle'
         self.sig_update_gui_from_state.emit(False)
         self.sig_finished.emit()
+
+    @QtCore.pyqtSlot(bool)
+    def pause(self, boolean):
+        self.pauseflag = boolean
 
     def send_progress(self,
                       cur_acq,
@@ -566,6 +572,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.snap_image()
             self.sig_get_live_image.emit()
 
+            while self.pauseflag is True:
+                time.sleep(0.1)
+                QtWidgets.QApplication.processEvents()
+
             QtWidgets.QApplication.processEvents()
 
             ''' How to handle a possible shutter switch?'''
@@ -795,9 +805,17 @@ class mesoSPIM_Core(QtCore.QObject):
                 if f_step != 0:
                     # print('F step: ', f_step)
                     move_dict.update({'f_rel':f_step})
-                
+
+                ''' The pauseflag allows:
+                    - pausing running acquisitions
+                    - wait for slow hardware to catch up (e.g. slow stages)
+                '''
                 self.move_relative(move_dict)
 
+                while self.pauseflag is True:
+                    time.sleep(0.02)
+                    QtWidgets.QApplication.processEvents()
+                
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
                 self.image_count += 1
 

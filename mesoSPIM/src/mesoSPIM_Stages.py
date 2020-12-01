@@ -33,6 +33,8 @@ class mesoSPIM_Stage(QtCore.QObject):
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str,int)
 
+    sig_pause = QtCore.pyqtSignal(bool)
+
     def __init__(self, parent = None):
         super().__init__()
         self.parent = parent
@@ -2321,6 +2323,7 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
     '''
+    sig_pause = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -2339,6 +2342,8 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
         self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
+
+        self.asi_stages.sig_pause.connect(self.pause)
 
         self.pos_timer_polling_interval = 500  
         self.pos_timer.stop()
@@ -2363,6 +2368,17 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
             logger.info('ASI Stage disconnected')
         except:
             logger.info('Error while disconnecting the ASI stage')
+
+    @QtCore.pyqtSlot(bool)
+    def pause(self,boolean):
+        state = self.state['state']
+        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+            self.sig_pause.emit(boolean)
+
+    @QtCore.pyqtSlot(dict)
+    def log_slice(self, dictionary):
+        slice = dictionary['current_image_in_acq']
+        self.asi_stages.current_z_slice = slice
 
     def report_position(self):
         position_dict = self.asi_stages.read_position()

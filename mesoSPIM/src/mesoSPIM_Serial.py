@@ -42,6 +42,8 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_mark_rotation_position = QtCore.pyqtSignal()
 
     sig_status_message = QtCore.pyqtSignal(str, int)
+
+    sig_pause = QtCore.pyqtSignal(bool)
     
     def __init__(self, parent):
         super().__init__()
@@ -97,6 +99,9 @@ class mesoSPIM_Serial(QtCore.QObject):
         elif self.cfg.stage_parameters['stage_type'] == 'TangoASI':
             self.stage = mesoSPIM_ASI_Tango_Stage(self)
             self.stage.sig_position.connect(self.report_position)
+            self.stage.sig_pause.connect(self.pause)
+            self.parent.sig_progress.connect(self.stage.log_slice)
+            #self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
             self.stage = mesoSPIM_ASI_MS2000_Stage(self)
             self.stage.sig_position.connect(self.report_position)
@@ -175,6 +180,10 @@ class mesoSPIM_Serial(QtCore.QObject):
     @QtCore.pyqtSlot(str, int)
     def send_status_message(self, string, time):
         self.sig_status_message.emit(string, time)
+
+    @QtCore.pyqtSlot(bool)
+    def pause(self, boolean):
+        self.sig_pause.emit(boolean)
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):

@@ -14,6 +14,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class StageControlASITango(QtCore.QObject):
+    sig_pause = QtCore.pyqtSignal(bool)
+
     '''
     Class to control a ASI Tango mechanical stage controller
     
@@ -45,6 +47,8 @@ class StageControlASITango(QtCore.QObject):
 
         self.previous_command = ''
 
+        self.current_z_slice = 0
+
     def close(self):
         '''Closes connection to the stage'''
         self.asi_connection.close()
@@ -65,12 +69,17 @@ class StageControlASITango(QtCore.QObject):
             start_time = time.time() 
             self.asi_connection.write(command)
             time.sleep(delay)
+            ''' During acquisitions: send pause signal '''
+            self.sig_pause.emit(True)
             message = self.asi_connection.readline()
             response_time = time.time() 
+            ''' During acquistions: send unpause signal '''
+            self.sig_pause.emit(False)
+
             ''' Logging of serial connections if response >15 ms'''
             delta_t = round(response_time - start_time, 6)
             if delta_t > 0.015:
-                logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Position: ' + str(position) + ' Response time (>15 ms): ' + str(delta_t))
+                logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time (>15 ms): ' + str(delta_t))
             return message
         except Exception as error:
             logger.info('Serial exception of the ASI stage: ' + str(error))
