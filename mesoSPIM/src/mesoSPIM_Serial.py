@@ -101,10 +101,11 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage.sig_position.connect(self.report_position)
             self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
-            #self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
             self.stage = mesoSPIM_ASI_MS2000_Stage(self)
             self.stage.sig_position.connect(self.report_position)
+            self.stage.sig_pause.connect(self.pause)
+            self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
             self.stage.sig_position.connect(self.report_position)
