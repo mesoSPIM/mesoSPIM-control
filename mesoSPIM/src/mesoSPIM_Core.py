@@ -810,7 +810,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     - pausing running acquisitions
                     - wait for slow hardware to catch up (e.g. slow stages)
                 '''
-                self.move_relative(move_dict)
+                self.move_relative(move_dict, wait_until_done=True)
 
                 while self.pauseflag is True:
                     time.sleep(0.02)
