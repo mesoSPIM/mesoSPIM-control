@@ -52,6 +52,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state['galvo_l_offset'] = self.cfg.startup['galvo_l_offset']
         self.state['galvo_r_offset'] = self.cfg.startup['galvo_r_offset']
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
+        self.state['stage_trigger_delay_%'] = self.cfg.startup['stage_trigger_delay_%']
+        self.state['stage_trigger_pulse_%'] = self.cfg.startup['stage_trigger_pulse_%']
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -361,6 +363,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         These are:
         - the master trigger task, a digital out task that only provides a trigger pulse for the others
         - the camera trigger task, a counter task that triggers the camera in lightsheet mode
+        - the stage trigger task, a counter task that provides a TTL trigger for stages that allow triggered movement (e.g. ASI stages)
         - the galvo task (analog out) that controls the left & right galvos for creation of
           the light-sheet and shadow avoidance
         - the ETL & Laser task (analog out) that controls all the laser intensities (Laser should only
@@ -372,9 +375,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
         samples = self.samples
         camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%','camera_delay_%'])
+        stage_trigger_pulse_percent, stage_delay_percent = self.state.get_parameter_list(['stage_trigger_pulse_%','stage_trigger_delay_%'])
 
         self.master_trigger_task = nidaqmx.Task()
         self.camera_trigger_task = nidaqmx.Task()
+        self.stage_trigger_task = nidaqmx.Task()
         self.galvo_etl_task = nidaqmx.Task()
         self.laser_task = nidaqmx.Task()
 
@@ -390,12 +395,21 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.camera_high_time = camera_pulse_percent*0.01*sweeptime
         self.camera_delay = camera_delay_percent*0.01*sweeptime
 
+        self.stage_high_time = stage_trigger_pulse_percent * 0.01 * sweeptime
+        self.stage_delay = stage_delay_percent * 0.01 * sweeptime
+
         '''Housekeeping: Setting up the counter task for the camera trigger'''
         self.camera_trigger_task.co_channels.add_co_pulse_chan_time(ah['camera_trigger_out_line'],
                                                                     high_time=self.camera_high_time,
                                                                     initial_delay=self.camera_delay)
 
         self.camera_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['camera_trigger_source'])
+
+        '''Housekeeping: Setting up the counter task for the stage TTL trigger '''
+        self.stage_trigger_task.co_channels.add_co_pulse_chan_time(ah['stage_trigger_out_line'],
+                                                                    high_time=self.stage_high_time,
+                                                                    initial_delay=self.stage_delay)
+        self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['stage_trigger_source'])
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'])
@@ -423,6 +437,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         signals until run_tasks() is called.
         '''
         self.camera_trigger_task.start()
+        self.stage_trigger_task.start()
         self.galvo_etl_task.start()
         self.laser_task.start()
 
@@ -441,12 +456,14 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.galvo_etl_task.wait_until_done()
         self.laser_task.wait_until_done()
         self.camera_trigger_task.wait_until_done()
+        self.stage_trigger_task.wait_until_done()
 
     def stop_tasks(self):
         '''Stops the tasks for triggering, analog and counter outputs'''
         self.galvo_etl_task.stop()
         self.laser_task.stop()
         self.camera_trigger_task.stop()
+        self.stage_trigger_task.stop()
         self.master_trigger_task.stop()
 
     def close_tasks(self):
@@ -457,6 +474,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.galvo_etl_task.close()
         self.laser_task.close()
         self.camera_trigger_task.close()
+        self.stage_trigger_task.close()
         self.master_trigger_task.close()
 
 class mesoSPIM_DemoWaveFormGenerator(QtCore.QObject):
