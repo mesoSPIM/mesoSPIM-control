@@ -78,8 +78,8 @@ class StageControlASITango(QtCore.QObject):
 
             ''' Logging of serial connections if response >15 ms'''
             delta_t = round(response_time - start_time, 6)
-            if delta_t > 0.015:
-                logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time (>15 ms): ' + str(delta_t))
+            # if delta_t > 0.015:
+            logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time (>15 ms): ' + str(delta_t))
             return message
         except Exception as error:
             logger.info('Serial exception of the ASI stage: ' + str(error))
@@ -182,4 +182,33 @@ class StageControlASITango(QtCore.QObject):
                 
         if command_string != 'M':
             command_string += '\r\n'
-            self._send_command(command_string.encode('UTF-8'))         
+            self._send_command(command_string.encode('UTF-8'))
+
+    def enable_ttl_mode(self, card_ids, bool):
+        ''' Enables or disables TTL mode of ASI controllers
+
+        Args:
+            card_ids (list): List of card IDs inside the controller (i.e. (2,3) for cards in slots 2 and 3) for 
+                            which TTL triggering should be enabled or disabled. If None, the controller is assumed
+                            not to have any card slots, i.e. an MS-2000 controller
+            
+            bool (boolean): True or False depending on whether TTL mode should be enabled or disabled.
+        '''
+        if card_ids is not None: # Tiger controller
+            if bool is True: # Enable TTL mode for all cards
+                for i in card_ids:
+                    command_string = str(i) + ' TTL X=2 Y=2\r\n'
+                    self._send_command(command_string.encode('UTF-8'))
+                    logger.info('Send string to ASI controller: ' + command_string)
+            else: # Disable TTL mode for all cards
+                for i in card_ids:
+                    command_string = str(i) + ' TTL X=0 Y=2\r\n'
+                    self._send_command(command_string.encode('UTF-8'))
+                    logger.info('Send string to ASI controller: ' + command_string)
+        else: # MS-2000 controller
+            if bool is True:
+                self._send_command(b'TTL X=2 Y=2\r\n') # MS-2000 TTL mode should be enabled
+                logger.info('Send string to ASI controller: ' + command_string)
+            else:
+                self._send_command(b'TTL X=0 Y=2\r\n') # MS-2000 TTL mode should be disabled
+                logger.info('Send string to ASI controller: ' + command_string)

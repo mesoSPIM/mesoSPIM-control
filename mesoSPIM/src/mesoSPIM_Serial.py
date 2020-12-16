@@ -160,6 +160,9 @@ class mesoSPIM_Serial(QtCore.QObject):
             if key == 'stage_program':
                 self.execute_stage_program()
             # Log Thread ID during Live: just debugging code
+            if key == 'ttl_movement_enabled_during_acq':
+                self.enable_ttl_motion(value)
+
             if key == 'state':
                 if value == 'live':
                     logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
@@ -185,6 +188,10 @@ class mesoSPIM_Serial(QtCore.QObject):
     @QtCore.pyqtSlot(bool)
     def pause(self, boolean):
         self.sig_pause.emit(boolean)
+
+    @QtCore.pyqtSlot(bool)
+    def enable_ttl_motion(self, boolean):
+        self.stage.enable_ttl_motion(boolean)
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
