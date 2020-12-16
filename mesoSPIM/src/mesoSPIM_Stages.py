@@ -2547,4 +2547,208 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         if wait_until_done == True:
             self.asi_stages.wait_until_done()
 
+class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
+    '''
+
+    It is expected that the parent class has the following signals:
+        sig_move_relative = pyqtSignal(dict)
+        sig_move_relative_and_wait_until_done = pyqtSignal(dict)
+        sig_move_absolute = pyqtSignal(dict)
+        sig_move_absolute_and_wait_until_done = pyqtSignal(dict)
+        sig_zero = pyqtSignal(list)
+        sig_unzero = pyqtSignal(list)
+        sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
+
+    Also contains a QTimer that regularily sends position updates, e.g
+    during the execution of movements.
+
+    This implements an ASI MS2000 controller for a setup with the following configuration
+    * ASI X Stage is equivalent to the mesoSPIM z-stage (moved during stacks direction)
+    * ASI Y Stage is equivalent to the mesoSPIM y-stage  
+    * ASI Z-Stage is equivalent to the mesoSPIM f-stage (focus)
+
+    '''
+    sig_pause = QtCore.pyqtSignal(bool)
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        self.state = mesoSPIM_StateSingleton()
+        '''
+        ASI-specific code
+        '''
+        from src.devices.stages.asi.asicontrol import StageControlASITango
+        
+        ''' Setting up the ASI stages '''
+        self.asi_parameters = self.cfg.asi_parameters
+        self.port = self.asi_parameters['COMport']
+        self.baudrate = self.asi_parameters['baudrate']
+        self.mesoSPIM2ASIdict = self.asi_parameters['stage_assignment'] # converts mesoSPIM stage to ASI stage designation
+        # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
+
+        self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
+        self.asi_stages.sig_pause.connect(self.pause)
+
+        self.pos_timer_polling_interval = 500  
+        self.pos_timer.stop()
+        self.pos_timer = QtCore.QTimer(self)
+        self.pos_timer.timeout.connect(self.report_position)
+        self.pos_timer.start(self.pos_timer_polling_interval)
+
+        logger.info('mesoSPIM_Stages: ASI stages initialized')
+        
+        self.counter = 0
+        self.num_images_between_position_polls = 20 
+        self.running_acquisition_flag = False
+        
+    def __del__(self):
+        try:
+            '''Close the ASI connection'''
+            self.asi_stages.close()
+            logger.info('ASI Stage disconnected')
+        except:
+            logger.info('Error while disconnecting the ASI stage')
+
+    @QtCore.pyqtSlot(bool)
+    def pause(self,boolean):
+        state = self.state['state']
+        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+            self.sig_pause.emit(boolean)
+
+    @QtCore.pyqtSlot(dict)
+    def log_slice(self, dictionary):
+        slice = dictionary['current_image_in_acq']
+        self.asi_stages.current_z_slice = slice
+
+    def report_position(self):
+        position_dict = self.asi_stages.read_position()
+        if position_dict is not None:
+            self.y_pos = position_dict[self.mesoSPIM2ASIdict['y']]
+            self.z_pos = position_dict[self.mesoSPIM2ASIdict['z']]
+            self.f_pos = position_dict[self.mesoSPIM2ASIdict['f']]
+            
+            self.create_position_dict()
+
+            self.int_y_pos = self.y_pos + self.int_y_pos_offset
+            self.int_z_pos = self.z_pos + self.int_z_pos_offset
+            self.int_f_pos = self.f_pos + self.int_f_pos_offset
+
+            self.create_internal_position_dict()
+
+            self.sig_position.emit(self.int_position_dict)
+
+    def adapt_position_polling_interval_to_state(self):
+        ''' Helper method to avoid stage hickups with the ASI stages via a serial connection: 
+            During acquisitions, the stage is only polled in long intervals
+        '''
+        state = self.state['state']
+        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+            if self.pos_timer.isActive():
+                self.pos_timer.stop()
+            if self.running_acquisition_flag == False:
+                self.running_acquisition_flag = True 
+                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!', 0)
+                # self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
+            if self.counter % self.num_images_between_position_polls == 0:
+                # self.report_position()
+                pass
+        else:
+            self.running_acquisition_flag = False 
+            if not self.pos_timer.isActive():
+                self.pos_timer.start(self.pos_timer_polling_interval)
+
+        self.counter += 1
+       
+    def move_relative(self, dict, wait_until_done=False):
+        ''' ASI move relative method
+
+        Lots of implementation details in here, should be replaced by a facade
+        '''
+
+        '''
+        Report position 
+
+        '''
+        self.adapt_position_polling_interval_to_state()
+
+        motion_dict = {}
+
+        if 'y_rel' in dict:
+            y_rel = dict['y_rel']
+            if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
+                motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_rel, 1)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
+
+        if 'z_rel' in dict:
+            z_rel = dict['z_rel']
+            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_rel, 1)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+        
+        if 'f_rel' in dict:
+            f_rel = dict['f_rel']
+            if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
+                motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_rel, 1)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+
+        if motion_dict != {}:
+            self.asi_stages.move_relative(motion_dict)
+
+        if wait_until_done == True:
+            self.asi_stages.wait_until_done()
     
+    def move_absolute(self, dict, wait_until_done=False):
+        '''
+        ASI move absolute method
+
+        Lots of implementation details in here, should be replaced by a facade
+        '''
+        self.adapt_position_polling_interval_to_state()
+
+        motion_dict = {}
+
+        if 'y_abs' in dict:
+            y_abs = dict['y_abs']
+            y_abs = y_abs - self.int_y_pos_offset
+            if self.y_min < y_abs and self.y_max > y_abs:
+                motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_abs, 1)})
+                    
+        if 'z_abs' in dict:
+            z_abs = dict['z_abs']
+            z_abs = z_abs - self.int_z_pos_offset
+            if self.z_min < z_abs and self.z_max > z_abs:
+                motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_abs, 1)})
+
+        if 'f_abs' in dict:
+            f_abs = dict['f_abs']
+            f_abs = f_abs - self.int_f_pos_offset
+            if self.f_min < f_abs and self.f_max > f_abs:
+                motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_abs, 1)})
+
+        if motion_dict != {}:
+            self.asi_stages.move_absolute(motion_dict)
+        
+        if wait_until_done == True:
+            self.asi_stages.wait_until_done()
+        
+    def stop(self):
+        self.asi_stages.stop()
+
+    def load_sample(self):
+        message = 'ASI MS-2000 Stage: Sample loading not implemented!'
+        print(message)
+        logger.info(message)
+
+    def unload_sample(self):
+        message = 'ASI MS-2000 Stage: Sample unloading not implemented!'
+        print(message)
+        logger.info(message)
+
+    def go_to_rotation_position(self, wait_until_done=False):
+        message = 'ASI MS-2000 Stage: Rotation position not implemented!'
+        print(message)
+        logger.info(message)
