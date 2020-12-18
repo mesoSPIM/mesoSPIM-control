@@ -116,6 +116,9 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.x_rot_position = self.cfg.stage_parameters['x_rot_position']
         self.y_rot_position = self.cfg.stage_parameters['y_rot_position']
         self.z_rot_position = self.cfg.stage_parameters['z_rot_position']
+
+        self.ttl_motion_enabled_during_acq = self.cfg.stage_parameters['ttl_motion_enabled']
+        self.ttl_motion_currently_enabled = False
         '''
         Debugging code
         '''
@@ -280,6 +283,10 @@ class mesoSPIM_Stage(QtCore.QObject):
         '''
         print('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
         logger.info('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
+
+    def enable_ttl_motion(self, boolean):
+        if self.ttl_motion_enabled_during_acq:
+            self.ttl_motion_currently_enabled = boolean
 
 class mesoSPIM_DemoStage(mesoSPIM_Stage):
     def __init__(self, parent = None):
@@ -2341,6 +2348,8 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         self.mesoSPIM2ASIdict = self.asi_parameters['stage_assignment'] # converts mesoSPIM stage to ASI stage designation
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
+        self.ttl_cards = self.asi_parameters['ttl_cards']
+
         self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
 
         self.asi_stages.sig_pause.connect(self.pause)
@@ -2427,57 +2436,57 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         ''' ASI move relative method
 
         Lots of implementation details in here, should be replaced by a facade
+
+        During "
         '''
 
-        '''
-        Report position 
-
-        '''
         self.adapt_position_polling_interval_to_state()
 
         motion_dict = {}
 
-        if 'x_rel' in dict:
-            x_rel = dict['x_rel']
-            if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_rel, 1)})
-            else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
-
-        if 'y_rel' in dict:
-            y_rel = dict['y_rel']
-            if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_rel, 1)})
-            else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
-
-        if 'z_rel' in dict:
-            z_rel = dict['z_rel']
-            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_rel, 1)})
-            else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+        if not self.ttl_motion_currently_enabled:
         
-        if 'theta_rel' in dict:
-            theta_rel = dict['theta_rel']
-            if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
-                ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
-                motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_rel*100)})
-            else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
+            if 'x_rel' in dict:
+                x_rel = dict['x_rel']
+                if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
+                    motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_rel, 1)})
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
 
-        if 'f_rel' in dict:
-            f_rel = dict['f_rel']
-            if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
-                motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_rel, 1)})
-            else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+            if 'y_rel' in dict:
+                y_rel = dict['y_rel']
+                if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
+                    motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_rel, 1)})
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
 
-        if motion_dict != {}:
-            self.asi_stages.move_relative(motion_dict)
+            if 'z_rel' in dict:
+                z_rel = dict['z_rel']
+                if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                    motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_rel, 1)})
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+            
+            if 'theta_rel' in dict:
+                theta_rel = dict['theta_rel']
+                if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
+                    ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
+                    motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_rel*100)})
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
 
-        if wait_until_done == True:
-            self.asi_stages.wait_until_done()
+            if 'f_rel' in dict:
+                f_rel = dict['f_rel']
+                if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
+                    motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_rel, 1)})
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+
+            if motion_dict != {}:
+                self.asi_stages.move_relative(motion_dict)
+
+            if wait_until_done == True:
+                self.asi_stages.wait_until_done()
     
     def move_absolute(self, dict, wait_until_done=False):
         '''
@@ -2485,6 +2494,7 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         Lots of implementation details in here, should be replaced by a facade
         '''
+
         self.adapt_position_polling_interval_to_state()
 
         motion_dict = {}
@@ -2542,10 +2552,18 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         y_abs = self.y_rot_position
         z_abs = self.z_rot_position
 
-        self.asi_stages.move_absolute({'x_abs':x_abs, 'y_abs':y_abs, 'z_abs':z_abs})
+        self.move_absolute({'x_abs':x_abs, 'y_abs':y_abs, 'z_abs':z_abs})
 
         if wait_until_done == True:
             self.asi_stages.wait_until_done()
+
+    def enable_ttl_motion(self, boolean):
+        if self.ttl_motion_enabled_during_acq:
+            self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
+            self.ttl_motion_currently_enabled = boolean
+            logger.info('TTL Motion currently enabled: '+str(boolean))
+            self.state['ttl_movement_enabled_during_acq'] = boolean
+        
 
 class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
     '''

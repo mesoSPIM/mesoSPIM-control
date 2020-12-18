@@ -123,14 +123,23 @@ class Acquisition(indexed.IndexedOrderedDict):
 
         return self.get_image_count()/framerate
 
-    def get_delta_z_dict(self):
-        ''' Returns relative movement dict for z-steps '''
+    def get_delta_z_and_delta_f_dict(self, inverted = False):
+        ''' Returns relative movement dict for z- and f-steps '''
         if self['z_end'] > self['z_start']:
             z_rel = abs(self['z_step'])
         else:
             z_rel = -abs(self['z_step'])
 
-        return {'z_rel' : z_rel}
+        ''' Calculate f-step '''
+        image_count = self.get_image_count()
+        f_rel = abs((self['f_end'] - self['f_start'])/image_count)
+        if self['f_end'] < self['f_start']:
+            f_rel = -f_rel
+        
+        if not inverted:
+            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : z_rel, 'f_rel' : f_rel, 'theta_rel': 0}
+        else:
+            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : -z_rel, 'f_rel' : -f_rel, 'theta_rel': 0}
 
     def get_delta_dict(self):
         ''' Returns relative movement dict for z-steps and f-steps'''

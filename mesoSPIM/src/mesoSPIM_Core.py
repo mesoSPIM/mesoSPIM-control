@@ -208,6 +208,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.start_time = 0
         self.stopflag = False
         self.pauseflag = False
+
+        self.TTL_mode_enabled_in_cfg = self.cfg.stage_parameters['ttl_motion_enabled']
+
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
@@ -769,6 +772,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.f_step_generator = acq.get_focus_stepsize_generator()
 
+               
+        if self.TTL_mode_enabled_in_cfg is True:
+            ''' The relative movement has to be carried out once with the ASI-controller '''
+            self.move_relative(acq.get_delta_z_and_delta_f_dict(inverted=True))
+            time.sleep(0.3)
+            self.move_relative(acq.get_delta_z_and_delta_f_dict())
+            self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : True})
+
         self.sig_status_message.emit('Preparing camera: Allocating memory',0)
         self.sig_prepare_image_series.emit(acq, acq_list)
         self.prepare_image_series()
@@ -786,6 +797,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.image_acq_start_time = time.time()
         self.image_acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
+        move_dict = acq.get_delta_dict()
+
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
@@ -799,7 +812,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 # self.sig_add_images_to_image_series_and_wait_until_done.emit()
 
                 # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-                move_dict = acq.get_delta_dict()
+
                 ''' Get the current correct f_step'''
                 f_step = self.f_step_generator.__next__()
                 if f_step != 0:
@@ -867,6 +880,9 @@ class mesoSPIM_Core(QtCore.QObject):
             # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
             self.sig_end_image_series.emit(acq, acq_list)
+
+        if self.TTL_mode_enabled_in_cfg is True:
+            self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : False})
 
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
