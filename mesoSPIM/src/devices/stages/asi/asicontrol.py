@@ -202,16 +202,16 @@ class StageControlASITango(QtCore.QObject):
                 for i in card_ids:
                     command_string = str(i) + ' TTL X=2 Y=2\r\n'
                     self._send_command(command_string.encode('UTF-8'))
-                    logger.info('Send string to ASI controller: ' + command_string)
+                    logger.info('Sending string to ASI controller: ' + command_string)
             else: # Disable TTL mode for all cards
                 for i in card_ids:
                     command_string = str(i) + ' TTL X=0 Y=2\r\n'
                     self._send_command(command_string.encode('UTF-8'))
-                    logger.info('Send string to ASI controller: ' + command_string)
+                    logger.info('Sending string to ASI controller: ' + command_string)
         else: # MS-2000 controller
             if bool is True:
                 self._send_command(b'TTL X=2 Y=2\r\n') # MS-2000 TTL mode should be enabled
-                logger.info('Send string to ASI controller: ' + command_string)
+                logger.info('Sending string to ASI controller: ' + 'TTL X=2 Y=2')
             else:
                 self._send_command(b'TTL X=0 Y=2\r\n') # MS-2000 TTL mode should be disabled
-                logger.info('Send string to ASI controller: ' + command_string)
+                logger.info('Sending string to ASI controller: ' + 'TTL X=0 Y=2')
