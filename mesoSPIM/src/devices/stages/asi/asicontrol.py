@@ -112,12 +112,15 @@ class StageControlASITango(QtCore.QObject):
         '''
         self.stage_busy = True
         while self.stage_busy is True:
-            message1 = self._send_command(b'/\r\n').decode('UTF-8')[0]
-            time.sleep(0.1)
-            message2 = self._send_command(b'/\r\n').decode('UTF-8')[0]
-            time.sleep(0.1)
-            if message1 == 'N' and message2 == 'N':
-                self.stage_busy = False
+            try: 
+                message1 = self._send_command(b'/\r\n').decode('UTF-8')[0]
+                time.sleep(0.1)
+                message2 = self._send_command(b'/\r\n').decode('UTF-8')[0]
+                time.sleep(0.1)
+                if message1 == 'N' and message2 == 'N':
+                    self.stage_busy = False
+            except:
+                logger.info('ASI stages: Wait until done failed')
         
     def read_position(self):
         '''Reports position from the stages 
