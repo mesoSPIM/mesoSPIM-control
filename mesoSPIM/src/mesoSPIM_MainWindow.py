@@ -349,7 +349,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.zMinusButton.setEnabled(False)
             self.zZeroButton.setEnabled(False)
 
-        if self.cfg.ui_options['enable_z_buttons'] is False:
+        if self.cfg.ui_options['enable_f_buttons'] is False:
             self.focusPlusButton.setEnabled(False)
             self.focusMinusButton.setEnabled(False)
             self.focusZeroButton.setEnabled(False) 
