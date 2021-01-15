@@ -845,10 +845,12 @@ class mesoSPIM_PI_z_Stage(mesoSPIM_Stage):
         
 
         ''' Stage 5 referencing hack '''
+        '''
         self.pidevice.FRF(1)
         logger.info('mesoSPIM_Stages: Referencing z-stage: Waiting for referencing move')
         self.block_till_controller_is_ready()
         logger.info('mesoSPIM_Stages:R eferencing z-stage:Emergency referencing hack done')
+        '''
         
     def __del__(self):
         try:
@@ -879,7 +881,7 @@ class mesoSPIM_PI_z_Stage(mesoSPIM_Stage):
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                 z_rel = z_rel/1000
-                self.pidevice.MVR({3 : z_rel})
+                self.pidevice.MVR({1 : z_rel})
             else:
                 self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
 
@@ -902,7 +904,7 @@ class mesoSPIM_PI_z_Stage(mesoSPIM_Stage):
             if self.z_min < z_abs and self.z_max > z_abs:
                 ''' Conversion to mm and command emission'''
                 z_abs= z_abs/1000
-                self.pidevice.MOV({3 : z_abs})
+                self.pidevice.MOV({1 : z_abs})
             else:
                 self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!',1000)
 
