@@ -9,9 +9,20 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
-Dark mode: Renders the UI dark
+Various user interface options
+
+The button enable options allow to restrict button availability for mesoSPIM variants that 
+have fewer stages or where users should not modify a stage position using the arrow buttons 
+(e.g. when a specific joystick should be used).
 '''
-dark_mode = False
+ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
+              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
+              'enable_y_buttons' : True, 
+              'enable_z_buttons' : True,
+              'enable_f_buttons' : True,
+              'enable_rotation_buttons' : True,
+              'enable_loading_buttons' : True,
+               }
 
 '''
 Waveform output for Galvos, ETLs etc.
