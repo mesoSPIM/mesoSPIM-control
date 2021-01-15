@@ -795,6 +795,137 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
             self.pitools.waitontarget(self.pidevice)
     '''
 
+class mesoSPIM_PI_z_Stage(mesoSPIM_Stage):
+    '''
+    Class for a drastically simplified mesoSPIM that utilizes only a single motorized z-stage, all other 
+    axes are manual.
+
+    It is expected that the parent class has the following signals:
+        sig_move_relative = pyqtSignal(dict)
+        sig_move_relative_and_wait_until_done = pyqtSignal(dict)
+        sig_move_absolute = pyqtSignal(dict)
+        sig_move_absolute_and_wait_until_done = pyqtSignal(dict)
+        sig_zero = pyqtSignal(list)
+        sig_unzero = pyqtSignal(list)
+        sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
+
+    Also contains a QTimer that regularily sends position updates, e.g
+    during the execution of movements.
+    '''
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        '''
+        PI-specific code
+        '''
+        from pipython import GCSDevice, pitools
+
+        self.pitools = pitools
+
+        ''' Setting up the PI stages '''
+        self.pi = self.cfg.pi_parameters
+
+        self.controllername = self.cfg.pi_parameters['controllername']
+        self.pi_stages = self.cfg.pi_parameters['stages']
+        self.refmode = self.cfg.pi_parameters['refmode']
+        self.serialnum = self.cfg.pi_parameters['serialnum']  
+
+        self.pidevice = GCSDevice(self.controllername)
+        self.pidevice.ConnectUSB(serialnum=self.serialnum)
+
+        ''' PI startup '''
+
+        ''' with refmode enabled: pretty dangerous
+        pitools.startup(self.pidevice, stages=self.pi_stages, refmode=self.refmode)
+        '''
+        pitools.startup(self.pidevice, stages=self.pi_stages)
+
+        
+
+        ''' Stage 5 referencing hack '''
+        '''
+        self.pidevice.FRF(1)
+        logger.info('mesoSPIM_Stages: Referencing z-stage: Waiting for referencing move')
+        self.block_till_controller_is_ready()
+        logger.info('mesoSPIM_Stages:R eferencing z-stage:Emergency referencing hack done')
+        '''
+        
+    def __del__(self):
+        try:
+            '''Close the PI connection'''
+            self.pidevice.unload()
+            logger.info('Stage disconnected')
+        except:
+            logger.info('Error while disconnecting the PI stage')
+
+    def report_position(self):
+        positions = self.pidevice.qPOS(self.pidevice.axes)
+
+        self.z_pos = round(positions['1']*1000,2)
+        
+        self.create_position_dict()
+
+        self.int_z_pos = self.z_pos + self.int_z_pos_offset
+        self.create_internal_position_dict()
+
+        self.sig_position.emit(self.int_position_dict)
+
+    def move_relative(self, dict, wait_until_done=False):
+        ''' PI move relative method
+
+        Lots of implementation details in here, should be replaced by a facade
+        '''
+        if 'z_rel' in dict:
+            z_rel = dict['z_rel']
+            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                z_rel = z_rel/1000
+                self.pidevice.MVR({1 : z_rel})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            self.pitools.waitontarget(self.pidevice)
+
+    def move_absolute(self, dict, wait_until_done=False):
+        '''
+        PI move absolute method
+
+        Lots of implementation details in here, should be replaced by a facade
+
+        TODO: Also lots of repeating code.
+        TODO: DRY principle violated
+        '''
+
+        if 'z_abs' in dict:
+            z_abs = dict['z_abs']
+            z_abs = z_abs - self.int_z_pos_offset
+            if self.z_min < z_abs and self.z_max > z_abs:
+                ''' Conversion to mm and command emission'''
+                z_abs= z_abs/1000
+                self.pidevice.MOV({1 : z_abs})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            self.pitools.waitontarget(self.pidevice)
+
+    def stop(self):
+        self.pidevice.STP(noraise=True)
+
+    def block_till_controller_is_ready(self):
+        '''
+        Blocks further execution (especially during referencing moves)
+        till the PI controller returns ready
+        '''
+        blockflag = True
+        while blockflag:
+            if self.pidevice.IsControllerReady():
+                blockflag = False
+            else:
+                time.sleep(0.1)
+
 class mesoSPIM_GalilStages(mesoSPIM_Stage):
     '''
 
