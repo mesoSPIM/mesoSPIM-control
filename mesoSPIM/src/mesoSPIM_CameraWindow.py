@@ -65,11 +65,16 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.roi_list = [self.roi_box, self.roi_box_w_text, self.roi_box_h_text]
 
         # Set up CameraWindow signals
-        self.adjustLevelsButton.clicked.connect(self.graphicsView.autoLevels)
+        self.adjustLevelsButton.clicked.connect(self.adjust_levels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_box_roi_labels)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+
+    def adjust_levels(self, pct_low=25, pct_hi=99.99):
+        ''''Adjust histogram levels'''
+        img = self.graphicsView.getImageItem().image
+        self.graphicsView.setLevels(min=np.percentile(img, pct_low), max=np.percentile(img, pct_hi))
 
     def px2um(self, px):
         '''Unit converter'''
