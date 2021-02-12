@@ -92,7 +92,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     def write_image(self, image, acq, acq_list):
         if self.file_extension == '.h5':
-            self.bdv_writer.append_plane(plane=image, plane_index=self.cur_image,
+            self.bdv_writer.append_plane(plane=image, z=self.cur_image,
                                          illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                          channel=acq_list.find_value_index(acq['laser'], 'laser'),
                                          angle=acq_list.find_value_index(acq['rot'], 'rot'),
