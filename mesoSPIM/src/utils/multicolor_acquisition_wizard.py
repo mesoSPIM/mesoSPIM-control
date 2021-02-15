@@ -6,6 +6,7 @@ Widgets that take user input and create acquisition lists
 '''
 import numpy as np
 import pprint
+from functools import partial
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
@@ -183,65 +184,91 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Define the bounding box of the tiling acquisition")
-        self.setSubTitle("Move XY stages to the starting corner position")
+        self.setSubTitle("Define bounding box by corners OR edges. "
+                         "Move XY stages to the positions before pressing the bounding box buttons.")
 
-        self.button0 = QtWidgets.QPushButton(self)
-        self.button0.setText('Set XY Start Corner')
-        self.button0.setCheckable(True)
-        self.button0.toggled.connect(self.get_xy_start_position)
+        self.button_xy_start = QtWidgets.QPushButton(self)
+        self.button_xy_start.setText('Set XY Start Corner')
+        self.button_xy_start.setCheckable(True)
+        self.button_xy_start.toggled.connect(partial(self.get_edge_position, key='xy-start'))
 
-        self.button1 = QtWidgets.QPushButton(self)
-        self.button1.setText('Set XY End Corner')
-        self.button1.setCheckable(True)
-        self.button1.toggled.connect(self.get_xy_end_position)
+        self.button_x_start = QtWidgets.QPushButton(self)
+        self.button_x_start.setText('Set X start')
+        self.button_x_start.setCheckable(True)
+        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='x-start'))
+
+        self.button_x_end = QtWidgets.QPushButton(self)
+        self.button_x_end.setText('Set X end')
+        self.button_x_end.setCheckable(True)
+        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='x-end'))
+
+        self.button_y_start = QtWidgets.QPushButton(self)
+        self.button_y_start.setText('Set Y start')
+        self.button_y_start.setCheckable(True)
+        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='y-start'))
+
+        self.button_y_end = QtWidgets.QPushButton(self)
+        self.button_y_end.setText('Set Y end')
+        self.button_y_end.setCheckable(True)
+        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='y-end'))
+
+        self.button_xy_end = QtWidgets.QPushButton(self)
+        self.button_xy_end.setText('Set XY End Corner')
+        self.button_xy_end.setCheckable(True)
+        self.button_xy_end.toggled.connect(partial(self.get_edge_position, key='xy-end'))
 
         self.ZStartButton = QtWidgets.QPushButton(self)
         self.ZStartButton.setText('Set Z start')
         self.ZStartButton.setCheckable(True)
-        self.ZStartButton.toggled.connect(self.update_z_start_position)
+        self.ZStartButton.toggled.connect(partial(self.get_edge_position, key='z-start'))
 
         self.ZEndButton = QtWidgets.QPushButton(self)
         self.ZEndButton.setText('Set Z end')
         self.ZEndButton.setCheckable(True)
-        self.ZEndButton.toggled.connect(self.update_z_end_position)
+        self.ZEndButton.toggled.connect(partial(self.get_edge_position, key='z-end'))
 
         self.ZSpinBoxLabel = QtWidgets.QLabel('Z stepsize')
 
         self.ZStepSpinBox = QtWidgets.QSpinBox(self)
-        self.ZStepSpinBox.setValue(1)
+        self.ZStepSpinBox.setValue(10)
         self.ZStepSpinBox.setMinimum(1)
         self.ZStepSpinBox.setMaximum(1000)
         self.ZStepSpinBox.valueChanged.connect(self.update_z_step)
 
-        self.registerField('xy_start_position*',
-                            self.button0,
-                            )
-        self.registerField('xy_end_position*',
-                            self.button1,
-                            )
-
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.button0, 0, 0)
-        self.layout.addWidget(self.button1, 1, 1)
-        self.layout.addWidget(self.ZStartButton, 2, 0)
-        self.layout.addWidget(self.ZEndButton, 2, 1)
-        self.layout.addWidget(self.ZSpinBoxLabel, 3, 0)
-        self.layout.addWidget(self.ZStepSpinBox, 3, 1)
+        self.layout.addWidget(self.button_xy_start, 0, 0)
+        self.layout.addWidget(self.button_y_start, 0, 1)
+        self.layout.addWidget(self.button_x_start, 1, 0)
+        self.layout.addWidget(self.button_x_end, 1, 2)
+        self.layout.addWidget(self.button_y_end, 2, 1)
+        self.layout.addWidget(self.button_xy_end, 2, 2)
+        self.layout.addWidget(self.ZStartButton, 3, 0)
+        self.layout.addWidget(self.ZEndButton, 3, 2)
+        self.layout.addWidget(self.ZSpinBoxLabel, 4, 0)
+        self.layout.addWidget(self.ZStepSpinBox, 4, 2)
         self.setLayout(self.layout)
 
-    def get_xy_start_position(self):
-        self.parent.x_start = self.parent.state['position']['x_pos']
-        self.parent.y_start = self.parent.state['position']['y_pos']
-        
-    def get_xy_end_position(self):
-        self.parent.x_end = self.parent.state['position']['x_pos']
-        self.parent.y_end = self.parent.state['position']['y_pos']    
-
-    def update_z_start_position(self):
-        self.parent.z_start = self.parent.state['position']['z_pos']
-    
-    def update_z_end_position(self):
-        self.parent.z_end = self.parent.state['position']['z_pos']
+    def get_edge_position(self, key):
+        valid_keys = ('x-start', 'x-end', 'y-start', 'y-end', 'z-start', 'z-end', 'xy-start', 'xy-end')
+        assert key in valid_keys, f"Position key {key} is invalid"
+        if key == 'x-start':
+            self.parent.x_start = self.parent.state['position']['x_pos']
+        elif key == 'x-end':
+            self.parent.x_end = self.parent.state['position']['x_pos']
+        elif key == 'y-start':
+            self.parent.y_start = self.parent.state['position']['y_pos']
+        elif key == 'y-end':
+            self.parent.y_end = self.parent.state['position']['y_pos']
+        elif key == 'z-start':
+            self.parent.z_start = self.parent.state['position']['z_pos']
+        elif key == 'z-end':
+            self.parent.z_end = self.parent.state['position']['z_pos']
+        elif key == 'xy-start':
+            self.parent.x_start = self.parent.state['position']['x_pos']
+            self.parent.y_start = self.parent.state['position']['y_pos']
+        elif key == 'xy-end':
+            self.parent.x_end = self.parent.state['position']['x_pos']
+            self.parent.y_end = self.parent.state['position']['y_pos']
 
     def update_z_step(self):
         self.parent.z_step = self.ZStepSpinBox.value()
