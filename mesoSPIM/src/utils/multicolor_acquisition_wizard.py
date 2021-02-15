@@ -200,17 +200,17 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.button_x_end = QtWidgets.QPushButton(self)
         self.button_x_end.setText('Set X end')
         self.button_x_end.setCheckable(True)
-        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='x-end'))
+        self.button_x_end.toggled.connect(partial(self.get_edge_position, key='x-end'))
 
         self.button_y_start = QtWidgets.QPushButton(self)
         self.button_y_start.setText('Set Y start')
         self.button_y_start.setCheckable(True)
-        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='y-start'))
+        self.button_y_start.toggled.connect(partial(self.get_edge_position, key='y-start'))
 
         self.button_y_end = QtWidgets.QPushButton(self)
         self.button_y_end.setText('Set Y end')
         self.button_y_end.setCheckable(True)
-        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='y-end'))
+        self.button_y_end.toggled.connect(partial(self.get_edge_position, key='y-end'))
 
         self.button_xy_end = QtWidgets.QPushButton(self)
         self.button_xy_end.setText('Set XY End Corner')
@@ -235,6 +235,9 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.ZStepSpinBox.setMaximum(1000)
         self.ZStepSpinBox.valueChanged.connect(self.update_z_step)
 
+        self.registerField('xy_start_position*', self.button_xy_start)
+        self.registerField('xy_end_position*', self.button_xy_end)
+
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.button_xy_start, 0, 0)
         self.layout.addWidget(self.button_y_start, 0, 1)
@@ -253,12 +256,20 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         assert key in valid_keys, f"Position key {key} is invalid"
         if key == 'x-start':
             self.parent.x_start = self.parent.state['position']['x_pos']
+            if self.button_y_start.isChecked():
+                self.button_xy_start.setChecked(True)
         elif key == 'x-end':
             self.parent.x_end = self.parent.state['position']['x_pos']
+            if self.button_y_end.isChecked():
+                self.button_xy_end.setChecked(True)
         elif key == 'y-start':
             self.parent.y_start = self.parent.state['position']['y_pos']
+            if self.button_x_start.isChecked():
+                self.button_xy_start.setChecked(True)
         elif key == 'y-end':
             self.parent.y_end = self.parent.state['position']['y_pos']
+            if self.button_x_end.isChecked():
+                self.button_xy_end.setChecked(True)
         elif key == 'z-start':
             self.parent.z_start = self.parent.state['position']['z_pos']
         elif key == 'z-end':
@@ -266,9 +277,13 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         elif key == 'xy-start':
             self.parent.x_start = self.parent.state['position']['x_pos']
             self.parent.y_start = self.parent.state['position']['y_pos']
+            self.button_x_start.setChecked(True)
+            self.button_y_start.setChecked(True)
         elif key == 'xy-end':
             self.parent.x_end = self.parent.state['position']['x_pos']
             self.parent.y_end = self.parent.state['position']['y_pos']
+            self.button_x_end.setChecked(True)
+            self.button_y_end.setChecked(True)
 
     def update_z_step(self):
         self.parent.z_step = self.ZStepSpinBox.value()
