@@ -2,3 +2,4 @@ tiling wizard:
 - z-step is set to 1, if the input spinbox is not clicked on (default should be 10)
 - if tiles are strongly overlapping (50% or more), the number of tiles in a grid is set too low, unless manual offsets are activated. 
 - in the last page, if Values (N tiles) are not OK, there is no Back button to adjust the tiling values.
+- the last wizard page fails to fully close, and stays around. 
