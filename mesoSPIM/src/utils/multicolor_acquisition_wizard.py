@@ -33,7 +33,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
-        self.cfg = parent.cfg
+        self.cfg = parent.cfg if parent else None
         self.state = mesoSPIM_StateSingleton()
 
         ''' Instance variables '''
@@ -43,12 +43,12 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.y_end = 0
         self.z_start = 0
         self.z_end = 0
-        self.z_step = 1
+        self.z_step = 10
         self.x_offset = 0
         self.y_offset = 0
         self.zoom = '1x'
-        self.x_pixels = self.cfg.camera_parameters['x_pixels']
-        self.y_pixels = self.cfg.camera_parameters['y_pixels']
+        self.x_pixels = self.cfg.camera_parameters['x_pixels'] if self.cfg else 2048
+        self.y_pixels = self.cfg.camera_parameters['y_pixels'] if self.cfg else 2048
         self.x_fov = 1
         self.y_fov = 1
         self.channels = []
@@ -109,14 +109,19 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.delta_y = abs(self.y_end - self.y_start)
 
         ''' Using the ceiling function to always create at least 1 image '''
-        self.x_image_count = int(np.ceil(self.delta_x/self.x_offset))
-        self.y_image_count = int(np.ceil(self.delta_y/self.y_offset))
-
-        ''' Create at least 1 image even if delta_x or delta_y is 0 '''
-        if self.x_image_count == 0:
+        if self.delta_x == 0:
             self.x_image_count = 1
-        if self.y_image_count == 0:
+        elif self.delta_x <= self.x_offset:
+            self.x_image_count = 2
+        else:
+            self.x_image_count = int(np.ceil(self.delta_x / self.x_offset))
+
+        if self.delta_y == 0:
             self.y_image_count = 1
+        elif self.delta_y <= self.y_offset:
+            self.y_image_count = 2
+        else:
+            self.y_image_count = int(np.ceil(self.delta_y/self.y_offset))
 
         ''' The first FOV is centered on the starting location -
             therefore, add another image count to fully contain the end position
@@ -237,6 +242,7 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
 
         self.registerField('xy_start_position*', self.button_xy_start)
         self.registerField('xy_end_position*', self.button_xy_end)
+        self.update_z_step()
 
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.button_xy_start, 0, 0)
@@ -303,12 +309,14 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
         self.zoomLabel = QtWidgets.QLabel('Zoom')
         self.zoomComboBox = QtWidgets.QComboBox(self)
-        self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
+        if self.parent.cfg:
+            self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
         self.zoomComboBox.currentIndexChanged.connect(self.update_fov_size)
 
         self.shutterLabel = QtWidgets.QLabel('Shutter')
         self.shutterComboBox = QtWidgets.QComboBox(self)
-        self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+        if self.parent.cfg:
+            self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
 
         self.fovSizeLabel = QtWidgets.QLabel('FOV Size X ⨉ Y:')
         self.fovSizeLineEdit = QtWidgets.QLineEdit(self)
@@ -478,7 +486,8 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
         self.laserLabel = QtWidgets.QLabel('Laser')
         self.laserComboBox = QtWidgets.QComboBox(self)
-        self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
+        if self.parent.cfg:
+            self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
 
         self.intensityLabel = QtWidgets.QLabel('Intensity')
         self.intensitySlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -487,7 +496,8 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
         self.filterLabel = QtWidgets.QLabel('Filter')
         self.filterComboBox = QtWidgets.QComboBox(self)
-        self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
+        if self.parent.cfg:
+            self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
 
         self.ETLCheckBoxLabel = QtWidgets.QLabel('ETL')
         self.ETLCheckBox = QtWidgets.QCheckBox('Copy current ETL parameters', self)
