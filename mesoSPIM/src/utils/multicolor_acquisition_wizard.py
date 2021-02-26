@@ -73,7 +73,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.setPage(7, ThirdChannelPage(self))
         self.setPage(8, DefineFolderPage(self))
         self.setPage(9, FinishedTilingPage(self))
-
+        self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
         self.show()
 
     def done(self, r):
@@ -88,7 +88,8 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
             print('Wizard was closed properly')
             # self.print_dict()
             self.update_acquisition_list()
-            self.update_model(self.parent.model, self.acq_list)
+            if self.parent:
+                self.update_model(self.parent.model, self.acq_list)
             ''' Update state with this new list '''
             # self.parent.update_persistent_editors()
             self.wizard_done.emit()
@@ -386,7 +387,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
     def update_fov_size(self):
         ''' Should be invoked whenever the zoom selection is changed '''
         new_zoom = self.zoomComboBox.currentText()
-        pixelsize_in_um = self.parent.cfg.pixelsize[new_zoom]
+        pixelsize_in_um = self.parent.cfg.pixelsize[new_zoom] if self.parent.cfg else 6.5
         ''' X and Y are interchanged here to account for the camera rotation by 90°'''
         new_x_fov_in_um = int(self.parent.y_pixels * pixelsize_in_um)
         new_y_fov_in_um = int(self.parent.x_pixels * pixelsize_in_um)

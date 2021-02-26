@@ -4,7 +4,7 @@ from src.utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
 
-app = QtWidgets.QApplication(sys.argv)
+TEST_MANUALLY = False # set True to manually test the GUI, False to run unittests
 
 class TestTilingWizard(unittest.TestCase):
     def setUp(self) -> None:
@@ -25,4 +25,10 @@ class TestTilingWizard(unittest.TestCase):
     #     """"Tidies up after EACH test method execution."""
 
 if __name__ == '__main__':
-    unittest.main()
+    app = QtWidgets.QApplication(sys.argv)
+    if not TEST_MANUALLY:
+        unittest.main()
+    else:
+        wizard_window = MulticolorTilingWizard()
+        wizard_window.show()
+        sys.exit(wizard_window.exec_())
