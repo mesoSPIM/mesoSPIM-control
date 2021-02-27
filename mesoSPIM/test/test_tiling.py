@@ -12,14 +12,19 @@ class TestTilingWizard(unittest.TestCase):
         self.wiz = MulticolorTilingWizard()
 
     def test_image_counts(self):
-        self.wiz.x_start = 0
-        self.wiz.y_start = 0
-        self.wiz.x_end = 30 # small delta_x
-        self.wiz.y_end = 30 # small delta_y
-        self.wiz.x_offset = self.wiz.y_offset = 60 # say, FOV=300, and default 20% overlap is used
-        self.wiz.update_image_counts()
-        self.assertEqual(self.wiz.x_image_count, 2, f"Image count along X is {self.wiz.x_image_count}, must be 2")
-        self.assertEqual(self.wiz.y_image_count, 2, f"Image count along Y is {self.wiz.y_image_count}, must be 2")
+        # assuming FOV = 1000, overlap 20%
+        xy_start_cases = [(0, 0), (-100, -100), (0, 0)]
+        xy_end_cases = [(200, 200), (100, 100), (10000, 7900)]
+        xy_offset_cases = [(800, 800), (800, 800), (800, 800)]
+        xy_counts_correct_answers = [(2, 2), (2, 2), (13, 11)]
+        for i in range(len(xy_start_cases)):
+            self.wiz.x_start, self.wiz.y_start = xy_start_cases[i]
+            self.wiz.x_end, self.wiz.y_end = xy_end_cases[i]
+            self.wiz.x_offset, self.wiz.y_offset = xy_offset_cases[i]
+            self.wiz.update_image_counts()
+            self.assertEqual((self.wiz.x_image_count, self.wiz.y_image_count), xy_counts_correct_answers[i],
+                             f"Image count [{i}] {self.wiz.x_image_count, self.wiz.y_image_count} is incorrect," \
+                             f" must be {xy_counts_correct_answers[i]}")
 
     # def tearDown(self) -> None:
     #     """"Tidies up after EACH test method execution."""

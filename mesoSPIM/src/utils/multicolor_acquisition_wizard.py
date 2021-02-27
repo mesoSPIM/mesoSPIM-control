@@ -122,7 +122,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         elif self.delta_y <= self.y_offset:
             self.y_image_count = 2
         else:
-            self.y_image_count = int(np.ceil(self.delta_y/self.y_offset))
+            self.y_image_count = int(np.ceil(self.delta_y / self.y_offset))
 
         ''' The first FOV is centered on the starting location -
             therefore, add another image count to fully contain the end position

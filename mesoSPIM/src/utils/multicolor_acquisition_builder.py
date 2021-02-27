@@ -58,18 +58,14 @@ class MulticolorTilingAcquisitionListBuilder():
         Core loop: Create an acquisition list for all x & y & channel values
         '''
         tilecount = 0
-        
-        for i in range(0,self.dict['x_image_count']):
-            self.x_pos = round(self.x_start + i * self.x_offset,2)
-            
-            for j in range(0,self.dict['y_image_count']):
-                self.y_pos = round(self.y_start + j * self.y_offset,2)
-
+        for i in range(0, self.dict['x_image_count']):
+            self.x_pos = round(self.x_start + i * self.x_offset, 2)
+            for j in range(0, self.dict['y_image_count']):
+                self.y_pos = round(self.y_start + j * self.y_offset, 2)
                 channelcount = 0
                 for c in range(0, len(self.dict['channels'])):
                     ''' Get a single channeldict out of the list of dicts '''
                     channeldict = self.dict['channels'][c]
-
                     acq = Acquisition(  x_pos=self.x_pos,
                                         y_pos=self.y_pos,
                                         z_start=self.dict['z_start'],
@@ -92,11 +88,9 @@ class MulticolorTilingAcquisitionListBuilder():
                                         )
                     ''' Update number of planes as this is not done by the acquisition 
                     object itself '''
-                    acq['planes']=acq.get_image_count()
-
+                    acq['planes'] = acq.get_image_count()
                     self.acq_prelist.append(acq)
-
-                    channelcount +=1
+                    channelcount += 1
 
                 tilecount += 1
 
