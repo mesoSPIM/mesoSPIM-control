@@ -1,7 +1,8 @@
-# python -m test.test_h5
+# To run the test:
+# $ python -m test.test_h5
 import unittest
 from src.utils.multicolor_acquisition_wizard import MulticolorTilingWizard
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 import sys
 
 TEST_MANUALLY = False # set True to manually test the GUI, False to run unittests
