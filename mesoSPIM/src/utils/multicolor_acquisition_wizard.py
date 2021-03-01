@@ -112,14 +112,14 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         ''' Using the ceiling function to always create at least 1 image '''
         if self.delta_x == 0:
             self.x_image_count = 1
-        elif self.delta_x <= self.x_offset:
+        elif self.delta_x <= self.x_offset/2:
             self.x_image_count = 2
         else:
             self.x_image_count = int(np.ceil(self.delta_x / self.x_offset))
 
         if self.delta_y == 0:
             self.y_image_count = 1
-        elif self.delta_y <= self.y_offset:
+        elif self.delta_y <= self.y_offset/2:
             self.y_image_count = 2
         else:
             self.y_image_count = int(np.ceil(self.delta_y / self.y_offset))
@@ -134,7 +134,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         if self.delta_y % self.y_offset > self.y_offset/2:
             self.y_image_count = self.y_image_count + 1
 
-      
+        #print(f"DEBUG: delta_x {self.delta_x}, x_offset {self.x_offset}, x_image_count {self.x_image_count}; "
+        #      f"delta_y {self.delta_y}, y_offset {self.y_offset}, y_image_count {self.y_image_count} ")
+
     def get_dict(self):
         return {'x_start' : self.x_start,
                 'x_end' : self.x_end,

@@ -14,10 +14,10 @@ class TestTilingWizard(unittest.TestCase):
 
     def test_image_counts(self):
         # assuming FOV = 1000, overlap 20%
-        xy_start_cases = [(0, 0), (-100, -100), (0, 0)]
-        xy_end_cases = [(200, 200), (100, 100), (10000, 7900)]
-        xy_offset_cases = [(800, 800), (800, 800), (800, 800)]
-        xy_counts_correct_answers = [(2, 2), (2, 2), (13, 11)]
+        xy_start_cases = [(0, 0), (-100, -100), (0, 0), (0, -350)]
+        xy_end_cases = [(200, 200), (100, 100), (10000, 7900), (0, 350)]
+        xy_offset_cases = [(800, 800), (800, 800), (800, 800), (752, 752)]
+        xy_counts_correct_answers = [(2, 2), (2, 2), (13, 11), (1, 2)]
         for i in range(len(xy_start_cases)):
             self.wiz.x_start, self.wiz.y_start = xy_start_cases[i]
             self.wiz.x_end, self.wiz.y_end = xy_end_cases[i]
