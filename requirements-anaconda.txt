@@ -1,0 +1,11 @@
+numpy
+scipy
+PyQt5
+nidaqmx
+indexed
+pyserial
+pyqtgraph
+pywinusb
+tifffile
+qdarkstyle
+npy2bdv
