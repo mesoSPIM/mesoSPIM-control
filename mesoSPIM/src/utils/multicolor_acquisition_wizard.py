@@ -198,42 +198,42 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.button_xy_start = QtWidgets.QPushButton(self)
         self.button_xy_start.setText('Set XY Start Corner')
         self.button_xy_start.setCheckable(True)
-        self.button_xy_start.toggled.connect(partial(self.get_edge_position, key='xy-start'))
+        self.button_xy_start.clicked.connect(partial(self.get_edge_position, key='xy-start'))
 
         self.button_x_start = QtWidgets.QPushButton(self)
         self.button_x_start.setText('Set X start')
         self.button_x_start.setCheckable(True)
-        self.button_x_start.toggled.connect(partial(self.get_edge_position, key='x-start'))
+        self.button_x_start.clicked.connect(partial(self.get_edge_position, key='x-start'))
 
         self.button_x_end = QtWidgets.QPushButton(self)
         self.button_x_end.setText('Set X end')
         self.button_x_end.setCheckable(True)
-        self.button_x_end.toggled.connect(partial(self.get_edge_position, key='x-end'))
+        self.button_x_end.clicked.connect(partial(self.get_edge_position, key='x-end'))
 
         self.button_y_start = QtWidgets.QPushButton(self)
         self.button_y_start.setText('Set Y start')
         self.button_y_start.setCheckable(True)
-        self.button_y_start.toggled.connect(partial(self.get_edge_position, key='y-start'))
+        self.button_y_start.clicked.connect(partial(self.get_edge_position, key='y-start'))
 
         self.button_y_end = QtWidgets.QPushButton(self)
         self.button_y_end.setText('Set Y end')
         self.button_y_end.setCheckable(True)
-        self.button_y_end.toggled.connect(partial(self.get_edge_position, key='y-end'))
+        self.button_y_end.clicked.connect(partial(self.get_edge_position, key='y-end'))
 
         self.button_xy_end = QtWidgets.QPushButton(self)
         self.button_xy_end.setText('Set XY End Corner')
         self.button_xy_end.setCheckable(True)
-        self.button_xy_end.toggled.connect(partial(self.get_edge_position, key='xy-end'))
+        self.button_xy_end.clicked.connect(partial(self.get_edge_position, key='xy-end'))
 
         self.ZStartButton = QtWidgets.QPushButton(self)
         self.ZStartButton.setText('Set Z start')
         self.ZStartButton.setCheckable(True)
-        self.ZStartButton.toggled.connect(partial(self.get_edge_position, key='z-start'))
+        self.ZStartButton.clicked.connect(partial(self.get_edge_position, key='z-start'))
 
         self.ZEndButton = QtWidgets.QPushButton(self)
         self.ZEndButton.setText('Set Z end')
         self.ZEndButton.setCheckable(True)
-        self.ZEndButton.toggled.connect(partial(self.get_edge_position, key='z-end'))
+        self.ZEndButton.clicked.connect(partial(self.get_edge_position, key='z-end'))
 
         self.ZSpinBoxLabel = QtWidgets.QLabel('Z stepsize')
 
@@ -245,6 +245,7 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
 
         self.registerField('xy_start_position*', self.button_xy_start)
         self.registerField('xy_end_position*', self.button_xy_end)
+        self.registerField('z_end_position*', self.ZEndButton)
         self.update_z_step()
 
         self.layout = QtWidgets.QGridLayout()
@@ -449,25 +450,49 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.yFOVs = QtWidgets.QLineEdit(self)
         self.yFOVs.setReadOnly(True)
 
+        self.x_start_end_label = QtWidgets.QLabel('X start, end:')
+        self.x_start = QtWidgets.QLineEdit(self)
+        self.x_start.setReadOnly(True)
+        self.x_end = QtWidgets.QLineEdit(self)
+        self.x_end.setReadOnly(True)
+
+        self.y_start_end_label = QtWidgets.QLabel('Y start, end:')
+        self.y_start = QtWidgets.QLineEdit(self)
+        self.y_start.setReadOnly(True)
+        self.y_end = QtWidgets.QLineEdit(self)
+        self.y_end.setReadOnly(True)
+
         self.Button = QtWidgets.QPushButton('Values are ok?')
         self.Button.setCheckable(True)
         self.Button.setChecked(False)
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.xFOVLabel, 1, 0)
-        self.layout.addWidget(self.xFOVs, 1, 1)
+        self.layout.addWidget(self.xFOVLabel, 0, 0)
+        self.layout.addWidget(self.xFOVs, 0, 1)
+        self.layout.addWidget(self.x_start_end_label, 1, 0)
+        self.layout.addWidget(self.x_start, 1, 1)
+        self.layout.addWidget(self.x_end, 1, 2)
+
         self.layout.addWidget(self.yFOVLabel, 2, 0)
         self.layout.addWidget(self.yFOVs, 2, 1)
-        self.layout.addWidget(self.Button, 3, 1)
-        self.setLayout(self.layout)
+        self.layout.addWidget(self.y_start_end_label, 3, 0)
+        self.layout.addWidget(self.y_start, 3, 1)
+        self.layout.addWidget(self.y_end, 3, 2)
 
-        self.registerField('finalCheck*',self.Button)
+        self.layout.addWidget(self.Button, 4, 0)
+        self.setLayout(self.layout)
+        self.registerField('finalCheck*', self.Button)
 
     def initializePage(self):
         ''' Here, the acquisition list is created for further checking'''
         self.parent.update_image_counts()
         self.xFOVs.setText(str(self.parent.x_image_count))
         self.yFOVs.setText(str(self.parent.y_image_count))
+        self.x_start.setText(str(self.parent.x_start))
+        self.y_start.setText(str(self.parent.y_start))
+        self.x_end.setText(str(self.parent.x_end))
+        self.y_end.setText(str(self.parent.y_end))
+
 
 class GenericChannelPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None, channel_id=0):
