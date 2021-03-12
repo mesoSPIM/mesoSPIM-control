@@ -8,7 +8,7 @@ Author: Fabian Voigt
 
 import time
 
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtCore
 
 class DemoZoom(QtCore.QObject):
     def __init__(self, zoomdict):
@@ -44,7 +44,7 @@ class DynamixelZoom(QtCore.QObject):
         self.goal_position_offset = 10
         ''' Specifies how long to sleep for the wait until done function'''
         self.sleeptime = 0.05
-        self.timeout = 15
+        self.timeout = 10
 
         # the dynamixel library uses integers instead of booleans for binary information
         self.torque_enable = 1
@@ -52,6 +52,12 @@ class DynamixelZoom(QtCore.QObject):
 
         self.port_num = dynamixel.portHandler(self.devicename)
         self.dynamixel.packetHandler()
+        self._connect()
+
+    def _connect(self):
+        # open port and set baud rate
+        self.dynamixel.openPort(self.port_num)
+        self.dynamixel.setBaudRate(self.port_num, self.baudrate)
 
     def set_zoom(self, zoom, wait_until_done=False):
         """Changes zoom after checking that the commanded value exists"""
@@ -62,9 +68,6 @@ class DynamixelZoom(QtCore.QObject):
             raise ValueError('Zoom designation not in the configuration')
 
     def _move(self, position, wait_until_done=False):
-        # open port and set baud rate
-        self.dynamixel.openPort(self.port_num)
-        self.dynamixel.setBaudRate(self.port_num, self.baudrate)
         # Enable servo
         self.dynamixel.write1ByteTxRx(self.port_num, 1, self.id, self.addr_mx_torque_enable, self.torque_enable)
         # Write Moving Speed
@@ -92,23 +95,18 @@ class DynamixelZoom(QtCore.QObject):
             while (cur_position < lower_limit) or (cur_position > upper_limit):
                 ''' Timeout '''
                 if time.time()-start_time > self.timeout:
+                    print("Dynamixel zoom servo: timeout")
                     break
-                time.sleep(0.05)
+                time.sleep(self.sleeptime)
                 cur_position = self.dynamixel.read4ByteTxRx(self.port_num, 1, self.id, self.addr_mx_present_position)
                 # print(cur_position)
-
-        self.dynamixel.closePort(self.port_num)
 
     def read_position(self):
         '''
         Returns position as an int between 0 and 4096
-
-        Opens & closes the port
         '''
-        self.dynamixel.openPort(self.port_num)
-        self.dynamixel.setBaudRate(self.port_num, self.baudrate)
         cur_position = self.dynamixel.read4ByteTxRx(self.port_num, 1, self.id, self.addr_mx_present_position)
-
-        self.dynamixel.closePort(self.port_num)
-
         return cur_position
+
+    def __del__(self):
+        self.dynamixel.closePort(self.port_num)

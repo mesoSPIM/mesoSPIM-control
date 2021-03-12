@@ -11,7 +11,7 @@ import io
 import time
 
 '''PyQt5 Imports'''
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtCore
 
 class LudlFilterwheel(QtCore.QObject):
 
