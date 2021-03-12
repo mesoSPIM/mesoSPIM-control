@@ -28,11 +28,8 @@ from .mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_PI_xyz_Stages, mesoSPIM_
 class mesoSPIM_Serial(QtCore.QObject):
     '''This class handles mesoSPIM serial connections'''
     sig_finished = QtCore.pyqtSignal()
-
     sig_state_request = QtCore.pyqtSignal(dict)
-    
     sig_position = QtCore.pyqtSignal(dict)
-
     sig_zero_axes = QtCore.pyqtSignal(list)
     sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
@@ -46,7 +43,6 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
         self.cfg = parent.cfg
-
         self.state = mesoSPIM_StateSingleton()
 
         ''' Handling of state changing requests '''
@@ -55,16 +51,15 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
-            self.filterwheel = LudlFilterwheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
+            self.filterwheel = LudlFilterwheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DemoFilterWheel':
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type']  == 'Sutter':
             self.filterwheel = Lambda10B(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
 
-
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
-            self.zoom = DynamixelZoom(self.cfg.zoomdict,self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
+            self.zoom = DynamixelZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'],self.cfg.zoom_parameters['servo_id'])
         elif self.cfg.zoom_parameters['zoom_type'] == 'DemoZoom':
             self.zoom = DemoZoom(self.cfg.zoomdict)
 
@@ -121,7 +116,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict, wait_until_done=False):
-        for key, value in zip(dict.keys(),dict.values()):
+        for key, value in zip(dict.keys(), dict.values()):
             # print('Serial thread: state request: Key: ', key, ' Value: ', value)
             '''
             Here, the request handling is done with lots if 'ifs'

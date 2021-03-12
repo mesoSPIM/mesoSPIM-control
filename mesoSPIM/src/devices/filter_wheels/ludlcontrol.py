@@ -44,7 +44,7 @@ class LudlFilterwheel(QtCore.QObject):
         self.filterdict = filterdict
         self.double_wheel = False
         self.ser = self.sio = None
-
+        self._connect()
         ''' Delay in s for the wait until done function '''
         self.wait_until_done_delay = 0.5
 
@@ -60,6 +60,17 @@ class LudlFilterwheel(QtCore.QObject):
         if type(self.filterdict[self.first_item_in_filterdict]) is tuple:
             self.double_wheel = True
 
+    def _connect(self):
+        try:
+            self.ser = Serial.Serial(self.COMport,
+                                     self.baudrate,
+                                     parity=Serial.PARITY_NONE,
+                                     timeout=0, write_timeout=0,
+                                     xonxoff=False,
+                                     stopbits=Serial.STOPBITS_TWO)
+            self.sio = Io.TextIOWrapper(Io.BufferedRWPair(self.ser, self.ser))
+        except Serial.SerialException as e:
+            print(f"ERROR: Serial connection to Ludl filter wheel failed: {e}")
 
     def _check_if_filter_in_filterdict(self, filter):
         '''
@@ -74,33 +85,12 @@ class LudlFilterwheel(QtCore.QObject):
     def set_filter(self, filter, wait_until_done=False):
         '''
         Moves filter using the pyserial command set.
-
         No checks are done whether the movement is completed or
         finished in time.
-
-
         '''
         if self._check_if_filter_in_filterdict(filter) is True:
-            try:
-                self.ser = Serial.Serial(self.COMport,
-                                         self.baudrate,
-                                         parity=Serial.PARITY_NONE,
-                                         timeout=0, write_timeout=0,
-                                         xonxoff=False,
-                                         stopbits=Serial.STOPBITS_TWO)
-                self.sio = Io.TextIOWrapper(Io.BufferedRWPair(self.ser, self.ser))
-            except Serial.SerialException as e:
-                print(f"ERROR: Serial connection to Ludl filter wheel failed: {e}")
-                if self.sio:
-                    self.sio.flush()
-                if self.ser:
-                    self.ser.close()
-                self.sio = self.ser = None
-                return
-                    
             """
             Check for double or single wheel
-
             TODO: A bit of repeating code in here. Might be better to
             spin the create and send commands off.
             """
