@@ -1,7 +1,7 @@
 # To run the test:
 # python -m test.test_serial
 import unittest
-import src.devices.filterwheels as fw
+import src.devices.filter_wheels.ludlcontrol as ludl
 
 # Copy these from your config file
 filterwheel_parameters = {'filterwheel_type' : 'Ludl',
@@ -21,14 +21,17 @@ class TestFilterWheel(unittest.TestCase):
     def setUp(self) -> None:
         """"This will automatically call for EVERY single test method below."""
         if filterwheel_parameters['filterwheel_type'] == 'Ludl':
-            self.fwheel = fw.LudlFilterwheel(filterwheel_parameters['COMport'], filterdict)
+            self.fwheel = ludl.LudlFilterwheel(filterwheel_parameters['COMport'], filterdict)
         else:
             raise ValueError('Only Ludl filterwheel test is currently implemented')
 
     def test_multiple_positions(self):
-        for i_cycle in range(1):
+        n_cycles = 5
+        for i_cycle in range(n_cycles):
+            print(f"cycle {i_cycle}/{n_cycles}")
             for filter in filterdict.keys():
-                self.fwheel.set_filter(filter)
+                self.fwheel.set_filter(filter, wait_until_done=True)
+                print(f"filter {filter}")
 
     # def tearDown(self) -> None:
     #     """"Tidies up after EACH test method execution."""
