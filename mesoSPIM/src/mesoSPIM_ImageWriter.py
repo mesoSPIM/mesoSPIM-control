@@ -108,6 +108,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:
+                    self.bdv_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
+                    self.bdv_writer.set_attribute_labels('illumination', tuple(acq_list.get_unique_attr_list('shutterconfig')))
+                    self.bdv_writer.set_attribute_labels('angle', tuple(acq_list.get_unique_attr_list('rot')))
                     self.bdv_writer.write_xml_file()
                 except:
                     logger.error(f'HDF5 XML could not be written: {sys.exc_info()}')
