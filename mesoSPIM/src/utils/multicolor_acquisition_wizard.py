@@ -60,6 +60,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.folder = ''
         self.delta_x = 0.0
         self.delta_y = 0.0
+        self.shutter_seq = False
         
         self.setWindowTitle('Tiling Wizard')
 
@@ -134,9 +135,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         if self.delta_y % self.y_offset > self.y_offset/2:
             self.y_image_count = self.y_image_count + 1
 
-        #print(f"DEBUG: delta_x {self.delta_x}, x_offset {self.x_offset}, x_image_count {self.x_image_count}; "
-        #      f"delta_y {self.delta_y}, y_offset {self.y_offset}, y_image_count {self.y_image_count} ")
-
     def get_dict(self):
         return {'x_start' : self.x_start,
                 'x_end' : self.x_end,
@@ -154,6 +152,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
                 'y_image_count' : self.y_image_count,
                 'zoom' : self.zoom,
                 'shutterconfig' : self.shutterconfig,
+                'shutter_seq': self.shutter_seq,
                 'folder' : self.folder,
                 'channels' : self.channels,
                 }
@@ -322,6 +321,11 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         if self.parent.cfg:
             self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
 
+        self.shutterSequenceLabel = QtWidgets.QLabel('Left, then Right?')
+        self.shutterSeqCheckBox = QtWidgets.QCheckBox(self)
+        self.shutterSeqCheckBox.setChecked(False)
+        self.shutterSeqCheckBox.clicked.connect(self.update_shutt_seq)
+
         self.fovSizeLabel = QtWidgets.QLabel('FOV Size X ⨉ Y:')
         self.fovSizeLineEdit = QtWidgets.QLineEdit(self)
         self.fovSizeLineEdit.setReadOnly(True)
@@ -369,6 +373,8 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.zoomComboBox, 1, 1)
         self.layout.addWidget(self.shutterLabel, 2, 0)
         self.layout.addWidget(self.shutterComboBox, 2, 1)
+        self.layout.addWidget(self.shutterSequenceLabel, 2, 2)
+        self.layout.addWidget(self.shutterSeqCheckBox, 2, 3)
         self.layout.addWidget(self.fovSizeLabel, 3, 0)
         self.layout.addWidget(self.fovSizeLineEdit, 3, 1)
         self.layout.addWidget(self.overlapPercentageCheckBox, 4, 0)
@@ -411,9 +417,16 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.xOffsetSpinBox.setValue(x_offset)
         self.yOffsetSpinBox.setValue(y_offset)
 
+    @QtCore.pyqtSlot()
+    def update_shutt_seq(self):
+        self.parent.shutter_seq = self.shutterSeqCheckBox.checkState()
+        if self.shutterSeqCheckBox.checkState():
+            self.shutterComboBox.setEnabled(False)
+        else:
+            self.shutterComboBox.setEnabled(True)
+
     def update_other_acquisition_parameters(self):
         ''' Here, all the Tiling parameters are filled in the parent (TilingWizard)
-
         This method should be called when the "Next" Button is pressed
         '''
         self.parent.zoom = self.zoomComboBox.currentText()
@@ -677,7 +690,6 @@ class DefineFolderPage(QtWidgets.QWizardPage):
 
     def choose_folder(self):
         ''' File dialog for choosing the save folder '''
-
         path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
         if path:
             self.parent.folder = path
@@ -689,13 +701,15 @@ class FinishedTilingPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Finished!")
-        self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue. To rename the files, use the filename wizard.")
+        self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue. "
+                         "To rename the files, use the filename wizard.")
 
     def validatePage(self):
         return True
 
+
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    wizard = MyWizard()
+    wizard = MulticolorTilingWizard()
     sys.exit(app.exec_())
