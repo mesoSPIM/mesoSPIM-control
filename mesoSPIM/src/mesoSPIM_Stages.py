@@ -552,6 +552,8 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
         # get configs
         self.pi = self.cfg.pi_parameters
 
+        print("Connecting stage drive...")
+
         # Setting up the PI xyz stages, explicitly set referencing status and get position
         # run stage startup for x axis
         self.pidevice_x = GCSDevice(self.pi['controllername'])
@@ -577,6 +579,27 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
         self.wait_for_controller(self.pidevice_z)
         print("z stage ready")
 
+        # run stage startup for focus (stage has no reference!)
+        self.pidevice_f = GCSDevice(self.pi['controllername'])
+        self.pidevice_f.ConnectUSB(serialnum=self.pi['serialnum_f'])
+        pitools.startup(self.pidevice_f, stages=self.pi['stage_f']) #  , refmodes=self.pi['refmode'])
+        self.pidevice_f.RON({1: 0})
+        print('referencing mode: {}'.format(self.pidevice_f.qRON()))
+        
+        self.pidevice_f.SVO(self.pidevice_f.axes, [True] * len(self.pidevice_f.axes))
+        print('servo state: {}'.format(self.pidevice_f.qSVO()))
+
+        self.pidevice_f.DFH(1)
+        print('home position: {}'.format(self.pidevice_f.qDFH()))
+
+        self.pidevice_f.POS({1: 0.0})
+        print('new position: {}'.format(self.pidevice_f.qPOS()))
+
+        #self.pidevice_f.DFH()
+        # self.pidevice_f.RTO() #  send actual position to non-volatile memory on controller
+        self.wait_for_controller(self.pidevice_f)
+        print("f stage ready")
+
         logger.info('mesoSPIM_Stages: C-663-type controller started')
 
 
@@ -596,6 +619,7 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
             self.pidevice_x.unload()
             self.pidevice_y.unload()
             self.pidevice_z.unload()
+            self.pidevice_f.unload()
             logger.info('Stages disconnected')
         except:
             logger.info('Error while disconnecting the PI stage')
@@ -605,14 +629,16 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
         position_x = self.pidevice_x.qPOS(1)[1]  # query single axis
         position_y = self.pidevice_y.qPOS(1)[1]  # query single axis
         position_z = self.pidevice_z.qPOS(1)[1]  # query single axis
+        position_f = self.pidevice_f.qPOS(1)[1]  # query single axis
         # print('current position of x axis {} is {:.5f}'.format(1, position_x))
         # print('current position of y axis {} is {:.5f}'.format(1, position_y))
         # print('current position of z axis {} is {:.5f}'.format(1, position_z))        
+        # print('current position of f stage {} is {:.5f}'.format(1, position_f))        
         positions = {'1': position_x,
                      '2': position_y,
                      '3': position_z,
                      '4': 0,
-                     '5': 0}
+                     '5': position_f}
         
         self.x_pos = round(positions['1']*1000,2)
         self.y_pos = round(positions['2']*1000,2)
@@ -663,6 +689,14 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
 
+        if 'f_rel' in dict:
+            f_rel = dict['f_rel']
+            if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
+                f_rel = f_rel/1000
+                self.pidevice_f.MVR({1 : f_rel})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+
         """
         # Currently not implemented for this microscope configuration
         if 'theta_rel' in dict:
@@ -685,6 +719,7 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
             self.pitools.waitontarget(self.pidevice_x)
             self.pitools.waitontarget(self.pidevice_y)
             self.pitools.waitontarget(self.pidevice_z)
+            self.pitools.waitontarget(self.pidevice_f)
 
 
     def move_absolute(self, dict, wait_until_done=False):
@@ -727,6 +762,16 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!',1000)
 
+        if 'f_abs' in dict:
+            f_abs = dict['f_abs']
+            f_abs = f_abs - self.int_f_pos_offset
+            if self.f_min < f_abs and self.f_max > f_abs:
+                ''' Conversion to mm and command emission'''
+                f_abs= f_abs/1000
+                self.pidevice_f.MOV({1 : f_abs})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: f Motion limit would be reached!',1000)
+
         """
         # currently not implemented for this microscope configuration
         if 'f_abs' in dict:
@@ -753,12 +798,14 @@ class mesoSPIM_PI_xyz_Stages(mesoSPIM_Stage):
             self.pitools.waitontarget(self.pidevice_x)
             self.pitools.waitontarget(self.pidevice_y)
             self.pitools.waitontarget(self.pidevice_z)
+            self.pitools.waitontarget(self.pidevice_f)
 
 
     def stop(self):
         self.pidevice_x.STP(noraise=True)
         self.pidevice_y.STP(noraise=True)
         self.pidevice_z.STP(noraise=True)
+        self.pidevice_f.STP(noraise=True)
 
 
     def load_sample(self):
