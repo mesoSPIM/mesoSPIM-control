@@ -188,7 +188,7 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyzf' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -198,8 +198,8 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz
                     'y_min' : -160000,
                     'z_max' : 99000,
                     'z_min' : -99000,
-                    'f_max' : 99000,
-                    'f_min' : -99000,
+                    'f_max' : 10000,
+                    'f_min' : -10000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     'x_rot_position': 0,
@@ -227,7 +227,8 @@ pi_parameters = {'controllername' : 'C-884',
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
 
-For microscope configuration with three independent stage controller use these params:
+For microscope configuration (PI_xyzf) with three independent xyz-stage controller and physikinstumente C-663 controller for
+driving simple stepper motor for automated focus use these params:
 pi_parameters = {'stage_x' : ('L-509.20SD00'),
                  'serialnum_x' : ('**********'),
                  'stage_y' : ('L-509.40SD00'),
@@ -235,7 +236,9 @@ pi_parameters = {'stage_x' : ('L-509.20SD00'),
                  'stage_z' : ('L-509.20SD00'),
                  'serialnum_z' : ('**********'),
                  'controllername' : ('C-663'),
-                 'refmode' : ('FRF')
+                 'refmode' : ('FRF'),
+                 'stage_f' : ('MESOSPIM_FOCUS'),
+                 'serialnum_f' : ('**********')
                  }
 '''
 
