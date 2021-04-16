@@ -235,9 +235,8 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.ZEndButton.clicked.connect(partial(self.get_edge_position, key='z-end'))
 
         self.ZSpinBoxLabel = QtWidgets.QLabel('Z stepsize')
-
         self.ZStepSpinBox = QtWidgets.QSpinBox(self)
-        self.ZStepSpinBox.setValue(10)
+        self.ZStepSpinBox.setValue(5)
         self.ZStepSpinBox.setMinimum(1)
         self.ZStepSpinBox.setMaximum(1000)
         self.ZStepSpinBox.valueChanged.connect(self.update_z_step)
@@ -336,7 +335,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.overlapPercentageSpinBox.setSuffix(' %')
         self.overlapPercentageSpinBox.setMinimum(1)
         self.overlapPercentageSpinBox.setMaximum(50)
-        self.overlapPercentageSpinBox.setValue(20)
+        self.overlapPercentageSpinBox.setValue(10)
         self.overlapPercentageSpinBox.valueChanged.connect(self.update_x_and_y_offset)
 
         self.manualOverlapCheckBox = QtWidgets.QCheckBox('Set Offset Manually', self)
@@ -501,10 +500,10 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.parent.update_image_counts()
         self.xFOVs.setText(str(self.parent.x_image_count))
         self.yFOVs.setText(str(self.parent.y_image_count))
-        self.x_start.setText(str(self.parent.x_start))
-        self.y_start.setText(str(self.parent.y_start))
-        self.x_end.setText(str(self.parent.x_end))
-        self.y_end.setText(str(self.parent.y_end))
+        self.x_start.setText(str(round(self.parent.x_start)))
+        self.y_start.setText(str(round(self.parent.y_start)))
+        self.x_end.setText(str(round(self.parent.x_end)))
+        self.y_end.setText(str(round(self.parent.y_end)))
 
 
 class GenericChannelPage(QtWidgets.QWizardPage):

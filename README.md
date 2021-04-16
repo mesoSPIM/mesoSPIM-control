@@ -26,15 +26,24 @@ If you are updating `mesoSPIM-control` from a previous version: Please have a cl
 #### Python
 mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.6 Python. 
 ##### Anaconda 
-Create and activate a Python 3.6 environment from Anaconda prompt:
+(optional) Create and activate a Python 3.6 environment from Anaconda prompt:
 ```
 conda create -n py36 python=3.6
 conda activate py36
 ```
-Many libraries are included in Anaconda, install the missing ones by `pip install requirements-anaconda.txt`
+The step above is optional because the latest Python 3.8 is backward compatible with Python 3.6 code.
+
+Many libraries are already included in Anaconda. 
+Install mesoSPIM-specific libraries: 
+```
+pip install requirements-anaconda.txt
+```
 
 ##### Clean python 
-For a clean (non-Anaconda) python interpreter, install all required libraries: `pip install requirements-clean-python.txt`
+For a clean (non-Anaconda) python interpreter, install all required libraries: 
+```
+pip install requirements-clean-python.txt
+```
 
 ##### Additional libraries
 Camera libraries are not hosted on PyPi and need to be installed manually:
