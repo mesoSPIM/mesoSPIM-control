@@ -13,11 +13,11 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import logging
 logger = logging.getLogger(__name__)
 
-class StageControlASITango(QtCore.QObject):
+class StageControlASITiger(QtCore.QObject):
     sig_pause = QtCore.pyqtSignal(bool)
 
     '''
-    Class to control a ASI Tango mechanical stage controller
+    Class to control a ASI Tiger mechanical stage controller
     
     Inherits from QtCore.QObject so it can be moved to a QThread.
 

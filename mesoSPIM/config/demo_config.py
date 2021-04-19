@@ -187,7 +187,7 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or 'TangoASI' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or 'TigerASI' or other configs found in mesoSPIM_serial.py
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -239,7 +239,7 @@ pi_parameters = {'stage_x' : ('L-509.20SD00'),
 '''
 
 '''
-For a benchtop mesoSPIM with an ASI Tango controller, the following parameters are necessary.
+For a benchtop mesoSPIM with an ASI Tiger controller, the following parameters are necessary.
 The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc) 
 which are the values of the dict.
 '''

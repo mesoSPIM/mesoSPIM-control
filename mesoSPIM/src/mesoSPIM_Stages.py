@@ -2314,7 +2314,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         '''Executes program stored on the Galil controller'''
         self.xy_stage.execute_program()
 
-class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
+class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
     '''
 
     It is expected that the parent class has the following signals:
@@ -2339,7 +2339,7 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
         '''
         ASI-specific code
         '''
-        from src.devices.stages.asi.asicontrol import StageControlASITango
+        from src.devices.stages.asi.asicontrol import StageControlASITiger
         
         ''' Setting up the ASI stages '''
         self.asi_parameters = self.cfg.asi_parameters
@@ -2350,7 +2350,7 @@ class mesoSPIM_ASI_Tango_Stage(mesoSPIM_Stage):
 
         self.ttl_cards = self.asi_parameters['ttl_cards']
 
-        self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
+        self.asi_stages = StageControlASITiger(self.port, self.baudrate, self.mesoSPIM2ASIdict)
 
         self.asi_stages.sig_pause.connect(self.pause)
 
@@ -2596,7 +2596,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         '''
         ASI-specific code
         '''
-        from src.devices.stages.asi.asicontrol import StageControlASITango
+        from src.devices.stages.asi.asicontrol import StageControlASITiger
         
         ''' Setting up the ASI stages '''
         self.asi_parameters = self.cfg.asi_parameters
@@ -2605,7 +2605,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         self.mesoSPIM2ASIdict = self.asi_parameters['stage_assignment'] # converts mesoSPIM stage to ASI stage designation
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
-        self.asi_stages = StageControlASITango(self.port, self.baudrate, self.mesoSPIM2ASIdict)
+        self.asi_stages = StageControlASITiger(self.port, self.baudrate, self.mesoSPIM2ASIdict)
         self.asi_stages.sig_pause.connect(self.pause)
 
         self.pos_timer_polling_interval = 500  
