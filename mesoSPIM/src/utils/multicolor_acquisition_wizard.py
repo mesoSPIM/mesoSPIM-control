@@ -236,7 +236,7 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
 
         self.ZSpinBoxLabel = QtWidgets.QLabel('Z stepsize')
         self.ZStepSpinBox = QtWidgets.QSpinBox(self)
-        self.ZStepSpinBox.setValue(5)
+        self.ZStepSpinBox.setValue(10)
         self.ZStepSpinBox.setMinimum(1)
         self.ZStepSpinBox.setMaximum(1000)
         self.ZStepSpinBox.valueChanged.connect(self.update_z_step)

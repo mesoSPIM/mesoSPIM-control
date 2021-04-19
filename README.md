@@ -46,6 +46,15 @@ pip install requirements-clean-python.txt
 ```
 
 ##### Additional libraries
+PIPython 1.3.5.37. 
+
+Part of the Physik Instrumente software collection. 
+Download PIPython 1.3.5.37 [here](https://github.com/mesoSPIM/pipython), unzip, 
+navigate to the folder and run `python setup.py install`
+
+:warning: The PyPi-hosted version (`pip install PIPython`) will **not** work,
+ because the API has changed.
+
 Camera libraries are not hosted on PyPi and need to be installed manually:
 * [PyVCAM when using a Photometrics camera](https://github.com/Photometrics/PyVCAM)
 * pco (`python -m pip install pco`) when using a PCO camera ([Link](https://pypi.org/project/pco/)). A Version ≥0.1.3 is recommended.
