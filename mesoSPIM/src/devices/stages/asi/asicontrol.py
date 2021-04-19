@@ -133,20 +133,23 @@ class StageControlASITiger(QtCore.QObject):
         position_string = self._send_command(command_string.encode('UTF-8'))
         # Create a list of the form "['7835', '-38704', '0', '0', '-367586']", first element is the ack ':A' and gets discarded
         if position_string is not None:
-            position_list = position_string.decode('UTF-8').split()[1:]
-            ''' Only process position list if it contains all values'''
-            if len(position_list) == self.num_axes:
+            try:
+                position_list = position_string.decode('UTF-8').split()[1:]
+                ''' Only process position list if it contains all values'''
+                if len(position_list) == self.num_axes:
                 # conversion to um: internal unit is 1/10 um
-                try:
-                    position_list = [int(value)/10 for value in position_list] 
-                    position_dict = {self.axes[i] : position_list[i] for i in range(self.num_axes)}
-                    if position_dict is not None:
-                        self.position_dict = position_dict
-                        return position_dict
-                except:
-                    logger.info('Invalid position dict: ' + str(position_list))
-                    # return last position dict
-                    return self.position_dict
+                    try:
+                        position_list = [int(value)/10 for value in position_list] 
+                        position_dict = {self.axes[i] : position_list[i] for i in range(self.num_axes)}
+                        if position_dict is not None:
+                            self.position_dict = position_dict
+                            return position_dict
+                    except:
+                        logger.info('Invalid position dict: ' + str(position_list))
+                        # return last position dict
+                        return self.position_dict
+            except: 
+                logger.info('Invalid position string: ' + str(position_string))
         
             
     def move_relative(self, motion_dict):
