@@ -1,4 +1,22 @@
-## Version [0.1.4] - in development
+## Version [0.1.5] 
+* :gem: Improved Tiling Wizard: 
+    * buttons `x-start, x-end, y-start, y-end` added for easier navigation: 
+    no need to search for corners of imaginary box around the sample. 
+    * `left, then right` illuminations can be created automatically for each tile: no need for manual duplication 
+    and changing the illumination directions in the Acquisition Manager.
+    
+* :gem: Improved saving options in Fiji/BigStitcher H5 format:
+     * `laser`, `illumination`, `angle` attributes are saved in the BigStitcher XML file.
+     * (optional) downsampling and compression are supported.
+* :gem: Image window got `Adjust levels` button for automatic intensity adjustment.
+* :gem: Image window got optional `Box overlay` to help measure sample dimensions.
+* :mag: Tests for tiling and serial communication are created.
+* :bug: **Bugfix:** long-standing `permission denied` issues with serial communication 
+to filter wheel and zoom servo are fixed.
+The fix opens serial ports once and keeps them open during the session.
+The root cause was due to laser control software polling serial ports regularly, thus blocking access to them.
+
+## Version [0.1.4] 
 ### Features & updates
 * :warning: **Config files need to be updated** Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the `demo.cfg` file into your config files.
 * :warning: :gem: **New handling of config files** - If there is a single config file (without a 'demo' prefix in the filename and apart from the `demo_config.py`-file) in the config folder, the software will automatically load this file. Otherwise, the config selection GUI is opened. This is especially helpful when operating a mesoSPIM with multiple users. Thanks to @raacampbell for this feature! 
