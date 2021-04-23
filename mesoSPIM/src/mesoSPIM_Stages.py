@@ -571,7 +571,6 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
                 elif refmode=='RON':
                     pitools.startup(pidevice_, stages=stage)
                     pidevice_.RON({1: 0}) # set reference mode
-                    print('referencing mode: {}'.format(pidevice_.qRON()))
                     # activate servo
                     pidevice_.SVO(pidevice_.axes, [True] * len(pidevice_.axes))
                     # print('servo state: {}'.format(pidevice_.qSVO()))
@@ -583,6 +582,7 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
                     import sys
                     print('oops!')
                     sys.exit('Sorry, this will not work! Check PI stage params')
+                print('axis {}, referencing mode: {}'.format(axis_name, pidevice_.qRON()))
                 self.wait_for_controller(pidevice_)
                 print('axis {}, stage {} ready'.format(axis_name, stage))            
                 setattr(self.pi_stages, ('pidevice_' + axis_name), pidevice_)
