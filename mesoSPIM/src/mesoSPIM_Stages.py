@@ -554,54 +554,100 @@ class mesoSPIM_PI_xyzf_Stages(mesoSPIM_Stage):
 
         # get configs
         self.pi = self.cfg.pi_parameters
+        
+        print(self)
+        print(vars(self))
+        
+        print(self.pi.keys())
+        [print(item) for item in self.pi.items()]
+
 
         print("Connecting stage drive...")
 
-        # Setting up the PI xyzf stages, explicitly set referencing status and get position
-        # run stage startup for x axis
-        self.pidevice_x = GCSDevice(self.pi['controllername'])
-        self.pidevice_x.ConnectUSB(serialnum=self.pi['serialnum_x'])
-        pitools.startup(self.pidevice_x, stages=self.pi['stage_x'], refmodes=self.pi['refmode'])
-        self.pidevice_x.FRF(1)
-        self.wait_for_controller(self.pidevice_x)
-        print("x stage ready")
-
-        # run stage startup for y axis
-        self.pidevice_y = GCSDevice(self.pi['controllername'])
-        self.pidevice_y.ConnectUSB(serialnum=self.pi['serialnum_y'])
-        pitools.startup(self.pidevice_y, stages=self.pi['stage_y'], refmodes=self.pi['refmode'])
-        self.pidevice_y.FRF(1)
-        self.wait_for_controller(self.pidevice_y)
-        print("y stage ready")
-
-        # run stage startup for z axis
-        self.pidevice_z = GCSDevice(self.pi['controllername'])
-        self.pidevice_z.ConnectUSB(serialnum=self.pi['serialnum_z'])
-        pitools.startup(self.pidevice_z, stages=self.pi['stage_z'], refmodes=self.pi['refmode'])
-        self.pidevice_z.FRF(1)
-        self.wait_for_controller(self.pidevice_z)
-        print("z stage ready")
-
-        # run stage startup for focus (stage has no reference!)
-        self.pidevice_f = GCSDevice(self.pi['controllername'])
-        self.pidevice_f.ConnectUSB(serialnum=self.pi['serialnum_f'])
-        pitools.startup(self.pidevice_f, stages=self.pi['stage_f'])
-        self.pidevice_f.RON({1: 0}) # set reference mode
-        #print('referencing mode: {}'.format(self.pidevice_f.qRON()))
+        # Setting up the stages with separate PI controller.
+        # Explicitly set referencing status and get position
         
-        # activate servo
-        self.pidevice_f.SVO(self.pidevice_f.axes, [True] * len(self.pidevice_f.axes))
-        #print('servo state: {}'.format(self.pidevice_f.qSVO()))
+        # gather stage devices in pi_stages class
+        class PI_STAGES:
+            pass
+        
+        self.pi_stages = PI_STAGES()
+        for name, stage, controller, serialnum, refmode in zip(self.pi['stage_names'], self.pi['stages'], self.pi['controller'], self.pi['serialnum'], self.pi['refmode']):
+            print(name, stage, controller, serialnum, refmode)
 
-        # set/get actual position as home position
-        # assumes that starting position is within reasonable distance from optimal focus
-        self.pidevice_f.POS({1: 0.0})
-        self.pidevice_f.DFH(1)
-        # simply report home and actual position (should match)
-        #print('home position: {}, actual position: {}'.format(self.pidevice_f.qDFH(), self.pidevice_f.qPOS()))
-        self.wait_for_controller(self.pidevice_f)
-        print("f stage ready")
+            # run stage startup for each None axis
+            if stage:
+                pidevice_ = GCSDevice(controller)
+                pidevice_.ConnectUSB(serialnum=serialnum)
+                if refmode=='FRF':
+                    pitools.startup(pidevice_, stages=stage, refmodes=refmode)
+                    pidevice_.FRF(1)
+                elif refmode=='RON':
+                    pitools.startup(pidevice_, stages=stage)
+                    pidevice_.RON({1: 0}) # set reference mode
+                    print('referencing mode: {}'.format(pidevice_.qRON()))
+                    # activate servo
+                    pidevice_.SVO(pidevice_.axes, [True] * len(pidevice_.axes))
+                    print('servo state: {}'.format(pidevice_.qSVO()))
+                    # set/get actual position as home position
+                    # assumes that starting position is within reasonable distance from optimal focus
+                    pidevice_.POS({1: 0.0})
+                    pidevice_.DFH(1)
+                else:
+                    print('oops!')
+                    raise Exception('Sorry, this will not work! Check PI stage params')
+                self.wait_for_controller(pidevice_)
+                print('stage ' + name + ' ready')            
+                setattr(self.pi_stages, name, pidevice_)
+            else:
+                setattr(self.pi_stages, name, None)
+        [print(name, getattr(self.pi_stages, name)) for name in self.pi['stage_names']]
 
+        '''
+                # run stage startup for x axis
+                self.pidevice_x = GCSDevice(self.pi['controllername'])
+                self.pidevice_x.ConnectUSB(serialnum=self.pi['serialnum_x'])
+                pitools.startup(self.pidevice_x, stages=self.pi['stage_x'], refmodes=self.pi['refmode'])
+                self.pidevice_x.FRF(1)
+                self.wait_for_controller(self.pidevice_x)
+                print("x stage ready")
+
+                # run stage startup for y axis
+                self.pidevice_y = GCSDevice(self.pi['controllername'])
+                self.pidevice_y.ConnectUSB(serialnum=self.pi['serialnum_y'])
+                pitools.startup(self.pidevice_y, stages=self.pi['stage_y'], refmodes=self.pi['refmode'])
+                self.pidevice_y.FRF(1)
+                self.wait_for_controller(self.pidevice_y)
+                print("y stage ready")
+
+                # run stage startup for z axis
+                self.pidevice_z = GCSDevice(self.pi['controllername'])
+                self.pidevice_z.ConnectUSB(serialnum=self.pi['serialnum_z'])
+                pitools.startup(self.pidevice_z, stages=self.pi['stage_z'], refmodes=self.pi['refmode'])
+                self.pidevice_z.FRF(1)
+                self.wait_for_controller(self.pidevice_z)
+                print("z stage ready")
+
+                # run stage startup for focus (stage has no reference!)
+                self.pidevice_f = GCSDevice(self.pi['controllername'])
+                self.pidevice_f.ConnectUSB(serialnum=self.pi['serialnum_f'])
+                pitools.startup(self.pidevice_f, stages=self.pi['stage_f'])
+                self.pidevice_f.RON({1: 0}) # set reference mode
+                #print('referencing mode: {}'.format(self.pidevice_f.qRON()))
+                
+                # activate servo
+                self.pidevice_f.SVO(self.pidevice_f.axes, [True] * len(self.pidevice_f.axes))
+                #print('servo state: {}'.format(self.pidevice_f.qSVO()))
+
+                # set/get actual position as home position
+                # assumes that starting position is within reasonable distance from optimal focus
+                self.pidevice_f.POS({1: 0.0})
+                self.pidevice_f.DFH(1)
+                # simply report home and actual position (should match)
+                #print('home position: {}, actual position: {}'.format(self.pidevice_f.qDFH(), self.pidevice_f.qPOS()))
+                self.wait_for_controller(self.pidevice_f)
+                print("f stage ready")
+        '''
         logger.info('mesoSPIM_Stages: C-663-type controller started')
 
 
@@ -618,16 +664,34 @@ class mesoSPIM_PI_xyzf_Stages(mesoSPIM_Stage):
     def __del__(self):
         try:
             '''Close the PI connection'''
-            self.pidevice_x.unload()
-            self.pidevice_y.unload()
-            self.pidevice_z.unload()
-            self.pidevice_f.unload()
+            [(getattr(self.pi_stages, name)).unload() for name in self.pi['stage_names'] if (getattr(self.pi_stages, name))]
+            #self.pidevice_x.unload()
+            #self.pidevice_y.unload()
+            #self.pidevice_z.unload()
+            #self.pidevice_f.unload()
             logger.info('Stages disconnected')
         except:
             logger.info('Error while disconnecting the PI stage')
     
     
     def report_position(self):
+        self_attribs = ['x_pos', 'y_pos', 'z_pos', 'theta_pos', 'f_pos']
+        self_int_attribs = ['int_x_pos', 'int_y_pos', 'int_z_pos', 'int_theta_pos', 'int_f_pos']
+        self_off_attribs = ['int_x_pos_offset', 'int_y_pos_offset', 'int_z_pos_offset', 'int_theta_pos_offset', 'int_f_pos_offset']
+        for name, self_attrib, self_int_attrib, self_off_attrib in zip(self.pi['stage_names'], self_attribs, self_int_attribs, self_off_attribs):
+            if (getattr(self.pi_stages, name)):
+                pos = round((getattr(self.pi_stages, name)).qPOS(1)[1] * 1000, 2)
+                int_pos = pos + getattr(self, self_off_attrib)
+            else:
+                pos = 0
+                int_pos = 0
+            setattr(self.pi_stages, self_attrib, pos)
+            setattr(self.pi_stages, self_int_attrib, int_pos)
+
+        [(getattr(self.pi_stages, name)).qPOS(1)[1] for name in self.pi['stage_names'] if (getattr(self.pi_stages, name))]
+        self.create_position_dict()
+        self.create_internal_position_dict()
+        '''
         position_x = self.pidevice_x.qPOS(1)[1]  # query single axis
         position_y = self.pidevice_y.qPOS(1)[1]  # query single axis
         position_z = self.pidevice_z.qPOS(1)[1]  # query single axis
@@ -657,7 +721,7 @@ class mesoSPIM_PI_xyzf_Stages(mesoSPIM_Stage):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
-
+        '''
         self.sig_position.emit(self.int_position_dict)
 
 
@@ -788,20 +852,25 @@ class mesoSPIM_PI_xyzf_Stages(mesoSPIM_Stage):
 
 
     def stop(self):
-        self.pidevice_x.STP(noraise=True)
-        self.pidevice_y.STP(noraise=True)
-        self.pidevice_z.STP(noraise=True)
-        self.pidevice_f.STP(noraise=True)
+        [(getattr(self.pi_stages, name)).STP(noraise=True) for name in self.pi['stage_names'] if (getattr(self.pi_stages, name))]
+        #self.pidevice_x.STP(noraise=True)
+        #self.pidevice_y.STP(noraise=True)
+        #self.pidevice_z.STP(noraise=True)
+        #self.pidevice_f.STP(noraise=True)
 
 
     def load_sample(self):
         y_abs = self.cfg.stage_parameters['y_load_position']/1000
-        self.pidevice_y.MOV({1 : y_abs})
+        (getattr(self.pi_stages, 'y')).MOV({1 : y_abs})
+        #y_abs = self.cfg.stage_parameters['y_load_position']/1000
+        #self.pidevice_y.MOV({1 : y_abs})
 
 
     def unload_sample(self):
         y_abs = self.cfg.stage_parameters['y_unload_position']/1000
-        self.pidevice_y.MOV({1 : y_abs})
+        (getattr(self.pi_stages, 'y')).MOV({1 : y_abs})
+        #y_abs = self.cfg.stage_parameters['y_unload_position']/1000
+        #self.pidevice_y.MOV({1 : y_abs})
 
 
     '''

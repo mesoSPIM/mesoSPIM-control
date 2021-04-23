@@ -24,6 +24,7 @@ mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
 
 mesoSPIM/config/*
 !mesoSPIM/config/demo_config.py
+!mesoSPIM/config/mesoSPIM_ISP_config.py
 
 mesoSPIM/config/etl_parameters/*.*
 !mesoSPIM/config/etl_parameters/ETL-parameters.csv
