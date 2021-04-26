@@ -9,22 +9,6 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
-Various user interface options
-
-The button enable options allow to restrict button availability for mesoSPIM variants that 
-have fewer stages or where users should not modify a stage position using the arrow buttons 
-(e.g. when a specific joystick should be used).
-'''
-ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
-              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
-              'enable_y_buttons' : True, 
-              'enable_z_buttons' : True,
-              'enable_f_buttons' : True,
-              'enable_rotation_buttons' : True,
-              'enable_loading_buttons' : True,
-               }
-
-'''
 Waveform output for Galvos, ETLs etc.
 '''
 
@@ -172,20 +156,6 @@ camera_parameters = {'x_pixels' : 5056,
                      'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
                     }
 
-For a PCO Panda 4.2 bi with Lightsheet-Firmware (allowing rolling shutter operation):
-
-camera_parameters = {'x_pixels' : 2048,
-                     'y_pixels' : 2048,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
-                     'subsampling' : [1,2,4],
-                     'binning' : '1x1',
-                     'trigger': 'external exposure start & software trigger',
-                     'exp_time': 20e-3, # 20 ms Exposure
-                     'line_interval': 75e-6, # 75 us Line delay
-                     'line_exposure_delay' : 266 # 266 lines = 20 ms / 75 us - parameter is not used during initialization
-                    }
-
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'PhotometricsIris15'
 
@@ -252,11 +222,20 @@ pi_parameters = {'controllername' : 'C-884',
 For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
 serialnumber with the one of your controller):
 
+V5 parameters, 'PI' configuration, stable.
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
 
+V5 parameters, 'PIStages' configuration (under test)
+pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
+                'stages': ('L-509.20DG10', 'L-509.40DG10', 'L-509.20DG10', 'M-060.DG', 'M-406.4PD'),
+                'controllername': ('C-884', 'C-884', 'C-884', 'C-884', 'C-884'),
+                'serialnum': ('118075764', '118075764', '118075764', '118075764', '118075764'),
+                'refmode': (None, None, None, None, None)
+                }
+                
 For microscope configuration (PI_xyzf) with three independent xyz-stage controller for stepper motors and physikinstumente C-663 controller for
 driving simple stepper motor for automated focus use these params:
 pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
@@ -265,6 +244,7 @@ pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'serialnum': ('**********', '**********', '**********', None, '**********'),
                 'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                 }
+                
 '''
 
 '''
@@ -275,7 +255,7 @@ Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
 a valid COMport is necessary.
 '''
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl' or 'Sutter'
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
@@ -326,8 +306,7 @@ zoomdict = {'0.63x' : 3423,
             '5x' : 318,
             '6.3x' : 0}
 '''
-Pixelsize in micron -- update these values with measured values from your instrument.
-These are used to calculate the FOV size & offset in the tiling wizard.
+Pixelsize in micron
 '''
 pixelsize = {'0.63x' : 10.52,
             '0.8x' : 8.23,
@@ -340,14 +319,6 @@ pixelsize = {'0.63x' : 10.52,
             '4x' : 1.60,
             '5x' : 1.27,
             '6.3x' : 1.03}
-
-'''
-HDF5 parameters, when this format is used for data saving (optional).
-'''
-hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
-        'compression': None, # None, 'gzip', 'lzf'
-        'flip_xyz': (True, True, False) # match BigDataViewer axes to mesoSPIM 
-        }
 
 '''
 Initial acquisition parameters
