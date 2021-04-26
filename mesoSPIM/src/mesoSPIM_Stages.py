@@ -3,7 +3,7 @@ mesoSPIM Stage classes
 ======================
 '''
 import time
-
+import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -569,17 +569,25 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
         # gather stage devices in VirtualController class
         class VirtualStages:
             pass
-        
+
+        assert len(self.pi['axes_names']) == len(self.pi['stages']) == len(self.pi['controllername']) \
+               == len(self.pi['serialnum']) == len(self.pi['refmode']), \
+            "Config file, pi_parameters dictionary: numbers of axes_names, stages, controllername, serialnum, refmode must match "
         self.pi_stages = VirtualStages()
-        for axis_name, stage, controller, serialnum, refmode in zip(self.pi['axes_names'], self.pi['stages'], self.pi['controllername'], self.pi['serialnum'], self.pi['refmode']):
+        for axis_name, stage, controller, serialnum, refmode in zip(self.pi['axes_names'], self.pi['stages'],
+                                                                    self.pi['controllername'], self.pi['serialnum'],
+                                                                    self.pi['refmode']):
             # run stage startup procedure for each axis
             if stage:
+                print(f'starting stage {stage}')
                 pidevice_ = GCSDevice(controller)
                 pidevice_.ConnectUSB(serialnum=serialnum)
-                if refmode=='FRF':
+                if refmode is None:
+                    pitools.startup(pidevice_, stages=stage)
+                elif refmode == 'FRF':
                     pitools.startup(pidevice_, stages=stage, refmodes=refmode)
                     pidevice_.FRF(1)
-                elif refmode=='RON':
+                elif refmode == 'RON':
                     pitools.startup(pidevice_, stages=stage)
                     pidevice_.RON({1: 0}) # set reference mode
                     # activate servo
@@ -590,9 +598,8 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
                     pidevice_.POS({1: 0.0})
                     pidevice_.DFH(1)
                 else:
-                    import sys
-                    print('oops!')
-                    sys.exit('Sorry, this will not work! Check PI stage params')
+                    raise ValueError(f"refmode {refmode} is not supported, PI stage {stage} initialization failed")
+                print(f'stage {stage} started')
                 print('axis {}, referencing mode: {}'.format(axis_name, pidevice_.qRON()))
                 self.wait_for_controller(pidevice_)
                 print('axis {}, stage {} ready'.format(axis_name, stage))            
@@ -675,12 +682,17 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
     
     def report_position(self):
         for axis_name in self.pi['axes_names']:
-            pidevice_name = 'pidevice_' + axis_name
-            if (hasattr(self.pi_stages, pidevice_name)):                
-                if not axis_name=='theta':
-                    pos = round((getattr(self.pi_stages, pidevice_name)).qPOS(1)[1] * 1000, 2)
-                else:
-                    pos = (getattr(self.pi_stages, pidevice_name)).qPOS(1)[1]
+            pidevice_name = 'pidevice_' + str(axis_name)
+            if hasattr(self.pi_stages, pidevice_name):
+                try:
+                    if axis_name is None:
+                        pos = 0
+                    elif axis_name == 'theta':
+                        pos = (getattr(self.pi_stages, pidevice_name)).qPOS(1)[1]
+                    else:
+                        pos = round((getattr(self.pi_stages, pidevice_name)).qPOS(1)[1] * 1000, 2)
+                except:
+                    print(f"Failed to report_position for axis_name {axis_name}, pidevice_name {pidevice_name}.")
             else:
                 pos = 0
 
