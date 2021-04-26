@@ -222,12 +222,21 @@ pi_parameters = {'controllername' : 'C-884',
 For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
 serialnumber with the one of your controller):
 
+V5 parameters, 'PI' configuration, stable.
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
                  'serialnum' : ('118015799'),
 
-For microscope configuration (PI_xyzf) with three independent xyz-stage controller for stepper motors and physikinstumente C-663 controller for
+V5 parameters, 'PIStages' configuration (under test)
+pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
+                'stages': ('L-509.20DG10', 'L-509.40DG10', 'L-509.20DG10', 'M-060.DG', 'M-406.4PD'),
+                'controllername': ('C-884', 'C-884', 'C-884', 'C-884', 'C-884'),
+                'serialnum': ('118075764', '118075764', '118075764', '118075764', '118075764'),
+                'refmode': (None, None, None, None, None)
+                }
+                
+For new 'PIStages' configuration with three independent xyz-stage controller for stepper motors and PI C-663 controller for
 driving simple stepper motor for automated focus use these params:
 pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'stages': ('L-509.20SD00', 'L-509.40SD00', 'L-509.20SD00', None, 'MESOSPIM_FOCUS'),
@@ -235,6 +244,7 @@ pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'serialnum': ('**********', '**********', '**********', None, '**********'),
                 'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                 }
+                
 '''
 
 '''

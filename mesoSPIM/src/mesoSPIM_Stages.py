@@ -3,7 +3,7 @@ mesoSPIM Stage classes
 ======================
 '''
 import time
-
+import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -330,16 +330,27 @@ class mesoSPIM_PIstage(mesoSPIM_Stage):
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
 
+        ''' Report reference status of all stages '''
+        for ii in range(1,len(self.pi_stages)+1):
+            tStage = self.pi_stages[ii-1];
+            if tStage == 'NOSTAGE':
+                continue
+
+            tState = self.pidevice.qFRF(ii)
+            if tState[ii]:
+                msg = 'referenced'
+            else:
+                msg = '*UNREFERENCED*'
+
+            logger.info( "Axis %d (%s) reference status: %s" % (ii, tStage, msg) )
+
+
         ''' Stage 5 referencing hack '''
-        # print('Referencing status 3: ', self.pidevice.qFRF(3))
-        # print('Referencing status 5: ', self.pidevice.qFRF(5))
         self.pidevice.FRF(5)
         logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
         logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack done')
-        # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
-        # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
-
+        
         ''' Stage 5 close to good focus'''
         self.startfocus = self.cfg.stage_parameters['startfocus']
         self.pidevice.MOV(5,self.startfocus/1000)
@@ -558,17 +569,25 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
         # gather stage devices in VirtualController class
         class VirtualStages:
             pass
-        
+
+        assert len(self.pi['axes_names']) == len(self.pi['stages']) == len(self.pi['controllername']) \
+               == len(self.pi['serialnum']) == len(self.pi['refmode']), \
+            "Config file, pi_parameters dictionary: numbers of axes_names, stages, controllername, serialnum, refmode must match "
         self.pi_stages = VirtualStages()
-        for axis_name, stage, controller, serialnum, refmode in zip(self.pi['axes_names'], self.pi['stages'], self.pi['controllername'], self.pi['serialnum'], self.pi['refmode']):
+        for axis_name, stage, controller, serialnum, refmode in zip(self.pi['axes_names'], self.pi['stages'],
+                                                                    self.pi['controllername'], self.pi['serialnum'],
+                                                                    self.pi['refmode']):
             # run stage startup procedure for each axis
             if stage:
+                print(f'starting stage {stage}')
                 pidevice_ = GCSDevice(controller)
                 pidevice_.ConnectUSB(serialnum=serialnum)
-                if refmode=='FRF':
+                if refmode is None:
+                    pitools.startup(pidevice_, stages=stage)
+                elif refmode == 'FRF':
                     pitools.startup(pidevice_, stages=stage, refmodes=refmode)
                     pidevice_.FRF(1)
-                elif refmode=='RON':
+                elif refmode == 'RON':
                     pitools.startup(pidevice_, stages=stage)
                     pidevice_.RON({1: 0}) # set reference mode
                     # activate servo
@@ -579,9 +598,8 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
                     pidevice_.POS({1: 0.0})
                     pidevice_.DFH(1)
                 else:
-                    import sys
-                    print('oops!')
-                    sys.exit('Sorry, this will not work! Check PI stage params')
+                    raise ValueError(f"refmode {refmode} is not supported, PI stage {stage} initialization failed")
+                print(f'stage {stage} started')
                 print('axis {}, referencing mode: {}'.format(axis_name, pidevice_.qRON()))
                 self.wait_for_controller(pidevice_)
                 print('axis {}, stage {} ready'.format(axis_name, stage))            
@@ -664,12 +682,17 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
     
     def report_position(self):
         for axis_name in self.pi['axes_names']:
-            pidevice_name = 'pidevice_' + axis_name
-            if (hasattr(self.pi_stages, pidevice_name)):                
-                if not axis_name=='theta':
-                    pos = round((getattr(self.pi_stages, pidevice_name)).qPOS(1)[1] * 1000, 2)
-                else:
-                    pos = (getattr(self.pi_stages, pidevice_name)).qPOS(1)[1]
+            pidevice_name = 'pidevice_' + str(axis_name)
+            if hasattr(self.pi_stages, pidevice_name):
+                try:
+                    if axis_name is None:
+                        pos = 0
+                    elif axis_name == 'theta':
+                        pos = (getattr(self.pi_stages, pidevice_name)).qPOS(1)[1]
+                    else:
+                        pos = round((getattr(self.pi_stages, pidevice_name)).qPOS(1)[1] * 1000, 2)
+                except:
+                    print(f"Failed to report_position for axis_name {axis_name}, pidevice_name {pidevice_name}.")
             else:
                 pos = 0
 
@@ -926,6 +949,137 @@ class mesoSPIM_PIStages(mesoSPIM_Stage):
             self.pitools.waitontarget(self.pidevice)
     '''
 
+class mesoSPIM_PI_z_Stage(mesoSPIM_Stage):
+    '''
+    Class for a drastically simplified mesoSPIM that utilizes only a single motorized z-stage, all other 
+    axes are manual.
+
+    It is expected that the parent class has the following signals:
+        sig_move_relative = pyqtSignal(dict)
+        sig_move_relative_and_wait_until_done = pyqtSignal(dict)
+        sig_move_absolute = pyqtSignal(dict)
+        sig_move_absolute_and_wait_until_done = pyqtSignal(dict)
+        sig_zero = pyqtSignal(list)
+        sig_unzero = pyqtSignal(list)
+        sig_stop_movement = pyqtSignal()
+        sig_mark_rotation_position = pyqtSignal()
+
+    Also contains a QTimer that regularily sends position updates, e.g
+    during the execution of movements.
+    '''
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        '''
+        PI-specific code
+        '''
+        from pipython import GCSDevice, pitools
+
+        self.pitools = pitools
+
+        ''' Setting up the PI stages '''
+        self.pi = self.cfg.pi_parameters
+
+        self.controllername = self.cfg.pi_parameters['controllername']
+        self.pi_stages = self.cfg.pi_parameters['stages']
+        self.refmode = self.cfg.pi_parameters['refmode']
+        self.serialnum = self.cfg.pi_parameters['serialnum']  
+
+        self.pidevice = GCSDevice(self.controllername)
+        self.pidevice.ConnectUSB(serialnum=self.serialnum)
+
+        ''' PI startup '''
+
+        ''' with refmode enabled: pretty dangerous
+        pitools.startup(self.pidevice, stages=self.pi_stages, refmode=self.refmode)
+        '''
+        pitools.startup(self.pidevice, stages=self.pi_stages)
+
+        
+
+        ''' Stage 5 referencing hack '''
+        '''
+        self.pidevice.FRF(1)
+        logger.info('mesoSPIM_Stages: Referencing z-stage: Waiting for referencing move')
+        self.block_till_controller_is_ready()
+        logger.info('mesoSPIM_Stages:R eferencing z-stage:Emergency referencing hack done')
+        '''
+        
+    def __del__(self):
+        try:
+            '''Close the PI connection'''
+            self.pidevice.unload()
+            logger.info('Stage disconnected')
+        except:
+            logger.info('Error while disconnecting the PI stage')
+
+    def report_position(self):
+        positions = self.pidevice.qPOS(self.pidevice.axes)
+
+        self.z_pos = round(positions['1']*1000,2)
+        
+        self.create_position_dict()
+
+        self.int_z_pos = self.z_pos + self.int_z_pos_offset
+        self.create_internal_position_dict()
+
+        self.sig_position.emit(self.int_position_dict)
+
+    def move_relative(self, dict, wait_until_done=False):
+        ''' PI move relative method
+
+        Lots of implementation details in here, should be replaced by a facade
+        '''
+        if 'z_rel' in dict:
+            z_rel = dict['z_rel']
+            if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
+                z_rel = z_rel/1000
+                self.pidevice.MVR({1 : z_rel})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            self.pitools.waitontarget(self.pidevice)
+
+    def move_absolute(self, dict, wait_until_done=False):
+        '''
+        PI move absolute method
+
+        Lots of implementation details in here, should be replaced by a facade
+
+        TODO: Also lots of repeating code.
+        TODO: DRY principle violated
+        '''
+
+        if 'z_abs' in dict:
+            z_abs = dict['z_abs']
+            z_abs = z_abs - self.int_z_pos_offset
+            if self.z_min < z_abs and self.z_max > z_abs:
+                ''' Conversion to mm and command emission'''
+                z_abs= z_abs/1000
+                self.pidevice.MOV({1 : z_abs})
+            else:
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!',1000)
+
+        if wait_until_done == True:
+            self.pitools.waitontarget(self.pidevice)
+
+    def stop(self):
+        self.pidevice.STP(noraise=True)
+
+    def block_till_controller_is_ready(self):
+        '''
+        Blocks further execution (especially during referencing moves)
+        till the PI controller returns ready
+        '''
+        blockflag = True
+        while blockflag:
+            if self.pidevice.IsControllerReady():
+                blockflag = False
+            else:
+                time.sleep(0.1)
+
 class mesoSPIM_GalilStages(mesoSPIM_Stage):
     '''
 
@@ -1159,6 +1313,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         pitools.startup(self.pidevice, stages=self.pi_stages, refmode=self.refmode)
         '''
         pitools.startup(self.pidevice, stages=self.pi_stages)
+
 
         ''' Setting PI velocities '''
         self.pidevice.VEL(self.cfg.pi_parameters['velocity'])
