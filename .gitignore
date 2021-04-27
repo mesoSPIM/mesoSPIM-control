@@ -3,15 +3,14 @@ __pycache__
 .ipynb_checkpoints
 /**/.ipynb_checkpoints
 **/*.ipynb_checkpoints/
-mesoSPIM/legacy/*
-
+venv/
 *.log
+*.bin
+.idea
+mesoSPIM/legacy/*
 mesoSPIM/src/devices/zoom/dynamixel/*
 mesoSPIM/PI_GCS2_DLL_x64.dll
-.idea
 prototypes/orcas/*.tif
-*.bin
-
 prototypes/python-essentials/temp\.tif
 
 mesoSPIM/src/devices/stages/galil/gclib/gclib\.py
@@ -28,43 +27,11 @@ mesoSPIM/config/*
 
 mesoSPIM/config/etl_parameters/*.*
 !mesoSPIM/config/etl_parameters/ETL-parameters.csv
-
-mesoSPIM/src/devices/stages/galil/gclib/gclib\.py
-
-mesoSPIM/src/devices/stages/galil/gclib\.py
-
-mesoSPIM/src/devices/stages/galil/gclib/__init__\.py
-
-mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
-
-
 mesoSPIM/src/mesoSPIM_DemoSerial\.py
-
-
-
-mesoSPIM/src/devices/stages/galil/gclib/gclib\.py
-
-
-
-mesoSPIM/src/devices/stages/galil/gclib\.py
-
-
-
-mesoSPIM/src/devices/stages/galil/gclib/__init__\.py
-
-
-
-mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
-
-
-
-*.log
-
-
-
 mesoSPIM/src/devices/zoom/dynamixel\.zip
 
 mesoSPIM/acq/
-
 mesoSPIM/tmp/
+
 !mesoSPIM/tmp/readme.txt
+*.DS_Store

@@ -9,6 +9,22 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
+Various user interface options
+
+The button enable options allow to restrict button availability for mesoSPIM variants that 
+have fewer stages or where users should not modify a stage position using the arrow buttons 
+(e.g. when a specific joystick should be used).
+'''
+ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
+              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
+              'enable_y_buttons' : True, 
+              'enable_z_buttons' : True,
+              'enable_f_buttons' : True,
+              'enable_rotation_buttons' : True,
+              'enable_loading_buttons' : True,
+               }
+
+'''
 Waveform output for Galvos, ETLs etc.
 '''
 
@@ -156,6 +172,20 @@ camera_parameters = {'x_pixels' : 5056,
                      'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
                     }
 
+For a PCO Panda 4.2 bi with Lightsheet-Firmware (allowing rolling shutter operation):
+
+camera_parameters = {'x_pixels' : 2048,
+                     'y_pixels' : 2048,
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'binning' : '1x1',
+                     'trigger': 'external exposure start & software trigger',
+                     'exp_time': 20e-3, # 20 ms Exposure
+                     'line_interval': 75e-6, # 75 us Line delay
+                     'line_exposure_delay' : 266 # 266 lines = 20 ms / 75 us - parameter is not used during initialization
+                    }
+
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'PhotometricsIris15'
 
@@ -255,7 +285,7 @@ Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
 a valid COMport is necessary.
 '''
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
+filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl' or 'Sutter'
                           'COMport' : 'COM53'}
 
 # Ludl marking 10 = position 0
@@ -306,7 +336,8 @@ zoomdict = {'0.63x' : 3423,
             '5x' : 318,
             '6.3x' : 0}
 '''
-Pixelsize in micron
+Pixelsize in micron -- update these values with measured values from your instrument.
+These are used to calculate the FOV size & offset in the tiling wizard.
 '''
 pixelsize = {'0.63x' : 10.52,
             '0.8x' : 8.23,
@@ -319,6 +350,14 @@ pixelsize = {'0.63x' : 10.52,
             '4x' : 1.60,
             '5x' : 1.27,
             '6.3x' : 1.03}
+
+'''
+HDF5 parameters, when this format is used for data saving (optional).
+'''
+hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+        'compression': None, # None, 'gzip', 'lzf'
+        'flip_xyz': (True, True, False) # match BigDataViewer axes to mesoSPIM 
+        }
 
 '''
 Initial acquisition parameters

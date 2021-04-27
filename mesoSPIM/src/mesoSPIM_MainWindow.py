@@ -25,9 +25,6 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
-from .utils.demo_threads import mesoSPIM_DemoThread
-
-
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
     Main application window which instantiates worker objects and moves them
@@ -108,6 +105,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
 
         ''' Get buttons & connections ready '''
+        self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
 
         ''' Widget list for blockSignals during status updates '''
@@ -169,6 +167,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.core_thread.wait()
         except:
             pass
+
+    def close_app(self):
+        self.camera_window.close()
+        self.acquisition_manager_window.close()
+        self.close()
 
     def display_icons(self):
         pass
@@ -293,6 +296,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         exec(windowstring+'.sig_execute_script.connect(self.execute_script)')
         self.script_window_counter += 1
 
+    def initialize_and_connect_menubar(self):
+        self.actionExit.triggered.connect(self.close_app)
+        self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
+        self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
+
+
     def initialize_and_connect_widgets(self):
         ''' Connecting the menu actions '''
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
@@ -322,7 +331,41 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
+
+        ''' Disabling UI buttons if necessary '''
+        if self.cfg.ui_options['enable_x_buttons'] is False:
+            self.xPlusButton.setEnabled(False)
+            self.xMinusButton.setEnabled(False)
         
+        if self.cfg.ui_options['enable_y_buttons'] is False:
+            self.yPlusButton.setEnabled(False)
+            self.yMinusButton.setEnabled(False)
+
+        if self.cfg.ui_options['enable_x_buttons'] is False and self.cfg.ui_options['enable_y_buttons'] is False:
+            self.xyZeroButton.setEnabled(False)
+
+        if self.cfg.ui_options['enable_z_buttons'] is False:
+            self.zPlusButton.setEnabled(False)
+            self.zMinusButton.setEnabled(False)
+            self.zZeroButton.setEnabled(False)
+
+        if self.cfg.ui_options['enable_f_buttons'] is False:
+            self.focusPlusButton.setEnabled(False)
+            self.focusMinusButton.setEnabled(False)
+            self.focusZeroButton.setEnabled(False) 
+
+        if self.cfg.ui_options['enable_rotation_buttons'] is False:
+            self.rotPlusButton.setEnabled(False)
+            self.rotMinusButton.setEnabled(False)
+            self.rotZeroButton.setEnabled(False)
+            self.goToRotationPositionButton.setEnabled(False)
+            self.markRotationPositionButton.setEnabled(False)
+
+        if self.cfg.ui_options['enable_loading_buttons'] is False:
+            self.xyzLoadButton.setEnabled(False)
+            self.xyzUnloadButton.setEnabled(False)
+
+        ''' Connecting state-changing buttons '''
         self.LiveButton.clicked.connect(self.run_live)
         self.SnapButton.clicked.connect(self.run_snap)
         self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)

@@ -6,6 +6,7 @@ Widgets that take user input and create acquisition lists
 '''
 import numpy as np
 import pprint
+from functools import partial
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
@@ -32,7 +33,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
-        self.cfg = parent.cfg
+        self.cfg = parent.cfg if parent else None
         self.state = mesoSPIM_StateSingleton()
 
         ''' Instance variables '''
@@ -42,10 +43,12 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.y_end = 0
         self.z_start = 0
         self.z_end = 0
-        self.z_step = 1
+        self.z_step = 10
         self.x_offset = 0
         self.y_offset = 0
         self.zoom = '1x'
+        self.x_pixels = self.cfg.camera_parameters['x_pixels'] if self.cfg else 2048
+        self.y_pixels = self.cfg.camera_parameters['y_pixels'] if self.cfg else 2048
         self.x_fov = 1
         self.y_fov = 1
         self.channels = []
@@ -57,6 +60,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.folder = ''
         self.delta_x = 0.0
         self.delta_y = 0.0
+        self.shutter_seq = False
         
         self.setWindowTitle('Tiling Wizard')
 
@@ -70,7 +74,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.setPage(7, ThirdChannelPage(self))
         self.setPage(8, DefineFolderPage(self))
         self.setPage(9, FinishedTilingPage(self))
-
+        self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
         self.show()
 
     def done(self, r):
@@ -85,7 +89,8 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
             print('Wizard was closed properly')
             # self.print_dict()
             self.update_acquisition_list()
-            self.update_model(self.parent.model, self.acq_list)
+            if self.parent:
+                self.update_model(self.parent.model, self.acq_list)
             ''' Update state with this new list '''
             # self.parent.update_persistent_editors()
             self.wizard_done.emit()
@@ -106,14 +111,19 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.delta_y = abs(self.y_end - self.y_start)
 
         ''' Using the ceiling function to always create at least 1 image '''
-        self.x_image_count = int(np.ceil(self.delta_x/self.x_offset))
-        self.y_image_count = int(np.ceil(self.delta_y/self.y_offset))
-
-        ''' Create at least 1 image even if delta_x or delta_y is 0 '''
-        if self.x_image_count == 0:
+        if self.delta_x == 0:
             self.x_image_count = 1
-        if self.y_image_count == 0:
+        elif self.delta_x <= self.x_offset/2:
+            self.x_image_count = 2
+        else:
+            self.x_image_count = int(np.ceil(self.delta_x / self.x_offset))
+
+        if self.delta_y == 0:
             self.y_image_count = 1
+        elif self.delta_y <= self.y_offset/2:
+            self.y_image_count = 2
+        else:
+            self.y_image_count = int(np.ceil(self.delta_y / self.y_offset))
 
         ''' The first FOV is centered on the starting location -
             therefore, add another image count to fully contain the end position
@@ -124,14 +134,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         
         if self.delta_y % self.y_offset > self.y_offset/2:
             self.y_image_count = self.y_image_count + 1
-
-      
-    def update_fov(self):
-        pass
-        # zoom = self.zoom
-        # index = self.parent.cfg.zoom_options.index(zoom)
-        # self.x_fov = self.parent.cfg.zoom_options[index]
-        # self.y_fov = self.parent.cfg.zoom_options[index]
 
     def get_dict(self):
         return {'x_start' : self.x_start,
@@ -150,14 +152,14 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
                 'y_image_count' : self.y_image_count,
                 'zoom' : self.zoom,
                 'shutterconfig' : self.shutterconfig,
+                'shutter_seq': self.shutter_seq,
                 'folder' : self.folder,
                 'channels' : self.channels,
                 }
 
     def update_acquisition_list(self):
         self.update_image_counts()
-        self.update_fov()
-
+        
         ''' Use the current rotation angle '''
         self.theta_pos = self.state['position']['theta_pos']
 
@@ -189,65 +191,107 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Define the bounding box of the tiling acquisition")
-        self.setSubTitle("Move XY stages to the starting corner position")
+        self.setSubTitle("Define bounding box by corners OR edges. "
+                         "Move XY stages to the positions before pressing the bounding box buttons.")
 
-        self.button0 = QtWidgets.QPushButton(self)
-        self.button0.setText('Set XY Start Corner')
-        self.button0.setCheckable(True)
-        self.button0.toggled.connect(self.get_xy_start_position)
+        self.button_xy_start = QtWidgets.QPushButton(self)
+        self.button_xy_start.setText('Set XY Start Corner')
+        self.button_xy_start.setCheckable(True)
+        self.button_xy_start.clicked.connect(partial(self.get_edge_position, key='xy-start'))
 
-        self.button1 = QtWidgets.QPushButton(self)
-        self.button1.setText('Set XY End Corner')
-        self.button1.setCheckable(True)
-        self.button1.toggled.connect(self.get_xy_end_position)
+        self.button_x_start = QtWidgets.QPushButton(self)
+        self.button_x_start.setText('Set X start')
+        self.button_x_start.setCheckable(True)
+        self.button_x_start.clicked.connect(partial(self.get_edge_position, key='x-start'))
+
+        self.button_x_end = QtWidgets.QPushButton(self)
+        self.button_x_end.setText('Set X end')
+        self.button_x_end.setCheckable(True)
+        self.button_x_end.clicked.connect(partial(self.get_edge_position, key='x-end'))
+
+        self.button_y_start = QtWidgets.QPushButton(self)
+        self.button_y_start.setText('Set Y start')
+        self.button_y_start.setCheckable(True)
+        self.button_y_start.clicked.connect(partial(self.get_edge_position, key='y-start'))
+
+        self.button_y_end = QtWidgets.QPushButton(self)
+        self.button_y_end.setText('Set Y end')
+        self.button_y_end.setCheckable(True)
+        self.button_y_end.clicked.connect(partial(self.get_edge_position, key='y-end'))
+
+        self.button_xy_end = QtWidgets.QPushButton(self)
+        self.button_xy_end.setText('Set XY End Corner')
+        self.button_xy_end.setCheckable(True)
+        self.button_xy_end.clicked.connect(partial(self.get_edge_position, key='xy-end'))
 
         self.ZStartButton = QtWidgets.QPushButton(self)
         self.ZStartButton.setText('Set Z start')
         self.ZStartButton.setCheckable(True)
-        self.ZStartButton.toggled.connect(self.update_z_start_position)
+        self.ZStartButton.clicked.connect(partial(self.get_edge_position, key='z-start'))
 
         self.ZEndButton = QtWidgets.QPushButton(self)
         self.ZEndButton.setText('Set Z end')
         self.ZEndButton.setCheckable(True)
-        self.ZEndButton.toggled.connect(self.update_z_end_position)
+        self.ZEndButton.clicked.connect(partial(self.get_edge_position, key='z-end'))
 
         self.ZSpinBoxLabel = QtWidgets.QLabel('Z stepsize')
-
         self.ZStepSpinBox = QtWidgets.QSpinBox(self)
-        self.ZStepSpinBox.setValue(1)
+        self.ZStepSpinBox.setValue(10)
         self.ZStepSpinBox.setMinimum(1)
         self.ZStepSpinBox.setMaximum(1000)
         self.ZStepSpinBox.valueChanged.connect(self.update_z_step)
 
-        self.registerField('xy_start_position*',
-                            self.button0,
-                            )
-        self.registerField('xy_end_position*',
-                            self.button1,
-                            )
+        self.registerField('xy_start_position*', self.button_xy_start)
+        self.registerField('xy_end_position*', self.button_xy_end)
+        self.registerField('z_end_position*', self.ZEndButton)
+        self.update_z_step()
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.button0, 0, 0)
-        self.layout.addWidget(self.button1, 1, 1)
-        self.layout.addWidget(self.ZStartButton, 2, 0)
-        self.layout.addWidget(self.ZEndButton, 2, 1)
-        self.layout.addWidget(self.ZSpinBoxLabel, 3, 0)
-        self.layout.addWidget(self.ZStepSpinBox, 3, 1)
+        self.layout.addWidget(self.button_xy_start, 0, 0)
+        self.layout.addWidget(self.button_y_start, 0, 1)
+        self.layout.addWidget(self.button_x_start, 1, 0)
+        self.layout.addWidget(self.button_x_end, 1, 2)
+        self.layout.addWidget(self.button_y_end, 2, 1)
+        self.layout.addWidget(self.button_xy_end, 2, 2)
+        self.layout.addWidget(self.ZStartButton, 3, 0)
+        self.layout.addWidget(self.ZEndButton, 3, 2)
+        self.layout.addWidget(self.ZSpinBoxLabel, 4, 0)
+        self.layout.addWidget(self.ZStepSpinBox, 4, 2)
         self.setLayout(self.layout)
 
-    def get_xy_start_position(self):
-        self.parent.x_start = self.parent.state['position']['x_pos']
-        self.parent.y_start = self.parent.state['position']['y_pos']
-        
-    def get_xy_end_position(self):
-        self.parent.x_end = self.parent.state['position']['x_pos']
-        self.parent.y_end = self.parent.state['position']['y_pos']    
-
-    def update_z_start_position(self):
-        self.parent.z_start = self.parent.state['position']['z_pos']
-    
-    def update_z_end_position(self):
-        self.parent.z_end = self.parent.state['position']['z_pos']
+    def get_edge_position(self, key):
+        valid_keys = ('x-start', 'x-end', 'y-start', 'y-end', 'z-start', 'z-end', 'xy-start', 'xy-end')
+        assert key in valid_keys, f"Position key {key} is invalid"
+        if key == 'x-start':
+            self.parent.x_start = self.parent.state['position']['x_pos']
+            if self.button_y_start.isChecked():
+                self.button_xy_start.setChecked(True)
+        elif key == 'x-end':
+            self.parent.x_end = self.parent.state['position']['x_pos']
+            if self.button_y_end.isChecked():
+                self.button_xy_end.setChecked(True)
+        elif key == 'y-start':
+            self.parent.y_start = self.parent.state['position']['y_pos']
+            if self.button_x_start.isChecked():
+                self.button_xy_start.setChecked(True)
+        elif key == 'y-end':
+            self.parent.y_end = self.parent.state['position']['y_pos']
+            if self.button_x_end.isChecked():
+                self.button_xy_end.setChecked(True)
+        elif key == 'z-start':
+            self.parent.z_start = self.parent.state['position']['z_pos']
+        elif key == 'z-end':
+            self.parent.z_end = self.parent.state['position']['z_pos']
+        elif key == 'xy-start':
+            self.parent.x_start = self.parent.state['position']['x_pos']
+            self.parent.y_start = self.parent.state['position']['y_pos']
+            self.button_x_start.setChecked(True)
+            self.button_y_start.setChecked(True)
+        elif key == 'xy-end':
+            self.parent.x_end = self.parent.state['position']['x_pos']
+            self.parent.y_end = self.parent.state['position']['y_pos']
+            self.button_x_end.setChecked(True)
+            self.button_y_end.setChecked(True)
 
     def update_z_step(self):
         self.parent.z_step = self.ZStepSpinBox.value()
@@ -260,9 +304,41 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
         self.setTitle("Define other parameters")
 
+        self.channelLabel = QtWidgets.QLabel('# Channels')
+        self.channelSpinBox = QtWidgets.QSpinBox(self)
+        self.channelSpinBox.setMinimum(1)
+        self.channelSpinBox.setMaximum(3)
+
         self.zoomLabel = QtWidgets.QLabel('Zoom')
         self.zoomComboBox = QtWidgets.QComboBox(self)
-        self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
+        if self.parent.cfg:
+            self.zoomComboBox.addItems(self.parent.cfg.zoomdict.keys())
+        self.zoomComboBox.currentIndexChanged.connect(self.update_fov_size)
+
+        self.shutterLabel = QtWidgets.QLabel('Shutter')
+        self.shutterComboBox = QtWidgets.QComboBox(self)
+        if self.parent.cfg:
+            self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+
+        self.shutterSequenceLabel = QtWidgets.QLabel('Left, then Right?')
+        self.shutterSeqCheckBox = QtWidgets.QCheckBox(self)
+        self.shutterSeqCheckBox.setChecked(False)
+        self.shutterSeqCheckBox.clicked.connect(self.update_shutt_seq)
+
+        self.fovSizeLabel = QtWidgets.QLabel('FOV Size X ⨉ Y:')
+        self.fovSizeLineEdit = QtWidgets.QLineEdit(self)
+        self.fovSizeLineEdit.setReadOnly(True)
+        
+        self.overlapPercentageCheckBox = QtWidgets.QCheckBox('Overlap %', self)
+        self.overlapLabel = QtWidgets.QLabel('Overlap in %')
+        self.overlapPercentageSpinBox = QtWidgets.QSpinBox(self)
+        self.overlapPercentageSpinBox.setSuffix(' %')
+        self.overlapPercentageSpinBox.setMinimum(1)
+        self.overlapPercentageSpinBox.setMaximum(50)
+        self.overlapPercentageSpinBox.setValue(10)
+        self.overlapPercentageSpinBox.valueChanged.connect(self.update_x_and_y_offset)
+
+        self.manualOverlapCheckBox = QtWidgets.QCheckBox('Set Offset Manually', self)
 
         self.xOffsetSpinBoxLabel = QtWidgets.QLabel('X Offset')
         self.xOffsetSpinBox = QtWidgets.QSpinBox(self)
@@ -270,7 +346,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.xOffsetSpinBox.setMinimum(1)
         self.xOffsetSpinBox.setMaximum(30000)
         self.xOffsetSpinBox.setValue(500)
-
+        
         self.yOffsetSpinBoxLabel = QtWidgets.QLabel('Y Offset')
         self.yOffsetSpinBox = QtWidgets.QSpinBox(self)
         self.yOffsetSpinBox.setSuffix(' μm')
@@ -278,26 +354,36 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.yOffsetSpinBox.setMaximum(30000)
         self.yOffsetSpinBox.setValue(500)
 
-        self.shutterLabel = QtWidgets.QLabel('Shutter')
-        self.shutterComboBox = QtWidgets.QComboBox(self)
-        self.shutterComboBox.addItems(self.parent.cfg.shutteroptions)
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.overlapPercentageSpinBox.setEnabled(boolean))
+        self.overlapPercentageCheckBox.clicked.connect(self.update_x_and_y_offset)
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.xOffsetSpinBox.setEnabled(not boolean))
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.yOffsetSpinBox.setEnabled(not boolean))
+        self.overlapPercentageCheckBox.clicked.connect(lambda boolean: self.manualOverlapCheckBox.setChecked(not boolean))
 
-        self.channelLabel = QtWidgets.QLabel('# Channels')
-        self.channelSpinBox = QtWidgets.QSpinBox(self)
-        self.channelSpinBox.setMinimum(1)
-        self.channelSpinBox.setMaximum(3)
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.overlapPercentageSpinBox.setEnabled(not boolean))
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.xOffsetSpinBox.setEnabled(boolean))
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.yOffsetSpinBox.setEnabled(boolean))
+        self.manualOverlapCheckBox.clicked.connect(lambda boolean: self.overlapPercentageCheckBox.setChecked(not boolean))
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.zoomLabel, 0, 0)
-        self.layout.addWidget(self.zoomComboBox, 0, 1)
-        self.layout.addWidget(self.shutterLabel, 1, 0)
-        self.layout.addWidget(self.shutterComboBox, 1, 1)
-        self.layout.addWidget(self.xOffsetSpinBoxLabel, 2, 0)
-        self.layout.addWidget(self.xOffsetSpinBox, 2, 1)
-        self.layout.addWidget(self.yOffsetSpinBoxLabel, 3, 0)
-        self.layout.addWidget(self.yOffsetSpinBox, 3, 1)
-        self.layout.addWidget(self.channelLabel, 4, 0)
-        self.layout.addWidget(self.channelSpinBox, 4, 1)
+        self.layout.addWidget(self.channelLabel, 0, 0)
+        self.layout.addWidget(self.channelSpinBox, 0, 1)
+        self.layout.addWidget(self.zoomLabel, 1, 0)
+        self.layout.addWidget(self.zoomComboBox, 1, 1)
+        self.layout.addWidget(self.shutterLabel, 2, 0)
+        self.layout.addWidget(self.shutterComboBox, 2, 1)
+        self.layout.addWidget(self.shutterSequenceLabel, 2, 2)
+        self.layout.addWidget(self.shutterSeqCheckBox, 2, 3)
+        self.layout.addWidget(self.fovSizeLabel, 3, 0)
+        self.layout.addWidget(self.fovSizeLineEdit, 3, 1)
+        self.layout.addWidget(self.overlapPercentageCheckBox, 4, 0)
+        self.layout.addWidget(self.overlapLabel, 5, 0)
+        self.layout.addWidget(self.overlapPercentageSpinBox, 5, 1)
+        self.layout.addWidget(self.manualOverlapCheckBox, 6, 0)
+        self.layout.addWidget(self.xOffsetSpinBoxLabel, 7, 0)
+        self.layout.addWidget(self.xOffsetSpinBox, 7, 1)
+        self.layout.addWidget(self.yOffsetSpinBoxLabel, 8, 0)
+        self.layout.addWidget(self.yOffsetSpinBox, 8, 1)
         self.setLayout(self.layout)
 
     def validatePage(self):
@@ -305,9 +391,41 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.update_other_acquisition_parameters()
         return True
 
+    @QtCore.pyqtSlot()
+    def update_fov_size(self):
+        ''' Should be invoked whenever the zoom selection is changed '''
+        new_zoom = self.zoomComboBox.currentText()
+        pixelsize_in_um = self.parent.cfg.pixelsize[new_zoom] if self.parent.cfg else 6.5
+        ''' X and Y are interchanged here to account for the camera rotation by 90°'''
+        new_x_fov_in_um = int(self.parent.y_pixels * pixelsize_in_um)
+        new_y_fov_in_um = int(self.parent.x_pixels * pixelsize_in_um)
+        self.parent.x_fov = new_x_fov_in_um
+        self.parent.y_fov = new_y_fov_in_um
+
+        self.fovSizeLineEdit.setText(str(new_x_fov_in_um)+' ⨉ '+str(new_y_fov_in_um) + ' μm²')
+
+        ''' If the zoom changes, the offset calculation should be redone'''
+        if self.overlapPercentageCheckBox.isChecked():
+            self.update_x_and_y_offset()
+
+    @QtCore.pyqtSlot()
+    def update_x_and_y_offset(self):
+        new_offset_percentage = self.overlapPercentageSpinBox.value()
+        x_offset = int(self.parent.x_fov * (1-new_offset_percentage / 100))
+        y_offset = int(self.parent.y_fov * (1-new_offset_percentage / 100))
+        self.xOffsetSpinBox.setValue(x_offset)
+        self.yOffsetSpinBox.setValue(y_offset)
+
+    @QtCore.pyqtSlot()
+    def update_shutt_seq(self):
+        self.parent.shutter_seq = self.shutterSeqCheckBox.checkState()
+        if self.shutterSeqCheckBox.checkState():
+            self.shutterComboBox.setEnabled(False)
+        else:
+            self.shutterComboBox.setEnabled(True)
+
     def update_other_acquisition_parameters(self):
         ''' Here, all the Tiling parameters are filled in the parent (TilingWizard)
-
         This method should be called when the "Next" Button is pressed
         '''
         self.parent.zoom = self.zoomComboBox.currentText()
@@ -318,7 +436,12 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
     def initializePage(self):
         self.update_page_from_state()
-
+        self.update_fov_size()
+        self.update_x_and_y_offset()
+        self.overlapPercentageCheckBox.setChecked(True)
+        self.xOffsetSpinBox.setEnabled(False)
+        self.yOffsetSpinBox.setEnabled(False)
+        
     def update_page_from_state(self):
         self.zoomComboBox.setCurrentText(self.parent.state['zoom'])
         self.shutterComboBox.setCurrentText(self.parent.state['shutterconfig'])
@@ -339,25 +462,49 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.yFOVs = QtWidgets.QLineEdit(self)
         self.yFOVs.setReadOnly(True)
 
+        self.x_start_end_label = QtWidgets.QLabel('X start, end:')
+        self.x_start = QtWidgets.QLineEdit(self)
+        self.x_start.setReadOnly(True)
+        self.x_end = QtWidgets.QLineEdit(self)
+        self.x_end.setReadOnly(True)
+
+        self.y_start_end_label = QtWidgets.QLabel('Y start, end:')
+        self.y_start = QtWidgets.QLineEdit(self)
+        self.y_start.setReadOnly(True)
+        self.y_end = QtWidgets.QLineEdit(self)
+        self.y_end.setReadOnly(True)
+
         self.Button = QtWidgets.QPushButton('Values are ok?')
         self.Button.setCheckable(True)
         self.Button.setChecked(False)
 
         self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.xFOVLabel, 1, 0)
-        self.layout.addWidget(self.xFOVs, 1, 1)
+        self.layout.addWidget(self.xFOVLabel, 0, 0)
+        self.layout.addWidget(self.xFOVs, 0, 1)
+        self.layout.addWidget(self.x_start_end_label, 1, 0)
+        self.layout.addWidget(self.x_start, 1, 1)
+        self.layout.addWidget(self.x_end, 1, 2)
+
         self.layout.addWidget(self.yFOVLabel, 2, 0)
         self.layout.addWidget(self.yFOVs, 2, 1)
-        self.layout.addWidget(self.Button, 3, 1)
-        self.setLayout(self.layout)
+        self.layout.addWidget(self.y_start_end_label, 3, 0)
+        self.layout.addWidget(self.y_start, 3, 1)
+        self.layout.addWidget(self.y_end, 3, 2)
 
-        self.registerField('finalCheck*',self.Button)
+        self.layout.addWidget(self.Button, 4, 0)
+        self.setLayout(self.layout)
+        self.registerField('finalCheck*', self.Button)
 
     def initializePage(self):
         ''' Here, the acquisition list is created for further checking'''
         self.parent.update_image_counts()
         self.xFOVs.setText(str(self.parent.x_image_count))
         self.yFOVs.setText(str(self.parent.y_image_count))
+        self.x_start.setText(str(round(self.parent.x_start)))
+        self.y_start.setText(str(round(self.parent.y_start)))
+        self.x_end.setText(str(round(self.parent.x_end)))
+        self.y_end.setText(str(round(self.parent.y_end)))
+
 
 class GenericChannelPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None, channel_id=0):
@@ -379,7 +526,8 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
         self.laserLabel = QtWidgets.QLabel('Laser')
         self.laserComboBox = QtWidgets.QComboBox(self)
-        self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
+        if self.parent.cfg:
+            self.laserComboBox.addItems(self.parent.cfg.laserdict.keys())
 
         self.intensityLabel = QtWidgets.QLabel('Intensity')
         self.intensitySlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -388,7 +536,8 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
         self.filterLabel = QtWidgets.QLabel('Filter')
         self.filterComboBox = QtWidgets.QComboBox(self)
-        self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
+        if self.parent.cfg:
+            self.filterComboBox.addItems(self.parent.cfg.filterdict.keys())
 
         self.ETLCheckBoxLabel = QtWidgets.QLabel('ETL')
         self.ETLCheckBox = QtWidgets.QCheckBox('Copy current ETL parameters', self)
@@ -540,7 +689,6 @@ class DefineFolderPage(QtWidgets.QWizardPage):
 
     def choose_folder(self):
         ''' File dialog for choosing the save folder '''
-
         path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
         if path:
             self.parent.folder = path
@@ -552,13 +700,15 @@ class FinishedTilingPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Finished!")
-        self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue. To rename the files, use the filename wizard.")
+        self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue. "
+                         "To rename the files, use the filename wizard.")
 
     def validatePage(self):
         return True
 
+
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    wizard = MyWizard()
+    wizard = MulticolorTilingWizard()
     sys.exit(app.exec_())
