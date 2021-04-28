@@ -6,14 +6,9 @@ This thread handles all connections with serial devices such as stages,
 filter wheels, zoom systems etc.
 '''
 
-import numpy as np
-import time
-
 import logging
 logger = logging.getLogger(__name__)
-
-'''PyQt5 Imports'''
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtCore
 
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
@@ -22,8 +17,8 @@ from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 from .devices.filter_wheels.sutterLambdaControl import Lambda10B
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
 from .devices.zoom.mesoSPIM_Zoom import DynamixelZoom, DemoZoom
-from .mesoSPIM_Stages import mesoSPIM_PIstage, mesoSPIM_PIStages, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
-# from .mesoSPIM_State import mesoSPIM_State
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
+
 
 class mesoSPIM_Serial(QtCore.QObject):
     '''This class handles mesoSPIM serial connections'''
@@ -47,14 +42,14 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Handling of state changing requests '''
         self.parent.sig_state_request.connect(self.state_request_handler)
-        self.parent.sig_state_request_and_wait_until_done.connect(lambda dict: self.state_request_handler(dict, wait_until_done=True), type=3)
+        self.parent.sig_state_request_and_wait_until_done.connect(lambda sdict: self.state_request_handler(sdict, wait_until_done=True), type=3)
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
             self.filterwheel = LudlFilterwheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DemoFilterWheel':
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
-        elif self.cfg.filterwheel_parameters['filterwheel_type']  == 'Sutter':
+        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
             self.filterwheel = Lambda10B(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
 
         ''' Attaching the zoom '''
@@ -64,29 +59,26 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.zoom = DemoZoom(self.cfg.zoomdict)
 
         ''' Attaching the stage '''
-        if self.cfg.stage_parameters['stage_type'] == 'PI':
-            self.stage = mesoSPIM_PIstage(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PIStages':
-            self.stage = mesoSPIM_PIStages(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
-        elif self.cfg.stage_parameters['stage_type'] == 'PI_z':
-            self.stage = mesoSPIM_PI_z_Stage(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+        if self.cfg.stage_parameters['stage_type'] == 'PI' or 'PI_1controllerNstages':
+            self.stage = mesoSPIM_PI_1toN(self)
+        elif self.cfg.stage_parameters['stage_type'] == 'PIStages' or 'PI_NcontrollersNstages':
+            self.stage = mesoSPIM_PI_NtoN(self)
+            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
             self.stage = mesoSPIM_GalilStages(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
             self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_f_rot_and_Galil_xyz':
             self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
             self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
+            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
         try:
@@ -96,10 +88,10 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Wiring signals through to child objects '''
         self.parent.sig_move_relative.connect(self.move_relative)
-        self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True), type=3)
+        self.parent.sig_move_relative_and_wait_until_done.connect(lambda sdict: self.move_relative(sdict, wait_until_done=True), type=3)
 
         self.parent.sig_move_absolute.connect(self.move_absolute)
-        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True), type=3)
+        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True), type=3)
 
         self.parent.sig_zero_axes.connect(self.sig_zero_axes.emit)
         self.parent.sig_unzero_axes.connect(self.sig_unzero_axes.emit)
@@ -115,8 +107,8 @@ class mesoSPIM_Serial(QtCore.QObject):
 
 
     @QtCore.pyqtSlot(dict)
-    def state_request_handler(self, dict, wait_until_done=False):
-        for key, value in zip(dict.keys(), dict.values()):
+    def state_request_handler(self, sdict, wait_until_done=False):
+        for key, value in zip(sdict.keys(), sdict.values()):
             # print('Serial thread: state request: Key: ', key, ' Value: ', value)
             '''
             Here, the request handling is done with lots if 'ifs'
@@ -140,25 +132,25 @@ class mesoSPIM_Serial(QtCore.QObject):
                     logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     @QtCore.pyqtSlot(dict)
-    def move_relative(self, dict, wait_until_done=False):
+    def move_relative(self, sdict, wait_until_done=False):
         # logger.info('Thread ID during relative movement: '+str(int(QtCore.QThread.currentThreadId())))
 
         # logger.info('Thread ID during move rel: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
-            self.stage.move_relative(dict, wait_until_done=True)
+            self.stage.move_relative(sdict, wait_until_done=True)
         else:
-            self.stage.move_relative(dict)
+            self.stage.move_relative(sdict)
 
     @QtCore.pyqtSlot(dict)
-    def move_absolute(self, dict, wait_until_done=False):
+    def move_absolute(self, sdict, wait_until_done=False):
         if wait_until_done:
-            self.stage.move_absolute(dict, wait_until_done=True)
+            self.stage.move_absolute(sdict, wait_until_done=True)
         else:
-            self.stage.move_absolute(dict)
+            self.stage.move_absolute(sdict)
 
     @QtCore.pyqtSlot(dict)
-    def report_position(self, dict):
-        self.sig_position.emit({'position': dict})
+    def report_position(self, sdict):
+        self.sig_position.emit({'position': sdict})
 
     @QtCore.pyqtSlot()
     def go_to_rotation_position(self, wait_until_done=False):
@@ -168,13 +160,13 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage.go_to_rotation_position()
 
     @QtCore.pyqtSlot(str)
-    def set_filter(self, filter, wait_until_done=False):
+    def set_filter(self, sfilter, wait_until_done=False):
         # logger.info('Thread ID during set filter: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
-            self.filterwheel.set_filter(filter, wait_until_done=True)
+            self.filterwheel.set_filter(sfilter, wait_until_done=True)
         else:
-            self.filterwheel.set_filter(filter, wait_until_done=False)
-        self.state['filter'] = filter
+            self.filterwheel.set_filter(sfilter, wait_until_done=False)
+        self.state['filter'] = sfilter
 
     @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=False):

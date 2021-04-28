@@ -186,9 +186,12 @@ The stage_parameter dictionary defines the general stage configuration, initial 
 and safety limits. The rotation position defines a XYZ position (in absolute coordinates)
 where sample rotation is safe. Additional hardware dictionaries (e.g. pi_parameters)
 define the stage configuration details.
+All positions are absolute.
+
+'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages' (former 'PIStages')
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PIStages' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage',
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -207,63 +210,30 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PIStag
                     'z_rot_position': 66000,
                     }
 
-'''
-Depending on the stage hardware, further dictionaries define further details of the stage configuration
-
-For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the
-serialnumber with the one of your controller):
-
-pi_parameters = {'controllername' : 'C-884',
-                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
-                 'refmode' : ('FRF',),
-                 'serialnum' : ('118015797'),
-                 }
-
-For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
-serialnumber with the one of your controller):
-
-V5 parameters, 'PI' configuration, stable.
+''''
+If 'stage_type' = 'PI_1controllerNstages' (vanilla mesoSPIM V5 with single 6-axis controller):
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
-                 'serialnum' : ('118015799'),
+                 'serialnum' : ('118075764'),
+                 }
 
-V5 parameters, 'PIStages' configuration (under test)
-pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
-                'stages': ('L-509.20DG10', 'L-509.40DG10', 'L-509.20DG10', 'M-060.DG', 'M-406.4PD'),
-                'controllername': ('C-884', 'C-884', 'C-884', 'C-884', 'C-884'),
-                'serialnum': ('118075764', '118075764', '118075764', '118075764', '118075764'),
-                'refmode': (None, None, None, None, None)
-                }
-                
-For microscope configuration (PI_xyzf) with three independent xyz-stage controller for stepper motors and physikinstumente C-663 controller for
-driving simple stepper motor for automated focus use these params:
+If 'stage_type' = 'PI_NcontrollersNstages' (mesoSPIM V5 with multiple singe-axis controllers):
 pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'stages': ('L-509.20SD00', 'L-509.40SD00', 'L-509.20SD00', None, 'MESOSPIM_FOCUS'),
                 'controllername': ('C-663', 'C-663', 'C-663', None, 'C-663'),
                 'serialnum': ('**********', '**********', '**********', None, '**********'),
                 'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                 }
-                
 '''
 
 '''
 Filterwheel configuration
-'''
-
-'''
-For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
-a valid COMport is necessary.
+For a DemoFilterWheel, no COMport needs to be specified.
+For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 '''
 filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
                           'COMport' : 'COM53'}
-
-# Ludl marking 10 = position 0
-
-'''
-
-A Ludl double filter wheel can be
-'''
 
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
               '405-488-647-Tripleblock' : 1,
