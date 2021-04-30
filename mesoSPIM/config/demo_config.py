@@ -191,7 +191,7 @@ All positions are absolute.
 'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages' (former 'PIStages')
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'PI_1controllerNstages', 'PI_NcontrollersNstages', see below
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', see below
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,

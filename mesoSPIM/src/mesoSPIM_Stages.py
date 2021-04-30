@@ -587,7 +587,6 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
         logger.info('mesoSPIM_PI_NtoN: started')
 
-
     def wait_for_controller(self, controller):
         # function used during stage setup
         blockflag = True
@@ -597,7 +596,6 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
             else:
                 time.sleep(0.1)
 
-
     def __del__(self):
         try:
             '''Close the PI connection'''
@@ -606,7 +604,6 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
             logger.info('Stages disconnected')
         except:
             logger.info('Error while disconnecting the PI stage')
-
 
     def report_position(self):
         for axis_name in self.pi['axes_names']:
@@ -633,13 +630,12 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
         self.sig_position.emit(self.int_position_dict)
 
-
     def move_relative(self, move_dict, wait_until_done=False):
         ''' PI move relative method '''
         
         ############
         print('move_dict relative: {}'.format(move_dict))
-        print('wait? : {}'.format(wait_until_done))
+        print("wait? : {}'.format(wait_until_done))
         ############
         
         for axis_move in move_dict.keys():        
@@ -662,37 +658,39 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
                 if wait_until_done == True:
                     self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))
 
-
     def move_absolute(self, move_dict, wait_until_done=False):
         ''' PI move absolute method '''
         
         ############
         print('move_dict absolute: {}'.format(move_dict))
-        print('wait? : {}'.format(wait_until_done))
+        print("wait? : {}'.format(wait_until_done))
         ############
 
-        for axis_move in move_dict.keys():
-            axis_name = axis_move.split('_')[0]
-            move_value = move_dict[axis_move] 
-            move_value = move_value - getattr(self, ('int_' + axis_name + '_pos_offset'))
-            print('axis to move: {}, value: {}'.format(axis_name, move_value))
-            print('min: {}, max: {}, intended: {}'.format(getattr(self, (axis_name + '_min')), getattr(self, (axis_name + '_max')), move_value))
-            
-            if (hasattr(self.pi_stages, ('pidevice_' + axis_name))):
-                if (getattr(self, (axis_name + '_min')) < move_value) and \
-                        (getattr(self, (axis_name + '_max')) > move_value):
-                    if not axis_name == 'theta':
-                        move_value = move_value / 1000
-                    (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: move_value})
-                    if axis_name == 'f':
-                        self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # not really sure
-                else:
-                    self.sig_status_message.emit(
-                        'Absolute movement stopped: {} Motion limit would be reached!'.format(axis_name), 1000)
+        axis_move = list(move_dict.keys())[0]
+        axis_name = axis_move.split('_')[0]
+        move_value = move_dict[axis_move]
+        move_value = move_value - getattr(self, ('int_' + axis_name + '_pos_offset'))
+        # print('axis to move: {}, value: {}'.format(axis_name, move_value))
 
-                if wait_until_done == True:
-                    self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))
+        if (getattr(self, (axis_name + '_min')) < move_value) and \
+                (getattr(self, (axis_name + '_max')) > move_value):
+            if not axis_name == 'theta':
+                move_value = move_value / 1000
+            (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: move_value})
+            if axis_name == 'f':
+                self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # not really sure
+        else:
+            self.sig_status_message.emit(
+                'Relative movement stopped: {} Motion limit would be reached!'.format(axis_name), 1000)
 
+        if wait_until_done == True:
+            self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))
+            '''
+            self.pitools.waitontarget(self.pidevice_x)
+            self.pitools.waitontarget(self.pidevice_y)
+            self.pitools.waitontarget(self.pidevice_z)
+            self.pitools.waitontarget(self.pidevice_f)
+            '''
 
     def stop(self):
         [(getattr(self.pi_stages, ('pidevice_' + axis_name))).STP(noraise=True) for axis_name in self.pi['axes_names']
@@ -702,14 +700,12 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
         # self.pidevice_z.STP(noraise=True)
         # self.pidevice_f.STP(noraise=True)
 
-
     def load_sample(self):
         axis_name = 'y'
         y_abs = self.cfg.stage_parameters['y_load_position'] / 1000
         (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: y_abs})
         # y_abs = self.cfg.stage_parameters['y_load_position']/1000
         # self.pidevice_y.MOV({1 : y_abs})
-
 
     def unload_sample(self):
         axis_name = 'y'
