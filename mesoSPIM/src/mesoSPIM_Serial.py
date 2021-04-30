@@ -65,7 +65,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         if self.cfg.stage_parameters['stage_type'] == 'PI' or 'PI_1controllerNstages':
             self.stage = mesoSPIM_PI_1toN(self)
             print('Ooooooooooop!')
-        elif self.cfg.stage_parameters['stage_type'] == 'PIStages' or 'PI_NcontrollersNstages':
+        elif self.cfg.stage_parameters['stage_type'] == 'PI_NcontrollersNstages':
             self.stage = mesoSPIM_PI_NtoN(self)
             print('Right!')
             self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
