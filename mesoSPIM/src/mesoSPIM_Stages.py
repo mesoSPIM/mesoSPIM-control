@@ -630,41 +630,43 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
         self.sig_position.emit(self.int_position_dict)
 
+    # def move_relative(self, dict, wait_until_done=False):
     def move_relative(self, move_dict, wait_until_done=False):
         ''' PI move relative method '''
         
-        ############
-        print('move_dict relative: {}'.format(move_dict))
         print("wait? : {}'.format(wait_until_done))
-        ############
-        
-        for axis_move in move_dict.keys():        
-            axis_name = axis_move.split('_')[0]
-            move_value = move_dict[axis_move]        
-            print('axis to move: {}, value: {}'.format(axis_name, move_value))
-            print('min: {}, max: {}, intended: {}'.format(getattr(self, (axis_name + '_min')), getattr(self, (axis_name + '_max')), move_value))
-        
-            if (hasattr(self.pi_stages, ('pidevice_' + axis_name))):
-                if (getattr(self, (axis_name + '_min')) < getattr(self, (axis_name + '_pos')) + move_value) and \
-                    (getattr(self, (axis_name + '_max')) > getattr(self, (axis_name + '_pos')) + move_value):
-                    if not axis_name=='theta':
-                        move_value = move_value/1000
-                    (getattr(self.pi_stages, ('pidevice_' + axis_name))).MVR({1 : move_value})
-                    if axis_name=='f':
-                        self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name))) #  not really sure
-                else:
-                    self.sig_status_message.emit('Relative movement stopped: {} Motion limit would be reached!'.format(axis_name),1000)
 
-                if wait_until_done == True:
-                    self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))
+        axis_move = list(move_dict.keys())[0]
+        axis_name = axis_move.split('_')[0]
+        move_value = move_dict[axis_move]
+        # print('axis to move: {}, value: {}'.format(axis_name, move_value))
 
+        if getattr(self, (axis_name + '_min')) < getattr(self, (axis_name + '_pos')) + move_value < getattr(self, (axis_name + '_max')):
+            if not axis_name == 'theta':
+                move_value = move_value / 1000
+            (getattr(self.pi_stages, ('pidevice_' + axis_name))).MVR({1: move_value})
+            if axis_name == 'f':
+                self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # not really sure
+        else:
+            self.sig_status_message.emit(
+                'Relative movement stopped: {} Motion limit would be reached!'.format(axis_name), 1000)
+
+        if wait_until_done == True:
+            self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))
+            '''
+            self.pitools.waitontarget(self.pidevice_x)
+            self.pitools.waitontarget(self.pidevice_y)
+            self.pitools.waitontarget(self.pidevice_z)
+            self.pitools.waitontarget(self.pidevice_f)
+            '''
+
+    # def move_absolute(self, dict, wait_until_done=False):
     def move_absolute(self, move_dict, wait_until_done=False):
-        ''' PI move absolute method '''
-        
-        ############
-        print('move_dict absolute: {}'.format(move_dict))
-        print("wait? : {}'.format(wait_until_done))
-        ############
+        '''
+            PI move absolute method
+            avoid using "dict" as varaible name
+        TODO: DRY principle violated
+        '''
 
         axis_move = list(move_dict.keys())[0]
         axis_name = axis_move.split('_')[0]
