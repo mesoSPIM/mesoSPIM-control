@@ -218,7 +218,7 @@ pi_parameters = {'controllername' : 'C-884',
                  'serialnum' : ('118075764'),
                  }
 
-If 'stage_type' = 'PI_NcontrollersNstages' (mesoSPIM V5 with multiple single-axis controllers):
+If 'stage_type' = 'PI_NcontrollersNstages' (mesoSPIM V5 with multiple singe-axis controllers):
 pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'stages': ('L-509.20SD00', 'L-509.40SD00', 'L-509.20SD00', None, 'MESOSPIM_FOCUS'),
                 'controllername': ('C-663', 'C-663', 'C-663', None, 'C-663'),
