@@ -544,7 +544,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
         # Setting up the stages with separate PI controller.
         # Explicitly set referencing status and get position
 
-        # gather stage devices in VirtualController class
+        # gather stage devices in VirtualStage class
         class VirtualStages:
             pass
 
@@ -601,12 +601,6 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
             '''Close the PI connection'''
             [(getattr(self.pi_stages, ('pidevice_' + axis_name))).unload() for axis_name in self.pi['axes_names'] if
              (hasattr(self.pi_stages, ('pidevice_' + axis_name)))]
-            '''
-            self.pidevice_x.unload()
-            self.pidevice_y.unload()
-            self.pidevice_z.unload()
-            self.pidevice_f.unload()
-            '''
             logger.info('Stages disconnected')
         except:
             logger.info('Error while disconnecting the PI stage')
@@ -639,6 +633,8 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
     # def move_relative(self, dict, wait_until_done=False):
     def move_relative(self, move_dict, wait_until_done=False):
         ''' PI move relative method '''
+        
+        print("wait? : {}'.format(wait_until_done))
 
         axis_move = list(move_dict.keys())[0]
         axis_name = axis_move.split('_')[0]
