@@ -533,7 +533,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
                         'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                         }
         make sure that reference points are not in conflict with general microscope setup
-        and can not hurt optics
+        and will not hurt optics under referencing at startup
     '''
 
 
@@ -602,8 +602,8 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
 
     def __del__(self):
+        '''Close the PI connection'''
         try:
-            '''Close the PI connection'''
             [(getattr(self.pi_stages, ('pidevice_' + axis_name))).unload() for axis_name in self.pi['axes_names'] if
              (hasattr(self.pi_stages, ('pidevice_' + axis_name)))]
             logger.info('Stages disconnected')
@@ -612,6 +612,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
 
     def report_position(self):
+        '''report stage position'''
         for axis_name in self.pi['axes_names']:
             pidevice_name = 'pidevice_' + str(axis_name)
             if hasattr(self.pi_stages, pidevice_name):
@@ -676,17 +677,20 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
 
     def stop(self):
+        '''stop stage movement'''
         [(getattr(self.pi_stages, ('pidevice_' + axis_name))).STP(noraise=True) for axis_name in self.pi['axes_names']
          if (hasattr(self.pi_stages, ('pidevice_' + axis_name)))]
 
 
     def load_sample(self):
+        '''bring sample to imaging position'''
         axis_name = 'y'
         y_abs = self.cfg.stage_parameters['y_load_position'] / 1000
         (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: y_abs})
 
 
     def unload_sample(self):
+        '''lift sample to sample handling position'''
         axis_name = 'y'
         y_abs = self.cfg.stage_parameters['y_unload_position'] / 1000
         (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: y_abs})
