@@ -532,7 +532,10 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
                         'serialnum': ('**********', '**********', '**********', None, '**********'),
                         'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                         }
+        make sure that reference points are not in conflict with general microscope setup
+        and will not hurt optics under referencing at startup
     '''
+
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -544,7 +547,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
         # Setting up the stages with separate PI controller.
         # Explicitly set referencing status and get position
 
-        # gather stage devices in VirtualController class
+        # gather stage devices in VirtualStages class
         class VirtualStages:
             pass
 
@@ -587,6 +590,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
         logger.info('mesoSPIM_PI_NtoN: started')
 
+
     def wait_for_controller(self, controller):
         # function used during stage setup
         blockflag = True
@@ -596,22 +600,19 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
             else:
                 time.sleep(0.1)
 
+
     def __del__(self):
+        '''Close the PI connection'''
         try:
-            '''Close the PI connection'''
             [(getattr(self.pi_stages, ('pidevice_' + axis_name))).unload() for axis_name in self.pi['axes_names'] if
              (hasattr(self.pi_stages, ('pidevice_' + axis_name)))]
-            '''
-            self.pidevice_x.unload()
-            self.pidevice_y.unload()
-            self.pidevice_z.unload()
-            self.pidevice_f.unload()
-            '''
             logger.info('Stages disconnected')
         except:
             logger.info('Error while disconnecting the PI stage')
 
+
     def report_position(self):
+        '''report stage position'''
         for axis_name in self.pi['axes_names']:
             pidevice_name = 'pidevice_' + str(axis_name)
             if hasattr(self.pi_stages, pidevice_name):
@@ -636,89 +637,64 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
         self.sig_position.emit(self.int_position_dict)
 
-    # def move_relative(self, dict, wait_until_done=False):
+
     def move_relative(self, move_dict, wait_until_done=False):
-        ''' PI move relative method '''
+        ''' PI move relative method '''        
+        for axis_move in move_dict.keys():        
+            axis_name = axis_move.split('_')[0]
+            move_value = move_dict[axis_move]        
+        
+            if (hasattr(self.pi_stages, ('pidevice_' + axis_name))):
+                if (getattr(self, (axis_name + '_min')) < getattr(self, (axis_name + '_pos')) + move_value) and \
+                    (getattr(self, (axis_name + '_max')) > getattr(self, (axis_name + '_pos')) + move_value):
+                    if not axis_name=='theta':
+                        move_value = move_value/1000
+                    (getattr(self.pi_stages, ('pidevice_' + axis_name))).MVR({1 : move_value})
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: {} Motion limit would be reached!'.format(axis_name),1000)
+                if (axis_name == 'f') or (wait_until_done == True):
+                    self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # focus may be slower than expected
 
-        axis_move = list(move_dict.keys())[0]
-        axis_name = axis_move.split('_')[0]
-        move_value = move_dict[axis_move]
-        # print('axis to move: {}, value: {}'.format(axis_name, move_value))
 
-        if getattr(self, (axis_name + '_min')) < getattr(self, (axis_name + '_pos')) + move_value < getattr(self, (axis_name + '_max')):
-            if not axis_name == 'theta':
-                move_value = move_value / 1000
-            (getattr(self.pi_stages, ('pidevice_' + axis_name))).MVR({1: move_value})
-            if axis_name == 'f':
-                self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # not really sure
-        else:
-            self.sig_status_message.emit(
-                'Relative movement stopped: {} Motion limit would be reached!'.format(axis_name), 1000)
-
-        if wait_until_done == True:
-            self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))
-            '''
-            self.pitools.waitontarget(self.pidevice_x)
-            self.pitools.waitontarget(self.pidevice_y)
-            self.pitools.waitontarget(self.pidevice_z)
-            self.pitools.waitontarget(self.pidevice_f)
-            '''
-
-    # def move_absolute(self, dict, wait_until_done=False):
     def move_absolute(self, move_dict, wait_until_done=False):
-        '''
-            PI move absolute method
-            avoid using "dict" as varaible name
-        TODO: DRY principle violated
-        '''
+        ''' PI move absolute method '''
+        for axis_move in move_dict.keys():
+            axis_name = axis_move.split('_')[0]
+            move_value = move_dict[axis_move] 
+            move_value = move_value - getattr(self, ('int_' + axis_name + '_pos_offset'))
+            
+            if (hasattr(self.pi_stages, ('pidevice_' + axis_name))):
+                if (getattr(self, (axis_name + '_min')) < move_value) and \
+                        (getattr(self, (axis_name + '_max')) > move_value):
+                    if not axis_name == 'theta':
+                        move_value = move_value / 1000
+                    (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: move_value})
+                else:
+                    self.sig_status_message.emit(
+                        'Absolute movement stopped: {} Motion limit would be reached!'.format(axis_name), 1000)
+                if (axis_name == 'f') or (wait_until_done == True):
+                    self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # focus may be slower than expected
 
-        axis_move = list(move_dict.keys())[0]
-        axis_name = axis_move.split('_')[0]
-        move_value = move_dict[axis_move]
-        move_value = move_value - getattr(self, ('int_' + axis_name + '_pos_offset'))
-        # print('axis to move: {}, value: {}'.format(axis_name, move_value))
-
-        if (getattr(self, (axis_name + '_min')) < move_value) and \
-                (getattr(self, (axis_name + '_max')) > move_value):
-            if not axis_name == 'theta':
-                move_value = move_value / 1000
-            (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: move_value})
-            if axis_name == 'f':
-                self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # not really sure
-        else:
-            self.sig_status_message.emit(
-                'Relative movement stopped: {} Motion limit would be reached!'.format(axis_name), 1000)
-
-        if wait_until_done == True:
-            self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))
-            '''
-            self.pitools.waitontarget(self.pidevice_x)
-            self.pitools.waitontarget(self.pidevice_y)
-            self.pitools.waitontarget(self.pidevice_z)
-            self.pitools.waitontarget(self.pidevice_f)
-            '''
 
     def stop(self):
+        '''stop stage movement'''
         [(getattr(self.pi_stages, ('pidevice_' + axis_name))).STP(noraise=True) for axis_name in self.pi['axes_names']
          if (hasattr(self.pi_stages, ('pidevice_' + axis_name)))]
-        # self.pidevice_x.STP(noraise=True)
-        # self.pidevice_y.STP(noraise=True)
-        # self.pidevice_z.STP(noraise=True)
-        # self.pidevice_f.STP(noraise=True)
+
 
     def load_sample(self):
+        '''bring sample to imaging position'''
         axis_name = 'y'
         y_abs = self.cfg.stage_parameters['y_load_position'] / 1000
         (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: y_abs})
-        # y_abs = self.cfg.stage_parameters['y_load_position']/1000
-        # self.pidevice_y.MOV({1 : y_abs})
+
 
     def unload_sample(self):
+        '''lift sample to sample handling position'''
         axis_name = 'y'
         y_abs = self.cfg.stage_parameters['y_unload_position'] / 1000
         (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: y_abs})
-        # y_abs = self.cfg.stage_parameters['y_unload_position']/1000
-        # self.pidevice_y.MOV({1 : y_abs})
+
 
     '''
     # currently not implemented for this microscope configuration
