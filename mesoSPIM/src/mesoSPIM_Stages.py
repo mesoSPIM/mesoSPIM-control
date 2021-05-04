@@ -638,8 +638,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
 
     def move_relative(self, move_dict, wait_until_done=False):
-        ''' PI move relative method '''
-        
+        ''' PI move relative method '''        
         for axis_move in move_dict.keys():        
             axis_name = axis_move.split('_')[0]
             move_value = move_dict[axis_move]        
@@ -658,7 +657,6 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
 
     def move_absolute(self, move_dict, wait_until_done=False):
         ''' PI move absolute method '''
-
         for axis_move in move_dict.keys():
             axis_name = axis_move.split('_')[0]
             move_value = move_dict[axis_move] 
