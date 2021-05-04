@@ -59,9 +59,9 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.zoom = DemoZoom(self.cfg.zoomdict)
 
         ''' Attaching the stage '''
-        if self.cfg.stage_parameters['stage_type'] == 'PI' or 'PI_1controllerNstages':
+        if self.cfg.stage_parameters['stage_type'] in {'PI', 'PI_1controllerNstages'}:
             self.stage = mesoSPIM_PI_1toN(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PIStages' or 'PI_NcontrollersNstages':
+        elif self.cfg.stage_parameters['stage_type'] == 'PI_NcontrollersNstages':
             self.stage = mesoSPIM_PI_NtoN(self)
             self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
