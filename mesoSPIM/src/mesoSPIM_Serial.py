@@ -61,7 +61,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] in {'PI', 'PI_1controllerNstages'}:
             self.stage = mesoSPIM_PI_1toN(self)
-        elif self.cfg.stage_parameters['stage_type'] in {'PIStages', 'PI_NcontrollersNstages'}:
+        elif self.cfg.stage_parameters['stage_type'] == 'PI_NcontrollersNstages':
             self.stage = mesoSPIM_PI_NtoN(self)
             self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
