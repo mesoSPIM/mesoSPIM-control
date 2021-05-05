@@ -9,6 +9,18 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
+Dark mode: Renders the UI dark
+'''
+ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
+              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
+              'enable_y_buttons' : True, 
+              'enable_z_buttons' : True,
+              'enable_f_buttons' : True,
+              'enable_rotation_buttons' : True,
+              'enable_loading_buttons' : True,
+               }
+               
+'''
 Waveform output for Galvos, ETLs etc.
 '''
 
@@ -188,7 +200,7 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 All positions are absolute.
 
-'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages' (former 'PIStages')
+'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages' 
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', see below
@@ -248,9 +260,6 @@ filterdict = {'Empty-Alignment' : 0, # Every config should contain this
 
 '''
 Zoom configuration
-'''
-
-'''
 For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom,
 these values have to be there
 '''
@@ -291,10 +300,18 @@ pixelsize = {'0.63x' : 10.52,
             '6.3x' : 1.03}
 
 '''
+ HDF5 parameters, if this format is used for data saving (optional).
+Downsampling and compression slows down writing by 5x - 10x, use with caution.
+Imaris can open these files if no subsampling and no compression is used.
+'''
+hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+        'compression': None, # None, 'gzip', 'lzf'
+        'flip_xyz': (True, True, False) # match BigStitcher coordinates to mesoSPIM axes.
+        }
+
+'''                                                                  
 Initial acquisition parameters
-
 Used as initial values after startup
-
 When setting up a new mesoSPIM, make sure that:
 * 'max_laser_voltage' is correct (5 V for Toptica MLEs, 10 V for Omicron SOLE)
 * 'galvo_l_amplitude' and 'galvo_r_amplitude' (in V) are correct (not above the max input allowed by your galvos)
