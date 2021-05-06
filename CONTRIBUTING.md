@@ -19,6 +19,8 @@ We follow the [Github worflow](https://guides.github.com/introduction/flow/) wit
 So, fork the repository, create your branch `my-feature` from `development`, and you are free to play. 
 Once the feature or bugfix work on your system, and you are ready to share, open a pull request. 
 
+After your commits were merged into `development`, the code is stable, and you are done with `my-feature` branch, don't forget to delete it. This will keep things tidy.
+
 ## Testing, testing
 Because mesoSPIM is a complex hardware-software system in active use and often individually customized, it is quite difficult to run good tests that cover your and other systems. So, be careful! 
 Test the code on your system, ideally in acquisition experiment that saves the "data" (with or without a sample), and then let us test it on our systems.
