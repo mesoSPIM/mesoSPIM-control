@@ -14,12 +14,14 @@ Stable releases from `development` will be merged into `master` once every few m
 ## Reporting bugs and issues
 If you find a bug or unexpected behavior, please report an [issue](https://github.com/mesoSPIM/mesoSPIM-control/issues)! We will try to fix it or find another solution.
 
-## Changing code
+## Changing the code
 We follow the [Github worflow](https://guides.github.com/introduction/flow/) with the `development` branch as the main. 
 So, fork the repository, create your branch `my-feature` from `development`, and you are free to play. 
-Once the feature or bugfix work on your system, and you are ready to share, open a pull request. 
+Once the feature works on your system, and you are ready to share, open a pull request. 
 
 After your commits were merged into `development`, the code is stable, and you are done with `my-feature` branch, don't forget to delete it. This will keep things tidy.
+
+Small bugfixes can be pull-requested directly from your forked `development` branch, without creating a new branch. This simplifies the workflow.
 
 ## Testing, testing
 Because mesoSPIM is a complex hardware-software system in active use and often individually customized, it is quite difficult to run good tests that cover your and other systems. So, be careful! 
