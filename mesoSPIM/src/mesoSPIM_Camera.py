@@ -495,9 +495,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         # 10.26 us x factor 
         # factor = 6 equals 71.82 us
         self.pvcam.set_param(param_id = self.const.PARAM_SCAN_LINE_DELAY, value = self.cfg.camera_parameters['scan_line_delay'])
-        self.pvcam.set_param(param_id = self.const.PARAM_READOUT_PORT, value = 1)
-        ''' Setting camera gain correctly, otherwise, initial gain might be 10x higher: A dark frame would have 3000 cts on average instead of 300 '''
-        self.pvcam.set_param(param_id = const.PARAM_GAIN_INDEX, value = 1)
+        
         ''' Setting Binning parameters: '''
         '''
         self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
@@ -578,7 +576,8 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
         
     def get_image(self):
-        return self.pvcam.get_frame()
+        frame , _ , _ = self.pvcam.poll_frame()
+        return frame['pixel_data']
     
     def initialize_image_series(self):
         ''' The Photometrics cameras expect integer exposure times, otherwise they default to the minimum value '''
