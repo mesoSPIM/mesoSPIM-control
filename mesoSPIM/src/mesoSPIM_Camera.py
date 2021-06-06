@@ -587,7 +587,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.pvcam.start_live()
 
     def get_images_in_series(self):
-        print('Exp Time in series:', self.pvcam.exp_time)
+        # print('Exp Time in series:', self.pvcam.exp_time)
         frame , _ , _ = self.pvcam.poll_frame()
         return [frame['pixel_data']]
     
@@ -602,12 +602,12 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         logger.info('Initializing live mode with exp time: '+str(exp_time_ms))
     
     def get_live_image(self):
-        print('Exp Time in live:', self.pvcam.exp_time)
+        # print('Exp Time in live:', self.pvcam.exp_time)
         frame , _ , _ = self.pvcam.poll_frame()
         return [frame['pixel_data']]
     
     def close_live_mode(self):
-        print('Live mode finished')
+        # print('Live mode finished')
         self.pvcam.finish()
         
 
