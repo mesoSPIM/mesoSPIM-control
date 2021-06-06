@@ -104,7 +104,7 @@ def get_parser():
     return parser
   
 def dark_mode_check(cfg, app):
-    if cfg.dark_mode == True:
+    if cfg.ui_options['dark_mode'] == True:
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 

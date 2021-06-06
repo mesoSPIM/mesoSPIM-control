@@ -92,7 +92,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     def write_image(self, image, acq, acq_list):
         if self.file_extension == '.h5':
-            self.bdv_writer.append_plane(plane=image, plane_index=self.cur_image,
+            self.bdv_writer.append_plane(plane=image, z=self.cur_image,
                                          illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                          channel=acq_list.find_value_index(acq['laser'], 'laser'),
                                          angle=acq_list.find_value_index(acq['rot'], 'rot'),
@@ -108,7 +108,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:
-                    self.bdv_writer.write_xml_file()
+                    self.bdv_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
+                    self.bdv_writer.set_attribute_labels('illumination', tuple(acq_list.get_unique_attr_list('shutterconfig')))
+                    self.bdv_writer.set_attribute_labels('angle', tuple(acq_list.get_unique_attr_list('rot')))
+                    self.bdv_writer.write_xml()
                 except:
                     logger.error(f'HDF5 XML could not be written: {sys.exc_info()}')
                 try:

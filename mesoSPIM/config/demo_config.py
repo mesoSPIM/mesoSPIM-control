@@ -9,6 +9,18 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
+Dark mode: Renders the UI dark
+'''
+ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
+              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
+              'enable_y_buttons' : True, 
+              'enable_z_buttons' : True,
+              'enable_f_buttons' : True,
+              'enable_rotation_buttons' : True,
+              'enable_loading_buttons' : True,
+               }
+               
+'''
 Waveform output for Galvos, ETLs etc.
 '''
 dark_mode = False 
@@ -141,20 +153,6 @@ camera_parameters = {'x_pixels' : 5056,
                      'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
                     }
 
-For a PCO Panda 4.2 bi with Lightsheet-Firmware (allowing rolling shutter operation):
-
-camera_parameters = {'x_pixels' : 2048,
-                     'y_pixels' : 2048,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
-                     'subsampling' : [1,2,4],
-                     'binning' : '1x1',
-                     'trigger': 'external exposure start & software trigger',
-                     'exp_time': 20e-3, # 20 ms Exposure
-                     'line_interval': 75e-6, # 75 us Line delay
-                     'line_exposure_delay' : 266 # 266 lines = 20 ms / 75 us - parameter is not used during initialization
-                    }
-
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsIris15'
 
@@ -185,9 +183,12 @@ The stage_parameter dictionary defines the general stage configuration, initial 
 and safety limits. The rotation position defines a XYZ position (in absolute coordinates)
 where sample rotation is safe. Additional hardware dictionaries (e.g. pi_parameters)
 define the stage configuration details.
+All positions are absolute.
+
+'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages' 
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz' or 'TigerASI' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', see below
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
@@ -197,8 +198,8 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz
                     'y_min' : -160000,
                     'z_max' : 99000,
                     'z_min' : -99000,
-                    'f_max' : 99000,
-                    'f_min' : -99000,
+                    'f_max' : 10000,
+                    'f_min' : -10000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     'x_rot_position': 0,
@@ -206,36 +207,21 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage' or 'PI' or 'PI_xyz
                     'z_rot_position': 66000,
                     }
 
-'''
-Depending on the stage hardware, further dictionaries define further details of the stage configuration
-
-For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the
-serialnumber with the one of your controller):
-
-pi_parameters = {'controllername' : 'C-884',
-                 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
-                 'refmode' : ('FRF',),
-                 'serialnum' : ('118015797'),
-                 }
-
-For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
-serialnumber with the one of your controller):
-
+''''
+If 'stage_type' = 'PI_1controllerNstages' (vanilla mesoSPIM V5 with single 6-axis controller):
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
-                 'serialnum' : ('118015799'),
-
-For microscope configuration with three independent stage controller use these params:
-pi_parameters = {'stage_x' : ('L-509.20SD00'),
-                 'serialnum_x' : ('**********'),
-                 'stage_y' : ('L-509.40SD00'),
-                 'serialnum_y' : ('**********'),
-                 'stage_z' : ('L-509.20SD00'),
-                 'serialnum_z' : ('**********'),
-                 'controllername' : ('C-663'),
-                 'refmode' : ('FRF')
+                 'serialnum' : ('118075764'),
                  }
+
+If 'stage_type' = 'PI_NcontrollersNstages' (mesoSPIM V5 with multiple single-axis controllers):
+pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
+                'stages': ('L-509.20SD00', 'L-509.40SD00', 'L-509.20SD00', None, 'MESOSPIM_FOCUS'),
+                'controllername': ('C-663', 'C-663', 'C-663', None, 'C-663'),
+                'serialnum': ('**********', '**********', '**********', None, '**********'),
+                'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
+                }
 '''
 
 '''
@@ -251,21 +237,11 @@ asi_parameters = {'COMport' : 'COM32',
 
 '''
 Filterwheel configuration
-'''
-
-'''
-For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
-a valid COMport is necessary.
+For a DemoFilterWheel, no COMport needs to be specified.
+For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 '''
 filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
                           'COMport' : 'COM53'}
-
-# Ludl marking 10 = position 0
-
-'''
-
-A Ludl double filter wheel can be
-'''
 
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
               '405-488-647-Tripleblock' : 1,
@@ -280,9 +256,6 @@ filterdict = {'Empty-Alignment' : 0, # Every config should contain this
 
 '''
 Zoom configuration
-'''
-
-'''
 For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom,
 these values have to be there
 '''
@@ -323,18 +296,18 @@ pixelsize = {'0.63x' : 10.52,
             '6.3x' : 1.03}
 
 '''
-HDF5 parameters, when this format is used for data saving (optional).
+ HDF5 parameters, if this format is used for data saving (optional).
+Downsampling and compression slows down writing by 5x - 10x, use with caution.
+Imaris can open these files if no subsampling and no compression is used.
 '''
 hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
-        'flip_xyz': (True, True, False) # match BigDataViewer axes to mesoSPIM 
+        'flip_xyz': (True, True, False) # match BigStitcher coordinates to mesoSPIM axes.
         }
 
-'''
+'''                                                                  
 Initial acquisition parameters
-
 Used as initial values after startup
-
 When setting up a new mesoSPIM, make sure that:
 * 'max_laser_voltage' is correct (5 V for Toptica MLEs, 10 V for Omicron SOLE)
 * 'galvo_l_amplitude' and 'galvo_r_amplitude' (in V) are correct (not above the max input allowed by your galvos)

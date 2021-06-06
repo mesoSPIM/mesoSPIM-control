@@ -1,15 +1,42 @@
-## Version [0.1.4] - in development
+## Latest version
+* :gem: Support of multiple PI single-axis controllers, thanks to #52 by @drchrisch. 
+Note the changes in config file: single multi-axis controller (C-884) is initialized by `'PI_1controllerNstages'`, 
+while multiple single-axis controllers (C-663) by `'PI_NcontrollersNstages'`.
+
+## Version [0.1.5] 
+* :gem: Improved Tiling Wizard: 
+    * buttons `x-start, x-end, y-start, y-end` added for easier navigation: 
+    no need to search for corners of imaginary box around the sample. 
+    * `left, then right` illuminations can be created automatically for each tile: no need for manual duplication 
+    and changing the illumination directions in the Acquisition Manager.
+    
+* :gem: Improved saving options in Fiji/BigStitcher H5 format:
+     * `laser`, `illumination`, `angle` attributes are saved in the BigStitcher XML file.
+     * (optional) downsampling and compression are supported.
+* :gem: Image window got `Adjust levels` button for automatic intensity adjustment.
+* :gem: Image window got optional `Box overlay` to help measure sample dimensions.
+* :mag: Tests for tiling and serial communication are created.
+* :bug: **Bugfix:** long-standing `permission denied` issues with serial communication 
+to filter wheel and zoom servo are fixed.
+The fix opens serial ports once and keeps them open during the session.
+The root cause was due to laser control software polling serial ports regularly, thus blocking access to them.
+
+## Version [0.1.4] 
 ### Features & updates
+* :warning: **Config files need to be updated** Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the `demo.cfg` file into your config files.
 * :warning: :gem: **New handling of config files** - If there is a single config file (without a 'demo' prefix in the filename and apart from the `demo_config.py`-file) in the config folder, the software will automatically load this file. Otherwise, the config selection GUI is opened. This is especially helpful when operating a mesoSPIM with multiple users. Thanks to @raacampbell for this feature! 
 * :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. 
 For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
 * :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
 * :gem: **New: Camera and Acquisition Manager Windows can be reopened** - A new menu allows the camera and acquisition manager windows to be reopened in case they get closed. The same menu bar allows exiting the program as well.
+* :gem: **New: Disabling arrow buttons** - To allow mesoSPIM configurations with less than 5 motorized stages, the arrow buttons in the main window can now be disabled in the configuration file. Typical examples are a mesoSPIM without a rotation stage or a mesoSPIM using only a single motorized z-stage. This feature can also be useful if the serial connection to the stages is too slow and pressing the arrow buttons leads to incorrect movements. 
 * :gem: **Interactive IPython console** - If the software is launched via `python mesoSPIM-control.py -C`, an interactive IPython console is launched for debugging. Feature by @raacampbell.
 * :gem: **Command-line demo mode option** - If the software is launched via `python mesoSPIM-control.py -D`, it launches automatically into demo mode. Feature by @raacampbell.
 * :gem: **New: Support for PCO cameras** - PCO cameras with lightsheet mode are now supported. For this the `pco` Python package needs to be installed via `python -m pip install pco`. Currently, the only tested camera is the PCO panda 4.2 bi with lightsheet firmware.
 * :gem: **New: Support for Sutter Lambda 10B Filter Controller** Thanks to Kevin Dean @AdvancedImagingUTSW, Sutter filter wheels are now supported.
 * :gem: **New: Support for Physik Instrumente stepper motor stages in a XYZ configuration** Thanks to @drchrisch, a mesoSPIM configuration ('PI_xyz') using stepper motor stages for sample movement is now supported. Please note that this is currently not supporting focus movements or sample rotations.
+* :gem: **New: Support for Physik Instrumente C-863 controller in a single-stage config** To allow setting up a simplified mesoSPIM using only a single motorized z-stage (all other stages need to be manually operated), the combination of the C-863 motor controller and L-509 stage is now supported ('PI_z')
+* :sparkles: **Improvement:** **Disabling movement buttons in the GUI** By modifying the `ui_options` dictionary in the configuration file, the X,Y,Z, focus, rotation, and load/unload buttons can be disabled. This allows modifing the UI for mesoSPIM setups which do not utilize the full set of 5 axes. Disabled buttons are greyed out.
 * :sparkles: **Improvement:** **Updated multicolor tiling wizard** The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.
 * :sparkles: **Improvement:** **Physik Instrumente stages now report their referencing status after startup in the logfile** This allows for easier diagnosis of unreferenced stages during startup. Feature by @raacampbell.
 * :bug: **Bugfix:** Binning was not working properly with all cameras.

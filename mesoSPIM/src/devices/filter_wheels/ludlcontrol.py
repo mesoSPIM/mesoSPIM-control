@@ -1,17 +1,17 @@
 """
 mesoSPIM Module for controlling Ludl filterwheels
 
-Author: Fabian Voigt
+Authors: Fabian Voigt, Nikita Vladimirov
 
 #TODO
 """
 
-import serial as Serial
-import io as Io
+import serial
+import io
 import time
 
 '''PyQt5 Imports'''
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtCore
 
 class LudlFilterwheel(QtCore.QObject):
 
@@ -43,8 +43,9 @@ class LudlFilterwheel(QtCore.QObject):
         self.baudrate = baudrate
         self.filterdict = filterdict
         self.double_wheel = False
-        self.ser = self.sio = None
-
+        self.ser = None
+        self.sio = None
+        self._connect()
         ''' Delay in s for the wait until done function '''
         self.wait_until_done_delay = 0.5
 
@@ -60,6 +61,20 @@ class LudlFilterwheel(QtCore.QObject):
         if type(self.filterdict[self.first_item_in_filterdict]) is tuple:
             self.double_wheel = True
 
+    def _connect(self):
+        """"Note: Only one connection should be done per session. Connecting frequently is error-prone,
+         because COM port can be scanned by another program (e.g. laser control) and thus be permission-denied at random
+          times."""
+        try:
+            self.ser = serial.Serial(self.COMport,
+                                     self.baudrate,
+                                     parity=serial.PARITY_NONE,
+                                     timeout=0, write_timeout=0,
+                                     xonxoff=False,
+                                     stopbits=serial.STOPBITS_TWO)
+            self.sio = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser))
+        except serial.SerialException as e:
+            print(f"ERROR: Serial connection to Ludl filter wheel failed: {e}")
 
     def _check_if_filter_in_filterdict(self, filter):
         '''
@@ -74,33 +89,12 @@ class LudlFilterwheel(QtCore.QObject):
     def set_filter(self, filter, wait_until_done=False):
         '''
         Moves filter using the pyserial command set.
-
         No checks are done whether the movement is completed or
         finished in time.
-
-
         '''
         if self._check_if_filter_in_filterdict(filter) is True:
-            try:
-                self.ser = Serial.Serial(self.COMport,
-                                         self.baudrate,
-                                         parity=Serial.PARITY_NONE,
-                                         timeout=0, write_timeout=0,
-                                         xonxoff=False,
-                                         stopbits=Serial.STOPBITS_TWO)
-                self.sio = Io.TextIOWrapper(Io.BufferedRWPair(self.ser, self.ser))
-            except Serial.SerialException as e:
-                print(f"ERROR: Serial connection to Ludl filter wheel failed: {e}")
-                if self.sio:
-                    self.sio.flush()
-                if self.ser:
-                    self.ser.close()
-                self.sio = self.ser = None
-                return
-                    
             """
             Check for double or single wheel
-
             TODO: A bit of repeating code in here. Might be better to
             spin the create and send commands off.
             """
@@ -109,11 +103,10 @@ class LudlFilterwheel(QtCore.QObject):
                 # Get the filter position from the filterdict:
                 self.filternumber = self.filterdict[filter]
                 # Rotat is the Ludl high-level command for moving a filter wheel
+                self.ser.flush()
                 self.ludlstring = 'Rotat S M ' + str(self.filternumber) + '\n'
                 self.sio.write(str(self.ludlstring))
                 self.sio.flush()
-                self.ser.close()
-                self.sio = self.ser = None
 
                 if wait_until_done:
                     ''' Wait a certain number of seconds. This is a hack
@@ -143,10 +136,13 @@ class LudlFilterwheel(QtCore.QObject):
                 self.ludlstring1 = 'Rotat S A ' + str(self.filternumber[1]) + '\n'
                 self.sio.write(str(self.ludlstring1))
                 self.sio.flush()
-                self.ser.close()
-                self.sio = self.ser = None
 
                 if wait_until_done:
                     time.sleep(self.wait_until_done_delay)
         else:
             print(f'Filter {filter} not found in configuration.')
+
+
+    def __del__(self):
+        self.sio.flush()
+        self.ser.close()

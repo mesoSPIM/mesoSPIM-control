@@ -14,7 +14,7 @@ If you are updating `mesoSPIM-control` from a previous version: Please have a cl
 
 ### Prerequisites
 * Windows 7 or Windows 10
-* Python >3.6
+* Python >=3.6
 
 #### Device drivers
 * [Hamamatsu DCAM API](https://dcam-api.com/) when using Hamamatsu Orca Flash 4.0 V2 or V3 sCMOS cameras. To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
@@ -24,28 +24,38 @@ If you are updating `mesoSPIM-control` from a previous version: Please have a cl
 * [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases) for Dynamixel Zoom servos. Make sure you download version 3.5.4 of the SDK.
 
 #### Python
-mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >3.6 Python. For a clean python install, the following packages are necessary (part of Anaconda):
+mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.6 Python. 
+##### Anaconda 
+(optional) Create and activate a Python 3.6 environment from Anaconda prompt:
+```
+conda create -n py36 python=3.6
+conda activate py36
+```
+The step above is optional because the latest Python 3.8 is backward compatible with Python 3.6 code.
 
-* csv
-* traceback
-* pprint
-* numpy
-* scipy
-* ctypes
-* importlib
-* argparse
-* glob
-* PyQt5 (if there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
+Many libraries are already included in Anaconda. 
+Install mesoSPIM-specific libraries: 
+```
+pip install requirements-anaconda.txt
+```
 
-In addition (for Anaconda), the following packages need to be installed:
-* nidaqmx (`python -m pip install nidaqmx`)
-* indexed (`python -m pip install indexed`)
-* serial (`python -m pip install pyserial`)
-* pyqtgraph  (`python -m pip install pyqtgraph`)
-* qdarkstyle (`python -m pip install qdarkstyle`)
-* pywinusb  (`python -m pip install pywinusb`)
-* PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`). You can also download PIPython [here](https://github.com/royerlab/pipython)
-* tifffile (`python -m pip install tifffile`)
+##### Clean python 
+For a clean (non-Anaconda) python interpreter, install all required libraries: 
+```
+pip install requirements-clean-python.txt
+```
+
+##### Additional libraries
+PIPython 1.3.5.37. 
+
+Part of the Physik Instrumente software collection. 
+Download PIPython 1.3.5.37 [here](https://github.com/mesoSPIM/pipython), unzip, 
+navigate to the folder and run `python setup.py install`
+
+:warning: The PyPi-hosted version (`pip install PIPython`) will **not** work,
+ because the API has changed.
+
+Camera libraries are not hosted on PyPi and need to be installed manually:
 * [PyVCAM when using a Photometrics camera](https://github.com/Photometrics/PyVCAM)
 * pco (`python -m pip install pco`) when using a PCO camera ([Link](https://pypi.org/project/pco/)). A Version ≥0.1.3 is recommended.
 
@@ -73,7 +83,7 @@ python mesoSPIM_Control.py
 ```
 The software will now start. If you have multiple configuration files you will be prompted to choose one. 
 
-For testing you can use demo mode:
+For testing, you can use demo mode:
 ```
 python mesoSPIM_Control.py -D
 ```
@@ -86,6 +96,9 @@ python mesoSPIM_Control.py -C
 ```
 For example, executing `mSpim.state.__dict__` in this console will show the current mesoSPIM state. 
 
+##### Troubleshooting
+If there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting 
+`mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
 
 #### Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation [here](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation).

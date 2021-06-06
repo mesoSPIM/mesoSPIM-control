@@ -258,7 +258,7 @@ class AcquisitionList(list):
 
     def get_keylist(self):
         '''
-        Here, a list of capitalized keys is returnes for usage as a table header
+        Here, a list of capitalized keys is returned for usage as a table header
         '''
         return self[0].get_keylist()
 
@@ -398,21 +398,42 @@ class AcquisitionList(list):
                 tile_list.append(tile_str)
         return tile_list.index(acq_str)
 
-    def find_value_index(self, value='488 nm', keyword='laser'):
-        """Find the index of occurence in the list of unique elements. Non-unique elements are removed from the list.
+    def get_unique_attr_list(self, key: str = 'laser') -> list:
+        """Return ordered list of acquisition attributes.
+
+        Parameters:
+        -----------
+            key: str
+                One of ('laser', 'shutterconfig', 'rot')
+
+        Returns:
+        --------
+            List of strings, e.g. ('488', '561') for key='laser', in the order of acquisition.
+        """
+        attributes = ('laser', 'shutterconfig', 'rot')
+        assert key in attributes, f'Key {key} must be one of {attributes}.'
+        unique_list = []
+        for acq in self:
+            if acq[key] not in unique_list:
+                unique_list.append(acq[key])
+        return unique_list
+
+    def find_value_index(self, value: str = '488 nm', key: str = 'laser'):
+        """Find the attribute index in the acquisition list.
         Example:
         al = AcquisitionList([Acquisition(), Acquisition(), Acquisition(), Acquisition()])
         al[0]['laser'] = '488 nm' #
         al[1]['laser'] = '488 nm' # gets removed because non-unique
         al[2]['laser'] = '561 nm' #
         al[3]['laser'] = '637 nm' #
+        Output:
         al.find_value_index('488 nm', 'laser') # -> 0
         al.find_value_index('561 nm', 'laser') # -> 1
         al.find_value_index('637 nm', 'laser') # -> 2
         """
-        unique_list = []
-        for a in self:
-            if a[keyword] not in unique_list:
-                unique_list.append(a[keyword])
+        unique_list = self.get_unique_attr_list(key)
         assert value in unique_list, f"Value({value}) not found in list {unique_list}"
         return unique_list.index(value)
+
+
+
