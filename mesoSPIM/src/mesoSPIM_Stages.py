@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 from PyQt5 import QtCore
 
+from .mesoSPIM_State import mesoSPIM_StateSingleton
+
+
 class mesoSPIM_Stage(QtCore.QObject):
     '''
     DemoStage for a mesoSPIM microscope
