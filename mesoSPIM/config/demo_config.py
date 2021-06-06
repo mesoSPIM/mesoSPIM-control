@@ -156,6 +156,24 @@ camera_parameters = {'x_pixels' : 5056,
                      'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us
                     }
 
+For a Photometrics Prime BSI Express, the following parameters are necessary:
+
+camera_parameters = {'x_pixels' : 2048, #5056
+                     'y_pixels' : 2048, # 2960
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'speed_table_index': 1, # 1 for 100 MHz
+                     'exp_mode' : 'Edge Trigger', # Lots of options in PyVCAM --> see constants.py
+                     'readout_port': 0,
+                     'gain_index': 1, # Enable HDR mode
+                     'exp_out_mode': 4, # 4: line out 
+                     'binning' : '1x1',
+                     'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
+                     'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
+                     'scan_line_delay' : 7, # 11.2 us x factor, a factor = 3 equals 33.6 us
+                    }
+
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'Photometrics'
 
