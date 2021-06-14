@@ -9,7 +9,7 @@ numpy==1.17.0
 scipy==1.2.1
 PyQt5==5.13.1
 nidaqmx==0.5.7
-indexed==0.0.1
+indexed==1.2.1
 pipython=2.5.1.3
 pyserial==3.4
 pyqtgraph==0.11.1
