@@ -1,8 +1,9 @@
 numpy==1.16.2
 scipy==1.2.1
 PyQt5==5.13.1
+PyQt5-sip==12.7.0
 nidaqmx==0.5.7
-indexed==0.0.1
+indexed==1.2.1
 pyserial==3.4
 pyqtgraph==0.10.0
 pywinusb==0.4.2
