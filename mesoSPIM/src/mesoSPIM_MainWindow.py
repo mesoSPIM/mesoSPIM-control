@@ -333,37 +333,38 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
 
         ''' Disabling UI buttons if necessary '''
-        if self.cfg.ui_options['enable_x_buttons'] is False:
-            self.xPlusButton.setEnabled(False)
-            self.xMinusButton.setEnabled(False)
-        
-        if self.cfg.ui_options['enable_y_buttons'] is False:
-            self.yPlusButton.setEnabled(False)
-            self.yMinusButton.setEnabled(False)
+        if hasattr(self.cfg, 'ui_options'):
+            if self.cfg.ui_options['enable_x_buttons'] is False:
+                self.xPlusButton.setEnabled(False)
+                self.xMinusButton.setEnabled(False)
 
-        if self.cfg.ui_options['enable_x_buttons'] is False and self.cfg.ui_options['enable_y_buttons'] is False:
-            self.xyZeroButton.setEnabled(False)
+            if self.cfg.ui_options['enable_y_buttons'] is False:
+                self.yPlusButton.setEnabled(False)
+                self.yMinusButton.setEnabled(False)
 
-        if self.cfg.ui_options['enable_z_buttons'] is False:
-            self.zPlusButton.setEnabled(False)
-            self.zMinusButton.setEnabled(False)
-            self.zZeroButton.setEnabled(False)
+            if self.cfg.ui_options['enable_x_buttons'] is False and self.cfg.ui_options['enable_y_buttons'] is False:
+                self.xyZeroButton.setEnabled(False)
 
-        if self.cfg.ui_options['enable_f_buttons'] is False:
-            self.focusPlusButton.setEnabled(False)
-            self.focusMinusButton.setEnabled(False)
-            self.focusZeroButton.setEnabled(False) 
+            if self.cfg.ui_options['enable_z_buttons'] is False:
+                self.zPlusButton.setEnabled(False)
+                self.zMinusButton.setEnabled(False)
+                self.zZeroButton.setEnabled(False)
 
-        if self.cfg.ui_options['enable_rotation_buttons'] is False:
-            self.rotPlusButton.setEnabled(False)
-            self.rotMinusButton.setEnabled(False)
-            self.rotZeroButton.setEnabled(False)
-            self.goToRotationPositionButton.setEnabled(False)
-            self.markRotationPositionButton.setEnabled(False)
+            if self.cfg.ui_options['enable_f_buttons'] is False:
+                self.focusPlusButton.setEnabled(False)
+                self.focusMinusButton.setEnabled(False)
+                self.focusZeroButton.setEnabled(False)
 
-        if self.cfg.ui_options['enable_loading_buttons'] is False:
-            self.xyzLoadButton.setEnabled(False)
-            self.xyzUnloadButton.setEnabled(False)
+            if self.cfg.ui_options['enable_rotation_buttons'] is False:
+                self.rotPlusButton.setEnabled(False)
+                self.rotMinusButton.setEnabled(False)
+                self.rotZeroButton.setEnabled(False)
+                self.goToRotationPositionButton.setEnabled(False)
+                self.markRotationPositionButton.setEnabled(False)
+
+            if self.cfg.ui_options['enable_loading_buttons'] is False:
+                self.xyzLoadButton.setEnabled(False)
+                self.xyzUnloadButton.setEnabled(False)
 
         ''' Connecting state-changing buttons '''
         self.LiveButton.clicked.connect(self.run_live)

@@ -23,7 +23,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         ''' Change the PyQtGraph-Options in White Mode'''
         pg.setConfigOptions(imageAxisOrder='row-major')
-        if not self.cfg.ui_options['dark_mode']:
+        if hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']:
             pg.setConfigOptions(foreground='k')
             pg.setConfigOptions(background='w')
         else:

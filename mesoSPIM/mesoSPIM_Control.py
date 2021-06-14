@@ -104,11 +104,12 @@ def get_parser():
     return parser
   
 def dark_mode_check(cfg, app):
-    if cfg.ui_options['dark_mode'] == True:
+    if (hasattr(cfg, 'dark_mode') and cfg.dark_mode) or (hasattr(cfg, 'ui_options') and cfg.ui_options['dark_mode']):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
-def main(embed_console=False,demo_mode=False):
+
+def main(embed_console=False, demo_mode=False):
     """
     Main function
     """
@@ -128,8 +129,9 @@ def main(embed_console=False,demo_mode=False):
     cfgLoaded = False
     if demo_mode:
         demo_fname = glob.glob(os.path.join(current_path,'*demo*.py'));
-        if len(demo_fname)==1:
+        if len(demo_fname) == 1:
             cfg = load_config_from_file(demo_fname[0])
+            print(f'Demo settings are loaded from file {demo_fname[0]}')
             cfgLoaded = True
     else:
         all_configs = glob.glob(os.path.join(current_path,'*.py')); # All possible config files
@@ -139,7 +141,7 @@ def main(embed_console=False,demo_mode=False):
 
         # If only one file left, we load it
         if len(all_configs_no_demo)==1 and len(all_configs_no_demo[0])>0:
-            cfg = load_config_from_file(os.path.join(current_path,all_configs_no_demo[0]))
+            cfg = load_config_from_file(os.path.join(current_path, all_configs_no_demo[0]))
             cfgLoaded = True
 
     if not cfgLoaded:
