@@ -1439,7 +1439,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         self.pi = self.cfg.pi_parameters
 
         self.controllername = self.cfg.pi_parameters['controllername']
-        self.pi_stages = self.cfg.pi_parameters['stages']
+        self.pi_stages = list(self.cfg.pi_parameters['stages'])
         # ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE')
         self.refmode = self.cfg.pi_parameters['refmode']
         # self.serialnum = ('118015439')  # Wyss Geneva

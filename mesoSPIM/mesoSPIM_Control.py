@@ -41,8 +41,8 @@ def load_config_UI(current_path):
     current_path = os.path.abspath('./config')
 
     global_config_path = ''
-    global_config_path , _ = QtWidgets.QFileDialog.getOpenFileName(None,\
-    'Open microscope configuration file',current_path)
+    global_config_path , _ = QtWidgets.QFileDialog.getOpenFileName(None,
+                                                                   'Open microscope configuration file',current_path)
 
     if global_config_path != '':
         config = load_config_from_file(global_config_path)
@@ -128,19 +128,19 @@ def main(embed_console=False, demo_mode=False):
 
     cfgLoaded = False
     if demo_mode:
-        demo_fname = glob.glob(os.path.join(current_path,'*demo*.py'));
+        demo_fname = glob.glob(os.path.join(current_path, '*demo*.py'))
         if len(demo_fname) == 1:
             cfg = load_config_from_file(demo_fname[0])
             print(f'Demo settings are loaded from file {demo_fname[0]}')
             cfgLoaded = True
     else:
-        all_configs = glob.glob(os.path.join(current_path,'*.py')); # All possible config files
+        all_configs = glob.glob(os.path.join(current_path,'*.py')) # All possible config files
         # Strip the paths so when we remove "demo" files we do so based only on the file name itself
-        strip_path = [tFile.replace(os.path.commonprefix(all_configs),'') for tFile in all_configs]
-        all_configs_no_demo = list(filter(lambda tFile: str.find(tFile,'demo')<0, strip_path))
+        strip_path = [tFile.replace(os.path.commonprefix(all_configs), '') for tFile in all_configs]
+        all_configs_no_demo = list(filter(lambda tFile: str.find(tFile, 'demo') < 0, strip_path))
 
         # If only one file left, we load it
-        if len(all_configs_no_demo)==1 and len(all_configs_no_demo[0])>0:
+        if len(all_configs_no_demo) == 1:
             cfg = load_config_from_file(os.path.join(current_path, all_configs_no_demo[0]))
             cfgLoaded = True
 
