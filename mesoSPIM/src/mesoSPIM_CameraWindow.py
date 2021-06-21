@@ -40,13 +40,11 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
 
         ''' Set histogram Range '''
-        self.graphicsView.setLevels(100,4000)
-
-        self.imageItem = self.graphicsView.getImageItem()
-
-        self.histogram = self.graphicsView.getHistogramWidget()
-        self.histogram.setMinimumWidth(250)
-        self.histogram.item.vb.setMaximumWidth(250)
+        self.image_view.setLevels(100, 3000)
+        self.imageItem = self.image_view.getImageItem()
+        self.histogram = self.image_view.getHistogramWidget()
+        self.histogram.setMinimumWidth(100)
+        self.histogram.item.vb.setMaximumWidth(100)
 
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
@@ -56,8 +54,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.crosspen = pg.mkPen({'color': "r", 'width': 1})
         self.vLine = pg.InfiniteLine(pos=self.x_image_width/2, angle=90, movable=False, pen=self.crosspen)
         self.hLine = pg.InfiniteLine(pos=self.y_image_width/2, angle=0, movable=False, pen=self.crosspen)
-        self.graphicsView.addItem(self.vLine, ignoreBounds=True)
-        self.graphicsView.addItem(self.hLine, ignoreBounds=True)
+        self.image_view.addItem(self.vLine, ignoreBounds=True)
+        self.image_view.addItem(self.hLine, ignoreBounds=True)
 
         # Create overlay ROIs
         x, y, w, h = 100, 100, 200, 200
@@ -78,8 +76,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     def adjust_levels(self, pct_low=25, pct_hi=99.99):
         ''''Adjust histogram levels'''
-        img = self.graphicsView.getImageItem().image
-        self.graphicsView.setLevels(min=np.percentile(img, pct_low), max=np.percentile(img, pct_hi))
+        img = self.image_view.getImageItem().image
+        self.image_view.setLevels(min=np.percentile(img, pct_low), max=np.percentile(img, pct_hi))
 
     def px2um(self, px):
         '''Unit converter'''
@@ -91,10 +89,10 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         if overlay_name == 'Box roi':
             self.update_box_roi_labels()
             for item in self.roi_list:
-                self.graphicsView.addItem(item)
+                self.image_view.addItem(item)
         elif overlay_name == 'Overlay: none':
             for item in self.roi_list:
-                self.graphicsView.removeItem(item)
+                self.image_view.removeItem(item)
 
     @QtCore.pyqtSlot()
     def update_box_roi_labels(self):
@@ -118,19 +116,19 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.statusBar().showMessage(string, time)
 
     def draw_crosshairs(self):
-        self.graphicsView.addItem(self.vLine, ignoreBounds=True)
-        self.graphicsView.addItem(self.hLine, ignoreBounds=True)
+        self.image_view.addItem(self.vLine, ignoreBounds=True)
+        self.image_view.addItem(self.hLine, ignoreBounds=True)
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
-        self.graphicsView.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
+        self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
         if image.shape[0] != self.y_image_width or image.shape[1] != self.x_image_width:
             self.x_image_width = image.shape[1]
             self.y_image_width = image.shape[0]
             self.vLine.setPos(self.x_image_width/2) # Stating a single value works for orthogonal lines
             self.hLine.setPos(self.y_image_width/2) # Stating a single value works for orthogonal lines
-            self.graphicsView.addItem(self.vLine, ignoreBounds=True)
-            self.graphicsView.addItem(self.hLine, ignoreBounds=True)
+            self.image_view.addItem(self.vLine, ignoreBounds=True)
+            self.image_view.addItem(self.hLine, ignoreBounds=True)
         else:
             self.draw_crosshairs()
 

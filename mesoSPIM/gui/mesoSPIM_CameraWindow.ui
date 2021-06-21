@@ -15,7 +15,7 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
-    <widget class="ImageView" name="graphicsView"/>
+    <widget class="ImageView" name="image_view"/>
    </item>
    <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
