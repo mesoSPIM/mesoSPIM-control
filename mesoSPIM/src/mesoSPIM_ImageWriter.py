@@ -63,7 +63,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             else:
                 subsamp = ((1, 1, 1),)
                 compression = None
-                flip_flags = (True, True, False)
+                flip_flags = (False, False, False)
             # create writer object if the view is first in the list
             if acq == acq_list[0]:
                 self.bdv_writer = npy2bdv.BdvWriter(self.path,
