@@ -52,8 +52,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>927</width>
-         <height>1205</height>
+         <width>916</width>
+         <height>1211</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -3357,7 +3357,7 @@ ETL tab</string>
      <x>0</x>
      <y>0</y>
      <width>959</width>
-     <height>28</height>
+     <height>37</height>
     </rect>
    </property>
    <property name="font">
@@ -3375,6 +3375,7 @@ ETL tab</string>
      <string>File</string>
     </property>
     <addaction name="actionExit"/>
+    <addaction name="actionOpen_TIFF"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="font">
@@ -3436,6 +3437,14 @@ ETL tab</string>
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionOpen_TIFF">
+   <property name="text">
+    <string>Open TIFF</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>

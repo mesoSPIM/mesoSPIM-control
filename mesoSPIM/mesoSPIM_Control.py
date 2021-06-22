@@ -92,11 +92,9 @@ def stage_referencing_check(cfg):
 def get_parser():
     """
     Parse command-line input arguments
-
     :return: The argparse parser object
     """
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
     parser.add_argument('-C', '--console', action='store_true',  # store_true makes it False by default
                         help='Start a ipython console')
     parser.add_argument('-D', '--demo', action='store_true',
@@ -111,21 +109,17 @@ def dark_mode_check(cfg, app):
 
 def main(embed_console=False, demo_mode=False):
     """
-    Main function
+    Main function:
+    Load a configuration file according to the following rules:
+    1. If the user did not ask for demo mode and there is only one config file in the path then load that.
+    2. If the user did not ask for demo mode and there are multiple config files in the path, then bring up the UI loader.
+    3. If the user asked for demo mode and there is only one demo file in path: load it.
+    4. If the user asked for demo mode and there are multiple demo files in the path: bring up the UI loader
+    5. Otherwise bring up the UI loader
     """
     print('Starting control software')
-
     logging.info('mesoSPIM Program started.')
-
-    # Load a configuration file according to the following rules:
-    # 1. If the user did not ask for demo mode and there is only one config file in the path then load that.
-    # 2. If the user did not ask for demo mode and there are multiple config files in the path, then bring up the UI loader.
-    # 3. If the user asked for demo mode and there is only one demo file in path: load it.
-    # 4. If the user asked for demo mode and there are multiple demo files in the path: bring up the UI loader
-    # 5. Otherwise bring up the UI loader
-
     current_path = os.path.abspath('./config')
-
     cfgLoaded = False
     if demo_mode:
         demo_fname = glob.glob(os.path.join(current_path, '*demo*.py'))
@@ -154,8 +148,6 @@ def main(embed_console=False, demo_mode=False):
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
-    ex.display_icons()
-
     print('Done!')
 
     if embed_console:
@@ -171,7 +163,6 @@ def main(embed_console=False, demo_mode=False):
 def run():
     args = get_parser().parse_args()
     main(embed_console=args.console,demo_mode=args.demo)
-
 
 
 if __name__ == '__main__':

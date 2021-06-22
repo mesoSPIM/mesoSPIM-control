@@ -280,7 +280,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def set_state(self, state):
         if state == 'live':
-            self.state['state']='live'
+            self.state['state'] = 'live'
             self.sig_state_request.emit({'state':'live'})
             logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
             #logger.info('Core internal thread affinity in live: '+str(id(self.thread())))

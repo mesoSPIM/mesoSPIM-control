@@ -118,11 +118,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
         self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
-        if image.shape[0] != self.y_image_width or image.shape[1] != self.x_image_width:
-            self.x_image_width = image.shape[1]
-            self.y_image_width = image.shape[0]
-            self.vLine.setPos(self.x_image_width/2) # Stating a single value works for orthogonal lines
-            self.hLine.setPos(self.y_image_width/2) # Stating a single value works for orthogonal lines
+        if len(image.shape) == 2:
+            h, w = image.shape[0], image.shape[1]
+        elif len(image.shape) >= 3: # when 3D/4D image is loaded, eg from a TIFF file
+            h, w = image.shape[1], image.shape[2]
+        if h != self.y_image_width or w != self.x_image_width:
+            self.x_image_width = w
+            self.y_image_width = h
+            self.vLine.setPos(self.x_image_width/2.) # Stating a single value works for orthogonal lines
+            self.hLine.setPos(self.y_image_width/2.) # Stating a single value works for orthogonal lines
             self.image_view.addItem(self.vLine, ignoreBounds=True)
             self.image_view.addItem(self.hLine, ignoreBounds=True)
         else:
