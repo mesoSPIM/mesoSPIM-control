@@ -18,9 +18,6 @@ mesoSPIM/src/devices/stages/galil/gclib/gclib\.py
 mesoSPIM/src/devices/stages/galil/gclib\.py
 
 mesoSPIM/src/devices/stages/galil/gclib/__init__\.py
-
-mesoSPIM/config/etl_parameters/ETL-parameters - Fabian - DBE - H45\.csv
-mesoSPIM/config/etl_parameters/ETL-parameters.csv
 mesoSPIM/config/*
 !mesoSPIM/config/demo_config.py
  mesoSPIM/config/mesoSPIM_ISP_config.py
