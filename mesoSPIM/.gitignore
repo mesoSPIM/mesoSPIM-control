@@ -26,7 +26,6 @@ mesoSPIM/config/*
  mesoSPIM/config/mesoSPIM_ISP_config.py
 
 mesoSPIM/config/etl_parameters/*.*
-!mesoSPIM/config/etl_parameters/ETL-parameters.csv
 mesoSPIM/src/mesoSPIM_DemoSerial\.py
 mesoSPIM/src/devices/zoom/dynamixel\.zip
 
