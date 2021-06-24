@@ -4,6 +4,7 @@ mesoSPIM CameraWindow
 '''
 import sys
 import numpy as np
+from .utils.optimization import shannon_dct
 
 import logging
 logger = logging.getLogger(__name__)
@@ -54,11 +55,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.image_view.addItem(self.hLine, ignoreBounds=True)
 
         # Create overlay ROIs
+        self.overlay = None  # None, 'box'
         x, y, w, h = 100, 100, 200, 200
         self.roi_box = pg.RectROI((x, y), (w, h), sideScalers=True)
         font = QtGui.QFont()
         font.setPixelSize(16)
-        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='r'), pg.TextItem(color='r', angle=90)
+        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='y'), pg.TextItem(color='y', angle=90)
         self.roi_box_w_text.setFont(font), self.roi_box_h_text.setFont(font)
         self.roi_box_w_text.setPos(x, y + h), self.roi_box_h_text.setPos(x, y + h)
         self.roi_list = [self.roi_box, self.roi_box_w_text, self.roi_box_h_text]
@@ -83,12 +85,21 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     def change_overlay(self, overlay_name):
         ''''Changes the image overlay'''
         if overlay_name == 'Box roi':
-            self.update_box_roi_labels()
             for item in self.roi_list:
                 self.image_view.addItem(item)
+            self.overlay = 'box'
+            self.update_box_roi_labels()
+
         elif overlay_name == 'Overlay: none':
+            self.overlay = None
             for item in self.roi_list:
                 self.image_view.removeItem(item)
+
+    def update_dcts(self):
+        """Update the image quality metric (DCTS)"""
+        im_item = self.image_view.getImageItem()
+        roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
+        self.dcts_value.setText(f"{1e4 * shannon_dct(roi_img):.2f}")
 
     @QtCore.pyqtSlot()
     def update_box_roi_labels(self):
@@ -98,6 +109,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.roi_box_h_text.setText(f"{int(self.px2um(h)):,} \u03BCm")
         self.roi_box_w_text.setPos(x, y + h)
         self.roi_box_h_text.setPos(x, y + h)
+        self.update_dcts()
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
@@ -125,12 +137,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         if h != self.y_image_width or w != self.x_image_width:
             self.x_image_width = w
             self.y_image_width = h
-            self.vLine.setPos(self.x_image_width/2.) # Stating a single value works for orthogonal lines
-            self.hLine.setPos(self.y_image_width/2.) # Stating a single value works for orthogonal lines
+            self.vLine.setPos(self.x_image_width/2.)
+            self.hLine.setPos(self.y_image_width/2.)
             self.image_view.addItem(self.vLine, ignoreBounds=True)
             self.image_view.addItem(self.hLine, ignoreBounds=True)
         else:
             self.draw_crosshairs()
+        if self.overlay == 'box':
+            self.update_dcts()
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)

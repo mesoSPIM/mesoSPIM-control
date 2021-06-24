@@ -135,7 +135,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
         filename = timestr + '.tif'
-        path = self.state['snap_folder']+'/'+filename
-        tifffile.imsave(path, image, photometric='minisblack')
+        path = self.state['snap_folder'] + '/' + filename
+        if os.path.exists(self.state['snap_folder']):
+            try:
+                tifffile.imsave(path, image, photometric='minisblack')
+            except Exception as e:
+                logger.error(f"{e}")
+        else:
+            logger.error(f"Snap folder does not exist: {self.state['snap_folder']}. Change it in config file.")
 
 

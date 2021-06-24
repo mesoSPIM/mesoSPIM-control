@@ -10,7 +10,7 @@ def _otf_radius(img, psf_radius_px):
     assert psf_radius_px > 0, "PSF radius must be positive"
     w = min(img.shape)
     psf_radius_px = np.ceil(psf_radius_px)  # clip all PSF radii below 1 px to 1.
-    return w/psf_radius_px
+    return w / (2 * psf_radius_px)
 
 def _normL2(x):
     """L2 norm of n-dimensional array"""
@@ -40,7 +40,7 @@ def _dct_2d(img, cutoff=100):
     assert len(img.shape) == 2, 'dct_2d(img): image must be 2D'
     return dct(dct(img.astype(np.float64).T, norm='ortho', n=cutoff).T, norm='ortho', n=cutoff)
 
-def shannon_DCT(img, psf_radius_px=1):
+def shannon_dct(img, psf_radius_px=1):
     """Shannon entropy of discreet cosine transform, for 2D images."""
     cutoff = _otf_radius(img, psf_radius_px)
     return _shannon(_dct_2d(img, cutoff), cutoff)
