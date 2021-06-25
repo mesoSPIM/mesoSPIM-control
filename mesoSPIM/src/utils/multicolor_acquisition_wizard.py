@@ -235,9 +235,10 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.ZEndButton.clicked.connect(partial(self.get_edge_position, key='z-end'))
 
         self.ZSpinBoxLabel = QtWidgets.QLabel('Z stepsize')
-        self.ZStepSpinBox = QtWidgets.QSpinBox(self)
+        self.ZStepSpinBox = QtWidgets.QDoubleSpinBox(self)
         self.ZStepSpinBox.setValue(10)
-        self.ZStepSpinBox.setMinimum(1)
+        self.ZStepSpinBox.setDecimals(1)
+        self.ZStepSpinBox.setMinimum(0.1)
         self.ZStepSpinBox.setMaximum(1000)
         self.ZStepSpinBox.valueChanged.connect(self.update_z_step)
 
