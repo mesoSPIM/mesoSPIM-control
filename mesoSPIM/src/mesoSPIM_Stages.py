@@ -307,7 +307,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         ''' Setting up the PI stages '''
         self.pi = self.cfg.pi_parameters
         self.controllername = self.cfg.pi_parameters['controllername']
-        self.pi_stages = self.cfg.pi_parameters['stages']
+        self.pi_stages = list(self.cfg.pi_parameters['stages'])
         self.refmode = self.cfg.pi_parameters['refmode']
         self.serialnum = self.cfg.pi_parameters['serialnum']
         self.pidevice = GCSDevice(self.controllername)
@@ -535,7 +535,6 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
         make sure that reference points are not in conflict with general microscope setup
         and will not hurt optics under referencing at startup
     '''
-
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -916,7 +915,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         self.pi = self.cfg.pi_parameters
 
         self.controllername = self.cfg.pi_parameters['controllername']
-        self.pi_stages = self.cfg.pi_parameters['stages']
+        self.pi_stages = list(self.cfg.pi_parameters['stages'])
         # ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE')
         self.refmode = self.cfg.pi_parameters['refmode']
         # self.serialnum = ('118015439')  # Wyss Geneva
@@ -1723,11 +1722,10 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         self.pi = self.cfg.pi_parameters
 
         self.controllername = self.cfg.pi_parameters['controllername']
-        self.pi_stages = self.cfg.pi_parameters['stages']
+        self.pi_stages = list(self.cfg.pi_parameters['stages'])
         # ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE')
         self.refmode = self.cfg.pi_parameters['refmode']
-        # self.serialnum = ('118015439')  # Wyss Geneva
-        self.serialnum = self.cfg.pi_parameters['serialnum']  # UZH Irchel H45
+        self.serialnum = self.cfg.pi_parameters['serialnum']
 
         self.pidevice = GCSDevice(self.controllername)
         self.pidevice.ConnectUSB(serialnum=self.serialnum)
@@ -1964,11 +1962,10 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         self.pi = self.cfg.pi_parameters
 
         self.controllername = self.cfg.pi_parameters['controllername']
-        self.pi_stages = self.cfg.pi_parameters['stages']
+        self.pi_stages = list(self.cfg.pi_parameters['stages'])
         # ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE')
         self.refmode = self.cfg.pi_parameters['refmode']
-        # self.serialnum = ('118015439')  # Wyss Geneva
-        self.serialnum = self.cfg.pi_parameters['serialnum']  # UZH Irchel H45
+        self.serialnum = self.cfg.pi_parameters['serialnum']
 
         self.pidevice = GCSDevice(self.controllername)
         self.pidevice.ConnectUSB(serialnum=self.serialnum)

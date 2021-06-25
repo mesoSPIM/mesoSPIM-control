@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class FilenameWizard(QtWidgets.QWizard):
     '''
     Wizard to run
-
     The parent is the Window class of the microscope
     '''
     wizard_done = QtCore.pyqtSignal()
@@ -30,14 +29,12 @@ class FilenameWizard(QtWidgets.QWizard):
         through '''
         self.parent = parent
         self.state = mesoSPIM_StateSingleton()
-
+        self.file_format = None
         self.setWindowTitle('Filename Wizard')
-
         self.setPage(0, FilenameWizardWelcomePage(self))
         self.setPage(1, FilenameWizardRawSelectionPage(self))
         self.setPage(2, FilenameWizardSingleHDF5SelectionPage(self))
         self.setPage(3, FilenameWizardCheckResultsPage(self))
-        
         self.show()
 
     def done(self, r):
@@ -62,21 +59,15 @@ class FilenameWizard(QtWidgets.QWizard):
     def replace_dots_with_underscores(self, string):
         return string.replace('.','_')
 
-    def generate_filename_list(self, suffix, increment_number=True):
+    def generate_filename_list(self, increment_number=True):
         '''
         Go through the model, entry for entry and populate the filenames
         '''
         row_count = self.parent.model.rowCount()
-        filename_column = self.parent.model.getFilenameColumn()
-
         num_string = '000000'
-        
         start_number = 0
-
         start_number_string = str(start_number)
-
         self.filename_list = []
-
         for row in range(0, row_count):
             filename = ''
 
@@ -90,45 +81,52 @@ class FilenameWizard(QtWidgets.QWizard):
                 filename += self.replace_spaces_with_underscores(descriptionstring)
                 filename += '_'
 
-            if self.field('xyPosition'):
-                '''Round to nearest integer '''
-                x_position_string = str(int(round(self.parent.model.getXPosition(row))))
-                y_position_string = str(int(round(self.parent.model.getYPosition(row))))
+            if self.file_format == 'raw':
+                if self.field('xyPosition'):
+                    '''Round to nearest integer '''
+                    x_position_string = str(int(round(self.parent.model.getXPosition(row))))
+                    y_position_string = str(int(round(self.parent.model.getYPosition(row))))
 
-                filename += 'X' + x_position_string + '_' + 'Y' + y_position_string + '_'
+                    filename += 'X' + x_position_string + '_' + 'Y' + y_position_string + '_'
 
-            if self.field('rotationPosition'):
-                rot_position_string = str(int(round(self.parent.model.getRotationPosition(row))))
-                filename += 'rot_' + rot_position_string + '_'
+                if self.field('rotationPosition'):
+                    rot_position_string = str(int(round(self.parent.model.getRotationPosition(row))))
+                    filename += 'rot_' + rot_position_string + '_'
 
-            if self.field('Laser'):
-                laserstring = self.parent.model.getLaser(row)
-                filename += self.replace_spaces_with_underscores(laserstring)
-                filename += '_'
-            
-            if self.field('Filter'):
-                filterstring = self.parent.model.getFilter(row)
-                filename += self.replace_spaces_with_underscores(filterstring)
-                filename += '_'
-            
-            if self.field('Zoom'):
-                zoomstring = self.parent.model.getZoom(row)
-                filename += self.replace_dots_with_underscores(zoomstring)
-                filename += '_'
+                if self.field('Laser'):
+                    laserstring = self.parent.model.getLaser(row)
+                    filename += self.replace_spaces_with_underscores(laserstring)
+                    filename += '_'
 
-            if self.field('Shutterconfig'):
-                shutterstring = self.parent.model.getShutterconfig(row)
-                filename += shutterstring
-                filename += '_'
+                if self.field('Filter'):
+                    filterstring = self.parent.model.getFilter(row)
+                    filename += self.replace_spaces_with_underscores(filterstring)
+                    filename += '_'
 
-            file_suffix = num_string[:-len(start_number_string)]+start_number_string + '.' + suffix
+                if self.field('Zoom'):
+                    zoomstring = self.parent.model.getZoom(row)
+                    filename += self.replace_dots_with_underscores(zoomstring)
+                    filename += '_'
 
-            if increment_number:
-                start_number += 1
-                start_number_string = str(start_number)
-            
+                if self.field('Shutterconfig'):
+                    shutterstring = self.parent.model.getShutterconfig(row)
+                    filename += shutterstring
+                    filename += '_'
+
+                file_suffix = num_string[:-len(start_number_string)] + start_number_string + '.' + self.file_format
+
+                if increment_number:
+                    start_number += 1
+                    start_number_string = str(start_number)
+
+            elif self.file_format == 'h5':
+                file_suffix = 'bdv.' + self.file_format
+
+            else:
+                raise ValueError(f"file suffix invalid: {self.file_format}")
+
             filename += file_suffix
-            
+
             self.filename_list.append(filename)
             
     def update_filenames_in_model(self):
@@ -136,7 +134,7 @@ class FilenameWizard(QtWidgets.QWizard):
         filename_column = self.parent.model.getFilenameColumn()
 
         for row in range(0, row_count):
-            filename =  self.filename_list[row]
+            filename = self.filename_list[row]
             index = self.parent.model.createIndex(row, filename_column)
             self.parent.model.setData(index, filename)
 
@@ -165,8 +163,10 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
     
     def nextId(self):
         if self.SaveAsComboBox.currentText() == self.raw_string: # is .raw
+            self.parent.file_format = 'raw'
             return self.parent.raw 
-        elif self.SaveAsComboBox.currentText() == self.single_hdf5_string: # is .h5 
+        elif self.SaveAsComboBox.currentText() == self.single_hdf5_string: # is .h5
+            self.parent.file_format = 'h5'
             return self.parent.single_hdf5
 
 class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
@@ -177,7 +177,8 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         self.setTitle("Autogenerate raw filenames")
         self.setSubTitle("Which properties would you like to use?")
 
-        self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ',self)
+        self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ', self)
+        self.DescriptionCheckBox.setChecked(True)
         self.DescriptionLineEdit = QtWidgets.QLineEdit(self) 
 
         self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
@@ -186,14 +187,18 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         self.RotationPositionCheckBox = QtWidgets.QCheckBox('Rotation angle')
 
         self.LaserCheckBox = QtWidgets.QCheckBox('Laser', self)
+        self.LaserCheckBox.setChecked(True)
         self.FilterCheckBox = QtWidgets.QCheckBox('Filter', self)
+        # self.FilterCheckBox.setChecked(True)
         self.ZoomCheckBox = QtWidgets.QCheckBox('Zoom', self)
+        self.ZoomCheckBox.setChecked(True)
         self.ShutterCheckBox = QtWidgets.QCheckBox('Shutterconfig', self)
+        self.ShutterCheckBox.setChecked(True)
 
         self.registerField('DescriptionRaw', self.DescriptionLineEdit)
         self.registerField('xyPosition', self.xyPositionCheckBox)
         self.registerField('rotationPosition', self.RotationPositionCheckBox)
-        self.registerField('Laser',self.LaserCheckBox)
+        self.registerField('Laser', self.LaserCheckBox)
         self.registerField('Filter', self.FilterCheckBox)
         self.registerField('Zoom', self.ZoomCheckBox)
         self.registerField('Shutterconfig', self.ShutterCheckBox)
@@ -210,11 +215,12 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def validatePage(self):
-        self.parent.generate_filename_list('raw')
+        self.parent.generate_filename_list()
         return super().validatePage()
 
     def nextId(self):
         return self.parent.finished
+
 
 class FilenameWizardSingleHDF5SelectionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -224,7 +230,7 @@ class FilenameWizardSingleHDF5SelectionPage(QtWidgets.QWizardPage):
         self.setTitle("Autogenerate hdf5 filename")
         self.setSubTitle("This replaces all filenames with a single hdf5 file. \n Which properties would you like to use?")
 
-        self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ',self)
+        self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ', self)
         self.DescriptionLineEdit = QtWidgets.QLineEdit(self) 
         self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
 
@@ -236,11 +242,12 @@ class FilenameWizardSingleHDF5SelectionPage(QtWidgets.QWizardPage):
         self.registerField('DescriptionHDF5', self.DescriptionLineEdit)
 
     def validatePage(self):
-        self.parent.generate_filename_list('h5', increment_number=False)
+        self.parent.generate_filename_list(increment_number=False)
         return super().validatePage()
 
     def nextId(self):
         return self.parent.finished
+
 
 class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -261,8 +268,15 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def initializePage(self):
-        for i in self.parent.filename_list:
-            self.mystring += str(i)
+        if self.parent.file_format == 'raw':
+            file_list = self.parent.filename_list
+        elif self.parent.file_format == 'h5':
+            file_list = [self.parent.filename_list[0]]
+        else:
+            raise ValueError(f"file_format must be in ('raw', 'h5'), received {self.parent.file_format}")
+
+        for f in file_list:
+            self.mystring += f
             self.mystring += '\n'
         self.TextEdit.setPlainText(self.mystring)        
 
