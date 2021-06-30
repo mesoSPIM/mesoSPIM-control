@@ -111,29 +111,8 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.delta_y = abs(self.y_end - self.y_start)
 
         ''' Using the ceiling function to always create at least 1 image '''
-        if self.delta_x == 0:
-            self.x_image_count = 1
-        elif self.delta_x <= self.x_offset/2:
-            self.x_image_count = 2
-        else:
-            self.x_image_count = int(np.ceil(self.delta_x / self.x_offset))
-
-        if self.delta_y == 0:
-            self.y_image_count = 1
-        elif self.delta_y <= self.y_offset/2:
-            self.y_image_count = 2
-        else:
-            self.y_image_count = int(np.ceil(self.delta_y / self.y_offset))
-
-        ''' The first FOV is centered on the starting location -
-            therefore, add another image count to fully contain the end position
-            if necessary
-        '''
-        if self.delta_x % self.x_offset > self.x_offset/2:
-            self.x_image_count = self.x_image_count + 1
-        
-        if self.delta_y % self.y_offset > self.y_offset/2:
-            self.y_image_count = self.y_image_count + 1
+        self.x_image_count = int(np.ceil(self.delta_x / self.x_offset)) + 1
+        self.y_image_count = int(np.ceil(self.delta_y / self.y_offset)) + 1
 
     def get_dict(self):
         return {'x_start' : self.x_start,
