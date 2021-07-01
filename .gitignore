@@ -23,7 +23,6 @@ mesoSPIM/src/devices/stages/galil/gclib/__init__\.py
 mesoSPIM/config/etl_parameters/*
 mesoSPIM/config/*
 !mesoSPIM/config/demo_config.py
-mesoSPIM/config/etl_parameters/ETL-parameters.csv
 
 mesoSPIM/src/mesoSPIM_DemoSerial\.py
 mesoSPIM/src/devices/zoom/dynamixel\.zip
