@@ -36,13 +36,13 @@ The step above is optional because the latest Python 3.8 is backward compatible 
 Many libraries are already included in Anaconda. 
 Install mesoSPIM-specific libraries: 
 ```
-pip install requirements-anaconda.txt
+pip install -r requirements-anaconda.txt
 ```
 
 ##### Clean python 
 For a clean (non-Anaconda) python interpreter, install all required libraries: 
 ```
-pip install requirements-clean-python.txt
+pip install -r requirements-clean-python.txt
 ```
 
 ##### Additional libraries
