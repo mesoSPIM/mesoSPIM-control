@@ -2,6 +2,7 @@
 * :gem: Support of multiple PI single-axis controllers, thanks to #52 by @drchrisch. 
 Note the changes in config file: single multi-axis controller (C-884) is initialized by `'PI_1controllerNstages'`, 
 while multiple single-axis controllers (C-663) by `'PI_NcontrollersNstages'`.
+
 :bug: Tiling count was incorrect by -1 in some cases.
 
 ## Version [0.1.5] 
