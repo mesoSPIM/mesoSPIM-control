@@ -12,6 +12,10 @@ class MarkPositionWidget(QtWidgets.QWidget):
         self.button = QtWidgets.QPushButton()
         self.button.setText("M")
 
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        self.button.setFont(font)
+
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -20,6 +24,7 @@ class MarkPositionWidget(QtWidgets.QWidget):
         self.button.setMinimumSize(QtCore.QSize(25, 0))
 
         self.lineEdit = QtWidgets.QLineEdit()
+        self.lineEdit.setFont(font)
         # self.lineEdit.setReadOnly(True)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -54,6 +59,7 @@ class SliderWithValue(QtWidgets.QWidget):
         self.label.setSizePolicy(sizePolicy)
 
         self.slider = QtWidgets.QSlider()
+
         self.slider.setOrientation(QtCore.Qt.Horizontal)
         self.slider.setTracking(False)
         self.slider.valueChanged.connect(self.setText)
@@ -65,6 +71,7 @@ class SliderWithValue(QtWidgets.QWidget):
         sizePolicy.setHeightForWidth(self.slider.sizePolicy().hasHeightForWidth())
         self.slider.setSizePolicy(sizePolicy)
 
+
         self.layout = QtWidgets.QHBoxLayout()
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.slider)
@@ -72,6 +79,10 @@ class SliderWithValue(QtWidgets.QWidget):
 
         self.setLayout(self.layout)
         self.setAutoFillBackground(True)
+
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        self.slider.setFont(font)
 
     def setText(self, value):
         self.label.setText(str(value) + '%')

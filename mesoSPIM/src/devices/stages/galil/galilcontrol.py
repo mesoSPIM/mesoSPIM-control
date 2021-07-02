@@ -11,10 +11,11 @@ import traceback
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-import gclib
+import src.devices.stages.galil.gclib as gclib
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 class StageControlGalil(QtCore.QObject):
     '''

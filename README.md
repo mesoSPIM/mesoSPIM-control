@@ -14,7 +14,7 @@ If you are updating `mesoSPIM-control` from a previous version: Please have a cl
 
 ### Prerequisites
 * Windows 7 or Windows 10
-* Python >3.6
+* Python >=3.6
 
 #### Device drivers
 * [Hamamatsu DCAM API](https://dcam-api.com/) when using Hamamatsu Orca Flash 4.0 V2 or V3 sCMOS cameras. To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
@@ -24,26 +24,31 @@ If you are updating `mesoSPIM-control` from a previous version: Please have a cl
 * [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases) for Dynamixel Zoom servos. Make sure you download version 3.5.4 of the SDK.
 
 #### Python
-mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >3.6 Python. For a clean python install, the following packages are necessary (part of Anaconda):
+mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.6 Python. 
+##### Anaconda 
+(optional) Create and activate a Python 3.6 environment from Anaconda prompt (you can use any name instead of `py36`):
+```
+conda create -n py36 python=3.6
+conda activate py36
+```
+The step above is optional because the latest Python 3.8 is backward compatible with Python 3.6 code.
 
-* csv
-* traceback
-* pprint
-* numpy
-* scipy
-* ctypes
-* importlib
-* PyQt5 (if there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
+Many libraries are already included in Anaconda. 
+Install mesoSPIM-specific libraries: 
+```
+pip install -r requirements-anaconda.txt
+```
 
-In addition (for Anaconda), the following packages need to be installed:
-* nidaqmx (`python -m pip install nidaqmx`)
-* indexed (`python -m pip install indexed`)
-* serial (`python -m pip install pyserial`)
-* pyqtgraph  (`python -m pip install pyqtgraph`)
-* pywinusb  (`python -m pip install pywinusb`)
-* PIPython (part of the Physik Instrumente software collection. Unzip it, `cd` to the directory with the Anaconda terminal as an admin user, then install with `python setup.py install`. Test install with  test installation with `import pipython`). You can also download PIPython [here](https://github.com/royerlab/pipython)
-* tifffile (`python -m pip install tifffile`)
-* ([PyVCAM when using Photometrics cameras](https://github.com/Photometrics/PyVCAM)
+##### Clean python 
+For a clean (non-Anaconda) python interpreter, install all required libraries: 
+```
+pip install -r requirements-clean-python.txt
+```
+
+##### Additional libraries
+Camera libraries are not hosted on PyPi and need to be installed manually:
+* [PyVCAM when using a Photometrics camera](https://github.com/Photometrics/PyVCAM)
+* pco (`python -m pip install pco`) when using a PCO camera ([Link](https://pypi.org/project/pco/)). A Version ≥0.1.3 is recommended.
 
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`
@@ -63,12 +68,30 @@ At time of writing that means the master trigger out (`PXI6259/port0/line1`) sho
 Use BNC T connectors to split each analog output line to both lasers.
 * You will need to set the ThorLabs shutter controllers to run on TTL input mode.
 
-#### Run the software.
+## Launching
+#### From Anaconda prompt
 ```
+conda activate py36
 python mesoSPIM_Control.py
 ```
-After launch, it will prompt you for a configuration file. Please choose a file
-with demo devices (e.g. `DemoStage`) for testing.
+The software will now start. If you have multiple configuration files you will be prompted to choose one. 
 
-#### Documentation for users
+#### From start_mesoSPIM.bat file
+Open the `start_mesoSPIM.bat` file in text editor and configure Anaconda and `py36` path to your own. 
+Once done, launch mesoSPIM by double-clicking the file. 
+Optionally, create a Windows shortcut (via right-click menu) and place it e.g. on your desktop. 
+Using shortcut saves a lot of time.
+
+#### Starting with interactive console
+You may also run the software with an interactive IPython console for de-bugging:
+```
+python mesoSPIM_Control.py -C
+```
+For example, executing `mSpim.state.__dict__` in this console will show the current mesoSPIM state. 
+
+## Troubleshooting
+If there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting 
+`mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
+
+## Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation [here](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation).
