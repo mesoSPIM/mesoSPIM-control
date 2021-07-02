@@ -1,9 +1,13 @@
 ## Release July 2021 [0.1.6]
+:gem: Simplified installation and upgrading via `pip install -r requirements-anaconda.txt`. See [installation instructions](https://github.com/mesoSPIM/mesoSPIM-control#python).
+
+:gem: Easy launching via double-clicking `start_mesoSPIM.bat` file (needs to be configured by the user).
+
 :gem: Support of multiple PI single-axis controllers, thanks to #52 by @drchrisch. 
 Note the changes in config file: single multi-axis controller (C-884) is initialized by `'PI_1controllerNstages'`, 
 while multiple single-axis controllers (C-663) by `'PI_NcontrollersNstages'`.
 
-:bug: Tiling count was incorrect by -1 in some cases.
+:bug: Incorrect tiling count (off by -1 in some cases) is fixed.
 
 ## Version [0.1.5] 
 * :gem: Improved Tiling Wizard: 
@@ -25,10 +29,9 @@ The root cause was due to laser control software polling serial ports regularly,
 
 ## Version [0.1.4] 
 ### Features & updates
-* :warning: **Config files need to be updated** Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the `demo.cfg` file into your config files.
+* :warning: **Config files need to be updated** Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the `demo_config.py` file into your config files.
 * :warning: :gem: **New handling of config files** - If there is a single config file (without a 'demo' prefix in the filename and apart from the `demo_config.py`-file) in the config folder, the software will automatically load this file. Otherwise, the config selection GUI is opened. This is especially helpful when operating a mesoSPIM with multiple users. Thanks to @raacampbell for this feature! 
-* :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. 
-For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
+* :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. This file format is also readable by Imaris. For this, the `npy2bdv` package by @nvladimus needs to be installed via pip.
 * :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
 * :gem: **New: Camera and Acquisition Manager Windows can be reopened** - A new menu allows the camera and acquisition manager windows to be reopened in case they get closed. The same menu bar allows exiting the program as well.
 * :gem: **New: Disabling arrow buttons** - To allow mesoSPIM configurations with less than 5 motorized stages, the arrow buttons in the main window can now be disabled in the configuration file. Typical examples are a mesoSPIM without a rotation stage or a mesoSPIM using only a single motorized z-stage. This feature can also be useful if the serial connection to the stages is too slow and pressing the arrow buttons leads to incorrect movements. 
