@@ -26,7 +26,7 @@ If you are updating `mesoSPIM-control` from a previous version: Please have a cl
 #### Python
 mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.6 Python. 
 ##### Anaconda 
-(optional) Create and activate a Python 3.6 environment from Anaconda prompt:
+(optional) Create and activate a Python 3.6 environment from Anaconda prompt (you can use any name instead of `py36`):
 ```
 conda create -n py36 python=3.6
 conda activate py36
@@ -68,28 +68,30 @@ At time of writing that means the master trigger out (`PXI6259/port0/line1`) sho
 Use BNC T connectors to split each analog output line to both lasers.
 * You will need to set the ThorLabs shutter controllers to run on TTL input mode.
 
-#### Run the software.
+## Launching
+#### From Anaconda prompt
 ```
+conda activate py36
 python mesoSPIM_Control.py
 ```
 The software will now start. If you have multiple configuration files you will be prompted to choose one. 
 
-For testing, you can use demo mode:
-```
-python mesoSPIM_Control.py -D
-```
+#### From start_mesoSPIM.bat file
+Open the `start_mesoSPIM.bat` file in text editor and configure Anaconda and `py36` path to your own. 
+Once done, launch mesoSPIM by double-clicking the file. 
+Optionally, create a Windows shortcut (via right-click menu) and place it e.g. on your desktop. 
+Using shortcut saves a lot of time.
 
-Or select a "demo" file using the UI selector, should you have more than in your configuration directory. 
-
-You may also run the software with an interactive iPython console for de-bugging:
+#### Starting with interactive console
+You may also run the software with an interactive IPython console for de-bugging:
 ```
 python mesoSPIM_Control.py -C
 ```
 For example, executing `mSpim.state.__dict__` in this console will show the current mesoSPIM state. 
 
-##### Troubleshooting
+## Troubleshooting
 If there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting 
 `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
 
-#### Documentation for users
+## Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation [here](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation).
