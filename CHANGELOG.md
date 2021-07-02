@@ -9,7 +9,7 @@ while multiple single-axis controllers (C-663) by `'PI_NcontrollersNstages'`.
 
 :bug: Incorrect tiling count (off by -1 in some cases) is fixed.
 
-## Version [0.1.5] 
+### [0.1.5] 
 * :gem: Improved Tiling Wizard: 
     * buttons `x-start, x-end, y-start, y-end` added for easier navigation: 
     no need to search for corners of imaginary box around the sample. 
@@ -27,8 +27,7 @@ to filter wheel and zoom servo are fixed.
 The fix opens serial ports once and keeps them open during the session.
 The root cause was due to laser control software polling serial ports regularly, thus blocking access to them.
 
-## Version [0.1.4] 
-### Features & updates
+### [0.1.4] 
 * :warning: **Config files need to be updated** Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the `demo_config.py` file into your config files.
 * :warning: :gem: **New handling of config files** - If there is a single config file (without a 'demo' prefix in the filename and apart from the `demo_config.py`-file) in the config folder, the software will automatically load this file. Otherwise, the config selection GUI is opened. This is especially helpful when operating a mesoSPIM with multiple users. Thanks to @raacampbell for this feature! 
 * :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. This file format is also readable by Imaris. For this, the `npy2bdv` package by @nvladimus needs to be installed via pip.
@@ -48,14 +47,7 @@ The root cause was due to laser control software polling serial ports regularly,
 * :bug: **Bugfix:** Removed unnecessary imports.
 * :bug: **Bugfix:** Laser power setting `max_laser_voltage` was always 10V, ignoring the config file. This can damage some lasers that operate on lower command voltage.
 
-### Contributors 
-* Fabian Voigt (@ffvoigt)
-* Nikita Vladimirov (@nvladimus)
-* Kevin Dean (@AdvancedImagingUTSW)
-* Christian Schulze (@drchrisch)
-* Rob Campbell (@raacampbell)
-
-## Version [0.1.3] - March 13, 2020
+## Release March 13, 2020 [0.1.3]
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
 * :warning: **There are new startup parameters in the config file - make sure to update your config files accordingly**. For example, `average_frame_rate` has been added.
 * :warning: **This release removes unnecessary configuration files from the public repository - make sure to back up your mesoSPIM & ETL configuration files beforehand. In addition, old example acquisition tables (in `mesoSPIM-control\mesoSPIM\acquisitions\`) are removed as well.** 
@@ -84,12 +76,17 @@ to f_start and at z_end, the detection path focus is at z_end. This allows imagi
 * :bug: **Bugfix #34:** Fixed: Last frame in a stack is blank due to an off-by-one error
 * :bug: **Bugfix #35:** Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist
 
---
-
-## Version [0.1.2] - August 19th, 2019
+## Release August 19th, 2019 [0.1.2]
 * **New:** Logging is now supported. Logfiles go in the `log` folder. 
 * **New:** Improved support for a specific mesoSPIM configuration using sample & focusing stages by Steinmayer Mechantronik and in combination with PI stages for sample rotation and z-movement.
 * **Fix:** Reduced the output to the command line
 * **Fix:** To decrease laggyness of the GUI in live mode and during acquisitions, display subsampling is now available. This way, less image data has to be rendered by the GUI. 
 * **Fix:** Fixed a variety of multithreading bugs.
 * **Fix:** Galvo amplitude and frequency in the startup part of the configuration file are now used to set startup parameters properly
+
+## Contributors 
+* Fabian Voigt (@ffvoigt)
+* Nikita Vladimirov (@nvladimus)
+* Kevin Dean (@AdvancedImagingUTSW)
+* Christian Schulze (@drchrisch)
+* Rob Campbell (@raacampbell)
