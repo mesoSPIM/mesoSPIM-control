@@ -10,7 +10,9 @@ cleared tissue samples. It is compatible with all major clearing approaches - in
 ## Installation
 
 ### :warning: Warning
-If you are updating `mesoSPIM-control` from a previous version: Please have a close look at the [Changelog](CHANGELOG.md) to avoid overwriting your configuration files.
+If you are updating `mesoSPIM-control` from a previous version: 
+please add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) 
+to your old configuration file in order to unlock all new features.
 
 ### Prerequisites
 * Windows 7 or Windows 10
