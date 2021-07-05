@@ -11,7 +11,7 @@ cleared tissue samples. It is compatible with all major clearing approaches - in
 
 ### :warning: Warning
 If you are updating `mesoSPIM-control` from a previous version: 
-please see add new sections from the [demo config file](./config/demo_config.py) 
+please see add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) 
 to your old configuration file in order to unlock all new features.
 
 ### Prerequisites
