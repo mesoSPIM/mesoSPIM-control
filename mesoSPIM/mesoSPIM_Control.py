@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __author__ = "Fabian Voigt"
 __license__ = "GPL v3"
-__maintainer__ = "Fabian Voigt"
+__maintainer__ = "Nikita Vladimirov"
 
 
 ''' Configuring the logging module before doing anything else'''
@@ -34,12 +34,8 @@ def load_config_UI(current_path):
     '''
     Bring up a GUI that allows the user to select a microscope configuration to import
     '''
-
-    ''' This needs an placeholder QApplication to work '''
     cfg_app = QtWidgets.QApplication(sys.argv)
-
     current_path = os.path.abspath('./config')
-
     global_config_path = ''
     global_config_path , _ = QtWidgets.QFileDialog.getOpenFileName(None,
                                                                    'Open microscope configuration file',current_path)
@@ -109,46 +105,42 @@ def dark_mode_check(cfg, app):
 
 def main(embed_console=False, demo_mode=False):
     """
-    Main function:
     Load a configuration file according to the following rules:
-    1. If the user did not ask for demo mode and there is only one config file in the path then load that.
-    2. If the user did not ask for demo mode and there are multiple config files in the path, then bring up the UI loader.
-    3. If the user asked for demo mode and there is only one demo file in path: load it.
-    4. If the user asked for demo mode and there are multiple demo files in the path: bring up the UI loader
-    5. Otherwise bring up the UI loader
+    1. If the user asked for demo mode, load the `demo_config.py` file
+    2. Else, ff the user did not ask for demo mode:
+     - if there is only one non-demo config file, load that.
+     - if there are multiple config files, bring up the UI loader.
     """
     print('Starting control software')
     logging.info('mesoSPIM Program started.')
     current_path = os.path.abspath('./config')
-    cfgLoaded = False
+
+    demo_fname = current_path + "/demo_config.py"
+    if not os.path.exists(demo_fname):
+        raise ValueError(f"Demo file not found: {demo_fname}")
+
     if demo_mode:
-        demo_fname = glob.glob(os.path.join(current_path, '*demo*.py'))
-        if len(demo_fname) == 1:
-            cfg = load_config_from_file(demo_fname[0])
-            print(f'Demo settings are loaded from file {demo_fname[0]}')
-            cfgLoaded = True
+            cfg = load_config_from_file(demo_fname)
+            print(f"Loaded config from demo file: {demo_fname}")
     else:
-        all_configs = glob.glob(os.path.join(current_path,'*.py')) # All possible config files
-        # Strip the paths so when we remove "demo" files we do so based only on the file name itself
-        strip_path = [tFile.replace(os.path.commonprefix(all_configs), '') for tFile in all_configs]
-        all_configs_no_demo = list(filter(lambda tFile: str.find(tFile, 'demo') < 0, strip_path))
-
-        # If only one file left, we load it
-        if len(all_configs_no_demo) == 1:
-            cfg = load_config_from_file(os.path.join(current_path, all_configs_no_demo[0]))
-            cfgLoaded = True
-
-    if not cfgLoaded:
-        # Otherwise bring up the UI loader
-        cfg = load_config_UI(current_path)
+        all_configs = glob.glob(os.path.join(current_path, '*.py')) # All possible config files
+        all_configs_no_demo = list(filter(lambda f: str.find(f, 'demo_') < 0, all_configs))
+        if len(all_configs_no_demo) == 0:
+            cfg = load_config_from_file(demo_fname)
+            print(f"Loaded config from demo file: {demo_fname}")
+        elif len(all_configs_no_demo) == 1:
+            config_fname = os.path.join(current_path, all_configs_no_demo[0])
+            cfg = load_config_from_file()
+            print(f"Loaded config from {config_fname}")
+        else:
+            cfg = load_config_UI(current_path)
 
     app = QtWidgets.QApplication(sys.argv)
-    
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
-    print('Done!')
+    ex.display_icons()
 
     if embed_console:
         from traitlets.config import Config
