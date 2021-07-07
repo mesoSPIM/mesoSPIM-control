@@ -140,7 +140,6 @@ def main(embed_console=False, demo_mode=False):
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
-    ex.display_icons()
 
     if embed_console:
         from traitlets.config import Config
