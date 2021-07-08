@@ -92,10 +92,42 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                         m_affine=affine_matrix,
                                         name_affine="Translation to Regular Grid"
                                         )
-        else:
+        elif self.file_extension == '.raw':
             self.fsize = self.x_pixels*self.y_pixels
             self.xy_stack = np.memmap(self.path, mode="write", dtype=np.uint16, shape=self.fsize * self.max_frame)
-    
+
+        elif self.file_extension == '.tiff':
+            self.tiff_writer = tifffile.TiffWriter(self.path)
+'''
+use .write() instead of .save() if version >=2020.9.30
+Explore the options:
+bigtiff : bool
+	If True, the BigTIFF format is used.
+byteorder : {'<', '>', '=', '|'}
+	The endianness of the data in the file.
+	By default, this is the system's native byte order.
+append : bool
+	If True and 'file' is an existing standard TIFF file, image data
+	and tags are appended to the file.
+	Appending data may corrupt specifically formatted TIFF files
+	such as OME-TIFF, LSM, STK, ImageJ, or FluoView.
+imagej : bool
+	If True and not 'ome', write an ImageJ hyperstack compatible file.
+	This format can handle data types uint8, uint16, or float32 and
+	data shapes up to 6 dimensions in TZCYXS order.
+	RGB images (S=3 or S=4) must be uint8.
+	ImageJ's default byte order is big-endian but this implementation
+	uses the system's native byte order by default.
+	ImageJ hyperstacks do not support BigTIFF or compression.
+	The ImageJ file format is undocumented.
+	When using compression, use ImageJ's Bio-Formats import function.
+ome : bool
+	If True, write an OME-TIFF compatible file. If None (default),
+	the value is determined from the file name extension, the value of
+	the 'description' parameter in the first call of the write
+	function, and the value of 'imagej'.
+	Refer to the OME model for restrictions of this format.
+'''
         self.cur_image = 0
 
     def write_image(self, image, acq, acq_list):
@@ -106,9 +138,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                          angle=acq_list.find_value_index(acq['rot'], 'rot'),
                                          tile=acq_list.get_tile_index(acq)
                                          )
-        else:
+        elif self.file_extension == '.raw':
             image = image.flatten()
             self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+        elif self.file_extension == '.tiff':
+            self.tiff_writer.save(image, contiguous=True)
 
         self.cur_image += 1
         
@@ -126,11 +160,16 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                     self.bdv_writer.close()
                 except:
                     logger.error(f'HDF5 file could not be closed: {sys.exc_info()}')
-        else:
+        elif self.file_extension == '.raw':
             try:
                 del self.xy_stack
             except:
                 logger.warning('Raw data stack could not be deleted')
+        elif self.file_extension == '.tiff':
+            try:
+                self.tiff_writer.close()
+            except:
+                logger.warning('TIFF writer could not be closed')
     
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
