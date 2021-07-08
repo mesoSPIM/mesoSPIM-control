@@ -131,7 +131,7 @@ def main(embed_console=False, demo_mode=False):
             print(f"Loaded config from demo file: {demo_fname}")
         elif len(all_configs_no_demo) == 1:
             config_fname = os.path.join(current_path, all_configs_no_demo[0])
-            cfg = load_config_from_file()
+            cfg = load_config_from_file(config_fname)
             print(f"Loaded config from {config_fname}")
         else:
             cfg = load_config_UI(current_path)
