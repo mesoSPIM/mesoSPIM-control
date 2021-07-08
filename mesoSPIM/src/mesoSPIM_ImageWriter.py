@@ -56,6 +56,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.processing_options_string = acq['processing']
 
         if self.file_extension == '.h5':
+            if hasattr(self.cfg, "hdf5"):
+                subsamp = self.cfg.hdf5['subsamp']
+                compression = self.cfg.hdf5['compression']
+                flip_flags = self.cfg.hdf5['flip_xyz']
+            else:
+                subsamp = ((1, 1, 1),)
+                compression = None
+                flip_flags = (False, False, False)
             # create writer object if the view is first in the list
             if acq == acq_list[0]:
                 self.bdv_writer = npy2bdv.BdvWriter(self.path,
@@ -64,12 +72,12 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                                     nangles=acq_list.get_n_angles(),
                                                     ntiles=acq_list.get_n_tiles(),
                                                     blockdim=((1, 256, 256),),
-                                                    subsamp=self.cfg.hdf5['subsamp'],
-                                                    compression=self.cfg.hdf5['compression'])
+                                                    subsamp=subsamp,
+                                                    compression=compression)
             # x and y need to be exchanged to account for the image rotation
             shape = (self.max_frame, self.y_pixels, self.x_pixels)
             px_size_um = self.cfg.pixelsize[acq['zoom']]
-            sign_xyz = (1 - np.array(self.cfg.hdf5['flip_xyz'])) * 2 - 1
+            sign_xyz = (1 - np.array(flip_flags)) * 2 - 1
             affine_matrix = np.array(((1.0, 0.0, 0.0, sign_xyz[0] * acq['x_pos']/px_size_um),
                                       (0.0, 1.0, 0.0, sign_xyz[1] * acq['y_pos']/px_size_um),
                                       (0.0, 0.0, 1.0, sign_xyz[2] * acq['z_start']/acq['z_step'])))

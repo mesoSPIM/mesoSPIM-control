@@ -158,9 +158,10 @@ class ZstepSpinBoxDelegate(QtWidgets.QStyledItemDelegate):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
-        spinbox = QtWidgets.QSpinBox(parent)
-        spinbox.setMinimum(1)
+        spinbox = QtWidgets.QDoubleSpinBox(parent)
+        spinbox.setMinimum(0.1)
         spinbox.setMaximum(1000)
+        spinbox.setDecimals(1)
         spinbox.valueChanged.connect(lambda: self.commitData.emit(self.sender()))
         spinbox.setAutoFillBackground(True)
         return spinbox
