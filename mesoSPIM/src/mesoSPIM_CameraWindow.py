@@ -21,16 +21,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.cfg = parent.cfg
         self.state = mesoSPIM_StateSingleton()
 
-        ''' Change the PyQtGraph-Options in White Mode'''
         pg.setConfigOptions(imageAxisOrder='row-major')
-        if not self.cfg.ui_options['dark_mode']:
-            pg.setConfigOptions(foreground='k')
-            pg.setConfigOptions(background='w')
+        if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\
+                (hasattr(self.cfg, 'dark_mode') and self.cfg.dark_mode):
+            pg.setConfigOptions(background=pg.mkColor('#19232D'))  # To avoid pitch black bg for the image view
         else:
-            '''Set background to #19232D'''
-            background_color = pg.mkColor('#19232D')
-            pg.setConfigOptions(background=background_color)
-            pg.setConfigOptions(foreground='w')
+            pg.setConfigOptions(background="w")
 
         '''Set up the UI'''
         if __name__ == '__main__':
@@ -60,8 +56,13 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.graphicsView.addItem(self.hLine, ignoreBounds=True)
 
         # Create overlay ROIs
-        self.roi_box = pg.RectROI((self.x_image_width//2 - 50, self.y_image_width//2 - 50), (100, 100))
+        x, y, w, h = 100, 100, 200, 200
+        self.roi_box = pg.RectROI((x, y), (w, h), sideScalers=True)
+        font = QtGui.QFont()
+        font.setPixelSize(16)
         self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='r'), pg.TextItem(color='r', angle=90)
+        self.roi_box_w_text.setFont(font), self.roi_box_h_text.setFont(font)
+        self.roi_box_w_text.setPos(x, y + h), self.roi_box_h_text.setPos(x, y + h)
         self.roi_list = [self.roi_box, self.roi_box_w_text, self.roi_box_h_text]
 
         # Set up CameraWindow signals
@@ -126,13 +127,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.hLine.setPos(self.y_image_width/2) # Stating a single value works for orthogonal lines
             self.graphicsView.addItem(self.vLine, ignoreBounds=True)
             self.graphicsView.addItem(self.hLine, ignoreBounds=True)
-            ''' Debugging info
-            
-            logger.info('x_image_width: '+str(self.x_image_width))
-            logger.info('y_image_width: '+str(self.y_image_width))
-            logger.info('x_image_width/2: '+str(self.x_image_width/2))
-            logger.info('y_image_width/2: '+str(self.y_image_width/2))
-            '''
         else:
             self.draw_crosshairs()
 
