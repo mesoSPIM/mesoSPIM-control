@@ -23,8 +23,6 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
 '''
 Waveform output for Galvos, ETLs etc.
 '''
-dark_mode = False 
-
 waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration' or 'NI'
 
 '''
@@ -213,6 +211,7 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNs
                     'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
+                    'ttl_motion_enabled': False,
                     'x_max' : 51000,
                     'x_min' : -46000,
                     'y_max' : 160000,
