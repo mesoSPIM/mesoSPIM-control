@@ -75,7 +75,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         ''' Set up the camera '''
         if self.cfg.camera == 'HamamatsuOrca':
             self.camera = mesoSPIM_HamamatsuCamera(self)
-        elif self.cfg.camera == 'PhotometricsIris15':
+        elif self.cfg.camera == 'Photometrics':
             self.camera = mesoSPIM_PhotometricsCamera(self)
         elif self.cfg.camera == 'PCO':
             self.camera = mesoSPIM_PCOCamera(self)
@@ -468,9 +468,14 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.pvcam = [cam for cam in Camera.detect_camera()][0]
 
         self.pvcam.open()
+
         self.pvcam.speed_table_index = self.cfg.camera_parameters['speed_table_index']
         self.pvcam.exp_mode = self.cfg.camera_parameters['exp_mode']
-        
+        self.pvcam.set_param(param_id = self.const.PARAM_READOUT_PORT, value = self.cfg.camera_parameters['readout_port'])
+        self.pvcam.set_param(self.const.PARAM_GAIN_INDEX, self.cfg.camera_parameters['gain_index'])
+        self.pvcam.exp_out_mode = self.cfg.camera_parameters['exp_out_mode']
+        self.pvcam.exp_res = 0 # 0 for ms
+
         logger.info('Camera Vendor Name: '+str(self.pvcam.get_param(param_id = self.const.PARAM_VENDOR_NAME)))
         logger.info('Camera Product Name: '+str(self.pvcam.get_param(param_id = self.const.PARAM_PRODUCT_NAME)))
         logger.info('Camera Chip Name: '+str(self.pvcam.get_param(param_id = self.const.PARAM_CHIP_NAME)))
@@ -490,9 +495,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         # 10.26 us x factor 
         # factor = 6 equals 71.82 us
         self.pvcam.set_param(param_id = self.const.PARAM_SCAN_LINE_DELAY, value = self.cfg.camera_parameters['scan_line_delay'])
-        self.pvcam.set_param(param_id = self.const.PARAM_READOUT_PORT, value = 1)
-        ''' Setting camera gain correctly, otherwise, initial gain might be 10x higher: A dark frame would have 3000 cts on average instead of 300 '''
-        self.pvcam.set_param(param_id = const.PARAM_GAIN_INDEX, value = 1)
+        
         ''' Setting Binning parameters: '''
         '''
         self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
@@ -556,6 +559,9 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.pvc.uninit_pvcam()
 
     def set_exposure_time(self, time):
+        print('Exp Time :', time)
+        exp_time_ms = int(self.camera_exposure_time * 1000)
+        self.pvcam.exp_time = exp_time_ms
         self.camera_exposure_time = time
 
     def set_line_interval(self, time):
@@ -570,30 +576,39 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
         
     def get_image(self):
-        return self.pvcam.get_live_frame()
+        frame , _ , _ = self.pvcam.poll_frame()
+        return frame['pixel_data']
     
     def initialize_image_series(self):
         ''' The Photometrics cameras expect integer exposure times, otherwise they default to the minimum value '''
         exp_time_ms = int(self.camera_exposure_time * 1000)
-        self.pvcam.start_live(exp_time_ms)    
+        self.pvcam.exp_time = exp_time_ms
+        self.pvcam.start_live()
 
     def get_images_in_series(self):
-        return [self.pvcam.get_live_frame()]
+        # print('Exp Time in series:', self.pvcam.exp_time)
+        frame , _ , _ = self.pvcam.poll_frame()
+        return [frame['pixel_data']]
     
     def close_image_series(self):
-        self.pvcam.stop_live()
+        self.pvcam.finish()
 
     def initialize_live_mode(self):
         ''' The Photometrics cameras expect integer exposure times, otherwise they default to the minimum value '''
         exp_time_ms = int(self.camera_exposure_time * 1000)
-        # logger.info('Initializing live mode with exp time: '+str(exp_time_ms))
-        self.pvcam.start_live(exp_time_ms)
+        self.pvcam.exp_time = exp_time_ms
+        self.pvcam.start_live()
+        logger.info('Initializing live mode with exp time: '+str(exp_time_ms))
     
     def get_live_image(self):
-        return [self.pvcam.get_live_frame()]
-
+        # print('Exp Time in live:', self.pvcam.exp_time)
+        frame , _ , _ = self.pvcam.poll_frame()
+        return [frame['pixel_data']]
+    
     def close_live_mode(self):
-        self.pvcam.stop_live()
+        # print('Live mode finished')
+        self.pvcam.finish()
+        
 
 class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
