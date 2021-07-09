@@ -75,11 +75,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                                     subsamp=subsamp,
                                                     compression=compression)
             # x and y need to be exchanged to account for the image rotation
-            shape = (self.max_frame, self.y_pixels, self.x_pixels)
+            shape = (self.max_frame, self.x_pixels, self.y_pixels)
             px_size_um = self.cfg.pixelsize[acq['zoom']]
             sign_xyz = (1 - np.array(flip_flags)) * 2 - 1
-            affine_matrix = np.array(((1.0, 0.0, 0.0, sign_xyz[0] * acq['x_pos']/px_size_um),
-                                      (0.0, 1.0, 0.0, sign_xyz[1] * acq['y_pos']/px_size_um),
+            affine_matrix = np.array(((1.0, 0.0, 0.0, sign_xyz[1] * acq['y_pos']/px_size_um),
+                                      (0.0, 1.0, 0.0, sign_xyz[0] * acq['x_pos']/px_size_um),
                                       (0.0, 0.0, 1.0, sign_xyz[2] * acq['z_start']/acq['z_step'])))
             self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
