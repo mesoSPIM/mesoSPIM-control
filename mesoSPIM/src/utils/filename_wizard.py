@@ -147,7 +147,7 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.setSubTitle("How would you like to save your data?")
 
         self.raw_string = 'Individual Raw Files: ~.raw'
-        self.tiff_string = 'TIFF files: ~.tiff'
+        self.tiff_string = 'ImageJ TIFF files: ~.tiff'
         self.single_hdf5_string = 'Single HDF5 file: ~.h5'
 
         self.SaveAsComboBoxLabel = QtWidgets.QLabel('Save as:')

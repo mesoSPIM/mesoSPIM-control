@@ -16,7 +16,7 @@ to your old configuration file in order to unlock all new features.
 
 ### Prerequisites
 * Windows 7 or Windows 10
-* Python >=3.6
+* Python >=3.7
 
 #### Device drivers
 * [Hamamatsu DCAM API](https://dcam-api.com/) when using Hamamatsu Orca Flash 4.0 V2 or V3 sCMOS cameras. To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
@@ -26,14 +26,14 @@ to your old configuration file in order to unlock all new features.
 * [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases) for Dynamixel Zoom servos. Make sure you download version 3.5.4 of the SDK.
 
 #### Python
-mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.6 Python. 
+mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.7 Python. 
 ##### Anaconda 
-(optional) Create and activate a Python 3.6 environment from Anaconda prompt (you can use any name instead of `py36`):
+(optional) Create and activate a Python 3.7 environment from Anaconda prompt (you can use any name instead of `py37`):
 ```
-conda create -n py36 python=3.6
-conda activate py36
+conda create -n py37 python=3.7
+conda activate py37
 ```
-The step above is optional because the latest Python 3.8 is backward compatible with Python 3.6 code.
+The step above is optional because the latest Python 3.8 is backward compatible with Python 3.7 code.
 
 Many libraries are already included in Anaconda. 
 Install mesoSPIM-specific libraries: 

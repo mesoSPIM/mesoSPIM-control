@@ -1,3 +1,9 @@
+# Latest changes
+:warning: Upgrade Python to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
+
+:gem: writing to ImageJ TIFF files, including > 4 GB in size. Voxel dimension saved in TIFF.
+This feature requires upgrade to Python 3.7 due to dependence from `tifffile` library.
+
 ## Release July 2021 [0.1.6]
 :gem: Simplified installation and upgrading via `pip install -r requirements-anaconda.txt`. See [installation instructions](https://github.com/mesoSPIM/mesoSPIM-control#python).
 
