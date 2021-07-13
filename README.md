@@ -72,7 +72,7 @@ Use BNC T connectors to split each analog output line to both lasers.
 ## Launching
 #### From Anaconda prompt
 ```
-conda activate py36
+conda activate py37
 python mesoSPIM_Control.py
 ```
 The software will now start. If you have multiple configuration files you will be prompted to choose one. 
