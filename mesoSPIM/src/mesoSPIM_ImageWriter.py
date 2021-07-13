@@ -51,7 +51,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
-
         self.max_frame = acq.get_image_count()
         self.processing_options_string = acq['processing']
 
@@ -92,10 +91,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                         m_affine=affine_matrix,
                                         name_affine="Translation to Regular Grid"
                                         )
-        else:
+        elif self.file_extension == '.raw':
             self.fsize = self.x_pixels*self.y_pixels
             self.xy_stack = np.memmap(self.path, mode="write", dtype=np.uint16, shape=self.fsize * self.max_frame)
-    
+
+        elif self.file_extension == '.tiff':
+            self.tiff_writer = tifffile.TiffWriter(self.path, imagej=True)
+
         self.cur_image = 0
 
     def write_image(self, image, acq, acq_list):
@@ -106,9 +108,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                          angle=acq_list.find_value_index(acq['rot'], 'rot'),
                                          tile=acq_list.get_tile_index(acq)
                                          )
-        else:
+        elif self.file_extension == '.raw':
             image = image.flatten()
             self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+        elif self.file_extension == '.tiff':
+            xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
+            self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
+                                   metadata={'spacing': acq['z_step']})
 
         self.cur_image += 1
         
@@ -126,11 +132,16 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                     self.bdv_writer.close()
                 except:
                     logger.error(f'HDF5 file could not be closed: {sys.exc_info()}')
-        else:
+        elif self.file_extension == '.raw':
             try:
                 del self.xy_stack
-            except:
-                logger.warning('Raw data stack could not be deleted')
+            except Exception as e:
+                logger.error(f'{e}')
+        elif self.file_extension == '.tiff':
+            try:
+                self.tiff_writer.close()
+            except Exception as e:
+                logger.error(f'{e}')
     
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
