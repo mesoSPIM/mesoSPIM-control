@@ -1,4 +1,10 @@
 # Latest changes
+:gem: Image sharpness of box ROI (by DCTS metrics) is added to Camera Window as experimental feature.
+
+:gem: TIFF files can be opened for preview: `Ctrl + O`.
+
+:gem: Button `Freeze galvos` is added to ETL tab for quick adjustment of ETL parameters outside of sample (see video tutorial).
+
 :warning: Upgrade Python to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
 
 :gem: writing to ImageJ TIFF files, including > 4 GB in size. Voxel dimension saved in TIFF.
