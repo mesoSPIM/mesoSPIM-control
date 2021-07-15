@@ -280,7 +280,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def set_state(self, state):
         if state == 'live':
-            self.state['state']='live'
+            self.state['state'] = 'live'
             self.sig_state_request.emit({'state':'live'})
             logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
             #logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
@@ -960,11 +960,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'stage_program' : 'execute'})
 
     def write_snap_metadata(self, filename):
-            path = self.state['snap_folder']+'/'+filename
-
-            metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
-
-            with open(metadata_path,'w') as file:
+        if os.path.exists(self.state['snap_folder']):
+            path = self.state['snap_folder'] + '/' + filename
+            metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+            with open(metadata_path, 'w') as file:
                 self.write_line(file, 'CFG')
                 self.write_line(file, 'Laser', self.state['laser'])
                 self.write_line(file, 'Intensity (%)', self.state['intensity'])
@@ -981,16 +980,16 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.write_line(file)
 
                 ''' Attention: change to true ETL values ASAP '''
-                self.write_line(file,'ETL PARAMETERS')
+                self.write_line(file, 'ETL PARAMETERS')
                 self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
-                self.write_line(file,'etl_l_offset', self.state['etl_l_offset'])
-                self.write_line(file,'etl_l_amplitude', self.state['etl_l_amplitude'])
-                self.write_line(file,'etl_r_offset', self.state['etl_r_offset'])
-                self.write_line(file,'etl_r_amplitude', self.state['etl_r_amplitude'])
+                self.write_line(file, 'etl_l_offset', self.state['etl_l_offset'])
+                self.write_line(file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
+                self.write_line(file, 'etl_r_offset', self.state['etl_r_offset'])
+                self.write_line(file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
                 self.write_line(file)
                 self.write_line(file, 'GALVO PARAMETERS')
-                self.write_line(file, 'galvo_l_frequency',self.state['galvo_l_frequency'])
-                self.write_line(file, 'galvo_l_amplitude',self.state['galvo_l_amplitude'])
+                self.write_line(file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
+                self.write_line(file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
                 self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
                 self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
                 self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
@@ -999,38 +998,10 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.write_line(file, 'camera_type', self.cfg.camera)
                 self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
                 self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
-                self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
-                self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
-
-    # ''' HICKUP DEBUGGING '''
-
-    # def collect_troubleshooting_data(self, acq):
-    #     self.hickup_delta_z = self.z_end_measured - acq['z_end']
-    #     self.hickup_delta_f = self.f_end_measured - acq['f_end']
-    #     # print('HICKUP Difference: ', self.hickup_delta_z)
-
-    # def append_troubleshooting_info_to_metadata(self, acq):
-    #     '''
-    #     Appends a metadata.txt file
-
-    #     Path contains the file to be written
-    #     '''
-    #     path = acq['folder']+'/'+acq['filename']
-
-    #     metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
-
-    #     with open(metadata_path,'a') as file:
-    #         ''' Adding troubleshooting information '''
-    #         self.write_line(file)
-    #         self.write_line(file, 'TROUBLESHOOTING INFORMATION')
-    #         self.write_line(file, 'Z_pos: delta_z end to start after acq', str(self.hickup_delta_z) )
-    #         self.write_line(file, 'z_start expected', acq['z_start'])
-    #         self.write_line(file, 'z_start measured', str(self.z_start_measured))
-    #         self.write_line(file, 'z_end expected', acq['z_end'])
-    #         self.write_line(file, 'z_end measured', str(self.z_end_measured))
-    #         self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
-    #         self.write_line(file, 'f_end expected', acq['f_end'])
-    #         self.write_line(file, 'f_end measured', str(self.f_end_measured))
+                self.write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
+                self.write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
+        else:
+            print(f"Snap folder does not exist: {self.state['snap_folder']}. Change it in config file.")
 
     def append_timing_info_to_metadata(self, acq):
         '''

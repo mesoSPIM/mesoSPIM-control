@@ -88,11 +88,9 @@ def stage_referencing_check(cfg):
 def get_parser():
     """
     Parse command-line input arguments
-
     :return: The argparse parser object
     """
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
     parser.add_argument('-C', '--console', action='store_true',  # store_true makes it False by default
                         help='Start a ipython console')
     parser.add_argument('-D', '--demo', action='store_true',
@@ -116,6 +114,7 @@ def main(embed_console=False, demo_mode=False):
     print('Starting control software')
     logging.info('mesoSPIM Program started.')
     current_path = os.path.abspath('./config')
+
     demo_fname = current_path + "/demo_config.py"
     if not os.path.exists(demo_fname):
         raise ValueError(f"Demo file not found: {demo_fname}")
@@ -141,7 +140,6 @@ def main(embed_console=False, demo_mode=False):
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
-    ex.display_icons()
 
     if embed_console:
         from traitlets.config import Config

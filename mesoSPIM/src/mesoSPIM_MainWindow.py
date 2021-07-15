@@ -1,14 +1,10 @@
 '''
 mesoSPIM MainWindow
-
 '''
-import sys
-import copy
-
-import time
-
+import tifffile
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel('DEBUG')
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
@@ -19,7 +15,7 @@ from PyQt5.uic import loadUi
 
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
-from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow
+from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
@@ -60,23 +56,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, config=None):
         super().__init__()
-
-        '''
-        Initial housekeeping
-        '''
-
+        # Initial housekeeping
         self.cfg = config
         self.script_window_counter = 0
         self.update_gui_from_state_flag = False
 
-        ''' Instantiate the one and only mesoSPIM state '''
+        # Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
         self.state.sig_updated.connect(self.update_gui_from_state)
 
-        '''
-        Setting up the user interface windows
-        '''
-
+        # Setting up the user interface windows
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle('mesoSPIM Main Window')
 
@@ -88,15 +77,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
         self.acquisition_manager_window.sig_move_absolute.connect(self.sig_move_absolute.emit)
 
-        '''
-        Setting up the threads
-        '''
+        # Setting up the threads
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         logger.info('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
 
-        ''' Setting the mesoSPIM_Core thread up '''
         self.core_thread = QtCore.QThread()
-        '''Entry point: Work on thread affinity here'''
+        # Entry point: Work on thread affinity here
         self.core = mesoSPIM_Core(self.cfg, self)
         #logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
         self.core.moveToThread(self.core_thread)
@@ -104,26 +90,25 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.waveformer.moveToThread(self.core_thread)
         #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
 
-        ''' Get buttons & connections ready '''
+        # Get buttons & connections ready
         self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
 
-        ''' Widget list for blockSignals during status updates '''
+        # Widget list for blockSignals during status updates
         self.widgets_to_block = []
         self.parent_widgets_to_block = [self.ETLTabWidget, self.ParameterTabWidget, self.ControlGroupBox]
         self.create_widget_list(self.parent_widgets_to_block, self.widgets_to_block)
 
-        ''' The signal switchboard '''
+        # The signal switchboard
         self.core.sig_finished.connect(self.finished)
         self.core.sig_position.connect(self.update_position_indicators)
         self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
-
         self.core.sig_warning.connect(self.display_warning)
 
-        ''' Connecting the camera frames (this is a deep connection and slightly
-        risky) It will break immediately when there is an API change.'''
+        # Connecting the camera frames (this is a deep connection and slightly
+        # risky) It will break immediately when there is an API change.
         try:
             self.core.camera_worker.sig_camera_frame.connect(self.camera_window.set_image)
             # print('Camera connected successfully to the display window!')
@@ -173,14 +158,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.close()
         self.close()
 
-    def display_icons(self):
-        pass
-        ''' Disabled taskbar button progress display due to problems with Anaconda default
-        if sys.platform == 'win32':
-            self.win_taskbar_button = QWinTaskbarButton(self)
-            self.win_taskbar_button.setWindow(self.windowHandle())
-            self.win_taskbar_button.progress().setVisible(False)
-        '''
+    def open_tiff(self):
+        """Open and display a TIFF file (stack), eg for demo and debugging purposes."""
+        tiff_path, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open TIFF', "./", "TIFF files (*tif; *tiff)")
+        if tiff_path:
+            try:
+                stack = tifffile.imread(tiff_path)
+                self.camera_window.set_image(stack)
+                logger.debug(f"Loaded TIFF file from {tiff_path}, dimensions {stack.shape}")
+            except Exception as e:
+                logger.exception(f"{e}")
+        else:
+            logger.info(f"Loaded TIFF file path is None")
 
     def get_state_parameter(self, state_parameter):
         return self.state[state_parameter]
@@ -298,6 +287,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def initialize_and_connect_menubar(self):
         self.actionExit.triggered.connect(self.close_app)
+        self.actionOpen_TIFF.triggered.connect(self.open_tiff)
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
 
@@ -379,13 +369,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ETLIncrementSpinBox.valueChanged.connect(self.update_etl_increments)
         self.ZeroLeftETLButton.toggled.connect(self.zero_left_etl)
         self.ZeroRightETLButton.toggled.connect(self.zero_right_etl)
+        self.freezeGalvoButton.toggled.connect(self.zero_galvo_amp)
 
         self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
         self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
         self.SnapFolderIndicator.setText(self.state['snap_folder'])
-        
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
         self.widget_to_state_parameter_assignment=(
@@ -664,6 +654,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else:
             self.RightETLAmplitudeSpinBox.setValue(self.ETL_R_amp_backup)
 
+    def zero_galvo_amp(self):
+        '''Set the amplitude of both galvos to zero, or back to where it was, depending on button state'''
+        if self.freezeGalvoButton.isChecked():
+            self.galvo_amp_backup = self.LeftGalvoAmplitudeSpinBox.value()
+            self.LeftGalvoAmplitudeSpinBox.setValue(0)
+            self.freezeGalvoButton.setText('Unfreeze galvos')
+        else:
+            self.LeftGalvoAmplitudeSpinBox.setValue(self.galvo_amp_backup)
+            self.freezeGalvoButton.setText('Freeze galvos')
+
     def choose_etl_config(self):
         ''' File dialog for choosing the config file
 
@@ -690,14 +690,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 string, QtWidgets.QMessageBox.Ok)
 
     def choose_snap_folder(self):
-        pass
-
         path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
-
         if path:
             self.state['snap_folder'] = path
             self.SnapFolderIndicator.setText(path)
-
             print('Chosen Snap Folder:', path)
 
             #self.sig_state_request.emit({'ETL_cfg_file' : path})

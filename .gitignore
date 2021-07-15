@@ -17,9 +17,9 @@ mesoSPIM/config/etl_parameters/*
 mesoSPIM/config/*
 !mesoSPIM/config/demo_config.py
 mesoSPIM/src/devices/zoom/dynamixel\.zip
-
 mesoSPIM/acq/
 mesoSPIM/tmp/
-
+mesoSPIM/test/fixtures/
 !mesoSPIM/tmp/readme.txt
 *.DS_Store
+.gitignore

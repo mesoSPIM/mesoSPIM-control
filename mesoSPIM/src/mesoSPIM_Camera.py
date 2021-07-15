@@ -2,11 +2,8 @@
 mesoSPIM Camera class, intended to run in its own thread
 '''
 
-import os
 import time
 import numpy as np
-
-import tifffile
 
 import logging
 logger = logging.getLogger(__name__)
