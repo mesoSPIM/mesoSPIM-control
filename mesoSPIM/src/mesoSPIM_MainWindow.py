@@ -369,13 +369,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ETLIncrementSpinBox.valueChanged.connect(self.update_etl_increments)
         self.ZeroLeftETLButton.toggled.connect(self.zero_left_etl)
         self.ZeroRightETLButton.toggled.connect(self.zero_right_etl)
+        self.freezeGalvoButton.toggled.connect(self.zero_galvo_amp)
 
         self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
         self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
         self.SnapFolderIndicator.setText(self.state['snap_folder'])
-        
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
         self.widget_to_state_parameter_assignment=(
@@ -654,6 +654,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else:
             self.RightETLAmplitudeSpinBox.setValue(self.ETL_R_amp_backup)
 
+    def zero_galvo_amp(self):
+        '''Set the amplitude of both galvos to zero, or back to where it was, depending on button state'''
+        if self.freezeGalvoButton.isChecked():
+            self.galvo_amp_backup = self.LeftGalvoAmplitudeSpinBox.value()
+            self.LeftGalvoAmplitudeSpinBox.setValue(0)
+            self.freezeGalvoButton.setText('Unfreeze galvos')
+        else:
+            self.LeftGalvoAmplitudeSpinBox.setValue(self.galvo_amp_backup)
+            self.freezeGalvoButton.setText('Freeze galvos')
+
     def choose_etl_config(self):
         ''' File dialog for choosing the config file
 
@@ -680,14 +690,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 string, QtWidgets.QMessageBox.Ok)
 
     def choose_snap_folder(self):
-        pass
-
         path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
-
         if path:
             self.state['snap_folder'] = path
             self.SnapFolderIndicator.setText(path)
-
             print('Chosen Snap Folder:', path)
 
             #self.sig_state_request.emit({'ETL_cfg_file' : path})
