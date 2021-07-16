@@ -98,22 +98,17 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def update_box_roi_labels(self):
-        if self.overlay == 'box':
-            w, h = self.roi_box.size()
-            im_item = self.image_view.getImageItem()
-            roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
-            self.roi_box_props.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
-                                       f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
-                                       f"sharpness {np.round(1e4 * shannon_dct(roi_img))}")
-            self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
-        else:
-            pass
+        w, h = self.roi_box.size()
+        im_item = self.image_view.getImageItem()
+        roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
+        self.roi_box_props.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
+                                   f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
+                                   f"sharpness {np.round(1e4 * shannon_dct(roi_img))}")
+        self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
-        '''
-        Displays a message in the status bar for a time in ms. If time=0, the message will stay.
-        '''
+        '''Displays a message in the status bar for a time in ms. If time=0, the message will stay.'''
         if time == 0:
             self.statusBar().showMessage(string)
         else:
@@ -125,32 +120,25 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
-        print(f"DEBUG: self.state['camera_display_live_subsampling'] {self.state['camera_display_live_subsampling']}")
-        print(f"DEBUG: self.subsampling {self.subsampling}")
-        if self.subsampling != self.parent.core.camera_worker.camera_display_live_subsampling:
-            subsampling_ratio = self.subsampling / self.parent.core.camera_worker.camera_display_live_subsampling
-            self.subsampling = self.parent.core.camera_worker.camera_display_live_subsampling
-            x, y = self.roi_box.pos()
-            w, h = self.roi_box.size()
-            self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
-            self.roi_box.setSize((w * subsampling_ratio, h * subsampling_ratio))
-
         self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
+        if self.overlay == 'box':
+            if self.subsampling != self.state['camera_display_live_subsampling']:
+                subsampling_ratio = self.subsampling / self.state['camera_display_live_subsampling']
+                self.subsampling = self.state['camera_display_live_subsampling']
+                x, y = self.roi_box.pos()
+                w, h = self.roi_box.size()
+                self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
+                self.roi_box.setSize((w * subsampling_ratio, h * subsampling_ratio))
+            self.update_box_roi_labels()
+
         if len(image.shape) == 2:
             h, w = image.shape[0], image.shape[1]
         elif len(image.shape) >= 3: # when 3D/4D image is loaded, eg from a TIFF file
             h, w = image.shape[1], image.shape[2]
         if h != self.y_image_width or w != self.x_image_width:
-            self.x_image_width = w
-            self.y_image_width = h
-            self.vLine.setPos(self.x_image_width/2.)
-            self.hLine.setPos(self.y_image_width/2.)
-            self.image_view.addItem(self.vLine, ignoreBounds=True)
-            self.image_view.addItem(self.hLine, ignoreBounds=True)
-        else:
-            self.draw_crosshairs()
-        if self.overlay == 'box':
-            self.update_box_roi_labels()
+            self.x_image_width, self.y_image_width = w, h
+            self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
+        self.draw_crosshairs()
 
 
 if __name__ == '__main__':
