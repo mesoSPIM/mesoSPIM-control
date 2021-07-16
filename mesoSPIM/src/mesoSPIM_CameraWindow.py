@@ -125,6 +125,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
+        print(f"DEBUG: self.state['camera_display_live_subsampling'] {self.state['camera_display_live_subsampling']}")
+        print(f"DEBUG: self.subsampling {self.subsampling}")
         if self.subsampling != self.parent.core.camera_worker.camera_display_live_subsampling:
             subsampling_ratio = self.subsampling / self.parent.core.camera_worker.camera_display_live_subsampling
             self.subsampling = self.parent.core.camera_worker.camera_display_live_subsampling
@@ -148,7 +150,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         else:
             self.draw_crosshairs()
         if self.overlay == 'box':
-            print("DEBUG: update_box_roi_labels() called from set_image()")
             self.update_box_roi_labels()
 
 
