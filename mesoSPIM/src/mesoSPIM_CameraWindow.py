@@ -91,7 +91,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
                 self.image_view.addItem(item)
             self.overlay = 'box'
             self.update_box_roi_labels()
-
         elif overlay_name == 'Overlay: none':
             self.overlay = None
             for item in self.roi_list:
@@ -99,20 +98,21 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def update_box_roi_labels(self):
-        w, h = self.roi_box.size()
-        im_item = self.image_view.getImageItem()
-        roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
-        self.roi_box_props.setText(f"ROI w={int(self.px2um(w, self.subsampling)):,} \u03BCm, "
-                                   f"h={int(self.px2um(h, self.subsampling)):,} \u03BCm, "
-                                   f"sharpness {1e4 * shannon_dct(roi_img):.1f}")
-        self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
+        if self.overlay == 'box':
+            w, h = self.roi_box.size()
+            im_item = self.image_view.getImageItem()
+            roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
+            self.roi_box_props.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
+                                       f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
+                                       f"sharpness {np.round(1e4 * shannon_dct(roi_img))}")
+            self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
+        else:
+            pass
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
         '''
-        Displays a message in the status bar for a time in ms
-
-        If time=0, the message will stay.
+        Displays a message in the status bar for a time in ms. If time=0, the message will stay.
         '''
         if time == 0:
             self.statusBar().showMessage(string)
@@ -148,6 +148,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         else:
             self.draw_crosshairs()
         if self.overlay == 'box':
+            print("DEBUG: update_box_roi_labels() called from set_image()")
             self.update_box_roi_labels()
 
 
