@@ -18,7 +18,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__()
 
-        self.parent = parent
+        self.parent = parent # the mesoSPIM_MainWindow() instance
         self.cfg = parent.cfg
         self.state = mesoSPIM_StateSingleton()
 
@@ -42,6 +42,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.histogram = self.image_view.getHistogramWidget()
         self.histogram.setMinimumWidth(100)
         self.histogram.item.vb.setMaximumWidth(100)
+        self.subsampling = self.state['camera_display_live_subsampling']
 
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
@@ -56,14 +57,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         # Create overlay ROIs
         self.overlay = None  # None, 'box'
-        x, y, w, h = 100, 100, 200, 200
+        w, h = 200, 200
+        x, y, = self.x_image_width/2 - w/2, self.y_image_width/2 - h/2
         self.roi_box = pg.RectROI((x, y), (w, h), sideScalers=True)
         font = QtGui.QFont()
         font.setPixelSize(16)
-        self.roi_box_w_text, self.roi_box_h_text = pg.TextItem(color='y'), pg.TextItem(color='y', angle=90)
-        self.roi_box_w_text.setFont(font), self.roi_box_h_text.setFont(font)
-        self.roi_box_w_text.setPos(x, y + h), self.roi_box_h_text.setPos(x, y + h)
-        self.roi_list = [self.roi_box, self.roi_box_w_text, self.roi_box_h_text]
+        self.roi_box_props = pg.TextItem(color='y')
+        self.roi_box_props.setFont(font)
+        self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
+        self.roi_list = [self.roi_box, self.roi_box_props]
 
         # Set up CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
@@ -77,9 +79,9 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         img = self.image_view.getImageItem().image
         self.image_view.setLevels(min=np.percentile(img, pct_low), max=np.percentile(img, pct_hi))
 
-    def px2um(self, px):
+    def px2um(self, px, scale=1):
         '''Unit converter'''
-        return px * self.cfg.pixelsize[self.state['zoom']]
+        return scale * px * self.cfg.pixelsize[self.state['zoom']]
 
     @QtCore.pyqtSlot(str)
     def change_overlay(self, overlay_name):
@@ -95,21 +97,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             for item in self.roi_list:
                 self.image_view.removeItem(item)
 
-    def update_dcts(self):
-        """Update the image quality metric (DCTS)"""
-        im_item = self.image_view.getImageItem()
-        roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
-        self.dcts_value.setText(f"{1e4 * shannon_dct(roi_img):.2f}")
-
     @QtCore.pyqtSlot()
     def update_box_roi_labels(self):
         w, h = self.roi_box.size()
-        x, y = self.roi_box.pos()
-        self.roi_box_w_text.setText(f"{int(self.px2um(w)):,} \u03BCm")
-        self.roi_box_h_text.setText(f"{int(self.px2um(h)):,} \u03BCm")
-        self.roi_box_w_text.setPos(x, y + h)
-        self.roi_box_h_text.setPos(x, y + h)
-        self.update_dcts()
+        im_item = self.image_view.getImageItem()
+        roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
+        self.roi_box_props.setText(f"ROI w={int(self.px2um(w, self.subsampling)):,} \u03BCm, "
+                                   f"h={int(self.px2um(h, self.subsampling)):,} \u03BCm, "
+                                   f"sharpness {1e4 * shannon_dct(roi_img):.1f}")
+        self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string, time=0):
@@ -129,6 +125,14 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
+        if self.subsampling != self.parent.core.camera_worker.camera_display_live_subsampling:
+            subsampling_ratio = self.subsampling / self.parent.core.camera_worker.camera_display_live_subsampling
+            self.subsampling = self.parent.core.camera_worker.camera_display_live_subsampling
+            x, y = self.roi_box.pos()
+            w, h = self.roi_box.size()
+            self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
+            self.roi_box.setSize((w * subsampling_ratio, h * subsampling_ratio))
+
         self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
         if len(image.shape) == 2:
             h, w = image.shape[0], image.shape[1]
@@ -144,7 +148,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         else:
             self.draw_crosshairs()
         if self.overlay == 'box':
-            self.update_dcts()
+            self.update_box_roi_labels()
 
 
 if __name__ == '__main__':

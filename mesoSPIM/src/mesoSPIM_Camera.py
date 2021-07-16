@@ -53,7 +53,6 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
         self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
-        self.camera_display_snap_subsampling = self.cfg.startup['camera_display_snap_subsampling']
         self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
 
         ''' Wiring signals '''
@@ -99,7 +98,6 @@ class mesoSPIM_Camera(QtCore.QObject):
                         'camera_line_interval',
                         'state',
                         'camera_display_live_subsampling',
-                        'camera_display_snap_subsampling',
                         'camera_display_acquisition_subsampling',
                         'camera_binning'):
                 exec('self.set_'+key+'(value)')
@@ -144,9 +142,6 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     def set_camera_display_live_subsampling(self, factor):
         self.camera_display_live_subsampling = factor
-
-    def set_camera_display_snap_subsampling(self, factor):
-        self.camera_display_snap_subsampling = factor
 
     def set_camera_display_acquisition_subsampling(self, factor):
         self.camera_display_acquisition_subsampling = factor
@@ -224,15 +219,13 @@ class mesoSPIM_Camera(QtCore.QObject):
     def snap_image(self):
         image = self.camera.get_image()
         image = np.rot90(image)
-        self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_snap_subsampling,0:self.y_pixels:self.camera_display_snap_subsampling])
+        self.sig_camera_frame.emit(image[:self.x_pixels, :self.y_pixels])
         self.image_writer.write_snap_image(image)
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
         self.camera.initialize_live_mode()
-
         self.live_image_count = 0
-
         self.start_time = time.time()
         logger.info('Camera: Preparing Live Mode')
         logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
@@ -244,7 +237,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         for image in images:
             image = np.rot90(image)
 
-            self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_live_subsampling,0:self.y_pixels:self.camera_display_live_subsampling])
+            self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_live_subsampling,
+                                       0:self.y_pixels:self.camera_display_live_subsampling])
             self.live_image_count += 1
             #self.sig_camera_status.emit(str(self.live_image_count))
 
