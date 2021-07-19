@@ -1,9 +1,9 @@
 # Latest changes
-:gem: Image sharpness of box ROI (by DCTS metrics) is added to Camera Window as experimental feature.
+:gem: Image sharpness metric of user-defined ROI (by DCTS algorithm) is added to the Camera Window for easier adjustment of focus and ETL values.
 
 :gem: TIFF files can be opened for preview: `Ctrl + O`.
 
-:gem: Button `Freeze galvos` is added to ETL tab for quick adjustment of ETL parameters outside of sample (see video tutorial).
+:gem: Button `Freeze galvos` is added to ETL tab for quick adjustment of ETL parameters outside of sample, see [video tutorial](https://www.youtube.com/watch?v=dcJ9a7VALi8).
 
 :warning: Upgrade Python to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
 
