@@ -36,6 +36,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             loadUi('gui/mesoSPIM_CameraWindow.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
 
+        self.status_label.setText("Status: OK")
+
         ''' Set histogram Range '''
         self.image_view.setLevels(100, 3000)
         self.imageItem = self.image_view.getImageItem()
@@ -60,17 +62,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         w, h = 200, 200
         x, y, = self.x_image_width/2 - w/2, self.y_image_width/2 - h/2
         self.roi_box = pg.RectROI((x, y), (w, h), sideScalers=True)
-        font = QtGui.QFont()
-        font.setPixelSize(16)
-        self.roi_box_props = pg.TextItem(color='y')
-        self.roi_box_props.setFont(font)
-        self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
-        self.roi_list = [self.roi_box, self.roi_box_props]
+        self.roi_list = [self.roi_box]
 
         # Set up CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
-        self.roi_box.sigRegionChangeFinished.connect(self.update_box_roi_labels)
+        self.roi_box.sigRegionChangeFinished.connect(self.update_status)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
@@ -97,22 +94,16 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
                 self.image_view.removeItem(item)
 
     @QtCore.pyqtSlot()
-    def update_box_roi_labels(self):
-        w, h = self.roi_box.size()
+    def update_status(self):
         im_item = self.image_view.getImageItem()
-        roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
-        self.roi_box_props.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
-                                   f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
-                                   f"sharpness {np.round(1e4 * shannon_dct(roi_img))}")
-        self.roi_box_props.setPos(0, self.y_image_width * 0.02 / self.subsampling)
-
-    @QtCore.pyqtSlot(str)
-    def display_status_message(self, string, time=0):
-        '''Displays a message in the status bar for a time in ms. If time=0, the message will stay.'''
-        if time == 0:
-            self.statusBar().showMessage(string)
+        if self.overlay == 'box':
+            w, h = self.roi_box.size()
+            roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
+            self.status_label.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
+                                      f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
+                                      f"sharpness {np.round(1e4 * shannon_dct(roi_img)):.0f}")
         else:
-            self.statusBar().showMessage(string, time)
+            self.status_label.setText(f"Image dimensions: {im_item.image.shape}")
 
     def draw_crosshairs(self):
         self.image_view.addItem(self.vLine, ignoreBounds=True)
@@ -121,20 +112,16 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
         self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
-        if self.overlay == 'box':
-            if self.subsampling != self.state['camera_display_live_subsampling']:
-                subsampling_ratio = self.subsampling / self.state['camera_display_live_subsampling']
-                self.subsampling = self.state['camera_display_live_subsampling']
-                x, y = self.roi_box.pos()
-                w, h = self.roi_box.size()
-                self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
-                self.roi_box.setSize((w * subsampling_ratio, h * subsampling_ratio))
-            self.update_box_roi_labels()
+        if self.overlay == 'box' and self.subsampling != self.state['camera_display_live_subsampling']:
+            subsampling_ratio = self.subsampling / self.state['camera_display_live_subsampling']
+            self.subsampling = self.state['camera_display_live_subsampling']
+            x, y = self.roi_box.pos()
+            w, h = self.roi_box.size()
+            self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
+            self.roi_box.setSize((w * subsampling_ratio, h * subsampling_ratio))
+        self.update_status()
 
-        if len(image.shape) == 2:
-            h, w = image.shape[0], image.shape[1]
-        elif len(image.shape) >= 3: # when 3D/4D image is loaded, eg from a TIFF file
-            h, w = image.shape[1], image.shape[2]
+        h, w = image.shape[-2], image.shape[-1]  # works for both 2D and 3/4D loaded TIFF files.
         if h != self.y_image_width or w != self.x_image_width:
             self.x_image_width, self.y_image_width = w, h
             self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
