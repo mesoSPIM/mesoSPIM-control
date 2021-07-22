@@ -1,4 +1,8 @@
 # Latest changes
+:recycle: Buttons `Mark Rotation Position` and `Go To Rotation Position` are removed from the main panel, 
+since they are redundant and rarely (if ever) used. Rotation position can be marked in the Acquisition Manager, 
+and one can go to rotation position by using increment buttons.
+
 :bug: Image processing option generates MAX projections as TIFF files when output file format is either `.raw` or `.tiff`, #60.
 
 :sparkles: File name wizard auto-starts after Tiling Wizard.
