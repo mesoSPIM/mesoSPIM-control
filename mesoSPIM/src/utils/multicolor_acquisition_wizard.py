@@ -12,7 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
 from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder
-
+from .filename_wizard import FilenameWizard
 from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 class MulticolorTilingWizard(QtWidgets.QWizard):
@@ -24,6 +24,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
     wizard_done = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
+        ''' Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
         super().__init__(parent)
 
         ''' By an instance variable, callbacks to window signals can be handed
@@ -83,6 +84,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
             ''' Update state with this new list '''
             # self.parent.update_persistent_editors()
             self.wizard_done.emit()
+            filename_wizard = FilenameWizard(self.parent)
         else:
             print('Wizard provided return code: ', r)
 
@@ -93,9 +95,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.state['acq_list']=self.acq_list
 
     def update_image_counts(self):
-        ''' 
-        TODO: This needs some FOV information
-        '''
         self.delta_x = abs(self.x_end - self.x_start)
         self.delta_y = abs(self.y_end - self.y_start)
 
@@ -127,8 +126,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 
     def update_acquisition_list(self):
         self.update_image_counts()
-        
-        ''' Use the current rotation angle '''
         self.theta_pos = self.state['position']['theta_pos']
 
         dict = self.get_dict()
@@ -141,9 +138,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 class TilingWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setTitle("Welcome to the tiling wizard")
         self.setSubTitle("This wizard will guide you through the steps of creating a tiling acquisition.")
+
 
 class DefineBoundingBoxPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -655,8 +652,8 @@ class FinishedTilingPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Finished!")
-        self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue. "
-                         "To rename the files, use the filename wizard.")
+        self.setSubTitle("Attention: This will overwrite the Acquisition Table. "
+                         "File name wizard will start next.")
 
     def validatePage(self):
         return True

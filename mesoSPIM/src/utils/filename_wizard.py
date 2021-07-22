@@ -13,16 +13,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class FilenameWizard(QtWidgets.QWizard):
-    '''
-    Wizard to run
-    The parent is the Window class of the microscope
-    '''
     wizard_done = QtCore.pyqtSignal()
 
     num_of_pages = 4
     (welcome, raw, single_hdf5, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
+        '''Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
         super().__init__(parent)
 
         ''' By an instance variable, callbacks to window signals can be handed
