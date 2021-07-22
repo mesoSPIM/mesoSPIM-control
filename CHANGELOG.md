@@ -1,4 +1,6 @@
 # Latest changes
+:sparkles: `Mark All` button is added to the Acquisition Manager, per @raacampbell request.
+
 :recycle: Buttons `Mark Rotation Position` and `Go To Rotation Position` are removed from the main panel, 
 since they are redundant and rarely (if ever) used. Rotation position can be marked in the Acquisition Manager, 
 and one can go to rotation position by using increment buttons.
