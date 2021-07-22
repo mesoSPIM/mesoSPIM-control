@@ -23,10 +23,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
     '''
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 10
-    (welcome, zeroing, boundingbox, generalparameters, checktiling, channel1, 
-    channel2, channel3, folderpage, finished) = range(num_of_pages)
-
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -37,43 +33,36 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.state = mesoSPIM_StateSingleton()
 
         ''' Instance variables '''
-        self.x_start = 0
-        self.x_end = 0
-        self.y_start = 0
-        self.y_end = 0
-        self.z_start = 0
-        self.z_end = 0
+        self.x_start = self.x_end = self.y_start = self.y_end = self.z_start = self.z_end = 0
         self.z_step = 10
-        self.x_offset = 0
-        self.y_offset = 0
+        self.x_offset = self.y_offset = 0
         self.zoom = '1x'
         self.x_pixels = self.cfg.camera_parameters['x_pixels'] if self.cfg else 2048
         self.y_pixels = self.cfg.camera_parameters['y_pixels'] if self.cfg else 2048
-        self.x_fov = 1
-        self.y_fov = 1
+        self.x_fov = self.y_fov = 1
         self.channels = []
         self.channelcount = 0
         self.shutterconfig = ''
         self.theta_pos = 0
-        self.x_image_count = 1
-        self.y_image_count = 1
+        self.x_image_count = self.y_image_count = 1
         self.folder = ''
-        self.delta_x = 0.0
-        self.delta_y = 0.0
+        self.delta_x = self.delta_y = 0.0
         self.shutter_seq = False
         
         self.setWindowTitle('Tiling Wizard')
 
         self.setPage(0, TilingWelcomePage(self))
-        self.setPage(1, ZeroingXYStagePage(self))
-        self.setPage(2, DefineBoundingBoxPage(self))
-        self.setPage(3, DefineGeneralParametersPage(self))
-        self.setPage(4, CheckTilingPage(self))
-        self.setPage(5, FirstChannelPage(self))
-        self.setPage(6, SecondChannelPage(self))
-        self.setPage(7, ThirdChannelPage(self))
-        self.setPage(8, DefineFolderPage(self))
-        self.setPage(9, FinishedTilingPage(self))
+        self.setPage(1, DefineBoundingBoxPage(self))
+        self.setPage(2, DefineGeneralParametersPage(self))
+        self.setPage(3, CheckTilingPage(self))
+        self.setPage(4, FirstChannelPage(self))
+        self.setPage(5, SecondChannelPage(self))
+        self.setPage(6, ThirdChannelPage(self))
+        self.setPage(7, DefineFolderPage(self))
+        self.setPage(8, FinishedTilingPage(self))
+
+        self.channel1, self.channel2, self.channel3, self.folderpage = 4, 5, 6, 7
+
         self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
         self.show()
 
@@ -155,14 +144,6 @@ class TilingWelcomePage(QtWidgets.QWizardPage):
 
         self.setTitle("Welcome to the tiling wizard")
         self.setSubTitle("This wizard will guide you through the steps of creating a tiling acquisition.")
-
-class ZeroingXYStagePage(QtWidgets.QWizardPage):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-
-        self.setTitle("Zero stage positions")
-        self.setSubTitle("To aid in relative positioning, it is recommended to zero the XY stages.")
 
 class DefineBoundingBoxPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -275,6 +256,7 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
 
     def update_z_step(self):
         self.parent.z_step = self.ZStepSpinBox.value()
+
 
 class DefineGeneralParametersPage(QtWidgets.QWizardPage):
     
@@ -426,6 +408,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.zoomComboBox.setCurrentText(self.parent.state['zoom'])
         self.shutterComboBox.setCurrentText(self.parent.state['shutterconfig'])
 
+
 class CheckTilingPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -537,13 +520,9 @@ class GenericChannelPage(QtWidgets.QWizardPage):
         self.GoToZEndButton.setText('Go to Z end')
         self.GoToZEndButton.clicked.connect(lambda: self.go_to_z_position(self.parent.z_end))
 
-        self.registerField('start_focus_position'+str(self.channel_id)+'*',
-                            self.StartFocusButton,
-                            )
+        self.registerField('start_focus_position' + str(self.channel_id) + '*', self.StartFocusButton)
 
-        self.registerField('end_focus_position'+str(self.channel_id)+'*',
-                            self.EndFocusButton,
-                            )
+        self.registerField('end_focus_position' + str(self.channel_id) + '*', self.EndFocusButton)
 
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.copyCurrentStateLabel, 0, 0, 1, 1)
@@ -580,12 +559,9 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
     def go_to_z_position(self, z):
         self.parent.parent.parent.sig_move_absolute.emit({'z_abs':z})
-        #try:
-        #except:
-        #    print('Move absolute is not possible!')
 
     def validatePage(self):
-        selectedIntensity =  self.intensitySlider.value()
+        selectedIntensity = self.intensitySlider.value()
         selectedLaser = self.laserComboBox.currentText()
         selectedFilter = self.filterComboBox.currentText()
         f_start = self.f_start
@@ -614,6 +590,7 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
         return True
 
+
 class FirstChannelPage(GenericChannelPage):
     def __init__(self, parent=None):
         super().__init__(parent, 0)
@@ -623,6 +600,7 @@ class FirstChannelPage(GenericChannelPage):
             return self.parent.folderpage
         else: 
             return self.parent.channel2 
+
 
 class SecondChannelPage(GenericChannelPage):
     def __init__(self, parent=None):
@@ -634,13 +612,15 @@ class SecondChannelPage(GenericChannelPage):
         else: 
             return self.parent.channel3 
 
+
 class ThirdChannelPage(GenericChannelPage):
     def __init__(self, parent=None):
         super().__init__(parent, 2)
 
     def nextId(self):
         return self.parent.folderpage 
-         
+
+
 class DefineFolderPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -667,6 +647,7 @@ class DefineFolderPage(QtWidgets.QWizardPage):
         if path:
             self.parent.folder = path
             self.TextEdit.setText(path)
+
 
 class FinishedTilingPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
