@@ -454,10 +454,6 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.y_end = QtWidgets.QLineEdit(self)
         self.y_end.setReadOnly(True)
 
-        self.Button = QtWidgets.QPushButton('Values are ok?')
-        self.Button.setCheckable(True)
-        self.Button.setChecked(False)
-
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.xFOVLabel, 0, 0)
         self.layout.addWidget(self.xFOVs, 0, 1)
@@ -471,9 +467,7 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.y_start, 3, 1)
         self.layout.addWidget(self.y_end, 3, 2)
 
-        self.layout.addWidget(self.Button, 4, 0)
         self.setLayout(self.layout)
-        self.registerField('finalCheck*', self.Button)
 
     def initializePage(self):
         ''' Here, the acquisition list is created for further checking'''
