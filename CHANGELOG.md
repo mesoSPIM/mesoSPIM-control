@@ -1,4 +1,7 @@
 # Latest changes
+* Laser intensity can be edited directly via spinbox, alternative to slider. 
+  In Acquisition manager, slider is replaced by a spinbox for convencience.
+
 :sparkles: `Mark All` button is added to the Acquisition Manager, per @raacampbell request.
 
 :recycle: Buttons `Mark Rotation Position` and `Go To Rotation Position` are removed from the main panel, 

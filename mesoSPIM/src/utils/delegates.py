@@ -58,6 +58,7 @@ class SliderDelegate(QtWidgets.QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         model.setData(index, editor.value())
 
+
 class SliderWithValueDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent):
         super().__init__(parent)
@@ -76,6 +77,30 @@ class SliderWithValueDelegate(QtWidgets.QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.value())
+
+
+class IntensitySpinBoxDelegate(QtWidgets.QStyledItemDelegate):
+    ''' Delegate with Spinbox for laser intensity'''
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        spinbox = QtWidgets.QSpinBox(parent)
+        spinbox.setSingleStep(5)
+        spinbox.setMinimum(0)
+        spinbox.setMaximum(100)
+        spinbox.setSuffix(' %')
+        spinbox.setAlignment(QtCore.Qt.AlignRight)
+        spinbox.setValue(int(index.model().data(index, role=QtCore.Qt.EditRole)))
+        spinbox.valueChanged.connect(lambda: self.commitData.emit(self.sender()))
+        spinbox.setAutoFillBackground(True)
+        return spinbox
+
+    def setEditorData(self, editor, index):
+        editor.blockSignals(True)
+        editor.setValue(index.model().data(index, role=QtCore.Qt.EditRole))
+        editor.blockSignals(False)
+
 
 class ProgressBarDelegate(QtWidgets.QStyledItemDelegate):
     ''' A progress bar as a delegate

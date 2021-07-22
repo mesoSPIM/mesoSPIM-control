@@ -426,8 +426,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
-        self.LaserIntensitySlider.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({'intensity': currentValue}))
+        self.LaserIntensitySlider.valueChanged.connect(self.set_laser_intensity)
+        self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
+
+    @QtCore.pyqtSlot(int)
+    def set_laser_intensity(self, value):
+        self.sig_state_request.emit({'intensity': value})
+        self.LaserIntensitySlider.setValue(value)
+        self.LaserIntensitySpinBox.setValue(value)
+
 
     def connect_widget_to_state_parameter(self, widget, state_parameter, conversion_factor):
         '''
