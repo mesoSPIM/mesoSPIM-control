@@ -155,7 +155,7 @@
           <string>Copies current sample rotation angle into the selected row.</string>
          </property>
          <property name="text">
-          <string>Mark Current Rotation</string>
+          <string>Mark Rotation</string>
          </property>
         </widget>
        </item>
@@ -170,7 +170,7 @@
           <string>Copies current ETL values into the selected row.</string>
          </property>
          <property name="text">
-          <string>Mark Current ETL values</string>
+          <string>Mark ETL values</string>
          </property>
         </widget>
        </item>
@@ -203,7 +203,7 @@
           <string>Generates Image Processing Options for the entire table.</string>
          </property>
          <property name="text">
-          <string>Image Processing Wizard</string>
+          <string>Image Processing Wiz</string>
          </property>
         </widget>
        </item>
@@ -218,7 +218,7 @@
           <string>Generates start/end focus positions for the table.</string>
          </property>
          <property name="text">
-          <string>Focus Tracking Wizard</string>
+          <string>Focus Tracking Wiz</string>
          </property>
         </widget>
        </item>
@@ -248,7 +248,7 @@
           <string>Copies current laser, intensity, zoom &amp; filter settings into the selected row.</string>
          </property>
          <property name="text">
-          <string>Mark Current State</string>
+          <string>Mark State</string>
          </property>
         </widget>
        </item>
@@ -263,7 +263,7 @@
           <string>Copies the current focus into the selected row (Sets both start &amp; end focus).</string>
          </property>
          <property name="text">
-          <string>Mark Current Focus</string>
+          <string>Mark Focus</string>
          </property>
         </widget>
        </item>
@@ -326,7 +326,7 @@
           <string>Generates filenames for the entire table.</string>
          </property>
          <property name="text">
-          <string>Filename Wizard</string>
+          <string>Filename Wiz</string>
          </property>
         </widget>
        </item>
@@ -399,6 +399,21 @@
          </property>
          <property name="text">
           <string>Set Folders</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="9">
+        <widget class="QPushButton" name="MarkAllButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Copies all current settings into the selected row.</string>
+         </property>
+         <property name="text">
+          <string>Mark ALL</string>
          </property>
         </widget>
        </item>

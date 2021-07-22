@@ -116,6 +116,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.MarkCurrentRotationButton.clicked.connect(self.mark_current_rotation)
         self.MarkCurrentStateButton.clicked.connect(self.mark_current_state)
         self.MarkCurrentETLParametersButton.clicked.connect(self.mark_current_etl_parameters)
+        self.MarkAllButton.clicked.connect(self.mark_all_current_parameters)
         self.PreviewSelectionButton.clicked.connect(self.preview_acquisition)
 
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
@@ -424,6 +425,13 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.mark_current_rotation()
             else:
                 self.display_no_row_selected_warning()
+
+    def mark_all_current_parameters(self):
+        self.mark_current_xy_position()
+        self.mark_current_rotation()
+        self.mark_current_focus()
+        self.mark_current_etl_parameters()
+        self.mark_current_state()
 
     def preview_acquisition(self):
         row = self.get_first_selected_row()
