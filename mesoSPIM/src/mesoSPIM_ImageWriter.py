@@ -35,15 +35,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
-        self.bdv_writer = None
+        self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
 
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
         self.filename = acq['filename']
         self.path = self.folder+'/'+self.filename
+        self.file_root, self.file_extension = os.path.splitext(self.path)
         logger.info(f'Image Writer: Save path: {self.path}')
-
-        _ , self.file_extension = os.path.splitext(self.filename)
 
         self.binning_string = self.state['camera_binning'] # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
@@ -52,7 +51,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.max_frame = acq.get_image_count()
-        self.processing_options_string = acq['processing']
 
         if self.file_extension == '.h5':
             if hasattr(self.cfg, "hdf5"):
@@ -98,9 +96,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         elif self.file_extension == '.tiff':
             self.tiff_writer = tifffile.TiffWriter(self.path, imagej=True)
 
+        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff'):
+            self.tiff_mip_writer = tifffile.TiffWriter(self.file_root + "_MAX.tiff", imagej=True)
+            self.mip_image = np.zeros((self.y_pixels, self.x_pixels), 'uint16')
+
         self.cur_image = 0
 
     def write_image(self, image, acq, acq_list):
+        xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
         if self.file_extension == '.h5':
             self.bdv_writer.append_plane(plane=image, z=self.cur_image,
                                          illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
@@ -109,12 +112,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                          tile=acq_list.get_tile_index(acq)
                                          )
         elif self.file_extension == '.raw':
-            image = image.flatten()
-            self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image
+            self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image.flatten()
         elif self.file_extension == '.tiff':
-            xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
             self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
                                    metadata={'spacing': acq['z_step']})
+
+        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff'):
+            self.mip_image = np.maximum(self.mip_image, image)
 
         self.cur_image += 1
         
@@ -142,7 +146,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.tiff_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
-    
+
+        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff'):
+            try:
+                self.tiff_mip_writer.write(self.mip_image)
+                self.tiff_mip_writer.close()
+            except Exception as e:
+                logger.error(f'{e}')
+
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
         filename = timestr + '.tif'

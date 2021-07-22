@@ -1,4 +1,8 @@
 # Latest changes
+:bug: Image processing option generates MAX projections as TIFF files when output file format is either `.raw` or `.tiff`, #60.
+
+:sparkles: File name wizard auto-starts after Tiling Wizard.
+
 :gem: Image sharpness metric of user-defined ROI (by DCTS algorithm) is added to the Camera Window for easier adjustment of focus and ETL values.
 
 :gem: TIFF files can be opened for preview: `Ctrl + O`.

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>959</width>
-    <height>1270</height>
+    <width>964</width>
+    <height>1337</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -52,8 +52,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>916</width>
-         <height>1211</height>
+         <width>921</width>
+         <height>1242</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -337,7 +337,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>16</pointsize>
+            <pointsize>14</pointsize>
            </font>
           </property>
           <property name="title">
@@ -622,7 +622,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>4</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -665,7 +665,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
               </font>
              </property>
              <property name="title">
@@ -858,7 +858,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
               </font>
              </property>
              <property name="title">
@@ -871,7 +871,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>30</y>
+                <y>40</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -907,7 +907,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>270</y>
+                <y>280</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -943,7 +943,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -1074,7 +1074,7 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>16</pointsize>
+              <pointsize>14</pointsize>
              </font>
             </property>
             <property name="title">
@@ -1238,12 +1238,12 @@
               <x>10</x>
               <y>550</y>
               <width>541</width>
-              <height>151</height>
+              <height>161</height>
              </rect>
             </property>
             <property name="font">
              <font>
-              <pointsize>16</pointsize>
+              <pointsize>14</pointsize>
              </font>
             </property>
             <property name="title">
@@ -1256,7 +1256,7 @@
              <property name="geometry">
               <rect>
                <x>20</x>
-               <y>30</y>
+               <y>40</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1292,7 +1292,7 @@
              <property name="geometry">
               <rect>
                <x>260</x>
-               <y>30</y>
+               <y>40</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1327,8 +1327,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>400</x>
-               <y>30</y>
+               <x>390</x>
+               <y>50</y>
                <width>141</width>
                <height>31</height>
               </rect>
@@ -1348,8 +1348,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>400</x>
-               <y>70</y>
+               <x>390</x>
+               <y>90</y>
                <width>121</width>
                <height>41</height>
               </rect>
@@ -1379,7 +1379,7 @@
              <property name="geometry">
               <rect>
                <x>140</x>
-               <y>30</y>
+               <y>40</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1415,7 +1415,7 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>18</pointsize>
+              <pointsize>16</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1439,7 +1439,7 @@ MOVEMENT </string>
             </property>
             <property name="font">
              <font>
-              <pointsize>18</pointsize>
+              <pointsize>16</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1470,7 +1470,7 @@ Position</string>
             </property>
             <property name="font">
              <font>
-              <pointsize>18</pointsize>
+              <pointsize>16</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -2297,7 +2297,7 @@ Position</string>
               <string>Right</string>
              </property>
             </widget>
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -2877,7 +2877,7 @@ ETL tab</string>
               <string>Right</string>
              </property>
             </widget>
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -3148,7 +3148,7 @@ ETL tab</string>
             <property name="title">
              <string>Display Subsampling</string>
             </property>
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -3274,7 +3274,7 @@ ETL tab</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>959</width>
+     <width>964</width>
      <height>37</height>
     </rect>
    </property>
