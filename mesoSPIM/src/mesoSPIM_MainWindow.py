@@ -47,11 +47,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
 
-    sig_mark_rotation_position = QtCore.pyqtSignal()
-    sig_go_to_rotation_position = QtCore.pyqtSignal()
-
     sig_save_etl_config = QtCore.pyqtSignal()
-
     sig_poke_demo_thread = QtCore.pyqtSignal()
 
     def __init__(self, config=None):
@@ -310,8 +306,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
-        self.goToRotationPositionButton.clicked.connect(self.sig_go_to_rotation_position.emit)
-        self.markRotationPositionButton.clicked.connect(self.sig_mark_rotation_position.emit)
 
         # self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
         self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
@@ -349,8 +343,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.rotPlusButton.setEnabled(False)
                 self.rotMinusButton.setEnabled(False)
                 self.rotZeroButton.setEnabled(False)
-                self.goToRotationPositionButton.setEnabled(False)
-                self.markRotationPositionButton.setEnabled(False)
 
             if self.cfg.ui_options['enable_loading_buttons'] is False:
                 self.xyzLoadButton.setEnabled(False)

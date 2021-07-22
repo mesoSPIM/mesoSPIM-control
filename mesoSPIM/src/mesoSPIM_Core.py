@@ -112,12 +112,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_stop_movement.connect(self.stop_movement)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
-        self.parent.sig_mark_rotation_position.connect(self.sig_mark_rotation_position.emit)
-        self.parent.sig_go_to_rotation_position.connect(self.sig_go_to_rotation_position.emit)
-
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
-
-        #logger.info('Core internal thread affinity in init: '+str(id(self.thread())))
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
