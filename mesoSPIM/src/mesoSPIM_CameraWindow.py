@@ -87,7 +87,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             for item in self.roi_list:
                 self.image_view.addItem(item)
             self.overlay = 'box'
-            self.update_box_roi_labels()
+            self.update_status()
         elif overlay_name == 'Overlay: none':
             self.overlay = None
             for item in self.roi_list:
