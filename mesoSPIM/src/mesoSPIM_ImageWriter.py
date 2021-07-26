@@ -10,9 +10,8 @@ import logging
 logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
-
+from distutils.version import StrictVersion
 from .mesoSPIM_State import mesoSPIM_StateSingleton
-
 import npy2bdv
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -36,6 +35,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         self.file_extension = ''
         self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
+        self.check_versions()
+
+    def check_versions(self):
+        """Take care of API changes in different library versions"""
+        if StrictVersion(tifffile.__version__) < StrictVersion('2020.9.30'):
+            self.tiff_write = tifffile.TiffWriter.save
+            print(f"Warning: you are using outdated version of tifffile library {tifffile.__version__}. "
+                  f"Upgrade to Python 3.7 and pip-install the latest tifffile version.")
+        else:
+            self.tiff_write = tifffile.TiffWriter.write
+
+        tifffile.TiffWriter.write = self.tiff_write # rename the entire class method if necessary
 
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
