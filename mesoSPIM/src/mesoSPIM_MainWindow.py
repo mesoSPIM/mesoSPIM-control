@@ -15,6 +15,7 @@ from PyQt5.uic import loadUi
 
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
+from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
@@ -28,15 +29,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
     # sig_live = QtCore.pyqtSignal()
     sig_stop = QtCore.pyqtSignal()
-
     sig_finished = QtCore.pyqtSignal()
-
     sig_enable_gui = QtCore.pyqtSignal(bool)
-
     sig_state_request = QtCore.pyqtSignal(dict)
-    
     sig_execute_script = QtCore.pyqtSignal(str)
-
     sig_move_relative = QtCore.pyqtSignal(dict)
     # sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
@@ -49,6 +45,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     sig_save_etl_config = QtCore.pyqtSignal()
     sig_poke_demo_thread = QtCore.pyqtSignal()
+    sig_launch_optimizer = QtCore.pyqtSignal()
 
     def __init__(self, config=None):
         super().__init__()
@@ -95,13 +92,17 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.parent_widgets_to_block = [self.ETLTabWidget, self.ParameterTabWidget, self.ControlGroupBox]
         self.create_widget_list(self.parent_widgets_to_block, self.widgets_to_block)
 
-        # The signal switchboard
+        # The signal switchboard, Core -> MainWindow
         self.core.sig_finished.connect(self.finished)
         self.core.sig_position.connect(self.update_position_indicators)
         self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+
+        self.optimizer = None
+        # The signal switchboard, MainWindow -> Core
+        self.sig_launch_optimizer.connect(self.launch_optimizer)
 
         # Connecting the camera frames (this is a deep connection and slightly
         # risky) It will break immediately when there is an API change.
@@ -152,6 +153,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def close_app(self):
         self.camera_window.close()
         self.acquisition_manager_window.close()
+        if self.optimizer:
+            self.optimizer.close()
         self.close()
 
     def open_tiff(self):
@@ -223,9 +226,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def pos2str(self, position):
         ''' Little helper method for converting positions to strings '''
-
-        ''' Show 2 decimal places '''
-        return '%.2f' % position
+        return '%.1f' % position
 
     @QtCore.pyqtSlot(dict)
     def update_position_indicators(self, dict):
@@ -287,7 +288,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
 
-
     def initialize_and_connect_widgets(self):
         ''' Connecting the menu actions '''
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
@@ -315,6 +315,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
+        self.launchOptimizerButton.clicked.connect(self.sig_launch_optimizer.emit)
 
         ''' Disabling UI buttons if necessary '''
         if hasattr(self.cfg, 'ui_options'):
@@ -578,6 +579,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setVisible(False)
         '''
+
+    @QtCore.pyqtSlot()
+    def launch_optimizer(self):
+        self.optimizer = mesoSPIM_Optimizer(self)
 
     @QtCore.pyqtSlot(bool)
     def enable_gui_updates_from_state(self, boolean):

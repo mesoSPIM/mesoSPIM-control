@@ -397,7 +397,7 @@
             </font>
            </property>
           </widget>
-          <widget class="QWidget" name="">
+          <widget class="QWidget" name="layoutWidget">
            <property name="geometry">
             <rect>
              <x>10</x>
@@ -658,7 +658,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -1888,29 +1888,47 @@ MOVEMENT </string>
             <property name="title">
              <string>ETL tuning</string>
             </property>
-            <widget class="QPushButton" name="freezeGalvoButton">
+            <widget class="QWidget" name="">
              <property name="geometry">
               <rect>
                <x>20</x>
                <y>40</y>
-               <width>141</width>
-               <height>28</height>
+               <width>187</width>
+               <height>83</height>
               </rect>
              </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="toolTip">
-              <string>Set amplitude of both galvos to 0</string>
-             </property>
-             <property name="text">
-              <string>Freeze galvos</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
+             <layout class="QGridLayout" name="gridLayout_4">
+              <item row="0" column="0">
+               <widget class="QPushButton" name="freezeGalvoButton">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>Set amplitude of both galvos to 0</string>
+                </property>
+                <property name="text">
+                 <string>Freeze galvos</string>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QPushButton" name="launchOptimizerButton">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Launch Optimizer</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
           </widget>

@@ -1,6 +1,5 @@
 '''
 mesoSPIM CameraWindow
-
 '''
 import sys
 import numpy as np
@@ -64,7 +63,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.roi_box = pg.RectROI((x, y), (w, h), sideScalers=True)
         self.roi_list = [self.roi_box]
 
-        # Set up CameraWindow signals
+        # Set up internal CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
