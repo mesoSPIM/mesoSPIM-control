@@ -1,4 +1,6 @@
 # Latest changes
+:bug: fix: Going back to previosly configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
+
 * Laser intensity can be edited directly via spinbox, alternative to slider. 
   In Acquisition manager, slider is replaced by a spinbox for convenience. 
   :warning: This change makes old acq tables incompatible with the new software.
@@ -9,7 +11,7 @@
 since they are redundant and rarely (if ever) used. Rotation position can be marked in the Acquisition Manager, 
 and one can go to rotation position by using increment buttons.
 
-:bug: Image processing option generates MAX projections as TIFF files when output file format is either `.raw` or `.tiff`, #60.
+:bug: fixed: Image processing option generates MAX projections as TIFF files when output file format is either `.raw` or `.tiff`, #60.
 
 :sparkles: File name wizard auto-starts after Tiling Wizard.
 
