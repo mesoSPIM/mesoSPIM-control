@@ -1,4 +1,5 @@
 import sys
+import time
 import numpy as np
 from .utils.optimization import shannon_dct
 
@@ -29,4 +30,20 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
-        print("OPTIMIZATION")
+        shutter = self.state['shutterconfig']
+        if shutter == 'Left':
+            self.state_key = 'etl_l_offset'
+        else:
+            self.state_key = 'etl_r_offset'
+        self.ini_value = self.state[self.state_key]
+        self.min_value = self.ini_value - self.searchAmpDoubleSpinBox.value
+        self.max_value = self.ini_value + self.searchAmpDoubleSpinBox.value
+        self.n_points = self.nPointsSpinBox.value
+        self.open_shutters()
+        for i, v in enumerate(np.linspace(self.min_value, self.max_value, self.n_points)):
+            self.sig_state_request.emit({self.state_key: v})
+            time.sleep(1)
+            self.snap_image()
+            print(i)
+        print("DONE")
+        self.close_shutters()
