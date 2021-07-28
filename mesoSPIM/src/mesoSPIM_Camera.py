@@ -180,7 +180,8 @@ class mesoSPIM_Camera(QtCore.QObject):
                 images = self.camera.get_images_in_series()
                 for image in images:
                     image = np.rot90(image)
-                    self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,0:self.y_pixels:self.camera_display_acquisition_subsampling])
+                    self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
+                                               0:self.y_pixels:self.camera_display_acquisition_subsampling])
                     self.image_writer.write_image(image, acq, acq_list)
                     self.cur_image += 1
 
@@ -199,11 +200,14 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.sig_finished.emit()
 
     @QtCore.pyqtSlot()
-    def snap_image(self):
+    def snap_image(self, write_flag=True):
+        """"Snap an image, display it, and (optionally) write it to file."""
         image = self.camera.get_image()
         image = np.rot90(image)
-        self.sig_camera_frame.emit(image[:self.x_pixels, :self.y_pixels])
-        self.image_writer.write_snap_image(image)
+        self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
+                                   0:self.y_pixels:self.camera_display_acquisition_subsampling])
+        if write_flag:
+            self.image_writer.write_snap_image(image)
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
@@ -301,6 +305,7 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
     def close_live_mode(self):
         pass
 
+
 class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -341,6 +346,7 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
 
     def get_live_image(self):
         return [self._create_random_image()]
+
 
 class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):

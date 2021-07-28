@@ -658,7 +658,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -1888,7 +1888,7 @@ MOVEMENT </string>
             <property name="title">
              <string>ETL tuning</string>
             </property>
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>20</x>
@@ -3145,7 +3145,7 @@ ETL tab</string>
               <rect>
                <x>10</x>
                <y>40</y>
-               <width>315</width>
+               <width>342</width>
                <height>77</height>
               </rect>
              </property>
@@ -3158,7 +3158,7 @@ ETL tab</string>
                  </font>
                 </property>
                 <property name="text">
-                 <string>During Live display</string>
+                 <string>during Live display</string>
                 </property>
                </widget>
               </item>
@@ -3179,7 +3179,7 @@ ETL tab</string>
                  </font>
                 </property>
                 <property name="text">
-                 <string>During Acquisitions</string>
+                 <string>in Snap &amp; Acquisitions</string>
                 </property>
                </widget>
               </item>

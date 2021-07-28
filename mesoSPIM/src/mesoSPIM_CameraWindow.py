@@ -126,10 +126,3 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
         self.draw_crosshairs()
 
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    camera_window = mesoSPIM_CameraWindow()
-    camera_window.show()
-
-    sys.exit(app.exec_())

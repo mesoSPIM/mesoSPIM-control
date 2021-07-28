@@ -36,14 +36,13 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         else:
             self.state_key = 'etl_r_offset'
         self.ini_value = self.state[self.state_key]
-        self.min_value = self.ini_value - self.searchAmpDoubleSpinBox.value
-        self.max_value = self.ini_value + self.searchAmpDoubleSpinBox.value
-        self.n_points = self.nPointsSpinBox.value
-        self.open_shutters()
+        self.min_value = self.ini_value - self.searchAmpDoubleSpinBox.value()
+        self.max_value = self.ini_value + self.searchAmpDoubleSpinBox.value()
+        self.n_points = self.nPointsSpinBox.value()
+        self.img_subsampling = self.core.camera_worker.camera_display_acquisition_subsampling
         for i, v in enumerate(np.linspace(self.min_value, self.max_value, self.n_points)):
-            self.sig_state_request.emit({self.state_key: v})
-            time.sleep(1)
-            self.snap_image()
-            print(i)
+            self.core.sig_state_request.emit({self.state_key: v})
+            self.core.snap(write_flag=True)
+            img = self.core.camera_worker.camera.get_image()[::self.img_subsampling, ::self.img_subsampling]
+            print(f"{i}, image shape: {img.shape}")
         print("DONE")
-        self.close_shutters()
