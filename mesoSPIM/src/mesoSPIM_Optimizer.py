@@ -42,7 +42,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.img_subsampling = self.core.camera_worker.camera_display_acquisition_subsampling
         for i, v in enumerate(np.linspace(self.min_value, self.max_value, self.n_points)):
             self.core.sig_state_request.emit({self.state_key: v})
-            self.core.snap(write_flag=True)
+            self.core.snap(write_flag=False)
             img = self.core.camera_worker.camera.get_image()[::self.img_subsampling, ::self.img_subsampling]
             print(f"{i}, image shape: {img.shape}")
         print("DONE")

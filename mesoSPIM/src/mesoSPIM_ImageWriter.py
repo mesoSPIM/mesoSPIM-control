@@ -15,10 +15,11 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
+        '''Image and metadata writer class. Parent is mesoSPIM_Camera() object'''
         super().__init__()
 
-        self.parent = parent
+        self.parent = parent # a mesoSPIM_Camera() object
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
@@ -172,10 +173,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if os.path.exists(self.state['snap_folder']):
             try:
                 tifffile.imsave(path, image, photometric='minisblack')
+                self.write_snap_metadata(path)
             except Exception as e:
                 logger.error(f"{e}")
         else:
-            logger.error(f"Snap folder does not exist: {self.state['snap_folder']}. Change it in config file.")
+            print(f"Error: Snap folder does not exist: {self.state['snap_folder']}. Choose it from the menu.")
 
     def write_line(self, file, key='', value=''):
         ''' Little helper method to write a single line with a key and value for metadata
@@ -186,49 +188,44 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         else:
             file.write('\n')
 
-    def write_snap_metadata(self, filename):
-        if os.path.exists(self.state['snap_folder']):
-            path = self.state['snap_folder'] + '/' + filename
-            metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
-            with open(metadata_path, 'w') as file:
-                self.write_line(file, 'CFG')
-                self.write_line(file, 'Laser', self.state['laser'])
-                self.write_line(file, 'Intensity (%)', self.state['intensity'])
-                self.write_line(file, 'Zoom', self.state['zoom'])
-                self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
-                self.write_line(file, 'Filter', self.state['filter'])
-                self.write_line(file, 'Shutter', self.state['shutterconfig'])
-                self.write_line(file)
-                self.write_line(file, 'POSITION')
-                self.write_line(file, 'x_pos', self.state['position']['x_pos'])
-                self.write_line(file, 'y_pos', self.state['position']['y_pos'])
-                self.write_line(file, 'z_pos', self.state['position']['z_pos'])
-                self.write_line(file, 'f_pos', self.state['position']['f_pos'])
-                self.write_line(file)
-
-                ''' Attention: change to true ETL values ASAP '''
-                self.write_line(file, 'ETL PARAMETERS')
-                self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
-                self.write_line(file, 'etl_l_offset', self.state['etl_l_offset'])
-                self.write_line(file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
-                self.write_line(file, 'etl_r_offset', self.state['etl_r_offset'])
-                self.write_line(file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
-                self.write_line(file)
-                self.write_line(file, 'GALVO PARAMETERS')
-                self.write_line(file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
-                self.write_line(file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
-                self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
-                self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
-                self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
-                self.write_line(file)
-                self.write_line(file, 'CAMERA PARAMETERS')
-                self.write_line(file, 'camera_type', self.cfg.camera)
-                self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
-                self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
-                self.write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
-                self.write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
-        else:
-            print(f"Snap folder does not exist: {self.state['snap_folder']}. Choose it from the menu.")
+    def write_snap_metadata(self, path):
+        metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+        with open(metadata_path, 'w') as file:
+            self.write_line(file, 'CFG')
+            self.write_line(file, 'Laser', self.state['laser'])
+            self.write_line(file, 'Intensity (%)', self.state['intensity'])
+            self.write_line(file, 'Zoom', self.state['zoom'])
+            self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
+            self.write_line(file, 'Filter', self.state['filter'])
+            self.write_line(file, 'Shutter', self.state['shutterconfig'])
+            self.write_line(file)
+            self.write_line(file, 'POSITION')
+            self.write_line(file, 'x_pos', self.state['position']['x_pos'])
+            self.write_line(file, 'y_pos', self.state['position']['y_pos'])
+            self.write_line(file, 'z_pos', self.state['position']['z_pos'])
+            self.write_line(file, 'f_pos', self.state['position']['f_pos'])
+            self.write_line(file)
+            ''' Attention: change to true ETL values ASAP '''
+            self.write_line(file, 'ETL PARAMETERS')
+            self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
+            self.write_line(file, 'etl_l_offset', self.state['etl_l_offset'])
+            self.write_line(file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
+            self.write_line(file, 'etl_r_offset', self.state['etl_r_offset'])
+            self.write_line(file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
+            self.write_line(file)
+            self.write_line(file, 'GALVO PARAMETERS')
+            self.write_line(file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
+            self.write_line(file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
+            self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
+            self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+            self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
+            self.write_line(file)
+            self.write_line(file, 'CAMERA PARAMETERS')
+            self.write_line(file, 'camera_type', self.cfg.camera)
+            self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
+            self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
+            self.write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
+            self.write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
 
     def write_metadata(self, acq, acq_list):
         '''

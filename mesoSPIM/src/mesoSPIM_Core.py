@@ -67,7 +67,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_prepare_live = QtCore.pyqtSignal()
     sig_get_live_image = QtCore.pyqtSignal()
-    sig_get_snap_image = QtCore.pyqtSignal()
+    sig_get_snap_image = QtCore.pyqtSignal(bool)
     sig_end_live = QtCore.pyqtSignal()
 
     ''' Movement-related signals: '''
@@ -442,14 +442,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_prepare_live.emit()
         self.open_shutters()
         self.snap_image()
-        self.sig_get_snap_image.emit()
+        self.sig_get_snap_image.emit(write_flag)
         self.close_shutters()
-        # Todo: move this to Writer class
-        if write_flag:
-            timestr = time.strftime("%Y%m%d-%H%M%S")
-            filename = timestr + '.tif'
-            self.camera_worker.image_writer.write_snap_metadata(filename)
-
         self.sig_end_live.emit()
         self.sig_finished.emit()
         QtWidgets.QApplication.processEvents()

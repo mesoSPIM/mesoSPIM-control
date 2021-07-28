@@ -19,6 +19,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 from .utils.acquisitions import AcquisitionList, Acquisition
 
+
 class mesoSPIM_Camera(QtCore.QObject):
     '''Top-level class for all cameras'''
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
@@ -29,12 +30,11 @@ class mesoSPIM_Camera(QtCore.QObject):
     def __init__(self, parent = None):
         super().__init__()
 
-        self.parent = parent # mesoSPIM_Core() object
+        self.parent = parent # a mesoSPIM_Core() object
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
         self.image_writer = mesoSPIM_ImageWriter(self)
-
         self.stopflag = False
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
@@ -199,13 +199,12 @@ class mesoSPIM_Camera(QtCore.QObject):
         logger.info(f'Camera: Framerate: {framerate}')
         self.sig_finished.emit()
 
-    @QtCore.pyqtSlot()
+    @QtCore.pyqtSlot(bool)
     def snap_image(self, write_flag=True):
-        """"Snap an image, display it, and (optionally) write it to file."""
+        """"Snap an image and display it"""
         image = self.camera.get_image()
-        image = np.rot90(image)
-        self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
-                                   0:self.y_pixels:self.camera_display_acquisition_subsampling])
+        image = np.rot90(image)[::self.camera_display_acquisition_subsampling, ::self.camera_display_acquisition_subsampling]
+        self.sig_camera_frame.emit(image)
         if write_flag:
             self.image_writer.write_snap_image(image)
 
