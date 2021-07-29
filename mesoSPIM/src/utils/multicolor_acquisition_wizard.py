@@ -52,20 +52,26 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         
         self.setWindowTitle('Tiling Wizard')
 
+        self.channel1, self.channel2, self.channel3, self.folderpage = 4, 5, 6, 7
         self.setPage(0, TilingWelcomePage(self))
         self.setPage(1, DefineBoundingBoxPage(self))
         self.setPage(2, DefineGeneralParametersPage(self))
         self.setPage(3, CheckTilingPage(self))
-        self.setPage(4, FirstChannelPage(self))
-        self.setPage(5, SecondChannelPage(self))
-        self.setPage(6, ThirdChannelPage(self))
-        self.setPage(7, DefineFolderPage(self))
+        self.setPage(self.channel1, FirstChannelPage(self))
+        self.setPage(self.channel2, SecondChannelPage(self))
+        self.setPage(self.channel3, ThirdChannelPage(self))
+        self.setPage(self.folderpage, DefineFolderPage(self))
         self.setPage(8, FinishedTilingPage(self))
-
-        self.channel1, self.channel2, self.channel3, self.folderpage = 4, 5, 6, 7
-
         self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
         self.show()
+
+        self.button(QtWidgets.QWizard.BackButton).clicked.connect(self.go_back)
+
+    def go_back(self):
+        '''Amend previously created channel settings'''
+        if self.currentId() in (self.channel1, self.channel2, self.channel3):
+            ch = self.channels.pop()
+            # print(f"DEBUG: removed channel {ch}")
 
     def done(self, r):
         ''' Reimplementation of the done function
@@ -84,7 +90,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
             ''' Update state with this new list '''
             # self.parent.update_persistent_editors()
             self.wizard_done.emit()
-            filename_wizard = FilenameWizard(self.parent)
+            FilenameWizard(self.parent)
         else:
             print('Wizard provided return code: ', r)
 
@@ -469,8 +475,7 @@ class GenericChannelPage(QtWidgets.QWizardPage):
         self.id_string = str(self.channel_id+1)
         self.setTitle("Configure channel #"+self.id_string)
 
-        self.f_start = 0
-        self.f_end = 0
+        self.f_start = self.f_end = 0
 
         self.copyCurrentStateLabel = QtWidgets.QLabel('Copy state:')
 
@@ -570,10 +575,7 @@ class GenericChannelPage(QtWidgets.QWizardPage):
             etl_r_offset = self.parent.state['etl_r_offset'] 
             etl_r_amplitude = self.parent.state['etl_r_amplitude']
         else: 
-            etl_l_offset = 0
-            etl_l_amplitude = 0
-            etl_r_offset = 0
-            etl_r_amplitude = 0
+            etl_l_offset = etl_l_amplitude = etl_r_offset = etl_r_amplitude = 0
 
         self.parent.channels.append({'laser':selectedLaser, 
                                     'intensity':selectedIntensity,
@@ -657,10 +659,3 @@ class FinishedTilingPage(QtWidgets.QWizardPage):
 
     def validatePage(self):
         return True
-
-
-if __name__ == '__main__':
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    wizard = MulticolorTilingWizard()
-    sys.exit(app.exec_())
