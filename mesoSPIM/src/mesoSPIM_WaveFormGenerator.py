@@ -88,6 +88,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'laser_r_delay_%',
                        'laser_r_pulse_%',
                        'laser_r_max_amplitude',
+                        'laser',
+                        'zoom',
                        'camera_delay_%',
                        'camera_pulse_%'):
                 ''' Notify GUI about the change '''
@@ -96,22 +98,16 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 #self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
                 # print('Waveform change')
-            elif key in ('ETL_cfg_file'):
+            elif key == 'ETL_cfg_file':
                 self.state[key] = value
                 self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
                 # print('ETL CFG File changed')
-            elif key in ('set_etls_according_to_zoom'):
+            elif key == 'set_etls_according_to_zoom':
                 self.update_etl_parameters_from_zoom(value)
                 #print('zoom change')
-            elif key in ('set_etls_according_to_laser'):
-                self.state['laser'] = value
-                self.create_waveforms()
+            elif key == 'set_etls_according_to_laser':
                 self.update_etl_parameters_from_laser(value)
-                #print('laser change')
-            elif key in ('laser'):
-                self.state['laser'] = value
-                self.create_waveforms()
-                
+
             # Log Thread ID during Live: just debugging code
             elif key == 'state':
                 if value == 'live':
@@ -525,6 +521,8 @@ class mesoSPIM_DemoWaveFormGenerator(QtCore.QObject):
                        'laser_r_delay_%',
                        'laser_r_pulse_%',
                        'laser_r_max_amplitude',
+                       'laser',
+                        'zoom',
                        'camera_delay_%',
                        'camera_pulse_%'):
                 ''' Notify GUI about the change '''
@@ -533,18 +531,14 @@ class mesoSPIM_DemoWaveFormGenerator(QtCore.QObject):
                 #self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
                 # print('Waveform change')
-            elif key in ('ETL_cfg_file'):
+            elif key == 'ETL_cfg_file':
                 self.state[key] = value
                 self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
                 # print('ETL CFG File changed')
-            elif key in ('zoom'):
+            elif key == 'set_etls_according_to_zoom':
                 self.update_etl_parameters_from_zoom(value)
-                #print('zoom change')
-            elif key in ('laser'):
-                self.state[key] = value
-                self.create_waveforms()
+            elif key == 'set_etls_according_to_laser':
                 self.update_etl_parameters_from_laser(value)
-                #print('laser change')
 
             # Log Thread ID during Live: just debugging code
             elif key == 'state':
