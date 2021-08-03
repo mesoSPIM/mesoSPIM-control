@@ -376,7 +376,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.ZoomComboBox, 'zoom',1),
             (self.ShutterComboBox, 'shutterconfig',1),
             (self.LaserComboBox, 'laser',1),
-            (self.LaserIntensitySlider, 'intensity',1),
+            (self.LaserIntensitySlider, 'intensity', 1),
+            (self.LaserIntensitySpinBox, 'intensity', 1),
             (self.CameraExposureTimeSpinBox, 'camera_exposure_time',1000),
             #(self.CameraLineIntervalSpinBox,'camera_line_interval',1000000),
             (self.CameraTriggerDelaySpinBox,'camera_delay_%',1),
@@ -454,7 +455,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             state_parameter (str): State parameter (has to exist in the config)
         '''
         combobox.addItems(option_list)
-        if int_conversion == False:
+        if not int_conversion:
             combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}))
             combobox.setCurrentText(self.cfg.startup[state_parameter])
         else:
@@ -480,7 +481,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
-        
         self.sig_execute_script.emit(script)
 
     def block_signals_from_controls(self, bool):
