@@ -448,7 +448,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         else: 
             if self.model.rowCount() == 1:
                 self.set_selected_row(0)
-                self.preview_acquisition()
+                self.preview_acquisition() # recursive call of the same function
             else:    
                 self.display_no_row_selected_warning()
 
