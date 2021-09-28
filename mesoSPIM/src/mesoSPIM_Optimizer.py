@@ -24,6 +24,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.state = mesoSPIM_StateSingleton() # current state
         self.results_window = None
         self.new_state = None
+        self.delay_s = 0.1  # give some delay between snaps to avoid state update hickups
 
         loadUi('gui/mesoSPIM_Optimizer.ui', self)
         self.setWindowTitle('mesoSPIM-Optimizer')
@@ -32,6 +33,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.runButton.clicked.connect(self.run_optimization)
         self.acceptButton.clicked.connect(self.acceptNewState)
         self.discardButton.clicked.connect(self.discardNewState)
+        self.closeButton.clicked.connect(self.close_window)
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
@@ -51,11 +53,13 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         print(f"Image subsampling: {self.img_subsampling}")
         for i, v in enumerate(self.search_grid):
             self.core.sig_state_request.emit({self.state_key: v})
+            time.sleep(self.delay_s)
             self.core.snap(write_flag=False)
             img = self.core.camera_worker.camera.get_image()[::self.img_subsampling, ::self.img_subsampling]
             self.metric_array[i] = shannon_dct(img)
             print(f"{i}, image metric: {self.metric_array[i]}")
-        print("DONE")
+        # Reset to initial state
+        self.core.sig_state_request.emit({self.state_key: self.ini_state})
         #fit with Gaussian
         fit_center, fit_sigma, fit_amp, fit_offset = fit_gaussian_1d(self.metric_array, self.search_grid)
         fit_grid = np.linspace(min(self.search_grid), max(self.search_grid), 51)
@@ -83,7 +87,6 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     @QtCore.pyqtSlot()
     def acceptNewState(self):
         self.core.sig_state_request.emit({self.state_key: self.new_state})
-        time.sleep(0.1)
         print(f"Fitted value: {self.new_state}")
         print(f"New {self.state_key}:{self.state[self.state_key]}")
 
@@ -95,3 +98,9 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.new_state = None
         self.acceptButton.setEnabled(False)
         self.discardButton.setEnabled(False)
+
+    @QtCore.pyqtSlot()
+    def close_window(self):
+        if self.results_window:
+            self.results_window.close()
+        self.close()
