@@ -541,7 +541,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.total_image_count = acq_list.get_image_count()
         self.start_time = time.time()
 
-
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
             if not self.stopflag:
@@ -737,7 +736,6 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     framerate = self.image_count / time_passed
                     self.state['predicted_acq_list_time'] = self.total_image_count / framerate
-      
 
                 self.send_progress(self.acquisition_count,
                                    self.total_acquisition_count,

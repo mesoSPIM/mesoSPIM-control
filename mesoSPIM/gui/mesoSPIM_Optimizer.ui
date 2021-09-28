@@ -13,30 +13,12 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QPushButton" name="runButton">
-   <property name="geometry">
-    <rect>
-     <x>80</x>
-     <y>260</y>
-     <width>115</width>
-     <height>37</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>14</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>Run</string>
-   </property>
-  </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>80</x>
      <y>40</y>
-     <width>471</width>
+     <width>619</width>
      <height>203</height>
     </rect>
    </property>
@@ -65,6 +47,9 @@
       </property>
       <property name="maximum">
        <number>30</number>
+      </property>
+      <property name="singleStep">
+       <number>2</number>
       </property>
       <property name="value">
        <number>5</number>
@@ -101,12 +86,12 @@
       </property>
       <item>
        <property name="text">
-        <string>Current ROI</string>
+        <string>Entire image</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>Entire image</string>
+        <string>Current ROI</string>
        </property>
       </item>
      </widget>
@@ -143,7 +128,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Search interval:</string>
+       <string>Search interval (+/- from current value):</string>
       </property>
      </widget>
     </item>
@@ -168,6 +153,75 @@
       </property>
       <property name="text">
        <string>Parameter to optimize:</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>80</x>
+     <y>260</y>
+     <width>621</width>
+     <height>39</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QPushButton" name="runButton">
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Run</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="acceptButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Accept</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="discardButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Discard</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="cancelButton">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Cancel</string>
       </property>
      </widget>
     </item>
