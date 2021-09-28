@@ -67,19 +67,20 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.new_state = fit_center
 
         # Plot the results and prepare GUI
-        self.results_window = pg.plot(title='Image metric')
-        self.results_window.addLegend()
-        self.results_window.plot(self.search_grid, self.metric_array,
+        self.results_window = pg.GraphicsLayoutWidget(show=True, title='Optimization results')
+        self.plot0 = self.results_window.addPlot(title='Image metric')
+        self.plot0.addLegend()
+        self.plot0.plot(self.search_grid, self.metric_array,
                                  pen=None, symbolBrush=(200,200,200), name='measured')
-        self.results_window.plot(x=[self.ini_state], y=[self.metric_array[(len(self.search_grid) - 1)//2]],
+        self.plot0.plot(x=[self.ini_state], y=[self.metric_array[(len(self.search_grid) - 1)//2]],
                                  symbolBrush=(0,0,250), name='old value')
-        self.results_window.plot(fit_grid, gaussian_values,
+        self.plot0.plot(fit_grid, gaussian_values,
                                  pen=(200,0,0), symbol=None, name='fitted')
-        self.results_window.plot(x=[fit_center], y=[max(gaussian_values)],
+        self.plot0.plot(x=[fit_center], y=[max(gaussian_values)],
                                  symbolBrush=(250, 0, 0), name='new value')
         labelStyle = {'color': '#FFF', 'font-size': '16pt'}
-        self.results_window.setLabel('bottom', self.state_key, **labelStyle)
-        self.results_window.setLabel('left', 'Shannon(DCT), AU', **labelStyle)
+        self.plot0.setLabel('bottom', self.state_key, **labelStyle)
+        self.plot0.setLabel('left', 'Shannon(DCT), AU', **labelStyle)
 
         self.acceptButton.setEnabled(True)
         self.discardButton.setEnabled(True)
