@@ -6,5 +6,5 @@ rem In a multi-user setting, you may want to create the py36 environment in a pu
 rem $ conda create -p C:/full/public/path/to/envs/py36 python=3.6
 rem Make sure all users have right to execute python in the py36 environment (you may need admin rights for that).
 echo off
-"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\anaconda3\Scripts\activate.bat" "C:\Users\Nikita\anaconda3\envs\py36" && python "mesoSPIM_Control.py""
+"%windir%\System32\cmd.exe" /k ""C:\ProgramData\Anaconda3\Scripts\activate.bat" "C:\Users\spim-user\.conda\envs\py37" && python "mesoSPIM_Control.py""
 pause

@@ -26,6 +26,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.new_state = None
         self.delay_s = 0.1  # give some delay between snaps to avoid state update hickups
 
+        self.core.camera_worker.sig_camera_frame.connect(self.set_image)
+
         loadUi('gui/mesoSPIM_Optimizer.ui', self)
         self.setWindowTitle('mesoSPIM-Optimizer')
         self.show()
@@ -34,6 +36,10 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.acceptButton.clicked.connect(self.acceptNewState)
         self.discardButton.clicked.connect(self.discardNewState)
         self.closeButton.clicked.connect(self.close_window)
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def set_image(self, image):
+        self.image = image
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
@@ -55,8 +61,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
             self.core.sig_state_request.emit({self.state_key: v})
             time.sleep(self.delay_s)
             self.core.snap(write_flag=False)
-            img = self.core.camera_worker.camera.get_image()[::self.img_subsampling, ::self.img_subsampling]
-            self.metric_array[i] = shannon_dct(img)
+            #img = self.core.camera_worker.camera.get_image()[::self.img_subsampling, ::self.img_subsampling]
+            self.metric_array[i] = shannon_dct(self.image)
             print(f"{i}, image metric: {self.metric_array[i]}")
         # Reset to initial state
         self.core.sig_state_request.emit({self.state_key: self.ini_state})
