@@ -25,6 +25,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.results_window = None
         self.new_state = None
         self.delay_s = 0.1  # give some delay between snaps to avoid state update hickups
+        self.roi_dims = None
 
         self.core.camera_worker.sig_camera_frame.connect(self.set_image)
 
@@ -32,14 +33,40 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.setWindowTitle('mesoSPIM-Optimizer')
         self.show()
 
+        # signal switchboard
         self.runButton.clicked.connect(self.run_optimization)
         self.acceptButton.clicked.connect(self.acceptNewState)
         self.discardButton.clicked.connect(self.discardNewState)
         self.closeButton.clicked.connect(self.close_window)
+        self.parent.camera_window.sig_update_roi.connect(self.get_roi_dims)
+        self.comboBoxMode.currentTextChanged.connect(self.set_mode)
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
         self.image = image
+        self.roi = self.image[self.roi_dims[0]:self.roi_dims[0] + self.roi_dims[2],
+                   self.roi_dims[1]:self.roi_dims[1] + self.roi_dims[3]]
+
+    @QtCore.pyqtSlot(tuple)
+    def get_roi_dims(self, roi_dims):
+        self.roi_dims = np.array(roi_dims).clip(min=0).astype(int)
+        #print(f"ROI X, Y, W, H: {self.roi_dims}")
+
+    @QtCore.pyqtSlot(str)
+    def set_mode(self, choice):
+        if choice == "ETL offset":
+            self.searchAmpDoubleSpinBox.setValue(0.5)
+            self.searchAmpDoubleSpinBox.setSuffix(" V")
+        elif choice == "ETL amplitude":
+            self.searchAmpDoubleSpinBox.setValue(0.3)
+            self.searchAmpDoubleSpinBox.setSuffix(" V")
+        elif choice == "Focus":
+            self.searchAmpDoubleSpinBox.setValue(200)
+            self.searchAmpDoubleSpinBox.setSuffix(" \u03BCm")
+            self.searchAmpDoubleSpinBox.setDecimals(0)
+        else:
+            raise ValueError(f"{choice} value is not allowed.")
+
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
@@ -60,9 +87,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         for i, v in enumerate(self.search_grid):
             self.core.sig_state_request.emit({self.state_key: v})
             time.sleep(self.delay_s)
-            self.core.snap(write_flag=False)
-            #img = self.core.camera_worker.camera.get_image()[::self.img_subsampling, ::self.img_subsampling]
-            self.metric_array[i] = shannon_dct(self.image)
+            self.core.snap(write_flag=False) # this shares downsampled image via slot self.set_image()
+            self.metric_array[i] = shannon_dct(self.roi)
             print(f"{i}, image metric: {self.metric_array[i]}")
         # Reset to initial state
         self.core.sig_state_request.emit({self.state_key: self.ini_state})

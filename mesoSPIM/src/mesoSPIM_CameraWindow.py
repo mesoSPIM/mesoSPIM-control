@@ -14,6 +14,8 @@ import pyqtgraph as pg
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
+    sig_update_roi = QtCore.pyqtSignal(tuple)
+
     def __init__(self, parent=None):
         super().__init__()
 
@@ -92,17 +94,29 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             for item in self.roi_list:
                 self.image_view.removeItem(item)
 
-    @QtCore.pyqtSlot()
-    def update_status(self):
+    def get_roi(self):
         im_item = self.image_view.getImageItem()
         if self.overlay == 'box':
+            roi = self.roi_box.getArrayRegion(im_item.image, im_item)
+            x, y = self.roi_box.pos()
             w, h = self.roi_box.size()
-            roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
+            self.sig_update_roi.emit((x, y, w, h))
+        else:
+            roi = im_item.image
+            w, h = im_item.image.shape
+            self.sig_update_roi.emit((0, 0, w, h))
+        return roi
+
+    @QtCore.pyqtSlot()
+    def update_status(self):
+        roi = self.get_roi()
+        if self.overlay == 'box':
+            w, h = self.roi_box.size()
             self.status_label.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
                                       f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
-                                      f"sharpness {np.round(1e4 * shannon_dct(roi_img)):.0f}")
+                                      f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
         else:
-            self.status_label.setText(f"Image dimensions: {im_item.image.shape}")
+            self.status_label.setText(f"Image dimensions: {roi.shape}")
 
     def draw_crosshairs(self):
         self.image_view.addItem(self.vLine, ignoreBounds=True)

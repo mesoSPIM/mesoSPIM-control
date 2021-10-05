@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>740</width>
-    <height>300</height>
+    <width>805</width>
+    <height>406</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,25 +17,25 @@
    <property name="geometry">
     <rect>
      <x>80</x>
-     <y>40</y>
+     <y>130</y>
      <width>619</width>
      <height>203</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="3" column="0" colspan="2">
-     <widget class="QLabel" name="label_4">
+    <item row="0" column="0" colspan="2">
+     <widget class="QLabel" name="label">
       <property name="font">
        <font>
         <pointsize>14</pointsize>
        </font>
       </property>
       <property name="text">
-       <string>Num of points</string>
+       <string>Parameter to optimize:</string>
       </property>
      </widget>
     </item>
-    <item row="3" column="2">
+    <item row="2" column="2">
      <widget class="QSpinBox" name="nPointsSpinBox">
       <property name="font">
        <font>
@@ -56,7 +56,7 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="2">
+    <item row="1" column="2">
      <widget class="QDoubleSpinBox" name="searchAmpDoubleSpinBox">
       <property name="font">
        <font>
@@ -66,38 +66,43 @@
       <property name="decimals">
        <number>3</number>
       </property>
+      <property name="maximum">
+       <double>500.000000000000000</double>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
       <property name="value">
        <double>0.500000000000000</double>
       </property>
      </widget>
     </item>
-    <item row="1" column="2">
-     <widget class="QComboBox" name="comboBox_2">
-      <property name="minimumSize">
-       <size>
-        <width>200</width>
-        <height>0</height>
-       </size>
-      </property>
+    <item row="2" column="0" colspan="2">
+     <widget class="QLabel" name="label_4">
       <property name="font">
        <font>
         <pointsize>14</pointsize>
        </font>
       </property>
-      <item>
-       <property name="text">
-        <string>Entire image</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Current ROI</string>
-       </property>
-      </item>
+      <property name="text">
+       <string>Num of points</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0" colspan="2">
+     <widget class="QLabel" name="label_3">
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Search interval (+/- from current value):</string>
+      </property>
      </widget>
     </item>
     <item row="0" column="2">
-     <widget class="QComboBox" name="comboBox">
+     <widget class="QComboBox" name="comboBoxMode">
       <property name="font">
        <font>
         <pointsize>14</pointsize>
@@ -120,49 +125,13 @@
       </item>
      </widget>
     </item>
-    <item row="2" column="0" colspan="2">
-     <widget class="QLabel" name="label_3">
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Search interval (+/- from current value):</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0" colspan="2">
-     <widget class="QLabel" name="label_2">
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Image:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="0" colspan="2">
-     <widget class="QLabel" name="label">
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Parameter to optimize:</string>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>80</x>
-     <y>260</y>
+     <y>350</y>
      <width>621</width>
      <height>39</height>
     </rect>
@@ -226,6 +195,24 @@
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>80</x>
+     <y>10</y>
+     <width>631</width>
+     <height>101</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Optimization runs on entire image by default.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Select &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Overlay: Box ROI&lt;/span&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt; in the Camera Window &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;to optimize on selected image region.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </widget>
  </widget>
  <resources/>
