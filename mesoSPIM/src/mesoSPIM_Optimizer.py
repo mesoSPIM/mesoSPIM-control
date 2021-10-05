@@ -14,6 +14,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_Optimizer(QtWidgets.QWidget):
     sig_state_request = QtCore.pyqtSignal(dict)
+    sig_move_absolute = QtCore.pyqtSignal(dict)
 
     def __init__(self, parent=None):
         '''Parent must be an mesoSPIM_MainWindow() object'''
@@ -23,7 +24,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.cfg = parent.cfg # initial config file
         self.state = mesoSPIM_StateSingleton() # current state
         self.results_window = None
-        self.new_state = None
+        self.state_key = self.new_state = None
         self.delay_s = 0.1  # give some delay between snaps to avoid state update hickups
         self.roi_dims = None
 
@@ -33,12 +34,16 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.setWindowTitle('mesoSPIM-Optimizer')
         self.show()
 
+        # initialize
+        self.set_mode(self.comboBoxMode.currentText())
+
         # signal switchboard
         self.runButton.clicked.connect(self.run_optimization)
         self.acceptButton.clicked.connect(self.acceptNewState)
         self.discardButton.clicked.connect(self.discardNewState)
         self.closeButton.clicked.connect(self.close_window)
         self.parent.camera_window.sig_update_roi.connect(self.get_roi_dims)
+        self.sig_move_absolute.connect(self.core.move_absolute)
         self.comboBoxMode.currentTextChanged.connect(self.set_mode)
 
     @QtCore.pyqtSlot(np.ndarray)
@@ -54,28 +59,36 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(str)
     def set_mode(self, choice):
+        shutter = self.state['shutterconfig']
         if choice == "ETL offset":
+            self.mode = 'etl_offset'
             self.searchAmpDoubleSpinBox.setValue(0.5)
             self.searchAmpDoubleSpinBox.setSuffix(" V")
+            self.state_key = 'etl_l_offset' if shutter == 'Left' else 'etl_r_offset'
         elif choice == "ETL amplitude":
+            self.mode = 'etl_amp'
             self.searchAmpDoubleSpinBox.setValue(0.3)
             self.searchAmpDoubleSpinBox.setSuffix(" V")
+            self.state_key = 'etl_l_amplitude' if shutter == 'Left' else 'etl_r_amplitude'
         elif choice == "Focus":
+            self.mode = 'focus'
             self.searchAmpDoubleSpinBox.setValue(200)
             self.searchAmpDoubleSpinBox.setSuffix(" \u03BCm")
             self.searchAmpDoubleSpinBox.setDecimals(0)
+            self.state_key = 'position'
         else:
             raise ValueError(f"{choice} value is not allowed.")
 
+    def set_state(self, new_val):
+        if self.mode == 'focus':
+            self.sig_move_absolute.emit({'f_pos': new_val})
+        else:
+            self.core.sig_state_request.emit({self.state_key: new_val})
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
-        shutter = self.state['shutterconfig']
-        if shutter == 'Left':
-            self.state_key = 'etl_l_offset'
-        else:
-            self.state_key = 'etl_r_offset'
-        self.ini_state = self.state[self.state_key]
+        self.ini_state = self.state[self.state_key]['f_pos'] if self.mode == 'focus' else self.state[self.state_key]
+        print(f"DEBUG: ini state {self.ini_state}")
         self.min_value = self.ini_state - self.searchAmpDoubleSpinBox.value()
         self.max_value = self.ini_state + self.searchAmpDoubleSpinBox.value()
         self.n_points = self.nPointsSpinBox.value()
@@ -85,13 +98,17 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.metric_array = np.zeros(len(self.search_grid))
         print(f"Image subsampling: {self.img_subsampling}")
         for i, v in enumerate(self.search_grid):
-            self.core.sig_state_request.emit({self.state_key: v})
+            self.set_state(v)
             time.sleep(self.delay_s)
             self.core.snap(write_flag=False) # this shares downsampled image via slot self.set_image()
             self.metric_array[i] = shannon_dct(self.roi)
             print(f"{i}, image metric: {self.metric_array[i]}")
         # Reset to initial state
-        self.core.sig_state_request.emit({self.state_key: self.ini_state})
+        if self.mode == 'focus':
+            self.sig_move_absolute.emit({'f_pos': self.ini_state})
+        else:
+            self.core.sig_state_request.emit({self.state_key: self.ini_state})
+
         #fit with Gaussian
         fit_center, fit_sigma, fit_amp, fit_offset = fit_gaussian_1d(self.metric_array, self.search_grid)
         fit_grid = np.linspace(min(self.search_grid), max(self.search_grid), 51)
@@ -119,7 +136,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def acceptNewState(self):
-        self.core.sig_state_request.emit({self.state_key: self.new_state})
+        self.set_state(self.new_state)
         print(f"Fitted value: {self.new_state}")
         print(f"New {self.state_key}:{self.state[self.state_key]}")
 
