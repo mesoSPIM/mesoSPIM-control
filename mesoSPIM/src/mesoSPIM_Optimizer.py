@@ -81,7 +81,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     def set_state(self, new_val):
         if self.mode == 'focus':
-            self.sig_move_absolute.emit({'f_pos': new_val})
+            self.sig_move_absolute.emit({'f_abs': new_val})
         else:
             self.core.sig_state_request.emit({self.state_key: new_val})
 
