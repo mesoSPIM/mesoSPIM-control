@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>805</width>
-    <height>406</height>
+    <height>446</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -43,7 +43,7 @@
        </font>
       </property>
       <property name="minimum">
-       <number>3</number>
+       <number>5</number>
       </property>
       <property name="maximum">
        <number>30</number>
@@ -131,7 +131,7 @@
    <property name="geometry">
     <rect>
      <x>80</x>
-     <y>350</y>
+     <y>390</y>
      <width>621</width>
      <height>39</height>
     </rect>
@@ -146,36 +146,6 @@
       </property>
       <property name="text">
        <string>Run</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="acceptButton">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Accept</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="discardButton">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Discard</string>
       </property>
      </widget>
     </item>

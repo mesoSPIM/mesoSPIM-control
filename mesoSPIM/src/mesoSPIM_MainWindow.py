@@ -582,7 +582,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot()
     def launch_optimizer(self):
-        self.optimizer = mesoSPIM_Optimizer(self)
+        if not self.optimizer:
+            self.optimizer = mesoSPIM_Optimizer(self)
+        else:
+            self.optimizer.show()
 
     @QtCore.pyqtSlot(bool)
     def enable_gui_updates_from_state(self, boolean):

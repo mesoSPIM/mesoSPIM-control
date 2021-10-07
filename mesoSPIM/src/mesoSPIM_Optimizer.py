@@ -1,7 +1,6 @@
-import sys
 import time
 import numpy as np
-from .utils.optimization import shannon_dct, fit_gaussian_1d, _gaussian_1d
+from .utils.optimization import shannon_dct, fit_gaussian_1d, gaussian_1d
 import pyqtgraph as pg
 
 import logging
@@ -23,12 +22,12 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.core = parent.core
         self.cfg = parent.cfg # initial config file
         self.state = mesoSPIM_StateSingleton() # current state
-        self.results_window = None
-        self.state_key = self.new_state = None
-        self.delay_s = 0.1  # give some delay between snaps to avoid state update hickups
-        self.roi_dims = None
-
-        self.core.camera_worker.sig_camera_frame.connect(self.set_image)
+        self.results_window = self.graphics_widget = None
+        self.mode = self.state_key = None
+        self.image = self.roi = self.roi_dims = self.img_subsampling = None
+        self.ini_state = self.new_state = self.n_points = self.min_value = self.max_value = None
+        self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
+        self.delay_s = 0.25  # give some delay between snaps to avoid state update hickups
 
         loadUi('gui/mesoSPIM_Optimizer.ui', self)
         self.setWindowTitle('mesoSPIM-Optimizer')
@@ -38,10 +37,10 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.set_mode(self.comboBoxMode.currentText())
 
         # signal switchboard
+        self.core.camera_worker.sig_camera_frame.connect(self.set_image)
         self.runButton.clicked.connect(self.run_optimization)
-        self.acceptButton.clicked.connect(self.acceptNewState)
-        self.discardButton.clicked.connect(self.discardNewState)
         self.closeButton.clicked.connect(self.close_window)
+
         self.parent.camera_window.sig_update_roi.connect(self.get_roi_dims)
         self.sig_move_absolute.connect(self.core.move_absolute)
         self.comboBoxMode.currentTextChanged.connect(self.set_mode)
@@ -55,7 +54,6 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     @QtCore.pyqtSlot(tuple)
     def get_roi_dims(self, roi_dims):
         self.roi_dims = np.array(roi_dims).clip(min=0).astype(int)
-        #print(f"ROI X, Y, W, H: {self.roi_dims}")
 
     @QtCore.pyqtSlot(str)
     def set_mode(self, choice):
@@ -88,7 +86,6 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     @QtCore.pyqtSlot()
     def run_optimization(self):
         self.ini_state = self.state[self.state_key]['f_pos'] if self.mode == 'focus' else self.state[self.state_key]
-        print(f"DEBUG: ini state {self.ini_state}")
         self.min_value = self.ini_state - self.searchAmpDoubleSpinBox.value()
         self.max_value = self.ini_state + self.searchAmpDoubleSpinBox.value()
         self.n_points = self.nPointsSpinBox.value()
@@ -97,12 +94,12 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.img_subsampling = self.core.camera_worker.camera_display_acquisition_subsampling
         self.metric_array = np.zeros(len(self.search_grid))
         print(f"Image subsampling: {self.img_subsampling}")
+        print(f"Initial value: {self.ini_state:.3f}")
         for i, v in enumerate(self.search_grid):
             self.set_state(v)
             time.sleep(self.delay_s)
             self.core.snap(write_flag=False) # this shares downsampled image via slot self.set_image()
             self.metric_array[i] = shannon_dct(self.roi)
-            print(f"{i}, image metric: {self.metric_array[i]}")
         # Reset to initial state
         if self.mode == 'focus':
             self.sig_move_absolute.emit({'f_pos': self.ini_state})
@@ -111,46 +108,71 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
         #fit with Gaussian
         fit_center, fit_sigma, fit_amp, fit_offset = fit_gaussian_1d(self.metric_array, self.search_grid)
-        fit_grid = np.linspace(min(self.search_grid), max(self.search_grid), 51)
-        gaussian_values = _gaussian_1d(fit_grid, fit_center, fit_sigma, fit_amp, fit_offset)
+        self.fit_grid = np.linspace(min(self.search_grid), max(self.search_grid), 51)
+        self.gaussian_values = gaussian_1d(self.fit_grid, fit_center, fit_sigma, fit_amp, fit_offset)
         self.new_state = fit_center
 
-        # Plot the results and prepare GUI
-        self.results_window = pg.GraphicsLayoutWidget(show=True, title='Optimization results')
-        self.plot0 = self.results_window.addPlot(title='Image metric')
-        self.plot0.addLegend()
-        self.plot0.plot(self.search_grid, self.metric_array,
-                                 pen=None, symbolBrush=(200,200,200), name='measured')
-        self.plot0.plot(x=[self.ini_state], y=[self.metric_array[(len(self.search_grid) - 1)//2]],
+        # Plot the results
+        self.create_results_window()
+        self.plot_results()
+
+    def create_results_window(self):
+        self.results_window = loadUi('gui/mesoSPIM_Optimizer_Results.ui')
+        self.results_window.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.results_window.setWindowTitle('Optimization results')
+        # signal switchboard for results window
+        self.results_window.acceptButton.clicked.connect(self.accept_new_state)
+        self.results_window.discardButton.clicked.connect(self.discard_new_state)
+
+    def plot_results(self):
+        layout = pg.QtGui.QGridLayout()
+        self.results_window.setLayout(layout)
+
+        self.graphics_widget = pg.GraphicsLayoutWidget(show=True)
+        plot0 = self.graphics_widget.addPlot(title='Image metric')
+        plot0.addLegend()
+        plot0.plot(self.search_grid, self.metric_array, pen=None, symbolBrush=(200,200,200), name='measured')
+        plot0.plot(x=[self.ini_state], y=[self.metric_array[(len(self.search_grid) - 1)//2]],
                                  symbolBrush=(0,0,250), name='old value')
-        self.plot0.plot(fit_grid, gaussian_values,
-                                 pen=(200,0,0), symbol=None, name='fitted')
-        self.plot0.plot(x=[fit_center], y=[max(gaussian_values)],
-                                 symbolBrush=(250, 0, 0), name='new value')
-        labelStyle = {'color': '#FFF', 'font-size': '16pt'}
-        self.plot0.setLabel('bottom', self.state_key, **labelStyle)
-        self.plot0.setLabel('left', 'Shannon(DCT), AU', **labelStyle)
+        plot0.plot(x=[self.new_state], y=[max(self.gaussian_values)], symbolBrush=(250, 0, 0), name='new value')
+        plot0.plot(self.fit_grid, self.gaussian_values, pen=(200,0,0), symbol=None, name='fitted')
 
-        self.acceptButton.setEnabled(True)
-        self.discardButton.setEnabled(True)
+        labelStyle = {'color': '#FFF', 'font-size': '14pt'}
+        plot0.setLabel('bottom', self.state_key, **labelStyle)
+        plot0.setLabel('left', 'Shannon(DCT), AU', **labelStyle)
+        plot0.showGrid(x=True)
+        self.results_window.label_results.setText(self.results_string())
+
+        layout.addWidget(self.graphics_widget, 0, 0, 1, 2, QtCore.Qt.AlignHCenter)
+        layout.addWidget(self.results_window.label_results, 1, 0, 1, 2, QtCore.Qt.AlignHCenter)
+        layout.addWidget(self.results_window.acceptButton, 2, 0, 1, 1, QtCore.Qt.AlignHCenter)
+        layout.addWidget(self.results_window.discardButton, 2, 1, 1, 1, QtCore.Qt.AlignHCenter)
+        self.results_window.show()
+
+    def results_string(self):
+        """Pretty formatting"""
+        if self.mode == 'focus':
+            return f"Old: {self.ini_state:.0f}\t New: {self.new_state:.0f}\t Diff: {(self.new_state - self.ini_state):.0f}"
+        else:
+            return f"Old: {self.ini_state:.3f}\t New: {self.new_state:.3f}\t Diff: {(self.new_state - self.ini_state):.3f}"
 
     @QtCore.pyqtSlot()
-    def acceptNewState(self):
+    def accept_new_state(self):
         self.set_state(self.new_state)
-        print(f"Fitted value: {self.new_state}")
+        print(f"Fitted value: {self.new_state:.3f}")
+        time.sleep(self.delay_s)
         print(f"New {self.state_key}:{self.state[self.state_key]}")
-
-        self.acceptButton.setEnabled(False)
-        self.discardButton.setEnabled(False)
+        self.results_window.deleteLater()
+        self.results_window = None
 
     @QtCore.pyqtSlot()
-    def discardNewState(self):
+    def discard_new_state(self):
         self.new_state = None
-        self.acceptButton.setEnabled(False)
-        self.discardButton.setEnabled(False)
+        self.results_window.deleteLater()
+        self.results_window = None
 
     @QtCore.pyqtSlot()
     def close_window(self):
         if self.results_window:
-            self.results_window.close()
+            self.results_window.deleteLater()
         self.close()
