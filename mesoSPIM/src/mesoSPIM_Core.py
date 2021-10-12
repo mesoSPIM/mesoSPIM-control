@@ -178,6 +178,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state']='idle'
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
+        self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
+        self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
 
         self.start_time = 0
         self.stopflag = False

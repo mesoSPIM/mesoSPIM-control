@@ -45,11 +45,11 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.histogram = self.image_view.getHistogramWidget()
         self.histogram.setMinimumWidth(100)
         self.histogram.item.vb.setMaximumWidth(100)
-        self.subsampling = self.state['camera_display_live_subsampling']
 
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
+        self.subsampling = self.cfg.startup['camera_display_live_subsampling']
 
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "r", 'width': 1})

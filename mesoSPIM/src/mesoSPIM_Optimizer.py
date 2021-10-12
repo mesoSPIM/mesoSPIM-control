@@ -52,8 +52,11 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
         self.image = image
-        self.roi = self.image[self.roi_dims[0]:self.roi_dims[0] + self.roi_dims[2],
-                   self.roi_dims[1]:self.roi_dims[1] + self.roi_dims[3]]
+        self.roi = self.image[self.roi_dims[1]:self.roi_dims[1] + self.roi_dims[3],
+                   self.roi_dims[0]:self.roi_dims[0] + self.roi_dims[2]]
+        # DEBUG mode, create new window for each snap
+        #roi_window = pg.ImageWindow()
+        #roi_window.setImage(self.roi)
 
     @QtCore.pyqtSlot(tuple)
     def get_roi_dims(self, roi_dims):
@@ -95,11 +98,11 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     @QtCore.pyqtSlot(str)
     def set_mode_from_gui(self, choice):
         if choice == "ETL offset":
-            self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 5})
+            self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.2, 'n_points': 7})
         elif choice == "ETL amplitude":
-            self.set_parameters({'mode': 'etl_amp', 'amplitude': 0.3, 'n_points': 5})
+            self.set_parameters({'mode': 'etl_amp', 'amplitude': 0.1, 'n_points': 7})
         elif choice == "Focus":
-            self.set_parameters({'mode': 'focus', 'amplitude': 200, 'n_points': 5})
+            self.set_parameters({'mode': 'focus', 'amplitude': 200, 'n_points': 7})
         else:
             raise ValueError(f"{choice} value is not allowed.")
 
@@ -116,6 +119,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
+        self.parent.sig_state_request.emit({'state': 'idle'}) # stop Live if it is running
+        time.sleep(1)
         self.get_params_from_gui()
         self.ini_state = self.state[self.state_key]['f_pos'] if self.mode == 'focus' else self.state[self.state_key]
         self.min_value = self.ini_state - self.search_amplitude
@@ -131,11 +136,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
             time.sleep(self.delay_s)
             self.core.snap(write_flag=False) # this shares downsampled image via slot self.set_image()
             self.metric_array[i] = shannon_dct(self.roi)
-        # Reset to initial state
-        if self.mode == 'focus':
-            self.sig_move_absolute.emit({'f_pos': self.ini_state})
-        else:
-            self.core.sig_state_request.emit({self.state_key: self.ini_state})
+
+        self.set_state(self.ini_state) # Reset to initial state
 
         #fit with Gaussian
         fit_center, fit_sigma, fit_amp, fit_offset = fit_gaussian_1d(self.metric_array, self.search_grid)
@@ -192,6 +194,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.set_state(self.new_state)
         print(f"Fitted value: {self.new_state:.3f}")
         time.sleep(self.delay_s)
+        self.core.snap(write_flag=False)
         print(f"New {self.state_key}:{self.state[self.state_key]}")
         self.results_window.deleteLater()
         self.results_window = None
