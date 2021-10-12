@@ -1104,7 +1104,7 @@
              <rect>
               <x>560</x>
               <y>10</y>
-              <width>171</width>
+              <width>271</width>
               <height>531</height>
              </rect>
             </property>
@@ -1262,6 +1262,37 @@
              </property>
              <property name="text">
               <string>Increment</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="focusAutoButton">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>150</x>
+               <y>180</y>
+               <width>111</width>
+               <height>111</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>16</pointsize>
+               <weight>50</weight>
+               <italic>false</italic>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>Autofocus Menu</string>
+             </property>
+             <property name="text">
+              <string>AUTO
+ F</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
              </property>
             </widget>
            </widget>

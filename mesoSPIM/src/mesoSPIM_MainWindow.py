@@ -45,7 +45,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     sig_save_etl_config = QtCore.pyqtSignal()
     sig_poke_demo_thread = QtCore.pyqtSignal()
-    sig_launch_optimizer = QtCore.pyqtSignal()
+    sig_launch_optimizer = QtCore.pyqtSignal(dict)
 
     def __init__(self, config=None):
         super().__init__()
@@ -113,7 +113,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             logger.warning(f'Main Window: Camera not connected to display!', exc_info=True)
 
         ''' Start the thread '''
-        #self.core_thread.start(QtCore.QThread.HighPriority)
         self.core_thread.start(QtCore.QThread.HighPriority)
         logger.info(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
         #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
@@ -307,15 +306,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
-        # self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
         self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
         self.zZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['z']) if bool is True else self.sig_unzero_axes.emit(['z']))
-        # self.xyzZeroButton.clicked.connect(lambda bool: self.sig_zero.emit(['x','y','z']) if bool is True else self.sig_unzero.emit(['x','y','z']))
         self.focusZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['f']) if bool is True else self.sig_unzero_axes.emit(['f']))
+        self.focusAutoButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'focus', 'amplitude': 200}))
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
-        self.launchOptimizerButton.clicked.connect(self.sig_launch_optimizer.emit)
+        self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({}))
 
         ''' Disabling UI buttons if necessary '''
         if hasattr(self.cfg, 'ui_options'):
@@ -580,11 +578,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setVisible(False)
         '''
 
-    @QtCore.pyqtSlot()
-    def launch_optimizer(self):
+    @QtCore.pyqtSlot(dict)
+    def launch_optimizer(self, ini_dict=None):
         if not self.optimizer:
             self.optimizer = mesoSPIM_Optimizer(self)
+            self.optimizer.set_parameters(ini_dict)
         else:
+            self.optimizer.set_parameters(ini_dict)
             self.optimizer.show()
 
     @QtCore.pyqtSlot(bool)

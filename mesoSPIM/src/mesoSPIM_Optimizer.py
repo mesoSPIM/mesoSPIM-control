@@ -23,9 +23,13 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.cfg = parent.cfg # initial config file
         self.state = mesoSPIM_StateSingleton() # current state
         self.results_window = self.graphics_widget = None
-        self.mode = self.state_key = None
+        self.modes_list = ['etl_offset', 'etl_amp', 'focus']
+        self.mode = self.modes_list[0]
+        self.n_points = 5
+        self.search_amplitude = 0.5
+        self.state_key = None
         self.image = self.roi = self.roi_dims = self.img_subsampling = None
-        self.ini_state = self.new_state = self.n_points = self.min_value = self.max_value = None
+        self.ini_state = self.new_state =self.min_value = self.max_value = None
         self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
         self.delay_s = 0.25  # give some delay between snaps to avoid state update hickups
 
@@ -34,7 +38,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.show()
 
         # initialize
-        self.set_mode(self.comboBoxMode.currentText())
+        self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 5})
 
         # signal switchboard
         self.core.camera_worker.sig_camera_frame.connect(self.set_image)
@@ -43,7 +47,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
         self.parent.camera_window.sig_update_roi.connect(self.get_roi_dims)
         self.sig_move_absolute.connect(self.core.move_absolute)
-        self.comboBoxMode.currentTextChanged.connect(self.set_mode)
+        self.comboBoxMode.currentTextChanged.connect(self.set_mode_from_gui)
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
@@ -55,27 +59,54 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     def get_roi_dims(self, roi_dims):
         self.roi_dims = np.array(roi_dims).clip(min=0).astype(int)
 
-    @QtCore.pyqtSlot(str)
-    def set_mode(self, choice):
-        shutter = self.state['shutterconfig']
-        if choice == "ETL offset":
-            self.mode = 'etl_offset'
-            self.searchAmpDoubleSpinBox.setValue(0.5)
-            self.searchAmpDoubleSpinBox.setSuffix(" V")
-            self.state_key = 'etl_l_offset' if shutter == 'Left' else 'etl_r_offset'
-        elif choice == "ETL amplitude":
-            self.mode = 'etl_amp'
-            self.searchAmpDoubleSpinBox.setValue(0.3)
-            self.searchAmpDoubleSpinBox.setSuffix(" V")
-            self.state_key = 'etl_l_amplitude' if shutter == 'Left' else 'etl_r_amplitude'
-        elif choice == "Focus":
-            self.mode = 'focus'
-            self.searchAmpDoubleSpinBox.setValue(200)
+    def set_parameters(self, param_dict=None, update_gui=True):
+        if param_dict:
+            if 'mode' in param_dict.keys():
+                self.mode = param_dict['mode']
+            if 'amplitude' in param_dict.keys():
+                self.search_amplitude = param_dict['amplitude']
+            if 'n_points' in param_dict.keys():
+                self.n_points = param_dict['n_points']
+        if self.mode == 'focus':
+            self.state_key = 'position'
+        elif self.mode == 'etl_offset':
+            self.state_key = 'etl_l_offset' if self.state['shutterconfig'] == 'Left' else 'etl_r_offset'
+        elif self.mode == 'etl_amp':
+            self.state_key = 'etl_l_amplitude' if self.state['shutterconfig'] == 'Left' else 'etl_r_amplitude'
+        if update_gui:
+            self.update_gui()
+
+    def update_gui(self):
+        if self.mode == 'focus':
             self.searchAmpDoubleSpinBox.setSuffix(" \u03BCm")
             self.searchAmpDoubleSpinBox.setDecimals(0)
-            self.state_key = 'position'
+        else:
+            self.searchAmpDoubleSpinBox.setSuffix(" V")
+            self.searchAmpDoubleSpinBox.setDecimals(3)
+
+        mode_index = self.modes_list.index(self.mode)
+        if mode_index != self.comboBoxMode.currentIndex():
+            self.comboBoxMode.setCurrentIndex(mode_index)
+        if self.search_amplitude != self.searchAmpDoubleSpinBox.value():
+            self.searchAmpDoubleSpinBox.setValue(self.search_amplitude)
+        if self.n_points != self.nPointsSpinBox.value():
+            self.nPointsSpinBox.setValue(self.n_points)
+
+    @QtCore.pyqtSlot(str)
+    def set_mode_from_gui(self, choice):
+        if choice == "ETL offset":
+            self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 5})
+        elif choice == "ETL amplitude":
+            self.set_parameters({'mode': 'etl_amp', 'amplitude': 0.3, 'n_points': 5})
+        elif choice == "Focus":
+            self.set_parameters({'mode': 'focus', 'amplitude': 200, 'n_points': 5})
         else:
             raise ValueError(f"{choice} value is not allowed.")
+
+    def get_params_from_gui(self):
+        self.mode = self.modes_list[self.comboBoxMode.currentIndex()]
+        self.search_amplitude = self.searchAmpDoubleSpinBox.value()
+        self.n_points = self.nPointsSpinBox.value()
 
     def set_state(self, new_val):
         if self.mode == 'focus':
@@ -85,10 +116,10 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
+        self.get_params_from_gui()
         self.ini_state = self.state[self.state_key]['f_pos'] if self.mode == 'focus' else self.state[self.state_key]
-        self.min_value = self.ini_state - self.searchAmpDoubleSpinBox.value()
-        self.max_value = self.ini_state + self.searchAmpDoubleSpinBox.value()
-        self.n_points = self.nPointsSpinBox.value()
+        self.min_value = self.ini_state - self.search_amplitude
+        self.max_value = self.ini_state + self.search_amplitude
         assert self.n_points % 2 == 1, f"Number of points must be odd, got {self.n_points} instead."
         self.search_grid = np.linspace(self.min_value, self.max_value, self.n_points)
         self.img_subsampling = self.core.camera_worker.camera_display_acquisition_subsampling
