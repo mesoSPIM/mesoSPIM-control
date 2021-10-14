@@ -69,7 +69,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         elif orientation == 'v':
             self.parent.camera_window.set_roi('box', (img_w*(1-roi_perc)//2, 0, int(img_w*roi_perc), img_h))
         elif orientation is None:
-            self.parent.camera_window.set_roi(None)
+            #self.parent.camera_window.set_roi(None)
+            pass
         else:
             raise ValueError("Orientation must be one of ('h', 'v', None).")
 
@@ -106,11 +107,11 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         if self.mode == 'focus':
             self.searchAmpDoubleSpinBox.setSuffix(" \u03BCm")
             self.searchAmpDoubleSpinBox.setDecimals(0)
-            self.set_roi(None)
+            #self.set_roi(None)
         else:
             self.searchAmpDoubleSpinBox.setSuffix(" V")
             self.searchAmpDoubleSpinBox.setDecimals(3)
-            self.set_roi('v') if self.mode == 'etl_offset' else self.set_roi('h')
+            #self.set_roi('v') if self.mode == 'etl_offset' else self.set_roi('h')
 
         mode_index = self.modes_list.index(self.mode)
         if mode_index != self.comboBoxMode.currentIndex():
@@ -222,7 +223,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         print(f"Fitted value: {self.new_state:.3f}")
         time.sleep(self.delay_s)
         self.core.snap(write_flag=False)
-        print(f"New {self.state_key}:{self.state[self.state_key]:.3f}")
+        state_str = f"{self.state[self.state_key]}" if self.mode == 'focus' else f"{self.state[self.state_key]:.3f}"
+        print(f"New {self.state_key}:{state_str}")
         self.results_window.deleteLater()
         self.results_window = None
 
