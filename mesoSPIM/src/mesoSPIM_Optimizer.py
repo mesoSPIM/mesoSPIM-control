@@ -38,7 +38,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.show()
 
         # initialize
-        self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 5})
+        self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 7})
 
         # signal switchboard
         self.core.camera_worker.sig_camera_frame.connect(self.set_image)
@@ -62,6 +62,17 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     def get_roi_dims(self, roi_dims):
         self.roi_dims = np.array(roi_dims).clip(min=0).astype(int)
 
+    def set_roi(self, orientation='h', roi_perc=0.25):
+        img_w, img_h = self.parent.camera_window.get_image_shape()
+        if orientation == 'h':
+            self.parent.camera_window.set_roi('box', (0, img_h*(1-roi_perc)//2, img_w, int(img_h*roi_perc)))
+        elif orientation == 'v':
+            self.parent.camera_window.set_roi('box', (img_w*(1-roi_perc)//2, 0, int(img_w*roi_perc), img_h))
+        elif orientation is None:
+            self.parent.camera_window.set_roi(None)
+        else:
+            raise ValueError("Orientation must be one of ('h', 'v', None).")
+
     def set_parameters(self, param_dict=None, update_gui=True):
         if param_dict:
             if 'mode' in param_dict.keys():
@@ -73,9 +84,21 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         if self.mode == 'focus':
             self.state_key = 'position'
         elif self.mode == 'etl_offset':
-            self.state_key = 'etl_l_offset' if self.state['shutterconfig'] == 'Left' else 'etl_r_offset'
+            if self.state['shutterconfig'] == 'Left':
+                self.state_key = 'etl_l_offset'
+                self.core.sig_state_request.emit({'etl_l_amplitude': 0})
+            elif self.state['shutterconfig'] == 'Right':
+                self.state_key = 'etl_r_offset'
+                self.core.sig_state_request.emit({'etl_r_amplitude': 0})
+            else:
+                raise ValueError(f"{self.state['shutterconfig']} expected to be in ('Left', 'Right')")
+            print("ETL offset optimization: ETL amplitude set to 0")
         elif self.mode == 'etl_amp':
+            ini_etl_amp = 0.1 # so that we never start from zero
             self.state_key = 'etl_l_amplitude' if self.state['shutterconfig'] == 'Left' else 'etl_r_amplitude'
+            if self.state[self.state_key ] == 0:
+                self.core.sig_state_request.emit({self.state_key: ini_etl_amp})
+                print(f"Initial ETL amp set to {ini_etl_amp}")
         if update_gui:
             self.update_gui()
 
@@ -83,9 +106,11 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         if self.mode == 'focus':
             self.searchAmpDoubleSpinBox.setSuffix(" \u03BCm")
             self.searchAmpDoubleSpinBox.setDecimals(0)
+            self.set_roi(None)
         else:
             self.searchAmpDoubleSpinBox.setSuffix(" V")
             self.searchAmpDoubleSpinBox.setDecimals(3)
+            self.set_roi('v') if self.mode == 'etl_offset' else self.set_roi('h')
 
         mode_index = self.modes_list.index(self.mode)
         if mode_index != self.comboBoxMode.currentIndex():
@@ -124,13 +149,15 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.get_params_from_gui()
         self.ini_state = self.state[self.state_key]['f_pos'] if self.mode == 'focus' else self.state[self.state_key]
         self.min_value = self.ini_state - self.search_amplitude
+        if self.mode in ('etl_offset', 'etl_amp'):
+            self.min_value = max(self.min_value, 0) # clip negative values for ETL
         self.max_value = self.ini_state + self.search_amplitude
         assert self.n_points % 2 == 1, f"Number of points must be odd, got {self.n_points} instead."
         self.search_grid = np.linspace(self.min_value, self.max_value, self.n_points)
         self.img_subsampling = self.core.camera_worker.camera_display_acquisition_subsampling
         self.metric_array = np.zeros(len(self.search_grid))
         print(f"Image subsampling: {self.img_subsampling}")
-        print(f"Initial value: {self.ini_state:.3f}")
+        print(f"Initial value: {self.ini_state:.3f}, searching in ({self.min_value:.3f}, {self.max_value:.3f}), n_points {self.n_points}")
         for i, v in enumerate(self.search_grid):
             self.set_state(v)
             time.sleep(self.delay_s)
@@ -195,7 +222,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         print(f"Fitted value: {self.new_state:.3f}")
         time.sleep(self.delay_s)
         self.core.snap(write_flag=False)
-        print(f"New {self.state_key}:{self.state[self.state_key]}")
+        print(f"New {self.state_key}:{self.state[self.state_key]:.3f}")
         self.results_window.deleteLater()
         self.results_window = None
 
@@ -207,6 +234,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def close_window(self):
+        self.parent.camera_window.set_roi(None)
         if self.results_window:
             self.results_window.deleteLater()
         self.close()
