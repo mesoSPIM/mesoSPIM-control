@@ -580,6 +580,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(dict)
     def launch_optimizer(self, ini_dict=None):
+        self.sig_move_relative.emit({'f_rel': 5})  # a hack to fix Galil stage coupling, between F and X/Y stages.
         if not self.optimizer:
             self.optimizer = mesoSPIM_Optimizer(self)
             self.optimizer.set_parameters(ini_dict)

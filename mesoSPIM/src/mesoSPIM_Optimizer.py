@@ -89,7 +89,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         elif self.mode == 'etl_amp':
             ini_etl_amp = 0.1 # so that we never start from zero
             self.state_key = 'etl_l_amplitude' if self.state['shutterconfig'] == 'Left' else 'etl_r_amplitude'
-            if self.state[self.state_key ] == 0:
+            if self.state[self.state_key] == 0:
                 self.core.sig_state_request.emit({self.state_key: ini_etl_amp})
                 print(f"Initial ETL amp set to {ini_etl_amp}")
         if update_gui:
@@ -99,11 +99,11 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         if self.mode == 'focus':
             self.searchAmpDoubleSpinBox.setSuffix(" \u03BCm")
             self.searchAmpDoubleSpinBox.setDecimals(0)
-            #self.set_roi(None)
+            self.set_roi(None)
         else:
             self.searchAmpDoubleSpinBox.setSuffix(" V")
             self.searchAmpDoubleSpinBox.setDecimals(3)
-            #self.set_roi('v') if self.mode == 'etl_offset' else self.set_roi('h')
+            self.set_roi('v') if self.mode == 'etl_offset' else self.set_roi('h')
 
         mode_index = self.modes_list.index(self.mode)
         if mode_index != self.comboBoxMode.currentIndex():
