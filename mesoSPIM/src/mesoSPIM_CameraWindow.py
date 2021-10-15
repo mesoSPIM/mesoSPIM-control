@@ -15,6 +15,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     sig_update_roi = QtCore.pyqtSignal(tuple)
+    sig_update_status = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__()
@@ -60,15 +61,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         # Create overlay ROIs
         self.overlay = None  # None, 'box'
-        w, h = 200, 200
-        x, y, = self.x_image_width/2 - w/2, self.y_image_width/2 - h/2
-        self.roi_box = pg.RectROI((x, y), (w, h), sideScalers=True)
-        self.roi_list = [self.roi_box]
+        w, h = self.x_image_width//self.subsampling, self.y_image_width//self.subsampling
+        self.roi_box = pg.RectROI((0, 0), (w, h), sideScalers=True)
+        self.roi_drawn = False
 
         # Set up internal CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
+        self.sig_update_status.connect(self.update_status)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
@@ -83,20 +84,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(str)
     def change_overlay(self, overlay_name):
-        ''''Changes the image overlay'''
+        w, h = self.get_image_shape()
         if overlay_name == 'Box roi':
-            for item in self.roi_list:
-                self.image_view.addItem(item)
-            self.overlay = 'box'
-            self.update_status()
+            self.set_roi('box', (w//2 - 50, h//2 - 50, 100, 100))
         elif overlay_name == 'Overlay: none':
-            self.overlay = None
-            for item in self.roi_list:
-                self.image_view.removeItem(item)
+            self.set_roi(None, (0, 0, w, h))
 
     def get_roi(self):
         im_item = self.image_view.getImageItem()
-        if self.overlay == 'box':
+        if self.overlay == 'box' and self.roi_drawn:
             roi = self.roi_box.getArrayRegion(im_item.image, im_item)
             x, y = self.roi_box.pos()
             w, h = self.roi_box.size()
@@ -108,14 +104,18 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         return roi
 
     def set_roi(self, mode='box', x_y_w_h=(0, 0, 100, 100)):
-        if mode == 'box':
-            self.change_overlay("Box roi")
-            x, y, w, h = x_y_w_h
-            self.roi_box.setPos((x, y))
-            self.roi_box.setSize((w, h))
-            self.update_status()
-        elif mode is None:
-            self.change_overlay('Overlay: none')
+        assert mode in ('box', None), f"Mode must be in ('box', None), received {mode} instead"
+        self.overlay = mode
+        x, y, w, h = x_y_w_h
+        self.roi_box.setPos((x, y))
+        self.roi_box.setSize((w, h))
+        if self.overlay is None and self.roi_drawn:
+            self.image_view.removeItem(self.roi_box)
+            self.roi_drawn = False
+        elif self.overlay == 'box' and not self.roi_drawn:
+            self.image_view.addItem(self.roi_box)
+            self.roi_drawn = True
+        self.sig_update_status.emit()
 
     def get_image_shape(self):
         return self.image_view.getImageItem().image.shape
