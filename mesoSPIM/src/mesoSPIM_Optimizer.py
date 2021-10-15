@@ -69,7 +69,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         elif orientation == 'v':
             self.parent.camera_window.set_roi('box', (img_w*(1-roi_perc)//2, 0, int(img_w*roi_perc), img_h))
         elif orientation is None:
-            self.parent.camera_window.set_roi(None)
+            self.parent.camera_window.set_roi(None, (0, 0, img_w, img_h))
         else:
             raise ValueError("Orientation must be one of ('h', 'v', None).")
 
@@ -84,15 +84,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         if self.mode == 'focus':
             self.state_key = 'position'
         elif self.mode == 'etl_offset':
-            if self.state['shutterconfig'] == 'Left':
-                self.state_key = 'etl_l_offset'
-                self.core.sig_state_request.emit({'etl_l_amplitude': 0})
-            elif self.state['shutterconfig'] == 'Right':
-                self.state_key = 'etl_r_offset'
-                self.core.sig_state_request.emit({'etl_r_amplitude': 0})
-            else:
-                raise ValueError(f"{self.state['shutterconfig']} expected to be in ('Left', 'Right')")
-            print("ETL offset optimization: ETL amplitude set to 0")
+            assert self.state['shutterconfig'] in ('Left', 'Right'),  f"Shutter config must be in ('Left', 'Right'), got {self.state['shutterconfig']}"
+            self.state_key = 'etl_l_offset' if self.state['shutterconfig'] == 'Left' else 'etl_r_offset'
         elif self.mode == 'etl_amp':
             ini_etl_amp = 0.1 # so that we never start from zero
             self.state_key = 'etl_l_amplitude' if self.state['shutterconfig'] == 'Left' else 'etl_r_amplitude'
@@ -142,11 +135,20 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         else:
             self.core.sig_state_request.emit({self.state_key: new_val})
 
+    def set_etl_amp_to_zero(self):
+        if self.state_key == 'etl_l_offset':
+            self.core.sig_state_request.emit({'etl_l_amplitude': 0})
+            print("ETL offset optimization: ETL amplitude (L) set to 0")
+        elif self.state_key == 'etl_r_offset':
+            self.core.sig_state_request.emit({'etl_r_amplitude': 0})
+            print("ETL offset optimization: ETL amplitude (R) set to 0")
+
     @QtCore.pyqtSlot()
     def run_optimization(self):
         self.parent.sig_state_request.emit({'state': 'idle'}) # stop Live if it is running
         time.sleep(1)
         self.get_params_from_gui()
+        self.set_etl_amp_to_zero()
         self.ini_state = self.state[self.state_key]['f_pos'] if self.mode == 'focus' else self.state[self.state_key]
         self.min_value = self.ini_state - self.search_amplitude
         if self.mode in ('etl_offset', 'etl_amp'):
@@ -222,7 +224,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         print(f"Fitted value: {self.new_state:.3f}")
         time.sleep(self.delay_s)
         self.core.snap(write_flag=False)
-        print(f"New {self.state_key}:{self.state[self.state_key]:.3f}")
+        print(f"Debug: new {self.state_key}:{self.state[self.state_key]}")
         self.results_window.deleteLater()
         self.results_window = None
 
