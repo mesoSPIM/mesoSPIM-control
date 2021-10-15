@@ -1041,7 +1041,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
-        xyz_motion_dict = {}
+        xyz_motion_dict = {1: 0, 2: 0, 3: 0}
 
         if 'x_abs' or 'y_abs' or 'z_abs' in dict:
             if 'x_abs' in dict:
@@ -1059,7 +1059,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
                 z_abs = z_abs - self.int_z_pos_offset
                 xyz_motion_dict.update({3: z_abs})
 
-        if xyz_motion_dict != {}:
+        if xyz_motion_dict != {1: 0, 2: 0, 3: 0}:
             self.xyz_stage.move_absolute(xyz_motion_dict)
 
         if wait_until_done == True:
@@ -1319,7 +1319,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
-        xyz_motion_dict = {}
+        xyz_motion_dict = {1: 0, 2: 0, 3: 0}
 
         if 'x_abs' or 'y_abs' or 'z_abs' in dict:
             if 'x_abs' in dict:
@@ -1337,7 +1337,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
                 z_abs = z_abs - self.int_z_pos_offset
                 xyz_motion_dict.update({3: z_abs})
 
-        if xyz_motion_dict != {}:
+        if xyz_motion_dict != {1: 0, 2: 0, 3: 0}:
             self.xyz_stage.move_absolute(xyz_motion_dict)
 
         if wait_until_done == True:
@@ -1562,7 +1562,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
-        xyf_motion_dict = {}
+        xyf_motion_dict = {1: 0, 2: 0, 3: 0}
 
         if 'x_abs' or 'y_abs' or 'f_abs' in dict:
             if 'x_abs' in dict:
@@ -1580,7 +1580,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
                 f_abs = f_abs - self.int_f_pos_offset
                 xyf_motion_dict.update({3: f_abs})
 
-        if xyf_motion_dict != {}:
+        if xyf_motion_dict != {1: 0, 2: 0, 3: 0}:
             self.xyf_stage.move_absolute(xyf_motion_dict)
 
         if wait_until_done == True:
@@ -1847,7 +1847,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
-        xyz_motion_dict = {}
+        xyz_motion_dict = {1: 0, 2: 0, 3: 0}
 
         if 'x_abs' or 'y_abs' or 'z_abs' in dict:
             if 'x_abs' in dict:
@@ -1865,7 +1865,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
                 z_abs = z_abs - self.int_z_pos_offset
                 xyz_motion_dict.update({3: z_abs})
 
-        if xyz_motion_dict != {}:
+        if xyz_motion_dict != {1: 0, 2: 0, 3: 0}:
             self.xyz_stage.move_absolute(xyz_motion_dict)
 
         if wait_until_done == True:
@@ -2094,7 +2094,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
 
         '''
-        xy_motion_dict = {}
+        xy_motion_dict = {1: 0, 2: 0}
 
         if 'x_abs' or 'y_abs' in dict:
             if 'x_abs' in dict:
@@ -2107,7 +2107,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
                 y_abs = y_abs - self.int_y_pos_offset
                 xy_motion_dict.update({2: y_abs})
 
-        if xy_motion_dict != {}:
+        if xy_motion_dict != {1: 0, 2: 0}:
             self.xy_stage.move_absolute(xy_motion_dict)
 
         if wait_until_done == True:
