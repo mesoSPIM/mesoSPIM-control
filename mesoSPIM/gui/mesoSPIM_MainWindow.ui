@@ -1289,10 +1289,10 @@
              </property>
              <property name="text">
               <string>AUTO
- F</string>
+Focus</string>
              </property>
              <property name="checkable">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
             </widget>
            </widget>

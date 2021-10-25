@@ -29,7 +29,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.search_amplitude = 0.5
         self.state_key = None
         self.image = self.roi = self.roi_dims = self.img_subsampling = None
-        self.ini_state = self.new_state =self.min_value = self.max_value = None
+        self.ini_state = self.ini_metric = self.new_state = self.min_value = self.max_value = None
         self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
         self.delay_s = 0.25  # give some delay between snaps to avoid state update hickups
 
@@ -38,7 +38,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.show()
 
         # initialize
-        self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 7})
+        #self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 7})
 
         # signal switchboard
         self.core.camera_worker.sig_camera_frame.connect(self.set_image)
@@ -68,6 +68,9 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
             self.parent.camera_window.set_roi('box', (0, img_h*(1-roi_perc)//2, img_w, int(img_h*roi_perc)))
         elif orientation == 'v':
             self.parent.camera_window.set_roi('box', (img_w*(1-roi_perc)//2, 0, int(img_w*roi_perc), img_h))
+        elif orientation == 'c':
+            self.parent.camera_window.set_roi('box', (img_w * (1 - roi_perc) // 2, (img_h * (1 - roi_perc)) // 2,
+                                                    int(img_w * roi_perc), int(img_h * roi_perc)))
         elif orientation is None:
             self.parent.camera_window.set_roi(None, (0, 0, img_w, img_h))
         else:
@@ -99,7 +102,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         if self.mode == 'focus':
             self.searchAmpDoubleSpinBox.setSuffix(" \u03BCm")
             self.searchAmpDoubleSpinBox.setDecimals(0)
-            self.set_roi(None)
+            self.set_roi('c')
         else:
             self.searchAmpDoubleSpinBox.setSuffix(" V")
             self.searchAmpDoubleSpinBox.setDecimals(3)
@@ -120,7 +123,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         elif choice == "ETL amplitude":
             self.set_parameters({'mode': 'etl_amp', 'amplitude': 0.1, 'n_points': 7})
         elif choice == "Focus":
-            self.set_parameters({'mode': 'focus', 'amplitude': 200, 'n_points': 7})
+            self.set_parameters({'mode': 'focus', 'amplitude': 300, 'n_points': 7})
         else:
             raise ValueError(f"{choice} value is not allowed.")
 
@@ -167,6 +170,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
             self.metric_array[i] = shannon_dct(self.roi)
 
         self.set_state(self.ini_state) # Reset to initial state
+        self.core.snap(write_flag=False)  # this shares downsampled image via slot self.set_image()
+        self.ini_metric = shannon_dct(self.roi)
 
         #fit with Gaussian
         fit_center, fit_sigma, fit_amp, fit_offset = fit_gaussian_1d(self.metric_array, self.search_grid)
@@ -192,17 +197,18 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
         self.graphics_widget = pg.GraphicsLayoutWidget(show=True)
         plot0 = self.graphics_widget.addPlot(title='Image metric')
-        plot0.addLegend()
-        plot0.plot(self.search_grid, self.metric_array, pen=None, symbolBrush=(200,200,200), name='measured')
-        plot0.plot(x=[self.ini_state], y=[self.metric_array[(len(self.search_grid) - 1)//2]],
-                                 symbolBrush=(0,0,250), name='old value')
-        plot0.plot(x=[self.new_state], y=[max(self.gaussian_values)], symbolBrush=(250, 0, 0), name='new value')
-        plot0.plot(self.fit_grid, self.gaussian_values, pen=(200,0,0), symbol=None, name='fitted')
+        plot0.addLegend(offset=(0, 0))
+        plot0.plot(self.search_grid, self.metric_array, pen=None, symbolBrush=(150,0,150), name='measured')
+        plot0.plot(x=[self.ini_state], y=[self.ini_metric],  symbolBrush=(0,0,250), name='old state')
+        plot0.plot(x=[self.new_state], y=[max(self.gaussian_values)], symbolBrush=(250, 0, 0), name='new state')
+        plot0.plot(self.fit_grid, self.gaussian_values, pen=(200, 0, 0), symbol=None, name='fitted')
 
         labelStyle = {'color': '#FFF', 'font-size': '14pt'}
         plot0.setLabel('bottom', self.state_key, **labelStyle)
         plot0.setLabel('left', 'Shannon(DCT), AU', **labelStyle)
         plot0.showGrid(x=True)
+        plot0.setYRange(min(self.gaussian_values.min(), self.metric_array.min())*0.7,
+                        max(self.gaussian_values.max(), self.metric_array.max())*1.2)
         self.results_window.label_results.setText(self.results_string())
 
         layout.addWidget(self.graphics_widget, 0, 0, 1, 2, QtCore.Qt.AlignHCenter)
