@@ -1,4 +1,6 @@
 # Latest changes
+:gem: :gem: :gem: Autofocus has been added and works beautifully, outperforming expert human in focusing accuracy. Highly recommended!
+
 :bug: fix: Going back to previosly configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
 
 * Laser intensity can be edited directly via spinbox, alternative to slider. 
