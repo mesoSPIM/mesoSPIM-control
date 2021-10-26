@@ -170,6 +170,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
             self.metric_array[i] = shannon_dct(self.roi)
 
         self.set_state(self.ini_state) # Reset to initial state
+        time.sleep(self.delay_s) # give it some time to settle
         self.core.snap(write_flag=False)  # this shares downsampled image via slot self.set_image()
         self.ini_metric = shannon_dct(self.roi)
 
