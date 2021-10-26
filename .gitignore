@@ -27,3 +27,4 @@ mesoSPIM/tmp/
 *.DS_Store
 
 *.dll
+*.bat
