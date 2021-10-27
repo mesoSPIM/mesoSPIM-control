@@ -1,6 +1,5 @@
 '''
 mesoSPIM CameraWindow
-
 '''
 import sys
 import numpy as np
@@ -15,6 +14,9 @@ import pyqtgraph as pg
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
+    sig_update_roi = QtCore.pyqtSignal(tuple)
+    sig_update_status = QtCore.pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__()
 
@@ -44,11 +46,11 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.histogram = self.image_view.getHistogramWidget()
         self.histogram.setMinimumWidth(100)
         self.histogram.item.vb.setMaximumWidth(100)
-        self.subsampling = self.state['camera_display_live_subsampling']
 
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
+        self.subsampling = self.cfg.startup['camera_display_live_subsampling']
 
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "r", 'width': 1})
@@ -59,15 +61,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         # Create overlay ROIs
         self.overlay = None  # None, 'box'
-        w, h = 200, 200
-        x, y, = self.x_image_width/2 - w/2, self.y_image_width/2 - h/2
-        self.roi_box = pg.RectROI((x, y), (w, h), sideScalers=True)
-        self.roi_list = [self.roi_box]
+        w, h = self.x_image_width//self.subsampling, self.y_image_width//self.subsampling
+        self.roi_box = pg.RectROI((0, 0), (w, h), sideScalers=True)
+        self.roi_drawn = False
 
-        # Set up CameraWindow signals
+        # Set up internal CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
+        self.sig_update_status.connect(self.update_status)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
@@ -82,28 +84,52 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(str)
     def change_overlay(self, overlay_name):
-        ''''Changes the image overlay'''
+        w, h = self.get_image_shape()
         if overlay_name == 'Box roi':
-            for item in self.roi_list:
-                self.image_view.addItem(item)
-            self.overlay = 'box'
-            self.update_status()
+            self.set_roi('box', (w//2 - 50, h//2 - 50, 100, 100))
         elif overlay_name == 'Overlay: none':
-            self.overlay = None
-            for item in self.roi_list:
-                self.image_view.removeItem(item)
+            self.set_roi(None, (0, 0, w, h))
+
+    def get_roi(self):
+        im_item = self.image_view.getImageItem()
+        if self.overlay == 'box' and self.roi_drawn:
+            roi = self.roi_box.getArrayRegion(im_item.image, im_item)
+            x, y = self.roi_box.pos()
+            w, h = self.roi_box.size()
+            self.sig_update_roi.emit((x, y, w, h))
+        else:
+            roi = im_item.image
+            w, h = im_item.image.shape
+            self.sig_update_roi.emit((0, 0, w, h))
+        return roi
+
+    def set_roi(self, mode='box', x_y_w_h=(0, 0, 100, 100)):
+        assert mode in ('box', None), f"Mode must be in ('box', None), received {mode} instead"
+        self.overlay = mode
+        x, y, w, h = x_y_w_h
+        self.roi_box.setPos((x, y))
+        self.roi_box.setSize((w, h))
+        if self.overlay is None and self.roi_drawn:
+            self.image_view.removeItem(self.roi_box)
+            self.roi_drawn = False
+        elif self.overlay == 'box' and not self.roi_drawn:
+            self.image_view.addItem(self.roi_box)
+            self.roi_drawn = True
+        self.sig_update_status.emit()
+
+    def get_image_shape(self):
+        return self.image_view.getImageItem().image.shape
 
     @QtCore.pyqtSlot()
     def update_status(self):
-        im_item = self.image_view.getImageItem()
+        roi = self.get_roi()
         if self.overlay == 'box':
             w, h = self.roi_box.size()
-            roi_img = self.roi_box.getArrayRegion(im_item.image, im_item)
             self.status_label.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
                                       f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
-                                      f"sharpness {np.round(1e4 * shannon_dct(roi_img)):.0f}")
+                                      f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
         else:
-            self.status_label.setText(f"Image dimensions: {im_item.image.shape}")
+            self.status_label.setText(f"Image dimensions: {roi.shape}")
 
     def draw_crosshairs(self):
         self.image_view.addItem(self.vLine, ignoreBounds=True)
@@ -112,6 +138,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
         self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
+        # update roi size if subsampling has changed interactively:
         if self.overlay == 'box' and self.subsampling != self.state['camera_display_live_subsampling']:
             subsampling_ratio = self.subsampling / self.state['camera_display_live_subsampling']
             self.subsampling = self.state['camera_display_live_subsampling']
@@ -127,10 +154,3 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
         self.draw_crosshairs()
 
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    camera_window = mesoSPIM_CameraWindow()
-    camera_window.show()
-
-    sys.exit(app.exec_())

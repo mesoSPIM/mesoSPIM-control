@@ -397,7 +397,7 @@
             </font>
            </property>
           </widget>
-          <widget class="QWidget" name="">
+          <widget class="QWidget" name="layoutWidget">
            <property name="geometry">
             <rect>
              <x>10</x>
@@ -1104,7 +1104,7 @@
              <rect>
               <x>560</x>
               <y>10</y>
-              <width>171</width>
+              <width>271</width>
               <height>531</height>
              </rect>
             </property>
@@ -1262,6 +1262,37 @@
              </property>
              <property name="text">
               <string>Increment</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="focusAutoButton">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>150</x>
+               <y>180</y>
+               <width>111</width>
+               <height>111</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>16</pointsize>
+               <weight>50</weight>
+               <italic>false</italic>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>Autofocus Menu</string>
+             </property>
+             <property name="text">
+              <string>AUTO
+Focus</string>
+             </property>
+             <property name="checkable">
+              <bool>false</bool>
              </property>
             </widget>
            </widget>
@@ -1888,29 +1919,47 @@ MOVEMENT </string>
             <property name="title">
              <string>ETL tuning</string>
             </property>
-            <widget class="QPushButton" name="freezeGalvoButton">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>20</x>
                <y>40</y>
-               <width>141</width>
-               <height>28</height>
+               <width>187</width>
+               <height>83</height>
               </rect>
              </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="toolTip">
-              <string>Set amplitude of both galvos to 0</string>
-             </property>
-             <property name="text">
-              <string>Freeze galvos</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
+             <layout class="QGridLayout" name="gridLayout_4">
+              <item row="0" column="0">
+               <widget class="QPushButton" name="freezeGalvoButton">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>Set amplitude of both galvos to 0</string>
+                </property>
+                <property name="text">
+                 <string>Freeze galvos</string>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QPushButton" name="launchOptimizerButton">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Launch Optimizer</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
           </widget>
@@ -3127,7 +3176,7 @@ ETL tab</string>
               <rect>
                <x>10</x>
                <y>40</y>
-               <width>315</width>
+               <width>342</width>
                <height>77</height>
               </rect>
              </property>
@@ -3140,7 +3189,7 @@ ETL tab</string>
                  </font>
                 </property>
                 <property name="text">
-                 <string>During Live display</string>
+                 <string>during Live display</string>
                 </property>
                </widget>
               </item>
@@ -3161,7 +3210,7 @@ ETL tab</string>
                  </font>
                 </property>
                 <property name="text">
-                 <string>During Acquisitions</string>
+                 <string>in Snap &amp; Acquisitions</string>
                 </property>
                </widget>
               </item>

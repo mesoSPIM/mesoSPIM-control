@@ -28,13 +28,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     the responsible class for actually causing that state change in hardware.
 
     '''
-    sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+    sig_update_gui_from_state = QtCore.pyqtSignal(bool) # -> mesoSPIM_Core.sig_update_gui_from_state -> MainWindow.enable_gui_updates_from_state
 
     def __init__(self, parent):
         super().__init__()
 
         self.cfg = parent.cfg
-        self.parent = parent
+        self.parent = parent # mesoSPIM_Core object
 
         self.state = mesoSPIM_StateSingleton()
         self.parent.sig_save_etl_config.connect(self.save_etl_parameters_to_csv)
@@ -95,9 +95,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'camera_delay_%',
                        'camera_pulse_%'):
                 ''' Notify GUI about the change '''
-                #self.sig_update_gui_from_state.emit(True)
+                self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
-                #self.sig_update_gui_from_state.emit(False)
+                self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
             elif key == 'ETL_cfg_file':
                 self.state[key] = value

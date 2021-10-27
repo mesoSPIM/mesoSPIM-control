@@ -1,8 +1,11 @@
 # Latest changes
+:gem: :gem: :gem: Autofocus has been added and works beautifully, outperforming expert human in focusing accuracy. Highly recommended!
+
 :bug: fix: Going back to previosly configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
 
 * Laser intensity can be edited directly via spinbox, alternative to slider. 
-  In Acquisition manager, slider is replaced by a spinbox for convenience.
+  In Acquisition manager, slider is replaced by a spinbox for convenience. 
+  :warning: This change makes old acq tables incompatible with the new software.
 
 :sparkles: `Mark All` button is added to the Acquisition Manager, per @raacampbell request.
 
@@ -20,10 +23,9 @@ and one can go to rotation position by using increment buttons.
 
 :gem: Button `Freeze galvos` is added to ETL tab for quick adjustment of ETL parameters outside of sample, see [video tutorial](https://www.youtube.com/watch?v=dcJ9a7VALi8).
 
-:warning: Upgrade Python to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
+:warning: Recommended Python upgrade to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
 
 :gem: writing to ImageJ TIFF files, including > 4 GB in size. Voxel dimension saved in TIFF.
-This feature requires upgrade to Python 3.7 due to dependence from `tifffile` library.
 
 ## Release July 2021 [0.1.6]
 :gem: Simplified installation and upgrading via `pip install -r requirements-anaconda.txt`. See [installation instructions](https://github.com/mesoSPIM/mesoSPIM-control#python).
