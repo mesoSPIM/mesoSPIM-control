@@ -1,9 +1,42 @@
-## Latest version
-* :gem: Support of multiple PI single-axis controllers, thanks to #52 by @drchrisch. 
+# Latest changes
+:bug: fix: Going back to previosly configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
+
+* Laser intensity can be edited directly via spinbox, alternative to slider. 
+  In Acquisition manager, slider is replaced by a spinbox for convenience.
+
+:sparkles: `Mark All` button is added to the Acquisition Manager, per @raacampbell request.
+
+:recycle: Buttons `Mark Rotation Position` and `Go To Rotation Position` are removed from the main panel, 
+since they are redundant and rarely (if ever) used. Rotation position can be marked in the Acquisition Manager, 
+and one can go to rotation position by using increment buttons.
+
+:bug: fixed: Image processing option generates MAX projections as TIFF files when output file format is either `.raw` or `.tiff`, #60.
+
+:sparkles: File name wizard auto-starts after Tiling Wizard.
+
+:gem: Image sharpness metric of user-defined ROI (by DCTS algorithm) is added to the Camera Window for easier adjustment of focus and ETL values.
+
+:gem: TIFF files can be opened for preview: `Ctrl + O`.
+
+:gem: Button `Freeze galvos` is added to ETL tab for quick adjustment of ETL parameters outside of sample, see [video tutorial](https://www.youtube.com/watch?v=dcJ9a7VALi8).
+
+:warning: Upgrade Python to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
+
+:gem: writing to ImageJ TIFF files, including > 4 GB in size. Voxel dimension saved in TIFF.
+This feature requires upgrade to Python 3.7 due to dependence from `tifffile` library.
+
+## Release July 2021 [0.1.6]
+:gem: Simplified installation and upgrading via `pip install -r requirements-anaconda.txt`. See [installation instructions](https://github.com/mesoSPIM/mesoSPIM-control#python).
+
+:gem: Easy launching via double-clicking `start_mesoSPIM.bat` file (needs to be configured by the user).
+
+:gem: Support of multiple PI single-axis controllers, thanks to #52 by @drchrisch. 
 Note the changes in config file: single multi-axis controller (C-884) is initialized by `'PI_1controllerNstages'`, 
 while multiple single-axis controllers (C-663) by `'PI_NcontrollersNstages'`.
 
-## Version [0.1.5] 
+:bug: Incorrect tiling count (off by -1 in some cases) is fixed.
+
+### [0.1.5] 
 * :gem: Improved Tiling Wizard: 
     * buttons `x-start, x-end, y-start, y-end` added for easier navigation: 
     no need to search for corners of imaginary box around the sample. 
@@ -21,12 +54,10 @@ to filter wheel and zoom servo are fixed.
 The fix opens serial ports once and keeps them open during the session.
 The root cause was due to laser control software polling serial ports regularly, thus blocking access to them.
 
-## Version [0.1.4] 
-### Features & updates
-* :warning: **Config files need to be updated** Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the `demo.cfg` file into your config files.
+### [0.1.4] 
+* :warning: **Config files need to be updated** Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the `demo_config.py` file into your config files.
 * :warning: :gem: **New handling of config files** - If there is a single config file (without a 'demo' prefix in the filename and apart from the `demo_config.py`-file) in the config folder, the software will automatically load this file. Otherwise, the config selection GUI is opened. This is especially helpful when operating a mesoSPIM with multiple users. Thanks to @raacampbell for this feature! 
-* :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. 
-For this, the `npy2bdv` package by @nvladimus needs to be installed via `python -m pip install npy2bdv`
+* :gem: **New: Writing HDF5** - If all rows in the acquistion manager contain the same file name (ending in `.h5`), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into [Bigstitcher](https://imagej.net/BigStitcher) for stitching & multiview fusion. This file format is also readable by Imaris. For this, the `npy2bdv` package by @nvladimus needs to be installed via pip.
 * :gem: **New: Dark mode** - If the `dark_mode` option in the config file is set to `True`, the user interface appears in a dark mode. For this, the `qdarkstyle` package needs to be installed via `python -m pip install qdarkstyle`.
 * :gem: **New: Camera and Acquisition Manager Windows can be reopened** - A new menu allows the camera and acquisition manager windows to be reopened in case they get closed. The same menu bar allows exiting the program as well.
 * :gem: **New: Disabling arrow buttons** - To allow mesoSPIM configurations with less than 5 motorized stages, the arrow buttons in the main window can now be disabled in the configuration file. Typical examples are a mesoSPIM without a rotation stage or a mesoSPIM using only a single motorized z-stage. This feature can also be useful if the serial connection to the stages is too slow and pressing the arrow buttons leads to incorrect movements. 
@@ -43,14 +74,7 @@ For this, the `npy2bdv` package by @nvladimus needs to be installed via `python 
 * :bug: **Bugfix:** Removed unnecessary imports.
 * :bug: **Bugfix:** Laser power setting `max_laser_voltage` was always 10V, ignoring the config file. This can damage some lasers that operate on lower command voltage.
 
-### Contributors 
-* Fabian Voigt (@ffvoigt)
-* Nikita Vladimirov (@nvladimus)
-* Kevin Dean (@AdvancedImagingUTSW)
-* Christian Schulze (@drchrisch)
-* Rob Campbell (@raacampbell)
-
-## Version [0.1.3] - March 13, 2020
+## Release March 13, 2020 [0.1.3]
 * :warning: **Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using `demo_config.py` as an example.**
 * :warning: **There are new startup parameters in the config file - make sure to update your config files accordingly**. For example, `average_frame_rate` has been added.
 * :warning: **This release removes unnecessary configuration files from the public repository - make sure to back up your mesoSPIM & ETL configuration files beforehand. In addition, old example acquisition tables (in `mesoSPIM-control\mesoSPIM\acquisitions\`) are removed as well.** 
@@ -79,10 +103,17 @@ to f_start and at z_end, the detection path focus is at z_end. This allows imagi
 * :bug: **Bugfix #34:** Fixed: Last frame in a stack is blank due to an off-by-one error
 * :bug: **Bugfix #35:** Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist
 
-## Version [0.1.2] - August 19th, 2019
+## Release August 19th, 2019 [0.1.2]
 * **New:** Logging is now supported. Logfiles go in the `log` folder. 
 * **New:** Improved support for a specific mesoSPIM configuration using sample & focusing stages by Steinmayer Mechantronik and in combination with PI stages for sample rotation and z-movement.
 * **Fix:** Reduced the output to the command line
 * **Fix:** To decrease laggyness of the GUI in live mode and during acquisitions, display subsampling is now available. This way, less image data has to be rendered by the GUI. 
 * **Fix:** Fixed a variety of multithreading bugs.
 * **Fix:** Galvo amplitude and frequency in the startup part of the configuration file are now used to set startup parameters properly
+
+## Contributors 
+* Fabian Voigt (@ffvoigt)
+* Nikita Vladimirov (@nvladimus)
+* Kevin Dean (@AdvancedImagingUTSW)
+* Christian Schulze (@drchrisch)
+* Rob Campbell (@raacampbell)

@@ -12,7 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
 from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder
-
+from .filename_wizard import FilenameWizard
 from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 class MulticolorTilingWizard(QtWidgets.QWizard):
@@ -23,11 +23,8 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
     '''
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 10
-    (welcome, zeroing, boundingbox, generalparameters, checktiling, channel1, 
-    channel2, channel3, folderpage, finished) = range(num_of_pages)
-
     def __init__(self, parent=None):
+        ''' Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
         super().__init__(parent)
 
         ''' By an instance variable, callbacks to window signals can be handed
@@ -37,45 +34,44 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.state = mesoSPIM_StateSingleton()
 
         ''' Instance variables '''
-        self.x_start = 0
-        self.x_end = 0
-        self.y_start = 0
-        self.y_end = 0
-        self.z_start = 0
-        self.z_end = 0
+        self.x_start = self.x_end = self.y_start = self.y_end = self.z_start = self.z_end = 0
         self.z_step = 10
-        self.x_offset = 0
-        self.y_offset = 0
+        self.x_offset = self.y_offset = 0
         self.zoom = '1x'
         self.x_pixels = self.cfg.camera_parameters['x_pixels'] if self.cfg else 2048
         self.y_pixels = self.cfg.camera_parameters['y_pixels'] if self.cfg else 2048
-        self.x_fov = 1
-        self.y_fov = 1
+        self.x_fov = self.y_fov = 1
         self.channels = []
         self.channelcount = 0
         self.shutterconfig = ''
         self.theta_pos = 0
-        self.x_image_count = 1
-        self.y_image_count = 1
+        self.x_image_count = self.y_image_count = 1
         self.folder = ''
-        self.delta_x = 0.0
-        self.delta_y = 0.0
+        self.delta_x = self.delta_y = 0.0
         self.shutter_seq = False
         
         self.setWindowTitle('Tiling Wizard')
 
+        self.channel1, self.channel2, self.channel3, self.folderpage = 4, 5, 6, 7
         self.setPage(0, TilingWelcomePage(self))
-        self.setPage(1, ZeroingXYStagePage(self))
-        self.setPage(2, DefineBoundingBoxPage(self))
-        self.setPage(3, DefineGeneralParametersPage(self))
-        self.setPage(4, CheckTilingPage(self))
-        self.setPage(5, FirstChannelPage(self))
-        self.setPage(6, SecondChannelPage(self))
-        self.setPage(7, ThirdChannelPage(self))
-        self.setPage(8, DefineFolderPage(self))
-        self.setPage(9, FinishedTilingPage(self))
+        self.setPage(1, DefineBoundingBoxPage(self))
+        self.setPage(2, DefineGeneralParametersPage(self))
+        self.setPage(3, CheckTilingPage(self))
+        self.setPage(self.channel1, FirstChannelPage(self))
+        self.setPage(self.channel2, SecondChannelPage(self))
+        self.setPage(self.channel3, ThirdChannelPage(self))
+        self.setPage(self.folderpage, DefineFolderPage(self))
+        self.setPage(8, FinishedTilingPage(self))
         self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
         self.show()
+
+        self.button(QtWidgets.QWizard.BackButton).clicked.connect(self.go_back)
+
+    def go_back(self):
+        '''Amend previously created channel settings'''
+        if self.currentId() in (self.channel1, self.channel2, self.channel3):
+            ch = self.channels.pop()
+            # print(f"DEBUG: removed channel {ch}")
 
     def done(self, r):
         ''' Reimplementation of the done function
@@ -94,6 +90,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
             ''' Update state with this new list '''
             # self.parent.update_persistent_editors()
             self.wizard_done.emit()
+            FilenameWizard(self.parent)
         else:
             print('Wizard provided return code: ', r)
 
@@ -104,9 +101,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.state['acq_list']=self.acq_list
 
     def update_image_counts(self):
-        ''' 
-        TODO: This needs some FOV information
-        '''
         self.delta_x = abs(self.x_end - self.x_start)
         self.delta_y = abs(self.y_end - self.y_start)
 
@@ -138,8 +132,6 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 
     def update_acquisition_list(self):
         self.update_image_counts()
-        
-        ''' Use the current rotation angle '''
         self.theta_pos = self.state['position']['theta_pos']
 
         dict = self.get_dict()
@@ -152,17 +144,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 class TilingWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setTitle("Welcome to the tiling wizard")
         self.setSubTitle("This wizard will guide you through the steps of creating a tiling acquisition.")
 
-class ZeroingXYStagePage(QtWidgets.QWizardPage):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-
-        self.setTitle("Zero stage positions")
-        self.setSubTitle("To aid in relative positioning, it is recommended to zero the XY stages.")
 
 class DefineBoundingBoxPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -275,6 +259,7 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
 
     def update_z_step(self):
         self.parent.z_step = self.ZStepSpinBox.value()
+
 
 class DefineGeneralParametersPage(QtWidgets.QWizardPage):
     
@@ -426,6 +411,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.zoomComboBox.setCurrentText(self.parent.state['zoom'])
         self.shutterComboBox.setCurrentText(self.parent.state['shutterconfig'])
 
+
 class CheckTilingPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -454,10 +440,6 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.y_end = QtWidgets.QLineEdit(self)
         self.y_end.setReadOnly(True)
 
-        self.Button = QtWidgets.QPushButton('Values are ok?')
-        self.Button.setCheckable(True)
-        self.Button.setChecked(False)
-
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.xFOVLabel, 0, 0)
         self.layout.addWidget(self.xFOVs, 0, 1)
@@ -471,9 +453,7 @@ class CheckTilingPage(QtWidgets.QWizardPage):
         self.layout.addWidget(self.y_start, 3, 1)
         self.layout.addWidget(self.y_end, 3, 2)
 
-        self.layout.addWidget(self.Button, 4, 0)
         self.setLayout(self.layout)
-        self.registerField('finalCheck*', self.Button)
 
     def initializePage(self):
         ''' Here, the acquisition list is created for further checking'''
@@ -495,8 +475,7 @@ class GenericChannelPage(QtWidgets.QWizardPage):
         self.id_string = str(self.channel_id+1)
         self.setTitle("Configure channel #"+self.id_string)
 
-        self.f_start = 0
-        self.f_end = 0
+        self.f_start = self.f_end = 0
 
         self.copyCurrentStateLabel = QtWidgets.QLabel('Copy state:')
 
@@ -543,13 +522,9 @@ class GenericChannelPage(QtWidgets.QWizardPage):
         self.GoToZEndButton.setText('Go to Z end')
         self.GoToZEndButton.clicked.connect(lambda: self.go_to_z_position(self.parent.z_end))
 
-        self.registerField('start_focus_position'+str(self.channel_id)+'*',
-                            self.StartFocusButton,
-                            )
+        self.registerField('start_focus_position' + str(self.channel_id) + '*', self.StartFocusButton)
 
-        self.registerField('end_focus_position'+str(self.channel_id)+'*',
-                            self.EndFocusButton,
-                            )
+        self.registerField('end_focus_position' + str(self.channel_id) + '*', self.EndFocusButton)
 
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.copyCurrentStateLabel, 0, 0, 1, 1)
@@ -586,12 +561,9 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
     def go_to_z_position(self, z):
         self.parent.parent.parent.sig_move_absolute.emit({'z_abs':z})
-        #try:
-        #except:
-        #    print('Move absolute is not possible!')
 
     def validatePage(self):
-        selectedIntensity =  self.intensitySlider.value()
+        selectedIntensity = self.intensitySlider.value()
         selectedLaser = self.laserComboBox.currentText()
         selectedFilter = self.filterComboBox.currentText()
         f_start = self.f_start
@@ -603,10 +575,7 @@ class GenericChannelPage(QtWidgets.QWizardPage):
             etl_r_offset = self.parent.state['etl_r_offset'] 
             etl_r_amplitude = self.parent.state['etl_r_amplitude']
         else: 
-            etl_l_offset = 0
-            etl_l_amplitude = 0
-            etl_r_offset = 0
-            etl_r_amplitude = 0
+            etl_l_offset = etl_l_amplitude = etl_r_offset = etl_r_amplitude = 0
 
         self.parent.channels.append({'laser':selectedLaser, 
                                     'intensity':selectedIntensity,
@@ -620,6 +589,7 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
         return True
 
+
 class FirstChannelPage(GenericChannelPage):
     def __init__(self, parent=None):
         super().__init__(parent, 0)
@@ -629,6 +599,7 @@ class FirstChannelPage(GenericChannelPage):
             return self.parent.folderpage
         else: 
             return self.parent.channel2 
+
 
 class SecondChannelPage(GenericChannelPage):
     def __init__(self, parent=None):
@@ -640,13 +611,15 @@ class SecondChannelPage(GenericChannelPage):
         else: 
             return self.parent.channel3 
 
+
 class ThirdChannelPage(GenericChannelPage):
     def __init__(self, parent=None):
         super().__init__(parent, 2)
 
     def nextId(self):
         return self.parent.folderpage 
-         
+
+
 class DefineFolderPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -674,21 +647,15 @@ class DefineFolderPage(QtWidgets.QWizardPage):
             self.parent.folder = path
             self.TextEdit.setText(path)
 
+
 class FinishedTilingPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
 
         self.setTitle("Finished!")
-        self.setSubTitle("Attention: This will overwrite the Acquisition Table. Click 'Finished' to continue. "
-                         "To rename the files, use the filename wizard.")
+        self.setSubTitle("Attention: This will overwrite the Acquisition Table. "
+                         "File name wizard will start next.")
 
     def validatePage(self):
         return True
-
-
-if __name__ == '__main__':
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    wizard = MulticolorTilingWizard()
-    sys.exit(app.exec_())

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>959</width>
-    <height>1270</height>
+    <width>964</width>
+    <height>1337</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -52,8 +52,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>927</width>
-         <height>1205</height>
+         <width>921</width>
+         <height>1242</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -337,7 +337,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>16</pointsize>
+            <pointsize>14</pointsize>
            </font>
           </property>
           <property name="title">
@@ -352,24 +352,6 @@
              <x>10</x>
              <y>30</y>
              <width>471</width>
-             <height>51</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>14</pointsize>
-            </font>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="LaserComboBox">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>90</y>
-             <width>261</width>
              <height>51</height>
             </rect>
            </property>
@@ -415,47 +397,101 @@
             </font>
            </property>
           </widget>
-          <widget class="QSlider" name="LaserIntensitySlider">
+          <widget class="QWidget" name="">
            <property name="geometry">
             <rect>
-             <x>280</x>
+             <x>10</x>
              <y>90</y>
-             <width>611</width>
-             <height>51</height>
+             <width>881</width>
+             <height>38</height>
             </rect>
            </property>
-           <property name="font">
-            <font>
-             <pointsize>16</pointsize>
-            </font>
-           </property>
-           <property name="autoFillBackground">
-            <bool>false</bool>
-           </property>
-           <property name="maximum">
-            <number>100</number>
-           </property>
-           <property name="value">
-            <number>1</number>
-           </property>
-           <property name="tracking">
-            <bool>false</bool>
-           </property>
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="invertedAppearance">
-            <bool>false</bool>
-           </property>
-           <property name="invertedControls">
-            <bool>false</bool>
-           </property>
-           <property name="tickPosition">
-            <enum>QSlider::TicksBothSides</enum>
-           </property>
-           <property name="tickInterval">
-            <number>10</number>
-           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <item>
+             <widget class="QComboBox" name="LaserComboBox">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>14</pointsize>
+               </font>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSlider" name="LaserIntensitySlider">
+              <property name="font">
+               <font>
+                <pointsize>16</pointsize>
+               </font>
+              </property>
+              <property name="autoFillBackground">
+               <bool>false</bool>
+              </property>
+              <property name="maximum">
+               <number>100</number>
+              </property>
+              <property name="pageStep">
+               <number>5</number>
+              </property>
+              <property name="value">
+               <number>1</number>
+              </property>
+              <property name="tracking">
+               <bool>false</bool>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="invertedAppearance">
+               <bool>false</bool>
+              </property>
+              <property name="invertedControls">
+               <bool>false</bool>
+              </property>
+              <property name="tickPosition">
+               <enum>QSlider::TicksBothSides</enum>
+              </property>
+              <property name="tickInterval">
+               <number>10</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="LaserIntensitySpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>14</pointsize>
+               </font>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+              <property name="suffix">
+               <string> %</string>
+              </property>
+              <property name="maximum">
+               <number>100</number>
+              </property>
+              <property name="value">
+               <number>0</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </widget>
         </item>
@@ -665,7 +701,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
               </font>
              </property>
              <property name="title">
@@ -858,7 +894,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
               </font>
              </property>
              <property name="title">
@@ -871,7 +907,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>30</y>
+                <y>40</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -907,7 +943,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>270</y>
+                <y>280</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -943,7 +979,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -1023,7 +1059,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
               </font>
              </property>
              <property name="suffix">
@@ -1074,7 +1110,7 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>16</pointsize>
+              <pointsize>14</pointsize>
              </font>
             </property>
             <property name="title">
@@ -1194,7 +1230,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
               </font>
              </property>
              <property name="suffix">
@@ -1238,12 +1274,12 @@
               <x>10</x>
               <y>550</y>
               <width>541</width>
-              <height>151</height>
+              <height>161</height>
              </rect>
             </property>
             <property name="font">
              <font>
-              <pointsize>16</pointsize>
+              <pointsize>14</pointsize>
              </font>
             </property>
             <property name="title">
@@ -1256,7 +1292,7 @@
              <property name="geometry">
               <rect>
                <x>20</x>
-               <y>30</y>
+               <y>40</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1292,7 +1328,7 @@
              <property name="geometry">
               <rect>
                <x>260</x>
-               <y>30</y>
+               <y>40</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1327,8 +1363,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>400</x>
-               <y>30</y>
+               <x>390</x>
+               <y>50</y>
                <width>141</width>
                <height>31</height>
               </rect>
@@ -1348,15 +1384,15 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>400</x>
-               <y>70</y>
+               <x>390</x>
+               <y>90</y>
                <width>121</width>
                <height>41</height>
               </rect>
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
               </font>
              </property>
              <property name="suffix">
@@ -1379,7 +1415,7 @@
              <property name="geometry">
               <rect>
                <x>140</x>
-               <y>30</y>
+               <y>40</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1407,15 +1443,15 @@
             </property>
             <property name="geometry">
              <rect>
-              <x>560</x>
+              <x>730</x>
               <y>560</y>
-              <width>171</width>
+              <width>161</width>
               <height>141</height>
              </rect>
             </property>
             <property name="font">
              <font>
-              <pointsize>18</pointsize>
+              <pointsize>16</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -1423,68 +1459,6 @@
             <property name="text">
              <string>STOP
 MOVEMENT </string>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="markRotationPositionButton">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>740</x>
-              <y>560</y>
-              <width>151</width>
-              <height>141</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>18</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Mark
-Rotation
-Position</string>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-            <property name="checked">
-             <bool>false</bool>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="goToRotationPositionButton">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>740</x>
-              <y>410</y>
-              <width>151</width>
-              <height>141</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>18</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Go to
-Rotation
-Position</string>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-            <property name="checked">
-             <bool>false</bool>
             </property>
            </widget>
           </widget>
@@ -1572,7 +1546,7 @@ Position</string>
               <double>5.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.002000000000000</double>
+              <double>0.010000000000000</double>
              </property>
              <property name="value">
               <double>2.520000000000000</double>
@@ -1641,7 +1615,7 @@ Position</string>
               <double>5.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.002000000000000</double>
+              <double>0.010000000000000</double>
              </property>
              <property name="value">
               <double>2.560000000000000</double>
@@ -1674,7 +1648,7 @@ Position</string>
               <double>2.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.002000000000000</double>
+              <double>0.010000000000000</double>
              </property>
              <property name="value">
               <double>0.180000000000000</double>
@@ -1707,7 +1681,7 @@ Position</string>
               <double>2.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.002000000000000</double>
+              <double>0.010000000000000</double>
              </property>
              <property name="value">
               <double>0.170000000000000</double>
@@ -1800,10 +1774,10 @@ Position</string>
               <number>3</number>
              </property>
              <property name="maximum">
-              <double>0.010000000000000</double>
+              <double>0.100000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.001000000000000</double>
+              <double>0.005000000000000</double>
              </property>
              <property name="value">
               <double>0.010000000000000</double>
@@ -1896,6 +1870,48 @@ Position</string>
             <property name="checkable">
              <bool>true</bool>
             </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_5">
+            <property name="geometry">
+             <rect>
+              <x>390</x>
+              <y>10</y>
+              <width>461</width>
+              <height>241</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+             </font>
+            </property>
+            <property name="title">
+             <string>ETL tuning</string>
+            </property>
+            <widget class="QPushButton" name="freezeGalvoButton">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>40</y>
+               <width>141</width>
+               <height>28</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>Set amplitude of both galvos to 0</string>
+             </property>
+             <property name="text">
+              <string>Freeze galvos</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
            </widget>
           </widget>
           <widget class="QWidget" name="ScriptingTabWidget">
@@ -2255,239 +2271,197 @@ Position</string>
               <string>Right</string>
              </property>
             </widget>
-            <widget class="QLabel" name="label_40">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>60</y>
-               <width>131</width>
-               <height>31</height>
+               <y>50</y>
+               <width>426</width>
+               <height>118</height>
               </rect>
              </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Delay</string>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftLaserPulseDelaySpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>60</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightLaserPulseDelaySpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>60</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_41">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>110</y>
-               <width>161</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Pulselength</string>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftLaserPulseLengthSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>110</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>80.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightLaserPulseLengthSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>110</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>80.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_51">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>160</y>
-               <width>181</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Max Amplitude</string>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftLaserPulseMaxAmplitudeSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>160</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>80.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightLaserPulseMaxAmplitudeSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>160</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>80.000000000000000</double>
-             </property>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_40">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Delay</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="LeftLaserPulseDelaySpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QDoubleSpinBox" name="RightLaserPulseDelaySpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_41">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Pulselength</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="LeftLaserPulseLengthSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>80.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QDoubleSpinBox" name="RightLaserPulseLengthSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>80.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_51">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Max Amplitude</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QDoubleSpinBox" name="LeftLaserPulseMaxAmplitudeSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>80.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QDoubleSpinBox" name="RightLaserPulseMaxAmplitudeSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>80.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
            <widget class="QGroupBox" name="groupBox_7">
@@ -2497,7 +2471,7 @@ Position</string>
             <property name="geometry">
              <rect>
               <x>450</x>
-              <y>270</y>
+              <y>260</y>
               <width>431</width>
               <height>221</height>
              </rect>
@@ -2877,239 +2851,197 @@ ETL tab</string>
               <string>Right</string>
              </property>
             </widget>
-            <widget class="QLabel" name="label_52">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>10</x>
                <y>110</y>
-               <width>131</width>
-               <height>31</height>
+               <width>401</width>
+               <height>118</height>
               </rect>
              </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Delay</string>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_53">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>160</y>
-               <width>161</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Ramp rising</string>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_54">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>210</y>
-               <width>161</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Ramp falling</string>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightETLDelaySpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>110</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftETLDelaySpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>110</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightETLRampRisingSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>160</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftETLRampRisingSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>160</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="RightETLRampFallingSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>210</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-            <widget class="QDoubleSpinBox" name="LeftETLRampFallingSpinBox">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>210</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="suffix">
-              <string> %</string>
-             </property>
-             <property name="maximum">
-              <double>100.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>10.000000000000000</double>
-             </property>
+             <layout class="QGridLayout" name="gridLayout_3">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_52">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Delay</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="LeftETLDelaySpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QDoubleSpinBox" name="RightETLDelaySpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_53">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Ramp rising</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="LeftETLRampRisingSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QDoubleSpinBox" name="RightETLRampRisingSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_54">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Ramp falling</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QDoubleSpinBox" name="LeftETLRampFallingSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QDoubleSpinBox" name="RightETLRampFallingSpinBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="suffix">
+                 <string> %</string>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
            <widget class="QGroupBox" name="groupBox_15">
@@ -3120,6 +3052,11 @@ ETL tab</string>
               <width>431</width>
               <height>121</height>
              </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+             </font>
             </property>
             <property name="title">
              <string>Snap Directory</string>
@@ -3172,9 +3109,9 @@ ETL tab</string>
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>440</y>
+              <y>450</y>
               <width>431</width>
-              <height>151</height>
+              <height>121</height>
              </rect>
             </property>
             <property name="font">
@@ -3185,107 +3122,62 @@ ETL tab</string>
             <property name="title">
              <string>Display Subsampling</string>
             </property>
-            <widget class="QComboBox" name="LiveSubSamplingComboBox">
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>30</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_48">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>30</y>
-               <width>191</width>
-               <height>31</height>
+               <y>40</y>
+               <width>315</width>
+               <height>77</height>
               </rect>
              </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>During Live display:</string>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_55">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>70</y>
-               <width>221</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>When Snapping Images:</string>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_56">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>110</y>
-               <width>201</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>During Acquisitions:</string>
-             </property>
-            </widget>
-            <widget class="QComboBox" name="SnapSubSamplingComboBox">
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>70</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-            </widget>
-            <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
-             <property name="geometry">
-              <rect>
-               <x>310</x>
-               <y>110</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="currentIndex">
-              <number>-1</number>
-             </property>
+             <layout class="QFormLayout" name="formLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_48">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>During Live display</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="LiveSubSamplingComboBox">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_56">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>During Acquisitions</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="currentIndex">
+                 <number>-1</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
           </widget>
@@ -3356,8 +3248,8 @@ ETL tab</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>959</width>
-     <height>28</height>
+     <width>964</width>
+     <height>37</height>
     </rect>
    </property>
    <property name="font">
@@ -3375,6 +3267,7 @@ ETL tab</string>
      <string>File</string>
     </property>
     <addaction name="actionExit"/>
+    <addaction name="actionOpen_TIFF"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="font">
@@ -3436,6 +3329,14 @@ ETL tab</string>
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionOpen_TIFF">
+   <property name="text">
+    <string>Open TIFF</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>

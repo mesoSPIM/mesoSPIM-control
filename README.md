@@ -16,7 +16,7 @@ to your old configuration file in order to unlock all new features.
 
 ### Prerequisites
 * Windows 7 or Windows 10
-* Python >=3.6
+* Python >=3.7
 
 ### Device drivers
 #### Cameras
@@ -36,14 +36,14 @@ If using USB connection, check ASI instructions on [USB support](http://www.asii
 * Dynamixel servos: [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases). Make sure you download version 3.5.4 of the SDK.
 
 #### Python
-mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.6 Python. 
+mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.7 Python. 
 ##### Anaconda 
-(optional) Create and activate a Python 3.6 environment from Anaconda prompt (you can use any name instead of `py36`):
+(optional) Create and activate a Python 3.7 environment from Anaconda prompt (you can use any name instead of `py37`):
 ```
-conda create -n py36 python=3.6
-conda activate py36
+conda create -n py37 python=3.7
+conda activate py37
 ```
-The step above is optional because the latest Python 3.8 is backward compatible with Python 3.6 code.
+The step above is optional because the latest Python 3.8 is backward compatible with Python 3.7 code.
 
 Many libraries are already included in Anaconda. 
 Install mesoSPIM-specific libraries: 
@@ -63,7 +63,6 @@ Camera libraries are not hosted on PyPi and need to be installed manually:
 
 #### Preparing python bindings for device drivers
 * For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`
-* For Galil stages, copy `gclib.py` into `mesoSPIM/src/devices/stages/galil/gclib/gclib.py`
 * For zoom control via dynamixel servos, copy the dynamixel Python file `dynamixel_functions.py` into `mesoSPIM/src/devices/zoom/dynamixel/` You will also need to edit this file to point to the correct Dynamixel dll. You could copy these files into the `zoom/dynamixel` folder to keep things neatly in one place.
 
 #### Prepare a configuration file and wire the NI DAQ
@@ -82,7 +81,7 @@ Use BNC T connectors to split each analog output line to both lasers.
 ## Launching
 #### From Anaconda prompt
 ```
-conda activate py36
+conda activate py37
 python mesoSPIM_Control.py
 ```
 The software will now start. If you have multiple configuration files you will be prompted to choose one. 

@@ -13,23 +13,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 class FilenameWizard(QtWidgets.QWizard):
-    '''
-    Wizard to run
-    The parent is the Window class of the microscope
-    '''
     wizard_done = QtCore.pyqtSignal()
 
     num_of_pages = 4
     (welcome, raw, single_hdf5, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
+        '''Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
         super().__init__(parent)
 
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
         self.state = mesoSPIM_StateSingleton()
-        self.file_format = None
+        self.file_format = None  # 'raw', 'h5', or 'tiff'
         self.setWindowTitle('Filename Wizard')
         self.setPage(0, FilenameWizardWelcomePage(self))
         self.setPage(1, FilenameWizardRawSelectionPage(self))
@@ -81,7 +78,7 @@ class FilenameWizard(QtWidgets.QWizard):
                 filename += self.replace_spaces_with_underscores(descriptionstring)
                 filename += '_'
 
-            if self.file_format == 'raw':
+            if self.file_format in ('raw', 'tiff'):
                 if self.field('xyPosition'):
                     '''Round to nearest integer '''
                     x_position_string = str(int(round(self.parent.model.getXPosition(row))))
@@ -147,11 +144,12 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.setSubTitle("How would you like to save your data?")
 
         self.raw_string = 'Individual Raw Files: ~.raw'
-        self.single_hdf5_string = 'Single HDF5-File: ~.h5'
+        self.tiff_string = 'ImageJ TIFF files: ~.tiff'
+        self.single_hdf5_string = 'Single HDF5 file: ~.h5'
 
         self.SaveAsComboBoxLabel = QtWidgets.QLabel('Save as:')
         self.SaveAsComboBox = QtWidgets.QComboBox()
-        self.SaveAsComboBox.addItems([self.raw_string, self.single_hdf5_string])
+        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string, self.single_hdf5_string])
         self.SaveAsComboBox.setCurrentIndex(0)
 
         self.registerField('SaveAs', self.SaveAsComboBox, 'currentIndex')
@@ -162,10 +160,13 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
     
     def nextId(self):
-        if self.SaveAsComboBox.currentText() == self.raw_string: # is .raw
+        if self.SaveAsComboBox.currentText() == self.raw_string:
             self.parent.file_format = 'raw'
-            return self.parent.raw 
-        elif self.SaveAsComboBox.currentText() == self.single_hdf5_string: # is .h5
+            return self.parent.raw
+        elif self.SaveAsComboBox.currentText() == self.tiff_string:
+            self.parent.file_format = 'tiff'
+            return self.parent.raw  # same file name generation
+        elif self.SaveAsComboBox.currentText() == self.single_hdf5_string:
             self.parent.file_format = 'h5'
             return self.parent.single_hdf5
 
@@ -174,7 +175,7 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self.parent = parent
 
-        self.setTitle("Autogenerate raw filenames")
+        self.setTitle("Autogenerate filenames")
         self.setSubTitle("Which properties would you like to use?")
 
         self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ', self)
@@ -268,12 +269,12 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def initializePage(self):
-        if self.parent.file_format == 'raw':
+        if self.parent.file_format in ('raw', 'tiff'):
             file_list = self.parent.filename_list
         elif self.parent.file_format == 'h5':
             file_list = [self.parent.filename_list[0]]
         else:
-            raise ValueError(f"file_format must be in ('raw', 'h5'), received {self.parent.file_format}")
+            raise ValueError(f"file_format must be in ('raw', 'tiff', 'h5'), received {self.parent.file_format}")
 
         for f in file_list:
             self.mystring += f

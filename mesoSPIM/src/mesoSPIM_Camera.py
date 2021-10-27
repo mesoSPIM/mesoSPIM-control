@@ -2,11 +2,8 @@
 mesoSPIM Camera class, intended to run in its own thread
 '''
 
-import os
 import time
 import numpy as np
-
-import tifffile
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,7 +29,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     def __init__(self, parent = None):
         super().__init__()
 
-        self.parent = parent
+        self.parent = parent # mesoSPIM_Core() object
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
@@ -56,12 +53,10 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
         self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
-        self.camera_display_snap_subsampling = self.cfg.startup['camera_display_snap_subsampling']
         self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
 
         ''' Wiring signals '''
-        self.parent.sig_state_request.connect(self.state_request_handler)
-
+        self.parent.sig_state_request.connect(self.state_request_handler) # from mesoSPIM_Core() to mesoSPIM_Camera()
         self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=3)
         self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
         self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=3)
@@ -102,7 +97,6 @@ class mesoSPIM_Camera(QtCore.QObject):
                         'camera_line_interval',
                         'state',
                         'camera_display_live_subsampling',
-                        'camera_display_snap_subsampling',
                         'camera_display_acquisition_subsampling',
                         'camera_binning'):
                 exec('self.set_'+key+'(value)')
@@ -147,16 +141,16 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     def set_camera_display_live_subsampling(self, factor):
         self.camera_display_live_subsampling = factor
-
-    def set_camera_display_snap_subsampling(self, factor):
-        self.camera_display_snap_subsampling = factor
+        self.state['camera_display_live_subsampling'] = factor
 
     def set_camera_display_acquisition_subsampling(self, factor):
         self.camera_display_acquisition_subsampling = factor
+        self.state['camera_display_acquisition_subsampling'] = factor
 
     def set_camera_binning(self, value):
         print('Setting camera binning: '+value)
         self.camera.set_binning(value)
+        self.state['camera_binning'] = value
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def prepare_image_series(self, acq, acq_list):
@@ -192,29 +186,10 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):
-        if self.stopflag is False:
-            if self.processing_options_string != '':
-                if self.processing_options_string == 'MAX':
-                    ''' Image processing needs to be reimplemented in an incremental fashion '''
-                    pass 
-
-                    '''
-                    self.sig_status_message.emit('Doing Max Projection')
-                    logger.info('Camera: Started Max Projection of '+str(self.max_frame)+' Images')
-                    stackview = self.xy_stack.view()
-                    stackview.shape = (self.max_frame, self.x_pixels, self.y_pixels)
-                    max_proj = np.max(stackview, axis=0)
-                    filename = 'MAX_' +self.filename + '.tif'
-                    path = self.folder+'/'+filename
-                    tifffile.imsave(path, max_proj, photometric='minisblack')
-                    logger.info('Camera: Saved Max Projection')
-                    self.sig_status_message.emit('Done with image processing')
-                    '''
-
         try:
             self.camera.close_image_series()
-        except:
-            logger.warning('Camera: Image Series could not be closed')
+        except Exception as e:
+            logger.warning(f'Camera: Image Series could not be closed: {e}')
             
         self.image_writer.end_acquisition(acq, acq_list)
 
@@ -227,15 +202,13 @@ class mesoSPIM_Camera(QtCore.QObject):
     def snap_image(self):
         image = self.camera.get_image()
         image = np.rot90(image)
-        self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_snap_subsampling,0:self.y_pixels:self.camera_display_snap_subsampling])
+        self.sig_camera_frame.emit(image[:self.x_pixels, :self.y_pixels])
         self.image_writer.write_snap_image(image)
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
         self.camera.initialize_live_mode()
-
         self.live_image_count = 0
-
         self.start_time = time.time()
         logger.info('Camera: Preparing Live Mode')
         logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
@@ -247,7 +220,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         for image in images:
             image = np.rot90(image)
 
-            self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_live_subsampling,0:self.y_pixels:self.camera_display_live_subsampling])
+            self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_live_subsampling,
+                                       0:self.y_pixels:self.camera_display_live_subsampling])
             self.live_image_count += 1
             #self.sig_camera_status.emit(str(self.live_image_count))
 
