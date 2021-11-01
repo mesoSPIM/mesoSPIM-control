@@ -2225,17 +2225,12 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         
         ''' Setting up the ASI stages '''
         self.asi_parameters = self.cfg.asi_parameters
-        self.port = self.asi_parameters['COMport']
-        self.baudrate = self.asi_parameters['baudrate']
         self.mesoSPIM2ASIdict = self.asi_parameters['stage_assignment'] # converts mesoSPIM stage to ASI stage designation
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
         self.ttl_cards = self.asi_parameters['ttl_cards']
-
-        self.asi_stages = StageControlASITiger(self.port, self.baudrate, self.mesoSPIM2ASIdict)
-
+        self.asi_stages = StageControlASITiger(self.asi_parameters)
         self.asi_stages.sig_pause.connect(self.pause)
-
         self.pos_timer_polling_interval = 500  
         self.pos_timer.stop()
         self.pos_timer = QtCore.QTimer(self)
@@ -2482,14 +2477,11 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         
         ''' Setting up the ASI stages '''
         self.asi_parameters = self.cfg.asi_parameters
-        self.port = self.asi_parameters['COMport']
-        self.baudrate = self.asi_parameters['baudrate']
         self.mesoSPIM2ASIdict = self.asi_parameters['stage_assignment'] # converts mesoSPIM stage to ASI stage designation
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
-        self.asi_stages = StageControlASITiger(self.port, self.baudrate, self.mesoSPIM2ASIdict)
+        self.asi_stages = StageControlASITiger(self.asi_parameters)
         self.asi_stages.sig_pause.connect(self.pause)
-
         self.pos_timer_polling_interval = 500  
         self.pos_timer.stop()
         self.pos_timer = QtCore.QTimer(self)

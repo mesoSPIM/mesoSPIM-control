@@ -30,20 +30,20 @@ class StageControlASITiger(QtCore.QObject):
         Internally, the 
     '''
 
-    def __init__(self, port, baudrate, stage_assigment):
+    def __init__(self, asi_parameters):
         super().__init__()
-        self.port = port
-        self.baudrate = baudrate
-        self.stage_assignment = stage_assigment
+        self.port = asi_parameters['COMport']
+        self.baudrate = asi_parameters['baudrate']
+        self.stage_assignment = asi_parameters['stage_assignment']
         self.axis_list = [self.stage_assignment[i] for i in self.stage_assignment.keys()]
         self.axes = ''.join(self.axis_list) # String containing all axes
         self.num_axes = len(self.axes) # The number of axes
+        self.encoder_conversion = asi_parameters['encoder_conversion']
         
         self.position_dict = {axis : None for axis in self.axis_list} # create an empty position dict
                 
         '''Open connection to the stage controller'''
-        self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=1
-    , xonxoff=False, stopbits=serial.STOPBITS_ONE)
+        self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=1, xonxoff=False, stopbits=serial.STOPBITS_ONE)
 
         self.previous_command = ''
 
@@ -137,10 +137,10 @@ class StageControlASITiger(QtCore.QObject):
                 position_list = position_string.decode('UTF-8').split()[1:]
                 ''' Only process position list if it contains all values'''
                 if len(position_list) == self.num_axes:
-                # conversion to um: internal unit is 1/10 um
                     try:
-                        position_list = [int(value)/10 for value in position_list] 
-                        position_dict = {self.axes[i] : position_list[i] for i in range(self.num_axes)}
+                        position_list = [int(value) for value in position_list]
+                        endcoder_conversion_list = list(self.encoder_conversion.values())
+                        position_dict = {self.axes[i]: position_list[i]/endcoder_conversion_list[i] for i in range(self.num_axes)}
                         if position_dict is not None:
                             self.position_dict = position_dict
                             return position_dict
@@ -150,8 +150,7 @@ class StageControlASITiger(QtCore.QObject):
                         return self.position_dict
             except: 
                 logger.info('Invalid position string: ' + str(position_string))
-        
-            
+
     def move_relative(self, motion_dict):
         '''Command for relative motion 
         
@@ -164,10 +163,7 @@ class StageControlASITiger(QtCore.QObject):
         command_string = 'R'
         for axis in motion_dict.keys():
             if self.axis_in_config_check(axis):
-                # Conversion um to 1/10 um for internal use requires *10
-                # TODO: This has to be taken into account for rotations: 90° = 90000 cts, command 9000
-                command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*10) 
-                
+                command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*self.encoder_conversion[axis])
         if command_string != 'R':
             command_string += '\r\n'
             self._send_command(command_string.encode('UTF-8'))
@@ -183,8 +179,7 @@ class StageControlASITiger(QtCore.QObject):
         command_string = 'M'
         for axis in motion_dict.keys():
             if self.axis_in_config_check(axis):
-                # Conversion um to 1/10 um for internal use requires *10
-                command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*10) 
+                command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*self.encoder_conversion[axis])
                 
         if command_string != 'M':
             command_string += '\r\n'
