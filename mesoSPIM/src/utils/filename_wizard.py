@@ -12,6 +12,7 @@ from ..mesoSPIM_State import mesoSPIM_StateSingleton
 import logging
 logger = logging.getLogger(__name__)
 
+
 class FilenameWizard(QtWidgets.QWizard):
     wizard_done = QtCore.pyqtSignal()
 
@@ -126,14 +127,19 @@ class FilenameWizard(QtWidgets.QWizard):
 
             self.filename_list.append(filename)
             
-    def update_filenames_in_model(self):
+    def update_filenames_in_model(self, append=True):
         row_count = self.parent.model.rowCount()
         filename_column = self.parent.model.getFilenameColumn()
 
         for row in range(0, row_count):
             filename = self.filename_list[row]
             index = self.parent.model.createIndex(row, filename_column)
-            self.parent.model.setData(index, filename)
+            if append:
+                filename_base = self.parent.model.getFilename(row)
+                self.parent.model.setData(index, filename_base + '_' + filename)
+            else:
+                self.parent.model.setData(index, filename)
+
 
 class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):

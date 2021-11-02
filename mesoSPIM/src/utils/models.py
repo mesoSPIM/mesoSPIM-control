@@ -16,10 +16,10 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     TODO: Typecheck in __init__ for AcquisitionList as table
     '''
-    def __init__(self, table = None, parent = None):
+    def __init__(self, table=None, parent=None):
         super().__init__(parent)
         
-        if table == None:
+        if table is None:
             self._table = AcquisitionList()
         else:
             self._table = table
@@ -87,7 +87,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             ''' Tooltip: Text that is display when mouse hovers '''
             return "Table entry: " + str(self._table[row](column))
 
-    def setData(self, index, value, role = QtCore.Qt.EditRole):
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
         ''' Method used to write data
 
         Here, a single table entry is set.
@@ -146,10 +146,8 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
             index = self.createIndex(row, planes_column)
             self.setData(index, planes)
-        
-        
 
-    def insertRows(self, position, rows, parent = QtCore.QModelIndex()):
+    def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
         ''' Method to add entries to the model
 
         Rows: how many rows are inserted at once.
@@ -268,6 +266,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     def getFilenameColumn(self):
         return self._headers.index('Filename')
+
+    def getFilename(self, row):
+        return self._table[row]['filename']
 
     def getStartFocusColumn(self):
         return self._headers.index('F_start')
