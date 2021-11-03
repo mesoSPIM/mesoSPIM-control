@@ -1,6 +1,10 @@
 # Latest changes
 :sparkles: TIFF file name pattern for multi-tile/channel datasets is fully compatible with BigStitcher auto-loader, no renaming is needed.
 
+:bug: fix: Files must always have extension (currently one of `.tiff`, `.tif`, `.raw`, `.h5`). Files without extension return an error.
+
+:warning: Default file format for data saving has changed to `.h5` for streamlined import into BigStitcher.
+
 :gem: :gem: :gem: Autofocus has been added and works beautifully, outperforming expert human in focusing accuracy by 10x. Highly recommended!
 
 :bug: fix: Going back to previously configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 

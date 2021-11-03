@@ -506,25 +506,28 @@ class mesoSPIM_Core(QtCore.QObject):
     def start(self, row=None):
         self.stopflag = False
 
-        if row==None:
+        if row is None:
             acq_list = self.state['acq_list']
         else:
-            acq_list = self.state['acq_list']
             acquisition = self.state['acq_list'][row]
             acq_list = AcquisitionList([acquisition])
             
         nonexisting_folders_list = acq_list.check_for_nonexisting_folders()
         filename_list = acq_list.check_for_existing_filenames()
         duplicates_list = acq_list.check_for_duplicated_filenames()
+        files_without_extensions = acq_list.check_filename_extensions()
 
-        if nonexisting_folders_list != []:
+        if nonexisting_folders_list:
             self.sig_warning.emit('The following folders do not exist - stopping! \n'+self.list_to_string_with_carriage_return(nonexisting_folders_list))
             self.sig_finished.emit()
-        elif filename_list != []:
+        elif filename_list:
             self.sig_warning.emit('The following files already exist - stopping! \n'+self.list_to_string_with_carriage_return(filename_list))
             self.sig_finished.emit()
-        elif duplicates_list != []:
+        elif duplicates_list:
             self.sig_warning.emit('The following filenames are duplicated - stopping! \n' +self.list_to_string_with_carriage_return(duplicates_list))
+            self.sig_finished.emit()
+        elif files_without_extensions:
+            self.sig_warning.emit('Some files have no extensions (.raw, .tiff, .h5) - stopping! \n' + self.list_to_string_with_carriage_return(files_without_extensions))
             self.sig_finished.emit()
         else:
             self.sig_update_gui_from_state.emit(True)
