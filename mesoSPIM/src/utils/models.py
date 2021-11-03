@@ -7,6 +7,7 @@ from ..mesoSPIM_State import mesoSPIM_StateSingleton
 import copy
 import pickle
 
+
 class AcquisitionModel(QtCore.QAbstractTableModel):
     '''
     Model class containing a AcquisitionList
@@ -291,6 +292,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getShutterconfig(self, row):
         return self._table[row]['shutterconfig']
 
+    def getNShutterConfigs(self):
+        return self._table.get_n_shutter_configs()
+
     def getZoom(self, row):
         return self._table[row]['zoom']
 
@@ -315,6 +319,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getTotalImageCount(self):
         ''' gets the total number of planes from the model '''
         return self._table.get_image_count()
+
+    def getTileIndex(self, row):
+        return self._table.get_tile_index(self._table[row])
 
     def get_acquisition_list(self, row=None):
         if row is None:
