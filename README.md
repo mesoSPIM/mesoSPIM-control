@@ -53,10 +53,6 @@ Camera libraries are not hosted on PyPi and need to be installed manually:
 * [PyVCAM when using a Photometrics camera](https://github.com/Photometrics/PyVCAM)
 * pco (`python -m pip install pco`) when using a PCO camera ([Link](https://pypi.org/project/pco/)). A Version ≥0.1.3 is recommended.
 
-#### Preparing python bindings for device drivers
-* For PI stages, copy `C:\ProgramData\PI\GCSTranslator\PI_GCS2_DLL_x64.dll` in the main mesoSPIM folder: `PI_GCS2_DLL_x64.dll`
-* For zoom control via dynamixel servos, copy the dynamixel Python file `dynamixel_functions.py` into `mesoSPIM/src/devices/zoom/dynamixel/` You will also need to edit this file to point to the correct Dynamixel dll. You could copy these files into the `zoom/dynamixel` folder to keep things neatly in one place.
-
 #### Prepare a configuration file and wire the NI DAQ
 The configuration files are in the `config` directory.
 The "demo" files have some devices replaced with dummy devices for testing purposes.

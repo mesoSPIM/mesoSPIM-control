@@ -9,14 +9,11 @@ mesoSPIM/test/fixtures/
 *.bin
 .idea
 mesoSPIM/legacy/*
-mesoSPIM/src/devices/zoom/dynamixel/*
-mesoSPIM/PI_GCS2_DLL_x64.dll
 prototypes/orcas/*.tif
 prototypes/python-essentials/temp\.tif
 mesoSPIM/config/etl_parameters/*
 mesoSPIM/config/*
 !mesoSPIM/config/demo_config.py
-mesoSPIM/src/devices/zoom/dynamixel\.zip
 mesoSPIM/acq/
 mesoSPIM/tmp/
 mesoSPIM/test/fixtures/
