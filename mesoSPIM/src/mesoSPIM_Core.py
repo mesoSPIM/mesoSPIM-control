@@ -67,7 +67,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_prepare_live = QtCore.pyqtSignal()
     sig_get_live_image = QtCore.pyqtSignal()
-    sig_get_snap_image = QtCore.pyqtSignal()
+    sig_get_snap_image = QtCore.pyqtSignal(bool)
     sig_end_live = QtCore.pyqtSignal()
 
     ''' Movement-related signals: '''
@@ -112,16 +112,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_stop_movement.connect(self.stop_movement)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
-        self.parent.sig_mark_rotation_position.connect(self.sig_mark_rotation_position.emit)
-        self.parent.sig_go_to_rotation_position.connect(self.sig_go_to_rotation_position.emit)
-
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
-
-        #logger.info('Core internal thread affinity in init: '+str(id(self.thread())))
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
-        #self.camera_worker = mesoSPIM_HamamatsuCamera(self)
         self.camera_worker = mesoSPIM_Camera(self)
         #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.moveToThread(self.camera_thread)
@@ -136,24 +130,10 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
         self.serial_worker.sig_position.connect(self.sig_position.emit)
 
-        # ''' Setting another demo thread up '''
-        # self.demo_thread = QtCore.QThread()
-        # self.demo_worker = mesoSPIM_DemoThread()
-        # self.sig_state_request.connect(self.demo_worker.report_thread_id)
-        # self.demo_worker.moveToThread(self.demo_thread)
-        # self.demo_thread.start()
-
-        # ''' HICKUP DEBUGGING '''
-        # self.z_start_measured = 0.0
-        # self.z_end_measured = 0.0
-        # self.hickup_delta_z = 0.0
-
         ''' Start the threads '''
         self.camera_thread.start()
         #logger.info('Camera worker thread affinity after starting the thread? Answer:'+str(id(self.camera_worker.thread())))
         self.serial_thread.start()
-
-        # ''' Get the demo thread set up and start it '''
 
         #logger.info('Camera thread running? Answer:'+str(self.camera_thread.isRunning()))
         #logger.info('Serial thread running? Answer:'+str(self.serial_thread.isRunning()))
@@ -198,6 +178,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state']='idle'
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
+        self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
+        self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
 
         self.start_time = 0
         self.stopflag = False
@@ -271,7 +253,6 @@ class mesoSPIM_Core(QtCore.QObject):
                        'camera_delay_%',
                        'camera_pulse_%',
                        'camera_display_live_subsampling',
-                       'camera_display_snap_subsampling',
                        'camera_display_acquisition_subsampling',
                        'camera_sensor_mode',
                        'camera_binning',
@@ -280,7 +261,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def set_state(self, state):
         if state == 'live':
-            self.state['state']='live'
+            self.state['state'] = 'live'
             self.sig_state_request.emit({'state':'live'})
             logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
             #logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
@@ -459,19 +440,12 @@ class mesoSPIM_Core(QtCore.QObject):
     '''
     Sub-Imaging modes
     '''
-    def snap(self):
+    def snap(self, write_flag=True):
         self.sig_prepare_live.emit()
         self.open_shutters()
         self.snap_image()
-        self.sig_get_snap_image.emit()
+        self.sig_get_snap_image.emit(write_flag)
         self.close_shutters()
-
-        ''' Doubled code'''
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        filename = timestr + '.tif'
-
-        self.write_snap_metadata(filename)
-
         self.sig_end_live.emit()
         self.sig_finished.emit()
         QtWidgets.QApplication.processEvents()
@@ -532,25 +506,28 @@ class mesoSPIM_Core(QtCore.QObject):
     def start(self, row=None):
         self.stopflag = False
 
-        if row==None:
+        if row is None:
             acq_list = self.state['acq_list']
         else:
-            acq_list = self.state['acq_list']
             acquisition = self.state['acq_list'][row]
             acq_list = AcquisitionList([acquisition])
             
         nonexisting_folders_list = acq_list.check_for_nonexisting_folders()
         filename_list = acq_list.check_for_existing_filenames()
         duplicates_list = acq_list.check_for_duplicated_filenames()
+        files_without_extensions = acq_list.check_filename_extensions()
 
-        if nonexisting_folders_list != []:
+        if nonexisting_folders_list:
             self.sig_warning.emit('The following folders do not exist - stopping! \n'+self.list_to_string_with_carriage_return(nonexisting_folders_list))
             self.sig_finished.emit()
-        elif filename_list != []:
+        elif filename_list:
             self.sig_warning.emit('The following files already exist - stopping! \n'+self.list_to_string_with_carriage_return(filename_list))
             self.sig_finished.emit()
-        elif duplicates_list != []:
+        elif duplicates_list:
             self.sig_warning.emit('The following filenames are duplicated - stopping! \n' +self.list_to_string_with_carriage_return(duplicates_list))
+            self.sig_finished.emit()
+        elif files_without_extensions:
+            self.sig_warning.emit('Some files have no extensions (.raw, .tiff, .h5) - stopping! \n' + self.list_to_string_with_carriage_return(files_without_extensions))
             self.sig_finished.emit()
         else:
             self.sig_update_gui_from_state.emit(True)
@@ -568,7 +545,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
         self.start_time = time.time()
-
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
@@ -607,62 +583,56 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def preview_acquisition(self, z_update=True):
         self.stopflag = False
-
         row = self.state['selected_row']
+        #self.sig_update_gui_from_state.emit(True) #deprecated
+        acq = self.state['acq_list'][row]
 
-        if row==None:
-            pass
-            # print('No row selected!')
+        ''' Rotation handling goes here '''
+        current_rotation = self.state['position']['theta_pos']
+        startpoint = acq.get_startpoint()
+        target_rotation = startpoint['theta_abs']
+
+        ''' Create a flag when rotation is required: '''
+        if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
+            rotationflag = True
         else:
-            self.sig_update_gui_from_state.emit(True)
-            acq = self.state['acq_list'][row]
+            rotationflag = False
 
-            ''' Rotation handling goes here '''
-            current_rotation = self.state['position']['theta_pos']
-            startpoint = acq.get_startpoint()
-            target_rotation = startpoint['theta_abs']
+        ''' Remove z-coordinate from dict so that z is not updated during preview: '''
+        if not z_update:
+            ''' If a rotation is necessary, z will be updated '''
+            if not rotationflag:
+                del startpoint['z_abs']
 
-            ''' Create a flag when rotation is required: '''
-            if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-                rotationflag = True 
-            else:
-                rotationflag = False
+        ''' Check if sample has to be rotated, allow some tolerance '''
+        if rotationflag:
+            self.sig_status_message.emit('Going to rotation position')
+            self.sig_go_to_rotation_position_and_wait_until_done.emit()
+            self.sig_status_message.emit('Rotating sample')
+            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
-            ''' Remove z-coordinate from dict so that z is not updated during preview: '''
-            if z_update is False:
-                ''' If a rotation is necessary, z will be updated '''
-                if rotationflag == False: 
-                    del startpoint['z_abs']                
+        self.sig_status_message.emit('Setting Filter')
+        self.set_filter(acq['filter'], wait_until_done=True)
 
-            ''' Check if sample has to be rotated, allow some tolerance '''
-            if rotationflag:
-                self.sig_status_message.emit('Going to rotation position')
-                self.sig_go_to_rotation_position_and_wait_until_done.emit()
-                self.sig_status_message.emit('Rotating sample')
-                self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+        self.sig_status_message.emit('Going to start position')
+        self.move_absolute(startpoint, wait_until_done=False)
 
-            self.sig_status_message.emit('Setting Filter')
-            self.set_filter(acq['filter'], wait_until_done=True)
+        self.sig_status_message.emit('Setting Shutter')
+        self.set_shutterconfig(acq['shutterconfig'])
+        self.sig_status_message.emit('Setting Zoom & Laser')
+        self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
+        self.set_intensity(acq['intensity'], wait_until_done=True)
+        self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
+        # Deprecated: This was for the GUI to update properly, otherwise ETL values for previous laser might be displayed
+        #QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
 
-            self.sig_status_message.emit('Going to start position')
-            self.move_absolute(startpoint, wait_until_done=False)
+        self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
+        self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
+        self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
+        self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
 
-            self.sig_status_message.emit('Setting Shutter')
-            self.set_shutterconfig(acq['shutterconfig'])
-            self.sig_status_message.emit('Setting Zoom & Laser')
-            self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
-            self.set_intensity(acq['intensity'], wait_until_done=True)
-            self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
-            ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
-
-            self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
-            self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
-            self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
-            self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
-
-            self.sig_status_message.emit('Ready for preview...')
-            self.sig_update_gui_from_state.emit(False)
+        self.sig_status_message.emit('Ready for preview...')
+        self.sig_update_gui_from_state.emit(False)
 
         self.state['state'] = 'idle'
 
@@ -678,13 +648,10 @@ class mesoSPIM_Core(QtCore.QObject):
         If target rotation different than current rotation:
             - go to target position
             - rotate to target angle
-            -
-
         '''
         current_rotation = self.state['position']['theta_pos']
         startpoint = acq.get_startpoint()
         target_rotation = startpoint['theta_abs']
-        self.acq_start_time = time.time()
         self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
         ''' Check if sample has to be rotated, allow some tolerance '''
@@ -715,10 +682,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_prepare_image_series.emit(acq, acq_list)
         self.prepare_image_series()
 
-        # ''' HICKUP DEBUGGING: Measure z position '''
-        # self.z_start_measured = self.state['position']['z_pos']
-
-        self.write_metadata(acq, acq_list)
+        self.camera_worker.image_writer.write_metadata(acq, acq_list)
 
     def run_acquisition(self, acq, acq_list):
         steps = acq.get_image_count()
@@ -771,7 +735,6 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     framerate = self.image_count / time_passed
                     self.state['predicted_acq_list_time'] = self.total_image_count / framerate
-      
 
                 self.send_progress(self.acquisition_count,
                                    self.total_acquisition_count,
@@ -788,13 +751,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.close_shutters()
 
     def close_acquisition(self, acq, acq_list):
-
-        # ''' HICKUP DEBUGGING '''
-        # self.z_end_measured = self.state['position']['z_pos']
-        # self.f_end_measured = self.state['position']['f_pos']
-        # self.collect_troubleshooting_data(acq)
-        # self.append_troubleshooting_info_to_metadata(acq)
-
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
 
         if self.stopflag is False:
@@ -802,10 +758,14 @@ class mesoSPIM_Core(QtCore.QObject):
             self.close_image_series()
             self.sig_end_image_series.emit(acq, acq_list)
 
-        self.acq_end_time = time.time()
+        img_total_time = self.image_acq_end_time - self.image_acq_start_time
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
-
-        self.append_timing_info_to_metadata(acq)
+        self.camera_worker.image_writer.append_timing_info_to_metadata(acq,
+                                                                       acq_start=self.acq_start_time_string,
+                                                                       img_start=self.image_acq_start_time_string,
+                                                                       img_end=self.image_acq_end_time_string,
+                                                                       acq_end=self.acq_end_time_string,
+                                                                       img_total_time=img_total_time)
         self.acquisition_count += 1
 
     @QtCore.pyqtSlot(str)
@@ -873,184 +833,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'etl_l_amplitude' : old_l_amp})
         self.sig_state_request.emit({'etl_r_amplitude' : old_r_amp})
 
-    def write_line(self, file, key='', value=''):
-        ''' Little helper method to write a single line with a key and value for metadata
-
-        Adds a line break at the end.
-        '''
-        if key !='':
-            file.write('['+str(key)+'] '+str(value) + '\n')
-        else:
-            file.write('\n')
-
-    def write_metadata(self, acq, acq_list):
-        '''
-        Writes a metadata.txt file
-
-        Path contains the file to be written
-        '''
-        path = acq['folder'] + '/' + acq['filename']
-
-        metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
-
-        # print('Metadata_path: ', metadata_path)
-        if acq['filename'][-3:] == '.h5':
-            if acq == acq_list[0]:
-                self.metadata_file = open(metadata_path, 'w')
-        else:
-            self.metadata_file = open(metadata_path, 'w')
-        self.write_line(self.metadata_file, 'Metadata for file', path)
-        self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
-        self.write_line(self.metadata_file, 'z_planes', acq['planes'])
-        self.write_line(self.metadata_file)
-        # self.write_line(file, 'COMMENTS')
-        # self.write_line(file, 'Comment: ', acq(['comment']))
-        # self.write_line(file)
-        self.write_line(self.metadata_file, 'CFG')
-        self.write_line(self.metadata_file, 'Laser', acq['laser'])
-        self.write_line(self.metadata_file, 'Intensity (%)', acq['intensity'])
-        self.write_line(self.metadata_file, 'Zoom', acq['zoom'])
-        self.write_line(self.metadata_file, 'Pixelsize in um', self.state['pixelsize'])
-        self.write_line(self.metadata_file, 'Filter', acq['filter'])
-        self.write_line(self.metadata_file, 'Shutter', acq['shutterconfig'])
-        self.write_line(self.metadata_file)
-        self.write_line(self.metadata_file, 'POSITION')
-        self.write_line(self.metadata_file, 'x_pos', acq['x_pos'])
-        self.write_line(self.metadata_file, 'y_pos', acq['y_pos'])
-        self.write_line(self.metadata_file, 'f_start', acq['f_start'])
-        self.write_line(self.metadata_file, 'f_end', acq['f_end'])
-        self.write_line(self.metadata_file, 'z_start', acq['z_start'])
-        self.write_line(self.metadata_file, 'z_end', acq['z_end'])
-        self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
-        self.write_line(self.metadata_file, 'z_planes', acq.get_image_count())
-        self.write_line(self.metadata_file, 'rot', acq['rot'])
-        self.write_line(self.metadata_file)
-
-        ''' Attention: change to true ETL values ASAP '''
-        self.write_line(self.metadata_file, 'ETL PARAMETERS')
-        self.write_line(self.metadata_file, 'ETL CFG File', self.state['ETL_cfg_file'])
-        self.write_line(self.metadata_file, 'etl_l_offset', self.state['etl_l_offset'])
-        self.write_line(self.metadata_file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
-        self.write_line(self.metadata_file, 'etl_r_offset', self.state['etl_r_offset'])
-        self.write_line(self.metadata_file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
-        self.write_line(self.metadata_file)
-        self.write_line(self.metadata_file, 'GALVO PARAMETERS')
-        self.write_line(self.metadata_file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
-        self.write_line(self.metadata_file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
-        self.write_line(self.metadata_file, 'galvo_l_offset', self.state['galvo_l_offset'])
-        self.write_line(self.metadata_file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
-        self.write_line(self.metadata_file, 'galvo_r_offset', self.state['galvo_r_offset'])
-        self.write_line(self.metadata_file)
-        self.write_line(self.metadata_file, 'CAMERA PARAMETERS')
-        self.write_line(self.metadata_file, 'camera_type', self.cfg.camera)
-        self.write_line(self.metadata_file, 'camera_exposure', self.state['camera_exposure_time'])
-        self.write_line(self.metadata_file, 'camera_line_interval', self.state['camera_line_interval'])
-        self.write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
-        self.write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
-
-        if acq['filename'][-3:] == '.h5':
-            if acq == acq_list[-1]:
-                self.metadata_file.close()
-        else:
-            self.metadata_file.close()
-
     def execute_galil_program(self):
         '''Little helper method to execute the program loaded onto the Galil stage:
         allows hand controller to operate'''
         self.sig_state_request.emit({'stage_program' : 'execute'})
-
-    def write_snap_metadata(self, filename):
-            path = self.state['snap_folder']+'/'+filename
-
-            metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
-
-            with open(metadata_path,'w') as file:
-                self.write_line(file, 'CFG')
-                self.write_line(file, 'Laser', self.state['laser'])
-                self.write_line(file, 'Intensity (%)', self.state['intensity'])
-                self.write_line(file, 'Zoom', self.state['zoom'])
-                self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
-                self.write_line(file, 'Filter', self.state['filter'])
-                self.write_line(file, 'Shutter', self.state['shutterconfig'])
-                self.write_line(file)
-                self.write_line(file, 'POSITION')
-                self.write_line(file, 'x_pos', self.state['position']['x_pos'])
-                self.write_line(file, 'y_pos', self.state['position']['y_pos'])
-                self.write_line(file, 'z_pos', self.state['position']['z_pos'])
-                self.write_line(file, 'f_pos', self.state['position']['f_pos'])
-                self.write_line(file)
-
-                ''' Attention: change to true ETL values ASAP '''
-                self.write_line(file,'ETL PARAMETERS')
-                self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
-                self.write_line(file,'etl_l_offset', self.state['etl_l_offset'])
-                self.write_line(file,'etl_l_amplitude', self.state['etl_l_amplitude'])
-                self.write_line(file,'etl_r_offset', self.state['etl_r_offset'])
-                self.write_line(file,'etl_r_amplitude', self.state['etl_r_amplitude'])
-                self.write_line(file)
-                self.write_line(file, 'GALVO PARAMETERS')
-                self.write_line(file, 'galvo_l_frequency',self.state['galvo_l_frequency'])
-                self.write_line(file, 'galvo_l_amplitude',self.state['galvo_l_amplitude'])
-                self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
-                self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
-                self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
-                self.write_line(file)
-                self.write_line(file, 'CAMERA PARAMETERS')
-                self.write_line(file, 'camera_type', self.cfg.camera)
-                self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
-                self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
-                self.write_line(file, 'x_pixels',self.cfg.camera_parameters['x_pixels'])
-                self.write_line(file, 'y_pixels',self.cfg.camera_parameters['y_pixels'])
-
-    # ''' HICKUP DEBUGGING '''
-
-    # def collect_troubleshooting_data(self, acq):
-    #     self.hickup_delta_z = self.z_end_measured - acq['z_end']
-    #     self.hickup_delta_f = self.f_end_measured - acq['f_end']
-    #     # print('HICKUP Difference: ', self.hickup_delta_z)
-
-    # def append_troubleshooting_info_to_metadata(self, acq):
-    #     '''
-    #     Appends a metadata.txt file
-
-    #     Path contains the file to be written
-    #     '''
-    #     path = acq['folder']+'/'+acq['filename']
-
-    #     metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
-
-    #     with open(metadata_path,'a') as file:
-    #         ''' Adding troubleshooting information '''
-    #         self.write_line(file)
-    #         self.write_line(file, 'TROUBLESHOOTING INFORMATION')
-    #         self.write_line(file, 'Z_pos: delta_z end to start after acq', str(self.hickup_delta_z) )
-    #         self.write_line(file, 'z_start expected', acq['z_start'])
-    #         self.write_line(file, 'z_start measured', str(self.z_start_measured))
-    #         self.write_line(file, 'z_end expected', acq['z_end'])
-    #         self.write_line(file, 'z_end measured', str(self.z_end_measured))
-    #         self.write_line(file, 'F_pos: delta_f end to start after acq', str(self.hickup_delta_f) )
-    #         self.write_line(file, 'f_end expected', acq['f_end'])
-    #         self.write_line(file, 'f_end measured', str(self.f_end_measured))
-
-    def append_timing_info_to_metadata(self, acq):
-        '''
-        Appends a metadata.txt file
-
-        Path contains the file to be written
-        '''
-        path = acq['folder']+'/'+acq['filename']
-
-        metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
-
-        with open(metadata_path,'a') as file:
-            ''' Adding troubleshooting information '''
-            self.write_line(file)
-            self.write_line(file, 'TIMING INFORMATION')
-            self.write_line(file, 'Started stack', self.acq_start_time_string )
-            self.write_line(file, 'Started taking images', self.image_acq_start_time_string )
-            self.write_line(file, 'Stopped taking images', self.image_acq_end_time_string )
-            self.write_line(file, 'Stopped stack', self.acq_end_time_string )
-            self.write_line(file, 'Frame rate:', str(acq.get_image_count()/(self.image_acq_end_time-self.image_acq_start_time)))
 
     @QtCore.pyqtSlot(str)
     def send_status_message_to_gui(self, string):

@@ -20,7 +20,7 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
         self.zoom_factor = 3
 
         self.setWindowTitle('mesoSPIM Script Editor')
-        self.setGeometry(1500,500,700,1000)
+        self.setGeometry(100, 100, 600, 800)
 
         self.LoadScriptButton = QtWidgets.QPushButton('Load Script')
         self.LoadScriptButton.setStyleSheet('QPushButton{font-size: 21px}')
@@ -59,7 +59,6 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
         last location from where a file was opened.
         '''
         current_path = os.path.abspath('./scripts')
-        # print(current_path)
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Load script',current_path)
 
         ''' To avoid crashes, continue only when a file has been selected:'''
@@ -69,11 +68,10 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
                 self.Editor.setPlainText(script)
 
     def save_script(self):
-        ''' Save a script '''
+        ''' Save a script as .py file '''
         current_path = os.path.abspath('./scripts')
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',current_path)
-
-        ''' To avoid crashes, continue only when a file has been selected:'''
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', current_path,
+                                                        filter="*.py", initialFilter="*.py")
         if path:
             with open(path, 'w') as myscript:
                 script = self.Editor.toPlainText()
@@ -81,13 +79,13 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
 
     def execute_script(self):
         script = self.Editor.toPlainText()
-
         if __name__ == '__main__':
             ''' Allow this editor to be used as an stand-alone editor for testing '''
             exec(script)
         else:
             self.setEnabled(False)
             self.sig_execute_script.emit(script)
+
 
 def format(color, style=''):
     '''Return a QTextCharFormat with the given attributes.'''
@@ -147,6 +145,7 @@ class PythonHighlighter (QtGui.QSyntaxHighlighter):
     braces = [
         '\{', '\}', '\(', '\)', '\[', '\]',
     ]
+
     def __init__(self, document):
         QtGui.QSyntaxHighlighter.__init__(self, document)
 

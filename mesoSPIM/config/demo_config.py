@@ -12,12 +12,13 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 Dark mode: Renders the UI dark
 '''
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
-              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
-              'enable_y_buttons' : True, 
+              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled
+              'enable_y_buttons' : True,
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'window_pos': (400, 100), # position of the main window on the screen, top left corner.
                }
                
 '''
@@ -323,7 +324,7 @@ startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
-'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
+'position' : {'x_pos':0,'y_pos':1,'z_pos':2,'f_pos':3,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'filepath' : '/tmp/file.raw',
 'folder' : '/tmp/',
@@ -369,8 +370,8 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
-'camera_display_live_subsampling': 1,
-'camera_display_snap_subsampling': 1,
+'camera_display_live_subsampling': 2,
+#'camera_display_snap_subsampling': 1, #deprecated
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',

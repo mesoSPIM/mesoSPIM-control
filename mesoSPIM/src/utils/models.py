@@ -7,6 +7,7 @@ from ..mesoSPIM_State import mesoSPIM_StateSingleton
 import copy
 import pickle
 
+
 class AcquisitionModel(QtCore.QAbstractTableModel):
     '''
     Model class containing a AcquisitionList
@@ -16,10 +17,10 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     TODO: Typecheck in __init__ for AcquisitionList as table
     '''
-    def __init__(self, table = None, parent = None):
+    def __init__(self, table=None, parent=None):
         super().__init__(parent)
         
-        if table == None:
+        if table is None:
             self._table = AcquisitionList()
         else:
             self._table = table
@@ -87,7 +88,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             ''' Tooltip: Text that is display when mouse hovers '''
             return "Table entry: " + str(self._table[row](column))
 
-    def setData(self, index, value, role = QtCore.Qt.EditRole):
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
         ''' Method used to write data
 
         Here, a single table entry is set.
@@ -146,10 +147,8 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
             index = self.createIndex(row, planes_column)
             self.setData(index, planes)
-        
-        
 
-    def insertRows(self, position, rows, parent = QtCore.QModelIndex()):
+    def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
         ''' Method to add entries to the model
 
         Rows: how many rows are inserted at once.
@@ -269,6 +268,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getFilenameColumn(self):
         return self._headers.index('Filename')
 
+    def getFilename(self, row):
+        return self._table[row]['filename']
+
     def getStartFocusColumn(self):
         return self._headers.index('F_start')
 
@@ -289,6 +291,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     def getShutterconfig(self, row):
         return self._table[row]['shutterconfig']
+
+    def getNShutterConfigs(self):
+        return self._table.get_n_shutter_configs()
 
     def getZoom(self, row):
         return self._table[row]['zoom']
@@ -314,6 +319,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getTotalImageCount(self):
         ''' gets the total number of planes from the model '''
         return self._table.get_image_count()
+
+    def getTileIndex(self, row):
+        return self._table.get_tile_index(self._table[row])
 
     def get_acquisition_list(self, row=None):
         if row is None:

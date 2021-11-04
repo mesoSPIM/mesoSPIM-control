@@ -1,3 +1,38 @@
+## Release November 2021 [0.1.7]
+:sparkles: TIFF file name pattern for multi-tile/channel datasets is fully compatible with BigStitcher auto-loader, no renaming is needed.
+
+:bug: fix: Files must always have extension (currently one of `.tiff`, `.tif`, `.raw`, `.h5`). Files without extension return an error.
+
+:warning: Default file format for data saving has changed to `.h5` for streamlined import into BigStitcher.
+
+:gem: :gem: :gem: Autofocus has been added and works beautifully, outperforming expert human in focusing accuracy by 10x. Highly recommended!
+
+:bug: fix: Going back to previously configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
+
+:sparkles: Laser intensity can be edited directly via spinbox, alternative to slider. 
+  In Acquisition manager, slider is replaced by a spinbox for convenience. 
+  :warning: This change makes old acq tables incompatible with the new software.
+
+:sparkles: `Mark All` button is added to the Acquisition Manager, per @raacampbell request.
+
+:recycle: Buttons `Mark Rotation Position` and `Go To Rotation Position` are removed from the main panel, 
+since they are redundant and rarely (if ever) used. Rotation position can be marked in the Acquisition Manager, 
+and one can go to rotation position by using increment buttons.
+
+:bug: fixed: Image processing option generates MAX projections as TIFF files when output file format is either `.raw` or `.tiff`, #60.
+
+:sparkles: File name wizard auto-starts after Tiling Wizard.
+
+:gem: Image sharpness metric of user-defined ROI (by DCTS algorithm) is added to the Camera Window for easier adjustment of focus and ETL values.
+
+:gem: TIFF files can be opened for preview: `Ctrl + O`.
+
+:gem: Button `Freeze galvos` is added to ETL tab for quick adjustment of ETL parameters outside of sample, see [video tutorial](https://www.youtube.com/watch?v=dcJ9a7VALi8).
+
+:warning: Recommended Python upgrade to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
+
+:gem: :gem: Saving datasets as ImageJ TIFF files, including big ones (Fiji TIFF format that allows > 4 GB size). Voxel dimension saved in TIFF metadata.
+
 ## Release July 2021 [0.1.6]
 :gem: Simplified installation and upgrading via `pip install -r requirements-anaconda.txt`. See [installation instructions](https://github.com/mesoSPIM/mesoSPIM-control#python).
 

@@ -79,9 +79,9 @@ class ImageProcessingWizardSetOptionsPage(QtWidgets.QWizardPage):
         self.setTitle("Select processing options")
         #self.setSubTitle("Select the processing options:")
 
-        self.maxProjectionCheckBox = QtWidgets.QCheckBox('Post-stack MAX projection (adds time)', self)
+        self.maxProjectionCheckBox = QtWidgets.QCheckBox('Post-stack MAX projection', self)
         
-        self.registerField('maxProjEnabled',self.maxProjectionCheckBox)
+        self.registerField('maxProjEnabled', self.maxProjectionCheckBox)
 
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.maxProjectionCheckBox, 0, 0)

@@ -37,8 +37,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_stop_movement = QtCore.pyqtSignal()
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
-    sig_mark_rotation_position = QtCore.pyqtSignal()
-    
+
     def __init__(self, parent):
         super().__init__()
 
@@ -90,8 +89,6 @@ class mesoSPIM_Serial(QtCore.QObject):
         # self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         # self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
 
-        # self.parent.sig_mark_rotation_position.connect(self.sig_mark_rotation_position.emit)
-        self.parent.sig_go_to_rotation_position.connect(self.go_to_rotation_position)
         # self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
 
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
