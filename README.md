@@ -90,8 +90,11 @@ If there are problems with PyQt5 such as `ModuleNotFoundError: No module named '
 `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
 
 ## Documentation for users
-For instructions on how to use mesoSPIM-control, please check out the documentation in [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation), our youtube [channel](), 
-and subscribe to our mailing [list](mailto:mesospim-jedi+subscribe@googlegroups.com).
+For instructions on how to use mesoSPIM-control, please check out the documentation:
+* [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation), 
+* youtube [channel](https://www.youtube.com/channel/UCeZqIhsh8j9wUhtbLJ73wbQ), 
+* subscribe to our mailing [list](mailto:mesospim-jedi+subscribe@googlegroups.com).
+
 If you have questions, contact the current core developer [Nikita Vladimirov](mailto:vladimirov@hifo.uzh.ch).
 
 
