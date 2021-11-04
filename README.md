@@ -15,8 +15,8 @@ please add new sections from the [demo config file](/mesoSPIM/config/demo_config
 to your old configuration file in order to unlock all new features.
 
 ### Prerequisites
-* Windows 7 or Windows 10
-* Python >=3.7
+* Windows 7 or Windows 10, 64-bit
+* Python >=3.7 (3.7 is preferred, but the code is compatible with 3.6)
 
 #### Device drivers
 * [Hamamatsu DCAM API](https://dcam-api.com/) when using Hamamatsu Orca Flash 4.0 V2 or V3 sCMOS cameras. To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
@@ -33,7 +33,8 @@ mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/dow
 conda create -n py37 python=3.7
 conda activate py37
 ```
-The step above is optional because the latest Python 3.8 is backward compatible with Python 3.7 code.
+The step above is optional but recommended, to avoid conflicts if some libraries already exist or will be changed in the default environment.
+This helps keep your mesoSPIM-dedicated python environment clean and stable.
 
 Many libraries are already included in Anaconda. 
 Install mesoSPIM-specific libraries: 
@@ -78,21 +79,23 @@ python mesoSPIM_Control.py
 The software will now start. If you have multiple configuration files you will be prompted to choose one. 
 
 #### From start_mesoSPIM.bat file
-Open the `start_mesoSPIM.bat` file in text editor and configure Anaconda and `py36` path to your own. 
+Open the `start_mesoSPIM.bat` file in text editor and configure Anaconda and `py37` path to your own. 
 Once done, launch mesoSPIM by double-clicking the file. 
 Optionally, create a Windows shortcut (via right-click menu) and place it e.g. on your desktop. 
-Using shortcut saves a lot of time.
+Using shortcut saves a lot of time for users.
 
-#### Starting with interactive console
-You may also run the software with an interactive IPython console for de-bugging:
+#### Starting in demo mode
 ```
-python mesoSPIM_Control.py -C
+python mesoSPIM_Control.py -D
 ```
-For example, executing `mSpim.state.__dict__` in this console will show the current mesoSPIM state. 
 
 ## Troubleshooting
 If there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting 
 `mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
 
 ## Documentation for users
-For instructions on how to use mesoSPIM-control, please check out the documentation [here](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation).
+For instructions on how to use mesoSPIM-control, please check out the documentation in [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation), our youtube [channel](), 
+and subscribe to our mailing [list](mailto:mesospim-jedi+subscribe@googlegroups.com).
+If you have questions, contact the current core developer [Nikita Vladimirov](mailto:vladimirov@hifo.uzh.ch).
+
+
