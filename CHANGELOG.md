@@ -1,4 +1,4 @@
-# Latest changes
+## Release November 2021 [0.1.7]
 :sparkles: TIFF file name pattern for multi-tile/channel datasets is fully compatible with BigStitcher auto-loader, no renaming is needed.
 
 :bug: fix: Files must always have extension (currently one of `.tiff`, `.tif`, `.raw`, `.h5`). Files without extension return an error.
@@ -9,7 +9,7 @@
 
 :bug: fix: Going back to previously configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
 
-* Laser intensity can be edited directly via spinbox, alternative to slider. 
+:sparkles: Laser intensity can be edited directly via spinbox, alternative to slider. 
   In Acquisition manager, slider is replaced by a spinbox for convenience. 
   :warning: This change makes old acq tables incompatible with the new software.
 
