@@ -68,6 +68,17 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
+
+        # arrange the windows on the screen
+        if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
+            window_pos = self.cfg.ui_options['window_pos']
+        else:
+            window_pos = (200, 100)
+        self.move(window_pos[0], window_pos[1])
+        self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
+        self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
+
+        # set up some Acq manager signals
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
         self.acquisition_manager_window.sig_move_absolute.connect(self.sig_move_absolute.emit)
 
@@ -532,7 +543,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def run_selected_acquisition(self):
         row = self.acquisition_manager_window.get_first_selected_row()
 
-        if row == None:
+        if row is None:
             self.display_warning('No row selected - stopping!')
         else:
             # print('selected row:', row)
