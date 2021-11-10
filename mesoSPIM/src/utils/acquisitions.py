@@ -217,6 +217,7 @@ class Acquisition(indexed.IndexedOrderedDict):
             expected_focus += f_step
             focus_error = round(expected_focus - focus, 5)
 
+
 class AcquisitionList(list):
     '''
     Class for a list of acquisition objects
@@ -327,9 +328,18 @@ class AcquisitionList(list):
             file_exists = os.path.isfile(filename)
             if file_exists:
                 filename_list.append(filename)
+        return filename_list
 
-        return filename_list 
-        
+    def check_filename_extensions(self):
+        '''Returns files that have no extension, so their format is undefined.'''
+        filename_list = []
+        for i in range(len(self)):
+            filename = self[i]['filename']
+            ext = os.path.splitext(filename)[1]
+            if ext == '':
+                filename_list.append(filename)
+        return filename_list
+
     def check_for_duplicated_filenames(self):
         ''' Returns a list of duplicated filenames '''
         filenames = []

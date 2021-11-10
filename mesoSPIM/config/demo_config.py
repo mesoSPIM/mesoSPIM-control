@@ -12,12 +12,13 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 Dark mode: Renders the UI dark
 '''
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
-              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
-              'enable_y_buttons' : True, 
+              'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled
+              'enable_y_buttons' : True,
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'window_pos': (400, 100), # position of the main window on the screen, top left corner.
                }
                
 '''

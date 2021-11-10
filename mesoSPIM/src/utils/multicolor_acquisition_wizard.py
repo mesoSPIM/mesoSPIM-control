@@ -15,6 +15,7 @@ from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuild
 from .filename_wizard import FilenameWizard
 from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
+
 class MulticolorTilingWizard(QtWidgets.QWizard):
     '''
     Wizard to run
@@ -96,9 +97,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 
         super().done(r)
 
-    def update_model(self, model, table):
-        model.setTable(table)
-        self.state['acq_list']=self.acq_list
+    def update_model(self, model, acq_list):
+        model.setTable(acq_list)
+        self.state['acq_list'] = acq_list
 
     def update_image_counts(self):
         self.delta_x = abs(self.x_end - self.x_start)

@@ -1,9 +1,15 @@
-# Latest changes
-:gem: :gem: :gem: Autofocus has been added and works beautifully, outperforming expert human in focusing accuracy. Highly recommended!
+## Release November 2021 [0.1.7]
+:sparkles: TIFF file name pattern for multi-tile/channel datasets is fully compatible with BigStitcher auto-loader, no renaming is needed.
 
-:bug: fix: Going back to previosly configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
+:bug: fix: Files must always have extension (currently one of `.tiff`, `.tif`, `.raw`, `.h5`). Files without extension return an error.
 
-* Laser intensity can be edited directly via spinbox, alternative to slider. 
+:warning: Default file format for data saving has changed to `.h5` for streamlined import into BigStitcher.
+
+:gem: :gem: :gem: Autofocus has been added and works beautifully, outperforming expert human in focusing accuracy by 10x. Highly recommended!
+
+:bug: fix: Going back to previously configured channel in the `Tiling Manager` appended a new channel to the acquisition list, rather than amending it. 
+
+:sparkles: Laser intensity can be edited directly via spinbox, alternative to slider. 
   In Acquisition manager, slider is replaced by a spinbox for convenience. 
   :warning: This change makes old acq tables incompatible with the new software.
 
@@ -25,7 +31,7 @@ and one can go to rotation position by using increment buttons.
 
 :warning: Recommended Python upgrade to 3.7 because some libraries have limited support for 3.6 (e.g. `tifffile`).
 
-:gem: writing to ImageJ TIFF files, including > 4 GB in size. Voxel dimension saved in TIFF.
+:gem: :gem: Saving datasets as ImageJ TIFF files, including big ones (Fiji TIFF format that allows > 4 GB size). Voxel dimension saved in TIFF metadata.
 
 ## Release July 2021 [0.1.6]
 :gem: Simplified installation and upgrading via `pip install -r requirements-anaconda.txt`. See [installation instructions](https://github.com/mesoSPIM/mesoSPIM-control#python).
