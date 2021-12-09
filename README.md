@@ -93,7 +93,7 @@ If there are problems with PyQt5 such as `ModuleNotFoundError: No module named '
 For instructions on how to use mesoSPIM-control, please check out the documentation:
 * [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation), 
 * youtube [channel](https://www.youtube.com/channel/UCeZqIhsh8j9wUhtbLJ73wbQ), 
-* subscribe to our mailing [list](mailto:mesospim-jedi+subscribe@googlegroups.com).
+* subscribe to our [mailing list](http://eepurl.com/hPBRhj).
 
 If you have questions, contact the current core developer [Nikita Vladimirov](mailto:vladimirov@hifo.uzh.ch).
 
