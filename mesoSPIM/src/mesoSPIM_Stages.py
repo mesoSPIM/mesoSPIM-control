@@ -31,7 +31,7 @@ class mesoSPIM_Stage(QtCore.QObject):
     '''
 
     sig_position = QtCore.pyqtSignal(dict)
-    sig_status_message = QtCore.pyqtSignal(str, int)
+    sig_status_message = QtCore.pyqtSignal(str)
 
     sig_pause = QtCore.pyqtSignal(bool)
 
@@ -165,35 +165,35 @@ class mesoSPIM_Stage(QtCore.QObject):
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                 self.x_pos = self.x_pos + x_rel
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 self.y_pos = self.y_pos + y_rel
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                 self.z_pos = self.z_pos + z_rel
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 self.theta_pos = self.theta_pos + theta_rel
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
             if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
                 self.f_pos = self.f_pos + f_rel
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if wait_until_done == True:
             time.sleep(0.02)
@@ -208,7 +208,7 @@ class mesoSPIM_Stage(QtCore.QObject):
             if self.x_min < x_abs and self.x_max > x_abs:
                 self.x_pos = x_abs
             else:
-                self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!')
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
@@ -216,7 +216,7 @@ class mesoSPIM_Stage(QtCore.QObject):
             if self.y_min < y_abs and self.y_max > y_abs:
                 self.y_pos = y_abs
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!')
 
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
@@ -224,7 +224,7 @@ class mesoSPIM_Stage(QtCore.QObject):
             if self.z_min < z_abs and self.z_max > z_abs:
                 self.z_pos = z_abs
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!')
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs']
@@ -232,7 +232,7 @@ class mesoSPIM_Stage(QtCore.QObject):
             if self.f_min < f_abs and self.f_max > f_abs:
                 self.f_pos = f_abs
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -240,14 +240,14 @@ class mesoSPIM_Stage(QtCore.QObject):
             if self.theta_min < theta_abs and self.theta_max > theta_abs:
                 self.theta_pos = theta_abs
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done == True:
             time.sleep(3)
 
     @QtCore.pyqtSlot()
     def stop(self):
-        self.sig_status_message.emit('Stopped', 0)
+        self.sig_status_message.emit('Stopped')
 
     def zero_axes(self, list):
         for axis in list:
@@ -394,7 +394,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 x_rel = x_rel / 1000
                 self.pidevice.MVR({1: x_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
@@ -402,7 +402,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 y_rel = y_rel / 1000
                 self.pidevice.MVR({2: y_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
@@ -410,14 +410,14 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 z_rel = z_rel / 1000
                 self.pidevice.MVR({3: z_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel < self.theta_max:
                 self.pidevice.MVR({4: theta_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
@@ -425,7 +425,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 f_rel = f_rel / 1000
                 self.pidevice.MVR({5: f_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if wait_until_done:
             self.pitools.waitontarget(self.pidevice)
@@ -446,7 +446,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 x_abs = x_abs / 1000
                 self.pidevice.MOV({1: x_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!')
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
@@ -456,7 +456,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 y_abs = y_abs / 1000
                 self.pidevice.MOV({2: y_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!')
 
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
@@ -466,7 +466,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 z_abs = z_abs / 1000
                 self.pidevice.MOV({3: z_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!')
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs']
@@ -476,7 +476,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 f_abs = f_abs / 1000
                 self.pidevice.MOV({5: f_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -485,7 +485,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 ''' No Conversion to mm !!!! and command emission'''
                 self.pidevice.MOV({4: theta_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done:
             self.pitools.waitontarget(self.pidevice)
@@ -663,7 +663,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
                         move_value = move_value/1000
                     (getattr(self.pi_stages, ('pidevice_' + axis_name))).MVR({1 : move_value})
                 else:
-                    self.sig_status_message.emit('Relative movement stopped: {} Motion limit would be reached!'.format(axis_name),1000)
+                    self.sig_status_message.emit('Relative movement stopped: {} Motion limit would be reached!'.format(axis_name))
                 if (axis_name == 'f') or (wait_until_done == True):
                     self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # focus may be slower than expected
 
@@ -683,7 +683,7 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
                     (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: move_value})
                 else:
                     self.sig_status_message.emit(
-                        'Absolute movement stopped: {} Motion limit would be reached!'.format(axis_name), 1000)
+                        'Absolute movement stopped: {} Motion limit would be reached!'.format(axis_name))
                 if (axis_name == 'f') or (wait_until_done == True):
                     self.pitools.waitontarget(getattr(self.pi_stages, ('pidevice_' + axis_name)))  # focus may be slower than expected
 
@@ -808,35 +808,35 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                 self.xyz_stage.move_relative(xrel=int(x_rel))
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 self.xyz_stage.move_relative(yrel=int(y_rel))
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                 self.xyz_stage.move_relative(zrel=int(z_rel))
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 print('No rotation stage attached')
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
             if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
                 self.f_stage.move_relative(zrel=f_rel)
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if wait_until_done == True:
             pass
@@ -1009,21 +1009,21 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                 xyz_motion_dict.update({1: int(x_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 xyz_motion_dict.update({2: int(y_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                 xyz_motion_dict.update({3: int(z_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if xyz_motion_dict != {}:
             self.xyz_stage.move_relative(xyz_motion_dict)
@@ -1033,7 +1033,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 self.pidevice.MVR({6: theta_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
@@ -1041,7 +1041,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
                 f_rel = f_rel / 1000
                 self.pidevice.MVR({5: f_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if wait_until_done == True:
             self.xyz_stage.wait_until_done('XYZ')
@@ -1086,7 +1086,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
                 f_abs = f_abs / 1000
                 self.pidevice.MOV({5: f_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -1095,7 +1095,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
                 ''' No Conversion to mm !!!! and command emission'''
                 self.pidevice.MOV({6: theta_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done == True:
             self.pitools.waitontarget(self.pidevice)
@@ -1287,21 +1287,21 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                 xyz_motion_dict.update({1: int(x_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 xyz_motion_dict.update({2: int(y_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                 xyz_motion_dict.update({3: int(z_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if xyz_motion_dict != {}:
             self.xyz_stage.move_relative(xyz_motion_dict)
@@ -1311,14 +1311,14 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 self.pidevice.MVR({1: theta_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
             if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
                 self.f_stage.move_relative({3: int(f_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if wait_until_done == True:
             self.f_stage.wait_until_done('Z')
@@ -1363,7 +1363,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
                 ''' Conversion to mm and command emission'''
                 self.f_stage.move_absolute({3: int(f_abs)})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -1372,7 +1372,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
                 ''' No Conversion to mm !!!! and command emission'''
                 self.pidevice.MOV({1: theta_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done == True:
             self.pitools.waitontarget(self.pidevice)
@@ -1530,14 +1530,14 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                 xyf_motion_dict.update({1: int(x_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 xyf_motion_dict.update({2: int(y_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
@@ -1545,21 +1545,21 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
                 z_rel = z_rel / 1000
                 self.pidevice.MVR({2: z_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 self.pidevice.MVR({1: theta_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
             if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
                 xyf_motion_dict.update({3: int(f_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if xyf_motion_dict != {}:
             self.xyf_stage.move_relative(xyf_motion_dict)
@@ -1607,7 +1607,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
                 z_abs = z_abs / 1000
                 self.pidevice.MOV({2: z_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -1616,7 +1616,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
                 ''' No Conversion to mm !!!! and command emission'''
                 self.pidevice.MOV({1: theta_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done == True:
             self.xyf_stage.wait_until_done('XYZ')
@@ -1815,21 +1815,21 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                 xyz_motion_dict.update({1: int(x_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 xyz_motion_dict.update({2: int(y_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                 xyz_motion_dict.update({3: int(z_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if xyz_motion_dict != {}:
             self.xyz_stage.move_relative(xyz_motion_dict)
@@ -1839,14 +1839,14 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 self.pidevice.MVR({1: theta_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
             if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
                 self.f_stage.move_relative({3: int(f_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if wait_until_done == True:
             self.f_stage.wait_until_done('Z')
@@ -1891,7 +1891,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
                 ''' Conversion to mm and command emission'''
                 self.f_stage.move_absolute({3: int(f_abs)})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -1900,7 +1900,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
                 ''' No Conversion to mm !!!! and command emission'''
                 self.pidevice.MOV({1: theta_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done == True:
             self.pitools.waitontarget(self.pidevice)
@@ -2061,14 +2061,14 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
             if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                 xy_motion_dict.update({1: int(x_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
         if 'y_rel' in dict:
             y_rel = dict['y_rel']
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 xy_motion_dict.update({2: int(y_rel)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
@@ -2076,14 +2076,14 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
                 z_rel = z_rel / 1000
                 self.pidevice.MVR({2: z_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
 
         if 'theta_rel' in dict:
             theta_rel = dict['theta_rel']
             if self.theta_min < self.theta_pos + theta_rel and self.theta_max > self.theta_pos + theta_rel:
                 self.pidevice.MVR({1: theta_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
@@ -2091,7 +2091,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
                 f_rel = f_rel / 1000
                 self.pidevice.MVR({3: f_rel})
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if xy_motion_dict != {}:
             self.xy_stage.move_relative(xy_motion_dict)
@@ -2134,7 +2134,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
                 f_abs = f_abs / 1000
                 self.pidevice.MOV({3: f_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
@@ -2144,7 +2144,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
                 z_abs = z_abs / 1000
                 self.pidevice.MOV({2: z_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -2153,7 +2153,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
                 ''' No Conversion to mm !!!! and command emission'''
                 self.pidevice.MOV({1: theta_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!', 1000)
+                self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done == True:
             self.xy_stage.wait_until_done('XY')
@@ -2297,7 +2297,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
                 self.pos_timer.stop()
             if self.running_acquisition_flag == False:
                 self.running_acquisition_flag = True 
-                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!', 0)
+                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!')
                 # self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
             if self.counter % self.num_images_between_position_polls == 0:
                 # self.report_position()
@@ -2328,21 +2328,21 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
                 if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
                     motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_rel, 1)})
                 else:
-                    self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!',1000)
+                    self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
             if 'y_rel' in dict:
                 y_rel = dict['y_rel']
                 if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                     motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_rel, 1)})
                 else:
-                    self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
+                    self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
             if 'z_rel' in dict:
                 z_rel = dict['z_rel']
                 if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                     motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_rel, 1)})
                 else:
-                    self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+                    self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
             
             if 'theta_rel' in dict:
                 theta_rel = dict['theta_rel']
@@ -2350,14 +2350,14 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
                     ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
                     motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_rel*100)})
                 else:
-                    self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!',1000)
+                    self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
             if 'f_rel' in dict:
                 f_rel = dict['f_rel']
                 if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
                     motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_rel, 1)})
                 else:
-                    self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+                    self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
             if motion_dict != {}:
                 self.asi_stages.move_relative(motion_dict)
@@ -2538,9 +2538,9 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
             if self.pos_timer.isActive():
                 self.pos_timer.stop()
-            if self.running_acquisition_flag == False:
+            if self.running_acquisition_flag is False:
                 self.running_acquisition_flag = True 
-                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!', 0)
+                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!')
                 # self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
             if self.counter % self.num_images_between_position_polls == 0:
                 # self.report_position()
@@ -2571,26 +2571,26 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
             if self.y_min < self.y_pos + y_rel and self.y_max > self.y_pos + y_rel:
                 motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_rel, 1)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!',1000)
+                self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
         if 'z_rel' in dict:
             z_rel = dict['z_rel']
             if self.z_min < self.z_pos + z_rel and self.z_max > self.z_pos + z_rel:
                 motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_rel, 1)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!',1000)
+                self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
         
         if 'f_rel' in dict:
             f_rel = dict['f_rel']
             if self.f_min < self.f_pos + f_rel and self.f_max > self.f_pos + f_rel:
                 motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_rel, 1)})
             else:
-                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!',1000)
+                self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
         if motion_dict != {}:
             self.asi_stages.move_relative(motion_dict)
 
-        if wait_until_done == True:
+        if wait_until_done is True:
             self.asi_stages.wait_until_done()
     
     def move_absolute(self, dict, wait_until_done=False):

@@ -33,7 +33,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_unload_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
 
-    sig_status_message = QtCore.pyqtSignal(str, int)
+    sig_status_message = QtCore.pyqtSignal(str)
 
     sig_pause = QtCore.pyqtSignal(bool)
     
@@ -171,9 +171,9 @@ class mesoSPIM_Serial(QtCore.QObject):
                     # self.stage.start_timer()
                     # self.stage.report_position()
 
-    @QtCore.pyqtSlot(str, int)
-    def send_status_message(self, string, time):
-        self.sig_status_message.emit(string, time)
+    @QtCore.pyqtSlot(str)
+    def send_status_message(self, string):
+        self.sig_status_message.emit(string)
 
     @QtCore.pyqtSlot(bool)
     def pause(self, boolean):

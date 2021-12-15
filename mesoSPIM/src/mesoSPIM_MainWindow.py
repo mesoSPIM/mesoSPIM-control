@@ -222,18 +222,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             else:
                 return None
 
-    @QtCore.pyqtSlot(str, int)
-    def display_status_message(self, string, time=0):
+    @QtCore.pyqtSlot(str)
+    def display_status_message(self, string):
         '''
         Displays a message in the status bar for a time in ms
-
-        If time=0, the message will stay.
         '''
-
-        if time == 0:
-            self.statusBar().showMessage(string)
-        else:
-            self.statusBar().showMessage(string, time)
+        self.statusBar().showMessage(string)
 
     def pos2str(self, position):
         ''' Little helper method for converting positions to strings '''
