@@ -366,11 +366,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):
-        '''Blanking: Enable only if blanking is off'''
-
-        if self.cfg.laser_blanking == False:
-            self.laserenabler.enable(laser)
-
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'laser' : laser})
             if update_etl:
@@ -504,11 +499,11 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
-        if self.cfg.laser_blanking == True:
+        if self.cfg.laser_blanking == 'images':
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
-        if self.cfg.laser_blanking == True:
+        if self.cfg.laser_blanking == 'images':
             self.laserenabler.disable(laser)
         self.waveformer.stop_tasks()
         self.waveformer.close_tasks()
@@ -521,12 +516,12 @@ class mesoSPIM_Core(QtCore.QObject):
     def snap_image_in_series(self):
         '''Snaps and image from a series without waveform update'''
         laser = self.state['laser']
-        if self.cfg.laser_blanking == True:
+        if self.cfg.laser_blanking == 'images':
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
         self.waveformer.stop_tasks()
-        if self.cfg.laser_blanking == True:
+        if self.cfg.laser_blanking == 'images':
             self.laserenabler.disable(laser)
 
     def close_image_series(self):
@@ -737,7 +732,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.f_step_generator = acq.get_focus_stepsize_generator()
 
-               
         if self.TTL_mode_enabled_in_cfg is True:
             ''' The relative movement has to be carried out once with the ASI-controller '''
             self.move_relative(acq.get_delta_z_and_delta_f_dict(inverted=True))
@@ -760,6 +754,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.image_acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
         move_dict = acq.get_delta_dict()
+        laser = self.state['laser']
+        if self.cfg.laser_blanking == 'stacks':
+            self.laserenabler.enable(laser)
 
         for i in range(steps):
             if self.stopflag is True:
@@ -821,7 +818,8 @@ class mesoSPIM_Core(QtCore.QObject):
                                    self.image_count,
                                    convert_seconds_to_string(time_passed),
                                    convert_seconds_to_string(time_remaining))
-
+        if self.cfg.laser_blanking == 'stacks':
+            self.laserenabler.disable(laser)
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
 

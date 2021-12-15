@@ -67,12 +67,17 @@ laserdict = {'405 nm': 'PXI6733/port0/line2',
              '594 nm': 'PXI6733/port0/line6',
              '647 nm': 'PXI6733/port0/line7'}
 
+
+''' Laser blanking indicates whether the laser enable lines should be set to LOW between
+individual images or stacks. This is helpful to avoid laser bleedthrough between images caused by insufficient
+modulation depth of the analog input (even at 0V, some laser light is still emitted).
+'''
+laser_blanking = 'images' # if 'images', laser is off before and after every image; if 'stacks', before and after each stack.
+
 '''
 Assignment of the analog outputs of the Laser card to the channels
 The Empty slots are placeholders.
 '''
-laser_blanking = False
-
 laser_designation = {'405 nm' : 0,
                      '488 nm' : 1,
                      '515 nm' : 2,
