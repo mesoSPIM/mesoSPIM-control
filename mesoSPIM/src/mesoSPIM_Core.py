@@ -499,11 +499,11 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
-        if self.cfg.laser_blanking == 'images':
+        if self.cfg.laser_blanking in ('images', 'image'):
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
-        if self.cfg.laser_blanking == 'images':
+        if self.cfg.laser_blanking in ('images', 'image'):
             self.laserenabler.disable(laser)
         self.waveformer.stop_tasks()
         self.waveformer.close_tasks()
@@ -516,12 +516,12 @@ class mesoSPIM_Core(QtCore.QObject):
     def snap_image_in_series(self):
         '''Snaps and image from a series without waveform update'''
         laser = self.state['laser']
-        if self.cfg.laser_blanking == 'images':
+        if self.cfg.laser_blanking in ('images', 'image'):
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
         self.waveformer.stop_tasks()
-        if self.cfg.laser_blanking == 'images':
+        if self.cfg.laser_blanking in ('images', 'image'):
             self.laserenabler.disable(laser)
 
     def close_image_series(self):
@@ -537,6 +537,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_prepare_live.emit()
 
         self.open_shutters()
+        laser = self.state['laser']
+        if self.cfg.laser_blanking in ('stacks', 'stack'):
+            self.laserenabler.enable(laser)
         while self.stopflag is False:
             ''' Needs update to use snap image in series '''
             self.snap_image()
@@ -551,6 +554,8 @@ class mesoSPIM_Core(QtCore.QObject):
             ''' How to handle a possible shutter switch?'''
             self.open_shutters()
 
+        if self.cfg.laser_blanking in ('stacks', 'stack'):
+            self.laserenabler.disable(laser)
         self.close_shutters()
         self.sig_end_live.emit()
         self.sig_finished.emit()
