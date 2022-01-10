@@ -69,7 +69,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
 
-        # arrange the windows on the screen
+        # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
             window_pos = self.cfg.ui_options['window_pos']
         else:
@@ -298,6 +298,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_TIFF.triggered.connect(self.open_tiff)
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
+        self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
     def initialize_and_connect_widgets(self):
         ''' Connecting the menu actions '''
@@ -719,5 +720,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
             #self.sig_state_request.emit({'ETL_cfg_file' : path})
     
-
-    
+    def cascade_all_windows(self):
+        if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
+            window_pos = self.cfg.ui_options['window_pos']
+        else:
+            window_pos = (100, 100)
+        self.move(window_pos[0], window_pos[1])
+        self.camera_window.move(window_pos[0] + 100, window_pos[1] + 100)
+        self.acquisition_manager_window.move(window_pos[0] + 200, window_pos[1] + 200)
