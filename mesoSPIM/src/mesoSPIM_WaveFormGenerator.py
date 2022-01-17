@@ -52,8 +52,14 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state['galvo_l_offset'] = self.cfg.startup['galvo_l_offset']
         self.state['galvo_r_offset'] = self.cfg.startup['galvo_r_offset']
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
-        self.state['stage_trigger_delay_%'] = self.cfg.startup['stage_trigger_delay_%']
-        self.state['stage_trigger_pulse_%'] = self.cfg.startup['stage_trigger_pulse_%']
+        if 'stage_trigger_delay_%' in self.cfg.startup.keys():
+            self.state['stage_trigger_delay_%'] = self.cfg.startup['stage_trigger_delay_%']
+        else:
+            self.state['stage_trigger_delay_%'] = None
+        if 'stage_trigger_pulse_%' in self.cfg.startup.keys():
+            self.state['stage_trigger_pulse_%'] = self.cfg.startup['stage_trigger_pulse_%']
+        else:
+            self.state['stage_trigger_pulse_%'] = None
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
