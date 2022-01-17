@@ -99,6 +99,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state']='init'
 
         ''' The signal-slot switchboard '''
+        # Note the name duplication (shadowing)!!
+        # parent.sig_state_request -> self.state_request_handler
+        # self.sig_state_request -> self.waveformer.state_request_handler
         self.parent.sig_state_request.connect(self.state_request_handler)
 
         self.parent.sig_execute_script.connect(self.execute_script)
@@ -206,7 +209,7 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            # print('Core Thread: State request: Key: ', key, ' Value: ', value)
+            logger.info(f'Core Thread: State request: Key: {key}, Value: {value}')
             '''
             The request handling is done with exec() to write fewer lines of
             code.
@@ -361,6 +364,7 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             self.sig_state_request.emit({'laser':laser})
             if update_etl:
+                #print("ETL updated")
                 self.sig_state_request.emit({'set_etls_according_to_laser' : laser})
 
     @QtCore.pyqtSlot(str)

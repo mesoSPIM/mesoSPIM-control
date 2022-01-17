@@ -244,23 +244,18 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         ETL-Right-Offset
         ETL-Right-Amp
         """
-        # print('Updating ETL parameters from file:', cfg_path)
+        #print('Updating ETL parameters from file:', cfg_path)
 
         self.sig_update_gui_from_state.emit(True)
         with open(cfg_path) as file:
             reader = csv.DictReader(file,delimiter=';')
             #print('opened csv')
+            match_found = False
             for row in reader:
                 if row['Wavelength'] == laser and row['Zoom'] == zoom:
-
-                    ''' Some diagnostic tracing statements
-
+                    match_found = True
+                    # Some diagnostic tracing statements
                     # print(row)
-                    # print('updating parameters')
-                    # print(self.etl_l['amplitude'])
-
-                    '''
-
                     ''' updating internal state '''
                     etl_l_offset = float(row['ETL-Left-Offset'])
                     etl_l_amplitude = float(row['ETL-Left-Amp'])
@@ -273,13 +268,16 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                       'etl_r_amplitude' : etl_r_amplitude}
 
                     '''  Now the GUI needs to be updated '''
-                    # print('Parameters set from csv')
+                    logger.info('Parameters set from csv')
                     self.state.set_parameters(parameter_dict)
 
-        '''Update waveforms with the new parameters'''
-
-        self.create_waveforms()
-        self.sig_update_gui_from_state.emit(False)
+        if match_found:
+            '''Update waveforms with the new parameters'''
+            self.create_waveforms()
+            self.sig_update_gui_from_state.emit(False)
+        else:
+            print(f"Error: laser {laser}, zoom {zoom} pair not found in file {cfg_path}. "
+                  f"Check is file {cfg_path} is configured correctly for your laser and zoom dictionary")
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):
