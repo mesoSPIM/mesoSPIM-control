@@ -3329,6 +3329,7 @@ ETL tab</string>
     </property>
     <addaction name="actionOpen_Camera_Window"/>
     <addaction name="actionOpen_Acquisition_Manager"/>
+    <addaction name="actionCascade_windows"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -3386,6 +3387,11 @@ ETL tab</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionCascade_windows">
+   <property name="text">
+    <string>Cascade all windows</string>
    </property>
   </action>
  </widget>
