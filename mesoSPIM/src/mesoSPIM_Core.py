@@ -527,10 +527,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
         self.waveformer.close_tasks()
-
-    '''
-    Execution code for major imaging modes starts here
-    '''
+        logger.info("close_image_series() finished")
 
     def live(self):
         self.stopflag = False

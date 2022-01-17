@@ -60,7 +60,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=3)
         self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
         self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=3)
-        self.parent.sig_end_image_series.connect(self.end_image_series, type=3)
+        # The following connection can cause problems when disk is too slow (e.g. writing TIFF files on HDD drive):
+        self.parent.sig_end_image_series.connect(self.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
 
         self.parent.sig_prepare_live.connect(self.prepare_live, type = 3)
         self.parent.sig_get_live_image.connect(self.get_live_image)
@@ -187,14 +188,16 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):
+        logger.info("end_image_series() started")
         try:
             self.camera.close_image_series()
+            logger.info("self.camera.close_image_series()")
         except Exception as e:
             logger.warning(f'Camera: Image Series could not be closed: {e}')
-            
+
         self.image_writer.end_acquisition(acq, acq_list)
 
-        self.end_time =  time.time()
+        self.end_time = time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
         logger.info(f'Camera: Framerate: {framerate}')
         self.sig_finished.emit()

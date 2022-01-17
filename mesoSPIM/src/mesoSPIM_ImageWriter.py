@@ -137,6 +137,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.cur_image += 1
         
     def end_acquisition(self, acq, acq_list):
+        logger.info("end_acquisition() started")
         if self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:
