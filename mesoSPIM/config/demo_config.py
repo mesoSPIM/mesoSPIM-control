@@ -18,7 +18,8 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
-              'window_pos': (400, 100), # position of the main window on the screen, top left corner.
+              'window_pos': (100, 100), # position of the main window on the screen, top left corner.
+              'usb_webcam': True, # open USB web-camera in a separate window
                }
                
 '''
