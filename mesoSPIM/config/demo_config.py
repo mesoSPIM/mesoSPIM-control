@@ -387,6 +387,8 @@ startup = {
 'laser_r_delay_%' : 10,
 'laser_r_pulse_%' : 87,
 'laser_r_max_amplitude_%' : 100,
+'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
+'stage_trigger_pulse_%' : 1,
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
