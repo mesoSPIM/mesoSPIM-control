@@ -20,3 +20,5 @@ mesoSPIM/test/fixtures/
 !mesoSPIM/tmp/readme.txt
 *.DS_Store
 .gitignore
+*.bat
+!mesoSPIM/start_mesoSPIM.bat
