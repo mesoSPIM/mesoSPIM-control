@@ -47,15 +47,15 @@ class mesoSPIM_StateSingleton():
                             'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
                             'ttl_movement_enabled_during_acq' : False,
                             'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
-                            'filename' : 'file.raw',
+                            'filename' : 'file.tif',
                             'folder' : 'tmp',
                             'snap_folder' : 'tmp',
                             'file_prefix' : '',
                             'file_suffix' : '000001',
                             'zoom' : '1x',
-                            'pixelsize' : 6.55,
+                            'pixelsize' : 1.0,
                             'laser' : '488 nm',
-                            'max_laser_voltage':10,
+                            'max_laser_voltage':1,
                             'intensity' : 10,
                             'shutterstate':False, # Is the shutter open or not?
                             'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
