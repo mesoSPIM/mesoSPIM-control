@@ -96,7 +96,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.cfg = self.parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
-        self.state['state']='init'
+        self.state['state'] = 'init'
 
         ''' The signal-slot switchboard '''
         # Note the name duplication (shadowing)!!

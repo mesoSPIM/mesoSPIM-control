@@ -23,6 +23,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
+
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
     Main application window which instantiates worker objects and moves them

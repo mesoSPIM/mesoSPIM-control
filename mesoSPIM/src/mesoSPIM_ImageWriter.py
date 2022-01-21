@@ -89,9 +89,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             shape = (self.max_frame, self.x_pixels, self.y_pixels)
             px_size_um = self.cfg.pixelsize[acq['zoom']]
             sign_xyz = (1 - np.array(flip_flags)) * 2 - 1
-            affine_matrix = np.array(((1.0, 0.0, 0.0, sign_xyz[1] * acq['y_pos']/px_size_um),
-                                      (0.0, 1.0, 0.0, sign_xyz[0] * acq['x_pos']/px_size_um),
-                                      (0.0, 0.0, 1.0, sign_xyz[2] * acq['z_start']/acq['z_step'])))
+            if hasattr(self.cfg, "hdf5") and ('transpose_xy' in self.cfg.hdf5.keys())\
+                    and self.cfg.hdf5['transpose_xy'] is False:
+                tile_translation = (sign_xyz[0] * acq['x_pos'] / px_size_um,
+                                    sign_xyz[1] * acq['y_pos'] / px_size_um,
+                                    sign_xyz[2] * acq['z_start'] / acq['z_step'])
+            else: # Hamamatsu Orca Flash 4 backward compatibility
+                tile_translation = (sign_xyz[1] * acq['y_pos'] / px_size_um,
+                                    sign_xyz[0] * acq['x_pos'] / px_size_um,
+                                    sign_xyz[2] * acq['z_start'] / acq['z_step'])
+            affine_matrix = np.array(((1.0, 0.0, 0.0, tile_translation[0]),
+                                      (0.0, 1.0, 0.0, tile_translation[1]),
+                                      (0.0, 0.0, 1.0, tile_translation[2])))
             self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
