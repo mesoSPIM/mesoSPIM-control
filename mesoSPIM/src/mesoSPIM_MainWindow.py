@@ -17,6 +17,7 @@ from PyQt5.uic import loadUi
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
+from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
@@ -70,11 +71,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
 
+        # create window for USB webcam
+        if hasattr(self.cfg, 'ui_options') and 'usb_webcam' in self.cfg.ui_options.keys() and self.cfg.ui_options['usb_webcam']:
+            self.webcam_window = WebcamWindow(self)
+            self.webcam_window.show()
+        else:
+            self.webcam_window = None
+
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
             window_pos = self.cfg.ui_options['window_pos']
         else:
-            window_pos = (200, 100)
+            window_pos = (100, 100)
         self.move(window_pos[0], window_pos[1])
         self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
         self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
@@ -167,6 +175,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.close()
         if self.optimizer:
             self.optimizer.close()
+        if self.webcam_window:
+            self.webcam_window.close()
         self.close()
 
     def open_tiff(self):
