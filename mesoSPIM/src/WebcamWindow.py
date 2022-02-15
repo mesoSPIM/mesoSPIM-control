@@ -1,5 +1,6 @@
 import numpy as np
 import pyqtgraph as pg
+import sys
 
 import logging
 logger = logging.getLogger(__name__)
@@ -18,8 +19,9 @@ class WebcamWindow(QtWidgets.QWidget):
         '''Parent must be an mesoSPIM_MainWindow() object'''
         super().__init__()
         self.parent = parent # the mesoSPIM_MainWindow() object
+        self.WEBCAM_ID = 0
         loadUi('gui/WebcamWindow.ui', self)
-        self.setWindowTitle('Webcam view')
+        self.setWindowTitle(f'Webcam view, camera ID {self.WEBCAM_ID}')
         self.show()
         self.start_capture()
 
@@ -27,7 +29,7 @@ class WebcamWindow(QtWidgets.QWidget):
         webcams = QCameraInfo.availableCameras()
         print(f"Webcams found: {len(webcams)}")
         if len(webcams) > 0:
-            self.webcam = QCamera(webcams[0])
+            self.webcam = QCamera(webcams[self.WEBCAM_ID])
             self.webcam.setCaptureMode(QCamera.CaptureViewfinder)
             self.vf_settings = QCameraViewfinderSettings()
             #self.vf_settings.setResolution(960, 720)
@@ -37,4 +39,10 @@ class WebcamWindow(QtWidgets.QWidget):
             self.webcam.start()
             #print(f"Supported webcam viewfinder resolutions {self.webcam.supportedViewfinderResolutions()}")
             self.viewfinder.show()
+        else:
+            print("Webcam not found")
 
+if __name__ == '__main__':
+    app = QtWidgets.QApplication([])
+    window = WebcamWindow()
+    sys.exit(app.exec_())
