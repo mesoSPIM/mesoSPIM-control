@@ -19,6 +19,7 @@ class WebcamWindow(QtWidgets.QWidget):
         '''Parent must be an mesoSPIM_MainWindow() object'''
         super().__init__()
         self.parent = parent # the mesoSPIM_MainWindow() object
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.WEBCAM_ID = 0
         loadUi('gui/WebcamWindow.ui', self)
         self.setWindowTitle(f'Webcam view, camera ID {self.WEBCAM_ID}')
@@ -41,6 +42,7 @@ class WebcamWindow(QtWidgets.QWidget):
             self.viewfinder.show()
         else:
             print("Webcam not found")
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication([])

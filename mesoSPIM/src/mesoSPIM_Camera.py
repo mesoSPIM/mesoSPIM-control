@@ -234,7 +234,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot()
     def end_live(self):
         self.camera.close_live_mode()
-        self.end_time =  time.time()
+        self.end_time = time.time()
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
         logger.info(f'Camera: Finished Live Mode: Framerate: {framerate}')
 

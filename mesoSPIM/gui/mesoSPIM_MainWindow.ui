@@ -658,7 +658,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>5</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -3274,6 +3274,27 @@ ETL tab</string>
             </property>
             <property name="text">
              <string>Run Lightsheet Switching  Mode</string>
+            </property>
+           </widget>
+           <widget class="QPushButton" name="ContrastWindowButton">
+            <property name="geometry">
+             <rect>
+              <x>430</x>
+              <y>10</y>
+              <width>361</width>
+              <height>71</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Open image contrast window</string>
             </property>
            </widget>
           </widget>

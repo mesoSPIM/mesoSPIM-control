@@ -124,6 +124,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
+        self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.set_image)
         #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         ''' Set the serial thread up '''
         self.serial_thread = QtCore.QThread()

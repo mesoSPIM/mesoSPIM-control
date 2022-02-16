@@ -18,6 +18,7 @@ from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
+from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
@@ -49,6 +50,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_save_etl_config = QtCore.pyqtSignal()
     sig_poke_demo_thread = QtCore.pyqtSignal()
     sig_launch_optimizer = QtCore.pyqtSignal(dict)
+    sig_launch_contrast_window = QtCore.pyqtSignal()
 
     def __init__(self, config=None):
         super().__init__()
@@ -122,16 +124,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_warning.connect(self.display_warning)
 
         self.optimizer = None
+        self.contrast_window = None
+
         # The signal switchboard, MainWindow -> Core
         self.sig_launch_optimizer.connect(self.launch_optimizer)
-
-        # Connecting the camera frames (this is a deep connection and slightly
-        # risky) It will break immediately when there is an API change.
-        try:
-            self.core.camera_worker.sig_camera_frame.connect(self.camera_window.set_image)
-            # print('Camera connected successfully to the display window!')
-        except:
-            logger.warning(f'Main Window: Camera not connected to display!', exc_info=True)
+        self.sig_launch_contrast_window.connect(self.launch_contrast_window)
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
@@ -177,6 +174,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.optimizer.close()
         if self.webcam_window:
             self.webcam_window.close()
+        if self.contrast_window:
+            self.contrast_window.close()
         self.close()
 
     def open_tiff(self):
@@ -332,6 +331,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
         self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'etl_offset', 'amplitude': 0.5}))
+        self.ContrastWindowButton.clicked.connect(lambda: self.sig_launch_contrast_window.emit())
 
         ''' Disabling UI buttons if necessary '''
         if hasattr(self.cfg, 'ui_options'):
@@ -607,6 +607,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else:
             self.optimizer.set_parameters(ini_dict)
             self.optimizer.show()
+
+    @QtCore.pyqtSlot()
+    def launch_contrast_window(self):
+        if not self.contrast_window:
+            self.contrast_window = mesoSPIM_ContrastWindow(self)
+            self.core.camera_worker.sig_camera_frame.connect(self.contrast_window.set_image)
+        else:
+            self.contrast_window.active = True
+            self.contrast_window.show()
 
     @QtCore.pyqtSlot(bool)
     def enable_gui_updates_from_state(self, boolean):
