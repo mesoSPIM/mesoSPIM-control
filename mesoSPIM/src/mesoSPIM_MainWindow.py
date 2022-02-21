@@ -172,8 +172,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.close()
         if self.optimizer:
             self.optimizer.close()
-        if self.webcam_window:
+        try:
             self.webcam_window.close()
+        except:
+            pass
         if self.contrast_window:
             self.contrast_window.close()
         self.close()

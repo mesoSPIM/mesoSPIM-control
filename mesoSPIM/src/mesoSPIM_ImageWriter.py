@@ -24,6 +24,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
+        self.running = False
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
         self.y_pixels = self.cfg.camera_parameters['y_pixels']
@@ -124,27 +125,49 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.mip_image = np.zeros((self.y_pixels, self.x_pixels), 'uint16')
 
         self.cur_image = 0
+        self.running = True
 
     def write_image(self, image, acq, acq_list):
-        xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
-        if self.file_extension == '.h5':
-            self.bdv_writer.append_plane(plane=image, z=self.cur_image,
-                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
-                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                         angle=acq_list.find_value_index(acq['rot'], 'rot'),
-                                         tile=acq_list.get_tile_index(acq)
-                                         )
-        elif self.file_extension == '.raw':
-            self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image.flatten()
-        elif self.file_extension in self.tiff_aliases:
-            self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
-                                   metadata={'spacing': acq['z_step']})
+        if self.running:
+            xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
+            if self.file_extension == '.h5':
+                self.bdv_writer.append_plane(plane=image, z=self.cur_image,
+                                             illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                             channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                             angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                             tile=acq_list.get_tile_index(acq)
+                                             )
+            elif self.file_extension == '.raw':
+                self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image.flatten()
+            elif self.file_extension in self.tiff_aliases:
+                self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
+                                       metadata={'spacing': acq['z_step']})
 
-        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
-            self.mip_image = np.maximum(self.mip_image, image)
+            if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
+                self.mip_image = np.maximum(self.mip_image, image)
 
-        self.cur_image += 1
-        
+            self.cur_image += 1
+        else:
+            logger.info("No image, running terminated")
+
+    def abort_writing(self):
+        """Terminate writing and close all files if STOP button is pressed"""
+        if self.running:
+            try:
+                if self.file_extension == '.h5':
+                    self.bdv_writer.close()
+                elif self.file_extension == '.raw':
+                    del self.xy_stack
+                elif self.file_extension in self.tiff_aliases:
+                    self.tiff_writer.close()
+            except Exception as e:
+                    logger.error(f'{e}')
+            print("Writing terminated, files closed")
+            self.running = False
+        else:
+            pass
+            print("No writing was active")
+
     def end_acquisition(self, acq, acq_list):
         logger.info("end_acquisition() started")
         if self.file_extension == '.h5':
@@ -177,6 +200,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.tiff_mip_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
+
+        self.running = False
 
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
