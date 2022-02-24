@@ -31,7 +31,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.image = self.roi = self.roi_dims = self.img_subsampling = None
         self.ini_state = self.ini_metric = self.new_state = self.min_value = self.max_value = None
         self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
-        self.delay_s = 0.25  # give some delay between snaps to avoid state update hickups
+        self.delay_s = 0.5  # time delay between snaps to avoid state update hickups, esp for heavy lens-camera assembly during AF
 
         loadUi('gui/mesoSPIM_Optimizer.ui', self)
         self.setWindowTitle('mesoSPIM-Optimizer')
@@ -69,8 +69,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         elif orientation == 'v':
             self.parent.camera_window.set_roi('box', (img_w*(1-roi_perc)//2, 0, int(img_w*roi_perc), img_h))
         elif orientation == 'c':
-            self.parent.camera_window.set_roi('box', (img_w * (1 - roi_perc) // 2, (img_h * (1 - roi_perc)) // 2,
-                                                    int(img_w * roi_perc), int(img_h * roi_perc)))
+            self.parent.camera_window.set_roi('box', (img_h * (1 - roi_perc) // 2, (img_w * (1 - roi_perc)) // 2,
+                                                    int(img_h * roi_perc), int(img_w * roi_perc)))
         elif orientation is None:
             self.parent.camera_window.set_roi(None, (0, 0, img_w, img_h))
         else:
