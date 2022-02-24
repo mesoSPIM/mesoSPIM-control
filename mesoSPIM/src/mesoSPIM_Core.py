@@ -485,17 +485,17 @@ class mesoSPIM_Core(QtCore.QObject):
     '''
     Sub-Imaging modes
     '''
-    def snap(self, write_flag=True):
+    def snap(self, write_flag=True, laser_blanking=True):
         self.sig_prepare_live.emit()
         self.open_shutters()
-        self.snap_image()
+        self.snap_image(laser_blanking)
         self.sig_get_snap_image.emit(write_flag)
         self.close_shutters()
         self.sig_end_live.emit()
         self.sig_finished.emit()
         QtWidgets.QApplication.processEvents()
 
-    def snap_image(self):
+    def snap_image(self, laser_blanking=True):
         '''Snaps a single image after updating the waveforms.
 
         Can be used in acquisitions where changing waveforms are required,
@@ -506,11 +506,11 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
-        if self.cfg.laser_blanking in ('images', 'image'):
+        if laser_blanking:
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
-        if self.cfg.laser_blanking in ('images', 'image'):
+        if laser_blanking:
             self.laserenabler.disable(laser)
         self.waveformer.stop_tasks()
         self.waveformer.close_tasks()
@@ -520,15 +520,15 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
 
-    def snap_image_in_series(self):
+    def snap_image_in_series(self, laser_blanking=True):
         '''Snaps and image from a series without waveform update'''
         laser = self.state['laser']
-        if self.cfg.laser_blanking in ('images', 'image'):
+        if laser_blanking:
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
         self.waveformer.stop_tasks()
-        if self.cfg.laser_blanking in ('images', 'image'):
+        if laser_blanking:
             self.laserenabler.disable(laser)
 
     def close_image_series(self):
@@ -539,14 +539,13 @@ class mesoSPIM_Core(QtCore.QObject):
     def live(self):
         self.stopflag = False
         self.sig_prepare_live.emit()
-
         self.open_shutters()
         laser = self.state['laser']
-        if self.cfg.laser_blanking in ('stacks', 'stack'):
-            self.laserenabler.enable(laser)
+        laser_blanking = False if self.cfg.laser_blanking in ('stack', 'stacks') else True
+        self.laserenabler.enable(laser)
         while self.stopflag is False:
             ''' Needs update to use snap image in series '''
-            self.snap_image()
+            self.snap_image(laser_blanking)
             self.sig_get_live_image.emit()
 
             while self.pauseflag is True:
@@ -558,15 +557,13 @@ class mesoSPIM_Core(QtCore.QObject):
             ''' How to handle a possible shutter switch?'''
             self.open_shutters()
 
-        if self.cfg.laser_blanking in ('stacks', 'stack'):
-            self.laserenabler.disable(laser)
+        self.laserenabler.disable(laser)
         self.close_shutters()
         self.sig_end_live.emit()
         self.sig_finished.emit()
 
     def start(self, row=None):
         self.stopflag = False
-
         if row is None:
             acq_list = self.state['acq_list']
         else:
@@ -598,9 +595,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_update_gui_from_state.emit(False)
 
     def prepare_acquisition_list(self, acq_list):
-        '''
-        Housekeeping: Prepare the acquisition list
-        '''
+        ''' Housekeeping: Prepare the acquisition list '''
         self.image_count = 0
         self.acquisition_count = 0
         self.total_acquisition_count = len(acq_list)
@@ -764,8 +759,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         move_dict = acq.get_delta_dict()
         laser = self.state['laser']
-        if self.cfg.laser_blanking == 'stacks':
-            self.laserenabler.enable(laser)
+        self.laserenabler.enable(laser)
+        laser_blanking = False if self.cfg.laser_blanking in ('stack', 'stacks') else True
 
         for i in range(steps):
             if self.stopflag is True:
@@ -774,7 +769,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.sig_finished.emit()
                 break
             else:
-                self.snap_image_in_series()
+                self.snap_image_in_series(laser_blanking)
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
                 #time.sleep(0.02)
                 # self.sig_add_images_to_image_series_and_wait_until_done.emit()
@@ -827,8 +822,7 @@ class mesoSPIM_Core(QtCore.QObject):
                                    self.image_count,
                                    convert_seconds_to_string(time_passed),
                                    convert_seconds_to_string(time_remaining))
-        if self.cfg.laser_blanking == 'stacks':
-            self.laserenabler.disable(laser)
+        self.laserenabler.disable(laser)
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
 

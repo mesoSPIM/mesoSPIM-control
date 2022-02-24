@@ -166,7 +166,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         for i, v in enumerate(self.search_grid):
             self.set_state(v)
             time.sleep(self.delay_s)
-            self.core.snap(write_flag=False) # this shares downsampled image via slot self.set_image()
+            self.core.snap(write_flag=False, laser_blanking=True) # this shares downsampled image via slot self.set_image()
             self.metric_array[i] = shannon_dct(self.roi)
 
         self.set_state(self.ini_state) # Reset to initial state
