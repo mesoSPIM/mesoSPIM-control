@@ -719,8 +719,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.sig_state_request.emit({'ETL_cfg_file' : path})
 
     def save_etl_config(self):
-        ''' Save current ETL parameters into config
-        '''
+        ''' Save current ETL parameters into config '''
         self.sig_save_etl_config.emit()
 
     def display_warning(self, string):

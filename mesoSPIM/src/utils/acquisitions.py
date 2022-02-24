@@ -317,8 +317,15 @@ class AcquisitionList(list):
             delta_rot = self[i+1].get_startpoint()['theta_abs']-self[i].get_startpoint()['theta_abs']
             if delta_rot != 0:
                 return True
-                break
         return False
+
+    def get_all_filenames(self):
+        ''' Returns a list of all filenames '''
+        filename_list = []
+        for i in range(len(self)):
+            filename = self[i]['folder']+'/'+self[i]['filename']
+            filename_list.append(filename)
+        return filename_list
 
     def check_for_existing_filenames(self):
         ''' Returns a list of existing filenames '''

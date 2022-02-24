@@ -3,10 +3,10 @@ Core for the mesoSPIM project
 =============================
 '''
 import os
-import numpy as np
+import ctypes
 import time
-from scipy import signal
-import csv
+import platform
+import io
 import traceback
 
 import logging
@@ -574,6 +574,8 @@ class mesoSPIM_Core(QtCore.QObject):
         filename_list = acq_list.check_for_existing_filenames()
         duplicates_list = acq_list.check_for_duplicated_filenames()
         files_without_extensions = acq_list.check_filename_extensions()
+        free_disk_space_bytes = self.get_free_disk_space(acq_list)
+        total_required_bytes = self.get_required_disk_space(acq_list)
 
         if nonexisting_folders_list:
             self.sig_warning.emit('The following folders do not exist - stopping! \n'+self.list_to_string_with_carriage_return(nonexisting_folders_list))
@@ -587,12 +589,53 @@ class mesoSPIM_Core(QtCore.QObject):
         elif files_without_extensions:
             self.sig_warning.emit('Some files have no extensions (.raw, .tiff, .h5) - stopping! \n' + self.list_to_string_with_carriage_return(files_without_extensions))
             self.sig_finished.emit()
+        elif free_disk_space_bytes < total_required_bytes * 1.02:
+            self.sig_warning.emit('Not sufficient disk space - stopping! \n')
+            self.sig_finished.emit()
         else:
             self.sig_update_gui_from_state.emit(True)
             self.prepare_acquisition_list(acq_list)
             self.run_acquisition_list(acq_list)
             self.close_acquisition_list(acq_list)
             self.sig_update_gui_from_state.emit(False)
+
+    def formatSize(self, bytes):
+        try:
+            bytes = float(bytes)
+            kb = bytes / 1024
+        except Exception as e:
+            print(f"{e}")
+            return None
+        if kb >= 1024:
+            M = kb / 1024
+            if M >= 1024:
+                G = M / 1024
+                return "%.2fG" % (G)
+            else:
+                return "%.2fM" % (M)
+        else:
+            return "%.2fkb" % (kb)
+
+    def get_free_disk_space(self, acq_list):
+        """Take the disk location of the first file and compute the free disk space"""
+        filename0 = os.path.realpath(acq_list.get_all_filenames()[0])
+        disk_name = os.path.splitdrive(filename0)[0]
+        if platform.system() == 'Windows':
+            free_bytes = ctypes.c_ulonglong(0)
+            ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(disk_name), None, None, ctypes.pointer(free_bytes))
+            print(f"Free disk {disk_name} space {self.formatSize(free_bytes.value)}")
+            return free_bytes.value
+        else: # non-Windows case, untested!
+            st = os.statvfs(disk_name)
+            return st.f_bavail * st.f_frsize
+
+    def get_required_disk_space(self, acq_list):
+        """"Compute total image data size from the acquisition list, in bytes"""
+        BYTES_PER_PIXEL = 2 # 16-bit camera
+        px_per_image = self.camera_worker.x_pixels * self.camera_worker.y_pixels
+        total_bytes_required = acq_list.get_image_count() * px_per_image * BYTES_PER_PIXEL
+        print(f"Required disk space: {self.formatSize(total_bytes_required)}")
+        return total_bytes_required
 
     def prepare_acquisition_list(self, acq_list):
         ''' Housekeeping: Prepare the acquisition list '''
