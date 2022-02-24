@@ -541,7 +541,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_prepare_live.emit()
         self.open_shutters()
         laser = self.state['laser']
-        laser_blanking = False if self.cfg.laser_blanking in ('stack', 'stacks') else True
+        laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         self.laserenabler.enable(laser)
         while self.stopflag is False:
             ''' Needs update to use snap image in series '''
@@ -760,7 +760,7 @@ class mesoSPIM_Core(QtCore.QObject):
         move_dict = acq.get_delta_dict()
         laser = self.state['laser']
         self.laserenabler.enable(laser)
-        laser_blanking = False if self.cfg.laser_blanking in ('stack', 'stacks') else True
+        laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
 
         for i in range(steps):
             if self.stopflag is True:

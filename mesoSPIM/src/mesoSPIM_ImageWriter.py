@@ -166,7 +166,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.running = False
         else:
             pass
-            print("No writing was active")
 
     def end_acquisition(self, acq, acq_list):
         logger.info("end_acquisition() started")
