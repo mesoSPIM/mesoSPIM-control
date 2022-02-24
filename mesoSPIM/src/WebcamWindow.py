@@ -15,12 +15,10 @@ class WebcamWindow(QtWidgets.QWidget):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
 
-    def __init__(self, parent=None):
-        '''Parent must be an mesoSPIM_MainWindow() object'''
+    def __init__(self, webcam_id=0):
         super().__init__()
-        self.parent = parent # the mesoSPIM_MainWindow() object
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.WEBCAM_ID = 0
+        #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.WEBCAM_ID = webcam_id
         loadUi('gui/WebcamWindow.ui', self)
         self.setWindowTitle(f'Webcam view, camera ID {self.WEBCAM_ID}')
         self.show()
@@ -41,7 +39,7 @@ class WebcamWindow(QtWidgets.QWidget):
             #print(f"Supported webcam viewfinder resolutions {self.webcam.supportedViewfinderResolutions()}")
             self.viewfinder.show()
         else:
-            print("Webcam not found")
+            pass
 
 
 if __name__ == '__main__':

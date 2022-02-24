@@ -73,12 +73,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
 
-        # create window for USB webcam
-        if hasattr(self.cfg, 'ui_options') and 'usb_webcam' in self.cfg.ui_options.keys() and self.cfg.ui_options['usb_webcam']:
-            self.webcam_window = WebcamWindow(self)
-            self.webcam_window.show()
-        else:
-            self.webcam_window = None
+        self.webcam_window = None
 
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
@@ -88,6 +83,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.move(window_pos[0], window_pos[1])
         self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
         self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
+        if self.webcam_window:
+            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 50, window_pos[1])
 
         # set up some Acq manager signals
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
@@ -154,6 +151,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.joystick = mesoSPIM_JoystickHandler(self)
 
         self.enable_gui_updates_from_state(False)
+
+    def open_webcam_window(self):
+        """Open USB webcam window using cam ID specified in config file. Otherwise, try to open with ID=0"""
+        if self.webcam_window is None: # first call
+            if hasattr(self.cfg, 'ui_options') and ('usb_webcam_ID' in self.cfg.ui_options.keys()):
+                if self.cfg.ui_options['usb_webcam_ID'] >= 0:
+                    self.webcam_window = WebcamWindow(self.cfg.ui_options['usb_webcam_ID'])
+                    self.webcam_window.show()
+            else:
+                self.webcam_window = WebcamWindow(0)
+                self.webcam_window.show()
+        else: # open previously close window
+            self.webcam_window.show()
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -303,6 +313,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionExit.triggered.connect(self.close_app)
         self.actionOpen_TIFF.triggered.connect(self.open_tiff)
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
+        self.actionOpen_Webcam_Window.triggered.connect(self.open_webcam_window)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
@@ -743,3 +754,5 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.move(window_pos[0], window_pos[1])
         self.camera_window.move(window_pos[0] + 100, window_pos[1] + 100)
         self.acquisition_manager_window.move(window_pos[0] + 200, window_pos[1] + 200)
+        if self.webcam_window:
+            self.webcam_window.move(window_pos[0] + 300, window_pos[1] + 300)
