@@ -64,6 +64,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_add_images_to_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_end_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
+    sig_write_metadata = QtCore.pyqtSignal(Acquisition, AcquisitionList)
 
     sig_prepare_live = QtCore.pyqtSignal()
     sig_get_live_image = QtCore.pyqtSignal()
@@ -737,14 +738,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state'] = 'idle'
 
     def prepare_acquisition(self, acq, acq_list):
-        '''
-        Housekeeping: Prepare the acquisition
-        '''
+        ''' Housekeeping: Prepare the acquisition  '''
         logger.info(f'Core: Running Acquisition #{self.acquisition_count} with Filename: {acq["filename"]}')
-
         self.sig_status_message.emit('Going to start position')
         ''' Rotation handling goes here:
-
         If target rotation different than current rotation:
             - go to target position
             - rotate to target angle
@@ -776,7 +773,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
         self.sig_state_request.emit({'etl_l_offset' : acq['etl_l_offset']})
         self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
-
         self.f_step_generator = acq.get_focus_stepsize_generator()
 
         if self.TTL_mode_enabled_in_cfg is True:
@@ -789,8 +785,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list)
         self.prepare_image_series()
-
-        self.camera_worker.image_writer.write_metadata(acq, acq_list)
+        #self.camera_worker.image_writer.write_metadata(acq, acq_list)
+        self.sig_write_metadata.emit(acq, acq_list)
 
     def run_acquisition(self, acq, acq_list):
         steps = acq.get_image_count()
@@ -885,12 +881,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acq_end_time = time.time()
         img_total_time = self.image_acq_end_time - self.image_acq_start_time
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
-        self.camera_worker.image_writer.append_timing_info_to_metadata(acq,
-                                                                       acq_start=self.acq_start_time_string,
-                                                                       img_start=self.image_acq_start_time_string,
-                                                                       img_end=self.image_acq_end_time_string,
-                                                                       acq_end=self.acq_end_time_string,
-                                                                       img_total_time=img_total_time)
+        # self.camera_worker.image_writer.append_timing_info_to_metadata(acq,
+        #                                                                acq_start=self.acq_start_time_string,
+        #                                                                img_start=self.image_acq_start_time_string,
+        #                                                                img_end=self.image_acq_end_time_string,
+        #                                                                acq_end=self.acq_end_time_string,
+        #                                                                img_total_time=img_total_time)
         self.acquisition_count += 1
 
     @QtCore.pyqtSlot(str)

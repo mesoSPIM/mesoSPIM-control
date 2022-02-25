@@ -57,16 +57,17 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler) # from mesoSPIM_Core() to mesoSPIM_Camera()
-        self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=3)
+        self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
-        self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=3)
+        self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=QtCore.Qt.BlockingQueuedConnection)
+        self.parent.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.QueuedConnection)
         # The following connection can cause problems when disk is too slow (e.g. writing TIFF files on HDD drive):
         self.parent.sig_end_image_series.connect(self.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
 
-        self.parent.sig_prepare_live.connect(self.prepare_live, type = 3)
+        self.parent.sig_prepare_live.connect(self.prepare_live, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_get_live_image.connect(self.get_live_image)
         self.parent.sig_get_snap_image.connect(self.snap_image)
-        self.parent.sig_end_live.connect(self.end_live, type=3)
+        self.parent.sig_end_live.connect(self.end_live, type=QtCore.Qt.BlockingQueuedConnection)
 
         ''' Set up the camera '''
         if self.cfg.camera == 'HamamatsuOrca':
@@ -193,7 +194,7 @@ class mesoSPIM_Camera(QtCore.QObject):
             self.camera.close_image_series()
             logger.info("self.camera.close_image_series()")
         except Exception as e:
-            logger.warning(f'Camera: Image Series could not be closed: {e}')
+            logger.error(f'Camera: Image Series could not be closed: {e}')
 
         self.image_writer.end_acquisition(acq, acq_list)
 

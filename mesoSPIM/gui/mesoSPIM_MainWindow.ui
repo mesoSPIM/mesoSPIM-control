@@ -658,7 +658,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>5</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -714,7 +714,7 @@
               <property name="geometry">
                <rect>
                 <x>130</x>
-                <y>30</y>
+                <y>40</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -753,7 +753,7 @@
               <property name="geometry">
                <rect>
                 <x>250</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -788,7 +788,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -823,7 +823,7 @@
               <property name="geometry">
                <rect>
                 <x>130</x>
-                <y>270</y>
+                <y>280</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -858,7 +858,7 @@
               <property name="geometry">
                <rect>
                 <x>130</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -1122,8 +1122,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>30</x>
-               <y>60</y>
+               <x>20</x>
+               <y>70</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1158,8 +1158,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>30</x>
-               <y>180</y>
+               <x>20</x>
+               <y>190</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1186,8 +1186,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>30</x>
-               <y>300</y>
+               <x>20</x>
+               <y>310</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1270,8 +1270,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>150</x>
-               <y>180</y>
+               <x>140</x>
+               <y>190</y>
                <width>111</width>
                <height>111</height>
               </rect>

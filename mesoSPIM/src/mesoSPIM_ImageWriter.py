@@ -13,6 +13,7 @@ from PyQt5 import QtCore
 from distutils.version import StrictVersion
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
+from .utils.acquisitions import AcquisitionList, Acquisition
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -263,22 +264,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
             self.write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
 
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_metadata(self, acq, acq_list):
-        '''
-        Writes a metadata.txt file
-
-        Path contains the file to be written
-        '''
+        ''' Writes a metadata.txt file. Path contains the file to be written '''
         path = acq['folder'] + '/' + acq['filename']
-
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
 
-        # print('Metadata_path: ', metadata_path)
         if acq['filename'][-3:] == '.h5':
             if acq == acq_list[0]:
                 self.metadata_file = open(metadata_path, 'w')
         else:
             self.metadata_file = open(metadata_path, 'w')
+
         self.write_line(self.metadata_file, 'Metadata for file', path)
         self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
         self.write_line(self.metadata_file, 'z_planes', acq['planes'])
