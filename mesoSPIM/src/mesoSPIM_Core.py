@@ -590,7 +590,7 @@ class mesoSPIM_Core(QtCore.QObject):
         elif files_without_extensions:
             self.sig_warning.emit('Some files have no extensions (.raw, .tiff, .h5) - stopping! \n' + self.list_to_string_with_carriage_return(files_without_extensions))
             self.sig_finished.emit()
-        elif free_disk_space_bytes < total_required_bytes * 1.02:
+        elif free_disk_space_bytes < total_required_bytes * 1.1:
             self.sig_warning.emit('Not sufficient disk space - stopping! \n')
             self.sig_finished.emit()
         else:
