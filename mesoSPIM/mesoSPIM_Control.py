@@ -4,9 +4,8 @@ mesoSPIM_control.py
 The core module of the mesoSPIM software
 '''
 
-__author__ = "Fabian Voigt"
+__authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
-__maintainer__ = "Nikita Vladimirov"
 
 
 ''' Configuring the logging module before doing anything else'''
