@@ -326,9 +326,9 @@ startup = {
 'sweeptime' : 0.2,
 'position' : {'x_pos':0,'y_pos':1,'z_pos':2,'f_pos':3,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
-'filepath' : '/tmp/file.raw',
-'folder' : '/tmp/',
-'snap_folder' : '/tmp/',
+#'filepath' : '/tmp/file.raw', #deprecated
+'folder' : 'D:/tmp/',
+'snap_folder' : 'D:/tmp/',
 'file_prefix' : '',
 'file_suffix' : '000001',
 'zoom' : '1x',

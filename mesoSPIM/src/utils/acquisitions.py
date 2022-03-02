@@ -56,12 +56,12 @@ class Acquisition(indexed.IndexedOrderedDict):
                  zoom= '1x',
                  shutterconfig='Left',
                  folder='tmp',
-                 filename='one.raw',
-                 etl_l_offset = 0,
-                 etl_l_amplitude =0,
-                 etl_r_offset = 0,
-                 etl_r_amplitude = 0,
-                 processing = ''):
+                 filename='one.tif',
+                 etl_l_offset=0,
+                 etl_l_amplitude=0,
+                 etl_r_offset=0,
+                 etl_r_amplitude=0,
+                 processing=''):
 
         super().__init__()
 
