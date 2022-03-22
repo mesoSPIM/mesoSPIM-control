@@ -43,10 +43,8 @@ class StageControlASITiger(QtCore.QObject):
         self.position_dict = {axis : None for axis in self.axis_list} # create an empty position dict
                 
         '''Open connection to the stage controller'''
-        self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=1, xonxoff=False, stopbits=serial.STOPBITS_ONE)
-
+        self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=5, xonxoff=False, stopbits=serial.STOPBITS_ONE)
         self.previous_command = ''
-
         self.current_z_slice = 0
 
     def close(self):
@@ -66,7 +64,8 @@ class StageControlASITiger(QtCore.QObject):
         '''
         try:
             # print(time.time(), ' ', command.decode('UTF-8'))
-            start_time = time.time() 
+            start_time = time.time()
+            self._reset_buffers()
             self.asi_connection.write(command)
             time.sleep(delay)
             ''' During acquisitions: send pause signal '''
@@ -83,7 +82,14 @@ class StageControlASITiger(QtCore.QObject):
             return message
         except Exception as error:
             logger.info('Serial exception of the ASI stage: ' + str(error))
-                        
+
+    def _reset_buffers(self):
+        if self.asi_connection is not None:
+            self.asi_connection.reset_input_buffer()
+            self.asi_connection.reset_output_buffer()
+        else:
+            logger.info("_reset_buffers(): serial port not initialized")
+
     def axis_in_config_check(self, axis):
         '''
         Checks if a axis string is in self.axes
@@ -98,9 +104,8 @@ class StageControlASITiger(QtCore.QObject):
             logger.info('Axis: ' + str(axis) + ' not found in ASI stage config.')
             return False
                   
-    def stop(self, restart_programs=False):
+    def stop(self):
         '''Stops movement on all axes by sending "halt" to the controller
-               
         '''
         self._send_command(b'\\r\n')
         
