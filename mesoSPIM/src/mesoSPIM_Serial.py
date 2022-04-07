@@ -17,7 +17,7 @@ from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 from .devices.filter_wheels.sutterLambdaControl import Lambda10B
 from .devices.filter_wheels.dynamixel_filterwheel import DynamixelFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
-from .devices.zoom.mesoSPIM_Zoom import DynamixelZoom, DemoZoom
+from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom
 from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
 
 

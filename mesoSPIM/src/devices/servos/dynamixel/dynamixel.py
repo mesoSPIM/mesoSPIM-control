@@ -1,34 +1,18 @@
 """
-mesoSPIM Module for controlling a discrete zoom changer
-
-Author: Fabian Voigt
-
-#TODO
+General-purpose Dynamixel servo class to control e.g. mesoSPIM zoom or filter wheel
+Authors: Fabian Voigt, Nikita Vladimirov
 """
 
+
 import time
-
 from PyQt5 import QtCore
+from . import dynamixel_functions as dynamixel_func
 
-class DemoZoom(QtCore.QObject):
-    def __init__(self, zoomdict):
+
+class Dynamixel(QtCore.QObject):
+    def __init__(self, COMport, identifier=1, baudrate=1000000):
         super().__init__()
-        self.zoomdict = zoomdict
-
-    def set_zoom(self, zoom, wait_until_done=False):
-        if zoom in self.zoomdict:
-            print('Zoom set to: ', str(zoom))
-            if wait_until_done:
-                time.sleep(1)
-   
-
-class DynamixelZoom(QtCore.QObject):
-    def __init__(self, zoomdict, COMport, identifier=2, baudrate=1000000):
-        super().__init__()
-        from .dynamixel import dynamixel_functions as dynamixel
-
-        self.zoomdict = zoomdict
-        self.dynamixel = dynamixel
+        self.dynamixel = dynamixel_func
         self.id = identifier
         self.devicename = COMport.encode('utf-8') # bad naming convention
         self.baudrate = baudrate
@@ -50,7 +34,7 @@ class DynamixelZoom(QtCore.QObject):
         self.torque_enable = 1
         self.torque_disable = 0
 
-        self.port_num = dynamixel.portHandler(self.devicename)
+        self.port_num = self.dynamixel.portHandler(self.devicename)
         self.dynamixel.packetHandler()
         self._connect()
 
@@ -58,14 +42,6 @@ class DynamixelZoom(QtCore.QObject):
         # open port and set baud rate
         self.dynamixel.openPort(self.port_num)
         self.dynamixel.setBaudRate(self.port_num, self.baudrate)
-
-    def set_zoom(self, zoom, wait_until_done=False):
-        """Changes zoom after checking that the commanded value exists"""
-        if zoom in self.zoomdict:
-            self._move(self.zoomdict[zoom], wait_until_done)
-            self.zoomvalue = zoom
-        else:
-            raise ValueError('Zoom designation not in the configuration')
 
     def _move(self, position, wait_until_done=False):
         # Enable servo
@@ -94,7 +70,7 @@ class DynamixelZoom(QtCore.QObject):
 
             while (cur_position < lower_limit) or (cur_position > upper_limit):
                 ''' Timeout '''
-                if time.time()-start_time > self.timeout:
+                if time.time() - start_time > self.timeout:
                     print("Dynamixel zoom servo: timeout")
                     break
                 time.sleep(self.sleeptime)
