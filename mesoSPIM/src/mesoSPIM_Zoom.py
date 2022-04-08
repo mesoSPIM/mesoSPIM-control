@@ -22,7 +22,7 @@ class DemoZoom(QtCore.QObject):
    
 
 class DynamixelZoom(Dynamixel):
-    def __init__(self, zoomdict, COMport, identifier=1, baudrate=1000000):
+    def __init__(self, zoomdict, COMport, identifier=1, baudrate=115200):
         super().__init__(COMport, identifier, baudrate)
         self.zoomdict = zoomdict
 

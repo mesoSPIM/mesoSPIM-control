@@ -266,10 +266,19 @@ asi_parameters = {'COMport' : 'COM32',
 Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
+For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
-                          'COMport' : 'COM53'}
-
+filterwheel_parameters = {'filterwheel_type' : 'Dynamixel', # 'DemoFilterWheel', 'Ludl', 'Dynamixel'
+                          'COMport' : 'COM3',
+                          'baudrate' : 115200, # relevant only for 'Dynamixel'
+                          'servo_id' :  1, # relevant only for 'Dynamixel'
+                          }
+'''
+filterdict contains filter labels and their positions. The valid positions are:
+For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
+For Dynamixel: servo encoder counts, e.g. 0 for 0 deg, 1024 for 45 deg (360 deg = 4096 counts, or 11.377 counts/deg). 
+Dynamixel encoder range in multi-turn mode: -28672 .. +28672 counts.
+'''
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
               '405-488-647-Tripleblock' : 1,
               '405-488-561-640-Quadrupleblock' : 2,

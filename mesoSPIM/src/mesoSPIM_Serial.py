@@ -13,10 +13,7 @@ from PyQt5 import QtCore
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 
-from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
-from .devices.filter_wheels.sutterLambdaControl import Lambda10B
-from .devices.filter_wheels.dynamixel_filterwheel import DynamixelFilterWheel
-from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
+from .mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom
 from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
 
@@ -51,13 +48,15 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
-            self.filterwheel = LudlFilterwheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
-        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DynamixelFilterWheel':
-            self.filterwheel = DynamixelFilterWheel(self.cfg.filterdict,self.cfg.filterpositiondict,self.cfg.filterwheel_parameters['COMport'],self.cfg.filterwheel_parameters['servo_id'], self.cfg.filterwheel_parameters['baudrate'])
+            self.filterwheel = LudlFilterWheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
+        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Dynamixel':
+            self.filterwheel = DynamixelFilterWheel(self.cfg.filterdict, self.cfg.filterwheel_parameters['COMport'],
+                                                    self.cfg.filterwheel_parameters['servo_id'],
+                                                    self.cfg.filterwheel_parameters['baudrate'])
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DemoFilterWheel':
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
-            self.filterwheel = Lambda10B(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
+            self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
 
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
