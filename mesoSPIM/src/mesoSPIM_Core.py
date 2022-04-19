@@ -179,11 +179,13 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['shutterstate'] = False
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
-        ''' Setting the laserenabler up '''
+        ''' Setting the laser enabler up '''
         if self.cfg.laser == 'NI':
             self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
         elif self.cfg.laser == 'Demo':
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
+
+        self.set_filter(self.cfg.startup['filter'])
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
@@ -199,7 +201,7 @@ class mesoSPIM_Core(QtCore.QObject):
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
-        self.state['state']='idle'
+        self.state['state'] = 'idle'
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads

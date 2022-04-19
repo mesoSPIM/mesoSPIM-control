@@ -60,7 +60,7 @@ class mesoSPIM_StateSingleton():
                             'shutterstate':False, # Is the shutter open or not?
                             'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
                             'laser_interleaving':False,
-                            'filter' : '405-488-561-640-Quadrupleblock',
+                            'filter' : 'Empty-Alignment',
                             'etl_l_delay_%' : 7.5,
                             'etl_l_ramp_rising_%' : 85,
                             'etl_l_ramp_falling_%' : 2.5,

@@ -10,7 +10,7 @@ from . import dynamixel_functions as dynamixel_func
 
 
 class Dynamixel(QtCore.QObject):
-    def __init__(self, COMport, identifier=1, baudrate=1000000):
+    def __init__(self, COMport, identifier=1, baudrate=115200):
         super().__init__()
         self.dynamixel = dynamixel_func
         self.id = identifier

@@ -467,7 +467,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySlider.setValue(value)
         self.LaserIntensitySpinBox.setValue(value)
 
-
     def connect_widget_to_state_parameter(self, widget, state_parameter, conversion_factor):
         '''
         Helper method to (currently) connect spinboxes
