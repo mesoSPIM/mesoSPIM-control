@@ -1,3 +1,9 @@
+'''
+Simple webcam display widget, can be used stand-alone
+author: Nikita Vladimirov, @nvladimus, 2022
+License: GPL-3
+'''
+
 import numpy as np
 import pyqtgraph as pg
 import sys

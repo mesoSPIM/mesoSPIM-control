@@ -1,3 +1,10 @@
+'''
+Frontend of the optimizer which allows to use auto-focus or optimization of other microscope parameters
+Auto-focus is based on Autopilot paper (Royer at al, Nat Biotechnol. 2016 Dec;34(12):1267-1278. doi: 10.1038/nbt.3708.)
+author: Nikita Vladimirov, @nvladimus, 2021
+License: GPL-3
+'''
+
 import time
 import numpy as np
 from .utils.optimization import shannon_dct, fit_gaussian_1d, gaussian_1d
