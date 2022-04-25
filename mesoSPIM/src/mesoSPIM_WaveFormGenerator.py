@@ -355,16 +355,18 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         os.rename(tmp_etl_cfg_file, etl_cfg_file)
 
     def create_tasks(self):
-        """Creates a total of four tasks for the mesoSPIM:
+        """Creates a tasks for the mesoSPIM:
 
         These are:
         - the master trigger task, a digital out task that only provides a trigger pulse for the others
         - the camera trigger task, a counter task that triggers the camera in lightsheet mode
         - the stage trigger task, a counter task that provides a TTL trigger for stages that allow triggered movement (e.g. ASI stages)
-        - the galvo task (analog out) that controls the left & right galvos for creation of
+        - the galvo and ETL task (analog out) that controls the left & right galvos for creation of
           the light-sheet and shadow avoidance
-        - the ETL & Laser task (analog out) that controls all the laser intensities (Laser should only
-          be on when the camera is acquiring) and the left/right ETL waveforms
+        - the aser task (analog out) that controls all the laser intensities (Laser should only
+          be on when the camera is acquiring) and the left/right ETL waveforms.
+          This task is bundled with galvo-ETL task if a single DAQmx card is used, because multifunction DAQmx devices
+          can only run only 1 AO hardware-timed task at a time (https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019KWYSA2&l=en-CH)
         """
         ah = self.cfg.acquisition_hardware
 
@@ -377,15 +379,22 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.master_trigger_task = nidaqmx.Task()
         self.camera_trigger_task = nidaqmx.Task()
         self.stage_trigger_task = nidaqmx.Task()
-        self.galvo_etl_task = nidaqmx.Task()
-        self.laser_task = nidaqmx.Task()
+
+        # Check if 1 or 2 DAQ cards are used for AO waveform generation
+        self.ao_cards = 1 if ah['galvo_etl_task_line'].split('/')[-2] == ah['laser_task_line'].split('/')[-2] else 2
+
+        if self.ao_cards == 1:
+            # These AO tasks than must be bundled into one task if a single DAQmx card is used (e.g. PXI-6733)
+            self.galvo_etl_laser_task = nidaqmx.Task()
+        else:
+            self.galvo_etl_task = nidaqmx.Task()
+            self.laser_task = nidaqmx.Task()
 
         '''Housekeeping: Setting up the DO master trigger task'''
         self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
                                                          line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
 
         '''Calculate camera high time and initial delay:
-
         Disadvantage: high time and delay can only be set after a task has been created
         '''
 
@@ -409,23 +418,33 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['stage_trigger_source'])
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
-        self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'])
-        self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
-                                                   sample_mode=AcquisitionType.FINITE,
-                                                   samps_per_chan=samples)
-        self.galvo_etl_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
+        if self.ao_cards == 2:
+            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'])
+            self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
+                                                       sample_mode=AcquisitionType.FINITE,
+                                                       samps_per_chan=samples)
+            self.galvo_etl_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
 
-        '''Housekeeping: Setting up the AO task for the ETL and lasers and setting the trigger input'''
-        self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'])
-        self.laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
-                                                    sample_mode=AcquisitionType.FINITE,
-                                                    samps_per_chan=samples)
-        self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
+            '''Housekeeping: Setting up the AO task for the ETL and lasers and setting the trigger input'''
+            self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'])
+            self.laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
+                                                        sample_mode=AcquisitionType.FINITE,
+                                                        samps_per_chan=samples)
+            self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
+        else:
+            self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'])
+            self.galvo_etl_laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
+                                                       sample_mode=AcquisitionType.FINITE,
+                                                       samps_per_chan=samples)
+            self.galvo_etl_laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
 
     def write_waveforms_to_tasks(self):
         """Write the waveforms to the slave tasks"""
-        self.galvo_etl_task.write(self.galvo_and_etl_waveforms)
-        self.laser_task.write(self.laser_waveforms)
+        if self.ao_cards == 2:
+            self.galvo_etl_task.write(self.galvo_and_etl_waveforms)
+            self.laser_task.write(self.laser_waveforms)
+        else:
+            self.galvo_etl_laser_task.write(np.vstack((self.galvo_and_etl_waveforms, self.laser_waveforms)))
 
     def start_tasks(self):
         """Starts the tasks for camera triggering and analog outputs
@@ -435,8 +454,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         """
         self.camera_trigger_task.start()
         self.stage_trigger_task.start()
-        self.galvo_etl_task.start()
-        self.laser_task.start()
+        if self.ao_cards == 2:
+            self.galvo_etl_task.start()
+            self.laser_task.start()
+        else:
+            self.galvo_etl_laser_task.start()
 
     def run_tasks(self):
         """Runs the tasks for triggering, analog and counter outputs
@@ -450,15 +472,21 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.master_trigger_task.write([False, True, True, True, False], auto_start=True)
 
         '''Wait until everything is done - this is effectively a sleep function.'''
-        self.galvo_etl_task.wait_until_done()
-        self.laser_task.wait_until_done()
+        if self.ao_cards == 2:
+            self.galvo_etl_task.wait_until_done()
+            self.laser_task.wait_until_done()
+        else:
+            self.galvo_etl_laser_task.wait_until_done()
         self.camera_trigger_task.wait_until_done()
         self.stage_trigger_task.wait_until_done()
 
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""
-        self.galvo_etl_task.stop()
-        self.laser_task.stop()
+        if self.ao_cards == 2:
+            self.galvo_etl_task.stop()
+            self.laser_task.stop()
+        else:
+            self.galvo_etl_laser_task.stop()
         self.camera_trigger_task.stop()
         self.stage_trigger_task.stop()
         self.master_trigger_task.stop()
@@ -467,8 +495,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         """Closes the tasks for triggering, analog and counter outputs.
         Tasks should only be closed are they are stopped.
         """
-        self.galvo_etl_task.close()
-        self.laser_task.close()
+        if self.ao_cards == 2:
+            self.galvo_etl_task.close()
+            self.laser_task.close()
+        else:
+            self.galvo_etl_laser_task.close()
         self.camera_trigger_task.close()
         self.stage_trigger_task.close()
         self.master_trigger_task.close()
