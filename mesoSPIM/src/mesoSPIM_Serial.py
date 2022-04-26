@@ -53,7 +53,7 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.filterwheel = DynamixelFilterWheel(self.cfg.filterdict, self.cfg.filterwheel_parameters['COMport'],
                                                     self.cfg.filterwheel_parameters['servo_id'],
                                                     self.cfg.filterwheel_parameters['baudrate'])
-        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DemoFilterWheel':
+        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Demo':
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
             self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
