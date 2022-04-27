@@ -542,7 +542,6 @@ class mesoSPIM_Core(QtCore.QObject):
     def live(self):
         self.stopflag = False
         self.sig_prepare_live.emit()
-        self.open_shutters()
         laser = self.state['laser']
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         self.laserenabler.enable(laser)
