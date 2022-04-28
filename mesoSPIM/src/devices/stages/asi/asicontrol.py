@@ -13,6 +13,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import logging
 logger = logging.getLogger(__name__)
 
+
 class StageControlASITiger(QtCore.QObject):
     sig_pause = QtCore.pyqtSignal(bool)
 

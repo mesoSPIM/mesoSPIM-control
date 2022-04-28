@@ -350,12 +350,6 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         self.block_till_controller_is_ready()
         logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack done')
 
-        ''' Stage 5 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.pidevice.MOV(5, self.startfocus / 1000)
-
-        # exchange 6 with 1
-
     def __del__(self):
         try:
             self.pidevice.unload()
@@ -959,10 +953,6 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         # print('Again: Referencing status 3: ', self.pidevice.qFRF(3))
         # print('Again: Referencing status 5: ', self.pidevice.qFRF(5))
 
-        ''' Stage 5 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.pidevice.MOV(5, self.startfocus / 1000)
-
     def __del__(self):
         try:
             '''Close the Galil connection'''
@@ -1232,11 +1222,6 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         print('M-061 Emergency referencing hack done')
         logger.info('M-061 Emergency referencing hack done')
 
-        ''' Stage 5 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.f_stage.move_absolute({3: self.startfocus})
-        # self.pidevice.MOV(5,self.startfocus/1000)
-
     def __del__(self):
         try:
             '''Close the Galil connection'''
@@ -1476,10 +1461,6 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         self.pidevice.FRF(2)
         print('M-406 Emergency referencing hack done')
         logger.info('M-406 Emergency referencing hack done')
-
-        ''' Stage 5 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.xyf_stage.move_absolute({3: self.startfocus})
 
     def __del__(self):
         try:
@@ -1760,11 +1741,6 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         print('M-061 Emergency referencing hack done')
         logger.info('M-061 Emergency referencing hack done')
 
-        ''' Stage 5 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.f_stage.move_absolute({3: self.startfocus})
-        # self.pidevice.MOV(5,self.startfocus/1000)
-
     def __del__(self):
         try:
             '''Close the Galil connection'''
@@ -2007,10 +1983,6 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
 
         self.block_till_controller_is_ready()
 
-        ''' Stage 3 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.pidevice.MOV(3, self.startfocus / 1000)
-
     def __del__(self):
         try:
             '''Close the Galil connection'''
@@ -2196,6 +2168,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         '''Executes program stored on the Galil controller'''
         self.xy_stage.execute_program()
 
+
 class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
     '''
 
@@ -2221,7 +2194,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         '''
         ASI-specific code
         '''
-        from src.devices.stages.asi.asicontrol import StageControlASITiger
+        from .devices.stages.asi.asicontrol import StageControlASITiger
         
         ''' Setting up the ASI stages '''
         self.asi_parameters = self.cfg.asi_parameters
@@ -2243,17 +2216,13 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         self.num_images_between_position_polls = 20 
         self.running_acquisition_flag = False
         
-        ''' Stage 5 close to good focus'''
-        self.startfocus = self.cfg.stage_parameters['startfocus']
-        self.move_absolute({'f_abs':self.startfocus})
-
     def __del__(self):
         try:
             '''Close the ASI connection'''
             self.asi_stages.close()
             logger.info('ASI Stage disconnected')
-        except:
-            logger.info('Error while disconnecting the ASI stage')
+        except Exception as e:
+            logger.info(f'Error while disconnecting the ASI stage: {e}')
 
     @QtCore.pyqtSlot(bool)
     def pause(self,boolean):
@@ -2410,7 +2379,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         if motion_dict != {}:
             self.asi_stages.move_absolute(motion_dict)
         
-        if wait_until_done == True:
+        if wait_until_done is True:
             self.asi_stages.wait_until_done()
         
     def stop(self):
@@ -2473,7 +2442,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         '''
         ASI-specific code
         '''
-        from src.devices.stages.asi.asicontrol import StageControlASITiger
+        from devices.stages.asi.asicontrol import StageControlASITiger
         
         ''' Setting up the ASI stages '''
         self.asi_parameters = self.cfg.asi_parameters

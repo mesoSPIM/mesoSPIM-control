@@ -193,7 +193,6 @@ All positions are absolute.
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', see below
-                    'startfocus' : -10000,
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
                     'ttl_motion_enabled': False,
