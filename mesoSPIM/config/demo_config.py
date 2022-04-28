@@ -78,14 +78,15 @@ laser_blanking = 'images' # if 'images', laser is off before and after every ima
 
 '''
 Shutter configuration
+Assumes that the shutter_left line is the general shutter
+and the shutter_right line is the left/right switch (Right==True)
 '''
-
 shutter = 'Demo' # 'Demo' or 'NI'
+shutteroptions = ('Left', 'Right') # Shutter options of the GUI
 shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # left (general) shutter
               'shutter_right' : '/PXI1Slot4/port0/line1', # flip mirror control or right shutter, depending on physical configuration
               }
-''' A bit of a hack: Shutter options for the GUI '''
-shutteroptions = ('Left','Right')
+
 shutterswitch = True # assumes that the shutter_left line is the general shutter
 
 '''
