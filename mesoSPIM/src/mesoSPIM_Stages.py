@@ -2348,35 +2348,45 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         if 'x_abs' in dict:
             x_abs = dict['x_abs']
             x_abs = x_abs - self.int_x_pos_offset
-            if self.x_min < x_abs and self.x_max > x_abs:
+            if self.x_min < x_abs < self.x_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_abs, 1)})
+            else:
+                print(f"Error: The x-move is outside of min-max range, check your config file, 'x_min' and 'x_max'.")
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
             y_abs = y_abs - self.int_y_pos_offset
-            if self.y_min < y_abs and self.y_max > y_abs:
+            if self.y_min < y_abs < self.y_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_abs, 1)})
+            else:
+                print(f"Error: The y-move is outside of min-max range, check your config file, 'y_min' and 'y_max'.")
                     
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
             z_abs = z_abs - self.int_z_pos_offset
-            if self.z_min < z_abs and self.z_max > z_abs:
+            if self.z_min < z_abs < self.z_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_abs, 1)})
+            else:
+                print(f"Error: The z-move is outside of min-max range, check your config file, 'z_min' and 'z_max'.")
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs']
             f_abs = f_abs - self.int_f_pos_offset
-            if self.f_min < f_abs and self.f_max > f_abs:
+            if self.f_min < f_abs < self.f_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_abs, 1)})
+            else:
+                print(f"Error: The f-move is outside of min-max range, check your config file, 'f_min' and 'f_max'.")
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
             theta_abs = theta_abs - self.int_theta_pos_offset
-            if self.theta_min < theta_abs and self.theta_max > theta_abs:
+            if self.theta_min < theta_abs < self.theta_max:
                 ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
                 motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_abs*100)})
-        
-        if motion_dict != {}:
+            else:
+                print(f"Error: The theta-move is outside of min-max range, check your config file, 'theta_min' and 'theta_max'.")
+
+        if motion_dict:
             self.asi_stages.move_absolute(motion_dict)
         
         if wait_until_done is True:
