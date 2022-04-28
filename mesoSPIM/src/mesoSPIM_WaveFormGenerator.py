@@ -202,7 +202,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         '''Update the laser intensity waveform'''
         '''This could be improved: create a list with as many zero arrays as analog out lines for ETL and Lasers'''
-        self.laser_waveform_list = [self.zero_waveform for i in self.cfg.laser_designation]
+        self.laser_waveform_list = [self.zero_waveform for i in self.cfg.laserdict]
 
         ''' Conversion from % to V of the intensity:'''
         laser_voltage = max_laser_voltage * intensity / 100
@@ -215,7 +215,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                     offset = 0)
 
         '''The key: replace the waveform in the waveform list with this new template'''
-        current_laser_index = self.cfg.laser_designation[self.state['laser']]
+        current_laser_index = sorted(list(self.cfg.laserdict.keys())).index(self.state['laser'])
         self.laser_waveform_list[current_laser_index] = self.laser_template_waveform
         self.laser_waveforms = np.stack(self.laser_waveform_list)
 

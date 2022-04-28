@@ -546,6 +546,8 @@ class mesoSPIM_Core(QtCore.QObject):
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         self.laserenabler.enable(laser)
         while self.stopflag is False:
+            ''' How to handle a possible shutter switch?'''
+            self.open_shutters()
             ''' Needs update to use snap image in series '''
             self.snap_image(laser_blanking)
             self.sig_get_live_image.emit()
@@ -555,9 +557,6 @@ class mesoSPIM_Core(QtCore.QObject):
                 QtWidgets.QApplication.processEvents()
 
             QtWidgets.QApplication.processEvents()
-
-            ''' How to handle a possible shutter switch?'''
-            self.open_shutters()
 
         self.laserenabler.disable(laser)
         self.close_shutters()

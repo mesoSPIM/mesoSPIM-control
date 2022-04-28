@@ -76,20 +76,6 @@ modulation depth of the analog input (even at 0V, some laser light is still emit
 laser_blanking = 'images' # if 'images', laser is off before and after every image; if 'stacks', before and after each stack.
 
 '''
-Assignment of the analog outputs of the Laser card to the channels
-The Empty slots are placeholders.
-'''
-laser_designation = {'405 nm' : 0,
-                     '488 nm' : 1,
-                     '515 nm' : 2,
-                     '561 nm' : 3,
-                     '594 nm' : 4,
-                     '647 nm' : 5,
-                     'Empty 0' : 6,
-                     'Empty 1' : 7
-                     }
-
-'''
 Assignment of the galvos and ETLs to the 6259 AO channels.
 '''
 
