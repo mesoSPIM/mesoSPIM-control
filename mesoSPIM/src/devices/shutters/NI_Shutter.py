@@ -23,20 +23,20 @@ class NI_Shutter:
 
         # Make sure that the Shutter is closed upon initialization
         with nidaqmx.Task() as task:
-            task.do_channels.add_do_chan(self.shutterline, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+            task.do_channels.add_do_chan(self.shutterline, line_grouping=LineGrouping.CHAN_PER_LINE)
             task.write([False], auto_start=True)
             self.shutterstate = False
 
     # Open and close shutter take an optional argument to deal with the on_click method of Jupyter Widgets
     def open(self, *args):
         with nidaqmx.Task() as task:
-            task.do_channels.add_do_chan(self.shutterline, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+            task.do_channels.add_do_chan(self.shutterline, line_grouping=LineGrouping.CHAN_PER_LINE)
             task.write([True], auto_start=True)
             self.shutterstate = True
 
     def close(self, *args):
         with nidaqmx.Task() as task:
-            task.do_channels.add_do_chan(self.shutterline, line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+            task.do_channels.add_do_chan(self.shutterline, line_grouping=LineGrouping.CHAN_PER_LINE)
             task.write([False], auto_start=True)
             self.shutterstate = False
 

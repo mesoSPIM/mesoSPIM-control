@@ -215,6 +215,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                     offset = 0)
 
         '''The key: replace the waveform in the waveform list with this new template'''
+        assert sorted(list(self.cfg.laserdict.keys())) == list(self.cfg.laserdict.keys()), f"Error: laserdict keys in config file must be alphanumerically sorted: {self.cfg.laserdict.keys()}"
         current_laser_index = sorted(list(self.cfg.laserdict.keys())).index(self.state['laser'])
         self.laser_waveform_list[current_laser_index] = self.laser_template_waveform
         self.laser_waveforms = np.stack(self.laser_waveform_list)

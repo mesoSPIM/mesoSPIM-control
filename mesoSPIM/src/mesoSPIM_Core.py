@@ -444,7 +444,6 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
 
         shutterconfig = self.state['shutterconfig']
-
         if shutterconfig == 'Both':
             if self.cfg.shutterswitch == False:
                 self.shutter_left.open()
@@ -464,7 +463,7 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 self.shutter_left.open() # open the general shutte
                 self.shutter_right.open() # set side-switch to true
-        else:
+        else: # BOTH open
             self.shutter_right.open()
             self.shutter_left.open()
 
@@ -514,7 +513,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.start_tasks()
         self.waveformer.run_tasks()
         if laser_blanking:
-            self.laserenabler.disable(laser)
+            self.laserenabler.disable_all()
         self.waveformer.stop_tasks()
         self.waveformer.close_tasks()
 
@@ -532,7 +531,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.run_tasks()
         self.waveformer.stop_tasks()
         if laser_blanking:
-            self.laserenabler.disable(laser)
+            self.laserenabler.disable_all()
 
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
@@ -558,7 +557,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
             QtWidgets.QApplication.processEvents()
 
-        self.laserenabler.disable(laser)
+        self.laserenabler.disable_all()
         self.close_shutters()
         self.sig_end_live.emit()
         self.sig_finished.emit()
@@ -792,7 +791,6 @@ class mesoSPIM_Core(QtCore.QObject):
         steps = acq.get_image_count()
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
-
         self.image_acq_start_time = time.time()
         self.image_acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
@@ -800,7 +798,6 @@ class mesoSPIM_Core(QtCore.QObject):
         laser = self.state['laser']
         self.laserenabler.enable(laser)
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
-
         for i in range(steps):
             if self.stopflag is True:
                 self.close_image_series()
@@ -861,7 +858,7 @@ class mesoSPIM_Core(QtCore.QObject):
                                    self.image_count,
                                    convert_seconds_to_string(time_passed),
                                    convert_seconds_to_string(time_remaining))
-        self.laserenabler.disable(laser)
+        self.laserenabler.disable_all()
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
 
