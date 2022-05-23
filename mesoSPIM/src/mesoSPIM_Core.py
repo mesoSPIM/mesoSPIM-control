@@ -437,14 +437,11 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot()
     def open_shutters(self):
         '''Here the left/right mode is hacked in
-
         If shutterswitch = True in the config:
         Assumes that the shutter_left line is the general shutter 
         and the shutter_right line is the left/right switch (Right==True)
         '''
-
         shutterconfig = self.state['shutterconfig']
-
         if shutterconfig == 'Both':
             if self.cfg.shutterswitch == False:
                 self.shutter_left.open()
@@ -505,7 +502,6 @@ class mesoSPIM_Core(QtCore.QObject):
         but there is additional overhead due to the need to write the
         waveforms into the buffers of the NI cards.
         '''
-
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
