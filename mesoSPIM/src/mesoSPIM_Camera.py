@@ -84,17 +84,13 @@ class mesoSPIM_Camera(QtCore.QObject):
     def __del__(self):
         try:
             self.camera.close_camera()
-        except Exception as error:
-            logger.info('Error while closing the camera:', str(error))
+        except:
+            pass
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
-        for key, value in zip(dict.keys(),dict.values()):
-            # print('Camera Thread: State request: Key: ', key, ' Value: ', value)
-            '''
-            The request handling is done with exec() to write fewer lines of
-            code.
-            '''
+        '''The request handling is done with exec() to write fewer lines of code. '''
+        for key, value in zip(dict.keys(), dict.values()):
             if key in ('camera_exposure_time',
                         'camera_line_interval',
                         'state',
@@ -102,10 +98,9 @@ class mesoSPIM_Camera(QtCore.QObject):
                         'camera_display_acquisition_subsampling',
                         'camera_binning'):
                 exec('self.set_'+key+'(value)')
-            # Log Thread ID during Live: just debugging code
             elif key == 'state':
                 if value == 'live':
-                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+                    logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def set_state(self, value):
         pass

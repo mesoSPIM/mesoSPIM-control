@@ -136,20 +136,20 @@ class mesoSPIM_Serial(QtCore.QObject):
                     self.set_filter(value, wait_until_done)
                 else:
                     self.set_filter(value)
-                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
+                logger.info(f'state change: {key}: {value}')
             if key == 'zoom':
                 if wait_until_done:
                     self.set_zoom(value, wait_until_done)
                 else:
                     self.set_zoom(value)
-                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
+                logger.info(f'state change: {key}: {value}')
             if key == 'stage_program':
                 self.execute_stage_program()
-                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
+                logger.info(f'state change: {key}: {value}')
             # Log Thread ID during Live: just debugging code
             if key == 'ttl_movement_enabled_during_acq':
                 self.enable_ttl_motion(value)
-                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
+                logger.info(f'state change: {key}: {value}')
 
     @QtCore.pyqtSlot(str)
     def send_status_message(self, string):

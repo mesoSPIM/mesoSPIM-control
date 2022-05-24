@@ -222,7 +222,7 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            logger.info(f'mesoSPIM_Core: State request: Key: {key}, Value: {value}')
+            logger.info(f'State request: Key: {key}, Value: {value}')
             '''
             The request handling is done with exec() to write fewer lines of
             code.

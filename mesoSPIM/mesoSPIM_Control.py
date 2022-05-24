@@ -7,8 +7,6 @@ The core module of the mesoSPIM software
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
 
-
-
 import time
 import logging
 import argparse
@@ -21,7 +19,8 @@ from PyQt5 import QtWidgets
 ''' Configuring the logging module before doing anything else'''
 timestr = time.strftime("%Y%m%d-%H%M%S")
 logging_filename = timestr + '.log'
-logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO, format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(thread)d:%(module)s:%(name)s:%(message)s')
+logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO,
+                    format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
 logger = logging.getLogger(__name__)
 logger.info('mesoSPIM-control started')
 
