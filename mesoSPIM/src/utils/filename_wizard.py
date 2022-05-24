@@ -34,6 +34,7 @@ class FilenameWizard(QtWidgets.QWizard):
         self.setPage(2, FilenameWizardTiffSelectionPage(self))
         self.setPage(3, FilenameWizardSingleHDF5SelectionPage(self))
         self.setPage(4, FilenameWizardCheckResultsPage(self))
+        self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
 
     def done(self, r):
