@@ -245,7 +245,7 @@ For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'Dynamixel', # 'Demo', 'Ludl', 'Dynamixel'
+filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Dynamixel'
                           'COMport' : 'COM3',
                           'baudrate' : 115200, # relevant only for 'Dynamixel'
                           'servo_id' :  1, # relevant only for 'Dynamixel'

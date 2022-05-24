@@ -302,8 +302,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.create_waveforms()
             self.sig_update_gui_from_state.emit(False)
         else:
-            print(f"Error: laser {laser}, zoom {zoom} pair not found in file {cfg_path}. "
-                  f"Check is file {cfg_path} is configured correctly for your laser and zoom dictionary")
+            logger.error(f"Laser {laser}, zoom {zoom} pair not found in file {cfg_path}. \n "
+                         f"Check is file {cfg_path} is configured correctly for your laser and zoom dictionary")
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):

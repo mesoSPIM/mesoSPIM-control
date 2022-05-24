@@ -26,6 +26,25 @@ from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
 
+class LogDisplayHandler(logging.Handler, QtCore.QObject):
+    '''
+    Helper class to display log in a TextDisplay widget. A thread-safe version.
+    '''
+    appendPlainText = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent):
+        super().__init__()
+        QtCore.QObject.__init__(self)
+        self.widget = QtWidgets.QPlainTextEdit(parent)
+        self.widget.hide()
+        self.widget.setReadOnly(True)
+        self.appendPlainText.connect(self.widget.appendPlainText)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.appendPlainText(msg)
+
+
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     '''
     Main application window which instantiates worker objects and moves them
@@ -66,6 +85,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Setting up the user interface windows
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle('mesoSPIM Main Window')
+
+        # overwrite the placeholder log display widget with the functional one.
+        self.log_display_handler = LogDisplayHandler(self)
+        self.log_display_handler.widget = self.LogTextDisplay
 
         self.camera_window = mesoSPIM_CameraWindow(self)
         self.camera_window.show()
@@ -129,10 +152,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
-        logger.info(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
-        #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
-
-        #logger.info('Core thread running? Answer:'+str(self.core_thread.isRunning()))
+        logger.debug(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
+        logger.debug('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
+        logger.debug('Core thread running? Answer:'+str(self.core_thread.isRunning()))
         
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
@@ -140,12 +162,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             #current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
             #current_thread.setPriority(4)
             #logger.info(f'Main Window: Thread priority: {str(current_thread.priority())}')
-            logger.info('Main Window Thread priority: '+str(self.thread().priority()))
+            logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
         except:
             logger.debug(f'Main Window: Printing Thread priority failed.')
 
-        #logger.info(f'Main Window: Core priority: {self.core_thread.priority()}')
-        #print('Core priority: ', self.core_thread.priority())
+        logger.debug(f'Main Window: Core priority: {self.core_thread.priority()}')
 
         ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
@@ -197,7 +218,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             try:
                 stack = tifffile.imread(tiff_path)
                 self.camera_window.set_image(stack)
-                logger.debug(f"Loaded TIFF file from {tiff_path}, dimensions {stack.shape}")
+                logger.info(f"Loaded TIFF file from {tiff_path}, dimensions {stack.shape}")
             except Exception as e:
                 logger.exception(f"{e}")
         else:
@@ -551,8 +572,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
-        ''' Logging code to check the thread ID during live'''
-        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
         self.sig_poke_demo_thread.emit()
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)

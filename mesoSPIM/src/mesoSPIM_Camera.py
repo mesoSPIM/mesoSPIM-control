@@ -200,7 +200,7 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         self.end_time = time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
-        logger.info(f'Camera: Framerate: {framerate}')
+        logger.info(f'Camera: Framerate: {framerate:.2f}')
         self.sig_finished.emit()
 
     @QtCore.pyqtSlot(bool)
@@ -237,7 +237,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera.close_live_mode()
         self.end_time = time.time()
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
-        logger.info(f'Camera: Finished Live Mode: Framerate: {framerate}')
+        logger.info(f'Camera: Finished Live Mode: Framerate: {framerate:.2f}')
+
 
 class mesoSPIM_GenericCamera(QtCore.QObject):
     ''' Generic mesoSPIM camera class meant for subclassing.'''

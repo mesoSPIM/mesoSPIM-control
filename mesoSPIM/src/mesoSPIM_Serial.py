@@ -131,44 +131,25 @@ class mesoSPIM_Serial(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):
         for key, value in zip(sdict.keys(), sdict.values()):
-            # print('Serial thread: state request: Key: ', key, ' Value: ', value)
-            '''
-            Here, the request handling is done with lots if 'ifs'
-            '''
-            # print('Key: ', key, ' Value: ', value)
             if key == 'filter':
                 if wait_until_done:
                     self.set_filter(value, wait_until_done)
                 else:
                     self.set_filter(value)
+                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
             if key == 'zoom':
                 if wait_until_done:
                     self.set_zoom(value, wait_until_done)
                 else:
                     self.set_zoom(value)
+                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
             if key == 'stage_program':
                 self.execute_stage_program()
+                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
             # Log Thread ID during Live: just debugging code
             if key == 'ttl_movement_enabled_during_acq':
                 self.enable_ttl_motion(value)
-
-            if key == 'state':
-                if value == 'live':
-                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
-                    logger.info('Thread of serial object during live: '+str(self.thread()))
-                    logger.info('Thread of the stage object during live: '+str(self.stage.thread()))
-                    logger.info('Thread of the timer during live: '+str(self.stage.pos_timer.thread()))
-                    logger.info('Thread of the filterwheel object during live: '+str(self.filterwheel.thread()))
-                    logger.info('Thread of the zoom object during live: '+str(self.zoom.thread()))
-                if value == 'snap':
-                    logger.info('Thread ID during snap: '+str(int(QtCore.QThread.currentThreadId())))
-                    logger.info('Thread of serial object during snap: '+str(self.thread()))
-                    logger.info('Thread of the stage object during snap: '+str(self.stage.thread()))
-                    logger.info('Thread of the timer during snap: '+str(self.stage.pos_timer.thread()))
-                    logger.info('Thread of the filterwheel object during snap: '+str(self.filterwheel.thread()))
-                    logger.info('Thread of the zoom object during snap: '+str(self.zoom.thread()))
-                    # self.stage.start_timer()
-                    # self.stage.report_position()
+                logger.info(f'mesoSPIM_Serial state change: {key}: {value}')
 
     @QtCore.pyqtSlot(str)
     def send_status_message(self, string):
