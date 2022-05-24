@@ -16,7 +16,6 @@ class DemoZoom(QtCore.QObject):
 
     def set_zoom(self, zoom, wait_until_done=False):
         if zoom in self.zoomdict:
-            print('Zoom set to: ', str(zoom))
             if wait_until_done:
                 time.sleep(1)
    
