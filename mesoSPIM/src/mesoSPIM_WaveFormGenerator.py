@@ -159,6 +159,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                 fall = etl_r_ramp_falling,
                                                 amplitude = etl_r_amplitude,
                                                 offset = etl_r_offset)
+        # freeze AO channel which is not in use, to reduce heating and increase ETL lifetime
+        if self.state['shutterconfig'] == 'Left':
+            self.etl_r_waveform[:] = etl_r_offset
+        elif self.state['shutterconfig'] == 'Right':
+            self.etl_l_waveform[:] = etl_l_offset
+        else:
+            pass
 
     def create_galvo_waveforms(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
@@ -180,15 +187,21 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                          dutycycle = galvo_l_duty_cycle,
                                          phase = galvo_l_phase)
 
-        ''' Attention: Right Galvo gets the left frequency for now '''
-
         self.galvo_r_waveform = sawtooth(samplerate = samplerate,
                                          sweeptime = sweeptime,
-                                         frequency = galvo_l_frequency,
+                                         frequency = galvo_r_frequency,
                                          amplitude = galvo_r_amplitude,
                                          offset = galvo_r_offset,
                                          dutycycle = galvo_r_duty_cycle,
                                          phase = galvo_r_phase)
+
+        # freeze AO channel which is not in use, to reduce heating and increase galvo lifetime
+        if self.state['shutterconfig'] == 'Left':
+            self.galvo_r_waveform[:] = galvo_r_offset
+        elif self.state['shutterconfig'] == 'Right':
+            self.galvo_l_waveform[:] = galvo_l_offset
+        else:
+            pass
 
     def create_laser_waveforms(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
@@ -290,8 +303,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.create_waveforms()
             self.sig_update_gui_from_state.emit(False)
         else:
-            print(f"Error: laser {laser}, zoom {zoom} pair not found in file {cfg_path}. "
-                  f"Check is file {cfg_path} is configured correctly for your laser and zoom dictionary")
+            logger.error(f"Laser {laser}, zoom {zoom} pair not found in file {cfg_path}. \n "
+                         f"Check is file {cfg_path} is configured correctly for your laser and zoom dictionary")
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):

@@ -198,7 +198,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.TTL_mode_enabled_in_cfg = self.cfg.stage_parameters['ttl_motion_enabled']
 
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.debug('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
         self.state['state'] = 'idle'
@@ -222,7 +222,7 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
-            logger.info(f'Core Thread: State request: Key: {key}, Value: {value}')
+            logger.info(f'State request: Key: {key}, Value: {value}')
             '''
             The request handling is done with exec() to write fewer lines of
             code.
@@ -279,8 +279,8 @@ class mesoSPIM_Core(QtCore.QObject):
         if state == 'live':
             self.state['state'] = 'live'
             self.sig_state_request.emit({'state':'live'})
-            logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
-            #logger.info('Core internal thread affinity in live: '+str(id(self.thread())))
+            logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+            logger.debug('Core internal thread affinity in live: '+str(id(self.thread())))
             self.live()
 
         if state == 'snap':
@@ -328,7 +328,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state'] = 'idle'
         self.sig_update_gui_from_state.emit(False)
         self.sig_finished.emit()
-
 
     @QtCore.pyqtSlot(bool)
     def pause(self, boolean):
@@ -437,12 +436,10 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot()
     def open_shutters(self):
         '''Here the left/right mode is hacked in
-
         If shutterswitch = True in the config:
         Assumes that the shutter_left line is the general shutter 
         and the shutter_right line is the left/right switch (Right==True)
         '''
-
         shutterconfig = self.state['shutterconfig']
         if shutterconfig == 'Both':
             if self.cfg.shutterswitch == False:
@@ -504,7 +501,6 @@ class mesoSPIM_Core(QtCore.QObject):
         but there is additional overhead due to the need to write the
         waveforms into the buffers of the NI cards.
         '''
-
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']

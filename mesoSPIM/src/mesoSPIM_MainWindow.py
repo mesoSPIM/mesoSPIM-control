@@ -26,11 +26,36 @@ from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
 
+class LogDisplayHandler(QtCore.QObject, logging.Handler):
+    """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
+    new_record = QtCore.pyqtSignal(object)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        super(logging.Handler).__init__()
+        formatter = Formatter('%(module)s:%(funcName)s:%(message)s')
+        self.setFormatter(formatter)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.new_record.emit(msg)  # <---- emit signal here
+
+
+class Formatter(logging.Formatter):
+    """ Formatter of the LogDisplayHandler class."""
+    def formatException(self, ei):
+        result = super(Formatter, self).formatException(ei)
+        return result
+
+    def format(self, record):
+        s = super(Formatter, self).format(record)
+        if record.exc_text:
+            s = s.replace('\n', '')
+        return s
+
+
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
-    '''
-    Main application window which instantiates worker objects and moves them
-    to a thread.
-    '''
+    """ Main application window which instantiates worker objects and moves them to a thread. """
     # sig_live = QtCore.pyqtSignal()
     sig_stop = QtCore.pyqtSignal()
     sig_finished = QtCore.pyqtSignal()
@@ -66,6 +91,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Setting up the user interface windows
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle('mesoSPIM Main Window')
+
+        # Connect log display widget
+        self.log_display_handler = LogDisplayHandler(self)
+        self.log_display_handler.new_record.connect(self.LogTextDisplay.appendPlainText)
 
         self.camera_window = mesoSPIM_CameraWindow(self)
         self.camera_window.show()
@@ -129,10 +158,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
-        logger.info(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
-        #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
-
-        #logger.info('Core thread running? Answer:'+str(self.core_thread.isRunning()))
+        logger.debug(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
+        logger.debug('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
+        logger.debug('Core thread running? Answer:'+str(self.core_thread.isRunning()))
         
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
@@ -140,14 +168,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             #current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
             #current_thread.setPriority(4)
             #logger.info(f'Main Window: Thread priority: {str(current_thread.priority())}')
-            logger.info('Main Window Thread priority: '+str(self.thread().priority()))
+            logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
         except:
             logger.debug(f'Main Window: Printing Thread priority failed.')
 
-        #logger.info(f'Main Window: Core priority: {self.core_thread.priority()}')
-        #print('Core priority: ', self.core_thread.priority())
+        logger.debug(f'Main Window: Core priority: {self.core_thread.priority()}')
 
-        ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
 
         self.enable_gui_updates_from_state(False)
@@ -166,11 +192,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.webcam_window.show()
 
     def __del__(self):
-        '''Cleans the threads up after deletion, waits until the threads
+        """Cleans the threads up after deletion, waits until the threads
         have truly finished their life.
 
         Make sure to keep this up to date with the number of threads
-        '''
+        """
         try:
             self.core_thread.quit()
             self.core_thread.wait()
@@ -197,7 +223,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             try:
                 stack = tifffile.imread(tiff_path)
                 self.camera_window.set_image(stack)
-                logger.debug(f"Loaded TIFF file from {tiff_path}, dimensions {stack.shape}")
+                logger.info(f"Loaded TIFF file from {tiff_path}, dimensions {stack.shape}")
             except Exception as e:
                 logger.exception(f"{e}")
         else:
@@ -226,14 +252,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             return False
 
     def create_widget_list(self, list, widget_list):
-        '''
-        Helper method to recursively loop through all the widgets in a list and 
-        their children.
-
+        """
+        Helper method to recursively loop through all the widgets in a list and their children.
         Args:
-            list (list): List of QtWidgets.QWidget objects 
-        
-        '''
+            list (list): List of QtWidgets.QWidget objects
+        """
         for widget in list:
             if list != ([] or None):
                 if self.check_instances(widget):
@@ -246,13 +269,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string):
-        '''
+        """
         Displays a message in the status bar for a time in ms
-        '''
+        """
         self.statusBar().showMessage(string)
 
     def pos2str(self, position):
-        ''' Little helper method for converting positions to strings '''
+        """ Little helper method for converting positions to strings """
         return '%.1f' % position
 
     @QtCore.pyqtSlot(dict)
@@ -296,12 +319,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                             ' Remaining: ' + remaining_time_string)
 
     def create_script_window(self):
-        '''
+        """
         Creates a script window and binds it to a self.scriptwindow0 ... n instanceself.
 
         This happens dynamically using exec which should be replaced at
         some point with a factory pattern.
-        '''
+        """
         windowstring = 'self.scriptwindow'+str(self.script_window_counter)
         exec(windowstring+ '= mesoSPIM_ScriptWindow(self)')
         exec(windowstring+'.setWindowTitle("Script Window #'+str(self.script_window_counter)+'")')
@@ -318,7 +341,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
     def initialize_and_connect_widgets(self):
-        ''' Connecting the menu actions '''
+        """ Connecting the menu actions """
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
         ''' Connecting the movement & zero buttons '''
@@ -551,8 +574,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
-        ''' Logging code to check the thread ID during live'''
-        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
         self.sig_poke_demo_thread.emit()
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)

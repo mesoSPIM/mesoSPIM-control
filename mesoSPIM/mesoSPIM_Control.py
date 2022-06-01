@@ -7,23 +7,22 @@ The core module of the mesoSPIM software
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
 
-
-''' Configuring the logging module before doing anything else'''
 import time
 import logging
 import argparse
 import glob
-timestr = time.strftime("%Y%m%d-%H%M%S")
-logging_filename = timestr + '.log'
-logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO, format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(thread)d:%(module)s:%(name)s:%(message)s')
-logger = logging.getLogger(__name__)
-logger.info('mesoSPIM-control started')
-
 import os
 import sys
 import importlib.util
-
 from PyQt5 import QtWidgets
+
+''' Configuring the logging module before doing anything else'''
+timestr = time.strftime("%Y%m%d-%H%M%S")
+logging_filename = timestr + '.log'
+logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO,
+                    format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
+logger = logging.getLogger(__name__)
+logger.info('mesoSPIM-control started')
 
 from src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
@@ -101,7 +100,6 @@ def dark_mode_check(cfg, app):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
-
 def main(embed_console=False, demo_mode=False):
     """
     Load a configuration file according to the following rules:
@@ -140,6 +138,9 @@ def main(embed_console=False, demo_mode=False):
     ex = mesoSPIM_MainWindow(cfg)
     ex.show()
 
+    # hook up the log display widget
+    logging.getLogger().addHandler(ex.log_display_handler)
+
     if embed_console:
         from traitlets.config import Config
         cfg = Config()
@@ -148,7 +149,6 @@ def main(embed_console=False, demo_mode=False):
         IPython.start_ipython(config=cfg, argv=[], user_ns=dict(mSpim=ex, app=app))
     else:
         sys.exit(app.exec_())
-
 
 def run():
     args = get_parser().parse_args()

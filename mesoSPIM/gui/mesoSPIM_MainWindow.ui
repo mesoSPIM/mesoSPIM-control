@@ -163,7 +163,7 @@
             <widget class="QLineEdit" name="X_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -196,7 +196,7 @@
             <widget class="QLineEdit" name="Y_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -229,7 +229,7 @@
             <widget class="QLineEdit" name="Z_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -265,7 +265,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -298,7 +298,7 @@
             <widget class="QLineEdit" name="Focus_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -1995,6 +1995,24 @@ MOVEMENT </string>
            <attribute name="title">
             <string>Log</string>
            </attribute>
+           <widget class="QPlainTextEdit" name="LogTextDisplay">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>20</y>
+              <width>871</width>
+              <height>681</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="autoFillBackground">
+             <bool>false</bool>
+            </property>
+           </widget>
           </widget>
           <widget class="QWidget" name="ParameterTabWidget">
            <attribute name="title">

@@ -6,6 +6,8 @@ import time
 import serial
 import io
 from PyQt5 import QtWidgets, QtCore, QtGui
+import logging
+logger = logging.getLogger(__name__)
 from .devices.servos.dynamixel.dynamixel import Dynamixel
 
 
@@ -26,7 +28,6 @@ class mesoSPIM_DemoFilterWheel(QtCore.QObject):
 
     def set_filter(self, filter, wait_until_done=False):
         if self._check_if_filter_in_filterdict(filter) is True:
-            print('Filter set to: ', str(filter))
             if wait_until_done:
                 time.sleep(1)
 
@@ -106,7 +107,7 @@ class LudlFilterWheel(QtCore.QObject):
                                      stopbits=serial.STOPBITS_TWO)
             self.sio = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser))
         except serial.SerialException as e:
-            print(f"ERROR: Serial connection to Ludl filter wheel failed: {e}")
+            logger.error(f"Serial connection to Ludl filter wheel failed: {e}")
 
     def _check_if_filter_in_filterdict(self, filter):
         '''
@@ -172,7 +173,7 @@ class LudlFilterWheel(QtCore.QObject):
                 if wait_until_done:
                     time.sleep(self.wait_until_done_delay)
         else:
-            print(f'Filter {filter} not found in configuration.')
+            logger.error(f'Filter {filter} not found in configuration.')
 
     def __del__(self):
         self.sio.flush()
@@ -207,7 +208,7 @@ class SutterLambda10BFilterWheel:
         if read_on_init:
             self.read(2)  # class 'bytes'
             self.init_finished = True
-            print('Done initializing filter wheel')
+            logger.info('Done initializing filter wheel')
         else:
             self.init_finished = False
         self.filternumber = 0
@@ -243,7 +244,7 @@ class SutterLambda10BFilterWheel:
                 if not self.init_finished:
                     self.read(2)
                     self.init_finished = True
-                    print('Done initializing filter wheel.')
+                    logger.info('Done initializing filter wheel.')
 
                 # Filter Wheel Command Byte Encoding = wheel + (speed*16) + position = command byte
                 outputcommand = self.wheel_position + 16 * speed
