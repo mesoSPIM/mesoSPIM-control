@@ -271,7 +271,7 @@ class mesoSPIM_Core(QtCore.QObject):
                        'camera_display_live_subsampling',
                        'camera_display_acquisition_subsampling',
                        'camera_sensor_mode',
-                       'camera_binning',
+                       'camera_binning'
                        ):
                 self.sig_state_request.emit({key : value})
 
@@ -431,7 +431,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_shutterconfig(self, shutterconfig):
-        self.state['shutterconfig'] = shutterconfig
+        self.sig_state_request.emit({'shutterconfig': shutterconfig})
 
     @QtCore.pyqtSlot()
     def open_shutters(self):

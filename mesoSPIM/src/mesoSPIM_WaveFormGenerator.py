@@ -101,9 +101,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'laser_r_pulse_%',
                        'laser_r_max_amplitude',
                         'laser',
-                        'zoom',
                        'camera_delay_%',
-                       'camera_pulse_%'):
+                       'camera_pulse_%',
+                       'shutterconfig',
+                       'zoom',
+                       ):
                 ''' Notify GUI about the change '''
                 self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
@@ -127,6 +129,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.samples = int(samplerate*sweeptime)
 
     def create_waveforms(self):
+        logger.info("waveforms updated")
         self.calculate_samples()
         self.create_etl_waveforms()
         self.create_galvo_waveforms()
@@ -162,8 +165,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         # freeze AO channel which is not in use, to reduce heating and increase ETL lifetime
         if self.state['shutterconfig'] == 'Left':
             self.etl_r_waveform[:] = etl_r_offset
+            logger.info("Right arm frozen")
         elif self.state['shutterconfig'] == 'Right':
             self.etl_l_waveform[:] = etl_l_offset
+            logger.info("Left arm frozen")
         else:
             pass
 
