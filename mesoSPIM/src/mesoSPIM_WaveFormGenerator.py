@@ -101,9 +101,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'laser_r_pulse_%',
                        'laser_r_max_amplitude',
                         'laser',
-                        'zoom',
                        'camera_delay_%',
-                       'camera_pulse_%'):
+                       'camera_pulse_%',
+                       'shutterconfig',
+                       'zoom',
+                       ):
                 ''' Notify GUI about the change '''
                 self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
@@ -127,6 +129,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.samples = int(samplerate*sweeptime)
 
     def create_waveforms(self):
+        logger.info("waveforms updated")
         self.calculate_samples()
         self.create_etl_waveforms()
         self.create_galvo_waveforms()
@@ -162,8 +165,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         # freeze AO channel which is not in use, to reduce heating and increase ETL lifetime
         if self.state['shutterconfig'] == 'Left':
             self.etl_r_waveform[:] = etl_r_offset
+            logger.info("Right arm frozen")
         elif self.state['shutterconfig'] == 'Right':
             self.etl_l_waveform[:] = etl_l_offset
+            logger.info("Left arm frozen")
         else:
             pass
 
@@ -228,6 +233,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                     offset = 0)
 
         '''The key: replace the waveform in the waveform list with this new template'''
+        assert sorted(list(self.cfg.laserdict.keys())) == list(self.cfg.laserdict.keys()), f"Error: laserdict keys in config file must be alphanumerically sorted: {self.cfg.laserdict.keys()}"
         current_laser_index = sorted(list(self.cfg.laserdict.keys())).index(self.state['laser'])
         self.laser_waveform_list[current_laser_index] = self.laser_template_waveform
         self.laser_waveforms = np.stack(self.laser_waveform_list)
