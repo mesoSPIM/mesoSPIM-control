@@ -282,12 +282,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def update_position_indicators(self, dict):
         for key, pos_dict in dict.items():
             if key == 'position':
-                self.X_Position_Indicator.setText(self.pos2str(pos_dict['x_pos'])+' µm')
-                self.Y_Position_Indicator.setText(self.pos2str(pos_dict['y_pos'])+' µm')
-                self.Z_Position_Indicator.setText(self.pos2str(pos_dict['z_pos'])+' µm')
-                self.Focus_Position_Indicator.setText(self.pos2str(pos_dict['f_pos'])+' µm')
-                self.Rotation_Position_Indicator.setText(self.pos2str(pos_dict['theta_pos'])+'°')
-       
+                self.x_position, self.y_position, self.z_position = pos_dict['x_pos'], pos_dict['y_pos'], pos_dict['z_pos']
+                self.f_position, self.theta_position = pos_dict['f_pos'], pos_dict['theta_pos']
+                self.X_Position_Indicator.setText(self.pos2str(self.x_position)+' µm')
+                self.Y_Position_Indicator.setText(self.pos2str(self.y_position)+' µm')
+                self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
+                self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
+                self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
                 self.state['position'] = dict['position']
 
     @QtCore.pyqtSlot(dict)
@@ -345,17 +346,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
         ''' Connecting the movement & zero buttons '''
-        self.xPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': -self.xyzIncrementSpinbox.value()}))
-        self.xMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': self.xyzIncrementSpinbox.value()}))
-        self.yPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': self.xyzIncrementSpinbox.value()}))
-        self.yMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': -self.xyzIncrementSpinbox.value()}))
-        self.zPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': self.xyzIncrementSpinbox.value()}))
-        self.zMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': -self.xyzIncrementSpinbox.value()}))
-        self.focusPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': self.focusIncrementSpinbox.value()}))
-        self.focusMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': -self.focusIncrementSpinbox.value()}))
-
-        self.rotPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': self.rotIncrementSpinbox.value()}))
-        self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
+        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': -self.xyzIncrementSpinbox.value()}))
+        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': self.xyzIncrementSpinbox.value()}))
+        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': self.xyzIncrementSpinbox.value()}))
+        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': -self.xyzIncrementSpinbox.value()}))
+        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': self.xyzIncrementSpinbox.value()}))
+        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': -self.xyzIncrementSpinbox.value()}))
+        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': self.focusIncrementSpinbox.value()}))
+        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': -self.focusIncrementSpinbox.value()}))
+        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': self.rotIncrementSpinbox.value()}))
+        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': -self.rotIncrementSpinbox.value()}))
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
@@ -483,6 +483,36 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySlider.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
+
+    @QtCore.pyqtSlot(dict)
+    def move_relative(self, pos_dict):
+        assert len(pos_dict) == 1, f"Position dictionary expects only one entry, got {pos_dict}"
+        key, value = list(pos_dict.keys())[0], list(pos_dict.values())[0]
+        if key == 'x_rel':
+            if not (self.cfg.stage_parameters['x_min'] + 1000 <= self.x_position + value <= self.cfg.stage_parameters['x_max'] - 1000):
+                self.X_Position_Indicator.setStyleSheet("color: red;")
+                logger.info(f"X axis position {self.x_position} close to software limits, defined in the config file.")
+            else:
+                self.X_Position_Indicator.setStyleSheet("color: white;")
+        elif key == 'y_rel':
+            if not (self.cfg.stage_parameters['y_min'] + 1000 <= self.y_position + value <= self.cfg.stage_parameters['y_max'] - 1000):
+                self.Y_Position_Indicator.setStyleSheet("color: red;")
+                logger.info(f"Y axis position {self.y_position} close to software limits, defined in the config file.")
+            else:
+                self.Y_Position_Indicator.setStyleSheet("color: white;")
+        elif key == 'z_rel':
+            if not (self.cfg.stage_parameters['z_min'] + 1000 <= self.z_position + value <= self.cfg.stage_parameters['z_max'] - 1000):
+                self.Z_Position_Indicator.setStyleSheet("color: red;")
+                logger.info(f"Z axis position {self.z_position} close to software limits, defined in the config file.")
+            else:
+                self.Z_Position_Indicator.setStyleSheet("color: white;")
+        elif key == 'f_rel':
+            if not (self.cfg.stage_parameters['f_min'] + 1000 <= self.f_position + value <= self.cfg.stage_parameters['f_max'] - 1000):
+                logger.info(f"F axis position {self.f_position} close to software limits, defined in the config file.")
+                self.Focus_Position_Indicator.setStyleSheet("color: red;")
+            else:
+                self.Focus_Position_Indicator.setStyleSheet("color: white;")
+        self.sig_move_relative.emit(pos_dict)
 
     @QtCore.pyqtSlot(int)
     def set_laser_intensity(self, value):
