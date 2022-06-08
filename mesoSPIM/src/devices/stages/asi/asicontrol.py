@@ -52,26 +52,22 @@ class StageControlASITiger(QtCore.QObject):
         '''Closes connection to the stage'''
         self.asi_connection.close()
     
-    def _send_command(self, command, delay=0.01):
+    def _send_command(self, command: bytes):
         '''Sends a command to the controller
-        
-        Try-except block included to catch errors - this is dangerous - no checking of success 
-        
+        Try-except block included to catch errors - this is dangerous - no checking of success
         Args:
-            command (str): Command string to be sent. Needs to be in the form "b'W V?\r\n'" - has to be binary, do not forget the carriage return
+            command (bytes): Command string to be sent. Needs to be in the form "b'W V?\r'" - has to be binary, do not forget the carriage return
             
         Returns:
-            answer (str): Answer by the controller. Will be in binary format and needs to be decoded if necessary.
+            answer (str): Answer by the controller.
         '''
         try:
-            # print(time.time(), ' ', command.decode('UTF-8'))
+            ''' During acquisitions: send pause signal '''
+            self.sig_pause.emit(True)
             start_time = time.time()
             self._reset_buffers()
             self.asi_connection.write(command)
-            time.sleep(delay)
-            ''' During acquisitions: send pause signal '''
-            self.sig_pause.emit(True)
-            message = self.asi_connection.readline()
+            message = self.asi_connection.readline().decode("ascii")
             response_time = time.time() 
             ''' During acquistions: send unpause signal '''
             self.sig_pause.emit(False)
@@ -82,14 +78,14 @@ class StageControlASITiger(QtCore.QObject):
                 logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time (>15 ms): ' + str(delta_t))
             return message
         except Exception as error:
-            logger.info('Serial exception of the ASI stage: ' + str(error))
+            logger.error(f"Serial exception of the ASI stage: command {command.decode('ascii')}, error: {error}")
 
     def _reset_buffers(self):
         if self.asi_connection is not None:
             self.asi_connection.reset_input_buffer()
             self.asi_connection.reset_output_buffer()
         else:
-            logger.info("_reset_buffers(): serial port not initialized")
+            logger.error("Serial port not initialized")
 
     def axis_in_config_check(self, axis):
         '''
@@ -108,7 +104,8 @@ class StageControlASITiger(QtCore.QObject):
     def stop(self):
         '''Stops movement on all axes by sending "halt" to the controller
         '''
-        self._send_command(b'\\r\n')
+        response = self._send_command(b'\\r')
+        logger.info(f"ASI response to HALT command: {response}")
         
     def wait_until_done(self):
         '''Blocks if the stage is moving due to a serial command'''
@@ -119,28 +116,27 @@ class StageControlASITiger(QtCore.QObject):
         self.stage_busy = True
         while self.stage_busy is True:
             try: 
-                message1 = self._send_command(b'/\r\n').decode('UTF-8')[0]
-                time.sleep(0.1)
-                message2 = self._send_command(b'/\r\n').decode('UTF-8')[0]
-                time.sleep(0.1)
+                message1 = self._send_command(b'/\r')[0]
+                time.sleep(0.05)
+                message2 = self._send_command(b'/\r')[0]
+                time.sleep(0.05)
                 if message1 == 'N' and message2 == 'N':
                     self.stage_busy = False
             except:
-                logger.info('ASI stages: Wait until done failed')
+                logger.error('ASI stages: Wait until done failed')
         
     def read_position(self):
-        '''Reports position from the stages 
-               
+        '''Reports position from the stages
         Returns:
             positions (dictionary): list of positions 
         
         '''
-        command_string = 'W ' + self.axes + '\r\n'
-        position_string = self._send_command(command_string.encode('UTF-8'))
+        command_string = 'W ' + self.axes + '\r'
+        position_string = self._send_command(command_string.encode('ascii'))
         # Create a list of the form "['7835', '-38704', '0', '0', '-367586']", first element is the ack ':A' and gets discarded
         if position_string is not None:
             try:
-                position_list = position_string.decode('UTF-8').split()[1:]
+                position_list = position_string.split()[1:]
                 ''' Only process position list if it contains all values'''
                 if len(position_list) == self.num_axes:
                     try:
@@ -154,8 +150,12 @@ class StageControlASITiger(QtCore.QObject):
                         logger.info('Invalid position dict: ' + str(position_list))
                         # return last position dict
                         return self.position_dict
+                else:
+                    logger.error(f"Position list count {position_list} does not match the number of axes {self.num_axes}")
             except: 
-                logger.info('Invalid position string: ' + str(position_string))
+                logger.error('Invalid position string: ' + str(position_string))
+        else:
+            logger.error("Position string is empty")
 
     def move_relative(self, motion_dict):
         '''Command for relative motion 
@@ -171,8 +171,8 @@ class StageControlASITiger(QtCore.QObject):
             if self.axis_in_config_check(axis):
                 command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*self.encoder_conversion[axis])
         if command_string != 'R':
-            command_string += '\r\n'
-            self._send_command(command_string.encode('UTF-8'))
+            command_string += '\r'
+            self._send_command(command_string.encode('ascii'))
         
     def move_absolute(self, motion_dict):
         ''' Command for absolute motion 
@@ -188,12 +188,11 @@ class StageControlASITiger(QtCore.QObject):
                 command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*self.encoder_conversion[axis])
                 
         if command_string != 'M':
-            command_string += '\r\n'
-            self._send_command(command_string.encode('UTF-8'))
+            command_string += '\r'
+            self._send_command(command_string.encode('ascii'))
 
     def enable_ttl_mode(self, card_ids, bool):
         ''' Enables or disables TTL mode of ASI controllers
-
         Args:
             card_ids (list): List of card IDs inside the controller (i.e. (2,3) for cards in slots 2 and 3) for 
                             which TTL triggering should be enabled or disabled. If None, the controller is assumed
@@ -204,18 +203,18 @@ class StageControlASITiger(QtCore.QObject):
         if card_ids is not None: # Tiger controller
             if bool is True: # Enable TTL mode for all cards
                 for i in card_ids:
-                    command_string = str(i) + ' TTL X=2 Y=2\r\n'
-                    self._send_command(command_string.encode('UTF-8'))
+                    command_string = str(i) + ' TTL X=2 Y=2\r'
+                    self._send_command(command_string.encode('ascii'))
                     logger.info('Send string to ASI controller: ' + command_string)
             else: # Disable TTL mode for all cards
                 for i in card_ids:
-                    command_string = str(i) + ' TTL X=0 Y=2\r\n'
-                    self._send_command(command_string.encode('UTF-8'))
+                    command_string = str(i) + ' TTL X=0 Y=2\r'
+                    self._send_command(command_string.encode('ascii'))
                     logger.info('Send string to ASI controller: ' + command_string)
         else: # MS-2000 controller
             if bool is True:
-                self._send_command(b'TTL X=2 Y=2\r\n') # MS-2000 TTL mode should be enabled
+                self._send_command(b'TTL X=2 Y=2\r') # MS-2000 TTL mode should be enabled
                 logger.info('Send string to ASI controller: ' + command_string)
             else:
-                self._send_command(b'TTL X=0 Y=2\r\n') # MS-2000 TTL mode should be disabled
+                self._send_command(b'TTL X=0 Y=2\r') # MS-2000 TTL mode should be disabled
                 logger.info('Send string to ASI controller: ' + command_string)

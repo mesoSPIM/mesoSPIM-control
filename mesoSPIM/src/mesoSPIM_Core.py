@@ -40,11 +40,7 @@ from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import convert_seconds_to_string
 
 class mesoSPIM_Core(QtCore.QObject):
-    '''This class is the pacemaker of a mesoSPIM
-
-    Signals it can send:
-
-    '''
+    '''This class is the pacemaker of a mesoSPIM'''
 
     sig_finished = QtCore.pyqtSignal()
 
@@ -85,6 +81,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_mark_rotation_position = QtCore.pyqtSignal()
     sig_go_to_rotation_position = QtCore.pyqtSignal()
     sig_go_to_rotation_position_and_wait_until_done = QtCore.pyqtSignal()
+    sig_polling_stage_position_start, sig_polling_stage_position_stop = QtCore.pyqtSignal(), QtCore.pyqtSignal()
 
     ''' ETL-related signals '''
     sig_save_etl_config = QtCore.pyqtSignal()
@@ -131,14 +128,17 @@ class mesoSPIM_Core(QtCore.QObject):
         self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
         self.serial_worker.moveToThread(self.serial_thread)
-        ''' If the stage (including the timer) is not manually moved to the serial thread, it will execute within the mesoSPIM_Core event loop'''
-        self.serial_worker.stage.moveToThread(self.serial_thread)
+        # If the stage (including the timer) is not manually moved to the serial thread, it will execute within the mesoSPIM_Core event loop - Fabian
+        # This caused timer start/stop issues, so it is commented out - Nikita
+        #self.serial_worker.stage.moveToThread(self.serial_thread)
         #self.serial_worker.stage.pos_timer.moveToThread(self.serial_thread)
 
         #self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
         self.serial_worker.sig_position.connect(self.sig_position.emit)
         self.serial_worker.sig_status_message.connect(self.send_status_message_to_gui)
         self.serial_worker.sig_pause.connect(self.pause)
+        self.sig_polling_stage_position_start.connect(self.serial_worker.stage.pos_timer.start)
+        self.sig_polling_stage_position_stop.connect(self.serial_worker.stage.pos_timer.stop)
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -381,7 +381,6 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             self.sig_state_request.emit({'laser':laser})
             if update_etl:
-                #print("ETL updated")
                 self.sig_state_request.emit({'set_etls_according_to_laser' : laser})
 
     @QtCore.pyqtSlot(str)
@@ -405,10 +404,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_move_relative_and_wait_until_done.emit(dict)
         else:
             self.sig_move_relative.emit(dict)
-
-    # @QtCore.pyqtSlot(dict)
-    # def move_relative_and_wait_until_done(self, dict):
-    #     self.move_relative(dict, wait_until_done=True)
 
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
@@ -640,6 +635,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
         self.start_time = time.time()
+        # stop asking stages about their positions, to avoid messing up serial comm during acquisition:
+        self.sig_polling_stage_position_stop.emit()
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
@@ -650,19 +647,20 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def close_acquisition_list(self, acq_list):
         self.sig_status_message.emit('Closing Acquisition List')
-
         if not self.stopflag:
             current_rotation = self.state['position']['theta_pos']
             startpoint = acq_list.get_startpoint()
             target_rotation = startpoint['theta_abs']
 
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-                ''' Go to rotation position '''
                 self.sig_go_to_rotation_position_and_wait_until_done.emit()
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
-            self.state['state']='idle' 
+            self.state['state'] = 'idle'
             self.move_absolute(acq_list.get_startpoint())
+            # resume asking stages about their position
+            self.sig_polling_stage_position_start.emit()
+
             self.set_filter(acq_list[0]['filter'])
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
             self.set_zoom(acq_list[0]['zoom'], wait_until_done=False, update_etl=False)
@@ -736,11 +734,6 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Housekeeping: Prepare the acquisition  '''
         logger.info(f'Core: Running Acquisition #{self.acquisition_count} with Filename: {acq["filename"]}')
         self.sig_status_message.emit('Going to start position')
-        ''' Rotation handling goes here:
-        If target rotation different than current rotation:
-            - go to target position
-            - rotate to target angle
-        '''
         current_rotation = self.state['position']['theta_pos']
         startpoint = acq.get_startpoint()
         target_rotation = startpoint['theta_abs']
@@ -753,7 +746,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
-
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
@@ -780,7 +772,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list)
         self.prepare_image_series()
-        #self.camera_worker.image_writer.write_metadata(acq, acq_list)
         self.sig_write_metadata.emit(acq, acq_list)
 
     def run_acquisition(self, acq, acq_list):
@@ -862,7 +853,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def close_acquisition(self, acq, acq_list):
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
-
         if self.stopflag is False:
             # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
@@ -874,12 +864,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acq_end_time = time.time()
         img_total_time = self.image_acq_end_time - self.image_acq_start_time
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
-        # self.camera_worker.image_writer.append_timing_info_to_metadata(acq,
-        #                                                                acq_start=self.acq_start_time_string,
-        #                                                                img_start=self.image_acq_start_time_string,
-        #                                                                img_end=self.image_acq_end_time_string,
-        #                                                                acq_end=self.acq_end_time_string,
-        #                                                                img_total_time=img_total_time)
         self.acquisition_count += 1
 
     @QtCore.pyqtSlot(str)

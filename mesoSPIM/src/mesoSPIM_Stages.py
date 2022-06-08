@@ -58,7 +58,7 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
-        self.pos_timer.start(20)
+        self.pos_timer.start(100)
 
         '''Initial setting of all positions
 
@@ -289,6 +289,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         if self.ttl_motion_enabled_during_acq:
             self.ttl_motion_currently_enabled = boolean
 
+
 class mesoSPIM_DemoStage(mesoSPIM_Stage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -346,9 +347,9 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
 
         ''' Stage 5 referencing hack '''
         self.pidevice.FRF(5)
-        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack: Waiting for referencing move')
+        logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
         self.block_till_controller_is_ready()
-        logger.info('mesoSPIM_Stages: M-406 Emergency referencing hack done')
+        logger.info('M-406 Emergency referencing hack done')
 
     def __del__(self):
         try:
@@ -2187,13 +2188,10 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
     '''
     sig_pause = QtCore.pyqtSignal(bool)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self.state = mesoSPIM_StateSingleton()
-        '''
-        ASI-specific code
-        '''
         from .devices.stages.asi.asicontrol import StageControlASITiger
         
         ''' Setting up the ASI stages '''
@@ -2204,28 +2202,19 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         self.ttl_cards = self.asi_parameters['ttl_cards']
         self.asi_stages = StageControlASITiger(self.asi_parameters)
         self.asi_stages.sig_pause.connect(self.pause)
-        self.pos_timer_polling_interval = 500  
-        self.pos_timer.stop()
-        self.pos_timer = QtCore.QTimer(self)
-        self.pos_timer.timeout.connect(self.report_position)
-        self.pos_timer.start(self.pos_timer_polling_interval)
 
-        logger.info('mesoSPIM_Stages: ASI stages initialized')
-        
-        self.counter = 0
-        self.num_images_between_position_polls = 20 
-        self.running_acquisition_flag = False
+        self.pos_timer.setInterval(100)
+        logger.info('ASI stages initialized')
         
     def __del__(self):
         try:
-            '''Close the ASI connection'''
             self.asi_stages.close()
             logger.info('ASI Stage disconnected')
-        except Exception as e:
-            logger.info(f'Error while disconnecting the ASI stage: {e}')
+        except:
+            pass
 
     @QtCore.pyqtSlot(bool)
-    def pause(self,boolean):
+    def pause(self, boolean):
         state = self.state['state']
         if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
             self.sig_pause.emit(boolean)
@@ -2256,37 +2245,12 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
 
             self.sig_position.emit(self.int_position_dict)
 
-    def adapt_position_polling_interval_to_state(self):
-        ''' Helper method to avoid stage hickups with the ASI stages via a serial connection: 
-            During acquisitions, the stage is only polled in long intervals
-        '''
-        state = self.state['state']
-        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
-            if self.pos_timer.isActive():
-                self.pos_timer.stop()
-            if self.running_acquisition_flag == False:
-                self.running_acquisition_flag = True 
-                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!')
-                # self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
-            if self.counter % self.num_images_between_position_polls == 0:
-                # self.report_position()
-                pass
-        else:
-            self.running_acquisition_flag = False 
-            if not self.pos_timer.isActive():
-                self.pos_timer.start(self.pos_timer_polling_interval)
 
-        self.counter += 1
-       
     def move_relative(self, dict, wait_until_done=False):
         ''' ASI move relative method
         Lots of implementation details in here, should be replaced by a facade
         '''
-
-        self.adapt_position_polling_interval_to_state()
-
         motion_dict = {}
-
         if not self.ttl_motion_currently_enabled:
         
             if 'x_rel' in dict:
@@ -2338,17 +2302,15 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         Lots of implementation details in here, should be replaced by a facade
         '''
 
-        self.adapt_position_polling_interval_to_state()
-
+        #self.adapt_position_polling_interval_to_state()
         motion_dict = {}
-
         if 'x_abs' in dict:
             x_abs = dict['x_abs']
             x_abs = x_abs - self.int_x_pos_offset
             if self.x_min < x_abs < self.x_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_abs, 1)})
             else:
-                print(f"Error: The x-move is outside of min-max range, check your config file, 'x_min' and 'x_max'.")
+                logger.error(f"The x-move is outside of min-max range, check your config file, 'x_min' and 'x_max'.")
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs']
@@ -2356,7 +2318,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             if self.y_min < y_abs < self.y_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_abs, 1)})
             else:
-                print(f"Error: The y-move is outside of min-max range, check your config file, 'y_min' and 'y_max'.")
+                logger.error(f"The y-move is outside of min-max range, check your config file, 'y_min' and 'y_max'.")
                     
         if 'z_abs' in dict:
             z_abs = dict['z_abs']
@@ -2364,7 +2326,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             if self.z_min < z_abs < self.z_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_abs, 1)})
             else:
-                print(f"Error: The z-move is outside of min-max range, check your config file, 'z_min' and 'z_max'.")
+                logger.error(f"The z-move is outside of min-max range, check your config file, 'z_min' and 'z_max'.")
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs']
@@ -2372,7 +2334,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             if self.f_min < f_abs < self.f_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_abs, 1)})
             else:
-                print(f"Error: The f-move is outside of min-max range, check your config file, 'f_min' and 'f_max'.")
+                logger.error(f"The f-move is outside of min-max range, check your config file, 'f_min' and 'f_max'.")
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
@@ -2381,7 +2343,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
                 ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
                 motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_abs*100)})
             else:
-                print(f"Error: The theta-move is outside of min-max range, check your config file, 'theta_min' and 'theta_max'.")
+                logger.error(f"The theta-move is outside of min-max range, check your config file, 'theta_min' and 'theta_max'.")
 
         if motion_dict:
             self.asi_stages.move_absolute(motion_dict)
@@ -2458,18 +2420,10 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
 
         self.asi_stages = StageControlASITiger(self.asi_parameters)
         self.asi_stages.sig_pause.connect(self.pause)
-        self.pos_timer_polling_interval = 500  
-        self.pos_timer.stop()
-        self.pos_timer = QtCore.QTimer(self)
-        self.pos_timer.timeout.connect(self.report_position)
-        self.pos_timer.start(self.pos_timer_polling_interval)
+        self.pos_timer.setInterval(100)
 
         logger.info('mesoSPIM_Stages: ASI stages initialized')
-        
-        self.counter = 0
-        self.num_images_between_position_polls = 20 
-        self.running_acquisition_flag = False
-        
+
     def __del__(self):
         try:
             '''Close the ASI connection'''
@@ -2506,28 +2460,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
 
             self.sig_position.emit(self.int_position_dict)
 
-    def adapt_position_polling_interval_to_state(self):
-        ''' Helper method to avoid stage hickups with the ASI stages via a serial connection: 
-            During acquisitions, the stage is only polled in long intervals
-        '''
-        state = self.state['state']
-        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
-            if self.pos_timer.isActive():
-                self.pos_timer.stop()
-            if self.running_acquisition_flag is False:
-                self.running_acquisition_flag = True 
-                self.sig_status_message.emit('Running Acquisition - Attention: Stage positions are not being updated during stacks!')
-                # self.sig_status_message.emit('Running Acquisition - Attention: Stage positions only updated every ' + str(self.num_images_between_position_polls) +' z-steps!', 0)
-            if self.counter % self.num_images_between_position_polls == 0:
-                # self.report_position()
-                pass
-        else:
-            self.running_acquisition_flag = False 
-            if not self.pos_timer.isActive():
-                self.pos_timer.start(self.pos_timer_polling_interval)
 
-        self.counter += 1
-       
     def move_relative(self, dict, wait_until_done=False):
         ''' ASI move relative method
 
@@ -2538,7 +2471,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         Report position 
 
         '''
-        self.adapt_position_polling_interval_to_state()
+        #self.adapt_position_polling_interval_to_state()
 
         motion_dict = {}
 
@@ -2575,7 +2508,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
 
         Lots of implementation details in here, should be replaced by a facade
         '''
-        self.adapt_position_polling_interval_to_state()
+        #self.adapt_position_polling_interval_to_state()
 
         motion_dict = {}
 

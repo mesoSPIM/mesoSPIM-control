@@ -29,9 +29,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
-
     sig_status_message = QtCore.pyqtSignal(str)
-
     sig_pause = QtCore.pyqtSignal(bool)
     
     def __init__(self, parent):
@@ -121,12 +119,11 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_go_to_rotation_position.connect(self.go_to_rotation_position)
         self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
 
-        logger.info('Thread at Startup: '+str(QtCore.QThread.currentThreadId()))
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-        logger.info('Thread of serial object during startup: '+str(self.thread()))
-        logger.info('Thread of stage object during startup: '+str(self.stage.thread()))
-        logger.info('Thread of the filterwheel object during startup: '+str(self.filterwheel.thread()))
-        logger.info('Thread of the zoom object during startup: '+str(self.zoom.thread()))
+        logger.debug('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.debug('Thread of serial object during startup: '+str(self.thread()))
+        logger.debug('Thread of stage object during startup: '+str(self.stage.thread()))
+        logger.debug('Thread of the filterwheel object during startup: '+str(self.filterwheel.thread()))
+        logger.debug('Thread of the zoom object during startup: '+str(self.zoom.thread()))
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):

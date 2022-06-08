@@ -33,7 +33,7 @@ class LogDisplayHandler(QtCore.QObject, logging.Handler):
     def __init__(self, parent):
         super().__init__(parent)
         super(logging.Handler).__init__()
-        formatter = Formatter('%(module)s:%(funcName)s:%(message)s')
+        formatter = Formatter('%(levelname)s:%(module)s:%(funcName)s:%(message)s')
         self.setFormatter(formatter)
 
     def emit(self, record):
