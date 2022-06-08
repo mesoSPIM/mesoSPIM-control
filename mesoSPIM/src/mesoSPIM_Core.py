@@ -125,11 +125,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.set_image)
         #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         ''' Set the serial thread up '''
-        self.serial_thread = QtCore.QThread()
+        #self.serial_thread = QtCore.QThread()
         self.serial_worker = mesoSPIM_Serial(self)
-        self.serial_worker.moveToThread(self.serial_thread)
+        # self.serial_worker.moveToThread(self.serial_thread)
         # If the stage (including the timer) is not manually moved to the serial thread, it will execute within the mesoSPIM_Core event loop - Fabian
-        # This caused timer start/stop issues, so it is commented out - Nikita
         #self.serial_worker.stage.moveToThread(self.serial_thread)
         #self.serial_worker.stage.pos_timer.moveToThread(self.serial_thread)
 
@@ -142,14 +141,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Start the threads '''
         self.camera_thread.start()
-        #logger.info('Camera worker thread affinity after starting the thread? Answer:'+str(id(self.camera_worker.thread())))
-        self.serial_thread.start()
-
-        #logger.info('Camera thread running? Answer:'+str(self.camera_thread.isRunning()))
-        #logger.info('Serial thread running? Answer:'+str(self.serial_thread.isRunning()))
-
-        #logger.info(f'Core: Camera Thread priority: {self.camera_thread.priority()}')
-        #logger.info(f'Core: Serial Thread priority: {self.serial_thread.priority()}')
+        #self.serial_thread.start()
 
         ''' Setting waveform generation up '''
         if self.cfg.waveformgeneration == 'NI':
@@ -198,7 +190,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.TTL_mode_enabled_in_cfg = self.cfg.stage_parameters['ttl_motion_enabled']
 
-        logger.debug('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
         self.state['state'] = 'idle'
@@ -211,10 +202,10 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         try:
             self.camera_thread.quit()
-            self.serial_thread.quit()
+            #self.serial_thread.quit()
 
             self.camera_thread.wait()
-            self.serial_thread.wait()
+            #self.serial_thread.wait()
         except:
             pass
 
@@ -635,8 +626,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.total_acquisition_count = len(acq_list)
         self.total_image_count = acq_list.get_image_count()
         self.start_time = time.time()
-        # stop asking stages about their positions, to avoid messing up serial comm during acquisition:
-        self.sig_polling_stage_position_stop.emit()
 
     def run_acquisition_list(self, acq_list):
         for acq in acq_list:
@@ -658,8 +647,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
             self.state['state'] = 'idle'
             self.move_absolute(acq_list.get_startpoint())
-            # resume asking stages about their position
-            self.sig_polling_stage_position_start.emit()
 
             self.set_filter(acq_list[0]['filter'])
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
@@ -765,9 +752,14 @@ class mesoSPIM_Core(QtCore.QObject):
         if self.TTL_mode_enabled_in_cfg is True:
             ''' The relative movement has to be carried out once with the ASI-controller '''
             self.move_relative(acq.get_delta_z_and_delta_f_dict(inverted=True))
-            time.sleep(0.3)
+            time.sleep(0.1)
             self.move_relative(acq.get_delta_z_and_delta_f_dict())
+            time.sleep(0.1)
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : True})
+            time.sleep(0.05)
+
+        # stop asking stages about their positions, to avoid messing up serial comm during acquisition:
+        self.sig_polling_stage_position_stop.emit()
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list)
@@ -859,7 +851,12 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_end_image_series.emit(acq, acq_list)
 
         if self.TTL_mode_enabled_in_cfg is True:
+            time.sleep(0.05) # add some buffer time for serial execution
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : False})
+            time.sleep(0.05)  # buffer time
+
+        # resume asking stages about their position
+        self.sig_polling_stage_position_start.emit()
 
         self.acq_end_time = time.time()
         img_total_time = self.image_acq_end_time - self.image_acq_start_time

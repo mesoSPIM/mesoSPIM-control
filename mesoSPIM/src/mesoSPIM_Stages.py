@@ -119,12 +119,6 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         self.ttl_motion_enabled_during_acq = self.cfg.stage_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
-        '''
-        Debugging code
-        '''
-        # self.sig_status_message.connect(lambda string, time: print(string))
-
-        logger.info('Thread ID at Startup: ' + str(int(QtCore.QThread.currentThreadId())))
 
     def create_position_dict(self):
         self.position_dict = {'x_pos': self.x_pos,
@@ -2203,7 +2197,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         self.asi_stages = StageControlASITiger(self.asi_parameters)
         self.asi_stages.sig_pause.connect(self.pause)
 
-        self.pos_timer.setInterval(100)
+        self.pos_timer.setInterval(250)
         logger.info('ASI stages initialized')
         
     def __del__(self):
@@ -2252,7 +2246,6 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         '''
         motion_dict = {}
         if not self.ttl_motion_currently_enabled:
-        
             if 'x_rel' in dict:
                 x_rel = dict['x_rel']
                 if self.x_min < self.x_pos + x_rel < self.x_max:

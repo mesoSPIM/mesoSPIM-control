@@ -8,6 +8,9 @@ import time
 from PyQt5 import QtCore
 from . import dynamixel_functions as dynamixel_func
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 PROTOCOL_VERSION = 1
 
 
@@ -38,18 +41,20 @@ class Dynamixel(QtCore.QObject):
         # the dynamixel library uses integers instead of booleans for binary information
         self.torque_enable = 1
         self.torque_disable = 0
-
-        self.port_num = self.dynamixel.portHandler(self.devicename)
-        self.dynamixel.packetHandler()
         self._connect()
 
     def _connect(self):
-        # open port and set baud rate
-        self.dynamixel.openPort(self.port_num)
-        self.dynamixel.setBaudRate(self.port_num, self.baudrate)
-        self.multiturn_offset = self.dynamixel.read2ByteTxRx(self.port_num, PROTOCOL_VERSION, self.id, self.addr_mx_mult_turn_offset)
-        self.multiturn_offset = self.normalize_position(self.multiturn_offset)
-        #print(f"DEBUG: Dynamixel multi-turn offset: {self.multiturn_offset}")
+        try:
+            logger.info(f"Connecting to serial port {self.devicename}")
+            self.port_num = self.dynamixel.portHandler(self.devicename)
+            self.dynamixel.packetHandler()
+            self.dynamixel.openPort(self.port_num)
+            self.dynamixel.setBaudRate(self.port_num, self.baudrate)
+            self.multiturn_offset = self.dynamixel.read2ByteTxRx(self.port_num, PROTOCOL_VERSION, self.id, self.addr_mx_mult_turn_offset)
+            self.multiturn_offset = self.normalize_position(self.multiturn_offset)
+            logger.info(f"Dynamixel multi-turn offset: {self.multiturn_offset}")
+        except Exception as e:
+            logger.error(f"Failed to open serial port: {e}")
 
     def _move(self, position, wait_until_done=False):
         # Enable servo
@@ -69,7 +74,7 @@ class Dynamixel(QtCore.QObject):
         -
         '''
         if wait_until_done:
-            print(f"DEBUG: Dynamixel (wait_until_done=True) goal positon {position}")
+            logger.info(f"Dynamixel (wait_until_done=True) goal positon {position}")
             start_time = time.time()
             upper_limit = position + self.goal_position_offset
             # print('Upper Limit: ', upper_limit)
@@ -81,12 +86,12 @@ class Dynamixel(QtCore.QObject):
             while (cur_position < lower_limit) or (cur_position > upper_limit):
                 ''' Timeout '''
                 if time.time() - start_time > self.timeout:
-                    print("Dynamixel zoom servo: timeout")
+                    logger.error("Dynamixel zoom servo: timeout")
                     break
                 time.sleep(self.sleeptime)
                 cur_position = self.dynamixel.read2ByteTxRx(self.port_num, PROTOCOL_VERSION, self.id, self.addr_mx_present_position)
                 cur_position = self.offset_position(self.normalize_position(cur_position))
-                #print(f"DEBUG: Dynamixel normalized current position {cur_position}")
+                logger.info(f"Dynamixel normalized current position {cur_position}")
 
     def read_position(self):
         '''

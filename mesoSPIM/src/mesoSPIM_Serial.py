@@ -119,12 +119,6 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_go_to_rotation_position.connect(self.go_to_rotation_position)
         self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
 
-        logger.debug('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-        logger.debug('Thread of serial object during startup: '+str(self.thread()))
-        logger.debug('Thread of stage object during startup: '+str(self.stage.thread()))
-        logger.debug('Thread of the filterwheel object during startup: '+str(self.filterwheel.thread()))
-        logger.debug('Thread of the zoom object during startup: '+str(self.zoom.thread()))
-
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):
         for key, value in zip(sdict.keys(), sdict.values()):
@@ -143,7 +137,6 @@ class mesoSPIM_Serial(QtCore.QObject):
             if key == 'stage_program':
                 self.execute_stage_program()
                 logger.info(f'state change: {key}: {value}')
-            # Log Thread ID during Live: just debugging code
             if key == 'ttl_movement_enabled_during_acq':
                 self.enable_ttl_motion(value)
                 logger.info(f'state change: {key}: {value}')

@@ -119,10 +119,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             elif key == 'set_etls_according_to_laser':
                 self.update_etl_parameters_from_laser(value)
 
-            # Log Thread ID during Live: just debugging code
             elif key == 'state':
                 if value == 'live':
-                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+                    logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
@@ -165,10 +164,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         # freeze AO channel which is not in use, to reduce heating and increase ETL lifetime
         if self.state['shutterconfig'] == 'Left':
             self.etl_r_waveform[:] = etl_r_offset
-            logger.info("Right arm frozen")
+            logger.debug("Right arm frozen")
         elif self.state['shutterconfig'] == 'Right':
             self.etl_l_waveform[:] = etl_l_offset
-            logger.info("Left arm frozen")
+            logger.debug("Left arm frozen")
         else:
             pass
 

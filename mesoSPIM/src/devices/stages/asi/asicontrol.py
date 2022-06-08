@@ -25,10 +25,6 @@ class StageControlASITiger(QtCore.QObject):
     Note:
         This is a custom ASI stageset which contains the axis designations:
         X Y Z T V W 
-        
-        V and W are 
-
-        Internally, the 
     '''
 
     def __init__(self, asi_parameters):
@@ -66,16 +62,17 @@ class StageControlASITiger(QtCore.QObject):
             self.sig_pause.emit(True)
             start_time = time.time()
             self._reset_buffers()
+            logger.debug(f"Serial sent: {command}")
             self.asi_connection.write(command)
             message = self.asi_connection.readline().decode("ascii")
             response_time = time.time() 
             ''' During acquistions: send unpause signal '''
             self.sig_pause.emit(False)
-
+            logger.debug(f"Serial received: {message} ")
             ''' Logging of serial connections if response >30 ms (previously: 15 ms)'''
             delta_t = round(response_time - start_time, 6)
-            if delta_t > 0.03: 
-                logger.info('Serial sent: ' + str(command) + ' Serial recv: ' + str(message) + ' Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time (>15 ms): ' + str(delta_t))
+            if delta_t > 0.04:
+                logger.info('Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time, s (if >0.04): ' + str(delta_t))
             return message
         except Exception as error:
             logger.error(f"Serial exception of the ASI stage: command {command.decode('ascii')}, error: {error}")
@@ -205,16 +202,16 @@ class StageControlASITiger(QtCore.QObject):
                 for i in card_ids:
                     command_string = str(i) + ' TTL X=2 Y=2\r'
                     self._send_command(command_string.encode('ascii'))
-                    logger.info('Send string to ASI controller: ' + command_string)
+                    logger.info('TTL enabled')
             else: # Disable TTL mode for all cards
                 for i in card_ids:
                     command_string = str(i) + ' TTL X=0 Y=2\r'
                     self._send_command(command_string.encode('ascii'))
-                    logger.info('Send string to ASI controller: ' + command_string)
+                    logger.info('TTL disabled')
         else: # MS-2000 controller
             if bool is True:
                 self._send_command(b'TTL X=2 Y=2\r') # MS-2000 TTL mode should be enabled
-                logger.info('Send string to ASI controller: ' + command_string)
+                logger.info('TTL enabled')
             else:
                 self._send_command(b'TTL X=0 Y=2\r') # MS-2000 TTL mode should be disabled
-                logger.info('Send string to ASI controller: ' + command_string)
+                logger.info('TTL disabled')

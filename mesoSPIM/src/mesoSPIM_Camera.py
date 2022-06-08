@@ -170,7 +170,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
-            logger.info('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
+            logger.debug('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
 
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
@@ -213,7 +213,6 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.live_image_count = 0
         self.start_time = time.time()
         logger.info('Camera: Preparing Live Mode')
-        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     @QtCore.pyqtSlot()
     def get_live_image(self):
@@ -350,7 +349,6 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
 class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def open_camera(self):
         ''' Hamamatsu-specific code '''
@@ -433,7 +431,6 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def open_camera(self):
         from pyvcam import pvc
@@ -592,7 +589,6 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         logger.info('PCO Cam initialized')
     
     def open_camera(self):

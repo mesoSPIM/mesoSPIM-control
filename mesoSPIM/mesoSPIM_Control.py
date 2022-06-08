@@ -16,10 +16,12 @@ import sys
 import importlib.util
 from PyQt5 import QtWidgets
 
+LOGGING_LEVEL = 'INFO' # 'DEBUG' for fuller info
+
 ''' Configuring the logging module before doing anything else'''
 timestr = time.strftime("%Y%m%d-%H%M%S")
 logging_filename = timestr + '.log'
-logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO,
+logging.basicConfig(filename='log/'+logging_filename, level=LOGGING_LEVEL,
                     format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
 logger = logging.getLogger(__name__)
 logger.info('mesoSPIM-control started')
@@ -47,8 +49,6 @@ def load_config_UI(current_path):
                 'No configuration file selected - shutting down!',
                 QtWidgets.QMessageBox.Ok)
         sys.exit()
-
-    sys.exit(cfg_app.exec_())
 
 def load_config_from_file(path_to_config):
     '''

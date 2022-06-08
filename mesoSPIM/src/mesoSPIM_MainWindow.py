@@ -5,7 +5,7 @@ import tifffile
 import logging
 import time
 logger = logging.getLogger(__name__)
-logger.setLevel('DEBUG')
+logger.setLevel('INFO') # set this to INFO to avoid excessive GUI logging messages, DEBUG for printing thread stats.
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
@@ -16,6 +16,7 @@ from PyQt5.uic import loadUi
 
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
+from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
@@ -120,17 +121,20 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.sig_move_absolute.connect(self.sig_move_absolute.emit)
 
         # Setting up the threads
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         logger.info('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
-
         self.core_thread = QtCore.QThread()
         # Entry point: Work on thread affinity here
         self.core = mesoSPIM_Core(self.cfg, self)
-        #logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
-        self.core.moveToThread(self.core_thread)
 
+        self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
+        # This shit below does not work, everything remains in the main thread. Why?
+        # Even if "moved" to core thread, all these objects actually run in the main thread.
+        # It is a working solution, but not ideal. Ideally these workers must run in self.core_thread.
+        #self.core.serial_worker.moveToThread(self.core_thread)
+        #self.core.serial_worker.stage.moveToThread(self.core_thread)
+        #self.core.serial_worker.stage.asi_stages.moveToThread(self.core_thread)
+        #self.core.serial_worker.stage.pos_timer.moveToThread(self.core_thread)
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -158,19 +162,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
-        logger.debug(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
-        logger.debug('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
-        logger.debug('Core thread running? Answer:'+str(self.core_thread.isRunning()))
-        
+
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
-            #current_thread = self.thread()
-            #current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
-            #current_thread.setPriority(4)
-            #logger.info(f'Main Window: Thread priority: {str(current_thread.priority())}')
             logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
         except:
-            logger.debug(f'Main Window: Printing Thread priority failed.')
+            logger.error(f'Main Window: Printing Thread priority failed.')
 
         logger.debug(f'Main Window: Core priority: {self.core_thread.priority()}')
 
