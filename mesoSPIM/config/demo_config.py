@@ -43,8 +43,6 @@ Physical channels must be connected in certain order:
 acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
                         'camera_trigger_source' : '/PXI1Slot4/PFI0',
                         'camera_trigger_out_line' : '/PXI1Slot4/ctr0',
-                        'stage_trigger_source' : '/PXI1Slot4/PFI0',
-                        'stage_trigger_out_line' : '/PXI1Slot4/ctr1',
                         'galvo_etl_task_line' : 'PXI1Slot4/ao0:3',
                         'galvo_etl_task_trigger_source' : '/PXI1Slot4/PFI0',
                         'laser_task_line' :  'PXI1Slot4/ao4:7',
@@ -189,10 +187,10 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 All positions are absolute.
 
-'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages' 
+'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages', 'TigerASI'
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', see below
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI'
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
                     'ttl_motion_enabled': False,
@@ -226,10 +224,8 @@ pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'serialnum': ('**********', '**********', '**********', None, '**********'),
                 'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                 }
-'''
-
-'''
-For a benchtop mesoSPIM with an ASI Tiger controller, the following parameters are necessary.
+                
+If 'stage_type' = 'TigerASI' (benchtop mesoSPIM with an ASI Tiger controller)
 The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc) 
 which are the values of the dict.
 '''
@@ -237,6 +233,10 @@ which are the values of the dict.
 asi_parameters = {'COMport' : 'COM32',
                   'baudrate' : 115200,
                   'stage_assignment': {'x':'X', 'y':'V', 'z':'Z', 'theta':'T', 'f':'Y'},
+                  'stage_trigger_source': '/PXI1Slot4/PFI0',
+                  'stage_trigger_out_line': '/PXI1Slot4/ctr1',
+                  'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
+                  'stage_trigger_pulse_%' : 1,
                   }
 
 '''
@@ -374,8 +374,6 @@ startup = {
 'laser_r_delay_%' : 10,
 'laser_r_pulse_%' : 87,
 'laser_r_max_amplitude_%' : 100,
-'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
-'stage_trigger_pulse_%' : 1,
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,

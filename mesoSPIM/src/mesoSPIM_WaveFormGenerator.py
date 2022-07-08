@@ -32,45 +32,25 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     def __init__(self, parent):
         super().__init__()
-
         self.cfg = parent.cfg
         self.parent = parent # mesoSPIM_Core object
-
         self.state = mesoSPIM_StateSingleton()
         self.parent.sig_save_etl_config.connect(self.save_etl_parameters_to_csv)
-
-        cfg_file = self.cfg.startup['ETL_cfg_file']
+        cfg_file = self.parent.read_config_parameter('ETL_cfg_file', self.cfg.startup)
         self.state['ETL_cfg_file'] = cfg_file
         self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
-
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
-        self.state['galvo_l_amplitude'] = self.cfg.startup['galvo_l_amplitude']
-        self.state['galvo_r_amplitude'] = self.cfg.startup['galvo_r_amplitude']
-        self.state['galvo_l_frequency'] = self.cfg.startup['galvo_l_frequency']
-        self.state['galvo_r_frequency'] = self.cfg.startup['galvo_r_frequency']
-        self.state['galvo_l_offset'] = self.cfg.startup['galvo_l_offset']
-        self.state['galvo_r_offset'] = self.cfg.startup['galvo_r_offset']
-        self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
-        if 'stage_trigger_delay_%' in self.cfg.startup.keys():
-            self.state['stage_trigger_delay_%'] = self.cfg.startup['stage_trigger_delay_%']
-        else:
-            self.state['stage_trigger_delay_%'] = 92.5
-            print("Warning: parameter 'stage_trigger_delay_%' not found in config file, set to default 92.5. "
-                        "Update the config file, startup{} dictionary")
-        if 'stage_trigger_pulse_%' in self.cfg.startup.keys():
-            self.state['stage_trigger_pulse_%'] = self.cfg.startup['stage_trigger_pulse_%']
-        else:
-            self.state['stage_trigger_pulse_%'] = 1
-            print("Warning: parameter 'stage_trigger_pulse_%' not found in config file, set to default 1. "
-                        "Update the config file, startup{} dictionary")
+        #logger.debug('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
+        self.state['galvo_l_amplitude'] = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
+        self.state['galvo_r_amplitude'] = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
+        self.state['galvo_l_frequency'] = self.parent.read_config_parameter('galvo_l_frequency', self.cfg.startup)
+        self.state['galvo_r_frequency'] = self.parent.read_config_parameter('galvo_r_frequency', self.cfg.startup)
+        self.state['galvo_l_offset'] = self.parent.read_config_parameter('galvo_l_offset', self.cfg.startup)
+        self.state['galvo_r_offset'] = self.parent.read_config_parameter('galvo_r_offset', self.cfg.startup)
+        self.state['max_laser_voltage'] = self.parent.read_config_parameter('max_laser_voltage', self.cfg.startup)
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
-        for key, value in zip(dict.keys(),dict.values()):
-            '''
-            The request handling is done
-            '''
+        for key, value in zip(dict.keys(), dict.values()):
             if key in ('samplerate',
                        'sweeptime',
                        'intensity',
@@ -124,7 +104,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                     logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def calculate_samples(self):
-        samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
         self.samples = int(samplerate*sweeptime)
 
     def create_waveforms(self):
@@ -137,14 +117,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.create_laser_waveforms()
 
     def create_etl_waveforms(self):
-        samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
-        etl_l_delay, etl_l_ramp_rising, etl_l_ramp_falling, etl_l_amplitude, etl_l_offset =\
-        self.state.get_parameter_list(['etl_l_delay_%','etl_l_ramp_rising_%','etl_l_ramp_falling_%',
-        'etl_l_amplitude','etl_l_offset'])
-        etl_r_delay, etl_r_ramp_rising, etl_r_ramp_falling, etl_r_amplitude, etl_r_offset =\
-        self.state.get_parameter_list(['etl_r_delay_%','etl_r_ramp_rising_%','etl_r_ramp_falling_%',
-        'etl_r_amplitude','etl_r_offset'])
-
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
+        etl_l_delay, etl_l_ramp_rising, etl_l_ramp_falling, etl_l_amplitude, etl_l_offset = \
+            self.state.get_parameter_list(['etl_l_delay_%', 'etl_l_ramp_rising_%', 'etl_l_ramp_falling_%', 'etl_l_amplitude','etl_l_offset'])
+        etl_r_delay, etl_r_ramp_rising, etl_r_ramp_falling, etl_r_amplitude, etl_r_offset = \
+            self.state.get_parameter_list(['etl_r_delay_%', 'etl_r_ramp_rising_%', 'etl_r_ramp_falling_%', 'etl_r_amplitude', 'etl_r_offset'])
 
         self.etl_l_waveform = tunable_lens_ramp(samplerate = samplerate,
                                                 sweeptime = sweeptime,
@@ -333,9 +310,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         '''Temporary filepath'''
         tmp_etl_cfg_file = etl_cfg_file+'_tmp'
-
-        # print('saving current ETL parameters')
-
         with open(etl_cfg_file,'r') as input_file, open(tmp_etl_cfg_file,'w') as outputfile:
             reader = csv.DictReader(input_file,delimiter=';')
             #print('created reader')
@@ -348,13 +322,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                           'ETL-Right-Amp']
 
             writer = csv.DictWriter(outputfile,fieldnames=fieldnames,dialect='excel',delimiter=';')
-            #print('created writer')
-
             writer.writeheader()
-
             for row in reader:
                 if row['Wavelength'] == laser and row['Zoom'] == zoom:
-
                         writer.writerow({'Objective' : '1x',
                                          'Wavelength' : laser,
                                          'Zoom' : zoom,
@@ -363,12 +333,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                          'ETL-Right-Offset' : etl_r_offset,
                                          'ETL-Right-Amp' : etl_r_amplitude,
                                          })
-
                 else:
-                        writer.writerow(row)
-
+                    writer.writerow(row)
             writer.writerows(reader)
-
         os.remove(etl_cfg_file)
         os.rename(tmp_etl_cfg_file, etl_cfg_file)
 
@@ -392,11 +359,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
         samples = self.samples
         camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%','camera_delay_%'])
-        stage_trigger_pulse_percent, stage_delay_percent = self.state.get_parameter_list(['stage_trigger_pulse_%','stage_trigger_delay_%'])
-
         self.master_trigger_task = nidaqmx.Task()
         self.camera_trigger_task = nidaqmx.Task()
-        self.stage_trigger_task = nidaqmx.Task()
+        if self.cfg.stage_parameters in {'TigerASI'}:
+            self.stage_trigger_task = nidaqmx.Task()
 
         # Check if 1 or 2 DAQ cards are used for AO waveform generation
         self.ao_cards = 1 if ah['galvo_etl_task_line'].split('/')[-2] == ah['laser_task_line'].split('/')[-2] else 2
@@ -415,12 +381,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''Calculate camera high time and initial delay:
         Disadvantage: high time and delay can only be set after a task has been created
         '''
-
         self.camera_high_time = camera_pulse_percent*0.01*sweeptime
         self.camera_delay = camera_delay_percent*0.01*sweeptime
-
-        self.stage_high_time = stage_trigger_pulse_percent * 0.01 * sweeptime
-        self.stage_delay = stage_delay_percent * 0.01 * sweeptime
 
         '''Housekeeping: Setting up the counter task for the camera trigger'''
         self.camera_trigger_task.co_channels.add_co_pulse_chan_time(ah['camera_trigger_out_line'],
@@ -429,11 +391,17 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         self.camera_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['camera_trigger_source'])
 
-        '''Housekeeping: Setting up the counter task for the stage TTL trigger '''
-        self.stage_trigger_task.co_channels.add_co_pulse_chan_time(ah['stage_trigger_out_line'],
-                                                                    high_time=self.stage_high_time,
-                                                                    initial_delay=self.stage_delay)
-        self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['stage_trigger_source'])
+        '''Housekeeping: Setting up the counter task for the stage TTL trigger for certain stages'''
+        if self.cfg.stage_parameters in {'TigerASI'}:
+            assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' must contain 'asi_parameters' dictionary"
+            trig_line = self.parent.read_config_parameter('stage_trigger_out_line', self.cfg.asi_parameters)
+            trig_source = self.parent.read_config_parameter('stage_trigger_source', self.cfg.asi_parameters)
+            stage_trigger_pulse_percent = self.parent.read_config_parameter('stage_trigger_pulse_%', self.cfg.asi_parameters)
+            stage_delay_percent = self.parent.read_config_parameter('stage_trigger_delay_%', self.cfg.asi_parameters)
+            stage_high_time = stage_trigger_pulse_percent * 0.01 * sweeptime
+            stage_delay = stage_delay_percent * 0.01 * sweeptime
+            self.stage_trigger_task.co_channels.add_co_pulse_chan_time(trig_line, high_time=stage_high_time, initial_delay=stage_delay)
+            self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(trig_source)
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         if self.ao_cards == 2:
@@ -471,7 +439,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         signals until run_tasks() is called.
         """
         self.camera_trigger_task.start()
-        self.stage_trigger_task.start()
+        if self.cfg.stage_parameters in {'TigerASI'}:
+            self.stage_trigger_task.start()
         if self.ao_cards == 2:
             self.galvo_etl_task.start()
             self.laser_task.start()
@@ -496,7 +465,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.wait_until_done()
         self.camera_trigger_task.wait_until_done()
-        self.stage_trigger_task.wait_until_done()
+        if self.cfg.stage_parameters in {'TigerASI'}:
+            self.stage_trigger_task.wait_until_done()
 
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""
@@ -506,7 +476,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.stop()
         self.camera_trigger_task.stop()
-        self.stage_trigger_task.stop()
+        if self.cfg.stage_parameters in {'TigerASI'}:
+            self.stage_trigger_task.stop()
         self.master_trigger_task.stop()
 
     def close_tasks(self):
@@ -519,7 +490,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.close()
         self.camera_trigger_task.close()
-        self.stage_trigger_task.close()
+        if self.cfg.stage_parameters in {'TigerASI'}:
+            self.stage_trigger_task.close()
         self.master_trigger_task.close()
 
 

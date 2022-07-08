@@ -951,3 +951,13 @@ class mesoSPIM_Core(QtCore.QObject):
         for i in input_list:
             mystring = mystring + ' \n ' + i    
         return mystring
+
+    def read_config_parameter(self, key, dictionary):
+        """Helper method to check if key exists in the dictionary and read its value, or throw a meaningful error"""
+        if key not in dictionary.keys():
+            message = f"Mandatory parameter {key} not found in dictionary: \n {dictionary} \n" \
+                      f"Check config file for missing parameter {key}."
+            logger.error(message)
+            raise ValueError(message)
+        else:
+            return dictionary[key]
