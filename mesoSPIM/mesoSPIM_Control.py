@@ -6,6 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
+__version__ = '1.8.0'
 
 import time
 import logging
@@ -45,9 +46,9 @@ def load_config_UI(current_path):
         return config
     else:
         ''' Application shutdown '''
-        warning = QtWidgets.QMessageBox.warning(None,'Shutdown warning',
-                'No configuration file selected - shutting down!',
-                QtWidgets.QMessageBox.Ok)
+        warning = QtWidgets.QMessageBox.warning(None, 'Shutdown warning',
+                                                'No configuration file selected - shutting down!',
+                                                QtWidgets.QMessageBox.Ok)
         sys.exit()
 
 def load_config_from_file(path_to_config):
@@ -135,7 +136,7 @@ def main(embed_console=False, demo_mode=False):
     app = QtWidgets.QApplication(sys.argv)
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
-    ex = mesoSPIM_MainWindow(cfg)
+    ex = mesoSPIM_MainWindow(cfg, "mesoSPIM Main Window, v. " + __version__)
     ex.show()
 
     # hook up the log display widget
@@ -152,7 +153,7 @@ def main(embed_console=False, demo_mode=False):
 
 def run():
     args = get_parser().parse_args()
-    main(embed_console=args.console,demo_mode=args.demo)
+    main(embed_console=args.console, demo_mode=args.demo)
 
 
 if __name__ == '__main__':

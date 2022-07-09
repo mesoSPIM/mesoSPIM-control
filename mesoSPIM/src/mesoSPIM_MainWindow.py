@@ -78,8 +78,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_launch_optimizer = QtCore.pyqtSignal(dict)
     sig_launch_contrast_window = QtCore.pyqtSignal()
 
-    def __init__(self, config=None):
+    def __init__(self, config, title="mesoSPIM Main Window"):
         super().__init__()
+        print(self.__version__)
         # Initial housekeeping
         self.cfg = config
         self.script_window_counter = 0
@@ -91,7 +92,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         # Setting up the user interface windows
         loadUi('gui/mesoSPIM_MainWindow.ui', self)
-        self.setWindowTitle('mesoSPIM Main Window')
+        self.setWindowTitle(title)
 
         # Connect log display widget
         self.log_display_handler = LogDisplayHandler(self)
