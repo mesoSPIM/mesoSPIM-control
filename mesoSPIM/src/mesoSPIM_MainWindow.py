@@ -80,7 +80,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, config, title="mesoSPIM Main Window"):
         super().__init__()
-        print(self.__version__)
         # Initial housekeeping
         self.cfg = config
         self.script_window_counter = 0

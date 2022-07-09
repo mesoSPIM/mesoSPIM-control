@@ -40,6 +40,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.file_extension = ''
         self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
         self.tiff_aliases = ('.tif', '.tiff')
+        self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
 
     def check_versions(self):
@@ -121,7 +122,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         elif self.file_extension in self.tiff_aliases:
             self.tiff_writer = tifffile.TiffWriter(self.path, imagej=True)
 
-        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
+        elif self.file_extension in self.bigtiff_aliases:
+            self.tiff_writer = tifffile.TiffWriter(self.path, bigtiff=True)
+
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             self.tiff_mip_writer = tifffile.TiffWriter(self.file_root + "_MAX.tiff", imagej=True)
             self.mip_image = np.zeros((self.y_pixels, self.x_pixels), 'uint16')
 
@@ -140,11 +144,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                              )
             elif self.file_extension == '.raw':
                 self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image.flatten()
-            elif self.file_extension in self.tiff_aliases:
+            elif self.file_extension in self.tiff_aliases + self.bigtiff_aliases:
                 self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
-                                       metadata={'spacing': acq['z_step']})
+                                       metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
-            if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
+            if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
                 self.mip_image = np.maximum(self.mip_image, image)
 
             self.cur_image += 1
@@ -159,10 +163,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                     self.bdv_writer.close()
                 elif self.file_extension == '.raw':
                     del self.xy_stack
-                elif self.file_extension in self.tiff_aliases:
+                elif self.file_extension in (self.tiff_aliases + self.bigtiff_aliases):
                     self.tiff_writer.close()
+                self.metadata_file.close()
             except Exception as e:
-                    logger.error(f'{e}')
+                logger.error(f'{e}')
             print("Writing terminated, files closed")
             self.running = False
         else:
@@ -188,13 +193,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 del self.xy_stack
             except Exception as e:
                 logger.error(f'{e}')
-        elif self.file_extension in self.tiff_aliases:
+        elif self.file_extension in (self.tiff_aliases + self.bigtiff_aliases):
             try:
                 self.tiff_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
 
-        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             try:
                 self.tiff_mip_writer.write(self.mip_image)
                 self.tiff_mip_writer.close()
