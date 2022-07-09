@@ -64,16 +64,10 @@ Camera libraries are not hosted on PyPi and need to be installed manually:
 
 #### Prepare a configuration file and wire the NI DAQ
 The configuration files are in the `config` directory.
-The "demo" files have some devices replaced with dummy devices for testing purposes.
-You can start with one of those if you wish or proceed directly to a non-demo config file.
-Choose one of the ZMB config files as appropriate and work through each section, filling it out for your hardware:
-
-* You can rename your DAQ devices in NI MAX to match the names in the config file (PXI6259 and PXI6733).
-* The `master_trigger_out_line` should be connected to the line which serves as the trigger source for the camera and the galvo/etl task.
-At time of writing that means the master trigger out (`PXI6259/port0/line1`) should be connected to `PXI6259/PFI0`.
-* On Toptica lasers, analog line 1 is the longest wavelength and line 4 is the shortest wavelength.
-Use BNC T connectors to split each analog output line to both lasers.
-* You will need to set the ThorLabs shutter controllers to run on TTL input mode.
+The "demo" files have some devices replaced with `Demo` devices for testing purposes.
+Start with demo config file to make sure installation went successfully.
+Then change the `Demo` devices to your hardware, set their parameters, and test each device.
+See [Wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file) for details.
 
 ## Launching
 #### From Anaconda prompt
