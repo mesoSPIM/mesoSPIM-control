@@ -6,24 +6,26 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
+__version__ = '1.8.0'
 
-
-''' Configuring the logging module before doing anything else'''
 import time
 import logging
 import argparse
 import glob
-timestr = time.strftime("%Y%m%d-%H%M%S")
-logging_filename = timestr + '.log'
-logging.basicConfig(filename='log/'+logging_filename, level=logging.INFO, format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(thread)d:%(module)s:%(name)s:%(message)s')
-logger = logging.getLogger(__name__)
-logger.info('mesoSPIM-control started')
-
 import os
 import sys
 import importlib.util
-
 from PyQt5 import QtWidgets
+
+LOGGING_LEVEL = 'INFO' # 'DEBUG' for fuller info
+
+''' Configuring the logging module before doing anything else'''
+timestr = time.strftime("%Y%m%d-%H%M%S")
+logging_filename = timestr + '.log'
+logging.basicConfig(filename='log/'+logging_filename, level=LOGGING_LEVEL,
+                    format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
+logger = logging.getLogger(__name__)
+logger.info('mesoSPIM-control started')
 
 from src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
@@ -44,12 +46,10 @@ def load_config_UI(current_path):
         return config
     else:
         ''' Application shutdown '''
-        warning = QtWidgets.QMessageBox.warning(None,'Shutdown warning',
-                'No configuration file selected - shutting down!',
-                QtWidgets.QMessageBox.Ok)
+        warning = QtWidgets.QMessageBox.warning(None, 'Shutdown warning',
+                                                'No configuration file selected - shutting down!',
+                                                QtWidgets.QMessageBox.Ok)
         sys.exit()
-
-    sys.exit(cfg_app.exec_())
 
 def load_config_from_file(path_to_config):
     '''
@@ -101,7 +101,6 @@ def dark_mode_check(cfg, app):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
-
 def main(embed_console=False, demo_mode=False):
     """
     Load a configuration file according to the following rules:
@@ -137,8 +136,11 @@ def main(embed_console=False, demo_mode=False):
     app = QtWidgets.QApplication(sys.argv)
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
-    ex = mesoSPIM_MainWindow(cfg)
+    ex = mesoSPIM_MainWindow(cfg, "mesoSPIM Main Window, v. " + __version__)
     ex.show()
+
+    # hook up the log display widget
+    logging.getLogger().addHandler(ex.log_display_handler)
 
     if embed_console:
         from traitlets.config import Config
@@ -149,10 +151,9 @@ def main(embed_console=False, demo_mode=False):
     else:
         sys.exit(app.exec_())
 
-
 def run():
     args = get_parser().parse_args()
-    main(embed_console=args.console,demo_mode=args.demo)
+    main(embed_console=args.console, demo_mode=args.demo)
 
 
 if __name__ == '__main__':

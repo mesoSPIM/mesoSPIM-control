@@ -28,8 +28,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         ''' Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
         super().__init__(parent)
 
-        ''' By an instance variable, callbacks to window signals can be handed
-        through '''
+        ''' By an instance variable, callbacks to window signals can be handed through '''
         self.parent = parent
         self.cfg = parent.cfg if parent else None
         self.state = mesoSPIM_StateSingleton()
@@ -65,6 +64,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.setPage(self.folderpage, DefineFolderPage(self))
         self.setPage(9, FinishedTilingPage(self))
         self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
+        self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
 
         self.button(QtWidgets.QWizard.BackButton).clicked.connect(self.go_back)

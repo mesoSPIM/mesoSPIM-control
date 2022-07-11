@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class FilenameWizard(QtWidgets.QWizard):
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 5
-    (welcome, raw, tiff, single_hdf5, finished) = range(num_of_pages)
+    num_of_pages = 6
+    (welcome, raw, tiff, bigtiff, single_hdf5, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         '''Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
@@ -27,13 +27,15 @@ class FilenameWizard(QtWidgets.QWizard):
         through '''
         self.parent = parent
         self.state = mesoSPIM_StateSingleton()
-        self.file_format = None  # 'raw', 'h5', or 'tiff'
+        self.file_format = None  # 'raw', 'h5', 'tiff', 'btf'
         self.setWindowTitle('Filename Wizard')
         self.setPage(0, FilenameWizardWelcomePage(self))
         self.setPage(1, FilenameWizardRawSelectionPage(self))
         self.setPage(2, FilenameWizardTiffSelectionPage(self))
-        self.setPage(3, FilenameWizardSingleHDF5SelectionPage(self))
-        self.setPage(4, FilenameWizardCheckResultsPage(self))
+        self.setPage(3, FilenameWizardBigTiffSelectionPage(self))
+        self.setPage(4, FilenameWizardSingleHDF5SelectionPage(self))
+        self.setPage(5, FilenameWizardCheckResultsPage(self))
+        self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
 
     def done(self, r):
@@ -101,9 +103,12 @@ class FilenameWizard(QtWidgets.QWizard):
                     start_number += 1
                     start_number_string = str(start_number)
 
-            elif self.file_format == 'tiff':
+            elif self.file_format in {'tiff', 'btf'}:
                 if self.field('DescriptionTIFF'):
                     filename += self.replace_spaces_with_underscores(self.field('DescriptionTIFF')) + '_'
+
+                if self.field('DescriptionBigTIFF'):
+                    filename += self.replace_spaces_with_underscores(self.field('DescriptionBigTIFF')) + '_'
 
                 if self.parent.model.getNShutterConfigs() > 1:
                     shutter_id = 0 if self.parent.model.getShutterconfig(row) == 'Left' else 1
@@ -138,17 +143,19 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self.parent = parent
 
+        self.setStyleSheet(''' font-size: 16px; ''')
         self.setTitle("Autogenerate filenames")
         self.setSubTitle("How would you like to save your data?")
 
         self.raw_string = 'Individual Raw Files: ~.raw'
         self.tiff_string = 'ImageJ TIFF files: ~.tiff'
+        self.bigtiff_string = 'BigTIFF files: ~.btf'
         self.single_hdf5_string = 'BigDataViewer HDF5 file: ~.h5'
 
         self.SaveAsComboBoxLabel = QtWidgets.QLabel('Save as:')
         self.SaveAsComboBox = QtWidgets.QComboBox()
-        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string, self.single_hdf5_string])
-        self.SaveAsComboBox.setCurrentIndex(2)
+        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string, self.bigtiff_string, self.single_hdf5_string])
+        self.SaveAsComboBox.setCurrentIndex(3)
 
         self.registerField('SaveAs', self.SaveAsComboBox, 'currentIndex')
         
@@ -164,25 +171,23 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         elif self.SaveAsComboBox.currentText() == self.tiff_string:
             self.parent.file_format = 'tiff'
             return self.parent.tiff
+        elif self.SaveAsComboBox.currentText() == self.bigtiff_string:
+            self.parent.file_format = 'btf'
+            return self.parent.bigtiff
         elif self.SaveAsComboBox.currentText() == self.single_hdf5_string:
             self.parent.file_format = 'h5'
             return self.parent.single_hdf5
 
 
-class FilenameWizardTiffSelectionPage(QtWidgets.QWizardPage):
+class AbstractSelectionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
-        self.setTitle("Autogenerate TIFF filenames")
-        self.setSubTitle("Names will be compatible with BigStitcher auto-loader format:\n {Description}_Tile{}_Ch{}_Sh{}.tiff")
-
+        self.setStyleSheet(''' font-size: 16px; ''')
         self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ', self)
         self.DescriptionCheckBox.setChecked(True)
         self.DescriptionLineEdit = QtWidgets.QLineEdit(self)
         self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
-
-        self.registerField('DescriptionTIFF', self.DescriptionLineEdit)
-
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.DescriptionCheckBox, 0, 0)
         self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
@@ -196,11 +201,29 @@ class FilenameWizardTiffSelectionPage(QtWidgets.QWizardPage):
         return self.parent.finished
 
 
+class FilenameWizardTiffSelectionPage(AbstractSelectionPage):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.setTitle("Autogenerate TIFF filenames")
+        self.setSubTitle("Names will be compatible with BigStitcher auto-loader format:\n {Description}_Tile{}_Ch{}_Sh{}.tiff")
+        self.registerField('DescriptionTIFF', self.DescriptionLineEdit)
+
+
+class FilenameWizardBigTiffSelectionPage(AbstractSelectionPage):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTitle("Autogenerate BigTIFF filenames")
+        self.setSubTitle("Names will be in format:\n {Description}_Tile{}_Ch{}_Sh{}.btf")
+        self.registerField('DescriptionBigTIFF', self.DescriptionLineEdit)
+
+
 class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
 
+        self.setStyleSheet(''' font-size: 16px; ''')
         self.setTitle("Autogenerate RAW filenames")
         self.setSubTitle("Which properties would you like to use?")
 
@@ -248,31 +271,16 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         return self.parent.finished
 
 
-class FilenameWizardSingleHDF5SelectionPage(QtWidgets.QWizardPage):
+class FilenameWizardSingleHDF5SelectionPage(AbstractSelectionPage):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.parent = parent
-
         self.setTitle("Autogenerate hdf5 filename")
         self.setSubTitle("This puts all raw data into a single hdf5 file, accompanied by two metadata files.")
-
-        self.DescriptionCheckBox = QtWidgets.QCheckBox('Description: ', self)
-        self.DescriptionCheckBox.setChecked(True)
-        self.DescriptionLineEdit = QtWidgets.QLineEdit(self) 
-        self.DescriptionCheckBox.toggled.connect(lambda boolean: self.DescriptionLineEdit.setEnabled(boolean))
-
-        self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.DescriptionCheckBox, 0, 0)
-        self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
-        self.setLayout(self.layout)
         self.registerField('DescriptionHDF5', self.DescriptionLineEdit)
 
     def validatePage(self):
         self.parent.generate_filename_list(increment_number=False)
         return super().validatePage()
-
-    def nextId(self):
-        return self.parent.finished
 
 
 class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
@@ -294,12 +302,12 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def initializePage(self):
-        if self.parent.file_format in ('raw', 'tiff'):
+        if self.parent.file_format in ('raw', 'tiff', 'btf'):
             file_list = self.parent.filename_list
         elif self.parent.file_format == 'h5':
             file_list = [self.parent.filename_list[0]]
         else:
-            raise ValueError(f"file_format must be in ('raw', 'tiff', 'h5'), received {self.parent.file_format}")
+            raise ValueError(f"file_format must be in ('raw', 'tiff', 'btf', 'h5'), received {self.parent.file_format}")
 
         for f in file_list:
             self.mystring += f

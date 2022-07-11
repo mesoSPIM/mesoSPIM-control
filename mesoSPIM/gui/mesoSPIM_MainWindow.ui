@@ -163,7 +163,7 @@
             <widget class="QLineEdit" name="X_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -196,7 +196,7 @@
             <widget class="QLineEdit" name="Y_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -229,7 +229,7 @@
             <widget class="QLineEdit" name="Z_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -265,7 +265,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -298,7 +298,7 @@
             <widget class="QLineEdit" name="Focus_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -714,7 +714,7 @@
               <property name="geometry">
                <rect>
                 <x>130</x>
-                <y>30</y>
+                <y>40</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -753,7 +753,7 @@
               <property name="geometry">
                <rect>
                 <x>250</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -788,7 +788,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -823,7 +823,7 @@
               <property name="geometry">
                <rect>
                 <x>130</x>
-                <y>270</y>
+                <y>280</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -858,7 +858,7 @@
               <property name="geometry">
                <rect>
                 <x>130</x>
-                <y>150</y>
+                <y>160</y>
                 <width>111</width>
                 <height>111</height>
                </rect>
@@ -1122,8 +1122,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>30</x>
-               <y>60</y>
+               <x>20</x>
+               <y>70</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1158,8 +1158,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>30</x>
-               <y>180</y>
+               <x>20</x>
+               <y>190</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1186,8 +1186,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>30</x>
-               <y>300</y>
+               <x>20</x>
+               <y>310</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1270,8 +1270,8 @@
              </property>
              <property name="geometry">
               <rect>
-               <x>150</x>
-               <y>180</y>
+               <x>140</x>
+               <y>190</y>
                <width>111</width>
                <height>111</height>
               </rect>
@@ -1995,6 +1995,24 @@ MOVEMENT </string>
            <attribute name="title">
             <string>Log</string>
            </attribute>
+           <widget class="QPlainTextEdit" name="LogTextDisplay">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>20</y>
+              <width>871</width>
+              <height>681</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="autoFillBackground">
+             <bool>false</bool>
+            </property>
+           </widget>
           </widget>
           <widget class="QWidget" name="ParameterTabWidget">
            <attribute name="title">
@@ -3276,6 +3294,30 @@ ETL tab</string>
              <string>Run Lightsheet Switching  Mode</string>
             </property>
            </widget>
+           <widget class="QPushButton" name="ContrastWindowButton">
+            <property name="geometry">
+             <rect>
+              <x>430</x>
+              <y>10</y>
+              <width>361</width>
+              <height>71</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>Show local contrast across the image, e.g. for test target</string>
+            </property>
+            <property name="text">
+             <string>Open image contrast window</string>
+            </property>
+           </widget>
           </widget>
          </widget>
         </item>
@@ -3328,6 +3370,7 @@ ETL tab</string>
      <string>View</string>
     </property>
     <addaction name="actionOpen_Camera_Window"/>
+    <addaction name="actionOpen_Webcam_Window"/>
     <addaction name="actionOpen_Acquisition_Manager"/>
     <addaction name="actionCascade_windows"/>
    </widget>
@@ -3392,6 +3435,14 @@ ETL tab</string>
   <action name="actionCascade_windows">
    <property name="text">
     <string>Cascade all windows</string>
+   </property>
+  </action>
+  <action name="actionOpen_Webcam_Window">
+   <property name="text">
+    <string>Open Webcam Window</string>
+   </property>
+   <property name="toolTip">
+    <string>Open Webcam Window, if configured</string>
    </property>
   </action>
  </widget>

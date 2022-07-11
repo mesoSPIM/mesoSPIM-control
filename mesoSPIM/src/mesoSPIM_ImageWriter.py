@@ -13,6 +13,7 @@ from PyQt5 import QtCore
 from distutils.version import StrictVersion
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
+from .utils.acquisitions import AcquisitionList, Acquisition
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -24,6 +25,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
+        self.running = False
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
         self.y_pixels = self.cfg.camera_parameters['y_pixels']
@@ -38,6 +40,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.file_extension = ''
         self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
         self.tiff_aliases = ('.tif', '.tiff')
+        self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
 
     def check_versions(self):
@@ -54,7 +57,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
         self.filename = acq['filename']
-        self.path = self.folder+'/'+self.filename
+        self.path = os.path.realpath(self.folder+'/'+self.filename)
         self.file_root, self.file_extension = os.path.splitext(self.path)
         logger.info(f'Image Writer: Save path: {self.path}')
 
@@ -86,12 +89,21 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                                     subsamp=subsamp,
                                                     compression=compression)
             # x and y need to be exchanged to account for the image rotation
-            shape = (self.max_frame, self.y_pixels, self.x_pixels)
+            shape = (self.max_frame, self.x_pixels, self.y_pixels)
             px_size_um = self.cfg.pixelsize[acq['zoom']]
             sign_xyz = (1 - np.array(flip_flags)) * 2 - 1
-            affine_matrix = np.array(((1.0, 0.0, 0.0, sign_xyz[0] * acq['x_pos']/px_size_um),
-                                      (0.0, 1.0, 0.0, sign_xyz[1] * acq['y_pos']/px_size_um),
-                                      (0.0, 0.0, 1.0, sign_xyz[2] * acq['z_start']/acq['z_step'])))
+            if hasattr(self.cfg, "hdf5") and ('transpose_xy' in self.cfg.hdf5.keys())\
+                    and self.cfg.hdf5['transpose_xy'] is False:
+                tile_translation = (sign_xyz[0] * acq['x_pos'] / px_size_um,
+                                    sign_xyz[1] * acq['y_pos'] / px_size_um,
+                                    sign_xyz[2] * acq['z_start'] / acq['z_step'])
+            else: # Hamamatsu Orca Flash 4 backward compatibility
+                tile_translation = (sign_xyz[1] * acq['y_pos'] / px_size_um,
+                                    sign_xyz[0] * acq['x_pos'] / px_size_um,
+                                    sign_xyz[2] * acq['z_start'] / acq['z_step'])
+            affine_matrix = np.array(((1.0, 0.0, 0.0, tile_translation[0]),
+                                      (0.0, 1.0, 0.0, tile_translation[1]),
+                                      (0.0, 0.0, 1.0, tile_translation[2])))
             self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
@@ -110,33 +122,59 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         elif self.file_extension in self.tiff_aliases:
             self.tiff_writer = tifffile.TiffWriter(self.path, imagej=True)
 
-        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
+        elif self.file_extension in self.bigtiff_aliases:
+            self.tiff_writer = tifffile.TiffWriter(self.path, bigtiff=True)
+
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             self.tiff_mip_writer = tifffile.TiffWriter(self.file_root + "_MAX.tiff", imagej=True)
             self.mip_image = np.zeros((self.y_pixels, self.x_pixels), 'uint16')
 
         self.cur_image = 0
+        self.running = True
 
     def write_image(self, image, acq, acq_list):
-        xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
-        if self.file_extension == '.h5':
-            self.bdv_writer.append_plane(plane=image, z=self.cur_image,
-                                         illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
-                                         channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                         angle=acq_list.find_value_index(acq['rot'], 'rot'),
-                                         tile=acq_list.get_tile_index(acq)
-                                         )
-        elif self.file_extension == '.raw':
-            self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image.flatten()
-        elif self.file_extension in self.tiff_aliases:
-            self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
-                                   metadata={'spacing': acq['z_step']})
+        if self.running:
+            xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
+            if self.file_extension == '.h5':
+                self.bdv_writer.append_plane(plane=image, z=self.cur_image,
+                                             illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                             channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                             angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                             tile=acq_list.get_tile_index(acq)
+                                             )
+            elif self.file_extension == '.raw':
+                self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image.flatten()
+            elif self.file_extension in self.tiff_aliases + self.bigtiff_aliases:
+                self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
+                                       metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
-        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
-            self.mip_image = np.maximum(self.mip_image, image)
+            if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+                self.mip_image = np.maximum(self.mip_image, image)
 
-        self.cur_image += 1
-        
+            self.cur_image += 1
+        else:
+            logger.info("No image, running terminated")
+
+    def abort_writing(self):
+        """Terminate writing and close all files if STOP button is pressed"""
+        if self.running:
+            try:
+                if self.file_extension == '.h5':
+                    self.bdv_writer.close()
+                elif self.file_extension == '.raw':
+                    del self.xy_stack
+                elif self.file_extension in (self.tiff_aliases + self.bigtiff_aliases):
+                    self.tiff_writer.close()
+                self.metadata_file.close()
+            except Exception as e:
+                logger.error(f'{e}')
+            print("Writing terminated, files closed")
+            self.running = False
+        else:
+            pass
+
     def end_acquisition(self, acq, acq_list):
+        logger.info("end_acquisition() started")
         if self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:
@@ -155,18 +193,20 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 del self.xy_stack
             except Exception as e:
                 logger.error(f'{e}')
-        elif self.file_extension in self.tiff_aliases:
+        elif self.file_extension in (self.tiff_aliases + self.bigtiff_aliases):
             try:
                 self.tiff_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
 
-        if acq['processing'] == 'MAX' and self.file_extension in ('.raw', '.tiff', '.tif'):
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             try:
                 self.tiff_mip_writer.write(self.mip_image)
                 self.tiff_mip_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
+
+        self.running = False
 
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -229,22 +269,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
             self.write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
 
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_metadata(self, acq, acq_list):
-        '''
-        Writes a metadata.txt file
-
-        Path contains the file to be written
-        '''
+        ''' Writes a metadata.txt file. Path contains the file to be written '''
         path = acq['folder'] + '/' + acq['filename']
-
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
 
-        # print('Metadata_path: ', metadata_path)
         if acq['filename'][-3:] == '.h5':
             if acq == acq_list[0]:
                 self.metadata_file = open(metadata_path, 'w')
         else:
             self.metadata_file = open(metadata_path, 'w')
+
         self.write_line(self.metadata_file, 'Metadata for file', path)
         self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
         self.write_line(self.metadata_file, 'z_planes', acq['planes'])

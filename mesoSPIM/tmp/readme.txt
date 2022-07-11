@@ -1,1 +1,0 @@
-The tmp folder is the default location to save data.
