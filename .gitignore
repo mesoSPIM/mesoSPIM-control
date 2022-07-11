@@ -22,3 +22,4 @@ mesoSPIM/test/fixtures/
 .gitignore
 *.bat
 !mesoSPIM/start_mesoSPIM.bat
+mesospim_control.egg-info

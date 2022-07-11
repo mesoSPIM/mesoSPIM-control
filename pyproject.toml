@@ -1,0 +1,30 @@
+# pyproject.toml
+
+[project]
+name = "mesospim-control"
+version = "1.0.0"
+
+description = "mesoSPIM microscope control"
+readme = "README.md"
+license = { file = "LICENSE" }
+#authors = [{ name = "Nikita Vladimirov", email = "vladimirov@hifo.uzh.ch" }]
+
+dependencies = [
+    "numpy==1.17.0",
+    "scipy==1.2.1",
+    "PyQt5==5.13.1",
+    "PyQt5-sip==12.7.0",
+    "nidaqmx==0.5.7",
+    "indexed==1.2.1",
+    "pipython==2.5.1.3",
+    "pyserial==3.4",
+    "pyqtgraph>=0.12.3",
+    "pywinusb==0.4.2",
+    "tifffile==2021.7.2",
+    "qdarkstyle==2.8.1",
+    "npy2bdv==1.0.7",
+    "future==0.18.2",
+]
+
+[project.scripts]
+mesospim = "mesoSPIM.mesoSPIM_Control:run"

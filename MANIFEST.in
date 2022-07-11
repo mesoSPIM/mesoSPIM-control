@@ -1,0 +1,3 @@
+# MANIFEST.in
+
+include mesoSPIM/src/config/demo_config.py
