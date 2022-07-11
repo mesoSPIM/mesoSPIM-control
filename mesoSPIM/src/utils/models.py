@@ -331,7 +331,8 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     def saveModel(self, filename):
         ''' Allows to serialize a model via pickle '''
-        pickle.dump(self._table, open(filename, "wb" ))
+        with open(filename, "wb" ) as file:
+            pickle.dump(self._table, file)
 
     def setTable(self, table):
         self.modelAboutToBeReset.emit()
@@ -340,7 +341,8 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     def loadModel(self, filename):
         self.modelAboutToBeReset.emit()
-        self._table = pickle.load(open(filename, "rb" ))
+        with open(filename, "rb" ) as file:
+            self._table = pickle.load(file)
         self.modelReset.emit()
 
     def deleteTable(self):

@@ -18,39 +18,37 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
-              'window_pos': (400, 100), # position of the main window on the screen, top left corner.
+              'window_pos': (100, 100), # position of the main window on the screen, top left corner.
+              'usb_webcam': True, # open USB web-camera in a separate window
                }
                
 '''
 Waveform output for Galvos, ETLs etc.
 '''
-
 waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration' or 'NI'
 
 '''
 Card designations need to be the same as in NI MAX, if necessary, use NI MAX
 to rename your cards correctly.
 
-A standard mesoSPIM configuration uses two cards:
+The new mesoSPIM configuration (benchtop-inspired) uses one card (PXI6733) and allows up to 4 laser channels.
 
-PXI6733 is responsible for the lasers (analog intensity control)
-PXI6259 is responsible for the shutters, ETL waveforms and galvo waveforms
-
-
+Physical channels must be connected in certain order:
+- 'galvo_etl_task_line' takes Galvo-L, Galvo-R, ETL-L, ETL-R 
+(e.g. value 'PXI6259/ao0:3' means Galvo-L on ao0, Galvo-R on ao1, ETL-L on ao2, ETL-R on ao3)
+- 'laser_task_line' takes laser modulation, lasers sorted in increasing wavelength order,
+(e.g. value 'PXI6733/ao0:7' means '405 nm' connected to ao4, '488 nm' to ao5, etc.)
 '''
 
-acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
-                        'camera_trigger_source' : '/PXI6259/PFI0',
-                        'camera_trigger_out_line' : '/PXI6259/ctr0',
-                        'galvo_etl_task_line' : 'PXI6259/ao0:3',
-                        'galvo_etl_task_trigger_source' : '/PXI6259/PFI0',
-                        'laser_task_line' :  'PXI6733/ao0:7',
-                        'laser_task_trigger_source' : '/PXI6259/PFI0'}
+acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
+                        'camera_trigger_source' : '/PXI1Slot4/PFI0',
+                        'camera_trigger_out_line' : '/PXI1Slot4/ctr0',
+                        'galvo_etl_task_line' : 'PXI1Slot4/ao0:3',
+                        'galvo_etl_task_trigger_source' : '/PXI1Slot4/PFI0',
+                        'laser_task_line' :  'PXI1Slot4/ao4:7',
+                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0'}
 
-'''
-Human interface device (Joystick)
-'''
-sidepanel = 'Demo' #'Demo' or 'FarmSimulator'
+sidepanel = 'Demo' #'Demo' or 'FarmSimulator', deprecated
 
 '''
 Digital laser enable lines
@@ -58,51 +56,36 @@ Digital laser enable lines
 
 laser = 'Demo' # 'Demo' or 'NI'
 
-''' The laserdict keys are the laser designation that will be shown
-in the user interface '''
-
-laserdict = {'405 nm': 'PXI6733/port0/line2',
-             '488 nm': 'PXI6733/port0/line3',
-             '515 nm': 'PXI6733/port0/line4',
-             '561 nm': 'PXI6733/port0/line5',
-             '594 nm': 'PXI6733/port0/line6',
-             '647 nm': 'PXI6733/port0/line7'}
-
+''' The `laserdict` specifies laser labels of the GUI and their digital modulation channels. 
+Keys are the laser designation that will be shown in the user interface
+Values are DO ports used for laser ENABLE digital signal.
+Critical: entries must be sorted in the increasing wavelength order: 405, 488, etc.
 '''
-Assignment of the analog outputs of the Laser card to the channels
-The Empty slots are placeholders.
-'''
+laserdict = {'488 nm': 'PXI1Slot4/port0/line2',
+             '520 nm': 'PXI1Slot4/port0/line3',
+             '568 nm': 'PXI1Slot4/port0/line4',
+             '638 nm': 'PXI1Slot4/port0/line5',
+             }
 
-laser_designation = {'405 nm' : 0,
-                     '488 nm' : 1,
-                     '515 nm' : 2,
-                     '561 nm' : 3,
-                     '594 nm' : 4,
-                     '647 nm' : 5,
-                     'Empty 0' : 6,
-                     'Empty 1' : 7
-                     }
 
+''' Laser blanking indicates whether the laser enable lines should be set to LOW between
+individual images or stacks. This is helpful to avoid laser bleedthrough between images caused by insufficient
+modulation depth of the analog input (even at 0V, some laser light is still emitted).
 '''
-Assignment of the galvos and ETLs to the 6259 AO channels.
-'''
-
-galvo_etl_designation = {'Galvo-L' : 0,
-                         'Galvo-R' : 1,
-                         'ETL-L' : 2,
-                         'ETL-R' : 3,
-                         }
+laser_blanking = 'images' # if 'images', laser is off before and after every image; if 'stacks', before and after each stack.
 
 '''
 Shutter configuration
+Assumes that the shutter_left line is the general shutter
+and the shutter_right line is the left/right switch (Right==True)
 '''
-
 shutter = 'Demo' # 'Demo' or 'NI'
-shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
-              'shutter_right' : 'PXI6259/port2/line0'}
+shutteroptions = ('Left', 'Right') # Shutter options of the GUI
+shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # left (general) shutter
+              'shutter_right' : '/PXI1Slot4/port0/line1', # flip mirror control or right shutter, depending on physical configuration
+              }
 
-''' A bit of a hack: Shutteroptions for the GUI '''
-shutteroptions = ('Left','Right','Both')
+shutterswitch = True # assumes that the shutter_left line is the general shutter
 
 '''
 Camera configuration
@@ -136,41 +119,44 @@ camera_parameters = {'x_pixels' : 2048,
                      'trigger_source' : 2, # external
                     }
 
-For a Hamamatsu Orca Fusion, the following parameters are necessary:
-
-camera_parameters = {'x_pixels' : 2304,
-                     'y_pixels' : 2304,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
-                     'subsampling' : [1,2,4],
-                     'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
-                     'defect_correct_mode': 2,
-                     'binning' : '1x1',
-                     'readout_speed' : 1,
-                     'trigger_active' : 1,
-                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
-                     'trigger_polarity' : 2, # positive pulse
-                     'trigger_source' : 2, # external
-                    }
-
 For a Photometrics Iris 15, the following parameters are necessary:
 
-camera_parameters = {'x_pixels' : 5056,
-                     'y_pixels' : 2960,
+camera_parameters = {'x_pixels' : 5056, 
+                     'y_pixels' : 2960, 
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
                      'speed_table_index': 0,
-                     'exp_mode' : 'Ext Trig Edge Rising', # Lots of options in PyVCAM --> see constants.py
+                     'exp_mode' : 'Edge Trigger', # Lots of options in PyVCAM --> see constants.py
+                     'readout_port': 0,
+                     'gain_index': 1,
+                     'exp_out_mode': 4, # 4: line out 
                      'binning' : '1x1',
                      'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
-                     'scan_direction' : 1, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
-                     'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
+                     'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
+                     'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us
+                    }
+
+For a Photometrics Prime BSI Express, the following parameters are necessary:
+
+camera_parameters = {'x_pixels' : 2048, #5056
+                     'y_pixels' : 2048, # 2960
+                     'x_pixel_size_in_microns' : 6.5,
+                     'y_pixel_size_in_microns' : 6.5,
+                     'subsampling' : [1,2,4],
+                     'speed_table_index': 1, # 1 for 100 MHz
+                     'exp_mode' : 'Edge Trigger', # Lots of options in PyVCAM --> see constants.py
+                     'readout_port': 0,
+                     'gain_index': 1, # Enable HDR mode
+                     'exp_out_mode': 4, # 4: line out 
+                     'binning' : '1x1',
+                     'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
+                     'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
+                     'scan_line_delay' : 7, # 11.2 us x factor, a factor = 3 equals 33.6 us
                     }
 
 '''
-camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'PhotometricsIris15'
+camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'Photometrics'
 
 camera_parameters = {'x_pixels' : 1024,
                      'y_pixels' : 1024,
@@ -201,21 +187,21 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 All positions are absolute.
 
-'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages' 
+'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages', 'TigerASI'
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', see below
-                    'startfocus' : -10000,
+stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI'
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
-                    'x_max' : 51000,
-                    'x_min' : -46000,
-                    'y_max' : 160000,
-                    'y_min' : -160000,
-                    'z_max' : 99000,
-                    'z_min' : -99000,
-                    'f_max' : 10000,
-                    'f_min' : -10000,
+                    'ttl_motion_enabled': False,
+                    'x_max' : 5000,
+                    'x_min' : -5000,
+                    'y_max' : 5000,
+                    'y_min' : -5000,
+                    'z_max' : 5000,
+                    'z_min' : -5000,
+                    'f_max' : 5000,
+                    'f_min' : -5000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     'x_rot_position': 0,
@@ -238,16 +224,38 @@ pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'serialnum': ('**********', '**********', '**********', None, '**********'),
                 'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                 }
+                
+If 'stage_type' = 'TigerASI' (benchtop mesoSPIM with an ASI Tiger controller)
+The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc) 
+which are the values of the dict.
 '''
+
+asi_parameters = {'COMport' : 'COM32',
+                  'baudrate' : 115200,
+                  'stage_assignment': {'x':'X', 'y':'V', 'z':'Z', 'theta':'T', 'f':'Y'},
+                  'stage_trigger_source': '/PXI1Slot4/PFI0',
+                  'stage_trigger_out_line': '/PXI1Slot4/ctr1',
+                  'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
+                  'stage_trigger_pulse_%' : 1,
+                  }
 
 '''
 Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
+For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'DemoFilterWheel', # 'DemoFilterWheel' or 'Ludl'
-                          'COMport' : 'COM53'}
-
+filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Dynamixel'
+                          'COMport' : 'COM3',
+                          'baudrate' : 115200, # relevant only for 'Dynamixel'
+                          'servo_id' :  1, # relevant only for 'Dynamixel'
+                          }
+'''
+filterdict contains filter labels and their positions. The valid positions are:
+For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
+For Dynamixel: servo encoder counts, e.g. 0 for 0 deg, 1024 for 45 deg (360 deg = 4096 counts, or 11.377 counts/deg). 
+Dynamixel encoder range in multi-turn mode: -28672 .. +28672 counts.
+'''
 filterdict = {'Empty-Alignment' : 0, # Every config should contain this
               '405-488-647-Tripleblock' : 1,
               '405-488-561-640-Quadrupleblock' : 2,

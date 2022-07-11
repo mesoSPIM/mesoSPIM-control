@@ -1,5 +1,9 @@
-# Utilitues for image-based optimization (ETL, auto-focus, etc)
-# by @nvladimus
+'''
+Utilities for fast image-based optimization (auto-focus, etc)
+Auto-focus is based on Autopilot paper (Royer at al, Nat Biotechnol. 2016 Dec;34(12):1267-1278. doi: 10.1038/nbt.3708.)
+author: Nikita Vladimirov, @nvladimus, 2021
+License: GPL-3
+'''
 
 from scipy.fftpack import dct
 import numpy as np
