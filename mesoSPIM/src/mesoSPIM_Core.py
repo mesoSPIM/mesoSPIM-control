@@ -168,6 +168,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.shutter_left.close()
         self.shutter_right.close()
+        self.shutterswitch = self.cfg.shutterswitch if hasattr(self.cfg, 'shutterswitch') else False # backward compatibility with older config files
         self.state['shutterstate'] = False
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
@@ -188,7 +189,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.stopflag = False
         self.pauseflag = False
 
-        self.TTL_mode_enabled_in_cfg = self.cfg.stage_parameters['ttl_motion_enabled']
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
+            assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' must contain 'asi_parameters' dict."
+            self.TTL_mode_enabled_in_cfg = self.read_config_parameter('ttl_motion_enabled', self.cfg.asi_parameters)
 
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
@@ -429,11 +432,11 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         shutterconfig = self.state['shutterconfig']
         if shutterconfig == 'Both':
-            if self.cfg.shutterswitch == False:
+            if self.shutterswitch is False:
                 self.shutter_left.open()
                 self.shutter_right.open()
         elif shutterconfig == 'Left':
-            if self.cfg.shutterswitch == False:
+            if self.shutterswitch is False:
                 self.shutter_left.open()
                 self.shutter_right.close()
             else:
@@ -441,7 +444,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.shutter_right.close() # set side-switch to false 
 
         elif shutterconfig == 'Right':
-            if self.cfg.shutterswitch == False:
+            if self.shutterswitch is False:
                 self.shutter_right.open()
                 self.shutter_left.close()
             else:
@@ -460,7 +463,7 @@ class mesoSPIM_Core(QtCore.QObject):
         Assumes that the shutter_left line is the general shutter 
         and the shutter_right line is the left/right switch (Right==True)
         '''
-        if self.cfg.shutterswitch == False:
+        if self.shutterswitch is False:
             self.shutter_left.close()
             self.shutter_right.close()
         else:
@@ -892,15 +895,15 @@ class mesoSPIM_Core(QtCore.QObject):
             self.shutter_left.close()
             ''' Slow down switching to account for slow flip mirror '''
             self.shutter_right.open()
-            if self.cfg.shutterswitch is True:
+            if self.shutterswitch is True:
                 time.sleep(0.25)
                 self.shutter_left.open()
             self.snap_image()
             self.sig_get_live_image.emit()
-            if self.cfg.shutterswitch is True:
+            if self.shutterswitch is True:
                 self.shutter_left.close()
             self.shutter_right.close()
-            if self.cfg.shutterswitch is True:
+            if self.shutterswitch is True:
                 time.sleep(0.25)
 
             QtWidgets.QApplication.processEvents()

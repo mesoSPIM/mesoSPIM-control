@@ -117,9 +117,6 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.y_rot_position = self.cfg.stage_parameters['y_rot_position']
         self.z_rot_position = self.cfg.stage_parameters['z_rot_position']
 
-        self.ttl_motion_enabled_during_acq = self.cfg.stage_parameters['ttl_motion_enabled']
-        self.ttl_motion_currently_enabled = False
-
     def create_position_dict(self):
         self.position_dict = {'x_pos': self.x_pos,
                               'y_pos': self.y_pos,
@@ -272,16 +269,10 @@ class mesoSPIM_Stage(QtCore.QObject):
                     self.z_pos)
 
     def go_to_rotation_position(self, wait_until_done=False):
-        ''' Move to the proper rotation position 
-        
-        Not implemented in the default
+        ''' Move to the proper rotation position.
         '''
         print('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
         logger.info('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
-
-    def enable_ttl_motion(self, boolean):
-        if self.ttl_motion_enabled_during_acq:
-            self.ttl_motion_currently_enabled = boolean
 
 
 class mesoSPIM_DemoStage(mesoSPIM_Stage):
@@ -2166,7 +2157,6 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
 
 class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
     '''
-
     It is expected that the parent class has the following signals:
         sig_move_relative = pyqtSignal(dict)
         sig_move_relative_and_wait_until_done = pyqtSignal(dict)
@@ -2196,6 +2186,10 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         self.ttl_cards = self.asi_parameters['ttl_cards']
         self.asi_stages = StageControlASITiger(self.asi_parameters)
         self.asi_stages.sig_pause.connect(self.pause)
+
+        assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' must have 'asi_parameters' dict."
+        self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
+        self.ttl_motion_currently_enabled = False
 
         self.pos_timer.setInterval(250)
         logger.info('ASI stages initialized')
@@ -2238,7 +2232,6 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             self.create_internal_position_dict()
 
             self.sig_position.emit(self.int_position_dict)
-
 
     def move_relative(self, dict, wait_until_done=False):
         ''' ASI move relative method

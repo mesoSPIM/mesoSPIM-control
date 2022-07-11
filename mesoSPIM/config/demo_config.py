@@ -76,22 +76,23 @@ laser_blanking = 'images' # if 'images', laser is off before and after every ima
 
 '''
 Shutter configuration
-Assumes that the shutter_left line is the general shutter
-and the shutter_right line is the left/right switch (Right==True)
+If shutterswitch = True:
+    'shutter_left' is the general shutter
+    'shutter_right' is the left/right switch (Right==True)
+    
+If shutterswitch = False or missing:
+    'shutter_left' and 'shutter_right' are two independent shutters.
 '''
 shutter = 'Demo' # 'Demo' or 'NI'
+shutterswitch = True # assumes that the shutter_left line is the general shutter
 shutteroptions = ('Left', 'Right') # Shutter options of the GUI
 shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # left (general) shutter
-              'shutter_right' : '/PXI1Slot4/port0/line1', # flip mirror control or right shutter, depending on physical configuration
+              'shutter_right' : '/PXI1Slot4/port0/line1', # flip mirror or right shutter, depending on physical configuration
               }
-
-shutterswitch = True # assumes that the shutter_left line is the general shutter
 
 '''
 Camera configuration
-'''
 
-'''
 For a DemoCamera, only the following options are necessary
 (x_pixels and y_pixels can be chosen arbitrarily):
 
@@ -193,7 +194,6 @@ All positions are absolute.
 stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI'
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
-                    'ttl_motion_enabled': False,
                     'x_max' : 5000,
                     'x_min' : -5000,
                     'y_max' : 5000,
@@ -237,6 +237,7 @@ asi_parameters = {'COMport' : 'COM32',
                   'stage_trigger_out_line': '/PXI1Slot4/ctr1',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
+                  'ttl_motion_enabled': False,
                   }
 
 '''
