@@ -47,6 +47,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state['galvo_l_offset'] = self.parent.read_config_parameter('galvo_l_offset', self.cfg.startup)
         self.state['galvo_r_offset'] = self.parent.read_config_parameter('galvo_r_offset', self.cfg.startup)
         self.state['max_laser_voltage'] = self.parent.read_config_parameter('max_laser_voltage', self.cfg.startup)
+        if hasattr(self.cfg, 'laser_designation'):
+            print("INFO: Config file: The 'laser_designation' dictionary is obsolete, you can remove it.")
+        if hasattr(self.cfg, 'galvo_etl_designation'):
+            print("INFO: Config file: The 'galvo_etl_designation' dictionary is obsolete, you can remove it.")
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
