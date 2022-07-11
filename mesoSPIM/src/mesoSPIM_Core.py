@@ -192,6 +192,8 @@ class mesoSPIM_Core(QtCore.QObject):
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
             assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' must contain 'asi_parameters' dict."
             self.TTL_mode_enabled_in_cfg = self.read_config_parameter('ttl_motion_enabled', self.cfg.asi_parameters)
+        else:
+            self.TTL_mode_enabled_in_cfg = False
 
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
