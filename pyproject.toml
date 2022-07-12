@@ -1,8 +1,12 @@
 # pyproject.toml
 
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mesospim-control"
-version = "1.0.0"
+version = "1.0.3"
 
 description = "mesoSPIM microscope control"
 readme = "README.md"
@@ -25,6 +29,11 @@ dependencies = [
     "npy2bdv==1.0.7",
     "future==0.18.2",
 ]
+
+requires-python = ">=3.7"
+
+[project.urls]
+Homepage = "http://mesospim.org/"
 
 [project.scripts]
 mesospim = "mesoSPIM.mesoSPIM_Control:run"

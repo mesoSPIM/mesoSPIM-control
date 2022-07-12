@@ -91,6 +91,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
+        self.package_directory = self.parent.package_directory
         self.cfg = self.parent.cfg
 
         self.state = mesoSPIM_StateSingleton()

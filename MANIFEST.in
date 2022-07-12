@@ -2,7 +2,7 @@
 include mesoSPIM/config/demo_config.py
 exclude mesoSPIM/config/config*.py
 include mesoSPIM/config/etl_parameters/ETL-parameters.csv
-include mesoSPIM/src
+graft mesoSPIM/src/*
 include mesoSPIM/gui/*
 include mesoSPIM/scripts
 include mesoSPIM/log/example.log

@@ -240,7 +240,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     def update_etl_parameters_from_laser(self, laser):
         """ Little helper method: Because laser changes need an ETL parameter update """
         zoom = self.state['zoom']
-        etl_cfg_file = self.state['ETL_cfg_file']
+        etl_cfg_file = os.path.join(self.parent.package_directory, self.state['ETL_cfg_file'])
         self.update_etl_parameters_from_csv(etl_cfg_file, laser, zoom)
 
     def update_etl_parameters_from_csv(self, cfg_path, laser, zoom):
@@ -256,10 +256,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         ETL-Right-Offset
         ETL-Right-Amp
         """
-        #print('Updating ETL parameters from file:', cfg_path)
-
         self.sig_update_gui_from_state.emit(True)
-        with open(cfg_path) as file:
+        full_path = os.path.join(self.parent.package_directory, cfg_path)
+        with open(full_path) as file:
             reader = csv.DictReader(file,delimiter=';')
             #print('opened csv')
             match_found = False
@@ -313,6 +312,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         'etl_l_offset', 'etl_l_amplitude', 'etl_r_offset','etl_r_amplitude'])
 
         '''Temporary filepath'''
+        etl_cfg_file = os.path.join(self.parent.package_directory, etl_cfg_file)
         tmp_etl_cfg_file = etl_cfg_file+'_tmp'
         with open(etl_cfg_file,'r') as input_file, open(tmp_etl_cfg_file,'w') as outputfile:
             reader = csv.DictReader(input_file,delimiter=';')

@@ -62,12 +62,12 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__()
 
-        self.parent = parent
+        self.parent = parent # mesoSPIM_MainWindow instance
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
 
-        loadUi('gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
+        loadUi(self.parent.package_directory + '/gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
 
         self.MoveUpButton.clicked.connect(self.move_selected_row_up)

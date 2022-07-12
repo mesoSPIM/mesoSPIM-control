@@ -725,7 +725,7 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         '''
         Galil-specific code
         '''
-        from src.devices.stages.galil.galilcontrol import StageControlGalil
+        from .devices.stages.galil.galilcontrol import StageControlGalil
 
         self.x_encodercounts_per_um = self.cfg.xyz_galil_parameters['x_encodercounts_per_um']
         self.y_encodercounts_per_um = self.cfg.xyz_galil_parameters['y_encodercounts_per_um']
@@ -873,7 +873,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         '''
         Galil-specific code
         '''
-        from src.devices.stages.galil.galilcontrol import StageControlGalil
+        from .devices.stages.galil.galilcontrol import StageControlGalil
 
         self.x_encodercounts_per_um = self.cfg.xyz_galil_parameters['x_encodercounts_per_um']
         self.y_encodercounts_per_um = self.cfg.xyz_galil_parameters['y_encodercounts_per_um']
@@ -1140,7 +1140,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         '''
         Galil-specific code
         '''
-        from src.devices.stages.galil.galilcontrol import StageControlGalil
+        from .devices.stages.galil.galilcontrol import StageControlGalil
 
         self.x_encodercounts_per_um = self.cfg.xyz_galil_parameters['x_encodercounts_per_um']
         self.y_encodercounts_per_um = self.cfg.xyz_galil_parameters['y_encodercounts_per_um']
@@ -1397,7 +1397,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         '''
         Galil-specific code
         '''
-        from src.devices.stages.galil.galilcontrol import StageControlGalil
+        from .devices.stages.galil.galilcontrol import StageControlGalil
 
         self.x_encodercounts_per_um = self.cfg.xyf_galil_parameters['x_encodercounts_per_um']
         self.y_encodercounts_per_um = self.cfg.xyf_galil_parameters['y_encodercounts_per_um']
@@ -1639,7 +1639,7 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         '''
         Galil-specific code
         '''
-        from src.devices.stages.galil.galilcontrol import StageControlGalil
+        from .devices.stages.galil.galilcontrol import StageControlGalil
 
         self.x_encodercounts_per_um = self.cfg.xy_galil_parameters['x_encodercounts_per_um']
         self.y_encodercounts_per_um = self.cfg.xy_galil_parameters['y_encodercounts_per_um']
