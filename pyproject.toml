@@ -7,8 +7,7 @@ version = "1.0.0"
 description = "mesoSPIM microscope control"
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "Nikita Vladimirov", email = "vladimirov@hifo.uzh.ch" },
-            { name = "Fabian Friedrich Voigt", email = "fvoigt@fas.harvard.edu" }]
+#authors = [{ name = "Nikita Vladimirov", email = "vladimirov@hifo.uzh.ch" }]
 
 dependencies = [
     "numpy==1.17.0",
@@ -28,4 +27,4 @@ dependencies = [
 ]
 
 [project.scripts]
-mesospim = "mesoSPIM_Control:run"
+mesospim = "mesoSPIM.mesoSPIM_Control:run"
