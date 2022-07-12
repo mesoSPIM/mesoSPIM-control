@@ -16,8 +16,8 @@ from nidaqmx.constants import LineGrouping, DigitalWidthUnits
 from nidaqmx.types import CtrTime
 
 '''mesoSPIM imports'''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
-from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
+from mesoSPIM.src.utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
 
 from PyQt5 import QtCore
 
@@ -37,6 +37,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state = mesoSPIM_StateSingleton()
         self.parent.sig_save_etl_config.connect(self.save_etl_parameters_to_csv)
         cfg_file = self.parent.read_config_parameter('ETL_cfg_file', self.cfg.startup)
+        if cfg_file.split('/')[0] != 'mesoSPIM':
+            cfg_file = 'mesoSPIM/' + cfg_file
+            print("Warning: Config file: Path to ETL parameters must start with 'mesoSPIM/' folder: "
+                  "'mesoSPIM/config/etl_parameters/ETL-parameters.csv'")
         self.state['ETL_cfg_file'] = cfg_file
         self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
         #logger.debug('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))

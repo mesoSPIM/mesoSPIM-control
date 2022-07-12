@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 ''' Import mesoSPIM modules '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
 
 #from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
 #from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel

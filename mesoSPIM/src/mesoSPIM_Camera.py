@@ -15,9 +15,9 @@ try:
 except:
     logger.info('Error: Hamamatsu camera could not be imported')
 '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
-from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
-from .utils.acquisitions import AcquisitionList, Acquisition
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
+from mesoSPIM.src.mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
+from mesoSPIM.src.utils.acquisitions import AcquisitionList, Acquisition
 
 
 class mesoSPIM_Camera(QtCore.QObject):

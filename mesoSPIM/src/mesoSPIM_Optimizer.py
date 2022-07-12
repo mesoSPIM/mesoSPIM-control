@@ -7,7 +7,7 @@ License: GPL-3
 
 import time
 import numpy as np
-from .utils.optimization import shannon_dct, fit_gaussian_1d, gaussian_1d
+from mesoSPIM.src.utils.optimization import shannon_dct, fit_gaussian_1d, gaussian_1d
 import pyqtgraph as pg
 
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
-from .mesoSPIM_State import mesoSPIM_StateSingleton
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
 
 
 class mesoSPIM_Optimizer(QtWidgets.QWidget):

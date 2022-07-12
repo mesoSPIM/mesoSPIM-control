@@ -13,11 +13,11 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 ''' mesoSPIM imports '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
 
-from .utils.models import AcquisitionModel
+from mesoSPIM.src.utils.models import AcquisitionModel
 
-from .utils.delegates import (ComboDelegate,
+from mesoSPIM.src.utils.delegates import (ComboDelegate,
                         SliderDelegate,
                         MarkXPositionDelegate,
                         MarkYPositionDelegate,
@@ -30,14 +30,14 @@ from .utils.delegates import (ComboDelegate,
                         ETLSpinBoxDelegate,
                         RotationSpinBoxDelegate)
 
-from .utils.widgets import MarkPositionWidget
+from mesoSPIM.src.utils.widgets import MarkPositionWidget
 
-from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
-from .utils.filename_wizard import FilenameWizard
-from .utils.focus_tracking_wizard import FocusTrackingWizard
-from .utils.image_processing_wizard import ImageProcessingWizard
+from mesoSPIM.src.utils.multicolor_acquisition_wizard import MulticolorTilingWizard
+from mesoSPIM.src.utils.filename_wizard import FilenameWizard
+from mesoSPIM.src.utils.focus_tracking_wizard import FocusTrackingWizard
+from mesoSPIM.src.utils.image_processing_wizard import ImageProcessingWizard
 
-from .utils.utility_functions import convert_seconds_to_string
+from mesoSPIM.src.utils.utility_functions import convert_seconds_to_string
 
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):

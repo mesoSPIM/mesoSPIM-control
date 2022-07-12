@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
 from distutils.version import StrictVersion
-from .mesoSPIM_State import mesoSPIM_StateSingleton
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
-from .utils.acquisitions import AcquisitionList, Acquisition
+from mesoSPIM.src.utils.acquisitions import AcquisitionList, Acquisition
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):

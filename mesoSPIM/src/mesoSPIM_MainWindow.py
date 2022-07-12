@@ -14,17 +14,16 @@ from PyQt5.uic import loadUi
 # if sys.platform == 'win32':
 #     from PyQt5.QtWinExtras import QWinTaskbarButton
 
-from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
-from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
-from .mesoSPIM_Serial import mesoSPIM_Serial
-from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
-from .WebcamWindow import WebcamWindow
-from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
-from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
-
-from .mesoSPIM_State import mesoSPIM_StateSingleton
-from .mesoSPIM_Core import mesoSPIM_Core
-from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
+from mesoSPIM.src.mesoSPIM_Core import mesoSPIM_Core
+from mesoSPIM.src.mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
+from mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
+from mesoSPIM.src.mesoSPIM_Serial import mesoSPIM_Serial
+from mesoSPIM.src.mesoSPIM_Optimizer import mesoSPIM_Optimizer
+from mesoSPIM.src.WebcamWindow import WebcamWindow
+from mesoSPIM.src.mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
+from mesoSPIM.src.mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
+from mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
 
 class LogDisplayHandler(QtCore.QObject, logging.Handler):
