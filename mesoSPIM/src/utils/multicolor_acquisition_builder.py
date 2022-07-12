@@ -2,7 +2,7 @@
 
 Take a dict with information and return an acquisition list
 '''
-from mesoSPIM.src.utils.acquisitions import Acquisition, AcquisitionList
+from .acquisitions import Acquisition, AcquisitionList
 
 
 class AcquisitionListBuilder():

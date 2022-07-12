@@ -4,7 +4,7 @@ mesoSPIM State class
 import numpy as np
 from PyQt5 import QtCore
 
-from mesoSPIM.src.utils.acquisitions import AcquisitionList
+from .utils.acquisitions import AcquisitionList
 
 class mesoSPIM_StateSingleton():
     '''

@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 import os
-from mesoSPIM.src.utils.widgets import MarkPositionWidget, SliderWithValue
+from .widgets import MarkPositionWidget, SliderWithValue
 
 class ComboDelegate(QtWidgets.QItemDelegate):
     '''

@@ -6,8 +6,8 @@ need something with an eventloop (e.g. a QApplication) even for testing.
 '''
 from PyQt5 import QtCore
 
-from mesoSPIM.src.devices.joysticks.Demo_SidePanel import Demo_SidePanel
-from mesoSPIM.src.devices.joysticks.logitech import FarmSimulatorSidePanel
+from .Demo_SidePanel import Demo_SidePanel
+from .logitech import FarmSimulatorSidePanel
 
 class Demo_JoystickHandler(QtCore.QObject):
     def __init__(self, parent = None):

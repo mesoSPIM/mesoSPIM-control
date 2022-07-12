@@ -7,7 +7,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
-from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
+from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import logging
 logger = logging.getLogger(__name__)

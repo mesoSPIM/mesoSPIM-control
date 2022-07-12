@@ -1,8 +1,8 @@
 from PyQt5 import QtWidgets, QtGui, QtCore, QtDesigner
 
-from mesoSPIM.src.utils.acquisitions import Acquisition, AcquisitionList
+from .acquisitions import Acquisition, AcquisitionList
 
-from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
+from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import copy
 import pickle

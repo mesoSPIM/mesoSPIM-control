@@ -22,22 +22,22 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 # from nidaqmx.types import CtrTime
 
 ''' Import mesoSPIM modules '''
-from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
+from .mesoSPIM_State import mesoSPIM_StateSingleton
 
-from mesoSPIM.src.devices.shutters.Demo_Shutter import Demo_Shutter
-from mesoSPIM.src.devices.shutters.NI_Shutter import NI_Shutter
+from .devices.shutters.Demo_Shutter import Demo_Shutter
+from .devices.shutters.NI_Shutter import NI_Shutter
 
-from mesoSPIM.src.mesoSPIM_Camera import mesoSPIM_Camera
+from .mesoSPIM_Camera import mesoSPIM_Camera
 
-from mesoSPIM.src.devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
-from mesoSPIM.src.devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
+from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
+from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 
-from mesoSPIM.src.mesoSPIM_Serial import mesoSPIM_Serial
+from .mesoSPIM_Serial import mesoSPIM_Serial
 # from .mesoSPIM_DemoSerial import mesoSPIM_Serial
-from mesoSPIM.src.mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
+from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
-from mesoSPIM.src.utils.acquisitions import AcquisitionList, Acquisition
-from mesoSPIM.src.utils.utility_functions import convert_seconds_to_string
+from .utils.acquisitions import AcquisitionList, Acquisition
+from .utils.utility_functions import convert_seconds_to_string
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM'''

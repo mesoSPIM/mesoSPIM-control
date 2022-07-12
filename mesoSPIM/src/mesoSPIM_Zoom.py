@@ -6,7 +6,7 @@ Authors: Fabian Voigt, Nikita Vladimirov
 
 import time
 from PyQt5 import QtCore
-from mesoSPIM.src.devices.servos.dynamixel.dynamixel import Dynamixel
+from .devices.servos.dynamixel.dynamixel import Dynamixel
 
 
 class DemoZoom(QtCore.QObject):

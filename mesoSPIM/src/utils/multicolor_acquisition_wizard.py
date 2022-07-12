@@ -11,9 +11,9 @@ from functools import partial
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
-from mesoSPIM.src.utils.multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder
-from mesoSPIM.src.utils.filename_wizard import FilenameWizard
-from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
+from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder
+from .filename_wizard import FilenameWizard
+from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 
 class MulticolorTilingWizard(QtWidgets.QWizard):
