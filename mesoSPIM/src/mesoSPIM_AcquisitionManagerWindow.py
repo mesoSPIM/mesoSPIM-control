@@ -67,7 +67,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.state = mesoSPIM_StateSingleton()
 
-        loadUi('gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
+        loadUi('mesoSPIM/gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
 
         self.MoveUpButton.clicked.connect(self.move_selected_row_up)

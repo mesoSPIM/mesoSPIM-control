@@ -22,12 +22,12 @@ LOGGING_LEVEL = 'INFO' # 'DEBUG' for fuller info
 ''' Configuring the logging module before doing anything else'''
 timestr = time.strftime("%Y%m%d-%H%M%S")
 logging_filename = timestr + '.log'
-logging.basicConfig(filename='log/'+logging_filename, level=LOGGING_LEVEL,
+logging.basicConfig(filename='mesoSPIM/log/'+logging_filename, level=LOGGING_LEVEL,
                     format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
 logger = logging.getLogger(__name__)
 logger.info('mesoSPIM-control started')
 
-from src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
+from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
 logger.info('Modules loaded')
 
@@ -111,7 +111,7 @@ def main(embed_console=False, demo_mode=False):
     """
     print('Starting control software')
     logging.info('mesoSPIM Program started.')
-    current_path = os.path.abspath('./config')
+    current_path = os.path.abspath('mesoSPIM/config')
 
     demo_fname = current_path + "/demo_config.py"
     if not os.path.exists(demo_fname):

@@ -40,7 +40,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
         self.delay_s = 0.5  # time delay between snaps to avoid state update hickups, esp for heavy lens-camera assembly during AF
 
-        loadUi('gui/mesoSPIM_Optimizer.ui', self)
+        loadUi('mesoSPIM/gui/mesoSPIM_Optimizer.ui', self)
         self.setWindowTitle('mesoSPIM-Optimizer')
         self.show()
 
@@ -192,7 +192,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.plot_results()
 
     def create_results_window(self):
-        self.results_window = loadUi('gui/mesoSPIM_Optimizer_Results.ui')
+        self.results_window = loadUi('mesoSPIM/gui/mesoSPIM_Optimizer_Results.ui')
         self.results_window.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.results_window.setWindowTitle('Optimization results')
         # signal switchboard for results window

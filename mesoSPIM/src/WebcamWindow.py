@@ -25,7 +25,7 @@ class WebcamWindow(QtWidgets.QWidget):
         super().__init__()
         #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.WEBCAM_ID = webcam_id
-        loadUi('gui/WebcamWindow.ui', self)
+        loadUi('mesoSPIM/gui/WebcamWindow.ui', self)
         self.setWindowTitle(f'Webcam view, camera ID {self.WEBCAM_ID}')
         self.show()
         self.start_capture()

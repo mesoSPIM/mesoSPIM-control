@@ -90,7 +90,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.state.sig_updated.connect(self.update_gui_from_state)
 
         # Setting up the user interface windows
-        loadUi('gui/mesoSPIM_MainWindow.ui', self)
+        loadUi('mesoSPIM/gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle(title)
 
         # Connect log display widget

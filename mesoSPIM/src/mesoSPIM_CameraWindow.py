@@ -35,7 +35,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         if __name__ == '__main__':
             loadUi('../gui/mesoSPIM_CameraWindow.ui', self)
         else:
-            loadUi('gui/mesoSPIM_CameraWindow.ui', self)
+            loadUi('mesoSPIM/gui/mesoSPIM_CameraWindow.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
 
         self.status_label.setText("Status: OK")
