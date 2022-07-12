@@ -11,7 +11,6 @@ version = "1.0.3"
 description = "mesoSPIM microscope control"
 readme = "README.md"
 license = { file = "LICENSE" }
-#authors = [{ name = "Nikita Vladimirov", email = "vladimirov@hifo.uzh.ch" }]
 
 dependencies = [
     "numpy==1.17.0",
@@ -33,7 +32,7 @@ dependencies = [
 requires-python = ">=3.7"
 
 [project.urls]
-Homepage = "http://mesospim.org/"
+Homepage = "https://github.com/mesoSPIM/mesoSPIM-control"
 
 [project.scripts]
 mesospim = "mesoSPIM.mesoSPIM_Control:run"
