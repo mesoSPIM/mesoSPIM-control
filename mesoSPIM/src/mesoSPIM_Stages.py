@@ -339,9 +339,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
     def __del__(self):
         try:
             self.pidevice.unload()
-            logger.info('Stage disconnected')
         except:
-            logger.info('Error while disconnecting the PI stage')
+            pass
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -598,9 +597,8 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
         try:
             [(getattr(self.pi_stages, ('pidevice_' + axis_name))).unload() for axis_name in self.pi['axes_names'] if
              (hasattr(self.pi_stages, ('pidevice_' + axis_name)))]
-            logger.info('Stages disconnected')
         except:
-            logger.info('Error while disconnecting the PI stage')
+            pass
 
 
     def report_position(self):
@@ -755,9 +753,8 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
             '''Close the Galil connection'''
             self.xyz_stage.close_stage()
             self.f_stage.close_stage()
-            logger.info('Galil stages disconnected')
         except:
-            logger.info('Error while disconnecting the Galil stage')
+            pass
 
     def report_position(self):
         self.x_pos = self.xyz_stage.read_position('x')
@@ -944,9 +941,8 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
             '''Close the Galil connection'''
             self.xyz_stage.close()
             self.f_stage.close_stage()
-            logger.info('Galil stages disconnected')
         except:
-            logger.info('Error while disconnecting the Galil stages')
+            pass
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -1213,9 +1209,8 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
             '''Close the Galil connection'''
             self.xyz_stage.close()
             self.f_stage.close_stage()
-            logger.info('Galil stages disconnected')
         except:
-            logger.info('Error while disconnecting the Galil stages')
+            pass
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -1452,9 +1447,8 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         try:
             '''Close the Galil connection'''
             self.xyf_stage.close()
-            logger.info('Galil stages disconnected')
         except:
-            logger.info('Error while disconnecting the Galil stages')
+            pass
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -1732,9 +1726,8 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
             '''Close the Galil connection'''
             self.xyz_stage.close()
             self.f_stage.close_stage()
-            logger.info('Galil stages disconnected')
         except:
-            logger.info('Error while disconnecting the Galil stages')
+            pass
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -1973,9 +1966,8 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
         try:
             '''Close the Galil connection'''
             self.xy_stage.close()
-            logger.info('Galil stages disconnected')
         except:
-            logger.info('Error while disconnecting the Galil stages')
+            pass
 
     def report_position(self):
         positions = self.pidevice.qPOS(self.pidevice.axes)
@@ -2197,7 +2189,6 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
     def __del__(self):
         try:
             self.asi_stages.close()
-            logger.info('ASI Stage disconnected')
         except:
             pass
 
@@ -2414,9 +2405,8 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         try:
             '''Close the ASI connection'''
             self.asi_stages.close()
-            logger.info('ASI Stage disconnected')
         except:
-            logger.info('Error while disconnecting the ASI stage')
+            pass
 
     @QtCore.pyqtSlot(bool)
     def pause(self,boolean):
