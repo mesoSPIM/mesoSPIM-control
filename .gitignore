@@ -24,3 +24,4 @@ mesoSPIM/test/fixtures/
 *.DS_Store
 .gitignore
 *.bat
+!mesoSPIM/mesoSpim.bat
