@@ -67,40 +67,31 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_PI_1toN(self)
         elif self.cfg.stage_parameters['stage_type'] == 'PI_NcontrollersNstages':
             self.stage = mesoSPIM_PI_NtoN(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
             self.stage = mesoSPIM_GalilStages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
             self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_f_rot_and_Galil_xyz':
             self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
             self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
-            self.stage.sig_position.connect(lambda dict: self.sig_position.emit({'position': dict}))
         elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
             self.stage = mesoSPIM_ASI_Tiger_Stage(self)
-            self.stage.sig_position.connect(self.report_position)
             self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
             self.stage = mesoSPIM_ASI_MS2000_Stage(self)
-            self.stage.sig_position.connect(self.report_position)
             self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
-            self.stage.sig_position.connect(self.report_position)
         try:
             self.stage.sig_status_message.connect(self.send_status_message)
-            # self.stage.sig_position.connect(self.report_position)
+            self.stage.sig_position.connect(self.report_position)
         except:
-            print('Stage not initalized! Please check the configuratio file')
+            print('Stage not initalized! Please check the config file')
 
         ''' Wiring signals through to child objects '''
         self.parent.sig_move_relative.connect(self.move_relative)
