@@ -47,10 +47,21 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state['galvo_l_offset'] = self.parent.read_config_parameter('galvo_l_offset', self.cfg.startup)
         self.state['galvo_r_offset'] = self.parent.read_config_parameter('galvo_r_offset', self.cfg.startup)
         self.state['max_laser_voltage'] = self.parent.read_config_parameter('max_laser_voltage', self.cfg.startup)
+        self.config_check()
+
+    def config_check(self):
+        '''Check config file for old/wrong/deprecated pieces'''
         if hasattr(self.cfg, 'laser_designation'):
             print("INFO: Config file: The 'laser_designation' dictionary is obsolete, you can remove it.")
         if hasattr(self.cfg, 'galvo_etl_designation'):
             print("INFO: Config file: The 'galvo_etl_designation' dictionary is obsolete, you can remove it.")
+        laser_task_line_start = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[0][-1])
+        laser_task_line_end = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[1])
+        if (laser_task_line_end - laser_task_line_start + 1) != len(self.cfg.laserdict):
+            raise ValueError(f"Config file: number of AO lines in 'laser_task_line' "
+                             f"({self.cfg.acquisition_hardware['laser_task_line']}) "
+                             f"must be equal to num(lasers) in 'laserdict' ({len(self.cfg.laserdict)}). "
+                             f"Check assignment of AO channels in 'laser_task_line'.")
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -192,8 +203,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
 
         laser_l_delay, laser_l_pulse, max_laser_voltage, intensity = \
-        self.state.get_parameter_list(['laser_l_delay_%','laser_l_pulse_%',
-        'max_laser_voltage','intensity'])
+        self.state.get_parameter_list(['laser_l_delay_%','laser_l_pulse_%', 'max_laser_voltage', 'intensity'])
 
         '''Create zero waveforms for the lasers'''
         self.zero_waveform = np.zeros((self.samples))
