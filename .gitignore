@@ -24,5 +24,3 @@ mesoSPIM/test/fixtures/
 *.DS_Store
 .gitignore
 *.bat
-!mesoSPIM/start_mesoSPIM.bat
-mesospim_control.egg-info
