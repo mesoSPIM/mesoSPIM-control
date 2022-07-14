@@ -6,14 +6,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mesospim-control"
-version = "1.0.3"
+version = "1.0.4"
 
 description = "mesoSPIM microscope control"
 readme = "README.md"
 license = { file = "LICENSE" }
 
 dependencies = [
-    "numpy==1.17.0",
+    "numpy>=1.17.0",
     "scipy==1.2.1",
     "PyQt5==5.13.1",
     "PyQt5-sip==12.7.0",
@@ -35,4 +35,5 @@ requires-python = ">=3.7"
 Homepage = "https://github.com/mesoSPIM/mesoSPIM-control"
 
 [project.scripts]
+mesospim-control = "mesoSPIM.mesoSPIM_Control:run"
 mesospim = "mesoSPIM.mesoSPIM_Control:run"

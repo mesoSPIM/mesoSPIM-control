@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 67.733332 67.733335"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   sodipodi:docname="icon.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="0.90583672"
+     inkscape:cx="-121.98666"
+     inkscape:cy="107.08332"
+     inkscape:window-width="1482"
+     inkscape:window-height="1232"
+     inkscape:window-x="1702"
+     inkscape:window-y="478"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g12082"
+       transform="matrix(0.98991158,0,0,0.99585515,0.34452856,-0.25386419)"
+       style="stroke-width:1.00717"
+       inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+       inkscape:export-xdpi="95.999977"
+       inkscape:export-ydpi="95.999977">
+      <rect
+         style="fill:#fd933a;stroke:#333333;stroke-width:0.26648;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:1.59889, 0.26648"
+         id="rect1092"
+         width="68.157158"
+         height="67.744087"
+         x="-0.20653686"
+         y="0.41307372"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <ellipse
+         style="fill:#0d6efd;stroke:#560dcb;stroke-width:0.26648;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:1.59889, 0.26648"
+         id="path2795"
+         cx="33.872013"
+         cy="34.28495"
+         rx="24.990953"
+         ry="25.920382"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#f2b6bc;stroke:#ffffff;stroke-width:2.01435;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M -2.8198974e-7,44.717366 H 42.333333"
+         id="path3236"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <text
+         xml:space="preserve"
+         style="font-size:14.1111px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';fill:#ffffff;stroke-width:0.26648"
+         x="27.925812"
+         y="39.41486"
+         id="text6998"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100"><tspan
+           sodipodi:role="line"
+           id="tspan6996"
+           style="font-size:14.1111px;fill:#ffffff;stroke-width:0.26648"
+           x="27.925812"
+           y="39.41486">M</tspan></text>
+      <path
+         style="fill:#f2b6bc;stroke:#ffffff;stroke-width:2.01435;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M 24.96531,23.767273 H 67.298643"
+         id="path12054"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+    </g>
+  </g>
+</svg>
