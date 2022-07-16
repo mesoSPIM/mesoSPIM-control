@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
-__version__ = '1.8.0'
+
 
 import time
 import logging
@@ -16,6 +16,8 @@ import os
 import sys
 import importlib.util
 from PyQt5 import QtWidgets
+import pkg_resources
+__version__ = pkg_resources.get_distribution("mesospim-control").version
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(package_directory)) # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
