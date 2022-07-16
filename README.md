@@ -32,35 +32,40 @@ When installing the MS Visual C++ tools, make sure to check [C++ build tools](ht
 * Steinmeyer Mechatronics / Feinmess stages: [Software for using Galil drivers](http://www.galilmc.com/downloads/api) if such a stage is used. To test the stages, GalilTools can be used.
 * ASI stages: [ASI Tiger drivers](http://www.asiimaging.com/support/downloads/tiger-controller-console/). 
 If using USB connection, check ASI instructions on [USB support](http://www.asiimaging.com/support/downloads/usb-support-on-ms-2000-wk-controllers/)
-#### Zoom servo
-* Dynamixel servos: [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases). Make sure you download version 3.5.4 of the SDK.
 
 #### Python
 mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.7 Python. 
 ##### Anaconda 
 (optional) Create and activate a Python 3.7 environment from Anaconda prompt (you can use any name instead of `py37`):
 ```
-conda create -n py37 python=3.7
-conda activate py37
+conda create -p C:/Users/Public/conda/envs/mesoSPIM-py37 python=3.7
+conda activate C:/Users/Public/conda/envs/mesoSPIM-py37
 ```
-The step above is optional but recommended, to avoid conflicts if some libraries already exist or will be changed in the default environment.
+The step above is highly recommended, to avoid conflicts if some libraries already exist or will be changed in the default environment.
 This helps keep your mesoSPIM-dedicated python environment clean and stable.
 
-Many libraries are already included in Anaconda. 
-Install mesoSPIM-specific libraries: 
+Install from PyPi:
 ```
-pip install -r requirements-anaconda.txt
+pip install mesospim-control 
 ```
+The code will be installed in `C:\Users\Public\conda\envs\mesoSPIM-py37\Lib\site-packages\mesoSPIM` directory. You can launch the program from anywhere in Anaconda prompt by typing `mesospim-control`.
 
-##### Clean python 
-For a clean (non-Anaconda) python interpreter, install all required libraries: 
+## Launching
+### Anaconda prompt
 ```
-pip install -r requirements-clean-python.txt
+conda activate mesoSPIM-py37
+mesospim-control
 ```
+Alternatively, you can navigate to folder `mesoSPIM/` and run
+```
+python mesoSPIM_Control.py
+```
+This method requires more typing, so we recommend the shortcut method below.
 
-##### Additional libraries
-Camera libraries are not hosted on PyPi and need to be installed manually:
+### Desktop shortcut 
+Download files [mesoSPIM.bat](https://github.com/mesoSPIM/mesoSPIM-control/blob/development/mesoSPIM/mesoSPIM.bat) and [mesoSPIM-shortcut](https://github.com/mesoSPIM/mesoSPIM-control/blob/development/mesoSPIM/mesoSPIM-shortcut.lnk) to your desktop. Double-click the `mesoSPIM-shortcut` (one with with blue-orange icon) to launch  `mesospim-control` in its installation directory.
 
+The newly installed software will start with the `mesoSPIM/config/demo_config.py` file (demo mode). If you have multiple configuration files you will be prompted to choose one. 
 
 #### Prepare a configuration file and wire the NI DAQ
 The configuration files are in the `config` directory.
@@ -69,21 +74,8 @@ Start with demo config file to make sure installation went successfully.
 Then change the `Demo` devices to your hardware, set their parameters, and test each device.
 See [Wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file) for details.
 
-## Launching
-#### From Anaconda prompt
-```
-conda activate py37
-python mesoSPIM_Control.py
-```
-The software will now start. If you have multiple configuration files you will be prompted to choose one. 
-
-#### From start_mesoSPIM.bat file
-Open the `start_mesoSPIM.bat` file in text editor and configure Anaconda and `py37` path to your own. 
-Once done, launch mesoSPIM by double-clicking the file. 
-Optionally, create a Windows shortcut (via right-click menu) and place it e.g. on your desktop. 
-Using shortcut saves a lot of time for users.
-
 #### Starting in demo mode
+Another quick way to start in demo mode from Anaconda:
 ```
 python mesoSPIM_Control.py -D
 ```
