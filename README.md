@@ -3,20 +3,17 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 # mesoSPIM-control
-Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. Currently, more than 10 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
+Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. 
+A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. 
+Currently, more than 15 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
 
 Parts lists, drawings, and instructions for building a mesoSPIM can be found in the [mesoSPIM wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
 
 ## Overview
 The mesoSPIM is a versatile light-sheet microscope for imaging
-cleared tissue samples. It is compatible with all major clearing approaches - including CLARITY - and optimized for quickly creating large-field-of-view overview datasets of whole mouse brains.
+cleared tissue samples. It is compatible with all major clearing approaches and optimized for quickly creating large-field-of-view overview datasets.
 
 ## Installation
-
-### :warning: Warning
-If you are updating `mesoSPIM-control` from a previous version: 
-please add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) 
-to your old configuration file in order to unlock all new features.
 
 ### Prerequisites
 * Windows 7 or Windows 10, 64-bit
@@ -37,54 +34,52 @@ When installing the MS Visual C++ tools, make sure to check [C++ build tools](ht
 * ASI stages: [ASI Tiger drivers](http://www.asiimaging.com/support/downloads/tiger-controller-console/). 
 If using USB connection, check ASI instructions on [USB support](http://www.asiimaging.com/support/downloads/usb-support-on-ms-2000-wk-controllers/)
 
-#### Python
-mesoSPIM-control is usually installed with [Anaconda](https://www.anaconda.com/download/). 
-##### Anaconda 
-Create and activate a Python 3.7 environment `mesoSPIM-py37` from Anaconda prompt:
+### Anaconda
+mesoSPIM-control is usually installed from [Anaconda](https://www.anaconda.com/download/). 
+
+1. Create and activate a new environment `mesoSPIM-py37` from Anaconda prompt:
 ```
 conda create -p C:/Users/Public/conda/envs/mesoSPIM-py37 python=3.7
 conda activate C:/Users/Public/conda/envs/mesoSPIM-py37
 ```
-The step above is highly recommended, to avoid conflicts if some libraries already exist or will be changed in the default environment.
-This helps keep your mesoSPIM-dedicated python environment clean and stable.
 
-Install from PyPi:
+2. Install `mesoSPIM-control` from PyPi:
 ```
 pip install mesospim-control 
 ```
-The code will be installed in `C:\Users\Public\conda\envs\mesoSPIM-py37\Lib\site-packages\mesoSPIM` directory. You can launch the program from anywhere in Anaconda prompt by typing `mesospim-control`.
+The code will be installed in `C:\Users\Public\conda\envs\mesoSPIM-py37\Lib\site-packages\mesoSPIM` directory. 
 
 ## Launching
 ### Desktop shortcut 
-Find files `mesoSPIM.bat` and `mesoSPIM-shortcut.lnk` in the `..\mesoSPIM\` directory. 
+For the end users we recommend this method.
+Find files `mesoSPIM.bat` and `mesoSPIM-shortcut.lnk` in the `..\mesoSPIM\` directory defined above. 
 Copy the `mesoSPIM-shortcut` (one with blue-orange icon) to your desktop. 
-Double-click it to launch  `mesospim-control`.
+Double-clicking the shortcut will launch the `mesoSPIM-control`. 
 
-### Anaconda prompt
+### Anaconda prompt (alternative)
 Activate the environment 
 ```
 conda activate C:\Users\Public\conda\envs\mesoSPIM-py37
 ```
-Launch the `mesospim-control` from anywhere:
+Launch the `mesospim-control` from any directory:
 ```
 mesospim-control
 ```
-Alternatively, navigate to folder `C:\Users\Public\conda\envs\mesoSPIM-py37\Lib\site-packages\mesoSPIM` and run
+Or, navigate to folder `C:\Users\Public\conda\envs\mesoSPIM-py37\Lib\site-packages\mesoSPIM` and run
 ```
 python mesoSPIM_Control.py
 ```
-The latter method requires more steps but allows more control, since you can move the `mesoSPIM` folder to where you like in your file system.
+These methods are recommended for developers - they require more steps but allow more control, 
+since you can move the `mesoSPIM` folder to where you like in your file system.
 
-For the end users we recommend the desktop shortcut method.
+### Prepare a configuration file and wire the hardware
+The config files are stored in the `mesoSPIM/config` directory. 
+The newly installed software will launch with the `demo_config.py`, 
+which has all external hardware replaced with `Demo` simulated devices, to make sure installation is successful in "dry run".
 
-The newly installed software will start with the `mesoSPIM/config/demo_config.py` file (demo mode). 
-If you have multiple configuration files you will be prompted to choose one. 
+Tip: another quick way to start in demo mode from command line (for developers): ``` python mesoSPIM_Control.py -D ```
 
-#### Prepare a configuration file and wire the NI DAQ
-The configuration files are in the `config` directory. 
-Launch with `demo_config.py` file to make sure installation went successfully and dry run does not throw any errors.
-The `demo_config.py` file has most hardware replaced with `Demo` simulated devices.
-Another quick way to start in demo mode from Anaconda (for developers): ``` python mesoSPIM_Control.py -D ```
+If you have multiple config files you will be prompted to choose one that corresponds to your hardware. 
 
 Once your hardware is connected and turned on, change the `Demo` devices to hardware-specific names, set their parameters, and test each device.
 See [Wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file) for details.
@@ -98,6 +93,8 @@ If there are problems with PyQt5 such as `ModuleNotFoundError: No module named '
 conda activate C:\Users\Public\conda\envs\mesoSPIM-py37
 pip install --upgrade mesospim-control 
 ```
+:warning: If you are updating `mesoSPIM-control` from a previous version, please add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) 
+to your old configuration file in order to unlock all new features.
 
 ## Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation:
