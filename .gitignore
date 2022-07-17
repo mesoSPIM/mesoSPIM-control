@@ -25,4 +25,6 @@ mesoSPIM/test/fixtures/
 *.DS_Store
 .gitignore
 *.bat
+*.lnk
 !mesoSPIM/mesoSpim.bat
+!mesoSPIM/mesoSpim-shortcut.lnk
