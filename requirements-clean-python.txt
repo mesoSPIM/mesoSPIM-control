@@ -16,5 +16,5 @@ pyqtgraph>=0.12.3
 pywinusb==0.4.2
 tifffile==2019.7.26
 qdarkstyle==2.8.1
-npy2bdv==1.0.7
+npy2bdv>=1.0.8
 future==0.18.2
