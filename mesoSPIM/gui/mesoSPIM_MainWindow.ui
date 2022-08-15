@@ -52,8 +52,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>921</width>
-         <height>1242</height>
+         <width>929</width>
+         <height>1258</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -658,7 +658,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>4</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -2599,7 +2599,7 @@ MOVEMENT </string>
               <double>0.001000000000000</double>
              </property>
              <property name="value">
-              <double>2.520000000000000</double>
+              <double>99.000000000000000</double>
              </property>
             </widget>
             <widget class="QLabel" name="label_42">
@@ -2695,7 +2695,7 @@ MOVEMENT </string>
               <string> V</string>
              </property>
              <property name="maximum">
-              <double>10.000000000000000</double>
+              <double>5.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>0.010000000000000</double>
@@ -3340,7 +3340,7 @@ ETL tab</string>
      <x>0</x>
      <y>0</y>
      <width>964</width>
-     <height>37</height>
+     <height>31</height>
     </rect>
    </property>
    <property name="font">

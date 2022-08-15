@@ -39,6 +39,7 @@ from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_Dem
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import convert_seconds_to_string
 
+
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM'''
 

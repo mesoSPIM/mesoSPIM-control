@@ -225,20 +225,24 @@ pi_parameters = {'axes_names': ('x', 'y', 'z', 'theta', 'f'),
                 'refmode': ('FRF', 'FRF', 'FRF', None, 'RON')
                 }
                 
+
 If 'stage_type' = 'TigerASI' (benchtop mesoSPIM with an ASI Tiger controller)
 The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc) 
 which are the values of the dict.
-'''
+
 
 asi_parameters = {'COMport' : 'COM32',
                   'baudrate' : 115200,
                   'stage_assignment': {'x':'X', 'y':'V', 'z':'Z', 'theta':'T', 'f':'Y'},
+                  'encoder_conversion': {'V': 10., 'Z': 10., 'R': 100., 'X': 10., 'Y': 10.}, # num of encoder counts per um or degree, depending on stage type.
                   'stage_trigger_source': '/PXI1Slot4/PFI0',
                   'stage_trigger_out_line': '/PXI1Slot4/ctr1',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
-                  'ttl_motion_enabled': False,
+                  'ttl_motion_enabled': True,
+                  'ttl_cards':(2,3),
                   }
+'''
 
 '''
 Filterwheel configuration
