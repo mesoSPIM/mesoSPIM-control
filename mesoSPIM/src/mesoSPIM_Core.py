@@ -888,22 +888,13 @@ class mesoSPIM_Core(QtCore.QObject):
         self.stopflag = False
         self.sig_prepare_live.emit()
         while self.stopflag is False:
-            self.set_shutterconfig('Left')
-            self.open_shutters()
-            self.snap_image()
-            self.sig_get_live_image.emit()
-            self.close_shutters()
-            self.set_shutterconfig('Right')
-            self.open_shutters()
-            ''' Slow down switching to account for slow flip mirror, if used '''
-            if self.shutterswitch is True:
-                time.sleep(0.25)
-            self.snap_image()
-            self.sig_get_live_image.emit()
-            self.close_shutters()
-            ''' Slow down switching to account for slow flip mirror, if used '''
-            if self.shutterswitch is True:
-                time.sleep(0.25)
+            for shutter in ('Left', 'Right'):
+                self.set_shutterconfig(shutter)
+                self.open_shutters()
+                self.snap_image()
+                self.sig_get_live_image.emit()
+                self.close_shutters()
+                time.sleep(0.1)
             QtWidgets.QApplication.processEvents()
 
         self.sig_end_live.emit()
