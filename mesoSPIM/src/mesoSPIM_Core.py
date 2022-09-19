@@ -452,7 +452,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.shutter_right.open()
                 self.shutter_left.close()
             else:
-                self.shutter_left.open() # open the general shutte
+                self.shutter_left.open() # open the general shutter
                 self.shutter_right.open() # set side-switch to true
         else: # BOTH open
             self.shutter_right.open()
@@ -887,32 +887,25 @@ class mesoSPIM_Core(QtCore.QObject):
         '''Switches shutters after each image to allow coalignment of both lightsheets'''
         self.stopflag = False
         self.sig_prepare_live.emit()
-        '''Needs more careful adjustment of the timing
-
-        TODO: There is no wait period to wait for the shutters to open. Nonetheless, the
-        visual of the mode impression is not too bad.
-        '''
         while self.stopflag is False:
-            self.shutter_left.open()
+            self.set_shutterconfig('Left')
+            self.open_shutters()
             self.snap_image()
             self.sig_get_live_image.emit()
-            self.shutter_left.close()
-            ''' Slow down switching to account for slow flip mirror '''
-            self.shutter_right.open()
+            self.close_shutters()
+            self.set_shutterconfig('Right')
+            self.open_shutters()
+            ''' Slow down switching to account for slow flip mirror, if used '''
             if self.shutterswitch is True:
                 time.sleep(0.25)
-                self.shutter_left.open()
             self.snap_image()
             self.sig_get_live_image.emit()
-            if self.shutterswitch is True:
-                self.shutter_left.close()
-            self.shutter_right.close()
+            self.close_shutters()
+            ''' Slow down switching to account for slow flip mirror, if used '''
             if self.shutterswitch is True:
                 time.sleep(0.25)
-
             QtWidgets.QApplication.processEvents()
 
-        self.close_shutters()
         self.sig_end_live.emit()
         self.sig_finished.emit()
 
