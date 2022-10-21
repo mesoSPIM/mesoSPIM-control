@@ -37,7 +37,7 @@ from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import convert_seconds_to_string
+from .utils.utility_functions import convert_seconds_to_string, format_data_size
 
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -580,7 +580,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_warning.emit('Some files have no extensions (.raw, .tiff, .h5) - stopping! \n' + self.list_to_string_with_carriage_return(files_without_extensions))
             self.sig_finished.emit()
         elif free_disk_space_bytes < total_required_bytes * 1.1:
-            self.sig_warning.emit('Not sufficient disk space - stopping! \n')
+            self.sig_warning.emit(f'Insufficient disk space: \n'
+                                  f'Free {format_data_size(free_disk_space_bytes)} \n'
+                                  f'Required {format_data_size(total_required_bytes)}. \n'
+                                  f'Stopping! \n')
             self.sig_finished.emit()
         else:
             self.sig_update_gui_from_state.emit(True)
@@ -589,23 +592,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.close_acquisition_list(acq_list)
             self.sig_update_gui_from_state.emit(False)
 
-    def formatSize(self, bytes):
-        try:
-            bytes = float(bytes)
-            kb = bytes / 1024
-        except Exception as e:
-            print(f"{e}")
-            return None
-        if kb >= 1024:
-            M = kb / 1024
-            if M >= 1024:
-                G = M / 1024
-                return "%.2fG" % (G)
-            else:
-                return "%.2fM" % (M)
-        else:
-            return "%.2fkb" % (kb)
-
     def get_free_disk_space(self, acq_list):
         """Take the disk location of the first file and compute the free disk space"""
         filename0 = os.path.realpath(acq_list.get_all_filenames()[0])
@@ -613,7 +599,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if platform.system() == 'Windows':
             free_bytes = ctypes.c_ulonglong(0)
             ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(disk_name), None, None, ctypes.pointer(free_bytes))
-            print(f"Free disk {disk_name} space {self.formatSize(free_bytes.value)}")
+            print(f"Free disk {disk_name} space {format_data_size(free_bytes.value)}")
             return free_bytes.value
         else: # non-Windows case, untested!
             st = os.statvfs(disk_name)
@@ -624,7 +610,6 @@ class mesoSPIM_Core(QtCore.QObject):
         BYTES_PER_PIXEL = 2 # 16-bit camera
         px_per_image = self.camera_worker.x_pixels * self.camera_worker.y_pixels
         total_bytes_required = acq_list.get_image_count() * px_per_image * BYTES_PER_PIXEL
-        print(f"Required disk space: {self.formatSize(total_bytes_required)}")
         return total_bytes_required
 
     def prepare_acquisition_list(self, acq_list):
