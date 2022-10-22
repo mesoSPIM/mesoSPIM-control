@@ -20,7 +20,7 @@ def convert_seconds_to_string(delta_t):
 
 def format_data_size(bytes):
     '''
-    Converts bytes into human-readable format (kb, M, G)
+    Converts bytes into human-readable format (kb, MB, GB)
     '''
     try:
         bytes = float(bytes)
@@ -32,8 +32,8 @@ def format_data_size(bytes):
         M = kb / 1024
         if M >= 1024:
             G = M / 1024
-            return "%.1fG" % (G)
+            return "%.1f GB" % (G)
         else:
-            return "%.1fM" % (M)
+            return "%.1f MB" % (M)
     else:
-        return "%.1fkb" % (kb)
+        return "%.1f kb" % (kb)
