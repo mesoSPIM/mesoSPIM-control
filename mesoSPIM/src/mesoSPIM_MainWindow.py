@@ -5,7 +5,7 @@ import tifffile
 import logging
 import time
 logger = logging.getLogger(__name__)
-logger.setLevel('INFO') # set this to INFO to avoid excessive GUI logging messages, DEBUG for printing thread stats.
+logger.setLevel('INFO')
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi

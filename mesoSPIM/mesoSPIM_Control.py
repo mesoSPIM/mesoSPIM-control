@@ -19,7 +19,7 @@ from PyQt5 import QtWidgets
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(package_directory)) # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
-LOGGING_LEVEL = 'INFO' # 'DEBUG' for fuller info
+LOGGING_LEVEL = 'DEBUG' # set this to INFO to avoid excessive GUI logging messages, DEBUG for printing thread statsand everything else.
 ''' Configuring the logging module before doing anything else'''
 timestr = time.strftime("%Y%m%d-%H%M%S")
 logging_filename = os.path.join(package_directory, 'log', timestr + '.log')
