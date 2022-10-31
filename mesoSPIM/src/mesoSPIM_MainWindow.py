@@ -122,7 +122,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.sig_move_absolute.connect(self.sig_move_absolute.emit)
 
         # Setting up the threads
-        logger.info('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
+        logger.debug('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
         self.core_thread = QtCore.QThread()
         # Entry point: Work on thread affinity here
         self.core = mesoSPIM_Core(self.cfg, self)
@@ -140,6 +140,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
+
+        # launch ETL menu
+        self.choose_etl_config()
 
         # Widget list for blockSignals during status updates
         self.widgets_to_block = []
@@ -764,27 +767,24 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def choose_etl_config(self):
         ''' File dialog for choosing the config file
-
-        TODO: Check that this is really a .csv-File
         '''
-        path , _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open csv File', self.state['ETL_cfg_file'])
-
+        path , _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open ETL config file, specific for immersion medium and stationary cuvette size',
+                                                         self.state['ETL_cfg_file'],  filter='CSV file (*.csv)')
         ''' To avoid crashes, only set the cfg file when a file has been selected:'''
         if path:
             self.state['ETL_cfg_file'] = path
             self.ETLconfigIndicator.setText(path)
-
             logger.info(f'Main Window: Chose ETL Config File: {path}')
-
             self.sig_state_request.emit({'ETL_cfg_file' : path})
+        else:
+            logger.error(f'Main Window: Choose ETL Config File cancelled')
 
     def save_etl_config(self):
         ''' Save current ETL parameters into config '''
         self.sig_save_etl_config.emit()
 
     def display_warning(self, string):
-        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
-                string, QtWidgets.QMessageBox.Ok)
+        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning', string, QtWidgets.QMessageBox.Ok)
 
     def choose_snap_folder(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
@@ -793,8 +793,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.SnapFolderIndicator.setText(path)
             print('Chosen Snap Folder:', path)
 
-            #self.sig_state_request.emit({'ETL_cfg_file' : path})
-    
     def cascade_all_windows(self):
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
             window_pos = self.cfg.ui_options['window_pos']
