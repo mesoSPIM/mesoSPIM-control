@@ -7,5 +7,5 @@ echo In a multi-user setting, you can create the py37 environment in a public fo
 echo $ conda create -p C:/Users/Public/conda/envs/mesoSPIM-py37 python=3.7
 echo Make sure all users have right to execute python in this py37 environment (admin rights required).
 echo off
-"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\anaconda3\Scripts\activate.bat" "C:\Users\Public\conda\envs\mesoSPIM-py37" && "mesospim-control""
+"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\anaconda3\Scripts\activate.bat" "C:\Users\Public\conda\envs\mesoSPIM-py37" && python "mesoSPIM_Control.py""
 pause
