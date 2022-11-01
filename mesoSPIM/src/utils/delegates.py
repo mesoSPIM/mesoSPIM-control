@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
-
+import os
 from .widgets import MarkPositionWidget, SliderWithValue
 
 class ComboDelegate(QtWidgets.QItemDelegate):
@@ -36,6 +36,7 @@ class ComboDelegate(QtWidgets.QItemDelegate):
 
     def currentIndexChanged(self):
         self.commitData.emit(self.sender())
+
 
 class SliderDelegate(QtWidgets.QStyledItemDelegate):
     ''' A slider delegate '''
@@ -336,7 +337,13 @@ class ChooseFolderDelegate(QtWidgets.QItemDelegate):
         return button
     
     def choose_folder_dialog(self):
-        path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder')
+        if os.path.isdir(self.parent.cfg.startup['folder']):
+            ini_folder = self.parent.cfg.startup['folder']
+        else:
+            ini_folder = ''
+            print(f"Warning: 'folder' specified in config file does no exist: {self.parent.cfg.startup['folder']}")
+
+        path = QtWidgets.QFileDialog.getExistingDirectory(self.parent, 'Select Folder', ini_folder)
         if path:
             self.folder = path
             self.commitData.emit(self.sender())

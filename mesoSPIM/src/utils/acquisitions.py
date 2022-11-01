@@ -50,18 +50,18 @@ class Acquisition(indexed.IndexedOrderedDict):
                  theta_pos=0,
                  f_start=0,
                  f_end=0,
-                 laser = '488 nm',
+                 laser='488 nm',
                  intensity=0,
-                 filter= 'Empty-Alignment',
-                 zoom= '1x',
+                 filter='Empty-Alignment',
+                 zoom='1x',
                  shutterconfig='Left',
                  folder='tmp',
-                 filename='one.raw',
-                 etl_l_offset = 0,
-                 etl_l_amplitude =0,
-                 etl_r_offset = 0,
-                 etl_r_amplitude = 0,
-                 processing = ''):
+                 filename='one.tif',
+                 etl_l_offset=0,
+                 etl_l_amplitude=0,
+                 etl_r_offset=0,
+                 etl_r_amplitude=0,
+                 processing=''):
 
         super().__init__()
 
@@ -123,14 +123,23 @@ class Acquisition(indexed.IndexedOrderedDict):
 
         return self.get_image_count()/framerate
 
-    def get_delta_z_dict(self):
-        ''' Returns relative movement dict for z-steps '''
+    def get_delta_z_and_delta_f_dict(self, inverted = False):
+        ''' Returns relative movement dict for z- and f-steps '''
         if self['z_end'] > self['z_start']:
             z_rel = abs(self['z_step'])
         else:
             z_rel = -abs(self['z_step'])
 
-        return {'z_rel' : z_rel}
+        ''' Calculate f-step '''
+        image_count = self.get_image_count()
+        f_rel = abs((self['f_end'] - self['f_start'])/image_count)
+        if self['f_end'] < self['f_start']:
+            f_rel = -f_rel
+        
+        if not inverted:
+            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : z_rel, 'f_rel' : f_rel, 'theta_rel': 0}
+        else:
+            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : -z_rel, 'f_rel' : -f_rel, 'theta_rel': 0}
 
     def get_delta_dict(self):
         ''' Returns relative movement dict for z-steps and f-steps'''
@@ -207,6 +216,7 @@ class Acquisition(indexed.IndexedOrderedDict):
             focus = round(focus, 5)
             expected_focus += f_step
             focus_error = round(expected_focus - focus, 5)
+
 
 class AcquisitionList(list):
     '''
@@ -307,8 +317,15 @@ class AcquisitionList(list):
             delta_rot = self[i+1].get_startpoint()['theta_abs']-self[i].get_startpoint()['theta_abs']
             if delta_rot != 0:
                 return True
-                break
         return False
+
+    def get_all_filenames(self):
+        ''' Returns a list of all filenames '''
+        filename_list = []
+        for i in range(len(self)):
+            filename = self[i]['folder']+'/'+self[i]['filename']
+            filename_list.append(filename)
+        return filename_list
 
     def check_for_existing_filenames(self):
         ''' Returns a list of existing filenames '''
@@ -318,9 +335,18 @@ class AcquisitionList(list):
             file_exists = os.path.isfile(filename)
             if file_exists:
                 filename_list.append(filename)
+        return filename_list
 
-        return filename_list 
-        
+    def check_filename_extensions(self):
+        '''Returns files that have no extension, so their format is undefined.'''
+        filename_list = []
+        for i in range(len(self)):
+            filename = self[i]['filename']
+            ext = os.path.splitext(filename)[1]
+            if ext == '':
+                filename_list.append(filename)
+        return filename_list
+
     def check_for_duplicated_filenames(self):
         ''' Returns a list of duplicated filenames '''
         filenames = []

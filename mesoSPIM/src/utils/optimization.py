@@ -1,5 +1,9 @@
-# Utilitues for image-based optimization (ETL, auto-focus, etc)
-# by @nvladimus
+'''
+Utilities for fast image-based optimization (auto-focus, etc)
+Auto-focus is based on Autopilot paper (Royer at al, Nat Biotechnol. 2016 Dec;34(12):1267-1278. doi: 10.1038/nbt.3708.)
+author: Nikita Vladimirov, @nvladimus, 2021
+License: GPL-3
+'''
 
 from scipy.fftpack import dct
 import numpy as np
@@ -46,7 +50,7 @@ def shannon_dct(img, psf_radius_px=1):
     cutoff = _otf_radius(img, psf_radius_px)
     return _shannon(_dct_2d(img, cutoff), cutoff)
 
-def _gaussian_1d(x_arr, xo, sigma, amplitude=1, offset=0):
+def gaussian_1d(x_arr, xo, sigma, amplitude=1, offset=0):
     """"Return 1D gaussian function as array"""
     g = offset + amplitude * np.exp(- ((x_arr - float(xo)) ** 2) / (2 * sigma ** 2))
     return g.ravel()
@@ -89,7 +93,7 @@ def fit_gaussian_1d(f_arr, x_arr):
     sigma_guess, amp_guess = x_arr.std(), f_arr.max()
     initial_guess = (x_peak, sigma_guess, amp_guess, amp_guess / 10)  # Parameters: xpos, sigma, amp, offset
     try:
-        popt, pcov = scipy.optimize.curve_fit(_gaussian_1d, (x_arr), f_arr,
+        popt, pcov = scipy.optimize.curve_fit(gaussian_1d, (x_arr), f_arr,
                                               p0=initial_guess,
                                               bounds=((x_arr.min(), # min position of the peak
                                                        0.2 * sigma_guess,  # min sigma

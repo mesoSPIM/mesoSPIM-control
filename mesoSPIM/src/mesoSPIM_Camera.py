@@ -19,6 +19,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 from .utils.acquisitions import AcquisitionList, Acquisition
 
+
 class mesoSPIM_Camera(QtCore.QObject):
     '''Top-level class for all cameras'''
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
@@ -29,12 +30,11 @@ class mesoSPIM_Camera(QtCore.QObject):
     def __init__(self, parent = None):
         super().__init__()
 
-        self.parent = parent # mesoSPIM_Core() object
+        self.parent = parent # a mesoSPIM_Core() object
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
         self.image_writer = mesoSPIM_ImageWriter(self)
-
         self.stopflag = False
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
@@ -57,20 +57,22 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler) # from mesoSPIM_Core() to mesoSPIM_Camera()
-        self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=3)
+        self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
-        self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=3)
-        self.parent.sig_end_image_series.connect(self.end_image_series, type=3)
+        self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=QtCore.Qt.BlockingQueuedConnection)
+        self.parent.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.QueuedConnection)
+        # The following connection can cause problems when disk is too slow (e.g. writing TIFF files on HDD drive):
+        self.parent.sig_end_image_series.connect(self.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
 
-        self.parent.sig_prepare_live.connect(self.prepare_live, type = 3)
+        self.parent.sig_prepare_live.connect(self.prepare_live, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_get_live_image.connect(self.get_live_image)
         self.parent.sig_get_snap_image.connect(self.snap_image)
-        self.parent.sig_end_live.connect(self.end_live, type=3)
+        self.parent.sig_end_live.connect(self.end_live, type=QtCore.Qt.BlockingQueuedConnection)
 
         ''' Set up the camera '''
         if self.cfg.camera == 'HamamatsuOrca':
             self.camera = mesoSPIM_HamamatsuCamera(self)
-        elif self.cfg.camera == 'PhotometricsIris15':
+        elif self.cfg.camera == 'Photometrics':
             self.camera = mesoSPIM_PhotometricsCamera(self)
         elif self.cfg.camera == 'PCO':
             self.camera = mesoSPIM_PCOCamera(self)
@@ -82,17 +84,13 @@ class mesoSPIM_Camera(QtCore.QObject):
     def __del__(self):
         try:
             self.camera.close_camera()
-        except Exception as error:
-            logger.info('Error while closing the camera:', str(error))
+        except:
+            pass
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
-        for key, value in zip(dict.keys(),dict.values()):
-            # print('Camera Thread: State request: Key: ', key, ' Value: ', value)
-            '''
-            The request handling is done with exec() to write fewer lines of
-            code.
-            '''
+        '''The request handling is done with exec() to write fewer lines of code. '''
+        for key, value in zip(dict.keys(), dict.values()):
             if key in ('camera_exposure_time',
                         'camera_line_interval',
                         'state',
@@ -100,10 +98,9 @@ class mesoSPIM_Camera(QtCore.QObject):
                         'camera_display_acquisition_subsampling',
                         'camera_binning'):
                 exec('self.set_'+key+'(value)')
-            # Log Thread ID during Live: just debugging code
             elif key == 'state':
                 if value == 'live':
-                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+                    logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     def set_state(self, value):
         pass
@@ -173,37 +170,42 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
-            logger.info('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
+            logger.debug('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
 
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
                 images = self.camera.get_images_in_series()
                 for image in images:
                     image = np.rot90(image)
-                    self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,0:self.y_pixels:self.camera_display_acquisition_subsampling])
+                    self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
+                                               0:self.y_pixels:self.camera_display_acquisition_subsampling])
                     self.image_writer.write_image(image, acq, acq_list)
                     self.cur_image += 1
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):
+        logger.info("end_image_series() started")
         try:
             self.camera.close_image_series()
+            logger.info("self.camera.close_image_series()")
         except Exception as e:
-            logger.warning(f'Camera: Image Series could not be closed: {e}')
-            
+            logger.error(f'Camera: Image Series could not be closed: {e}')
+
         self.image_writer.end_acquisition(acq, acq_list)
 
-        self.end_time =  time.time()
+        self.end_time = time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
-        logger.info(f'Camera: Framerate: {framerate}')
+        logger.info(f'Camera: Framerate: {framerate:.2f}')
         self.sig_finished.emit()
 
-    @QtCore.pyqtSlot()
-    def snap_image(self):
+    @QtCore.pyqtSlot(bool)
+    def snap_image(self, write_flag=True):
+        """"Snap an image and display it"""
         image = self.camera.get_image()
-        image = np.rot90(image)
-        self.sig_camera_frame.emit(image[:self.x_pixels, :self.y_pixels])
-        self.image_writer.write_snap_image(image)
+        image = np.rot90(image)[::self.camera_display_acquisition_subsampling, ::self.camera_display_acquisition_subsampling]
+        self.sig_camera_frame.emit(image)
+        if write_flag:
+            self.image_writer.write_snap_image(image)
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
@@ -211,7 +213,6 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.live_image_count = 0
         self.start_time = time.time()
         logger.info('Camera: Preparing Live Mode')
-        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
 
     @QtCore.pyqtSlot()
     def get_live_image(self):
@@ -228,9 +229,10 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot()
     def end_live(self):
         self.camera.close_live_mode()
-        self.end_time =  time.time()
+        self.end_time = time.time()
         framerate = (self.live_image_count + 1)/(self.end_time - self.start_time)
-        logger.info(f'Camera: Finished Live Mode: Framerate: {framerate}')
+        logger.info(f'Camera: Finished Live Mode: Framerate: {framerate:.2f}')
+
 
 class mesoSPIM_GenericCamera(QtCore.QObject):
     ''' Generic mesoSPIM camera class meant for subclassing.'''
@@ -301,6 +303,7 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
     def close_live_mode(self):
         pass
 
+
 class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -342,10 +345,10 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
     def get_live_image(self):
         return [self._create_random_image()]
 
+
 class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def open_camera(self):
         ''' Hamamatsu-specific code '''
@@ -428,7 +431,6 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def open_camera(self):
         from pyvcam import pvc
@@ -442,9 +444,14 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.pvcam = [cam for cam in Camera.detect_camera()][0]
 
         self.pvcam.open()
+
         self.pvcam.speed_table_index = self.cfg.camera_parameters['speed_table_index']
         self.pvcam.exp_mode = self.cfg.camera_parameters['exp_mode']
-        
+        self.pvcam.set_param(param_id = self.const.PARAM_READOUT_PORT, value = self.cfg.camera_parameters['readout_port'])
+        self.pvcam.set_param(self.const.PARAM_GAIN_INDEX, self.cfg.camera_parameters['gain_index'])
+        self.pvcam.exp_out_mode = self.cfg.camera_parameters['exp_out_mode']
+        self.pvcam.exp_res = 0 # 0 for ms
+
         logger.info('Camera Vendor Name: '+str(self.pvcam.get_param(param_id = self.const.PARAM_VENDOR_NAME)))
         logger.info('Camera Product Name: '+str(self.pvcam.get_param(param_id = self.const.PARAM_PRODUCT_NAME)))
         logger.info('Camera Chip Name: '+str(self.pvcam.get_param(param_id = self.const.PARAM_CHIP_NAME)))
@@ -464,7 +471,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         # 10.26 us x factor 
         # factor = 6 equals 71.82 us
         self.pvcam.set_param(param_id = self.const.PARAM_SCAN_LINE_DELAY, value = self.cfg.camera_parameters['scan_line_delay'])
-        self.pvcam.set_param(param_id = self.const.PARAM_READOUT_PORT, value = 1)
+        
         ''' Setting Binning parameters: '''
         '''
         self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
@@ -528,6 +535,9 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.pvc.uninit_pvcam()
 
     def set_exposure_time(self, time):
+        print('Exp Time :', time)
+        exp_time_ms = int(self.camera_exposure_time * 1000)
+        self.pvcam.exp_time = exp_time_ms
         self.camera_exposure_time = time
 
     def set_line_interval(self, time):
@@ -542,35 +552,43 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
         
     def get_image(self):
-        return self.pvcam.get_live_frame()
+        frame , _ , _ = self.pvcam.poll_frame()
+        return frame['pixel_data']
     
     def initialize_image_series(self):
         ''' The Photometrics cameras expect integer exposure times, otherwise they default to the minimum value '''
         exp_time_ms = int(self.camera_exposure_time * 1000)
-        self.pvcam.start_live(exp_time_ms)    
+        self.pvcam.exp_time = exp_time_ms
+        self.pvcam.start_live()
 
     def get_images_in_series(self):
-        return [self.pvcam.get_live_frame()]
+        # print('Exp Time in series:', self.pvcam.exp_time)
+        frame , _ , _ = self.pvcam.poll_frame()
+        return [frame['pixel_data']]
     
     def close_image_series(self):
-        self.pvcam.stop_live()
+        self.pvcam.finish()
 
     def initialize_live_mode(self):
         ''' The Photometrics cameras expect integer exposure times, otherwise they default to the minimum value '''
         exp_time_ms = int(self.camera_exposure_time * 1000)
-        # logger.info('Initializing live mode with exp time: '+str(exp_time_ms))
-        self.pvcam.start_live(exp_time_ms)
+        self.pvcam.exp_time = exp_time_ms
+        self.pvcam.start_live()
+        logger.info('Initializing live mode with exp time: '+str(exp_time_ms))
     
     def get_live_image(self):
-        return [self.pvcam.get_live_frame()]
-
+        # print('Exp Time in live:', self.pvcam.exp_time)
+        frame , _ , _ = self.pvcam.poll_frame()
+        return [frame['pixel_data']]
+    
     def close_live_mode(self):
-        self.pvcam.stop_live()
+        # print('Live mode finished')
+        self.pvcam.finish()
+        
 
 class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         logger.info('PCO Cam initialized')
     
     def open_camera(self):

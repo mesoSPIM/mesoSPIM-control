@@ -3,8 +3,9 @@ mesoSPIM MainWindow
 '''
 import tifffile
 import logging
+import time
 logger = logging.getLogger(__name__)
-logger.setLevel('DEBUG')
+logger.setLevel('INFO')
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
@@ -15,28 +16,53 @@ from PyQt5.uic import loadUi
 
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
+from .mesoSPIM_Serial import mesoSPIM_Serial
+from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
+from .WebcamWindow import WebcamWindow
+from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
+
+class LogDisplayHandler(QtCore.QObject, logging.Handler):
+    """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
+    new_record = QtCore.pyqtSignal(object)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        super(logging.Handler).__init__()
+        formatter = Formatter('%(levelname)s:%(module)s:%(funcName)s:%(message)s')
+        self.setFormatter(formatter)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.new_record.emit(msg)  # <---- emit signal here
+
+
+class Formatter(logging.Formatter):
+    """ Formatter of the LogDisplayHandler class."""
+    def formatException(self, ei):
+        result = super(Formatter, self).formatException(ei)
+        return result
+
+    def format(self, record):
+        s = super(Formatter, self).format(record)
+        if record.exc_text:
+            s = s.replace('\n', '')
+        return s
+
+
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
-    '''
-    Main application window which instantiates worker objects and moves them
-    to a thread.
-    '''
+    """ Main application window which instantiates worker objects and moves them to a thread. """
     # sig_live = QtCore.pyqtSignal()
     sig_stop = QtCore.pyqtSignal()
-
     sig_finished = QtCore.pyqtSignal()
-
     sig_enable_gui = QtCore.pyqtSignal(bool)
-
     sig_state_request = QtCore.pyqtSignal(dict)
-    
     sig_execute_script = QtCore.pyqtSignal(str)
-
     sig_move_relative = QtCore.pyqtSignal(dict)
     # sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
@@ -49,11 +75,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     sig_save_etl_config = QtCore.pyqtSignal()
     sig_poke_demo_thread = QtCore.pyqtSignal()
+    sig_launch_optimizer = QtCore.pyqtSignal(dict)
+    sig_launch_contrast_window = QtCore.pyqtSignal()
 
-    def __init__(self, config=None):
+    def __init__(self, package_directory, config, title="mesoSPIM Main Window"):
         super().__init__()
         # Initial housekeeping
         self.cfg = config
+        self.package_directory = package_directory
         self.script_window_counter = 0
         self.update_gui_from_state_flag = False
 
@@ -62,40 +91,65 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.state.sig_updated.connect(self.update_gui_from_state)
 
         # Setting up the user interface windows
-        loadUi('gui/mesoSPIM_MainWindow.ui', self)
-        self.setWindowTitle('mesoSPIM Main Window')
+        loadUi(self.package_directory + '/gui/mesoSPIM_MainWindow.ui', self)
+        self.setWindowTitle(title)
+
+        # Connect log display widget
+        self.log_display_handler = LogDisplayHandler(self)
+        self.log_display_handler.new_record.connect(self.LogTextDisplay.appendPlainText)
 
         self.camera_window = mesoSPIM_CameraWindow(self)
         self.camera_window.show()
 
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
+
+        self.webcam_window = None
+
+        # arrange the windows on the screen, tiled
+        if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
+            window_pos = self.cfg.ui_options['window_pos']
+        else:
+            window_pos = (100, 100)
+        self.move(window_pos[0], window_pos[1])
+        self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
+        self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
+        if self.webcam_window:
+            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 50, window_pos[1])
+
+        # set up some Acq manager signals
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
         self.acquisition_manager_window.sig_move_absolute.connect(self.sig_move_absolute.emit)
 
         # Setting up the threads
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-        logger.info('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
-
+        logger.debug('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
         self.core_thread = QtCore.QThread()
         # Entry point: Work on thread affinity here
         self.core = mesoSPIM_Core(self.cfg, self)
-        #logger.info('Core thread affinity before moveToThread? Answer:'+str(id(self.core.thread())))
-        self.core.moveToThread(self.core_thread)
 
+        self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        #logger.info('Core thread affinity after moveToThread? Answer:'+str(id(self.core.thread())))
+        # This shit below does not work, everything remains in the main thread. Why?
+        # Even if "moved" to core thread, all these objects actually run in the main thread.
+        # It is a working solution, but not ideal. Ideally these workers must run in self.core_thread.
+        #self.core.serial_worker.moveToThread(self.core_thread)
+        #self.core.serial_worker.stage.moveToThread(self.core_thread)
+        #self.core.serial_worker.stage.asi_stages.moveToThread(self.core_thread)
+        #self.core.serial_worker.stage.pos_timer.moveToThread(self.core_thread)
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
+
+        # launch ETL menu
+        self.choose_etl_config()
 
         # Widget list for blockSignals during status updates
         self.widgets_to_block = []
         self.parent_widgets_to_block = [self.ETLTabWidget, self.ParameterTabWidget, self.ControlGroupBox]
         self.create_widget_list(self.parent_widgets_to_block, self.widgets_to_block)
 
-        # The signal switchboard
+        # The signal switchboard, Core -> MainWindow
         self.core.sig_finished.connect(self.finished)
         self.core.sig_position.connect(self.update_position_indicators)
         self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
@@ -103,46 +157,47 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
 
-        # Connecting the camera frames (this is a deep connection and slightly
-        # risky) It will break immediately when there is an API change.
-        try:
-            self.core.camera_worker.sig_camera_frame.connect(self.camera_window.set_image)
-            # print('Camera connected successfully to the display window!')
-        except:
-            logger.warning(f'Main Window: Camera not connected to display!', exc_info=True)
+        self.optimizer = None
+        self.contrast_window = None
+
+        # The signal switchboard, MainWindow -> Core
+        self.sig_launch_optimizer.connect(self.launch_optimizer)
+        self.sig_launch_contrast_window.connect(self.launch_contrast_window)
 
         ''' Start the thread '''
-        #self.core_thread.start(QtCore.QThread.HighPriority)
         self.core_thread.start(QtCore.QThread.HighPriority)
-        logger.info(f'Core Thread: Thread priority: {str(self.core_thread.priority())}')
-        #logger.info('Core thread affinity after starting the thread? Answer:'+str(id(self.core.thread())))
 
-        #logger.info('Core thread running? Answer:'+str(self.core_thread.isRunning()))
-        
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
-            #current_thread = self.thread()
-            #current_thread.setPriority(QtCore.QThread.TimeCriticalPriority)
-            #current_thread.setPriority(4)
-            #logger.info(f'Main Window: Thread priority: {str(current_thread.priority())}')
-            logger.info('Main Window Thread priority: '+str(self.thread().priority()))
+            logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
         except:
-            logger.debug(f'Main Window: Printing Thread priority failed.')
+            logger.error(f'Main Window: Printing Thread priority failed.')
 
-        #logger.info(f'Main Window: Core priority: {self.core_thread.priority()}')
-        #print('Core priority: ', self.core_thread.priority())
+        logger.debug(f'Main Window: Core priority: {self.core_thread.priority()}')
 
-        ''' Setting up the joystick '''
         self.joystick = mesoSPIM_JoystickHandler(self)
 
         self.enable_gui_updates_from_state(False)
 
+    def open_webcam_window(self):
+        """Open USB webcam window using cam ID specified in config file. Otherwise, try to open with ID=0"""
+        if self.webcam_window is None: # first call
+            if hasattr(self.cfg, 'ui_options') and ('usb_webcam_ID' in self.cfg.ui_options.keys()):
+                if self.cfg.ui_options['usb_webcam_ID'] >= 0:
+                    self.webcam_window = WebcamWindow(self.cfg.ui_options['usb_webcam_ID'])
+                    self.webcam_window.show()
+            else:
+                self.webcam_window = WebcamWindow(0)
+                self.webcam_window.show()
+        else: # open previously close window
+            self.webcam_window.show()
+
     def __del__(self):
-        '''Cleans the threads up after deletion, waits until the threads
+        """Cleans the threads up after deletion, waits until the threads
         have truly finished their life.
 
         Make sure to keep this up to date with the number of threads
-        '''
+        """
         try:
             self.core_thread.quit()
             self.core_thread.wait()
@@ -152,6 +207,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def close_app(self):
         self.camera_window.close()
         self.acquisition_manager_window.close()
+        if self.optimizer:
+            self.optimizer.close()
+        try:
+            self.webcam_window.close()
+        except:
+            pass
+        if self.contrast_window:
+            self.contrast_window.close()
         self.close()
 
     def open_tiff(self):
@@ -161,7 +224,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             try:
                 stack = tifffile.imread(tiff_path)
                 self.camera_window.set_image(stack)
-                logger.debug(f"Loaded TIFF file from {tiff_path}, dimensions {stack.shape}")
+                logger.info(f"Loaded TIFF file from {tiff_path}, dimensions {stack.shape}")
             except Exception as e:
                 logger.exception(f"{e}")
         else:
@@ -190,14 +253,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             return False
 
     def create_widget_list(self, list, widget_list):
-        '''
-        Helper method to recursively loop through all the widgets in a list and 
-        their children.
-
+        """
+        Helper method to recursively loop through all the widgets in a list and their children.
         Args:
-            list (list): List of QtWidgets.QWidget objects 
-        
-        '''
+            list (list): List of QtWidgets.QWidget objects
+        """
         for widget in list:
             if list != ([] or None):
                 if self.check_instances(widget):
@@ -209,34 +269,27 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 return None
 
     @QtCore.pyqtSlot(str)
-    def display_status_message(self, string, time=0):
-        '''
+    def display_status_message(self, string):
+        """
         Displays a message in the status bar for a time in ms
-
-        If time=0, the message will stay.
-        '''
-
-        if time == 0:
-            self.statusBar().showMessage(string)
-        else:
-            self.statusBar().showMessage(string, time)
+        """
+        self.statusBar().showMessage(string)
 
     def pos2str(self, position):
-        ''' Little helper method for converting positions to strings '''
-
-        ''' Show 2 decimal places '''
-        return '%.2f' % position
+        """ Little helper method for converting positions to strings """
+        return '%.1f' % position
 
     @QtCore.pyqtSlot(dict)
     def update_position_indicators(self, dict):
         for key, pos_dict in dict.items():
             if key == 'position':
-                self.X_Position_Indicator.setText(self.pos2str(pos_dict['x_pos'])+' µm')
-                self.Y_Position_Indicator.setText(self.pos2str(pos_dict['y_pos'])+' µm')
-                self.Z_Position_Indicator.setText(self.pos2str(pos_dict['z_pos'])+' µm')
-                self.Focus_Position_Indicator.setText(self.pos2str(pos_dict['f_pos'])+' µm')
-                self.Rotation_Position_Indicator.setText(self.pos2str(pos_dict['theta_pos'])+'°')
-       
+                self.x_position, self.y_position, self.z_position = pos_dict['x_pos'], pos_dict['y_pos'], pos_dict['z_pos']
+                self.f_position, self.theta_position = pos_dict['f_pos'], pos_dict['theta_pos']
+                self.X_Position_Indicator.setText(self.pos2str(self.x_position)+' µm')
+                self.Y_Position_Indicator.setText(self.pos2str(self.y_position)+' µm')
+                self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
+                self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
+                self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
                 self.state['position'] = dict['position']
 
     @QtCore.pyqtSlot(dict)
@@ -268,12 +321,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                             ' Remaining: ' + remaining_time_string)
 
     def create_script_window(self):
-        '''
+        """
         Creates a script window and binds it to a self.scriptwindow0 ... n instanceself.
 
         This happens dynamically using exec which should be replaced at
         some point with a factory pattern.
-        '''
+        """
         windowstring = 'self.scriptwindow'+str(self.script_window_counter)
         exec(windowstring+ '= mesoSPIM_ScriptWindow(self)')
         exec(windowstring+'.setWindowTitle("Script Window #'+str(self.script_window_counter)+'")')
@@ -285,36 +338,37 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionExit.triggered.connect(self.close_app)
         self.actionOpen_TIFF.triggered.connect(self.open_tiff)
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
+        self.actionOpen_Webcam_Window.triggered.connect(self.open_webcam_window)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
-
+        self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
     def initialize_and_connect_widgets(self):
-        ''' Connecting the menu actions '''
+        """ Connecting the menu actions """
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
         ''' Connecting the movement & zero buttons '''
-        self.xPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': -self.xyzIncrementSpinbox.value()}))
-        self.xMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'x_rel': self.xyzIncrementSpinbox.value()}))
-        self.yPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': self.xyzIncrementSpinbox.value()}))
-        self.yMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'y_rel': -self.xyzIncrementSpinbox.value()}))
-        self.zPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': self.xyzIncrementSpinbox.value()}))
-        self.zMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'z_rel': -self.xyzIncrementSpinbox.value()}))
-        self.focusPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': self.focusIncrementSpinbox.value()}))
-        self.focusMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'f_rel': -self.focusIncrementSpinbox.value()}))
-
-        self.rotPlusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': self.rotIncrementSpinbox.value()}))
-        self.rotMinusButton.pressed.connect(lambda: self.sig_move_relative.emit({'theta_rel': -self.rotIncrementSpinbox.value()}))
+        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': -self.xyzIncrementSpinbox.value()}))
+        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': self.xyzIncrementSpinbox.value()}))
+        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': self.xyzIncrementSpinbox.value()}))
+        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': -self.xyzIncrementSpinbox.value()}))
+        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': self.xyzIncrementSpinbox.value()}))
+        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': -self.xyzIncrementSpinbox.value()}))
+        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': self.focusIncrementSpinbox.value()}))
+        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': -self.focusIncrementSpinbox.value()}))
+        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': self.rotIncrementSpinbox.value()}))
+        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': -self.rotIncrementSpinbox.value()}))
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
-        # self.xyZeroButton.toggled.connect(lambda bool: print('XY toggled') if bool is True else print('XY detoggled'))
         self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
         self.zZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['z']) if bool is True else self.sig_unzero_axes.emit(['z']))
-        # self.xyzZeroButton.clicked.connect(lambda bool: self.sig_zero.emit(['x','y','z']) if bool is True else self.sig_unzero.emit(['x','y','z']))
         self.focusZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['f']) if bool is True else self.sig_unzero_axes.emit(['f']))
+        self.focusAutoButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'focus', 'amplitude': 300}))
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
+        self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'etl_offset', 'amplitude': 0.5}))
+        self.ContrastWindowButton.clicked.connect(lambda: self.sig_launch_contrast_window.emit())
 
         ''' Disabling UI buttons if necessary '''
         if hasattr(self.cfg, 'ui_options'):
@@ -431,12 +485,41 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
 
+    @QtCore.pyqtSlot(dict)
+    def move_relative(self, pos_dict):
+        assert len(pos_dict) == 1, f"Position dictionary expects only one entry, got {pos_dict}"
+        key, value = list(pos_dict.keys())[0], list(pos_dict.values())[0]
+        if key == 'x_rel':
+            if not (self.cfg.stage_parameters['x_min'] + 1000 <= self.x_position + value <= self.cfg.stage_parameters['x_max'] - 1000):
+                self.X_Position_Indicator.setStyleSheet("color: red;")
+                logger.info(f"X axis position {self.x_position} close to software limits, defined in the config file.")
+            else:
+                self.X_Position_Indicator.setStyleSheet("color: white;")
+        elif key == 'y_rel':
+            if not (self.cfg.stage_parameters['y_min'] + 1000 <= self.y_position + value <= self.cfg.stage_parameters['y_max'] - 1000):
+                self.Y_Position_Indicator.setStyleSheet("color: red;")
+                logger.info(f"Y axis position {self.y_position} close to software limits, defined in the config file.")
+            else:
+                self.Y_Position_Indicator.setStyleSheet("color: white;")
+        elif key == 'z_rel':
+            if not (self.cfg.stage_parameters['z_min'] + 1000 <= self.z_position + value <= self.cfg.stage_parameters['z_max'] - 1000):
+                self.Z_Position_Indicator.setStyleSheet("color: red;")
+                logger.info(f"Z axis position {self.z_position} close to software limits, defined in the config file.")
+            else:
+                self.Z_Position_Indicator.setStyleSheet("color: white;")
+        elif key == 'f_rel':
+            if not (self.cfg.stage_parameters['f_min'] + 1000 <= self.f_position + value <= self.cfg.stage_parameters['f_max'] - 1000):
+                logger.info(f"F axis position {self.f_position} close to software limits, defined in the config file.")
+                self.Focus_Position_Indicator.setStyleSheet("color: red;")
+            else:
+                self.Focus_Position_Indicator.setStyleSheet("color: white;")
+        self.sig_move_relative.emit(pos_dict)
+
     @QtCore.pyqtSlot(int)
     def set_laser_intensity(self, value):
         self.sig_state_request.emit({'intensity': value})
         self.LaserIntensitySlider.setValue(value)
         self.LaserIntensitySpinBox.setValue(value)
-
 
     def connect_widget_to_state_parameter(self, widget, state_parameter, conversion_factor):
         '''
@@ -522,8 +605,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
-        ''' Logging code to check the thread ID during live'''
-        logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
         self.sig_poke_demo_thread.emit()
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
@@ -532,7 +614,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def run_selected_acquisition(self):
         row = self.acquisition_manager_window.get_first_selected_row()
 
-        if row == None:
+        if row is None:
             self.display_warning('No row selected - stopping!')
         else:
             # print('selected row:', row)
@@ -578,6 +660,27 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if sys.platform == 'win32':
             self.win_taskbar_button.progress().setVisible(False)
         '''
+
+    @QtCore.pyqtSlot(dict)
+    def launch_optimizer(self, ini_dict=None):
+        self.sig_move_relative.emit({'f_rel': 5})  # a hack to fix Galil stage coupling, between F and X/Y stages.
+        time.sleep(0.1)
+        self.sig_move_relative.emit({'f_rel': -5})  # a hack to fix Galil stage coupling, between F and X/Y stages.
+        if not self.optimizer:
+            self.optimizer = mesoSPIM_Optimizer(self)
+            self.optimizer.set_parameters(ini_dict)
+        else:
+            self.optimizer.set_parameters(ini_dict)
+            self.optimizer.show()
+
+    @QtCore.pyqtSlot()
+    def launch_contrast_window(self):
+        if not self.contrast_window:
+            self.contrast_window = mesoSPIM_ContrastWindow(self)
+            self.core.camera_worker.sig_camera_frame.connect(self.contrast_window.set_image)
+        else:
+            self.contrast_window.active = True
+            self.contrast_window.show()
 
     @QtCore.pyqtSlot(bool)
     def enable_gui_updates_from_state(self, boolean):
@@ -664,28 +767,24 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def choose_etl_config(self):
         ''' File dialog for choosing the config file
-
-        TODO: Check that this is really a .csv-File
         '''
-        path , _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open csv File', self.state['ETL_cfg_file'])
-
+        path , _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open ETL config file, specific for immersion medium and stationary cuvette size',
+                                                         self.state['ETL_cfg_file'],  filter='CSV file (*.csv)')
         ''' To avoid crashes, only set the cfg file when a file has been selected:'''
         if path:
             self.state['ETL_cfg_file'] = path
             self.ETLconfigIndicator.setText(path)
-
             logger.info(f'Main Window: Chose ETL Config File: {path}')
-
             self.sig_state_request.emit({'ETL_cfg_file' : path})
+        else:
+            logger.error(f'Main Window: Choose ETL Config File cancelled')
 
     def save_etl_config(self):
-        ''' Save current ETL parameters into config
-        '''
+        ''' Save current ETL parameters into config '''
         self.sig_save_etl_config.emit()
 
     def display_warning(self, string):
-        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
-                string, QtWidgets.QMessageBox.Ok)
+        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning', string, QtWidgets.QMessageBox.Ok)
 
     def choose_snap_folder(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
@@ -694,7 +793,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.SnapFolderIndicator.setText(path)
             print('Chosen Snap Folder:', path)
 
-            #self.sig_state_request.emit({'ETL_cfg_file' : path})
-    
-
-    
+    def cascade_all_windows(self):
+        if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
+            window_pos = self.cfg.ui_options['window_pos']
+        else:
+            window_pos = (100, 100)
+        self.move(window_pos[0], window_pos[1])
+        self.camera_window.move(window_pos[0] + 100, window_pos[1] + 100)
+        self.acquisition_manager_window.move(window_pos[0] + 200, window_pos[1] + 200)
+        if self.webcam_window:
+            self.webcam_window.move(window_pos[0] + 300, window_pos[1] + 300)

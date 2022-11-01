@@ -1,0 +1,79 @@
+2022-07-12 15:15:04,793:INFO:20768:mesoSPIM_Control:<module>:mesoSPIM-control started
+2022-07-12 15:15:07,136:INFO:20768:mesoSPIM_Control:<module>:Modules loaded
+2022-07-12 15:15:07,136:INFO:20768:mesoSPIM_Control:main:mesoSPIM Program started.
+2022-07-12 15:15:13,495:INFO:20768:mesoSPIM_Control:load_config_from_file:Configuration file loaded: C:/Users/nvladi/Documents/GitHub/mesoSPIM-control/mesoSPIM/config/config_H45-June2022.py
+2022-07-12 15:15:13,514:INFO:20768:__init__:_load_stylesheet:QSS file sucessfuly loaded.
+2022-07-12 15:15:13,514:INFO:20768:__init__:_apply_application_patches:Found application patches to be applied.
+2022-07-12 15:15:16,185:INFO:20768:mesoSPIM_CameraWindow:__init__:Thread ID at Startup: 20768
+2022-07-12 15:15:16,267:INFO:20768:mesoSPIM_AcquisitionManagerWindow:__init__:Thread ID at Startup: 20768
+2022-07-12 15:15:16,287:INFO:20768:mesoSPIM_MainWindow:__init__:Ideal thread count: 16
+2022-07-12 15:15:17,603:INFO:20768:mesoSPIM_Camera:open_camera:Initialized Hamamatsu camera model: C13440-20C
+2022-07-12 15:15:17,759:INFO:20768:dynamixel:_connect:Connecting to serial port b'COM17'
+2022-07-12 15:15:17,765:INFO:20768:dynamixel:_connect:Dynamixel multi-turn offset: 0
+2022-07-12 15:15:19,782:INFO:20768:mesoSPIM_Stages:__init__:M-406 Emergency referencing hack: Waiting for referencing move
+2022-07-12 15:15:19,785:INFO:20768:mesoSPIM_Stages:__init__:M-406 Emergency referencing hack done
+2022-07-12 15:15:19,788:INFO:20768:mesoSPIM_WaveFormGenerator:update_etl_parameters_from_csv:Parameters set from csv
+2022-07-12 15:15:19,789:INFO:20768:mesoSPIM_WaveFormGenerator:update_etl_parameters_from_csv:Parameters set from csv
+2022-07-12 15:15:19,789:INFO:20768:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:19,952:INFO:20768:mesoSPIM_Serial:state_request_handler:state change: filter: 405-488-561-640-Quadrupleblock
+2022-07-12 15:15:19,982:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: intensity, Value: 10.0
+2022-07-12 15:15:19,982:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:19,993:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: camera_pulse_%, Value: 1.0
+2022-07-12 15:15:19,994:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,002:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: laser_l_pulse_%, Value: 87.0
+2022-07-12 15:15:20,002:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,011:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: laser_r_pulse_%, Value: 87.0
+2022-07-12 15:15:20,011:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,027:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: laser_l_max_amplitude_%, Value: 100.0
+2022-07-12 15:15:20,027:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: laser_r_max_amplitude_%, Value: 100.0
+2022-07-12 15:15:20,027:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: galvo_r_frequency, Value: 99.9
+2022-07-12 15:15:20,027:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,034:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: galvo_l_amplitude, Value: 2.5
+2022-07-12 15:15:20,035:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,041:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: galvo_l_phase, Value: 1.57
+2022-07-12 15:15:20,041:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,047:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: galvo_r_phase, Value: 1.57
+2022-07-12 15:15:20,047:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,053:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: galvo_l_offset, Value: 0.0
+2022-07-12 15:15:20,053:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,058:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: galvo_r_offset, Value: 0.0
+2022-07-12 15:15:20,059:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,065:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_l_offset, Value: 2.3
+2022-07-12 15:15:20,065:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,070:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_r_offset, Value: 2.36
+2022-07-12 15:15:20,071:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,075:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_l_amplitude, Value: 0.7
+2022-07-12 15:15:20,076:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,081:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_r_amplitude, Value: 0.65
+2022-07-12 15:15:20,081:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,086:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_l_delay_%, Value: 7.5
+2022-07-12 15:15:20,086:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,091:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_r_delay_%, Value: 2.5
+2022-07-12 15:15:20,091:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,096:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_l_ramp_rising_%, Value: 85.0
+2022-07-12 15:15:20,097:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,102:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_r_ramp_rising_%, Value: 5.0
+2022-07-12 15:15:20,102:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,107:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_l_ramp_falling_%, Value: 2.5
+2022-07-12 15:15:20,107:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,112:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: etl_r_ramp_falling_%, Value: 85.0
+2022-07-12 15:15:20,112:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,117:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: filter, Value: 405-488-561-640-Quadrupleblock
+2022-07-12 15:15:20,118:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: zoom, Value: 1x
+2022-07-12 15:15:20,118:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,129:INFO:14944:mesoSPIM_WaveFormGenerator:update_etl_parameters_from_csv:Parameters set from csv
+2022-07-12 15:15:20,129:INFO:14944:mesoSPIM_WaveFormGenerator:update_etl_parameters_from_csv:Parameters set from csv
+2022-07-12 15:15:20,130:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,135:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: shutterconfig, Value: Right
+2022-07-12 15:15:20,135:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,140:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: laser, Value: 488 nm
+2022-07-12 15:15:20,140:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,146:INFO:14944:mesoSPIM_WaveFormGenerator:update_etl_parameters_from_csv:Parameters set from csv
+2022-07-12 15:15:20,147:INFO:14944:mesoSPIM_WaveFormGenerator:update_etl_parameters_from_csv:Parameters set from csv
+2022-07-12 15:15:20,147:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,152:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: camera_display_live_subsampling, Value: 2
+2022-07-12 15:15:20,152:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: camera_display_acquisition_subsampling, Value: 2
+2022-07-12 15:15:20,153:INFO:14944:mesoSPIM_Core:state_request_handler:State request: Key: intensity, Value: 10
+2022-07-12 15:15:20,153:INFO:14944:mesoSPIM_WaveFormGenerator:create_waveforms:waveforms updated
+2022-07-12 15:15:20,304:INFO:20768:mesoSPIM_Serial:state_request_handler:state change: filter: 405-488-561-640-Quadrupleblock
+2022-07-12 15:15:20,317:INFO:20768:mesoSPIM_Serial:state_request_handler:state change: zoom: 1x

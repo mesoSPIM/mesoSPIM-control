@@ -15,6 +15,7 @@ from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuild
 from .filename_wizard import FilenameWizard
 from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
+
 class MulticolorTilingWizard(QtWidgets.QWizard):
     '''
     Wizard to run
@@ -27,8 +28,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         ''' Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
         super().__init__(parent)
 
-        ''' By an instance variable, callbacks to window signals can be handed
-        through '''
+        ''' By an instance variable, callbacks to window signals can be handed through '''
         self.parent = parent
         self.cfg = parent.cfg if parent else None
         self.state = mesoSPIM_StateSingleton()
@@ -52,7 +52,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         
         self.setWindowTitle('Tiling Wizard')
 
-        self.channel1, self.channel2, self.channel3, self.folderpage = 4, 5, 6, 7
+        self.channel1, self.channel2, self.channel3, self.channel4, self.folderpage = 4, 5, 6, 7, 8
         self.setPage(0, TilingWelcomePage(self))
         self.setPage(1, DefineBoundingBoxPage(self))
         self.setPage(2, DefineGeneralParametersPage(self))
@@ -60,9 +60,11 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.setPage(self.channel1, FirstChannelPage(self))
         self.setPage(self.channel2, SecondChannelPage(self))
         self.setPage(self.channel3, ThirdChannelPage(self))
+        self.setPage(self.channel4, FourthChannelPage(self))
         self.setPage(self.folderpage, DefineFolderPage(self))
-        self.setPage(8, FinishedTilingPage(self))
+        self.setPage(9, FinishedTilingPage(self))
         self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
+        self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
 
         self.button(QtWidgets.QWizard.BackButton).clicked.connect(self.go_back)
@@ -96,9 +98,9 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 
         super().done(r)
 
-    def update_model(self, model, table):
-        model.setTable(table)
-        self.state['acq_list']=self.acq_list
+    def update_model(self, model, acq_list):
+        model.setTable(acq_list)
+        self.state['acq_list'] = acq_list
 
     def update_image_counts(self):
         self.delta_x = abs(self.x_end - self.x_start)
@@ -199,7 +201,7 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
 
         self.ZSpinBoxLabel = QtWidgets.QLabel('Z stepsize')
         self.ZStepSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.ZStepSpinBox.setValue(10)
+        self.ZStepSpinBox.setValue(5)
         self.ZStepSpinBox.setDecimals(1)
         self.ZStepSpinBox.setMinimum(0.1)
         self.ZStepSpinBox.setMaximum(1000)
@@ -272,7 +274,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         self.channelLabel = QtWidgets.QLabel('# Channels')
         self.channelSpinBox = QtWidgets.QSpinBox(self)
         self.channelSpinBox.setMinimum(1)
-        self.channelSpinBox.setMaximum(3)
+        self.channelSpinBox.setMaximum(4)
 
         self.zoomLabel = QtWidgets.QLabel('Zoom')
         self.zoomComboBox = QtWidgets.QComboBox(self)
@@ -615,6 +617,17 @@ class SecondChannelPage(GenericChannelPage):
 class ThirdChannelPage(GenericChannelPage):
     def __init__(self, parent=None):
         super().__init__(parent, 2)
+
+    def nextId(self):
+        if self.parent.channelcount == 3:
+            return self.parent.folderpage
+        else:
+            return self.parent.channel4
+
+
+class FourthChannelPage(GenericChannelPage):
+    def __init__(self, parent=None):
+        super().__init__(parent, 3)
 
     def nextId(self):
         return self.parent.folderpage 

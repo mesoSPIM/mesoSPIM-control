@@ -4,6 +4,7 @@ Take a dict with information and return an acquisition list
 '''
 from .acquisitions import Acquisition, AcquisitionList
 
+
 class AcquisitionListBuilder():
     '''
     Generic Acquisition List Builder as parent class?
@@ -11,6 +12,7 @@ class AcquisitionListBuilder():
     TODO: Write this class
     '''
     pass
+
 
 class MulticolorTilingAcquisitionListBuilder():
     '''
@@ -58,6 +60,7 @@ class MulticolorTilingAcquisitionListBuilder():
         Core loop: Create an acquisition list for all x & y & channel values
         '''
         tilecount = 0
+        n_tiles = self.dict['x_image_count'] * self.dict['y_image_count']
         for i in range(0, self.dict['x_image_count']):
             self.x_pos = round(self.x_start + i * self.x_offset, 2)
             for j in range(0, self.dict['y_image_count']):
@@ -79,15 +82,17 @@ class MulticolorTilingAcquisitionListBuilder():
                                             z_end=self.dict['z_end'],
                                             z_step=self.dict['z_step'],
                                             theta_pos=self.dict['theta_pos'],
-                                            f_start=round(channeldict['f_start'],2),
-                                            f_end=round(channeldict['f_end'],2),
+                                            f_start=round(channeldict['f_start'], 2),
+                                            f_end=round(channeldict['f_end'], 2),
                                             laser=channeldict['laser'],
                                             intensity=channeldict['intensity'],
                                             filter=channeldict['filter'],
                                             zoom=self.dict['zoom'],
                                             shutterconfig=shutter_states[i_shutter],
                                             folder=self.dict['folder'],
-                                            filename='tiling_file_t'+str(tilecount)+'_c'+str(channelcount)+'.raw',
+                                            filename='Tile'+str(tilecount % n_tiles)
+                                                     + '_Ch'+str(channelcount)
+                                                     + '_Sh' + str(i_shutter % n_shutter_configs),
                                             etl_l_offset=channeldict['etl_l_offset'],
                                             etl_l_amplitude=channeldict['etl_l_amplitude'],
                                             etl_r_offset=channeldict['etl_r_offset'],

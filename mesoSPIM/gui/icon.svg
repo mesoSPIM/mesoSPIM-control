@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 67.733332 67.733335"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   sodipodi:docname="icon.svg"
+   inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+   inkscape:export-xdpi="100"
+   inkscape:export-ydpi="100"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="0.90583672"
+     inkscape:cx="59.061417"
+     inkscape:cy="222.99825"
+     inkscape:window-width="1482"
+     inkscape:window-height="1232"
+     inkscape:window-x="896"
+     inkscape:window-y="577"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#fd933a;stroke:#333333;stroke-width:0.264582;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:1.5875, 0.264582"
+       id="rect1092"
+       width="67.469559"
+       height="67.463295"
+       x="0.14007533"
+       y="0.15749741"
+       inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+       inkscape:export-xdpi="95.998856"
+       inkscape:export-ydpi="95.998856" />
+    <ellipse
+       style="fill:#0d6efd;stroke:#560dcb;stroke-width:0.264582;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:1.5875, 0.264582"
+       id="path2795"
+       cx="33.874699"
+       cy="33.888981"
+       rx="24.738834"
+       ry="25.812946"
+       inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+       inkscape:export-xdpi="95.998856"
+       inkscape:export-ydpi="95.998856" />
+    <text
+       xml:space="preserve"
+       style="font-size:14.0106px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';fill:#ffffff;stroke-width:0.264582"
+       x="28.072515"
+       y="37.313381"
+       id="text6998"
+       inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+       inkscape:export-xdpi="95.998856"
+       inkscape:export-ydpi="95.998856"
+       transform="scale(0.99701136,1.0029976)"><tspan
+         sodipodi:role="line"
+         id="tspan6996"
+         style="font-size:14.0106px;fill:#ffffff;stroke-width:0.264582"
+         x="28.072515"
+         y="37.313381">M</tspan></text>
+    <g
+       id="g1399"
+       transform="translate(0,7.0922947)"
+       style="fill:#ffffff;stroke:#ffffff"
+       inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+       inkscape:export-xdpi="95.998856"
+       inkscape:export-ydpi="95.998856">
+      <path
+         style="fill:#ffffff;stroke:#ffffff;stroke-width:1.32292;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M 0.86348778,40.648043 66.886222,33.053776"
+         id="path12054"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100"
+         sodipodi:nodetypes="cc" />
+      <path
+         style="fill:#ffffff;stroke:#ffffff;stroke-width:1.32292;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M 66.886222,40.648043 0.86348778,33.053776"
+         id="path1391"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100"
+         sodipodi:nodetypes="cc" />
+    </g>
+  </g>
+</svg>

@@ -11,7 +11,7 @@ import traceback
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-import src.devices.stages.galil.gclib as gclib
+from . import gclib
 
 import logging
 logger = logging.getLogger(__name__)

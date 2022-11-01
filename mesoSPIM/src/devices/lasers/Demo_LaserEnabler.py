@@ -10,7 +10,7 @@ class Demo_LaserEnabler:
             raise ValueError('Laser not in the configuration')
     
     def enable(self, laser):
-        if self._check_if_laser_in_laserdict(laser) == True:
+        if self._check_if_laser_in_laserdict(laser) is True:
             self.laserenablestate = laser
         else:
             pass
@@ -18,8 +18,12 @@ class Demo_LaserEnabler:
     def enable_all(self):
         self.laserenablestate = 'all on'
 
+    def disable(self, laser):
+        self.laserenablestate = 'off'
+
     def disable_all(self):
         self.laserenablestate = 'off'
+
 
     def state(self):
         return self.laserenablestate
