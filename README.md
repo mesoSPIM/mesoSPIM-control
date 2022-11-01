@@ -44,11 +44,16 @@ If using USB connection, check ASI instructions on [USB support](http://www.asii
 conda create -p C:/Users/Public/conda/envs/mesoSPIM-py37 python=3.7
 conda activate C:/Users/Public/conda/envs/mesoSPIM-py37
 ```
+3. Install mesoSPIM-specific libraries: 
+```
+cd C:/Users/Public/mesoSPIM-control
+pip install -r requirements-anaconda.txt
+```
 
 ## Launching
 
 ### Anaconda prompt
-1. `cd C:/Users/Public/mesoSPIM-control`
+1. `cd C:/Users/Public/mesoSPIM-control/mesoSPIM`
 2. `python mesoSPIM_Control.py` (with argument `-D` for demo mode)
 
 If there you see error `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras`, reinstall PyQt5: `python -m pip install --user -I PyQt5 PyQt5-sip`
