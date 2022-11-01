@@ -56,8 +56,6 @@ pip install -r requirements-anaconda.txt
 1. `cd C:/Users/Public/mesoSPIM-control/mesoSPIM`
 2. `python mesoSPIM_Control.py` (with argument `-D` for demo mode)
 
-If there you see error `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras`, reinstall PyQt5: `python -m pip install --user -I PyQt5 PyQt5-sip`
-
 ### Desktop shortcut (fast launch)
 From Anaconda prompt, type `where conda`, and enter the result (e.g. `C:\Users\Nikita\anaconda3\Scripts\activate.bat`) into line 10 of `mesoSPIM.bat` file:
 ```
