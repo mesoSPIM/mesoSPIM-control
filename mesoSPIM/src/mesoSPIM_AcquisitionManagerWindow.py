@@ -5,10 +5,7 @@ mesoSPIM Acquisition Manager Window
 import os
 import sys
 import time
-
 import logging
-logger = logging.getLogger(__name__)
-
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
@@ -36,8 +33,10 @@ from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
-
 from .utils.utility_functions import convert_seconds_to_string
+
+logger = logging.getLogger(__name__)
+
 
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):

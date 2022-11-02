@@ -21,7 +21,9 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'window_pos': (100, 100), # position of the main window on the screen, top left corner.
               'usb_webcam': False, # open USB web-camera in a separate window
                }
-               
+
+logging_level = 'INFO' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
+
 '''
 Waveform output for Galvos, ETLs etc.
 '''

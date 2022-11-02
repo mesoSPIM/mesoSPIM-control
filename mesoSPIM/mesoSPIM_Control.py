@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
-__version__ = "1.8.0"
+__version__ = "1.8.1"
 
 import time
 import logging
@@ -16,21 +16,10 @@ import os
 import sys
 import importlib.util
 from PyQt5 import QtWidgets
-
 package_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(package_directory)) # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
-LOGGING_LEVEL = 'INFO' # set this to INFO to avoid excessive GUI logging messages, DEBUG for printing thread statsand everything else.
-''' Configuring the logging module before doing anything else'''
-timestr = time.strftime("%Y%m%d-%H%M%S")
-logging_filename = os.path.join(package_directory, 'log', timestr + '.log')
-logging.basicConfig(filename=logging_filename, level=LOGGING_LEVEL,
-                    format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
-logger = logging.getLogger(__name__)
-logger.info('mesoSPIM-control started')
-
 from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
-logger.info('Modules loaded')
 
 def load_config_UI(current_path):
     '''
@@ -44,13 +33,14 @@ def load_config_UI(current_path):
 
     if global_config_path != '':
         config = load_config_from_file(global_config_path)
-        return config
+        return config, global_config_path
     else:
         ''' Application shutdown '''
         warning = QtWidgets.QMessageBox.warning(None, 'Shutdown warning',
                                                 'No configuration file selected - shutting down!',
                                                 QtWidgets.QMessageBox.Ok)
         sys.exit()
+
 
 def load_config_from_file(path_to_config):
     '''
@@ -59,8 +49,9 @@ def load_config_from_file(path_to_config):
     spec = importlib.util.spec_from_file_location('module.name', path_to_config)
     config = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(config)
-    logger.info(f'Configuration file loaded: {path_to_config}')
+    print(f'Configuration file loaded: {path_to_config}')
     return config
+
 
 def stage_referencing_check(cfg):
     '''
@@ -81,9 +72,10 @@ def stage_referencing_check(cfg):
                     QtWidgets.QMessageBox.Ok)
             sys.exit()
         else:
-            return True
+            pass
     else:
-        return True
+        pass
+
 
 def get_parser():
     """
@@ -96,11 +88,27 @@ def get_parser():
     parser.add_argument('-D', '--demo', action='store_true',
                         help='Start in demo mode')
     return parser
-  
+
+
 def dark_mode_check(cfg, app):
     if (hasattr(cfg, 'dark_mode') and cfg.dark_mode) or (hasattr(cfg, 'ui_options') and cfg.ui_options['dark_mode']):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
+
+
+def get_logger(cfg, package_directory):
+    if hasattr(cfg, 'logging_level') and cfg.logging_level in ('DEBUG', 'INFO'):
+        LOGGING_LEVEL = cfg.logging_level
+    else:
+        LOGGING_LEVEL = 'INFO'
+        print(f"Config file has missing parameter 'logging_level' ('INFO', 'DEBUG'). Setting to 'INFO' value.")
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    logging_filename = os.path.join(package_directory, 'log', timestr + '.log')
+    logging.basicConfig(filename=logging_filename, level=LOGGING_LEVEL,
+                        format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
+    logger = logging.getLogger(__name__)
+    return logger
+
 
 def main(embed_console=False, demo_mode=False):
     """
@@ -111,27 +119,26 @@ def main(embed_console=False, demo_mode=False):
      - if there are multiple config files, bring up the UI loader.
     """
     print('Starting control software')
-    logging.info('mesoSPIM Program started.')
     demo_fname = os.path.join(package_directory, 'config', 'demo_config.py')
     if not os.path.exists(demo_fname):
         raise ValueError(f"Demo file not found: {demo_fname}")
 
     if demo_mode:
-            cfg = load_config_from_file(demo_fname)
-            print(f"Loaded config from demo file: {demo_fname}")
+        config_fname = demo_fname
+        cfg = load_config_from_file(config_fname)
     else:
         all_configs = glob.glob(os.path.join(package_directory, 'config', '*.py')) # All possible config files
         all_configs_no_demo = list(filter(lambda f: str.find(f, 'demo_') < 0, all_configs))
         if len(all_configs_no_demo) == 0:
-            cfg = load_config_from_file(demo_fname)
-            print(f"Loaded config from demo file: {demo_fname}")
+            config_fname = demo_fname
+            cfg = load_config_from_file(config_fname)
         elif len(all_configs_no_demo) == 1:
             config_fname = os.path.join(package_directory, all_configs_no_demo[0])
             cfg = load_config_from_file(config_fname)
-            print(f"Loaded config from {config_fname}")
         else:
-            cfg = load_config_UI(os.path.join(package_directory, 'config'))
-
+            cfg, config_fname = load_config_UI(os.path.join(package_directory, 'config'))
+    logger = get_logger(cfg, package_directory)
+    logger.info(f'Config file loaded: {config_fname}')
     app = QtWidgets.QApplication(sys.argv)
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
@@ -149,6 +156,7 @@ def main(embed_console=False, demo_mode=False):
         IPython.start_ipython(config=cfg, argv=[], user_ns=dict(mSpim=ex, app=app))
     else:
         sys.exit(app.exec_())
+
 
 def run():
     args = get_parser().parse_args()

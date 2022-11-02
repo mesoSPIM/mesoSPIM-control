@@ -4,13 +4,9 @@ mesoSPIM Stage classes
 '''
 import time
 import logging
-
-logger = logging.getLogger(__name__)
-
 from PyQt5 import QtCore
-
 from .mesoSPIM_State import mesoSPIM_StateSingleton
-
+logger = logging.getLogger(__name__)
 
 class mesoSPIM_Stage(QtCore.QObject):
     '''

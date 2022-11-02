@@ -4,9 +4,6 @@ mesoSPIM MainWindow
 import tifffile
 import logging
 import time
-logger = logging.getLogger(__name__)
-logger.setLevel('INFO')
-
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
@@ -26,6 +23,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
+logger = logging.getLogger(__name__)
 
 class LogDisplayHandler(QtCore.QObject, logging.Handler):
     """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
