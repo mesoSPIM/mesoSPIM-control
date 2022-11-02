@@ -39,7 +39,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         cfg_file = self.parent.read_config_parameter('ETL_cfg_file', self.cfg.startup)
         self.state['ETL_cfg_file'] = cfg_file
         self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
-        #logger.debug('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
         self.state['galvo_l_amplitude'] = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
         self.state['galvo_r_amplitude'] = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
         self.state['galvo_l_frequency'] = self.parent.read_config_parameter('galvo_l_frequency', self.cfg.startup)
@@ -62,6 +61,19 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                              f"({self.cfg.acquisition_hardware['laser_task_line']}) "
                              f"must be equal to num(lasers) in 'laserdict' ({len(self.cfg.laserdict)}). "
                              f"Check assignment of AO channels in 'laser_task_line'.")
+        if not hasattr(self.cfg, 'scale_galvo_amp_with_zoom'):
+            print("INFO: Config file: parameter 'scale_galvo_amp_with_zoom' (True, False) is missing. Default is False.")
+
+    def rescale_galvo_amplitude_by_zoom(self, zoom: float):
+        if hasattr(self.cfg, 'scale_galvo_amp_with_zoom') and self.cfg.scale_galvo_amp_with_zoom is True:
+            galvo_l_amplitude_ini = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
+            galvo_r_amplitude_ini = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
+            zoom_ini = float(self.parent.read_config_parameter('zoom', self.cfg.startup)[:-1])
+            self.state['galvo_l_amplitude'] = galvo_l_amplitude_ini * zoom_ini / zoom
+            self.state['galvo_r_amplitude'] = galvo_r_amplitude_ini * zoom_ini / zoom
+            logger.info(f"Galvo amplitudes rescaled by {zoom_ini / zoom}")
+        else:
+            logger.debug('No rescaling of galvo amplitudes')
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -99,11 +111,16 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'camera_delay_%',
                        'camera_pulse_%',
                        'shutterconfig',
-                       'zoom',
                        ):
                 ''' Notify GUI about the change '''
                 self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
+                self.sig_update_gui_from_state.emit(False)
+                self.create_waveforms()
+            elif key == 'zoom':
+                self.sig_update_gui_from_state.emit(True)
+                self.state[key] = value
+                self.rescale_galvo_amplitude_by_zoom(float(value[:-1])) # truncate and convert string eg '1.2x' -> 1.2
                 self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
             elif key == 'ETL_cfg_file':
@@ -269,8 +286,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.sig_update_gui_from_state.emit(True)
         full_path = os.path.join(self.parent.package_directory, cfg_path)
         with open(full_path) as file:
-            reader = csv.DictReader(file,delimiter=';')
-            #print('opened csv')
+            reader = csv.DictReader(file, delimiter=';')
             match_found = False
             for row in reader:
                 if row['Wavelength'] == laser and row['Zoom'] == zoom:

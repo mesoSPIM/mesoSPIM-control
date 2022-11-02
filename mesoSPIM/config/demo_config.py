@@ -335,13 +335,14 @@ When setting up a new mesoSPIM, make sure that:
 * the initial filter exists in the filter dictionary above
 '''
 
+scale_galvo_amp_with_zoom = True # If e.g. 'galvo_l_amplitude' is defined at zoom '1x', rescale the amplitude when zoom is interactively changed
+
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
 'position' : {'x_pos':0,'y_pos':1,'z_pos':2,'f_pos':3,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
-#'filepath' : '/tmp/file.raw', #deprecated
 'folder' : 'D:/tmp/',
 'snap_folder' : 'D:/tmp/',
 'file_prefix' : '',
