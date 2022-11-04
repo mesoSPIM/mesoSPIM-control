@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mesospim-control"
-version = "1.8.0"
+version = "1.8.1"
 authors = [{ name = "Nikita Vladimirov", email = "vladimirov@hifo.uzh.ch" }, { name = "Fabian Voigt", email = "fvoigt@fas.harvard.edu" },]
 description = "mesoSPIM microscope control"
 readme = "README.md"
