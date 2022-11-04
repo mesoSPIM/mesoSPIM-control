@@ -38,8 +38,9 @@ The new mesoSPIM configuration (benchtop-inspired) uses one card (PXI6733) and a
 Physical channels must be connected in certain order:
 - 'galvo_etl_task_line' takes Galvo-L, Galvo-R, ETL-L, ETL-R 
 (e.g. value 'PXI6259/ao0:3' means Galvo-L on ao0, Galvo-R on ao1, ETL-L on ao2, ETL-R on ao3)
+
 - 'laser_task_line' takes laser modulation, lasers sorted in increasing wavelength order,
-(e.g. value 'PXI6733/ao0:7' means '405 nm' connected to ao4, '488 nm' to ao5, etc.)
+(e.g. value 'PXI6733/ao4:7' means '405 nm' connected to ao4, '488 nm' to ao5, etc.)
 '''
 
 acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
@@ -325,6 +326,8 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'flip_xyz': (True, True, False) # match BigStitcher coordinates to mesoSPIM axes.
         }
 
+scale_galvo_amp_with_zoom = True # If e.g. 'galvo_l_amplitude' is defined at zoom '1x', rescale the amplitude when zoom is interactively changed
+
 '''                                                                  
 Initial acquisition parameters
 Used as initial values after startup
@@ -334,9 +337,6 @@ When setting up a new mesoSPIM, make sure that:
 * all the filepaths exist
 * the initial filter exists in the filter dictionary above
 '''
-
-scale_galvo_amp_with_zoom = True # If e.g. 'galvo_l_amplitude' is defined at zoom '1x', rescale the amplitude when zoom is interactively changed
-
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
