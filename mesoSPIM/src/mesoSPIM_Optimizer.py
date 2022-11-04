@@ -1,3 +1,10 @@
+'''
+Frontend of the optimizer which allows to use auto-focus or optimization of other microscope parameters
+Auto-focus is based on Autopilot paper (Royer at al, Nat Biotechnol. 2016 Dec;34(12):1267-1278. doi: 10.1038/nbt.3708.)
+author: Nikita Vladimirov, @nvladimus, 2021
+License: GPL-3
+'''
+
 import time
 import numpy as np
 from .utils.optimization import shannon_dct, fit_gaussian_1d, gaussian_1d
@@ -31,7 +38,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.image = self.roi = self.roi_dims = self.img_subsampling = None
         self.ini_state = self.ini_metric = self.new_state = self.min_value = self.max_value = None
         self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
-        self.delay_s = 0.25  # give some delay between snaps to avoid state update hickups
+        self.delay_s = 0.5  # time delay between snaps to avoid state update hickups, esp for heavy lens-camera assembly during AF
 
         loadUi('gui/mesoSPIM_Optimizer.ui', self)
         self.setWindowTitle('mesoSPIM-Optimizer')
@@ -69,8 +76,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         elif orientation == 'v':
             self.parent.camera_window.set_roi('box', (img_w*(1-roi_perc)//2, 0, int(img_w*roi_perc), img_h))
         elif orientation == 'c':
-            self.parent.camera_window.set_roi('box', (img_w * (1 - roi_perc) // 2, (img_h * (1 - roi_perc)) // 2,
-                                                    int(img_w * roi_perc), int(img_h * roi_perc)))
+            self.parent.camera_window.set_roi('box', (img_h * (1 - roi_perc) // 2, (img_w * (1 - roi_perc)) // 2,
+                                                    int(img_h * roi_perc), int(img_w * roi_perc)))
         elif orientation is None:
             self.parent.camera_window.set_roi(None, (0, 0, img_w, img_h))
         else:
@@ -166,7 +173,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         for i, v in enumerate(self.search_grid):
             self.set_state(v)
             time.sleep(self.delay_s)
-            self.core.snap(write_flag=False) # this shares downsampled image via slot self.set_image()
+            self.core.snap(write_flag=False, laser_blanking=True) # this shares downsampled image via slot self.set_image()
             self.metric_array[i] = shannon_dct(self.roi)
 
         self.set_state(self.ini_state) # Reset to initial state

@@ -1,0 +1,11 @@
+# MANIFEST.in
+include mesoSPIM/config/demo_config.py
+exclude mesoSPIM/config/config*.py
+include mesoSPIM/config/etl_parameters/ETL-parameters.csv
+graft mesoSPIM/src/*
+include mesoSPIM/gui/*
+include mesoSPIM/scripts
+include mesoSPIM/mesoSPIM.bat
+include mesoSPIM/mesoSPIM-shortcut.lnk
+include mesoSPIM/log/example.log
+recursive-exclude mesoSPIM *.pyc

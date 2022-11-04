@@ -1,100 +1,87 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6109315.svg)](https://doi.org/10.5281/zenodo.6109315)
+[![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 # mesoSPIM-control
-Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. Currently, more than 10 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
+Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. 
+A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. 
+Currently, more than 15 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
 
 Parts lists, drawings, and instructions for building a mesoSPIM can be found in the [mesoSPIM wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
 
 ## Overview
 The mesoSPIM is a versatile light-sheet microscope for imaging
-cleared tissue samples. It is compatible with all major clearing approaches - including CLARITY - and optimized for quickly creating large-field-of-view overview datasets of whole mouse brains.
+cleared tissue samples. It is compatible with all major clearing approaches and optimized for quickly creating large-field-of-view overview datasets.
 
 ## Installation
 
-### :warning: Warning
-If you are updating `mesoSPIM-control` from a previous version: 
-please add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) 
-to your old configuration file in order to unlock all new features.
-
 ### Prerequisites
 * Windows 7 or Windows 10, 64-bit
-* Python >=3.7 (3.7 is preferred, but the code is compatible with 3.6)
+* Python >=3.7, we recommend [Anaconda](https://www.anaconda.com/download/)
 
-#### Device drivers
-* [Hamamatsu DCAM API](https://dcam-api.com/) when using Hamamatsu Orca Flash 4.0 V2 or V3 sCMOS cameras. To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
-* [PVCAM and PVCAM-SDK](https://www.photometrics.com/support/software/) when using Photometrics cameras (under development). In addition, the `PyVCAM` Python package is necessary ([Link](https://github.com/Photometrics/PyVCAM)).
-* [Software for Physik Instrumente stages](https://www.physikinstrumente.com/en/products/motion-control-software/) if a PI stage is used. To test the stages, PI MicroMove can be used. 
-* [Software for Steinmeyer Mechatronics / Feinmess stages using Galil drivers](http://www.galilmc.com/downloads/api) if such a stage is used. To test the stages, GalilTools can be used.
-* [Robotis DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK/releases) for Dynamixel Zoom servos. Make sure you download version 3.5.4 of the SDK.
+### Device drivers
+#### Cameras
+* Hamamatsu Orca Flash 4.0 V2/V3 camera: [Hamamatsu DCAM API](https://dcam-api.com/). To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
+* Photometrics camera: [PVCAM and PVCAM-SDK](https://www.photometrics.com/support/software/). 
+In addition, the `PyVCAM` Python package is required ([github](https://github.com/Photometrics/PyVCAM)), 
+which depends on ¨[MS Visual C++ 14.0 or higher](https://visualstudio.microsoft.com/visual-cpp-build-tools/). 
+When installing the MS Visual C++ tools, make sure to check [C++ build tools](https://docs.microsoft.com/en-us/answers/questions/136595/error-microsoft-visual-c-140-or-greater-is-require.html)
+* PCO camera: `pco` python library (`python -m pip install pco`). A Version ≥0.1.3 is recommended.
 
-#### Python
-mesoSPIM-control is usually running with [Anaconda](https://www.anaconda.com/download/) using a >=3.7 Python. 
-##### Anaconda 
-(optional) Create and activate a Python 3.7 environment from Anaconda prompt (you can use any name instead of `py37`):
-```
-conda create -n py37 python=3.7
-conda activate py37
-```
-The step above is optional but recommended, to avoid conflicts if some libraries already exist or will be changed in the default environment.
-This helps keep your mesoSPIM-dedicated python environment clean and stable.
+#### Stages
+* PI stages: [Software for Physik Instrumente stages](https://www.physikinstrumente.com/en/products/motion-control-software/). To test the stages, PI MicroMove can be used. 
+* Steinmeyer Mechatronics / Feinmess stages: [Software for using Galil drivers](http://www.galilmc.com/downloads/api) if such a stage is used. To test the stages, GalilTools can be used.
+* ASI stages: [ASI Tiger drivers](http://www.asiimaging.com/support/downloads/tiger-controller-console/). 
+If using USB connection, check ASI instructions on [USB support](http://www.asiimaging.com/support/downloads/usb-support-on-ms-2000-wk-controllers/)
 
-Many libraries are already included in Anaconda. 
-Install mesoSPIM-specific libraries: 
+## Installation steps 
+1. Clone this repository either by via GitHub Desktop (recommended) or by downloading and unpacking the ZIP file into folder `C:/Users/Public/mesoSPIM-control`
+
+![image](https://user-images.githubusercontent.com/10835134/198991579-df1e5acc-d246-425b-a345-03ba93a1f0bb.png)
+
+2. Open Anaconda prompt, create and activate a new environment `mesoSPIM-py37`:
 ```
+conda create -p C:/Users/Public/conda/envs/mesoSPIM-py37 python=3.7
+conda activate C:/Users/Public/conda/envs/mesoSPIM-py37
+```
+3. Install mesoSPIM-specific libraries: 
+```
+cd C:/Users/Public/mesoSPIM-control
 pip install -r requirements-anaconda.txt
 ```
 
-##### Clean python 
-For a clean (non-Anaconda) python interpreter, install all required libraries: 
-```
-pip install -r requirements-clean-python.txt
-```
-
-##### Additional libraries
-Camera libraries are not hosted on PyPi and need to be installed manually:
-* [PyVCAM when using a Photometrics camera](https://github.com/Photometrics/PyVCAM)
-* pco (`python -m pip install pco`) when using a PCO camera ([Link](https://pypi.org/project/pco/)). A Version ≥0.1.3 is recommended.
-
-#### Prepare a configuration file and wire the NI DAQ
-The configuration files are in the `config` directory.
-The "demo" files have some devices replaced with dummy devices for testing purposes.
-You can start with one of those if you wish or proceed directly to a non-demo config file.
-Choose one of the ZMB config files as appropriate and work through each section, filling it out for your hardware:
-
-* You can rename your DAQ devices in NI MAX to match the names in the config file (PXI6259 and PXI6733).
-* The `master_trigger_out_line` should be connected to the line which serves as the trigger source for the camera and the galvo/etl task.
-At time of writing that means the master trigger out (`PXI6259/port0/line1`) should be connected to `PXI6259/PFI0`.
-* On Toptica lasers, analog line 1 is the longest wavelength and line 4 is the shortest wavelength.
-Use BNC T connectors to split each analog output line to both lasers.
-* You will need to set the ThorLabs shutter controllers to run on TTL input mode.
-
 ## Launching
-#### From Anaconda prompt
-```
-conda activate py37
-python mesoSPIM_Control.py
-```
-The software will now start. If you have multiple configuration files you will be prompted to choose one. 
 
-#### From start_mesoSPIM.bat file
-Open the `start_mesoSPIM.bat` file in text editor and configure Anaconda and `py37` path to your own. 
-Once done, launch mesoSPIM by double-clicking the file. 
-Optionally, create a Windows shortcut (via right-click menu) and place it e.g. on your desktop. 
-Using shortcut saves a lot of time for users.
+### Anaconda prompt
+1. `cd C:/Users/Public/mesoSPIM-control/mesoSPIM`
+2. `python mesoSPIM_Control.py` (with argument `-D` for demo mode)
 
-#### Starting in demo mode
+### Desktop shortcut (fast launch)
+From Anaconda prompt, type `where conda`, and enter the result (e.g. `C:\Users\Nikita\anaconda3\Scripts\activate.bat`) into line 10 of `mesoSPIM.bat` file:
 ```
-python mesoSPIM_Control.py -D
+"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\anaconda3\Scripts\activate.bat" "C:\Users\Public\conda\envs\mesoSPIM-py37" && python "mesoSPIM_Control.py""
 ```
+Save changes and double-click the `mesoSPIM.bat` file - this should launch the control software. If this does ot happen, check the Anaconda path. Once this works, create a shortcut and place it on your desktop for quick launching.  
 
-## Troubleshooting
-If there are problems with PyQt5 such as `ModuleNotFoundError: No module named 'PyQt5.QtWinExtras` after starting 
-`mesoSPIM-control`, try reinstalling PyQt5 by: `python -m pip install --user -I PyQt5` and `python -m pip install --user -I PyQt5-sip`)
+## Prepare a configuration file and wire the hardware
+The config files are stored in the `mesoSPIM/config` directory. 
+The newly installed software will launch with the `demo_config.py`, 
+which has all external hardware replaced with `Demo` simulated devices, to make sure installation is successful in "dry run".
+
+If you have multiple config files you will be prompted to choose one that corresponds to your hardware. 
+
+Once your hardware is connected and turned on, change the `Demo` devices to hardware-specific names, set their parameters, and test each device.
+See [Wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file) for details.
+
+
+
+## Updating existing installation
+To ensure safe transition to a new version, we recommend fresh installation of each new version into a separate folder (e.g. `mesoSPIM-control-Nov2022`) using the steps above. In order to unlock all new features, please review and add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) to your old configuration file.
 
 ## Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation:
 * [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation), 
-* youtube [channel](https://www.youtube.com/channel/UCeZqIhsh8j9wUhtbLJ73wbQ), 
+* youtube [channel](https://www.youtube.com/c/mesoSPIM), 
 * subscribe to our [mailing list](http://eepurl.com/hPBRhj).
 
 If you have questions, contact the current core developer [Nikita Vladimirov](mailto:vladimirov@hifo.uzh.ch).

@@ -4,8 +4,12 @@ __pycache__
 /**/.ipynb_checkpoints
 **/*.ipynb_checkpoints/
 venv/
+dist/
+build/
+mesospim_control.egg-info
 mesoSPIM/test/fixtures/
 *.log
+!mesoSPIM/log/example.log
 *.bin
 .idea
 mesoSPIM/legacy/*
@@ -20,3 +24,7 @@ mesoSPIM/test/fixtures/
 !mesoSPIM/tmp/readme.txt
 *.DS_Store
 .gitignore
+*.bat
+*.lnk
+!mesoSPIM/mesoSpim.bat
+!mesoSPIM/mesoSpim-shortcut.lnk

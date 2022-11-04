@@ -5,16 +5,13 @@ mesoSPIM Acquisition Manager Window
 import os
 import sys
 import time
-
 import logging
-logger = logging.getLogger(__name__)
-
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 ''' mesoSPIM imports '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
-
+from .utils.utility_functions import format_data_size
 from .utils.models import AcquisitionModel
 
 from .utils.delegates import (ComboDelegate,
@@ -36,8 +33,10 @@ from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
-
 from .utils.utility_functions import convert_seconds_to_string
+
+logger = logging.getLogger(__name__)
+
 
 class MyStyle(QtWidgets.QProxyStyle):
     def drawPrimitive(self, element, option, painter, widget=None):
@@ -62,12 +61,12 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__()
 
-        self.parent = parent
+        self.parent = parent # mesoSPIM_MainWindow instance
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
 
-        loadUi('gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
+        loadUi(self.parent.package_directory + '/gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
 
         self.MoveUpButton.clicked.connect(self.move_selected_row_up)
@@ -84,6 +83,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.table.setModel(self.model)
         self.model.dataChanged.connect(self.set_state)
         self.model.dataChanged.connect(self.update_acquisition_time_prediction)
+        self.model.dataChanged.connect(self.update_acquisition_size_prediction)
 
         ''' Table selection behavior '''
         self.table.setSelectionBehavior(self.table.SelectRows)
@@ -95,7 +95,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.table.setDropIndicatorShown(True)
         self.table.setSortingEnabled(True)
 
-    
         self.set_item_delegates()
 
         ''' Set our custom style - this draws the drop indicator across the whole row '''
@@ -136,13 +135,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
-
-        ''' Display initial time prediction '''
-        self.update_acquisition_time_prediction()
-
-        '''XML writing testcode'''
-        # self.GenerateXMLButton.clicked.connect(self.generate_xml)
- 
 
     def enable(self):
         self.setEnabled(True)
@@ -305,7 +297,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.state['predicted_acq_list_time'] = total_time
         self.state['remaining_acq_list_time'] = total_time
         time_string = convert_seconds_to_string(total_time)
-        self.AcquisitionTimeEdit.setText(time_string)
+        self.AcquisitionTimeLabel.setText(time_string)
+
+    def update_acquisition_size_prediction(self):
+        bytes_total = self.parent.core.get_required_disk_space(self.model.get_acquisition_list())
+        self.PredictedSizeLabel.setText(format_data_size(bytes_total))
 
     def set_state(self):
         self.state['acq_list'] = self.model.get_acquisition_list()
@@ -335,6 +331,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.model.loadModel(path)
                 self.set_state()
                 self.update_acquisition_time_prediction()
+                self.update_acquisition_size_prediction()
             except:
                 self.sig_warning.emit('Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!')
 

@@ -349,26 +349,17 @@
         </widget>
        </item>
        <item row="2" column="3">
-        <widget class="QLineEdit" name="AcquisitionTimeEdit">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
+        <widget class="QLabel" name="AcquisitionTimeLabel">
          <property name="font">
           <font>
            <pointsize>14</pointsize>
           </font>
          </property>
-         <property name="acceptDrops">
-          <bool>false</bool>
-         </property>
          <property name="toolTip">
           <string>Predicted acquisition time in hh:mm:ss.</string>
          </property>
-         <property name="readOnly">
-          <bool>true</bool>
+         <property name="text">
+          <string>00:00:00</string>
          </property>
         </widget>
        </item>
@@ -383,7 +374,10 @@
           <string>Predicted acquisition time in hh:mm:ss.</string>
          </property>
          <property name="text">
-          <string>Predicted time (HH:MM:SS):</string>
+          <string>Estimated time &amp; size:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
@@ -414,6 +408,21 @@
          </property>
          <property name="text">
           <string>Mark ALL</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="4">
+        <widget class="QLabel" name="PredictedSizeLabel">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Predicted data size</string>
+         </property>
+         <property name="text">
+          <string>0 G</string>
          </property>
         </widget>
        </item>

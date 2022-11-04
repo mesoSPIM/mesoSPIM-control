@@ -3,15 +3,14 @@ mesoSPIM CameraWindow
 '''
 import sys
 import numpy as np
-from .utils.optimization import shannon_dct
-
 import logging
-logger = logging.getLogger(__name__)
-
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 import pyqtgraph as pg
+from .utils.optimization import shannon_dct
 from .mesoSPIM_State import mesoSPIM_StateSingleton
+
+logger = logging.getLogger(__name__)
 
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     sig_update_roi = QtCore.pyqtSignal(tuple)
@@ -35,7 +34,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         if __name__ == '__main__':
             loadUi('../gui/mesoSPIM_CameraWindow.ui', self)
         else:
-            loadUi('gui/mesoSPIM_CameraWindow.ui', self)
+            loadUi(self.parent.package_directory + '/gui/mesoSPIM_CameraWindow.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
 
         self.status_label.setText("Status: OK")

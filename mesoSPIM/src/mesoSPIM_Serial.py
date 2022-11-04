@@ -7,17 +7,14 @@ filter wheels, zoom systems etc.
 '''
 
 import logging
-logger = logging.getLogger(__name__)
 from PyQt5 import QtCore
-
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
+from .mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel, SutterLambda10BFilterWheel
+from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
 
-from .devices.filter_wheels.ludlcontrol import LudlFilterwheel
-from .devices.filter_wheels.sutterLambdaControl import Lambda10B
-from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
-from .devices.zoom.mesoSPIM_Zoom import DynamixelZoom, DemoZoom
-from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
+logger = logging.getLogger(__name__)
 
 
 class mesoSPIM_Serial(QtCore.QObject):
@@ -31,6 +28,8 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
+    sig_status_message = QtCore.pyqtSignal(str)
+    sig_pause = QtCore.pyqtSignal(bool)
     
     def __init__(self, parent):
         super().__init__()
@@ -46,11 +45,15 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
-            self.filterwheel = LudlFilterwheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
-        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'DemoFilterWheel':
+            self.filterwheel = LudlFilterWheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
+        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Dynamixel':
+            self.filterwheel = DynamixelFilterWheel(self.cfg.filterdict, self.cfg.filterwheel_parameters['COMport'],
+                                                    self.cfg.filterwheel_parameters['servo_id'],
+                                                    self.cfg.filterwheel_parameters['baudrate'])
+        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Demo':
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
-            self.filterwheel = Lambda10B(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
+            self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
 
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
@@ -63,28 +66,31 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_PI_1toN(self)
         elif self.cfg.stage_parameters['stage_type'] == 'PI_NcontrollersNstages':
             self.stage = mesoSPIM_PI_NtoN(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
             self.stage = mesoSPIM_GalilStages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
             self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_f_rot_and_Galil_xyz':
             self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
             self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
-            self.stage.sig_position.connect(lambda sdict: self.sig_position.emit({'position': sdict}))
+        elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
+            self.stage = mesoSPIM_ASI_Tiger_Stage(self)
+            self.stage.sig_pause.connect(self.pause)
+            self.parent.sig_progress.connect(self.stage.log_slice)
+        elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
+            self.stage = mesoSPIM_ASI_MS2000_Stage(self)
+            self.stage.sig_pause.connect(self.pause)
+            self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
         try:
+            self.stage.sig_status_message.connect(self.send_status_message)
             self.stage.sig_position.connect(self.report_position)
         except:
-            print('Stage not initalized! Please check the configuratio file')
+            print('Stage not initalized! Please check the config file')
 
         ''' Wiring signals through to child objects '''
         self.parent.sig_move_relative.connect(self.move_relative)
@@ -103,39 +109,42 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_go_to_rotation_position.connect(self.go_to_rotation_position)
         self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
 
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
-
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):
         for key, value in zip(sdict.keys(), sdict.values()):
-            # print('Serial thread: state request: Key: ', key, ' Value: ', value)
-            '''
-            Here, the request handling is done with lots if 'ifs'
-            '''
-            # print('Key: ', key, ' Value: ', value)
             if key == 'filter':
                 if wait_until_done:
                     self.set_filter(value, wait_until_done)
                 else:
                     self.set_filter(value)
+                logger.info(f'state change: {key}: {value}')
             if key == 'zoom':
                 if wait_until_done:
                     self.set_zoom(value, wait_until_done)
                 else:
                     self.set_zoom(value)
+                logger.info(f'state change: {key}: {value}')
             if key == 'stage_program':
                 self.execute_stage_program()
-            # Log Thread ID during Live: just debugging code
-            if key == 'state':
-                if value == 'live':
-                    logger.info('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+                logger.info(f'state change: {key}: {value}')
+            if key == 'ttl_movement_enabled_during_acq':
+                self.enable_ttl_motion(value)
+                logger.info(f'state change: {key}: {value}')
+
+    @QtCore.pyqtSlot(str)
+    def send_status_message(self, string):
+        self.sig_status_message.emit(string)
+
+    @QtCore.pyqtSlot(bool)
+    def pause(self, boolean):
+        self.sig_pause.emit(boolean)
+
+    @QtCore.pyqtSlot(bool)
+    def enable_ttl_motion(self, boolean):
+        self.stage.enable_ttl_motion(boolean)
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
-        # logger.info('Thread ID during relative movement: '+str(int(QtCore.QThread.currentThreadId())))
-
-        # logger.info('Thread ID during move rel: '+str(int(QtCore.QThread.currentThreadId())))
         if wait_until_done:
             self.stage.move_relative(sdict, wait_until_done=True)
         else:
