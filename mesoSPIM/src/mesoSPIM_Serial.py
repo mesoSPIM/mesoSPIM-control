@@ -10,7 +10,7 @@ import logging
 from PyQt5 import QtCore
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
-from .mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel, SutterLambda10BFilterWheel
+from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom
 from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
 

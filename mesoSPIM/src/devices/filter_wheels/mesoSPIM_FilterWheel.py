@@ -8,7 +8,7 @@ import io
 from PyQt5 import QtWidgets, QtCore, QtGui
 import logging
 logger = logging.getLogger(__name__)
-from .devices.servos.dynamixel.dynamixel import Dynamixel
+from mesoSPIM.src.devices.servos.dynamixel.dynamixel import Dynamixel
 
 
 class mesoSPIM_DemoFilterWheel(QtCore.QObject):
