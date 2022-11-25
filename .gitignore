@@ -18,6 +18,7 @@ prototypes/python-essentials/temp\.tif
 mesoSPIM/config/etl_parameters/*
 mesoSPIM/config/*
 !mesoSPIM/config/demo_config.py
+!mesoSPIM/config/*example*_config.py
 mesoSPIM/acq/
 mesoSPIM/tmp/
 mesoSPIM/test/fixtures/
