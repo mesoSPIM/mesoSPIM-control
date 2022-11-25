@@ -41,12 +41,16 @@ class ZwoFilterWheel(QtCore.QObject):
     def __init__(self, filterdict):
         dll_path = os.path.join(state['package_directory'], 'src', 'devices', 'filter_wheels', 'ZWO_EFW', 'lib', 'Win64', 'EFW_filter.dll')
         self.device = pyzwoefw.EFW(dll_path)
-        print(f"Number of ZWO EFW found: {self.device.GetNum()}")
+        logger.info(f"Number of ZWO EFW filter wheels connected: {self.device.GetNum()}")
+        self.n_slots = self.device.GetProperty(self.device.IDs[0])['slotNum']
+        assert len(filterdict) <= self.n_slots, f"The length of filter dictionary {filterdict} exceeds " \
+                                                f"the number of physical filter wheel slots ({self.n_slots}). " \
+                                                f"\nChange the filter dictionary in config file."
         self.filterdict = filterdict
 
     def set_filter(self, filter, wait_until_done=False):
         if filter in self.filterdict:
-            self.device.SetPosition(self.device.IDs[0], self.filterdict[filter])
+            self.device.SetPosition(self.device.IDs[0], self.filterdict[filter], wait_until_done)
             self.filter = filter
         else:
             raise ValueError(f'Filter {filter} not found in the configuration file, please update config file')

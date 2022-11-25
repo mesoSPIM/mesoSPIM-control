@@ -1,6 +1,7 @@
 '''
 Code modified from https://github.com/AndreEbel/PyZWOEFW
 Modifications by @nvladimus
+Note that methods here are CamelCase for legacy reasons, unlike the rest of mesoSPIM API.
 License: GPL-3
 '''
 import ctypes as c
@@ -169,7 +170,7 @@ class EFW(object):
             raise efw_errors[r]
         return slot.value
 
-    def SetPosition(self, ID, slot, wait_until_done=False):
+    def SetPosition(self, ID, slot, wait_until_done=True):
         r = self.dll.EFWSetPosition(ID, slot)
         if r:
             if self.verbose:
@@ -178,7 +179,7 @@ class EFW(object):
         if wait_until_done:
             inPosition = False
             while not inPosition:
-                #sleep(0.1)
+                sleep(0.25)
                 pos = self.GetPosition(ID)#.value
                 if pos == slot:
                     inPosition = True
@@ -216,19 +217,5 @@ class EFW(object):
         if len(FiltersNames) == self.slotNums[ID]:
             self.FiltersNames[ID] = FiltersNames
             self.FiltersSlots[ID] = {v: k for k, v in self.FiltersNames[ID].items()}
-    
-    def SetColor(self, ID, color): 
-        if color in self.FiltersSlots[ID]: 
-            pos = self.FiltersSlots[ID][color]
-            self.SetPosition(ID, pos)
-    # def GetDirection(self, ID): #not ok OSError: exception: access violation writing 0x0000000000000000
-    #     direction = c.c_bool()
-    #     r = self.dll.EFWGetDirection(ID, direction)
-    #     if r:
-    #         if self.verbose: 
-    #             print(r)
-    #         raise efw_errors[r]
-    #     return direction
-    # def GetProductIDs(self): #not tested
-    #     self.dll.EFWGetProductIDs()
+
 

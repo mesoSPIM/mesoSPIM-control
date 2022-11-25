@@ -253,8 +253,8 @@ For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel'
-                          'COMport' : 'COM3',
+filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel', 'ZWO'
+                          'COMport' : 'COM3', # irrelevant for 'ZWO'
                           'baudrate' : 115200, # relevant only for 'Dynamixel'
                           'servo_id' :  1, # relevant only for 'Dynamixel'
                           }
@@ -263,6 +263,7 @@ filterdict contains filter labels and their positions. The valid positions are:
 For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
 For Dynamixel: servo encoder counts, e.g. 0 for 0 deg, 1024 for 45 deg (360 deg = 4096 counts, or 11.377 counts/deg). 
 Dynamixel encoder range in multi-turn mode: -28672 .. +28672 counts.
+For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
 '''
 filterdict = {'Empty' : 0, # Every config should contain at least this entry
               '405-488-647-Tripleblock' : 1,
@@ -323,7 +324,8 @@ Imaris can open these files if no subsampling and no compression is used.
 '''
 hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
-        'flip_xyz': (True, True, False) # match BigStitcher coordinates to mesoSPIM axes.
+        'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
+        'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
 
 scale_galvo_amp_with_zoom = True # If e.g. 'galvo_l_amplitude' is defined at zoom '1x', rescale the amplitude when zoom is interactively changed
@@ -355,7 +357,7 @@ startup = {
 'shutterstate':False, # Is the shutter open or not?
 'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
-'filter' : '405-488-561-640-Quadrupleblock',
+'filter' : 'Empty',
 'etl_l_delay_%' : 7.5,
 'etl_l_ramp_rising_%' : 85,
 'etl_l_ramp_falling_%' : 2.5,
