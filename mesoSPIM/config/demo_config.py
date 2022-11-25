@@ -323,7 +323,8 @@ Imaris can open these files if no subsampling and no compression is used.
 '''
 hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
-        'flip_xyz': (True, True, False) # match BigStitcher coordinates to mesoSPIM axes.
+        'flip_xyz': (True, True, False),  # match BigStitcher coordinates to mesoSPIM axes.
+        'transpose_xy': False, # Flip X vs Y axes
         }
 
 scale_galvo_amp_with_zoom = True # If e.g. 'galvo_l_amplitude' is defined at zoom '1x', rescale the amplitude when zoom is interactively changed
