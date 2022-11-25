@@ -1,0 +1,30 @@
+V1.7 2021.4.29
+Fix some bugs
+
+V1.6 2021.3.3
+Add EFWGetSerialNumber and EFWSetID
+
+V0.4.1022 2018.10.22
+Fix some bugs
+
+
+V1, 2, 0, 4 2017.12.05 
+Support dual-wheels filter wheel
+Fix other bugs
+
+V1, 1, 1, 0 2017.02.14 
+Add calibrate API
+
+V1.1.0.1 2016.11.15
+ID of each connected filter wheel is const
+Open filter wheel with ID instead of index
+Add EFWGetProductIDs for all supported filter wheels
+
+V1.0.0.5 2016.7.27
+Add error handle when filter wheel is removed 
+
+V1.0.0.4 2016.7.20
+Create EFW SDK
+
+
+

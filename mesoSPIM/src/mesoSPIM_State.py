@@ -60,7 +60,7 @@ class mesoSPIM_StateSingleton():
                             'shutterstate':False, # Is the shutter open or not?
                             'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
                             'laser_interleaving':False,
-                            'filter' : 'Empty-Alignment',
+                            'filter' : 'Empty',
                             'etl_l_delay_%' : 7.5,
                             'etl_l_ramp_rising_%' : 85,
                             'etl_l_ramp_falling_%' : 2.5,
@@ -98,6 +98,7 @@ class mesoSPIM_StateSingleton():
                             'current_framerate':3.8,
                             'predicted_acq_list_time':1,
                             'remaining_acq_list_time':1,
+                            'package_directory': ''
                             }
 
         def __len__(self):

@@ -5,11 +5,15 @@ Authors: Fabian Voigt, Nikita Vladimirov
 import time
 import serial
 import io
+import os
 from PyQt5 import QtWidgets, QtCore, QtGui
 import logging
 logger = logging.getLogger(__name__)
-from .devices.servos.dynamixel.dynamixel import Dynamixel
+from mesoSPIM.src.devices.servos.dynamixel.dynamixel import Dynamixel
+from mesoSPIM.src.devices.filter_wheels.ZWO_EFW import pyzwoefw
+from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
 
+state = mesoSPIM_StateSingleton()
 
 class mesoSPIM_DemoFilterWheel(QtCore.QObject):
     def __init__(self, filterdict):
@@ -32,6 +36,26 @@ class mesoSPIM_DemoFilterWheel(QtCore.QObject):
                 time.sleep(1)
 
 
+class ZwoFilterWheel(QtCore.QObject):
+    '''Astronomy filter wheels from https://astronomy-imaging-camera.com'''
+    def __init__(self, filterdict):
+        dll_path = os.path.join(state['package_directory'], 'src', 'devices', 'filter_wheels', 'ZWO_EFW', 'lib', 'Win64', 'EFW_filter.dll')
+        self.device = pyzwoefw.EFW(dll_path)
+        logger.info(f"Number of ZWO EFW filter wheels connected: {self.device.GetNum()}")
+        self.n_slots = self.device.GetProperty(self.device.IDs[0])['slotNum']
+        assert len(filterdict) <= self.n_slots, f"The length of filter dictionary {filterdict} exceeds " \
+                                                f"the number of physical filter wheel slots ({self.n_slots}). " \
+                                                f"\nChange the filter dictionary in config file."
+        self.filterdict = filterdict
+
+    def set_filter(self, filter, wait_until_done=False):
+        if filter in self.filterdict:
+            self.device.SetPosition(self.device.IDs[0], self.filterdict[filter], wait_until_done)
+            self.filter = filter
+        else:
+            raise ValueError(f'Filter {filter} not found in the configuration file, please update config file')
+
+
 class DynamixelFilterWheel(Dynamixel):
     def __init__(self, filterdict, COMport, identifier=1, baudrate=115200):
         super().__init__(COMport, identifier, baudrate)
@@ -44,7 +68,7 @@ class DynamixelFilterWheel(Dynamixel):
             self._move(self.filterdict[filter], wait_until_done)
             self.filter = filter
         else:
-            raise ValueError('Filter designation not in the configuration')
+            raise ValueError(f'Filter {filter} not found in the configuration file, please update config file')
 
 
 class LudlFilterWheel(QtCore.QObject):
@@ -61,7 +85,7 @@ class LudlFilterWheel(QtCore.QObject):
            '529 542-27':5,
            '561LP':6,
            '594LP':7,
-           'Empty-Alignment':8,}
+           'Empty':8,}
 
     If there are tuples instead of integers as values, the
     filterwheel is assumed to be a double wheel.
