@@ -87,6 +87,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
         self.state.sig_updated.connect(self.update_gui_from_state)
+        self.state['package_directory'] = package_directory
 
         # Setting up the user interface windows
         loadUi(self.package_directory + '/gui/mesoSPIM_MainWindow.ui', self)

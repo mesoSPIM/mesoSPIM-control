@@ -52,7 +52,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                  f_end=0,
                  laser='488 nm',
                  intensity=0,
-                 filter='Empty-Alignment',
+                 filter='Empty',
                  zoom='1x',
                  shutterconfig='Left',
                  folder='tmp',

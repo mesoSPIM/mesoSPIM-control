@@ -9,7 +9,7 @@ Filterwheel settings from config file
 """
 filterwheel_parameters = {'filterwheel_type' : 'Ludl',
                           'COMport' : 'COM6'}
-filterdict = {'Empty-Alignment' : 0,
+filterdict = {'Empty' : 0,
               '405/50' : 1,
               '480/40' : 2,
               '525/50' : 3,
