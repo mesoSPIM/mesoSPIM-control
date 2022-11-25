@@ -85,26 +85,28 @@ def tunable_lens_ramp(
     amplitude:  Volts
     offset:     Volts
     '''
+    sum_perc = delay + rise + fall
+    assert sum_perc <= 100, ValueError(f"ETL Delay, Ramp rising and Ramp falling % amount to {sum_perc} %")
     # get an integer number of samples
     samples = int(np.floor(np.multiply(samplerate, sweeptime)))
     # create an array just containing the negative amplitude voltage:
-    array = np.zeros((samples))-amplitude + offset
+    array = np.zeros(samples)-amplitude + offset
 
     # convert rise, fall, and delay in % into number of samples
     delaysamples = int(samples * delay / 100)
     risesamples = int(samples * rise / 100)
     fallsamples = int(samples * fall / 100)
 
-    risearray = np.arange(0,risesamples)
+    risearray = np.arange(0, risesamples)
     risearray = amplitude * (2 * np.divide(risearray, risesamples) - 1) + offset
 
-    fallarray = np.arange(0,fallsamples)
-    fallarray = amplitude * (1-2*np.divide(fallarray, fallsamples)) + offset
+    fallarray = np.arange(0, fallsamples)
+    fallarray = amplitude * (1 - 2*np.divide(fallarray, fallsamples)) + offset
 
     # rise phase
     array[delaysamples:delaysamples+risesamples] = risearray
     # fall phase
-    array[delaysamples+risesamples:delaysamples+risesamples+fallsamples] = fallarray
+    array[delaysamples + risesamples : delaysamples + risesamples + fallsamples] = fallarray
 
     return np.array(array)
 

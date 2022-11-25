@@ -526,7 +526,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
         self.waveformer.close_tasks()
-        logger.info("close_image_series() finished")
+        logger.debug("close_image_series() finished")
 
     def live(self):
         self.stopflag = False
@@ -844,9 +844,11 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_end_image_series.emit(acq, acq_list)
 
         if self.TTL_mode_enabled_in_cfg is True:
+            logger.debug('Attempting to set TTL mode to False')
             time.sleep(0.05) # add some buffer time for serial execution
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : False})
             time.sleep(0.05)  # buffer time
+            logger.debug('TTL mode set to False')
 
         # resume asking stages about their position
         self.sig_polling_stage_position_start.emit()

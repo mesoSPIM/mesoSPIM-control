@@ -184,10 +184,10 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):
-        logger.info("end_image_series() started")
+        logger.debug("end_image_series() started")
         try:
             self.camera.close_image_series()
-            logger.info("self.camera.close_image_series()")
+            logger.debug("self.camera.close_image_series()")
         except Exception as e:
             logger.error(f'Camera: Image Series could not be closed: {e}')
 
@@ -428,6 +428,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
     def close_live_mode(self):
         self.hcam.stopAcquisition()
 
+
 class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -442,9 +443,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 
         pvc.init_pvcam()
         self.pvcam = [cam for cam in Camera.detect_camera()][0]
-
         self.pvcam.open()
-
         self.pvcam.speed_table_index = self.cfg.camera_parameters['speed_table_index']
         self.pvcam.exp_mode = self.cfg.camera_parameters['exp_mode']
         self.pvcam.set_param(param_id = self.const.PARAM_READOUT_PORT, value = self.cfg.camera_parameters['readout_port'])
@@ -567,6 +566,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         return [frame['pixel_data']]
     
     def close_image_series(self):
+        logger.debug("Calling self.pvcam.finish()")
         self.pvcam.finish()
 
     def initialize_live_mode(self):
