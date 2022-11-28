@@ -352,4 +352,4 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.write_line(file, 'Started taking images', kwargs.get('img_start'))
             self.write_line(file, 'Stopped taking images', kwargs.get('img_end'))
             self.write_line(file, 'Stopped stack', kwargs.get('acq_end'))
-            self.write_line(file, 'Frame rate:', str(acq.get_image_count()/kwargs.get('img_total_time')))
+            self.write_line(file, 'Frame rate', str(acq.get_image_count()/kwargs.get('img_total_time')))
