@@ -281,8 +281,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.metadata_file = open(metadata_path, 'w')
 
         self.write_line(self.metadata_file, 'Metadata for file', path)
-        self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
-        self.write_line(self.metadata_file, 'z_planes', acq['planes'])
         self.write_line(self.metadata_file)
         # self.write_line(file, 'COMMENTS')
         # self.write_line(file, 'Comment: ', acq(['comment']))
