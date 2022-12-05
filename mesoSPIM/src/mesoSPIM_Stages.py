@@ -20,7 +20,6 @@ class mesoSPIM_Stage(QtCore.QObject):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
-        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -50,7 +49,6 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.parent.sig_unzero_axes.connect(self.unzero_axes)
         self.parent.sig_load_sample.connect(self.load_sample)
         self.parent.sig_unload_sample.connect(self.unload_sample)
-        self.parent.sig_mark_rotation_position.connect(self.mark_rotation_position)
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -109,9 +107,10 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.f_min = self.cfg.stage_parameters['f_min']
         self.theta_max = self.cfg.stage_parameters['theta_max']
         self.theta_min = self.cfg.stage_parameters['theta_min']
-        self.x_rot_position = self.cfg.stage_parameters['x_rot_position']
-        self.y_rot_position = self.cfg.stage_parameters['y_rot_position']
-        self.z_rot_position = self.cfg.stage_parameters['z_rot_position']
+        for deprecated_param in ('x_rot_position', 'y_rot_position', 'z_rot_position'):
+            if deprecated_param in self.cfg.stage_parameters.keys():
+                print(f"INFO: '{deprecated_param}' in 'stage_parameters' dictionary is deprecated and ignored. "
+                      f"Update your config file to suppress these messages.")
 
     def create_position_dict(self):
         self.position_dict = {'x_pos': self.x_pos,
@@ -255,20 +254,6 @@ class mesoSPIM_Stage(QtCore.QObject):
 
     def unload_sample(self):
         self.y_pos = self.cfg.stage_parameters['y_unload_position']
-
-    def mark_rotation_position(self):
-        ''' Take the current position and mark it as rotation location '''
-        self.x_rot_position = self.x_pos
-        self.y_rot_position = self.y_pos
-        self.z_rot_position = self.z_pos
-        logger.info('Marking new rotation position (absolute coordinates): X: ', self.x_pos, ' Y: ', self.y_pos, ' Z: ',
-                    self.z_pos)
-
-    def go_to_rotation_position(self, wait_until_done=False):
-        ''' Move to the proper rotation position.
-        '''
-        print('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
-        logger.info('Going to rotation position: NOT IMPLEMENTED / DEMO MODE')
 
 
 class mesoSPIM_DemoStage(mesoSPIM_Stage):
@@ -476,16 +461,6 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         y_abs = self.cfg.stage_parameters['y_unload_position'] / 1000
         self.pidevice.MOV({2: y_abs})
 
-    def go_to_rotation_position(self, wait_until_done=False):
-        x_abs = self.x_rot_position / 1000
-        y_abs = self.y_rot_position / 1000
-        z_abs = self.z_rot_position / 1000
-
-        self.pidevice.MOV({1: x_abs, 2: y_abs, 3: z_abs})
-
-        if wait_until_done:
-            self.pitools.waitontarget(self.pidevice)
-
     def block_till_controller_is_ready(self):
         '''
         Blocks further execution (especially during referencing moves)
@@ -682,20 +657,6 @@ class mesoSPIM_PI_NtoN(mesoSPIM_Stage):
         (getattr(self.pi_stages, ('pidevice_' + axis_name))).MOV({1: y_abs})
 
 
-    '''
-    # currently not implemented for this microscope configuration
-    def go_to_rotation_position(self, wait_until_done=False):
-        x_abs = self.x_rot_position/1000
-        y_abs = self.y_rot_position/1000
-        z_abs = self.z_rot_position/1000
-
-        self.pidevice.MOV({1 : x_abs, 2 : y_abs, 3 : z_abs})
-
-        if wait_until_done == True:
-            self.pitools.waitontarget(self.pidevice)
-    '''
-
-
 class mesoSPIM_GalilStages(mesoSPIM_Stage):
     '''
 
@@ -707,7 +668,6 @@ class mesoSPIM_GalilStages(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
-        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -1080,11 +1040,6 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         self.xyz_stage.move_absolute(
             {1: self.int_x_pos, 2: self.cfg.stage_parameters['y_unload_position'], 3: self.int_z_pos})
 
-    def go_to_rotation_position(self, wait_until_done=False):
-        self.xyz_stage.move_absolute({1: self.x_rot_position, 2: self.y_rot_position, 3: self.z_rot_position})
-        if wait_until_done == True:
-            self.xyz_stage.wait_until_done('XYZ')
-
     def block_till_controller_is_ready(self):
         '''
         Blocks further execution (especially during referencing moves)
@@ -1118,7 +1073,6 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
-        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -1349,11 +1303,6 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
 
     def unload_sample(self):
         self.move_absolute({'y_abs': self.cfg.stage_parameters['y_unload_position']})
-
-    def go_to_rotation_position(self, wait_until_done=False):
-        self.move_absolute({'x_abs': self.x_rot_position, 'y_abs': self.y_rot_position, 'z_abs': self.z_rot_position})
-        if wait_until_done == True:
-            self.xyz_stage.wait_until_done('XYZ')
 
     def block_till_controller_is_ready(self):
         '''
@@ -1588,17 +1537,6 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
 
     def unload_sample(self):
         self.xyf_stage.move_absolute({2: self.cfg.stage_parameters['y_unload_position']})
-
-    def go_to_rotation_position(self, wait_until_done=False):
-        ''' This has to be done in absolute coordinates of the stages to avoid problems with the 
-        internal position offset (when the stage is zeroed). '''
-        xy_motion_dict = {1: self.x_rot_position, 2: self.y_rot_position}
-        self.xyf_stage.move_absolute(xy_motion_dict)
-        self.pidevice.MOV({2: self.z_rot_position / 1000})
-
-        if wait_until_done == True:
-            self.xyf_stage.wait_until_done('XYZ')
-            self.pitools.waitontarget(self.pidevice)
 
     def block_till_controller_is_ready(self):
         '''
@@ -1842,17 +1780,6 @@ class mesoSPIM_PI_rotzf_and_Galil_xy_Stages(mesoSPIM_Stage):
     def unload_sample(self):
         self.xy_stage.move_absolute({2: self.cfg.stage_parameters['y_unload_position']})
 
-    def go_to_rotation_position(self, wait_until_done=False):
-        ''' This has to be done in absolute coordinates of the stages to avoid problems with the 
-        internal position offset (when the stage is zeroed). '''
-        xy_motion_dict = {1: self.x_rot_position, 2: self.y_rot_position}
-        self.xy_stage.move_absolute(xy_motion_dict)
-        self.pidevice.MOV({2: self.z_rot_position / 1000})
-
-        if wait_until_done == True:
-            self.xy_stage.wait_until_done('XY')
-            self.pitools.waitontarget(self.pidevice)
-
     def block_till_controller_is_ready(self):
         '''
         Blocks further execution (especially during referencing moves)
@@ -1880,7 +1807,6 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
-        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -2062,16 +1988,6 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         y_abs = self.cfg.stage_parameters['y_unload_position']
         self.move_absolute({'y_abs':round(y_abs)})
 
-    def go_to_rotation_position(self, wait_until_done=False):
-        x_abs = self.x_rot_position
-        y_abs = self.y_rot_position
-        z_abs = self.z_rot_position
-
-        self.move_absolute({'x_abs':x_abs, 'y_abs':y_abs, 'z_abs':z_abs})
-
-        if wait_until_done == True:
-            self.asi_stages.wait_until_done()
-
     def enable_ttl_motion(self, boolean):
         if self.ttl_motion_enabled_during_acq:
             self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
@@ -2091,7 +2007,6 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         sig_zero = pyqtSignal(list)
         sig_unzero = pyqtSignal(list)
         sig_stop_movement = pyqtSignal()
-        sig_mark_rotation_position = pyqtSignal()
 
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
@@ -2245,10 +2160,5 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
 
     def unload_sample(self):
         message = 'ASI MS-2000 Stage: Sample unloading not implemented!'
-        print(message)
-        logger.info(message)
-
-    def go_to_rotation_position(self, wait_until_done=False):
-        message = 'ASI MS-2000 Stage: Rotation position not implemented!'
         print(message)
         logger.info(message)

@@ -110,10 +110,6 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
 
-        self.parent.sig_mark_rotation_position.connect(self.sig_mark_rotation_position.emit)
-        self.parent.sig_go_to_rotation_position.connect(self.go_to_rotation_position)
-        self.parent.sig_go_to_rotation_position_and_wait_until_done.connect(lambda: self.go_to_rotation_position(wait_until_done=True), type=3)
-
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):
         for key, value in zip(sdict.keys(), sdict.values()):

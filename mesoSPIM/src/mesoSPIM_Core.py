@@ -79,9 +79,6 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
 
-    sig_mark_rotation_position = QtCore.pyqtSignal()
-    sig_go_to_rotation_position = QtCore.pyqtSignal()
-    sig_go_to_rotation_position_and_wait_until_done = QtCore.pyqtSignal()
     sig_polling_stage_position_start, sig_polling_stage_position_stop = QtCore.pyqtSignal(), QtCore.pyqtSignal()
 
     ''' ETL-related signals '''
@@ -635,7 +632,6 @@ class mesoSPIM_Core(QtCore.QObject):
             target_rotation = startpoint['theta_abs']
 
             if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-                self.sig_go_to_rotation_position_and_wait_until_done.emit()
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.state['state'] = 'idle'
@@ -667,21 +663,10 @@ class mesoSPIM_Core(QtCore.QObject):
         target_rotation = startpoint['theta_abs']
 
         ''' Create a flag when rotation is required: '''
-        if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-            rotationflag = True
-        else:
-            rotationflag = False
-
-        ''' Remove z-coordinate from dict so that z is not updated during preview: '''
-        if not z_update:
-            ''' If a rotation is necessary, z will be updated '''
-            if not rotationflag:
-                del startpoint['z_abs']
+        rotationflag = True if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1 else False
 
         ''' Check if sample has to be rotated, allow some tolerance '''
         if rotationflag:
-            self.sig_status_message.emit('Going to rotation position')
-            self.sig_go_to_rotation_position_and_wait_until_done.emit()
             self.sig_status_message.emit('Rotating sample')
             self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
@@ -722,7 +707,6 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Going to start position')
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-            self.sig_go_to_rotation_position_and_wait_until_done.emit()
             self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
