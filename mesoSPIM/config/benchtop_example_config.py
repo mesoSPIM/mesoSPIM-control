@@ -358,7 +358,7 @@ startup = {
 'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
 'filter' : 'Empty',
-'etl_l_delay_%' : 0,
+'etl_l_delay_%' : 5,
 'etl_l_ramp_rising_%' : 90,
 'etl_l_ramp_falling_%' : 5,
 'etl_l_amplitude' : 0.7,
