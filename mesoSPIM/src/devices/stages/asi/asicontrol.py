@@ -1,7 +1,7 @@
 """
 mesoSPIM Module for controlling ASI-Stages 
 
-Author: Fabian Voigt
+Authors: Fabian Voigt, Nikita Vladimirov
 """
 
 import time

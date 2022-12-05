@@ -1831,7 +1831,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' must have 'asi_parameters' dict."
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
-
+        self.set_speed_from_config()
         self.pos_timer.setInterval(250)
         logger.info('ASI stages initialized')
         
@@ -1840,6 +1840,18 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             self.asi_stages.close()
         except:
             pass
+
+    def set_speed_from_config(self):
+        if hasattr(self.cfg, 'asi_parameters') and 'speed' in self.cfg.asi_parameters.keys():
+            command = 'S'
+            for axis, speed in self.cfg.asi_parameters['speed'].items():
+                if self.asi_stages.axis_in_config_check(axis):
+                    command += ' ' + axis + '=' + str(speed)
+                else: logger.error(f'Axis {axis} not in the axes list, check config file for ASI stages')
+            command += '\r'
+            self.asi_stages._send_command(command.encode('ascii'))
+        else:
+            print("INFO: 'speed' not found in config file, 'asi_parameters' dictionary, using default values.")
 
     @QtCore.pyqtSlot(bool)
     def pause(self, boolean):
