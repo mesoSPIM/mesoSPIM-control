@@ -319,6 +319,13 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
 		'transpose_xy': False
         }
 
+
+Rescale the galvo amplitude when zoom is changed
+For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
+'''        
+scale_galvo_amp_with_zoom = True 
+
+
 '''
 Initial acquisition parameters
 
@@ -362,12 +369,12 @@ startup = {
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
-'galvo_l_amplitude' : 2.5,
+'galvo_l_amplitude' : 1.5,
 'galvo_l_offset' : 0,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 2.5,
+'galvo_r_amplitude' : 1.5,
 'galvo_r_offset' : 0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
