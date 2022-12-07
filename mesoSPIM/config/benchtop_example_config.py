@@ -151,7 +151,7 @@ camera_parameters = {'x_pixels' : 2048, #5056
                     }
 
 '''
-camera = 'Photometrics' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'Photometrics'
+camera = 'Photometrics' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
 camera_parameters = {'x_pixels' : 5056,
                      'y_pixels' : 2960,
@@ -180,9 +180,13 @@ The stage_parameter dictionary defines the general stage configuration, initial 
 and safety limits. The rotation position defines a XYZ position (in absolute coordinates)
 where sample rotation is safe. Additional hardware dictionaries (e.g. pi_parameters)
 define the stage configuration details.
+
+ASI stages supported: 'stage_type' : 'TigerASI', 'MS2000ASI'
+PI stage support: 'stage_type' : 'PI' or 'PI_1controllerNstages' (equivalent), 'PI_NcontrollersNstages'
+Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy', 
 '''
 
-stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage','PI','TigerASI' or other configs found in mesoSPIM_serial.py
+stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
                     'y_load_position': 10000,
                     'y_unload_position': -23000,
                     'x_max' : 51000,
