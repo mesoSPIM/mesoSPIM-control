@@ -668,10 +668,10 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Check if sample has to be rotated, allow some tolerance '''
         if rotationflag:
             self.sig_status_message.emit('Rotating sample')
-            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=False)
 
         self.sig_status_message.emit('Setting Filter')
-        self.set_filter(acq['filter'], wait_until_done=True)
+        self.set_filter(acq['filter'], wait_until_done=False)
 
         self.sig_status_message.emit('Going to start position')
         self.move_absolute(startpoint, wait_until_done=False)
@@ -680,8 +680,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_shutterconfig(acq['shutterconfig'])
         self.sig_status_message.emit('Setting Zoom & Laser')
         self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
-        self.set_intensity(acq['intensity'], wait_until_done=True)
-        self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
+        self.set_intensity(acq['intensity'], wait_until_done=False)
+        self.set_laser(acq['laser'], wait_until_done=False, update_etl=False)
         # Deprecated: This was for the GUI to update properly, otherwise ETL values for previous laser might be displayed
         #QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
 
@@ -707,7 +707,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Going to start position')
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
-            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
+            self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
         self.sig_status_message.emit('Setting Filter & Shutter')
@@ -732,7 +732,7 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.1)
             self.move_relative(acq.get_delta_z_and_delta_f_dict())
             time.sleep(0.1)
-            self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : True})
+            self.sig_state_request.emit({'ttl_movement_enabled_during_acq': True})
             time.sleep(0.05)
 
         # stop asking stages about their positions, to avoid messing up serial comm during acquisition:

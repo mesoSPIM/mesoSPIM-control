@@ -1847,7 +1847,8 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             for axis, speed in self.cfg.asi_parameters['speed'].items():
                 if self.asi_stages.axis_in_config_check(axis):
                     command += ' ' + axis + '=' + str(speed)
-                else: logger.error(f'Axis {axis} not in the axes list, check config file for ASI stages')
+                else:
+                    logger.error(f'Axis {axis} not in the axes list, check config file for ASI stages')
             command += '\r'
             self.asi_stages._send_command(command.encode('ascii'))
         else:
@@ -2159,7 +2160,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         if motion_dict != {}:
             self.asi_stages.move_absolute(motion_dict)
         
-        if wait_until_done == True:
+        if wait_until_done is True:
             self.asi_stages.wait_until_done()
         
     def stop(self):
