@@ -302,23 +302,6 @@ class AcquisitionList(list):
     # def get_rotation_point(self):
     #     return self.rotation_point
 
-    def has_rotation(self):
-        '''
-        Returns true if there is a single rotation in the acq_list.
-
-        TODO: Better method name
-        '''
-        delta_rot = 0
-        for i in range(len(self)-1):
-            ''' self[i] is a acq_list element - an acquisition
-                get_startpoint() returns the startpoint dict
-                dict['theta_abs'] returns the start angle
-            '''
-            delta_rot = self[i+1].get_startpoint()['theta_abs']-self[i].get_startpoint()['theta_abs']
-            if delta_rot != 0:
-                return True
-        return False
-
     def get_all_filenames(self):
         ''' Returns a list of all filenames '''
         filename_list = []

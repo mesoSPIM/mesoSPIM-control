@@ -289,11 +289,17 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getLaser(self, row):
         return self._table[row]['laser']
 
+    def getLaserList(self):
+        return self._table.get_unique_attr_list('laser')
+
     def getShutterconfig(self, row):
         return self._table[row]['shutterconfig']
 
     def getNShutterConfigs(self):
         return self._table.get_n_shutter_configs()
+
+    def getNAngles(self):
+        return self._table.get_n_angles()
 
     def getZoom(self, row):
         return self._table[row]['zoom']

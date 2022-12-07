@@ -114,14 +114,24 @@ class FilenameWizard(QtWidgets.QWizard):
                     shutter_id = 0 if self.parent.model.getShutterconfig(row) == 'Left' else 1
                 else:
                     shutter_id = 0
-                filename += f'Tile{self.parent.model.getTileIndex(row)}_Ch{self.parent.model.getLaser(row)[:-3]}_Sh{shutter_id}'
+
+                if self.parent.model.getNAngles() > 1:
+                    angle = int(self.parent.model.getRotationPosition(row))
+                else:
+                    angle = 0
+
+                filename += f'Mag{self.parent.model.getZoom(row)}_Tile{self.parent.model.getTileIndex(row)}_Ch{self.parent.model.getLaser(row)[:-3]}_Sh{shutter_id}_Rot{angle}'
 
                 file_suffix = '.' + self.file_format
 
             elif self.file_format == 'h5':
                 if self.field('DescriptionHDF5'):
                     filename += self.replace_spaces_with_underscores(self.field('DescriptionHDF5')) + '_'
-                file_suffix = 'bdv.' + self.file_format
+                filename += f'Mag{self.parent.model.getZoom(0)}'
+                laser_list = self.parent.model.getLaserList()
+                for laser in laser_list:
+                    filename += '_ch' + laser[:-3]
+                file_suffix = '_bdv.' + self.file_format
 
             else:
                 raise ValueError(f"file suffix invalid: {self.file_format}")
@@ -206,7 +216,7 @@ class FilenameWizardTiffSelectionPage(AbstractSelectionPage):
         super().__init__(parent)
         self.parent = parent
         self.setTitle("Autogenerate TIFF filenames")
-        self.setSubTitle("Names will be compatible with BigStitcher auto-loader format:\n {Description}_Tile{}_Ch{}_Sh{}.tiff")
+        self.setSubTitle("Names will be in BigStitcher auto-loader format:\n {Description}_Mag{}_Tile{}_Ch{}_Sh{}_Rot{}.tiff")
         self.registerField('DescriptionTIFF', self.DescriptionLineEdit)
 
 
@@ -214,7 +224,7 @@ class FilenameWizardBigTiffSelectionPage(AbstractSelectionPage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setTitle("Autogenerate BigTIFF filenames")
-        self.setSubTitle("Names will be in format:\n {Description}_Tile{}_Ch{}_Sh{}.btf")
+        self.setSubTitle("Names will be in BigStitcher auto-loader format:\n {Description}_Mag{}_Tile{}_Ch{}_Sh{}_Rot{}.btf")
         self.registerField('DescriptionBigTIFF', self.DescriptionLineEdit)
 
 
@@ -275,7 +285,8 @@ class FilenameWizardSingleHDF5SelectionPage(AbstractSelectionPage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setTitle("Autogenerate hdf5 filename")
-        self.setSubTitle("This puts all raw data into a single hdf5 file, accompanied by two metadata files.")
+        self.setSubTitle("All raw data saved into one hdf5 file, accompanied by two metadata files."
+                         "\nFilename example: {Description}_Mag1x_ch488_ch561_bdv.h5")
         self.registerField('DescriptionHDF5', self.DescriptionLineEdit)
 
     def validatePage(self):
