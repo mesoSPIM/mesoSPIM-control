@@ -319,13 +319,13 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.generalControlButtons.setEnabled(False)
 
     def save_table(self):
-        path , _ = QtWidgets.QFileDialog.getSaveFileName(None,'Save Table')
+        path , _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save Table', directory='./acq_table.bin')
         if path:
             self.model.saveModel(path)
         self.set_state()
 
     def load_table(self):
-        path , _ = QtWidgets.QFileDialog.getOpenFileName(None,'Load Table')
+        path , _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Load Table')
         if path:
             try:
                 self.model.loadModel(path)
@@ -333,7 +333,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
                 self.update_acquisition_time_prediction()
                 self.update_acquisition_size_prediction()
             except:
-                self.sig_warning.emit('Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!')
+                err_message = 'Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!'
+                self.print(err_message)
+                logger.error(err_message)
 
     def run_tiling_wizard(self):
         wizard = MulticolorTilingWizard(self)
