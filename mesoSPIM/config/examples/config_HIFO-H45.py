@@ -133,33 +133,13 @@ camera_parameters = {'x_pixels' : 5056,
                      'scan_direction' : 1, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
                      'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us                     
                     }
-
-camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsIris15'
-
-camera_parameters = {'x_pixels' : 1024,
-                     'y_pixels' : 1024,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
-                     'subsampling' : [1,2,4],
-                     'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
-                     'defect_correct_mode': 2,
-                     'binning' : '1x1',
-                     'readout_speed' : 1,
-                     'trigger_active' : 1,
-                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
-                     'trigger_polarity' : 2, # positive pulse
-                     'trigger_source' : 2, # external
-                    }
 '''
 
 binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
 
 '''
 Stage configuration
-'''
 
-'''
 The stage_parameter dictionary defines the general stage configuration, initial positions,
 and safety limits. The rotation position defines a XYZ position (in absolute coordinates)
 where sample rotation is safe. Additional hardware dictionaries (e.g. pi_parameters)
