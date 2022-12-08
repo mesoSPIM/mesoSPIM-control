@@ -16,8 +16,9 @@ mesoSPIM/legacy/*
 prototypes/orcas/*.tif
 prototypes/python-essentials/temp\.tif
 mesoSPIM/config/etl_parameters/*
-mesoSPIM/config/*
+mesoSPIM/config/*.py
 !mesoSPIM/config/demo_config.py
+!mesoSPIM/config/examples/*.py
 mesoSPIM/acq/
 mesoSPIM/tmp/
 mesoSPIM/test/fixtures/

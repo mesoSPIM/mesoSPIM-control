@@ -160,7 +160,7 @@ camera_parameters = {'x_pixels' : 2048, #5056
                     }
 
 '''
-camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'Photometrics'
+camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
 camera_parameters = {'x_pixels' : 1024,
                      'y_pixels' : 1024,
@@ -191,10 +191,13 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 All positions are absolute.
 
-'stage_type' options: 'DemoStage', 'PI_1controllerNstages' (former 'PI'), 'PI_NcontrollersNstages', 'TigerASI'
+'stage_type' option:
+ASI stages, 'stage_type' : 'TigerASI', 'MS2000ASI'
+PI stages, 'stage_type' : 'PI' or 'PI_1controllerNstages' (equivalent), 'PI_NcontrollersNstages'
+Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy'
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage'. 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI'
+stage_parameters = {'stage_type' : 'DemoStage', # e.g. 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', or 'TigerASI', see above
                     'y_load_position': -86000,
                     'y_unload_position': -120000,
                     'x_max' : 5000,
