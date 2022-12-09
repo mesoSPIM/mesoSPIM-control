@@ -43,13 +43,13 @@ Physical channels must be connected in certain order:
 (e.g. value 'PXI6733/ao4:7' means '405 nm' connected to ao4, '488 nm' to ao5, etc.)
 '''
 
-acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
-                        'camera_trigger_source' : '/PXI1Slot4/PFI0',
-                        'camera_trigger_out_line' : '/PXI1Slot4/ctr0',
-                        'galvo_etl_task_line' : 'PXI1Slot4/ao0:3',
-                        'galvo_etl_task_trigger_source' : '/PXI1Slot4/PFI0',
-                        'laser_task_line' :  'PXI1Slot4/ao4:7',
-                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0'}
+acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
+                        'camera_trigger_source' : '/PXI6259/PFI0',
+                        'camera_trigger_out_line' : '/PXI6259/ctr0',
+                        'galvo_etl_task_line' : 'PXI6259/ao0:3',
+                        'galvo_etl_task_trigger_source' : '/PXI6259/PFI0',
+                        'laser_task_line' :  'PXI6733/ao0:3',
+                        'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
 sidepanel = 'Demo' #'Demo' or 'FarmSimulator', deprecated
 
@@ -64,10 +64,10 @@ Keys are the laser designation that will be shown in the user interface
 Values are DO ports used for laser ENABLE digital signal.
 Critical: entries must be sorted in the increasing wavelength order: 405, 488, etc.
 '''
-laserdict = {'488 nm': 'PXI1Slot4/port0/line2',
-             '520 nm': 'PXI1Slot4/port0/line3',
-             '568 nm': 'PXI1Slot4/port0/line4',
-             '638 nm': 'PXI1Slot4/port0/line5',
+laserdict = {'488 nm': 'PXI6733/port0/line2',
+             '520 nm': 'PXI6733/port0/line3',
+             '568 nm': 'PXI6733/port0/line4',
+             '638 nm': 'PXI6733/port0/line5',
              }
 
 
@@ -87,12 +87,11 @@ If shutterswitch = False or missing:
     'shutter_left' and 'shutter_right' are two independent shutters.
 '''
 shutter = 'Demo' # 'Demo' or 'NI'
-shutterswitch = True # assumes that the shutter_left line is the general shutter
+shutterswitch = False # see legend above
 shutteroptions = ('Left', 'Right') # Shutter options of the GUI
-shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # left (general) shutter
-              'shutter_right' : '/PXI1Slot4/port0/line1', # flip mirror or right shutter, depending on physical configuration
-              }
-
+shutterdict = {'shutter_left' : 'PXI6259/port0/line0', # left (general) shutter
+              'shutter_right' : 'PXI6259/port2/line0'} # flip mirror or right shutter, depending on physical configuration
+              
 '''
 Camera configuration
 
