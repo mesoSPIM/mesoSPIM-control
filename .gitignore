@@ -16,6 +16,7 @@ mesoSPIM/legacy/*
 prototypes/orcas/*.tif
 prototypes/python-essentials/temp\.tif
 mesoSPIM/config/etl_parameters/*
+!mesoSPIM/config/etl_parameters/ETL-parameters-benchtop.csv
 mesoSPIM/config/*.py
 !mesoSPIM/config/demo_config.py
 !mesoSPIM/config/*example*_config.py
