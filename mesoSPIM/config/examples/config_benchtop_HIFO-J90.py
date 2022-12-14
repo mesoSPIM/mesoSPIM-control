@@ -1,9 +1,5 @@
 import numpy as np
 
-'''
-This is a hacked config file, where physical shutter is used to control 568 laser port, and in software it is controlled by laser-enable line of 568 laser.
-Valid only for a demo version of denchtop mesoSPIM, to recycle axisting 568nm laser.
-'''
 logging_level = 'DEBUG'
 
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
