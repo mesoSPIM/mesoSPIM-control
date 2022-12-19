@@ -770,6 +770,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.LeftETLAmplitudeSpinBox.setValue(0)
             self.LeftETLAmplitudeSpinBox.setEnabled(False)
             self.SaveETLParametersButton.setEnabled(False)
+            self.ChooseETLcfgButton.setEnabled(False)
             if self.ShutterComboBox.currentText() == 'Both':
                 self.RightETLOffsetSpinBox.setEnabled(False)
                 self.RightETLAmplitudeSpinBox.setEnabled(False)
@@ -778,6 +779,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.LeftETLAmplitudeSpinBox.setValue(self.ETL_L_amp_backup)
             self.LeftETLAmplitudeSpinBox.setEnabled(True)
             self.SaveETLParametersButton.setEnabled(True)
+            self.ChooseETLcfgButton.setEnabled(True)
             if self.ShutterComboBox.currentText() == 'Both':
                 self.RightETLOffsetSpinBox.setEnabled(True)
                 self.RightETLAmplitudeSpinBox.setEnabled(True)
@@ -790,6 +792,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.RightETLAmplitudeSpinBox.setValue(0)
             self.RightETLAmplitudeSpinBox.setEnabled(False)
             self.SaveETLParametersButton.setEnabled(False)
+            self.ChooseETLcfgButton.setEnabled(False)
             if self.ShutterComboBox.currentText() == 'Both':
                 self.LeftETLOffsetSpinBox.setEnabled(False)
                 self.LeftETLAmplitudeSpinBox.setEnabled(False)
@@ -798,6 +801,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.RightETLAmplitudeSpinBox.setValue(self.ETL_R_amp_backup)
             self.RightETLAmplitudeSpinBox.setEnabled(True)
             self.SaveETLParametersButton.setEnabled(True)
+            self.ChooseETLcfgButton.setEnabled(True)
             if self.ShutterComboBox.currentText() == 'Both':
                 self.LeftETLOffsetSpinBox.setEnabled(True)
                 self.LeftETLAmplitudeSpinBox.setEnabled(True)
