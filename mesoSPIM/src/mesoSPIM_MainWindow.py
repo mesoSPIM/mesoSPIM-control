@@ -490,30 +490,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def move_relative(self, pos_dict):
         assert len(pos_dict) == 1, f"Position dictionary expects only one entry, got {pos_dict}"
         key, value = list(pos_dict.keys())[0], list(pos_dict.values())[0]
-        if key == 'x_rel':
-            if not (self.cfg.stage_parameters['x_min'] + 1000 <= self.x_position + value <= self.cfg.stage_parameters['x_max'] - 1000):
-                self.X_Position_Indicator.setStyleSheet("color: red;")
-                logger.info(f"X axis position {self.x_position} close to software limits, defined in the config file.")
-            else:
-                self.X_Position_Indicator.setStyleSheet("color: white;")
-        elif key == 'y_rel':
-            if not (self.cfg.stage_parameters['y_min'] + 1000 <= self.y_position + value <= self.cfg.stage_parameters['y_max'] - 1000):
-                self.Y_Position_Indicator.setStyleSheet("color: red;")
-                logger.info(f"Y axis position {self.y_position} close to software limits, defined in the config file.")
-            else:
-                self.Y_Position_Indicator.setStyleSheet("color: white;")
-        elif key == 'z_rel':
-            if not (self.cfg.stage_parameters['z_min'] + 1000 <= self.z_position + value <= self.cfg.stage_parameters['z_max'] - 1000):
-                self.Z_Position_Indicator.setStyleSheet("color: red;")
-                logger.info(f"Z axis position {self.z_position} close to software limits, defined in the config file.")
-            else:
-                self.Z_Position_Indicator.setStyleSheet("color: white;")
-        elif key == 'f_rel':
-            if not (self.cfg.stage_parameters['f_min'] + 1000 <= self.f_position + value <= self.cfg.stage_parameters['f_max'] - 1000):
-                logger.info(f"F axis position {self.f_position} close to software limits, defined in the config file.")
-                self.Focus_Position_Indicator.setStyleSheet("color: red;")
-            else:
-                self.Focus_Position_Indicator.setStyleSheet("color: white;")
         self.sig_move_relative.emit(pos_dict)
 
     @QtCore.pyqtSlot(int)

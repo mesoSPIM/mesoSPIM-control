@@ -144,19 +144,31 @@ class mesoSPIM_Serial(QtCore.QObject):
     def enable_ttl_motion(self, boolean):
         self.stage.enable_ttl_motion(boolean)
 
+    def stage_limits_OK(self, sdict, safety_margin_n_moves=3):
+        '''Safety margin is added to deal with delays in position reporting.'''
+        for key in ('x_rel', 'y_rel', 'z_rel', 'theta_rel', 'f_rel'):
+            if key in sdict:
+                axis = key[:-4]
+                condition = f"(self.stage.{axis}_min < self.stage.{axis}_pos + {safety_margin_n_moves} * sdict['{key}'] < self.stage.{axis}_max)"
+                if not eval(condition):
+                    self.send_status_message(f'Relative movement stopped: {axis} motion limit would be reached!')
+                    return False
+        self.send_status_message('Stage limits OK')
+        return True
+
     @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
-        if wait_until_done:
-            self.stage.move_relative(sdict, wait_until_done=True)
+        if self.stage_limits_OK(sdict):
+            self.stage.move_relative(sdict, wait_until_done=wait_until_done)
         else:
-            self.stage.move_relative(sdict)
+            logger.info('Stage limits reached: motion stopped')
 
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False):
-        if wait_until_done:
-            self.stage.move_absolute(sdict, wait_until_done=True)
+        if self.stage_limits_OK(sdict):
+            self.stage.move_absolute(sdict, wait_until_done=wait_until_done)
         else:
-            self.stage.move_absolute(sdict)
+            logger.info('Stage limits reached: motion stopped')
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
@@ -164,18 +176,11 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def go_to_rotation_position(self, wait_until_done=False):
-        if wait_until_done:
-            self.stage.go_to_rotation_position(wait_until_done=True)
-        else:
-            self.stage.go_to_rotation_position()
+        self.stage.go_to_rotation_position(wait_until_done=wait_until_done)
 
     @QtCore.pyqtSlot(str)
     def set_filter(self, sfilter, wait_until_done=False):
-        # logger.info('Thread ID during set filter: '+str(int(QtCore.QThread.currentThreadId())))
-        if wait_until_done:
-            self.filterwheel.set_filter(sfilter, wait_until_done=True)
-        else:
-            self.filterwheel.set_filter(sfilter, wait_until_done=False)
+        self.filterwheel.set_filter(sfilter, wait_until_done=wait_until_done)
         self.state['filter'] = sfilter
 
     @QtCore.pyqtSlot(str)
@@ -185,10 +190,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         this is to avoid laggy update loops with the GUI.'''
         self.state['zoom'] = zoom
         self.state['pixelsize'] = self.cfg.pixelsize[zoom]
-        if wait_until_done:
-            self.zoom.set_zoom(zoom, wait_until_done=True)
-        else:
-            self.zoom.set_zoom(zoom, wait_until_done=False)
+        self.zoom.set_zoom(zoom, wait_until_done=wait_until_done)
 
     def execute_stage_program(self):
         self.stage.execute_program()
