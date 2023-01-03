@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 67.733332 67.733335"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   sodipodi:docname="icon1.6.svg"
+   inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+   inkscape:export-xdpi="100"
+   inkscape:export-ydpi="100"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="1.1429831"
+     inkscape:cx="-42.432822"
+     inkscape:cy="188.54171"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1" />
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient5011">
+      <stop
+         style="stop-color:#250657;stop-opacity:1"
+         offset="0"
+         id="stop5005" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1"
+         offset="0.48167041"
+         id="stop5007" />
+      <stop
+         style="stop-color:#250657;stop-opacity:1"
+         offset="1"
+         id="stop5009" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient1580">
+      <stop
+         style="stop-color:#250657;stop-opacity:1"
+         offset="0"
+         id="stop1576" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1"
+         offset="0.48167041"
+         id="stop1671" />
+      <stop
+         style="stop-color:#250657;stop-opacity:1"
+         offset="1"
+         id="stop1578" />
+    </linearGradient>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath1151">
+      <rect
+         style="opacity:0.5;fill:none;stroke:#000000;stroke-width:0.264583;stroke-dasharray:none;stop-color:#000000"
+         id="rect1153"
+         width="50.498524"
+         height="22.97683"
+         x="-54.63858"
+         y="22.237932" />
+    </clipPath>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5011"
+       id="linearGradient1582"
+       x1="-7.352345"
+       y1="17.855696"
+       x2="-7.4131618"
+       y2="23.978256"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.3049402,0,0,1,13.637985,-0.0252037)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient1580"
+       id="linearGradient1745"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.3049402,0,0,1,72.110902,-0.0252037)"
+       x1="-7.352345"
+       y1="17.855696"
+       x2="-7.4131618"
+       y2="23.978256" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#f1c107;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:1.5875, 0.264583;stroke-opacity:1"
+       id="rect1092"
+       width="67.733337"
+       height="67.733337"
+       x="0"
+       y="-2.7755576e-17"
+       inkscape:export-filename="icon1.6.png"
+       inkscape:export-xdpi="95.998856"
+       inkscape:export-ydpi="95.998856" />
+    <ellipse
+       style="fill:#6610f2;fill-opacity:1;stroke:#0d6efd;stroke-width:0.264582;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1"
+       id="path2795"
+       cx="33.866669"
+       cy="33.8918"
+       rx="26.322845"
+       ry="26.328215"
+       inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+       inkscape:export-xdpi="95.998856"
+       inkscape:export-ydpi="95.998856" />
+    <g
+       id="g1147"
+       transform="translate(62.390867,0.16552572)">
+      <text
+         xml:space="preserve"
+         style="font-size:14.1111px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';fill:#ffffff;stroke-width:0.264582"
+         x="-47.908646"
+         y="27.460108"
+         id="text1141"
+         inkscape:export-filename="C:\Users\Nikita\Documents\GitHub\mesoSPIM-control\mesoSPIM\gui\icon.png"
+         inkscape:export-xdpi="95.998856"
+         inkscape:export-ydpi="95.998856"
+         transform="scale(0.99690759,1.003102)"><tspan
+           sodipodi:role="line"
+           id="tspan1139"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.1111px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#ffffff;stroke-width:0.264582"
+           x="-47.908646"
+           y="27.460108">meso</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-size:14.1108px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';fill:#ffffff;stroke-width:0.264582"
+         x="-47.48732"
+         y="48.562958"
+         id="text1145"
+         inkscape:export-filename="..\icon1.4.png"
+         inkscape:export-xdpi="95.998856"
+         inkscape:export-ydpi="95.998856"
+         transform="scale(0.99690759,1.003102)"><tspan
+           sodipodi:role="line"
+           id="tspan1143"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.1108px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#ffffff;stroke-width:0.264582"
+           x="-47.48732"
+           y="48.562958">SPIM</tspan></text>
+    </g>
+    <path
+       id="path1000"
+       style="fill:#ffffff;fill-opacity:1;stroke:#ffffff;stroke-width:0.264584;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 67.592453,26.946018 c -23.255688,7.20743 -44.25757,6.670629 -67.460161,0 v 11.349947 m 0,0 c 23.237656,-6.573362 44.306143,-6.690598 67.460161,0 V 26.946018"
+       sodipodi:nodetypes="cccccc" />
+    <rect
+       style="fill:url(#linearGradient1582);fill-opacity:1;stroke:none;stroke-width:0.264584;stroke-opacity:1;stop-color:#000000"
+       id="rect1514"
+       width="9.260417"
+       height="36.589588"
+       x="0"
+       y="15.571875" />
+    <rect
+       style="fill:url(#linearGradient1745);fill-opacity:1;stroke:none;stroke-width:0.264584;stroke-opacity:1;stop-color:#000000"
+       id="rect1743"
+       width="9.260417"
+       height="36.589588"
+       x="58.472919"
+       y="15.571875" />
+  </g>
+</svg>
