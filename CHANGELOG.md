@@ -15,6 +15,8 @@ Add `scale_galvo_amp_with_zoom = True` to config file to enable this feature.
 :gem: BigTIFF file support
 
 ### User interface
+:wrench: User is forced to select clearing-specific ETL parameters file (e.g. `ETL-CLARITY-cuvette40x40.csv`) at the startup, to avoid non-optimal default settings (often forgotten step).
+
 :gem: `Acquisition Manager` shows estimated dataset size (GB) before acquisition to help planning data management.
 
 :gem: Disk space check: if the disk has insufficient free space, acquisition does not start (shows error message).

@@ -423,6 +423,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.SnapFolderIndicator.setText(self.state['snap_folder'])
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
+        self.ShutterComboBox.currentIndexChanged.connect(self.set_shutter)
+
         self.widget_to_state_parameter_assignment=(
             (self.FilterComboBox, 'filter',1),
             (self.FilterComboBox, 'filter',1),
@@ -519,6 +521,30 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_state_request.emit({'intensity': value})
         self.LaserIntensitySlider.setValue(value)
         self.LaserIntensitySpinBox.setValue(value)
+
+    def set_shutter(self):
+        ''' Disables controls for the opposite ETL to avoid overriding parameters '''
+        if self.ShutterComboBox.currentText() == 'Left':
+            self.LeftETLOffsetSpinBox.setEnabled(True)
+            self.LeftETLAmplitudeSpinBox.setEnabled(True)
+            self.ZeroLeftETLButton.setEnabled(True)
+            self.RightETLOffsetSpinBox.setEnabled(False)
+            self.RightETLAmplitudeSpinBox.setEnabled(False)
+            self.ZeroRightETLButton.setEnabled(False)
+        elif self.ShutterComboBox.currentText() == 'Right':
+            self.RightETLOffsetSpinBox.setEnabled(True)
+            self.RightETLAmplitudeSpinBox.setEnabled(True)
+            self.ZeroRightETLButton.setEnabled(True)
+            self.LeftETLOffsetSpinBox.setEnabled(False)
+            self.LeftETLAmplitudeSpinBox.setEnabled(False)
+            self.ZeroLeftETLButton.setEnabled(False)
+        else: # In case of "Both" (or if something completely different is in the config file)
+            self.RightETLOffsetSpinBox.setEnabled(True)
+            self.RightETLAmplitudeSpinBox.setEnabled(True)
+            self.ZeroRightETLButton.setEnabled(True)
+            self.LeftETLOffsetSpinBox.setEnabled(True)
+            self.LeftETLAmplitudeSpinBox.setEnabled(True)
+            self.ZeroLeftETLButton.setEnabled(True)
 
     def connect_widget_to_state_parameter(self, widget, state_parameter, conversion_factor):
         '''
@@ -743,16 +769,44 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if self.ZeroLeftETLButton.isChecked():
             self.ETL_L_amp_backup = self.LeftETLAmplitudeSpinBox.value()
             self.LeftETLAmplitudeSpinBox.setValue(0)
+            self.LeftETLAmplitudeSpinBox.setEnabled(False)
+            self.SaveETLParametersButton.setEnabled(False)
+            self.ChooseETLcfgButton.setEnabled(False)
+            if self.ShutterComboBox.currentText() == 'Both':
+                self.RightETLOffsetSpinBox.setEnabled(False)
+                self.RightETLAmplitudeSpinBox.setEnabled(False)
+                self.ZeroRightETLButton.setEnabled(False)
         else:
             self.LeftETLAmplitudeSpinBox.setValue(self.ETL_L_amp_backup)
+            self.LeftETLAmplitudeSpinBox.setEnabled(True)
+            self.SaveETLParametersButton.setEnabled(True)
+            self.ChooseETLcfgButton.setEnabled(True)
+            if self.ShutterComboBox.currentText() == 'Both':
+                self.RightETLOffsetSpinBox.setEnabled(True)
+                self.RightETLAmplitudeSpinBox.setEnabled(True)
+                self.ZeroRightETLButton.setEnabled(True)
 
     def zero_right_etl(self):
         ''' Zeros the amplitude of the right ETL for faster alignment '''
         if self.ZeroRightETLButton.isChecked():
             self.ETL_R_amp_backup = self.RightETLAmplitudeSpinBox.value()
             self.RightETLAmplitudeSpinBox.setValue(0)
+            self.RightETLAmplitudeSpinBox.setEnabled(False)
+            self.SaveETLParametersButton.setEnabled(False)
+            self.ChooseETLcfgButton.setEnabled(False)
+            if self.ShutterComboBox.currentText() == 'Both':
+                self.LeftETLOffsetSpinBox.setEnabled(False)
+                self.LeftETLAmplitudeSpinBox.setEnabled(False)
+                self.ZeroLeftETLButton.setEnabled(False)
         else:
             self.RightETLAmplitudeSpinBox.setValue(self.ETL_R_amp_backup)
+            self.RightETLAmplitudeSpinBox.setEnabled(True)
+            self.SaveETLParametersButton.setEnabled(True)
+            self.ChooseETLcfgButton.setEnabled(True)
+            if self.ShutterComboBox.currentText() == 'Both':
+                self.LeftETLOffsetSpinBox.setEnabled(True)
+                self.LeftETLAmplitudeSpinBox.setEnabled(True)
+                self.ZeroLeftETLButton.setEnabled(True)
 
     def zero_galvo_amp(self):
         '''Set the amplitude of both galvos to zero, or back to where it was, depending on button state'''

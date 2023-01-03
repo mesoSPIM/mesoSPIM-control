@@ -139,7 +139,6 @@ binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
 
 '''
 Stage configuration
-
 The stage_parameter dictionary defines the general stage configuration, initial positions,
 and safety limits. The rotation position defines a XYZ position (in absolute coordinates)
 where sample rotation is safe. Additional hardware dictionaries (e.g. pi_parameters)

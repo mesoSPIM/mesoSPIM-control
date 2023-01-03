@@ -90,6 +90,3 @@ If you have questions, contact the current core developer [Nikita Vladimirov](ma
 Fabian F. Voigt, Nikita Vladimirov, Christian Schulze, Rob Campbell, & Fritjof Helmchen. (2022). MesoSPIM control: An open-source acquisition software for light-sheet microscopy written in Python and Qt. Zenodo. https://doi.org/10.5281/zenodo.6109315
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6109315.svg)](https://doi.org/10.5281/zenodo.6109315)
-
-
-
