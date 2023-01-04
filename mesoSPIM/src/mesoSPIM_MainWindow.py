@@ -105,6 +105,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.webcam_window = None
 
+        self.check_config_file()
+
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
             window_pos = self.cfg.ui_options['window_pos']
@@ -177,6 +179,22 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.joystick = mesoSPIM_JoystickHandler(self)
 
         self.enable_gui_updates_from_state(False)
+
+    def check_config_file(self):
+        """Checks missing blocks in config file and gives suggestions.
+        Todo: all new config options
+        """
+        gen_msg = "You are using outdated config file, check project github with the most recent template (demo_config.py):"
+        if not hasattr(self.cfg, 'ui_options'):
+            spec_msg = "\n - 'ui_options' is missing"
+            logger.info(gen_msg + spec_msg)
+            print(gen_msg + spec_msg)
+        else:
+            if not ('button_sleep_ms_xyzft' in self.cfg.ui_options.keys()):
+                spec_msg = "\n - 'button_sleep_ms_xyzft' is missing"
+                logger.info(gen_msg + spec_msg)
+                print(gen_msg + spec_msg)
+
 
     def open_webcam_window(self):
         """Open USB webcam window using cam ID specified in config file. Otherwise, try to open with ID=0"""
@@ -372,29 +390,24 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Disabling UI buttons if necessary '''
         if hasattr(self.cfg, 'ui_options'):
             if self.cfg.ui_options['enable_x_buttons'] is False:
-                self.xPlusButton.setEnabled(False)
-                self.xMinusButton.setEnabled(False)
+                self.enable_move_buttons('x', False)
 
             if self.cfg.ui_options['enable_y_buttons'] is False:
-                self.yPlusButton.setEnabled(False)
-                self.yMinusButton.setEnabled(False)
+                self.enable_move_buttons('y', False)
 
             if self.cfg.ui_options['enable_x_buttons'] is False and self.cfg.ui_options['enable_y_buttons'] is False:
                 self.xyZeroButton.setEnabled(False)
 
             if self.cfg.ui_options['enable_z_buttons'] is False:
-                self.zPlusButton.setEnabled(False)
-                self.zMinusButton.setEnabled(False)
+                self.enable_move_buttons('z', False)
                 self.zZeroButton.setEnabled(False)
 
             if self.cfg.ui_options['enable_f_buttons'] is False:
-                self.focusPlusButton.setEnabled(False)
-                self.focusMinusButton.setEnabled(False)
+                self.enable_move_buttons('f', False)
                 self.focusZeroButton.setEnabled(False)
 
             if self.cfg.ui_options['enable_rotation_buttons'] is False:
-                self.rotPlusButton.setEnabled(False)
-                self.rotMinusButton.setEnabled(False)
+                self.enable_move_buttons('theta', False)
                 self.rotZeroButton.setEnabled(False)
 
             if self.cfg.ui_options['enable_loading_buttons'] is False:
@@ -486,11 +499,39 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
 
+    def enable_move_buttons(self, axis='x', state=True):
+        if axis == 'x':
+            self.xPlusButton.setEnabled(state)
+            self.xMinusButton.setEnabled(state)
+        elif axis == 'y':
+            self.yPlusButton.setEnabled(state)
+            self.yMinusButton.setEnabled(state)
+        elif axis == 'z':
+            self.zPlusButton.setEnabled(state)
+            self.zMinusButton.setEnabled(state)
+        elif axis == 'f':
+            self.focusPlusButton.setEnabled(state)
+            self.focusMinusButton.setEnabled(state)
+        elif axis == 'theta':
+            self.rotPlusButton.setEnabled(state)
+            self.rotMinusButton.setEnabled(state)
+        else:
+            raise ValueError(f'axis = {axis} is unknown.')
+
     @QtCore.pyqtSlot(dict)
     def move_relative(self, pos_dict):
         assert len(pos_dict) == 1, f"Position dictionary expects only one entry, got {pos_dict}"
         key, value = list(pos_dict.keys())[0], list(pos_dict.values())[0]
         self.sig_move_relative.emit(pos_dict)
+        if hasattr(self.cfg, 'ui_options') and ('button_sleep_ms_xyzft' in self.cfg.ui_options.keys()):
+            axis = key[:-4]
+            index = ['x', 'y', 'z', 'f', 'theta'].index(axis)
+            sleep_ms = self.cfg.ui_options['button_sleep_ms_xyzft'][index]
+            if sleep_ms > 0:
+                self.enable_move_buttons(axis, False)
+                QtCore.QTimer().singleShot(sleep_ms, lambda: self.enable_move_buttons(axis, True))
+            else:
+                pass
 
     @QtCore.pyqtSlot(int)
     def set_laser_intensity(self, value):
