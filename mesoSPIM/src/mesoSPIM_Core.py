@@ -423,6 +423,7 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(str)
     def set_shutterconfig(self, shutterconfig):
         self.sig_state_request.emit({'shutterconfig': shutterconfig})
+        self.parent.update_GUI_by_shutter_state()
 
     @QtCore.pyqtSlot()
     def open_shutters(self):

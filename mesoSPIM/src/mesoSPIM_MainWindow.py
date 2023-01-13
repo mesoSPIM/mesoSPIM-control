@@ -436,7 +436,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.SnapFolderIndicator.setText(self.state['snap_folder'])
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
-        self.ShutterComboBox.currentIndexChanged.connect(self.set_shutter)
+        self.ShutterComboBox.currentIndexChanged.connect(self.update_GUI_by_shutter_state)
 
         self.widget_to_state_parameter_assignment=(
             (self.FilterComboBox, 'filter',1),
@@ -539,7 +539,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySlider.setValue(value)
         self.LaserIntensitySpinBox.setValue(value)
 
-    def set_shutter(self):
+    def update_GUI_by_shutter_state(self):
         ''' Disables controls for the opposite ETL to avoid overriding parameters '''
         if self.ShutterComboBox.currentText() == 'Left':
             self.LeftETLOffsetSpinBox.setEnabled(True)
