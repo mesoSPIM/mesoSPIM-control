@@ -266,7 +266,8 @@ class mesoSPIM_Core(QtCore.QObject):
                        'camera_display_live_subsampling',
                        'camera_display_acquisition_subsampling',
                        'camera_sensor_mode',
-                       'camera_binning'
+                       'camera_binning',
+                       'galvo_amp_scale_w_zoom',
                        ):
                 self.sig_state_request.emit({key : value})
 

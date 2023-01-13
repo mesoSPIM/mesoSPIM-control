@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>964</width>
-    <height>1337</height>
+    <height>1336</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,6 +25,11 @@
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
       </property>
       <property name="acceptDrops">
        <bool>false</bool>
@@ -52,8 +57,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>929</width>
-         <height>1258</height>
+         <width>921</width>
+         <height>1241</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -403,7 +408,7 @@
              <x>10</x>
              <y>90</y>
              <width>881</width>
-             <height>38</height>
+             <height>36</height>
             </rect>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -2029,7 +2034,7 @@ MOVEMENT </string>
             </property>
             <property name="font">
              <font>
-              <pointsize>14</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="title">
@@ -2049,7 +2054,7 @@ MOVEMENT </string>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="suffix">
@@ -2079,7 +2084,7 @@ MOVEMENT </string>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2098,7 +2103,7 @@ MOVEMENT </string>
             </property>
             <property name="font">
              <font>
-              <pointsize>14</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="title">
@@ -2115,7 +2120,7 @@ MOVEMENT </string>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2133,7 +2138,7 @@ MOVEMENT </string>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2154,7 +2159,7 @@ MOVEMENT </string>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="suffix">
@@ -2184,7 +2189,7 @@ MOVEMENT </string>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="suffix">
@@ -2277,7 +2282,7 @@ MOVEMENT </string>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2288,15 +2293,15 @@ MOVEMENT </string>
            <widget class="QGroupBox" name="groupBox_12">
             <property name="geometry">
              <rect>
-              <x>450</x>
+              <x>440</x>
               <y>500</y>
-              <width>431</width>
+              <width>451</width>
               <height>201</height>
              </rect>
             </property>
             <property name="font">
              <font>
-              <pointsize>14</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="title">
@@ -2306,14 +2311,14 @@ MOVEMENT </string>
              <property name="geometry">
               <rect>
                <x>190</x>
-               <y>20</y>
+               <y>50</y>
                <width>91</width>
                <height>31</height>
               </rect>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2324,14 +2329,14 @@ MOVEMENT </string>
              <property name="geometry">
               <rect>
                <x>310</x>
-               <y>20</y>
+               <y>50</y>
                <width>91</width>
                <height>31</height>
               </rect>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2342,7 +2347,7 @@ MOVEMENT </string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>50</y>
+               <y>80</y>
                <width>426</width>
                <height>118</height>
               </rect>
@@ -2352,7 +2357,7 @@ MOVEMENT </string>
                <widget class="QLabel" name="label_40">
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -2367,7 +2372,7 @@ MOVEMENT </string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2391,7 +2396,7 @@ MOVEMENT </string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2412,7 +2417,7 @@ MOVEMENT </string>
                <widget class="QLabel" name="label_41">
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -2427,7 +2432,7 @@ MOVEMENT </string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2451,7 +2456,7 @@ MOVEMENT </string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2472,7 +2477,7 @@ MOVEMENT </string>
                <widget class="QLabel" name="label_51">
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -2487,7 +2492,7 @@ MOVEMENT </string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2511,7 +2516,7 @@ MOVEMENT </string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2530,6 +2535,24 @@ MOVEMENT </string>
               </item>
              </layout>
             </widget>
+            <widget class="QLabel" name="label_55">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>30</y>
+               <width>151</width>
+               <height>41</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>(for developers)</string>
+             </property>
+            </widget>
            </widget>
            <widget class="QGroupBox" name="groupBox_7">
             <property name="enabled">
@@ -2539,8 +2562,8 @@ MOVEMENT </string>
              <rect>
               <x>450</x>
               <y>260</y>
-              <width>431</width>
-              <height>221</height>
+              <width>441</width>
+              <height>241</height>
              </rect>
             </property>
             <property name="font">
@@ -2549,13 +2572,13 @@ MOVEMENT </string>
              </font>
             </property>
             <property name="title">
-             <string>Galvo (Shadow reduction)</string>
+             <string>Galvos (vertical scanning)</string>
             </property>
             <widget class="QLabel" name="label_24">
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>30</y>
+               <y>40</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -2575,8 +2598,8 @@ MOVEMENT </string>
              </property>
              <property name="geometry">
               <rect>
-               <x>240</x>
-               <y>30</y>
+               <x>180</x>
+               <y>40</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -2605,8 +2628,8 @@ MOVEMENT </string>
             <widget class="QLabel" name="label_42">
              <property name="geometry">
               <rect>
-               <x>190</x>
-               <y>60</y>
+               <x>120</x>
+               <y>70</y>
                <width>91</width>
                <height>31</height>
               </rect>
@@ -2623,8 +2646,8 @@ MOVEMENT </string>
             <widget class="QLabel" name="label_43">
              <property name="geometry">
               <rect>
-               <x>310</x>
-               <y>60</y>
+               <x>240</x>
+               <y>70</y>
                <width>91</width>
                <height>31</height>
               </rect>
@@ -2659,10 +2682,10 @@ MOVEMENT </string>
             <widget class="QLabel" name="label_45">
              <property name="geometry">
               <rect>
-               <x>10</x>
-               <y>140</y>
-               <width>141</width>
-               <height>31</height>
+               <x>11</x>
+               <y>144</y>
+               <width>131</width>
+               <height>28</height>
               </rect>
              </property>
              <property name="font">
@@ -2680,16 +2703,19 @@ MOVEMENT </string>
              </property>
              <property name="geometry">
               <rect>
-               <x>240</x>
-               <y>140</y>
-               <width>131</width>
-               <height>31</height>
+               <x>150</x>
+               <y>141</y>
+               <width>96</width>
+               <height>34</height>
               </rect>
              </property>
              <property name="font">
               <font>
                <pointsize>14</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Defines vertical scanning range.</string>
              </property>
              <property name="suffix">
               <string> V</string>
@@ -2710,7 +2736,7 @@ MOVEMENT </string>
              </property>
              <property name="geometry">
               <rect>
-               <x>310</x>
+               <x>240</x>
                <y>100</y>
                <width>111</width>
                <height>31</height>
@@ -2720,6 +2746,9 @@ MOVEMENT </string>
               <font>
                <pointsize>14</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Vertical offset of the laser beam, Right arm.</string>
              </property>
              <property name="suffix">
               <string> V</string>
@@ -2743,7 +2772,7 @@ MOVEMENT </string>
              </property>
              <property name="geometry">
               <rect>
-               <x>190</x>
+               <x>120</x>
                <y>100</y>
                <width>111</width>
                <height>31</height>
@@ -2753,6 +2782,9 @@ MOVEMENT </string>
               <font>
                <pointsize>14</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Vertical offset of the laser beam, Left arm.</string>
              </property>
              <property name="suffix">
               <string> V</string>
@@ -2774,7 +2806,7 @@ MOVEMENT </string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>180</y>
+               <y>190</y>
                <width>131</width>
                <height>31</height>
               </rect>
@@ -2790,12 +2822,12 @@ MOVEMENT </string>
             </widget>
             <widget class="QDoubleSpinBox" name="LeftGalvoPhaseSpinBox">
              <property name="enabled">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
              <property name="geometry">
               <rect>
-               <x>190</x>
-               <y>180</y>
+               <x>120</x>
+               <y>190</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -2817,12 +2849,12 @@ MOVEMENT </string>
             </widget>
             <widget class="QDoubleSpinBox" name="RightGalvoPhaseSpinBox">
              <property name="enabled">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
              <property name="geometry">
               <rect>
-               <x>310</x>
-               <y>180</y>
+               <x>240</x>
+               <y>190</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -2842,6 +2874,40 @@ MOVEMENT </string>
               <double>2.520000000000000</double>
              </property>
             </widget>
+            <widget class="QCheckBox" name="checkBoxScaleWZoom">
+             <property name="geometry">
+              <rect>
+               <x>270</x>
+               <y>142</y>
+               <width>171</width>
+               <height>32</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>Auto-adjust the galvo amplitude when zoom is changed</string>
+             </property>
+             <property name="text">
+              <string>Scale w/zoom</string>
+             </property>
+            </widget>
+            <zorder>label_24</zorder>
+            <zorder>GalvoFrequencySpinBox</zorder>
+            <zorder>label_42</zorder>
+            <zorder>label_43</zorder>
+            <zorder>label_44</zorder>
+            <zorder>LeftGalvoAmplitudeSpinBox</zorder>
+            <zorder>RightGalvoOffsetSpinBox</zorder>
+            <zorder>LeftGalvoOffsetSpinBox</zorder>
+            <zorder>label_46</zorder>
+            <zorder>LeftGalvoPhaseSpinBox</zorder>
+            <zorder>RightGalvoPhaseSpinBox</zorder>
+            <zorder>checkBoxScaleWZoom</zorder>
+            <zorder>label_45</zorder>
            </widget>
            <widget class="QGroupBox" name="groupBox_13">
             <property name="enabled">
@@ -2857,43 +2923,24 @@ MOVEMENT </string>
             </property>
             <property name="font">
              <font>
-              <pointsize>14</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="title">
-             <string>Tunable lenses</string>
+             <string>Tunable lenses delays/durations</string>
             </property>
-            <widget class="QLabel" name="label_47">
-             <property name="geometry">
-              <rect>
-               <x>190</x>
-               <y>60</y>
-               <width>221</width>
-               <height>41</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>For offset &amp; amplitude see 
-ETL tab</string>
-             </property>
-            </widget>
             <widget class="QLabel" name="label_49">
              <property name="geometry">
               <rect>
-               <x>190</x>
-               <y>20</y>
+               <x>140</x>
+               <y>70</y>
                <width>91</width>
                <height>31</height>
               </rect>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2903,15 +2950,15 @@ ETL tab</string>
             <widget class="QLabel" name="label_50">
              <property name="geometry">
               <rect>
-               <x>310</x>
-               <y>20</y>
+               <x>280</x>
+               <y>70</y>
                <width>91</width>
                <height>31</height>
               </rect>
              </property>
              <property name="font">
               <font>
-               <pointsize>14</pointsize>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="text">
@@ -2932,7 +2979,7 @@ ETL tab</string>
                <widget class="QLabel" name="label_52">
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -2947,7 +2994,7 @@ ETL tab</string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2971,7 +3018,7 @@ ETL tab</string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -2992,7 +3039,7 @@ ETL tab</string>
                <widget class="QLabel" name="label_53">
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -3007,7 +3054,7 @@ ETL tab</string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -3031,7 +3078,7 @@ ETL tab</string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -3052,7 +3099,7 @@ ETL tab</string>
                <widget class="QLabel" name="label_54">
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -3067,7 +3114,7 @@ ETL tab</string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -3091,7 +3138,7 @@ ETL tab</string>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="suffix">
@@ -3109,6 +3156,24 @@ ETL tab</string>
                </widget>
               </item>
              </layout>
+            </widget>
+            <widget class="QLabel" name="label_47">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>30</y>
+               <width>151</width>
+               <height>41</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>(for developers)</string>
+             </property>
             </widget>
            </widget>
            <widget class="QGroupBox" name="groupBox_15">
@@ -3340,7 +3405,7 @@ ETL tab</string>
      <x>0</x>
      <y>0</y>
      <width>964</width>
-     <height>31</height>
+     <height>37</height>
     </rect>
    </property>
    <property name="font">

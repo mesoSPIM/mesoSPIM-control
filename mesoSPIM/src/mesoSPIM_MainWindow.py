@@ -195,6 +195,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 logger.info(gen_msg + spec_msg)
                 print(gen_msg + spec_msg)
 
+        if not hasattr(self.cfg, 'scale_galvo_amp_with_zoom'):
+            print("INFO: Config file: parameter 'scale_galvo_amp_with_zoom' (True, False) is missing. Default is False.")
+            self.state['galvo_amp_scale_w_zoom'] = False
+        else:
+            self.state['galvo_amp_scale_w_zoom'] = self.cfg.scale_galvo_amp_with_zoom
+        self.checkBoxScaleWZoom.setChecked(self.state['galvo_amp_scale_w_zoom'])
 
     def open_webcam_window(self):
         """Open USB webcam window using cam ID specified in config file. Otherwise, try to open with ID=0"""
@@ -474,7 +480,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.LeftETLRampRisingSpinBox,'etl_l_ramp_rising_%',1),
             (self.RightETLRampRisingSpinBox, 'etl_r_ramp_rising_%',1),
             (self.LeftETLRampFallingSpinBox, 'etl_l_ramp_falling_%',1),
-            (self.RightETLRampFallingSpinBox, 'etl_r_ramp_falling_%',1)
+            (self.RightETLRampFallingSpinBox, 'etl_r_ramp_falling_%',1),
         )
 
         for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
@@ -495,6 +501,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
+        self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
         self.LaserIntensitySlider.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
@@ -539,6 +546,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySlider.setValue(value)
         self.LaserIntensitySpinBox.setValue(value)
 
+    @QtCore.pyqtSlot()
+    def scale_galvo_amp_w_zoom(self):
+        self.state['galvo_amp_scale_w_zoom'] = self.checkBoxScaleWZoom.isChecked()
+
     def update_GUI_by_shutter_state(self):
         ''' Disables controls for the opposite ETL to avoid overriding parameters '''
         if self.ShutterComboBox.currentText() == 'Left':
@@ -567,7 +578,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         Helper method to (currently) connect spinboxes
         '''
-        if isinstance(widget,(QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+        if isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
             self.connect_spinbox_to_state_parameter(widget, state_parameter, conversion_factor)
 
     def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter, int_conversion = False):

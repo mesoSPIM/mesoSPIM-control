@@ -61,11 +61,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                              f"({self.cfg.acquisition_hardware['laser_task_line']}) "
                              f"must be equal to num(lasers) in 'laserdict' ({len(self.cfg.laserdict)}). "
                              f"Check assignment of AO channels in 'laser_task_line'.")
-        if not hasattr(self.cfg, 'scale_galvo_amp_with_zoom'):
-            print("INFO: Config file: parameter 'scale_galvo_amp_with_zoom' (True, False) is missing. Default is False.")
 
     def rescale_galvo_amplitude_by_zoom(self, zoom: float):
-        if hasattr(self.cfg, 'scale_galvo_amp_with_zoom') and self.cfg.scale_galvo_amp_with_zoom is True:
+        if self.state['galvo_amp_scale_w_zoom'] is True:
             galvo_l_amplitude_ini = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
             galvo_r_amplitude_ini = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
             zoom_ini = float(self.parent.read_config_parameter('zoom', self.cfg.startup)[:-1])
@@ -73,7 +71,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.state['galvo_r_amplitude'] = galvo_r_amplitude_ini * zoom_ini / zoom
             logger.info(f"Galvo amplitudes rescaled by {zoom_ini / zoom}")
         else:
-            logger.debug('No rescaling of galvo amplitudes')
+            logger.debug('No rescaling of galvo amplitude')
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):

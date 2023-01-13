@@ -98,7 +98,8 @@ class mesoSPIM_StateSingleton():
                             'current_framerate':3.8,
                             'predicted_acq_list_time':1,
                             'remaining_acq_list_time':1,
-                            'package_directory': ''
+                            'package_directory': '',
+                            'galvo_amp_scale_w_zoom': False,
                             }
 
         def __len__(self):
