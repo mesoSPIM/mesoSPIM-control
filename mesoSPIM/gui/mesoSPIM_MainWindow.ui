@@ -355,7 +355,7 @@
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>30</y>
+             <y>40</y>
              <width>471</width>
              <height>51</height>
             </rect>
@@ -373,7 +373,7 @@
            <property name="geometry">
             <rect>
              <x>700</x>
-             <y>30</y>
+             <y>40</y>
              <width>191</width>
              <height>51</height>
             </rect>
@@ -391,7 +391,7 @@
            <property name="geometry">
             <rect>
              <x>490</x>
-             <y>30</y>
+             <y>40</y>
              <width>201</width>
              <height>51</height>
             </rect>
@@ -406,7 +406,7 @@
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>90</y>
+             <y>100</y>
              <width>881</width>
              <height>36</height>
             </rect>
@@ -683,7 +683,7 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>16</pointsize>
+              <pointsize>14</pointsize>
              </font>
             </property>
             <property name="title">
@@ -1479,10 +1479,10 @@ Focus</string>
             </property>
             <property name="geometry">
              <rect>
-              <x>730</x>
-              <y>560</y>
-              <width>161</width>
-              <height>141</height>
+              <x>710</x>
+              <y>590</y>
+              <width>121</width>
+              <height>111</height>
              </rect>
             </property>
             <property name="font">
@@ -1492,9 +1492,21 @@ Focus</string>
               <bold>false</bold>
              </font>
             </property>
+            <property name="autoFillBackground">
+             <bool>false</bool>
+            </property>
             <property name="text">
-             <string>STOP
-MOVEMENT </string>
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>stop-stages.png</normaloff>stop-stages.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>100</width>
+              <height>100</height>
+             </size>
             </property>
            </widget>
           </widget>
