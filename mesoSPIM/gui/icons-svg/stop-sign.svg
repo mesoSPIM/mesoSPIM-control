@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="67.73333mm"
+   height="58.732269mm"
+   viewBox="0 0 67.73333 58.732269"
+   version="1.1"
+   id="svg5"
+   inkscape:export-filename="stop-stages.png"
+   inkscape:export-xdpi="30.963808"
+   inkscape:export-ydpi="30.963808"
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   sodipodi:docname="stop-sign.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.84096521"
+     inkscape:cx="74.91392"
+     inkscape:cy="265.76605"
+     inkscape:window-width="1710"
+     inkscape:window-height="887"
+     inkscape:window-x="352"
+     inkscape:window-y="352"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-15.059668,-9.2421732)">
+    <path
+       sodipodi:type="star"
+       style="fill:#aa0000;stroke:#ececec;stroke-width:0.231226;stop-color:#000000"
+       id="path234"
+       inkscape:flatsided="true"
+       sodipodi:sides="6"
+       sodipodi:cx="44.67585"
+       sodipodi:cy="34.922668"
+       sodipodi:r1="29.463493"
+       sodipodi:r2="17.754599"
+       sodipodi:arg1="1.0450278"
+       sodipodi:arg2="1.5686266"
+       inkscape:rounded="1.0408341e-17"
+       inkscape:randomized="0"
+       d="M 59.462926,60.406778 29.999502,60.470706 15.212426,34.986597 29.888774,9.438559 59.352198,9.3746306 74.139274,34.85874 Z"
+       transform="matrix(1.1442631,0,0,1.1442631,-2.1945923,-1.3524136)"
+       inkscape:export-filename="stop-stages.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
+    <text
+       xml:space="preserve"
+       style="font-size:14.8167px;line-height:0.85;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';stroke-width:0.264583"
+       x="48.845718"
+       y="37.556381"
+       id="text398"><tspan
+         sodipodi:role="line"
+         id="tspan396"
+         style="font-size:14.8167px;text-align:center;text-anchor:middle;fill:#ffffff;stroke-width:0.264583"
+         x="48.845718"
+         y="37.556381">STOP</tspan><tspan
+         sodipodi:role="line"
+         style="font-size:12.7px;text-align:center;text-anchor:middle;fill:#ffffff;stroke-width:0.264583"
+         x="48.845718"
+         y="50.150578"
+         id="tspan400">stages</tspan></text>
+  </g>
+</svg>
