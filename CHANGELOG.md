@@ -1,3 +1,24 @@
+## Release January 2023 [1.8.2]
+### Hardware control 
+- New filter wheel [ZWO EFWmini](https://astronomy-imaging-camera.com/product/efw-mini) supported
+- added `'speed'` config parameter for ASI Tiger controller that allows to change teh default speed settings.
+- more [config examples](https://github.com/mesoSPIM/mesoSPIM-control/tree/master/mesoSPIM/config/examples) from various systems were uploaded.
+
+### User interface
+- official [mesoSPIM logo](https://github.com/mesoSPIM/mesoSPIM-control/tree/master/mesoSPIM/gui/mesoSPIM-logo.png) is uploaded, also for use as desktop icon (mesoSPIM-logo.ico)
+- non-relevant ETL settings are grayed out depending on the left/right illumination to minimize confusion during ETL optimization (#71).
+- for slow stages the **Move** buttons can be set to sleep for *N* ms to limit the click frequency from the user (prevent stage runout): paremeter `'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0),` in the [config file](https://github.com/mesoSPIM/mesoSPIM-control/blob/master/mesoSPIM/config/demo_config.py).
+- file names now include magnification and rotation (if several rotations are present)
+- GUI allows to change `scale_galvo_amp_with_zoom` flag interactively,
+- developer-only GUI sections have smaller font and are marked as such,
+- **STOP Stages** button is big red.
+
+### Bug fixes
+- tile translation metadata in XML/H5 data were transposed in some configurations (x-y)
+- `'etl_l_delay_%'` config parameter was updated to avoid edge artifacts in ETL scanning
+- in auto-focus optimization pipeline, the first image of the sequence was incorrect
+
+
 ## Release November 2022 [1.8.1]
 ### Hardware control
 :sparkles: Galvo amplitude can be automatically rescaled depending on selected zoom. 
