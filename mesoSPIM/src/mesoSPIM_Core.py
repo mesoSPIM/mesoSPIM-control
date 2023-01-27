@@ -667,10 +667,14 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Create a flag when rotation is required: '''
         rotationflag = True if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1 else False
 
+        ''' Remove z-coordinate from dict so that z is not updated during preview. If rotation necessary, z_abs is updated'''
+        if not z_update and not rotationflag:
+                del startpoint['z_abs']
+
         ''' Check if sample has to be rotated, allow some tolerance '''
         if rotationflag:
             self.sig_status_message.emit('Rotating sample')
-            self.move_absolute({'theta_abs':target_rotation}, wait_until_done=False)
+            self.move_absolute({'theta_abs': target_rotation}, wait_until_done=False)
 
         self.sig_status_message.emit('Setting Filter')
         self.set_filter(acq['filter'], wait_until_done=False)
