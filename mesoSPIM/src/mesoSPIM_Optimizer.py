@@ -156,7 +156,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
     @QtCore.pyqtSlot()
     def run_optimization(self):
         self.parent.sig_state_request.emit({'state': 'idle'}) # stop Live if it is running
-        time.sleep(1)
+        time.sleep(0.5)
         self.get_params_from_gui()
         self.set_etl_amp_to_zero()
         self.ini_state = self.state[self.state_key]['f_pos'] if self.mode == 'focus' else self.state[self.state_key]
