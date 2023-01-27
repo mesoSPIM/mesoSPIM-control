@@ -61,9 +61,6 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.image = image
         self.roi = self.image[self.roi_dims[1]:self.roi_dims[1] + self.roi_dims[3],
                    self.roi_dims[0]:self.roi_dims[0] + self.roi_dims[2]]
-        # DEBUG mode, create new window for each snap
-        #roi_window = pg.ImageWindow()
-        #roi_window.setImage(self.roi)
 
     @QtCore.pyqtSlot(tuple)
     def get_roi_dims(self, roi_dims):
@@ -173,6 +170,8 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         for i, v in enumerate(self.search_grid):
             self.set_state(v)
             time.sleep(self.delay_s)
+            if i == 0:
+                self.core.snap(write_flag=False, laser_blanking=True) # clears the first image from buffer
             self.core.snap(write_flag=False, laser_blanking=True) # this shares downsampled image via slot self.set_image()
             self.metric_array[i] = shannon_dct(self.roi)
 
@@ -237,7 +236,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.set_state(self.new_state)
         print(f"Fitted value: {self.new_state:.3f}")
         time.sleep(self.delay_s)
-        self.core.snap(write_flag=False)
+        self.core.snap(write_flag=False, laser_blanking=True)
         state_str = f"{self.state[self.state_key]}" if self.mode == 'focus' else f"{self.state[self.state_key]:.3f}"
         print(f"New {self.state_key}:{state_str}")
         self.results_window.deleteLater()
