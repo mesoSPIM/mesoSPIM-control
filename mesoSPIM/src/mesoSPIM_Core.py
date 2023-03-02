@@ -940,8 +940,6 @@ class mesoSPIM_Core(QtCore.QObject):
         path = acq['folder'] + '/' + acq['filename']
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
         with open(metadata_path, 'a') as file:
-            ''' Adding troubleshooting information '''
-            write_line(file)
             write_line(file, 'TIMING INFORMATION')
             write_line(file, 'Started stack', self.acq_start_time_string)
             write_line(file, 'Started taking images', self.image_acq_start_time_string)
@@ -951,3 +949,5 @@ class mesoSPIM_Core(QtCore.QObject):
             write_line(file, 'Total time of stack acquisition, s', str(round(self.acq_end_time - self.acq_start_time, 2)))
             write_line(file, 'Frame rate during taking images, img/s:',
                             str(round(acq.get_image_count() / (self.image_acq_end_time - self.image_acq_start_time), 2)))
+            write_line(file, '===================== END OF ACQUISITION ======================')
+            write_line(file)

@@ -2,8 +2,6 @@
 Contains a variety of mesoSPIM utility functions
 '''
 
-import numpy as np
-
 def convert_seconds_to_string(delta_t):
     '''
     Converts an input value in seconds into a string in the format hh:mm:ss

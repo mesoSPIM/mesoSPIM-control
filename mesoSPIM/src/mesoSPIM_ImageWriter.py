@@ -269,6 +269,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if acq['filename'][-3:] == '.h5':
             if acq == acq_list[0]:
                 self.metadata_file = open(metadata_path, 'w')
+            else:
+                self.metadata_file = open(metadata_path, 'a')
         else:
             self.metadata_file = open(metadata_path, 'w')
 
@@ -317,9 +319,5 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'camera_line_interval', self.state['camera_line_interval'])
         write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
         write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
-
-        if acq['filename'][-3:] == '.h5':
-            if acq == acq_list[-1]:
-                self.metadata_file.close()
-        else:
-            self.metadata_file.close()
+        write_line(self.metadata_file)
+        self.metadata_file.close()
