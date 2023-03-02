@@ -14,6 +14,7 @@ from distutils.version import StrictVersion
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
+from .utils.utility_functions import write_line
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -220,53 +221,44 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         else:
             print(f"Error: Snap folder does not exist: {self.state['snap_folder']}. Choose it from the menu.")
 
-    def write_line(self, file, key='', value=''):
-        ''' Little helper method to write a single line with a key and value for metadata
-        Adds a line break at the end.
-        '''
-        if key !='':
-            file.write('['+str(key)+'] '+str(value) + '\n')
-        else:
-            file.write('\n')
-
     def write_snap_metadata(self, path):
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
         with open(metadata_path, 'w') as file:
-            self.write_line(file, 'CFG')
-            self.write_line(file, 'Laser', self.state['laser'])
-            self.write_line(file, 'Intensity (%)', self.state['intensity'])
-            self.write_line(file, 'Zoom', self.state['zoom'])
-            self.write_line(file, 'Pixelsize in um', self.state['pixelsize'])
-            self.write_line(file, 'Filter', self.state['filter'])
-            self.write_line(file, 'Shutter', self.state['shutterconfig'])
-            self.write_line(file)
-            self.write_line(file, 'POSITION')
-            self.write_line(file, 'x_pos', self.state['position']['x_pos'])
-            self.write_line(file, 'y_pos', self.state['position']['y_pos'])
-            self.write_line(file, 'z_pos', self.state['position']['z_pos'])
-            self.write_line(file, 'f_pos', self.state['position']['f_pos'])
-            self.write_line(file)
+            write_line(file, 'CFG')
+            write_line(file, 'Laser', self.state['laser'])
+            write_line(file, 'Intensity (%)', self.state['intensity'])
+            write_line(file, 'Zoom', self.state['zoom'])
+            write_line(file, 'Pixelsize in um', self.state['pixelsize'])
+            write_line(file, 'Filter', self.state['filter'])
+            write_line(file, 'Shutter', self.state['shutterconfig'])
+            write_line(file)
+            write_line(file, 'POSITION')
+            write_line(file, 'x_pos', self.state['position']['x_pos'])
+            write_line(file, 'y_pos', self.state['position']['y_pos'])
+            write_line(file, 'z_pos', self.state['position']['z_pos'])
+            write_line(file, 'f_pos', self.state['position']['f_pos'])
+            write_line(file)
             ''' Attention: change to true ETL values ASAP '''
-            self.write_line(file, 'ETL PARAMETERS')
-            self.write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
-            self.write_line(file, 'etl_l_offset', self.state['etl_l_offset'])
-            self.write_line(file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
-            self.write_line(file, 'etl_r_offset', self.state['etl_r_offset'])
-            self.write_line(file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
-            self.write_line(file)
-            self.write_line(file, 'GALVO PARAMETERS')
-            self.write_line(file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
-            self.write_line(file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
-            self.write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
-            self.write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
-            self.write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
-            self.write_line(file)
-            self.write_line(file, 'CAMERA PARAMETERS')
-            self.write_line(file, 'camera_type', self.cfg.camera)
-            self.write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
-            self.write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
-            self.write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
-            self.write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
+            write_line(file, 'ETL PARAMETERS')
+            write_line(file, 'ETL CFG File', self.state['ETL_cfg_file'])
+            write_line(file, 'etl_l_offset', self.state['etl_l_offset'])
+            write_line(file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
+            write_line(file, 'etl_r_offset', self.state['etl_r_offset'])
+            write_line(file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
+            write_line(file)
+            write_line(file, 'GALVO PARAMETERS')
+            write_line(file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
+            write_line(file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
+            write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
+            write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+            write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
+            write_line(file)
+            write_line(file, 'CAMERA PARAMETERS')
+            write_line(file, 'camera_type', self.cfg.camera)
+            write_line(file, 'camera_exposure', self.state['camera_exposure_time'])
+            write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
+            write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
+            write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_metadata(self, acq, acq_list):
@@ -280,76 +272,54 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         else:
             self.metadata_file = open(metadata_path, 'w')
 
-        self.write_line(self.metadata_file, 'Metadata for file', path)
-        self.write_line(self.metadata_file)
-        # self.write_line(file, 'COMMENTS')
-        # self.write_line(file, 'Comment: ', acq(['comment']))
-        # self.write_line(file)
-        self.write_line(self.metadata_file, 'CFG')
-        self.write_line(self.metadata_file, 'Laser', acq['laser'])
-        self.write_line(self.metadata_file, 'Intensity (%)', acq['intensity'])
-        self.write_line(self.metadata_file, 'Zoom', acq['zoom'])
-        self.write_line(self.metadata_file, 'Pixelsize in um', self.state['pixelsize'])
-        self.write_line(self.metadata_file, 'Filter', acq['filter'])
-        self.write_line(self.metadata_file, 'Shutter', acq['shutterconfig'])
-        self.write_line(self.metadata_file)
-        self.write_line(self.metadata_file, 'POSITION')
-        self.write_line(self.metadata_file, 'x_pos', acq['x_pos'])
-        self.write_line(self.metadata_file, 'y_pos', acq['y_pos'])
-        self.write_line(self.metadata_file, 'f_start', acq['f_start'])
-        self.write_line(self.metadata_file, 'f_end', acq['f_end'])
-        self.write_line(self.metadata_file, 'z_start', acq['z_start'])
-        self.write_line(self.metadata_file, 'z_end', acq['z_end'])
-        self.write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
-        self.write_line(self.metadata_file, 'z_planes', acq.get_image_count())
-        self.write_line(self.metadata_file, 'rot', acq['rot'])
-        self.write_line(self.metadata_file)
-
+        write_line(self.metadata_file, 'Metadata for file', path)
+        write_line(self.metadata_file)
+        # write_line(file, 'COMMENTS')
+        # write_line(file, 'Comment: ', acq(['comment']))
+        # write_line(file)
+        write_line(self.metadata_file, 'CFG')
+        write_line(self.metadata_file, 'Laser', acq['laser'])
+        write_line(self.metadata_file, 'Intensity (%)', acq['intensity'])
+        write_line(self.metadata_file, 'Zoom', acq['zoom'])
+        write_line(self.metadata_file, 'Pixelsize in um', self.state['pixelsize'])
+        write_line(self.metadata_file, 'Filter', acq['filter'])
+        write_line(self.metadata_file, 'Shutter', acq['shutterconfig'])
+        write_line(self.metadata_file)
+        write_line(self.metadata_file, 'POSITION')
+        write_line(self.metadata_file, 'x_pos', acq['x_pos'])
+        write_line(self.metadata_file, 'y_pos', acq['y_pos'])
+        write_line(self.metadata_file, 'f_start', acq['f_start'])
+        write_line(self.metadata_file, 'f_end', acq['f_end'])
+        write_line(self.metadata_file, 'z_start', acq['z_start'])
+        write_line(self.metadata_file, 'z_end', acq['z_end'])
+        write_line(self.metadata_file, 'z_stepsize', acq['z_step'])
+        write_line(self.metadata_file, 'z_planes', acq.get_image_count())
+        write_line(self.metadata_file, 'rot', acq['rot'])
+        write_line(self.metadata_file)
         ''' Attention: change to true ETL values ASAP '''
-        self.write_line(self.metadata_file, 'ETL PARAMETERS')
-        self.write_line(self.metadata_file, 'ETL CFG File', self.state['ETL_cfg_file'])
-        self.write_line(self.metadata_file, 'etl_l_offset', self.state['etl_l_offset'])
-        self.write_line(self.metadata_file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
-        self.write_line(self.metadata_file, 'etl_r_offset', self.state['etl_r_offset'])
-        self.write_line(self.metadata_file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
-        self.write_line(self.metadata_file)
-        self.write_line(self.metadata_file, 'GALVO PARAMETERS')
-        self.write_line(self.metadata_file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
-        self.write_line(self.metadata_file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
-        self.write_line(self.metadata_file, 'galvo_l_offset', self.state['galvo_l_offset'])
-        self.write_line(self.metadata_file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
-        self.write_line(self.metadata_file, 'galvo_r_offset', self.state['galvo_r_offset'])
-        self.write_line(self.metadata_file)
-        self.write_line(self.metadata_file, 'CAMERA PARAMETERS')
-        self.write_line(self.metadata_file, 'camera_type', self.cfg.camera)
-        self.write_line(self.metadata_file, 'camera_exposure', self.state['camera_exposure_time'])
-        self.write_line(self.metadata_file, 'camera_line_interval', self.state['camera_line_interval'])
-        self.write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
-        self.write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
+        write_line(self.metadata_file, 'ETL PARAMETERS')
+        write_line(self.metadata_file, 'ETL CFG File', self.state['ETL_cfg_file'])
+        write_line(self.metadata_file, 'etl_l_offset', self.state['etl_l_offset'])
+        write_line(self.metadata_file, 'etl_l_amplitude', self.state['etl_l_amplitude'])
+        write_line(self.metadata_file, 'etl_r_offset', self.state['etl_r_offset'])
+        write_line(self.metadata_file, 'etl_r_amplitude', self.state['etl_r_amplitude'])
+        write_line(self.metadata_file)
+        write_line(self.metadata_file, 'GALVO PARAMETERS')
+        write_line(self.metadata_file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
+        write_line(self.metadata_file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
+        write_line(self.metadata_file, 'galvo_l_offset', self.state['galvo_l_offset'])
+        write_line(self.metadata_file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+        write_line(self.metadata_file, 'galvo_r_offset', self.state['galvo_r_offset'])
+        write_line(self.metadata_file)
+        write_line(self.metadata_file, 'CAMERA PARAMETERS')
+        write_line(self.metadata_file, 'camera_type', self.cfg.camera)
+        write_line(self.metadata_file, 'camera_exposure', self.state['camera_exposure_time'])
+        write_line(self.metadata_file, 'camera_line_interval', self.state['camera_line_interval'])
+        write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
+        write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
 
         if acq['filename'][-3:] == '.h5':
             if acq == acq_list[-1]:
                 self.metadata_file.close()
         else:
             self.metadata_file.close()
-
-    def append_timing_info_to_metadata(self, acq, **kwargs):
-        '''
-        Appends a metadata.txt file
-        Arguments:
-            acq_start, img_start, img_end, acq_end: strings that contain acquisition and camera start/stop time.
-            img_total_time: time count of taking images.
-        '''
-        for key in kwargs.keys():
-            assert key in ('acq_start', 'img_start', 'img_end', 'acq_end', 'img_total_time'), f"Key unknown: {key}"
-        path = acq['folder']+'/'+acq['filename']
-        metadata_path = os.path.dirname(path)+'/'+os.path.basename(path)+'_meta.txt'
-        with open(metadata_path,'a') as file:
-            ''' Adding troubleshooting information '''
-            self.write_line(file)
-            self.write_line(file, 'TIMING INFORMATION')
-            self.write_line(file, 'Started stack', kwargs.get('acq_start'))
-            self.write_line(file, 'Started taking images', kwargs.get('img_start'))
-            self.write_line(file, 'Stopped taking images', kwargs.get('img_end'))
-            self.write_line(file, 'Stopped stack', kwargs.get('acq_end'))
-            self.write_line(file, 'Frame rate', str(acq.get_image_count()/kwargs.get('img_total_time')))

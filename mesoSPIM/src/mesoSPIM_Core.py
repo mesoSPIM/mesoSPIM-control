@@ -37,7 +37,7 @@ from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import convert_seconds_to_string, format_data_size
+from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line
 
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -708,6 +708,7 @@ class mesoSPIM_Core(QtCore.QObject):
         current_rotation = self.state['position']['theta_pos']
         startpoint = acq.get_startpoint()
         target_rotation = startpoint['theta_abs']
+        self.acq_start_time = time.time()
         self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
         self.sig_status_message.emit('Going to start position')
@@ -844,14 +845,14 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_polling_stage_position_start.emit()
 
         self.acq_end_time = time.time()
-        img_total_time = self.image_acq_end_time - self.image_acq_start_time
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+        self.append_timing_info_to_metadata(acq)
         self.acquisition_count += 1
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
         self.sig_update_gui_from_state.emit(True)
-        self.state['state']='running_script'
+        self.state['state'] = 'running_script'
         try:
             exec(script)
         except:
@@ -930,3 +931,23 @@ class mesoSPIM_Core(QtCore.QObject):
             raise ValueError(message)
         else:
             return dictionary[key]
+
+    def append_timing_info_to_metadata(self, acq):
+        '''
+        Appends a metadata.txt file
+        Path contains the file to be written
+        '''
+        path = acq['folder'] + '/' + acq['filename']
+        metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+        with open(metadata_path, 'a') as file:
+            ''' Adding troubleshooting information '''
+            write_line(file)
+            write_line(file, 'TIMING INFORMATION')
+            write_line(file, 'Started stack', self.acq_start_time_string)
+            write_line(file, 'Started taking images', self.image_acq_start_time_string)
+            write_line(file, 'Stopped taking images', self.image_acq_end_time_string)
+            write_line(file, 'Stopped stack', self.acq_end_time_string)
+            write_line(file, 'Total time of taking images, s', str(round(self.image_acq_end_time - self.image_acq_start_time, 2)))
+            write_line(file, 'Total time of stack acquisition, s', str(round(self.acq_end_time - self.acq_start_time, 2)))
+            write_line(file, 'Frame rate during taking images, img/s:',
+                            str(round(acq.get_image_count() / (self.image_acq_end_time - self.image_acq_start_time), 2)))

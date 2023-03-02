@@ -37,3 +37,13 @@ def format_data_size(bytes):
             return "%.1f MB" % (M)
     else:
         return "%.1f kb" % (kb)
+
+
+def write_line(file, key='', value=''):
+    ''' Little helper method to write a single line with a key and value for metadata
+    Adds a line break at the end.
+    '''
+    if key != '':
+        file.write('['+str(key)+'] '+str(value) + '\n')
+    else:
+        file.write('\n')
