@@ -58,7 +58,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler) # from mesoSPIM_Core() to mesoSPIM_Camera()
         self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=QtCore.Qt.BlockingQueuedConnection)
-        self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series)
+        self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.QueuedConnection)
         # The following connection can cause problems when disk is too slow (e.g. writing TIFF files on HDD drive):

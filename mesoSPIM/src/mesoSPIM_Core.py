@@ -846,6 +846,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+        self.state['current_framerate'] = acq.get_image_count() / (self.image_acq_end_time - self.image_acq_start_time)
         self.append_timing_info_to_metadata(acq)
         self.acquisition_count += 1
 
@@ -947,7 +948,6 @@ class mesoSPIM_Core(QtCore.QObject):
             write_line(file, 'Stopped stack', self.acq_end_time_string)
             write_line(file, 'Total time of taking images, s', str(round(self.image_acq_end_time - self.image_acq_start_time, 2)))
             write_line(file, 'Total time of stack acquisition, s', str(round(self.acq_end_time - self.acq_start_time, 2)))
-            write_line(file, 'Frame rate during taking images, img/s:',
-                            str(round(acq.get_image_count() / (self.image_acq_end_time - self.image_acq_start_time), 2)))
+            write_line(file, 'Frame rate during taking images, img/s:', str(round(self.state['current_framerate'], 2)))
             write_line(file, '===================== END OF ACQUISITION ======================')
             write_line(file)
