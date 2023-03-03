@@ -5,6 +5,7 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 import os
 import time
 import numpy as np
+import psutil
 import tifffile
 import logging
 logger = logging.getLogger(__name__)
@@ -54,6 +55,70 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.tiff_write = tifffile.TiffWriter.write
 
         tifffile.TiffWriter.write = self.tiff_write # rename the entire class method if necessary
+
+    def acquisition_shape(self):
+        '''Return a tuple of acquisition shape (z,y,x)'''
+        return (self.max_frame, self.y_pixels, self.x_pixels)
+
+    def allocate_np(self):
+        '''Return a numpy array filled with zeros the shape of the acquisition array'''
+        return np.zeros(self.acquisition_shape(), dtype='uint16')
+
+    @staticmethod
+    def gb_size_of_array_shape(shape):
+        '''Given a tuple of array shape, return the size in GB of at uint16 array'''
+        for idx,ii in enumerate(shape):
+            if idx == 0:
+                total = ii
+            else:
+                total *= ii
+        total = total * 16 / 8
+        return total / 1024**3
+
+    def allocate_np_percent_ram_free(self,percent):
+        '''Return a numpy array filled with zeros that maximizes for available RAM
+        but leaves a percentage of RAM free.
+
+        If shape of the acquisition is smaller, allocate the smaller array.
+        '''
+        ram = psutil.virtual_memory()
+        must_remain_free_GB = ram.total*(percent/100)
+        max_amount_useable = ram.available - must_remain_free_GB
+        size_of_1_image = self.y_pixels * self.x_pixels * 16 / 8 #Assume np.uint16
+
+        if max_amount_useable < size_of_1_image:
+            # Case where there is not enough RAM for even 1 image
+            if size_of_1_image > max_amount_useable:
+                import warnings
+                warnings.warn('There may not be enough available RAM to continue with acquisition')
+            print(f'There is not enough RAM available to maintain {self.percent_ram_free} percent free RAM: Continuing acquisition without RAM buffer')
+
+        z_layers_to_allocate = int(max_amount_useable // size_of_1_image) - 1
+        z_layers_to_allocate = z_layers_to_allocate if z_layers_to_allocate >= 1 else 1
+
+        if self.gb_size_of_array_shape(self.acquisition_shape()) <= max_amount_useable/1024**3:
+            shape = self.acquisition_shape()
+        else:
+            shape = (z_layers_to_allocate, self.y_pixels, self.x_pixels)
+        return np.zeros(shape, dtype='uint16')
+
+    def less_than_gb(self,gb):
+        '''Is the size of the acquisition array smaller than some size in gigabytes'''
+        num_pix = self.max_frame * self.y_pixels * self.x_pixels
+        size = (num_pix*16/8) / (1024**3) #in gigabytes
+        if size < gb:
+            return True
+        else:
+            return False
+
+    def remove_image_buffer(self):
+        self.image_buffer = None  # Clear RAM
+
+    def ram_percent_remaing_free(self):
+        ram = psutil.virtual_memory()
+        total = ram.total
+        free = ram.free
+        return (free/total)*100
 
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
@@ -130,10 +195,32 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.mip_image = np.zeros((self.y_pixels, self.x_pixels), 'uint16')
 
         self.cur_image = 0
+        self.written_image = 0
+        self.abort_flag = False
         self.running = True
 
+        self.acq = acq
+        self.acq_list = acq_list
+
+        #Future: The % could be included as a parameter in the config file
+        self.percent_ram_free = 20 #This value is the % of Total System RAM that will remain unused during acquisition
+        #Create a RAM buffer for acquisition that keeps {self.percent_ram_free} of total RAM free
+        self.image_buffer = self.allocate_np_percent_ram_free(self.percent_ram_free)
+
     def write_image(self, image, acq, acq_list):
-        if self.running:
+        self.image_buffer[self.written_image % self.image_buffer.shape[0]] = image
+        self.written_image += 1
+        # ## Only for test purposes
+        # percent_ram_remaining = self.ram_percent_remaing_free()
+        # print(f'Percent RAM remaining is {round(percent_ram_remaining,2)}')
+        # ##
+        if self.written_image % self.image_buffer.shape[0] == 0 or self.written_image == self.max_frame or self.abort_flag:
+            self.image_to_disk(acq, acq_list)
+
+    def image_to_disk(self, acq, acq_list):
+        self.parent.parent.sig_status_message.emit('RAM Buffer Full: Flushing data to disk before continuing acquisition')
+        while True:
+            image = self.image_buffer[self.cur_image % self.image_buffer.shape[0]]
             xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
             if self.file_extension == '.h5':
                 self.bdv_writer.append_plane(plane=image, z=self.cur_image,
@@ -144,19 +231,32 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                              )
             elif self.file_extension == '.raw':
                 self.xy_stack[self.cur_image*self.fsize:(self.cur_image+1)*self.fsize] = image.flatten()
-            elif self.file_extension in self.tiff_aliases + self.bigtiff_aliases:
+            elif self.file_extension in self.tiff_aliases:
                 self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
+                                       metadata={'spacing': acq['z_step'], 'unit': 'um'})
+            elif self.file_extension in self.bigtiff_aliases:
+                self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res #, tile=(1024,1024), compression='lzw', #compression requires imagecodecs
                                        metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
             if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
-                self.mip_image = np.maximum(self.mip_image, image)
+                self.mip_image[:] = np.maximum(self.mip_image, image)
 
             self.cur_image += 1
-        else:
+            # Terminate loop if the full buffer has been dumped to disk or if all images from acquisition have been dumpped to disk
+            if self.cur_image % self.image_buffer.shape[0] == 0 or self.cur_image == self.max_frame:
+                self.parent.parent.sig_status_message.emit('Running Acquisition')
+                break
+            elif self.abort_flag and self.cur_image == self.written_image:
+                self.parent.parent.sig_status_message.emit('Running Acquisition')
+                break
+
+        if not self.running:
             logger.info("No image, running terminated")
 
     def abort_writing(self):
         """Terminate writing and close all files if STOP button is pressed"""
+        self.abort_flag = True
+        self.image_to_disk(self.acq, self.acq_list) # Flush remaining buffer to disk
         if self.running:
             try:
                 if self.file_extension == '.h5':
@@ -170,6 +270,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 logger.error(f'{e}')
             print("Writing terminated, files closed")
             self.running = False
+            self.remove_image_buffer() #Free RAM
+            self.abort_flag = False
         else:
             pass
 
@@ -207,6 +309,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 logger.error(f'{e}')
 
         self.running = False
+        self.remove_image_buffer()  # Free RAM
 
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
