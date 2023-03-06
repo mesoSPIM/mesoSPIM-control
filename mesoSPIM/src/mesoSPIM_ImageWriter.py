@@ -235,7 +235,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
                                        metadata={'spacing': acq['z_step'], 'unit': 'um'})
             elif self.file_extension in self.bigtiff_aliases:
-                self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res #, tile=(1024,1024), compression='lzw', #compression requires imagecodecs
+                self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
                                        metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
             if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
