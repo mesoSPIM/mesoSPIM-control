@@ -12,4 +12,5 @@ tifffile==2021.7.2
 qdarkstyle==2.8.1
 npy2bdv>=1.0.8
 future==0.18.2
+psutil==5.9.4
 
