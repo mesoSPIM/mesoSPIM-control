@@ -244,9 +244,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def abort_writing(self):
         """Terminate writing and close all files if STOP button is pressed"""
         self.abort_flag = True
-        self.image_to_disk(self.acq, self.acq_list) # Flush remaining buffer to disk
         if self.running_flag:
             try:
+                self.image_to_disk(self.acq, self.acq_list)  # Flush remaining buffer to disk
                 if self.file_extension == '.h5':
                     self.bdv_writer.close()
                 elif self.file_extension == '.raw':
