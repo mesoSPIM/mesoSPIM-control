@@ -45,3 +45,5 @@ def write_line(file, key='', value=''):
         file.write('['+str(key)+'] '+str(value) + '\n')
     else:
         file.write('\n')
+
+        
