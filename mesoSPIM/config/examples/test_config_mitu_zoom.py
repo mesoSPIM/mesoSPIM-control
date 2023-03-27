@@ -282,7 +282,7 @@ For the 'DemoZoom', 'servo_id', 'COMport' and 'baudrate' do not matter.
 For a 'Dynamixel' servo-driven zoom, 'servo_id', 'COMport' and 'baudrate' (default 1000000) must be specified
 For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be specified
 '''
-zoom_parameters = {'zoom_type' : 'Demo', # 'DemoZoom', 'Dynamixel', or 'Mitu'
+zoom_parameters = {'zoom_type' : 'Mitu', # 'DemoZoom', 'Dynamixel', or 'Mitu'
                    'COMport' : 'COM1',
                    'baudrate' : 9600,
                    'servo_id': 4, # only for 'Dynamixel'
@@ -294,7 +294,6 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 '''
 '''
 The 'Dynamixel' servo default zoom positions
-'''
 zoomdict = {'0.63x' : 3423,
             '0.8x' : 3071,
             '1x' : 2707,
@@ -306,18 +305,18 @@ zoomdict = {'0.63x' : 3423,
             '4x' : 637,
             '5x' : 318,
             '6.3x' : 0}    
-
+'''
 
 '''
 The 'Mitu' (Mitutoyo revolver) positions
-
+'''
 zoomdict = {'2x': 'A',
             '5x': 'B',
             '7.5x': 'C',
             '10x': 'D',
             '20x': 'E',
             }
-'''
+
 '''
 Pixelsize in micron
 '''
