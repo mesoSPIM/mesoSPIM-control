@@ -39,11 +39,26 @@ class DynamixelZoom(Dynamixel):
 class MitutoyoZoom(QtCore.QObject):
     def __init__(self, zoomdict, COMport, baudrate=9600):
         super().__init__()
-        self.port = self.COMport
+        self.port = COMport
         self.baudrate = baudrate
         self.zoomdict = zoomdict
-        self.revolver_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=5,
-                                            xonxoff=False, stopbits=serial.STOPBITS_ONE)
+        try:
+            self.revolver_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_EVEN, timeout=5,
+                                                stopbits=serial.STOPBITS_ONE)
+            self._initialize()
+        except Exception as error:
+            msg = f"Serial connection to Mitutoyo revolver failed, error: {error}"
+            logger.error(msg)
+            print(msg)
+
+    def _initialize(self):
+        response = self._send_command(b'RRDSTU\r')
+        if response[:9] != 'ROK000001':
+            msg = f"Error in Mitutoyo revolver initialization, response: {response} \nIf response is empty, check if the revolver is connected."
+            logger.error(msg)
+            print(msg)
+        else:
+            logger.info("Mitutoyo revolver initialized")
 
     def _send_command(self, command: bytes):
         try:
@@ -68,7 +83,9 @@ class MitutoyoZoom(QtCore.QObject):
             assert position in ('A', 'B', 'C', 'D', 'E'), "Revolver position must be one of ('A', 'B', 'C', 'D', 'E')"
             command = 'RWRMV' + position + '\r'
             message = self._send_command(command.encode('ascii'))
-            if message != 'ROK\r':
-                logger.error(f"Mitutoyo revolver response: {message}")
+            if message != 'ROK\r\n':
+                msg = f"Error in Mitutoyo revolver command, response:{message}."
+                logger.error(msg)
+                print(msg)
         else:
             return ValueError(f"Zoom {zoom} not in 'zoomdict', check your config file")

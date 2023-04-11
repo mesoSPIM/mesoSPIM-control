@@ -278,11 +278,11 @@ filterdict = {'Empty' : 0, # Every config should contain at least this entry
 
 '''
 Zoom configuration
-For the 'DemoZoom', 'servo_id', 'COMport' and 'baudrate' do not matter. 
+For the 'Demo', 'servo_id', 'COMport' and 'baudrate' do not matter. 
 For a 'Dynamixel' servo-driven zoom, 'servo_id', 'COMport' and 'baudrate' (default 1000000) must be specified
 For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be specified
 '''
-zoom_parameters = {'zoom_type' : 'Demo', # 'DemoZoom', 'Dynamixel', or 'Mitu'
+zoom_parameters = {'zoom_type' : 'Demo', # 'Demo', 'Dynamixel', or 'Mitu'
                    'COMport' : 'COM1',
                    'baudrate' : 9600,
                    'servo_id': 4, # only for 'Dynamixel'

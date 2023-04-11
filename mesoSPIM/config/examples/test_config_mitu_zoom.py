@@ -23,7 +23,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'usb_webcam': False, # open USB web-camera in a separate window
                }
 
-logging_level = 'INFO' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
+logging_level = 'DEBUG' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
 
 '''
 Waveform output for Galvos, ETLs etc.
@@ -278,12 +278,12 @@ filterdict = {'Empty' : 0, # Every config should contain at least this entry
 
 '''
 Zoom configuration
-For the 'DemoZoom', 'servo_id', 'COMport' and 'baudrate' do not matter. 
+For the 'Demo', 'servo_id', 'COMport' and 'baudrate' do not matter. 
 For a 'Dynamixel' servo-driven zoom, 'servo_id', 'COMport' and 'baudrate' (default 1000000) must be specified
 For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be specified
 '''
-zoom_parameters = {'zoom_type' : 'Mitu', # 'DemoZoom', 'Dynamixel', or 'Mitu'
-                   'COMport' : 'COM1',
+zoom_parameters = {'zoom_type' : 'Mitu', # 'Demo', 'Dynamixel', or 'Mitu'
+                   'COMport' : 'COM3',
                    'baudrate' : 9600,
                    'servo_id': 4, # only for 'Dynamixel'
                    }
@@ -320,17 +320,12 @@ zoomdict = {'2x': 'A',
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.63x' : 10.52,
-            '0.8x' : 8.23,
-            '1x' : 6.55,
-            '1.25x' : 5.26,
-            '1.6x' : 4.08,
-            '2x' : 3.26,
-            '2.5x' : 2.6,
-            '3.2x' : 2.03,
-            '4x' : 1.60,
-            '5x' : 1.27,
-            '6.3x' : 1.03}
+pixelsize = {'1x': 5.5,
+            '2x' : 2.75,
+            '5x' : 1.1,
+            '7.5x' : 0.73,
+             '10x' : 0.55,
+             '20x' : 0.275,}
 
 '''
  HDF5 parameters, if this format is used for data saving (optional).
@@ -368,8 +363,8 @@ startup = {
 'snap_folder' : 'D:/tmp/',
 'file_prefix' : '',
 'file_suffix' : '000001',
-'zoom' : '1x',
-'pixelsize' : 6.55,
+'zoom' : '2x',
+'pixelsize' : 5.5,
 'laser' : '488 nm',
 'max_laser_voltage':10,
 'intensity' : 10,

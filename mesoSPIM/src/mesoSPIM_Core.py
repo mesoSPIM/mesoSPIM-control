@@ -44,16 +44,12 @@ class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM'''
 
     sig_finished = QtCore.pyqtSignal()
-
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
-
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_position = QtCore.pyqtSignal(dict)
-
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
-
     sig_progress = QtCore.pyqtSignal(dict)
 
     ''' Camera-related signals '''
@@ -62,7 +58,6 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_end_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_write_metadata = QtCore.pyqtSignal(Acquisition, AcquisitionList)
-
     sig_prepare_live = QtCore.pyqtSignal()
     sig_get_live_image = QtCore.pyqtSignal()
     sig_get_snap_image = QtCore.pyqtSignal(bool)
@@ -100,9 +95,7 @@ class mesoSPIM_Core(QtCore.QObject):
         # parent.sig_state_request -> self.state_request_handler
         # self.sig_state_request -> self.waveformer.state_request_handler
         self.parent.sig_state_request.connect(self.state_request_handler)
-
         self.parent.sig_execute_script.connect(self.execute_script)
-
         self.parent.sig_move_relative.connect(self.move_relative)
         # self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True))
         self.parent.sig_move_absolute.connect(self.move_absolute)
@@ -178,6 +171,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.set_filter(self.cfg.startup['filter'])
+        self.set_zoom(self.cfg.startup['zoom'])
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
