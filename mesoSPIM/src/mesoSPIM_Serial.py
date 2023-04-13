@@ -65,7 +65,7 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.zoom = DynamixelZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'], self.cfg.zoom_parameters['servo_id'], self.cfg.zoom_parameters['baudrate'])
         elif self.cfg.zoom_parameters['zoom_type'] in ('Mitu', 'Mitutoyo'):
             self.zoom = MitutoyoZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'], self.cfg.zoom_parameters['baudrate'])
-        elif self.cfg.zoom_parameters['zoom_type'] == 'Demo':
+        elif self.cfg.zoom_parameters['zoom_type'] in ('Demo', 'DemoZoom'):
             self.zoom = DemoZoom(self.cfg.zoomdict)
 
         ''' Attaching the stage '''
