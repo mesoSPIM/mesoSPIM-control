@@ -367,7 +367,10 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
         self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
         self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
         self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
-        self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
+        if 'readout_speed' in self.cfg.camera_parameters.keys():
+            self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
+        else:
+            logger.warning('No readout speed specified in the configuration file. Using default value.')
 
         self.hcam.setPropertyValue("trigger_active", self.cfg.camera_parameters['trigger_active'])
         self.hcam.setPropertyValue("trigger_mode", self.cfg.camera_parameters['trigger_mode']) # it is unclear if this is the external lightsheeet mode - how to check this?
