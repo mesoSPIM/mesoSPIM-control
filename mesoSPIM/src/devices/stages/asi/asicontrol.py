@@ -38,10 +38,10 @@ class StageControlASITiger(QtCore.QObject):
         self.encoder_conversion = asi_parameters['encoder_conversion']
         
         self.position_dict = {axis : None for axis in self.axis_list} # create an empty position dict
-                
-        '''Open connection to the stage controller'''
         self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=5, xonxoff=False, stopbits=serial.STOPBITS_ONE)
         self.previous_command = ''
+        if self.read_position() is None:
+            raise ValueError('Could not connect to ASI stage')
         self.current_z_slice = 0
 
     def close(self):
@@ -125,8 +125,7 @@ class StageControlASITiger(QtCore.QObject):
     def read_position(self):
         '''Reports position from the stages
         Returns:
-            positions (dictionary): list of positions 
-        
+            positions (dictionary): list of positions
         '''
         command_string = 'W ' + self.axes + '\r'
         position_string = self._send_command(command_string.encode('ascii'))
@@ -153,6 +152,7 @@ class StageControlASITiger(QtCore.QObject):
                 logger.error('Invalid position string: ' + str(position_string))
         else:
             logger.error("Position string is empty")
+            return None
 
     def move_relative(self, motion_dict):
         '''Command for relative motion 
