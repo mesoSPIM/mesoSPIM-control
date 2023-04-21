@@ -67,6 +67,8 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.zoom = MitutoyoZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'], self.cfg.zoom_parameters['baudrate'])
         elif self.cfg.zoom_parameters['zoom_type'] in ('Demo', 'DemoZoom'):
             self.zoom = DemoZoom(self.cfg.zoomdict)
+        else:
+            raise ValueError(f"Zoom type unknown: {self.cfg.zoom_parameters['zoom_type']}")
 
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] in {'PI', 'PI_1controllerNstages'}:
@@ -93,6 +95,8 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
+        else:
+            raise ValueError(f"Stage type unknown: {self.cfg.stage_parameters['stage_type']}")
         try:
             self.stage.sig_status_message.connect(self.send_status_message)
             self.stage.sig_position.connect(self.report_position)
