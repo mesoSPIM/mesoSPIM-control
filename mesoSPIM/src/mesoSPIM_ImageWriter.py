@@ -64,36 +64,43 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         '''Return a numpy array filled with zeros the shape of the acquisition array'''
         return np.zeros(self.acquisition_shape(), dtype='uint16')
 
-    def allocate_np_percent_ram_free(self,percent):
+    def allocate_ram(self):
         '''Return a numpy array filled with zeros that maximizes for available RAM
         but leaves a percentage of RAM free.
 
         If shape of the acquisition is smaller, allocate the smaller array.
         '''
-        ram = psutil.virtual_memory()
-        must_remain_free_GB = ram.total*(percent/100)
-        max_amount_useable = ram.available - must_remain_free_GB
-        size_of_1_image = self.y_pixels * self.x_pixels * 16 / 8 #Assume np.uint16
-
-        if max_amount_useable < size_of_1_image:
-            # Case where there is not enough RAM for even 1 image
-            msg = f'There is not enough RAM available to maintain {self.percent_ram_free} percent free RAM: Continuing acquisition without RAM buffer'
-            logger.warning(msg)
+        if not hasattr(self.cfg, 'buffering') or not self.cfg.buffering['use_ram_buffer']:
+            msg = 'No RAM buffer specified in config file. Continuing without RAM buffer. To turn on RAM buffering, add a "buffering" dictionary to the config file.'
+            logger.info(msg)
             print(msg)
-
-        z_layers_to_allocate = int(max_amount_useable // size_of_1_image) - 1
-        z_layers_to_allocate = z_layers_to_allocate if z_layers_to_allocate >= 1 else 1
-
-        if gb_size_of_array_shape(self.acquisition_shape()) <= max_amount_useable/1024**3:
-            shape = self.acquisition_shape()
+            buffer_shape = (1, self.x_pixels, self.y_pixels)
         else:
-            shape = (z_layers_to_allocate, self.x_pixels, self.y_pixels)
-        return np.zeros(shape, dtype='uint16')
+            percent_ram_free = self.cfg.buffering['percent_ram_free']
+            ram = psutil.virtual_memory()
+            must_remain_free_GB = ram.total*(percent_ram_free/100)
+            max_amount_useable = ram.available - must_remain_free_GB
+            size_of_1_image = self.y_pixels * self.x_pixels * 16 / 8 # Assume np.uint16
 
-    def less_than_gb(self,gb):
+            if max_amount_useable < size_of_1_image:
+                # Case where there is not enough RAM for even 1 image
+                msg = f'There is not enough RAM available to maintain {percent_ram_free} percent free RAM: Continuing acquisition without RAM buffer'
+                logger.warning(msg)
+                print(msg)
+
+            z_layers_to_allocate = int(max_amount_useable // size_of_1_image) - 1
+            z_layers_to_allocate = z_layers_to_allocate if z_layers_to_allocate >= 1 else 1
+
+            if gb_size_of_array_shape(self.acquisition_shape()) <= max_amount_useable/1024**3:
+                buffer_shape = self.acquisition_shape()
+            else:
+                buffer_shape = (z_layers_to_allocate, self.x_pixels, self.y_pixels)
+        return np.zeros(buffer_shape, dtype='uint16')
+
+    def less_than_gb(self, gb):
         '''Is the size of the acquisition array smaller than some size in gigabytes'''
         num_pix = self.max_frame * self.y_pixels * self.x_pixels
-        size = (num_pix*16/8) / (1024**3) #in gigabytes
+        size = (num_pix*16/8) / (1024**3) # in gigabytes
         if size < gb:
             return True
         else:
@@ -190,10 +197,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.acq = acq
         self.acq_list = acq_list
 
-        #Future: The % could be included as a parameter in the config file
-        self.percent_ram_free = 20 #This value is the % of Total System RAM that will remain unused during acquisition
         #Create a RAM buffer for acquisition that keeps {self.percent_ram_free} of total RAM free
-        self.image_buffer = self.allocate_np_percent_ram_free(self.percent_ram_free)
+        self.image_buffer = self.allocate_ram()
 
     def write_image(self, image, acq, acq_list):
         self.image_buffer[self.written_image_counter % self.image_buffer.shape[0]] = image
@@ -202,7 +207,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         # percent_ram_remaining = self.ram_percent_remaing_free()
         # print(f'Percent RAM remaining is {round(percent_ram_remaining,2)}')
         # ##
-        if self.written_image_counter % self.image_buffer.shape[0] == 0 or self.written_image_counter == self.max_frame or self.abort_flag:
+        if (self.written_image_counter % self.image_buffer.shape[0] == 0) or (self.written_image_counter == self.max_frame) or self.abort_flag:
             self.image_to_disk(acq, acq_list)
 
     def image_to_disk(self, acq, acq_list):
