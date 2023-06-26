@@ -5,7 +5,7 @@
 # mesoSPIM-control
 Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. 
 A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. 
-Currently, more than 15 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
+Currently, more than 20 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
 
 Parts lists, drawings, and instructions for building a mesoSPIM can be found in the [mesoSPIM wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
 
