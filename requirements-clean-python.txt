@@ -6,7 +6,7 @@ importlib
 argparse
 glob
 numpy==1.17.0
-scipy==1.2.1
+scipy==1.10.0
 PyQt5==5.13.1
 nidaqmx==0.5.7
 indexed==1.2.1
