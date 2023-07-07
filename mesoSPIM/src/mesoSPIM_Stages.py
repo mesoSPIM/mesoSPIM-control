@@ -269,10 +269,10 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             logger.info("Axis %d (%s) reference status: %s" % (ii, tStage, msg))
 
         ''' Stage 5 referencing hack '''
-        self.pidevice.FRF(5)
-        logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
-        self.block_till_controller_is_ready()
-        logger.info('M-406 Emergency referencing hack done')
+        # self.pidevice.FRF(5)
+        # logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
+        # self.block_till_controller_is_ready()
+        # logger.info('M-406 Emergency referencing hack done')
 
     def __del__(self):
         try:

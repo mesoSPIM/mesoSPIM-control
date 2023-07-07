@@ -18,7 +18,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
-              'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
+			  'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'window_pos': (100, 100), # position of the main window on the screen, top left corner.
               'usb_webcam': False, # open USB web-camera in a separate window
                }
@@ -28,7 +28,7 @@ logging_level = 'INFO' # 'DEBUG' for ultra-detailed, 'INFO' for general logging 
 '''
 Waveform output for Galvos, ETLs etc.
 '''
-waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration' or 'NI'
+waveformgeneration = 'NI' # 'DemoWaveFormGeneration' or 'NI'
 
 '''
 Card designations need to be the same as in NI MAX, if necessary, use NI MAX
@@ -52,24 +52,23 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'laser_task_line' :  'PXI6733/ao0:3',
                         'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
-sidepanel = 'Demo' #'Demo' or 'FarmSimulator', deprecated
+sidepanel = 'FarmSimulator' #'Demo' or 'FarmSimulator', deprecated
 
 '''
 Digital laser enable lines
 '''
 
-laser = 'Demo' # 'Demo' or 'NI'
+laser = 'NI' # 'Demo' or 'NI'
 
 ''' The `laserdict` specifies laser labels of the GUI and their digital modulation channels. 
 Keys are the laser designation that will be shown in the user interface
 Values are DO ports used for laser ENABLE digital signal.
 Critical: entries must be sorted in the increasing wavelength order: 405, 488, etc.
 '''
-laserdict = {'488 nm': 'PXI6733/port0/line2',
-             '520 nm': 'PXI6733/port0/line3',
-             '568 nm': 'PXI6733/port0/line4',
-             '638 nm': 'PXI6733/port0/line5',
-             }
+laserdict = {'405 nm': 'PXI6733/port0/line2',
+             '488 nm': 'PXI6733/port0/line3',
+             '561 nm': 'PXI6733/port0/line4',
+             '647 nm': 'PXI6733/port0/line5'}
 
 
 ''' Laser blanking indicates whether the laser enable lines should be set to LOW between
@@ -87,11 +86,11 @@ If shutterswitch = True:
 If shutterswitch = False or missing:
     'shutter_left' and 'shutter_right' are two independent shutters.
 '''
-shutter = 'Demo' # 'Demo' or 'NI'
+shutter = 'NI' # 'Demo' or 'NI'
 shutterswitch = False # see legend above
 shutteroptions = ('Left', 'Right') # Shutter options of the GUI
-shutterdict = {'shutter_left' : 'PXI6259/port0/line0', # left (general) shutter
-              'shutter_right' : 'PXI6259/port2/line0'} # flip mirror or right shutter, depending on physical configuration
+shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
+              'shutter_right' : 'PXI6259/port2/line0'}
               
 '''
 Camera configuration
@@ -160,10 +159,10 @@ camera_parameters = {'x_pixels' : 2048, #5056
                     }
 
 '''
-camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
+camera = 'HamamatsuOrca' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
-camera_parameters = {'x_pixels' : 1024,
-                     'y_pixels' : 1024,
+camera_parameters = {'x_pixels' : 2048,
+                     'y_pixels' : 2048,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
@@ -194,23 +193,29 @@ All positions are absolute.
 'stage_type' option:
 ASI stages, 'stage_type' : 'TigerASI', 'MS2000ASI'
 PI stages, 'stage_type' : 'PI' or 'PI_1controllerNstages' (equivalent), 'PI_NcontrollersNstages'
-Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy',
+Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy'
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI', etc, see above
-                    'y_load_position': -86000,
-                    'y_unload_position': -120000,
-                    'x_max' : 3000,
-                    'x_min' : -3000,
-                    'y_max' : 3000,
-                    'y_min' : -3000,
-                    'z_max' : 3000,
-                    'z_min' : -3000,
-                    'f_max' : 3000,
-                    'f_min' : -3000,
-                    'theta_max' : 999,
-                    'theta_min' : -999,
+stage_parameters = {'stage_type' : 'PI', # 'PI' or 'Debug'
+					'y_load_position': 75000,
+                    'y_unload_position': 40000,
+                    'x_max' : 35000,
+                    'x_min' : 8500,
+					'y_max' : 99000,
+					'y_min' : 0,
+					'z_max' : 41000,
+					'z_min' : 1000,
+					'f_max' : 99000,
+					'f_min' : 0,
+					'theta_max' : 999,
+					'theta_min' : -999,
                     }
+
+pi_parameters = {'controllername' : 'C-884',
+				 'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
+                 'refmode' : ('FRF',),
+                 'serialnum' : ('118015439'),
+                 }
 
 ''''
 If 'stage_type' = 'PI_1controllerNstages' (vanilla mesoSPIM V5 with single 6-axis controller):
@@ -253,48 +258,40 @@ For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel', 'ZWO'
-                          'COMport' : 'COM3', # irrelevant for 'ZWO'
+filterwheel_parameters = {'filterwheel_type' : 'Ludl', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel', 'ZWO'
+                          'COMport' : 'COM1', # irrelevant for 'ZWO'
                           'baudrate' : 115200, # relevant only for 'Dynamixel'
                           'servo_id' :  1, # relevant only for 'Dynamixel'
                           }
-'''
-filterdict contains filter labels and their positions. The valid positions are:
-For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
-For Dynamixel: servo encoder counts, e.g. 0 for 0 deg, 1024 for 45 deg (360 deg = 4096 counts, or 11.377 counts/deg). 
-Dynamixel encoder range in multi-turn mode: -28672 .. +28672 counts.
-For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
-'''
-filterdict = {'Empty' : 0, # Every config should contain at least this entry
-              '405-488-647-Tripleblock' : 1,
-              '405-488-561-640-Quadrupleblock' : 2,
-              '464 482-35' : 3,
-              '508 520-35' : 4,
-              '515LP' : 5,
-              '529 542-27' : 6,
-              '561LP' : 7,
-              '594LP' : 8,
-              '417 447-60' : 9}
+
+
+# Ludl marking 10 = position 0
+filterdict = {'Empty-Alignment' : 0,
+              '530/43' : 1,
+              'LP515' : 2,
+              'LP561' : 3,
+              'LP663' : 4,
+              '542/27' : 5,
+              '482/35' : 6,
+              '450/50' : 7,
+			  '593/40' : 8,
+			  'LP664' : 9,}
 
 '''
 Zoom configuration
-For the 'Demo', 'servo_id', 'COMport' and 'baudrate' do not matter. 
-For a 'Dynamixel' servo-driven zoom, 'servo_id', 'COMport' and 'baudrate' (default 1000000) must be specified
-For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be specified
+For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom,
+these values have to be there
 '''
-zoom_parameters = {'zoom_type' : 'Demo', # 'Demo', 'Dynamixel', or 'Mitu'
-                   'COMport' : 'COM1',
-                   'baudrate' : 9600,
-                   'servo_id': 4, # only for 'Dynamixel'
-                   }
+zoom_parameters = {'zoom_type' : 'Dynamixel',
+                   'servo_id' :  2,
+                   'COMport' : 'COM7',
+                   'baudrate' : 1000000}
 
 '''
 The keys in the zoomdict define what zoom positions are displayed in the selection box
 (combobox) in the user interface.
 '''
-'''
-The 'Dynamixel' servo default zoom positions
-'''
+
 zoomdict = {'0.63x' : 3423,
             '0.8x' : 3071,
             '1x' : 2707,
@@ -305,19 +302,7 @@ zoomdict = {'0.63x' : 3423,
             '3.2x' : 967,
             '4x' : 637,
             '5x' : 318,
-            '6.3x' : 0}    
-
-
-'''
-The 'Mitu' (Mitutoyo revolver) positions
-
-zoomdict = {'2x': 'A',
-            '5x': 'B',
-            '7.5x': 'C',
-            '10x': 'D',
-            '20x': 'E',
-            }
-'''
+            '6.3x' : 0}
 '''
 Pixelsize in micron
 '''
@@ -338,20 +323,14 @@ pixelsize = {'0.63x' : 10.52,
 Downsampling and compression slows down writing by 5x - 10x, use with caution.
 Imaris can open these files if no subsampling and no compression is used.
 '''
+
 hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
         'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
 
-buffering = {'use_ram_buffer': True, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
-             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
-             }
-'''
-Rescale the galvo amplitude when zoom is changed
-For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
-'''        
-scale_galvo_amp_with_zoom = True 
+scale_galvo_amp_with_zoom = True # If e.g. 'galvo_l_amplitude' is defined at zoom '1x', rescale the amplitude when zoom is interactively changed
 
 '''                                                                  
 Initial acquisition parameters
@@ -366,8 +345,8 @@ startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
-'position' : {'x_pos':0,'y_pos':1,'z_pos':2,'f_pos':3,'theta_pos':180},
-'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
+'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
+'ETL_cfg_file' : 'C:\mesoSPIM-control-0.1.2\mesoSPIM\config\etl_parameters\ETL-parameters - Wyss - Startup.csv',
 'folder' : 'D:/tmp/',
 'snap_folder' : 'D:/tmp/',
 'file_prefix' : '',
@@ -375,12 +354,12 @@ startup = {
 'zoom' : '1x',
 'pixelsize' : 6.55,
 'laser' : '488 nm',
-'max_laser_voltage':10,
-'intensity' : 10,
+'max_laser_voltage':5,
+'intensity' : 15,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
+'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
-'filter' : 'Empty',
+'filter' : 'LP561',
 'etl_l_delay_%' : 7.5,
 'etl_l_ramp_rising_%' : 85,
 'etl_l_ramp_falling_%' : 2.5,
@@ -392,13 +371,13 @@ startup = {
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
-'galvo_l_amplitude' : 2.5,
-'galvo_l_offset' : 0,
+'galvo_l_amplitude' : 3.16,
+'galvo_l_offset' : -0.49,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 2.5,
-'galvo_r_offset' : 0,
+'galvo_r_amplitude' : 3.16,
+'galvo_r_offset' : 0.33,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
 'laser_l_delay_%' : 10,
@@ -410,11 +389,11 @@ startup = {
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
-'camera_line_interval':0.000075, # Hamamatsu-specific parameter
-'camera_display_live_subsampling': 2,
+'camera_line_interval':0.000075,
+'camera_display_live_subsampling': 1,
 #'camera_display_snap_subsampling': 1, #deprecated
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
-'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
-'average_frame_rate': 2.5,
+'camera_sensor_mode':'ASLM',
+'average_frame_rate': 4.969,
 }

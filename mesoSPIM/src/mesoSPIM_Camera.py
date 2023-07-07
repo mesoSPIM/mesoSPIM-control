@@ -365,15 +365,42 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
         self.hcam.setPropertyValue("sensor_mode", self.cfg.camera_parameters['sensor_mode'])
 
         self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
-        self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
         self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
-        self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
+        if 'readout_speed' in self.cfg.camera_parameters.keys():
+            self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
+        else:
+            logger.warning('No readout speed specified in the configuration file. Using default value.')
+        if 'high_dynamic_range_mode' in self.cfg.camera_parameters.keys():
+            self.hcam.setPropertyValue("high_dynamic_range_mode", self.cfg.camera_parameters['high_dynamic_range_mode'])
+        else:
+            logger.warning('No "high_dynamic_range_mode" specified in the configuration file. Using default value.')
 
         self.hcam.setPropertyValue("trigger_active", self.cfg.camera_parameters['trigger_active'])
         self.hcam.setPropertyValue("trigger_mode", self.cfg.camera_parameters['trigger_mode']) # it is unclear if this is the external lightsheeet mode - how to check this?
         self.hcam.setPropertyValue("trigger_polarity", self.cfg.camera_parameters['trigger_polarity']) # positive pulse
         self.hcam.setPropertyValue("trigger_source", self.cfg.camera_parameters['trigger_source']) # external
         self.hcam.setPropertyValue("internal_line_interval",self.camera_line_interval)
+        self.hcam.setPropertyValue("exposure_time", self.camera_exposure_time)
+        self.print_camera_properties(message='Camera properties after initialization')
+
+    def print_camera_properties(self, message='Camera properties'):
+        ''' Camera properties '''
+        logger.debug(message)
+        props = self.hcam.getProperties()
+        for i, id_name in enumerate(sorted(props.keys())):
+            [p_value, p_type] = self.hcam.getPropertyValue(id_name)
+            p_rw = self.hcam.getPropertyRW(id_name)
+            read_write = ""
+            if p_rw[0]:
+                read_write += "read"
+            if p_rw[1]:
+                read_write += ", write"
+            logger.debug(f"  {i} ) {id_name}, = {p_value}  type is: {p_type}, {read_write}")
+            text_values = self.hcam.getPropertyText(id_name)
+            if len(text_values) > 0:
+                logger.debug("          option / value")
+                for key in sorted(text_values, key=text_values.get):
+                    logger.debug(f"         {key} / {text_values[key]}")
 
     def close_camera(self):
         self.hcam.shutdown()

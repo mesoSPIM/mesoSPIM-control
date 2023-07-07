@@ -12,7 +12,7 @@ from PyQt5 import QtCore
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
-from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom
+from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
 from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
 
 logger = logging.getLogger(__name__)
@@ -63,8 +63,12 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
             self.zoom = DynamixelZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'], self.cfg.zoom_parameters['servo_id'], self.cfg.zoom_parameters['baudrate'])
-        elif self.cfg.zoom_parameters['zoom_type'] == 'DemoZoom':
+        elif self.cfg.zoom_parameters['zoom_type'] in ('Mitu', 'Mitutoyo'):
+            self.zoom = MitutoyoZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'], self.cfg.zoom_parameters['baudrate'])
+        elif self.cfg.zoom_parameters['zoom_type'] in ('Demo', 'DemoZoom'):
             self.zoom = DemoZoom(self.cfg.zoomdict)
+        else:
+            raise ValueError(f"Zoom type unknown: {self.cfg.zoom_parameters['zoom_type']}")
 
         ''' Attaching the stage '''
         if self.cfg.stage_parameters['stage_type'] in {'PI', 'PI_1controllerNstages'}:
@@ -91,6 +95,8 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
+        else:
+            raise ValueError(f"Stage type unknown: {self.cfg.stage_parameters['stage_type']}")
         try:
             self.stage.sig_status_message.connect(self.send_status_message)
             self.stage.sig_position.connect(self.report_position)

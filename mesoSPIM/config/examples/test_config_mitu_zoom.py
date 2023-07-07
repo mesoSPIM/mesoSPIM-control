@@ -23,7 +23,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'usb_webcam': False, # open USB web-camera in a separate window
                }
 
-logging_level = 'INFO' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
+logging_level = 'DEBUG' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
 
 '''
 Waveform output for Galvos, ETLs etc.
@@ -282,8 +282,8 @@ For the 'Demo', 'servo_id', 'COMport' and 'baudrate' do not matter.
 For a 'Dynamixel' servo-driven zoom, 'servo_id', 'COMport' and 'baudrate' (default 1000000) must be specified
 For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be specified
 '''
-zoom_parameters = {'zoom_type' : 'Demo', # 'Demo', 'Dynamixel', or 'Mitu'
-                   'COMport' : 'COM1',
+zoom_parameters = {'zoom_type' : 'Mitu', # 'Demo', 'Dynamixel', or 'Mitu'
+                   'COMport' : 'COM3',
                    'baudrate' : 9600,
                    'servo_id': 4, # only for 'Dynamixel'
                    }
@@ -294,7 +294,6 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 '''
 '''
 The 'Dynamixel' servo default zoom positions
-'''
 zoomdict = {'0.63x' : 3423,
             '0.8x' : 3071,
             '1x' : 2707,
@@ -306,32 +305,27 @@ zoomdict = {'0.63x' : 3423,
             '4x' : 637,
             '5x' : 318,
             '6.3x' : 0}    
-
+'''
 
 '''
 The 'Mitu' (Mitutoyo revolver) positions
-
+'''
 zoomdict = {'2x': 'A',
             '5x': 'B',
             '7.5x': 'C',
             '10x': 'D',
             '20x': 'E',
             }
-'''
+
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.63x' : 10.52,
-            '0.8x' : 8.23,
-            '1x' : 6.55,
-            '1.25x' : 5.26,
-            '1.6x' : 4.08,
-            '2x' : 3.26,
-            '2.5x' : 2.6,
-            '3.2x' : 2.03,
-            '4x' : 1.60,
-            '5x' : 1.27,
-            '6.3x' : 1.03}
+pixelsize = {'1x': 5.5,
+            '2x' : 2.75,
+            '5x' : 1.1,
+            '7.5x' : 0.73,
+             '10x' : 0.55,
+             '20x' : 0.275,}
 
 '''
  HDF5 parameters, if this format is used for data saving (optional).
@@ -344,9 +338,6 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
 
-buffering = {'use_ram_buffer': True, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
-             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
-             }
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
@@ -372,8 +363,8 @@ startup = {
 'snap_folder' : 'D:/tmp/',
 'file_prefix' : '',
 'file_suffix' : '000001',
-'zoom' : '1x',
-'pixelsize' : 6.55,
+'zoom' : '2x',
+'pixelsize' : 5.5,
 'laser' : '488 nm',
 'max_laser_voltage':10,
 'intensity' : 10,
@@ -410,11 +401,11 @@ startup = {
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
-'camera_line_interval':0.000075, # Hamamatsu-specific parameter
+'camera_line_interval':0.000075,
 'camera_display_live_subsampling': 2,
 #'camera_display_snap_subsampling': 1, #deprecated
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
-'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
+'camera_sensor_mode':'ASLM',
 'average_frame_rate': 2.5,
 }

@@ -1,7 +1,7 @@
 ## Release January 2023 [1.8.2]
 ### Hardware control 
 - New filter wheel [ZWO EFWmini](https://astronomy-imaging-camera.com/product/efw-mini) supported
-- added `'speed'` config parameter for ASI Tiger controller that allows to change teh default speed settings.
+- added `'speed'` config parameter for ASI Tiger controller that allows to change default speed settings.
 - more [config examples](https://github.com/mesoSPIM/mesoSPIM-control/tree/master/mesoSPIM/config/examples) from various systems were uploaded.
 
 ### User interface

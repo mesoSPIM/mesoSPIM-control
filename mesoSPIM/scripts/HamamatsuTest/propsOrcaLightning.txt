@@ -1,0 +1,142 @@
+found: 1 cameras
+camera 0 model: C14120-20P
+Supported properties:
+   0 ) binning  =  1  type is: MODE , read, write
+          option / value
+          1x1 / 1
+          2x2 / 2
+          4x4 / 4
+   1 ) bit_per_channel  =  12  type is: LONG , read
+   2 ) buffer_framebytes  =  23887872  type is: LONG , read
+   3 ) buffer_pixel_type  =  2  type is: MODE , read
+          option / value
+          MONO16 / 2
+          MONO12P / 5
+   4 ) buffer_rowbytes  =  9216  type is: LONG , read
+   5 ) buffer_top_offset_bytes  =  0  type is: LONG , read
+   6 ) colortype  =  1  type is: MODE , read
+          option / value
+          B/W / 1
+   7 ) conversion_factor_coeff  =  0.29  type is: REAL , read
+   8 ) conversion_factor_offset  =  200.0  type is: REAL , read
+   9 ) defect_correct_mode  =  2  type is: MODE , read, write
+          option / value
+          OFF / 1
+          ON / 2
+   10 ) exposure_time  =  0.0081952  type is: REAL , read, write
+   11 ) frame_stamp_producer  =  5  type is: MODE , read
+          option / value
+          IMAGING DEVICE / 5
+   12 ) framebundle_frame_step_bytes  =  23887872  type is: LONG , read
+   13 ) framebundle_mode  =  1  type is: MODE , read
+          option / value
+          OFF / 1
+   14 ) framebundle_number  =  2  type is: LONG , read
+   15 ) framebundle_rowbytes  =  9216  type is: LONG , read
+   16 ) high_dynamic_range_mode  =  1  type is: MODE , read, write
+          option / value
+          OFF / 1
+          ON / 2
+   17 ) image_detector_pixel_height  =  5.5  type is: REAL , read
+   18 ) image_detector_pixel_num_horz  =  4608  type is: LONG , read
+   19 ) image_detector_pixel_num_vert  =  2592  type is: LONG , read
+   20 ) image_detector_pixel_width  =  5.5  type is: REAL , read
+   21 ) image_framebytes  =  23887872  type is: LONG , read
+   22 ) image_height  =  2592  type is: LONG , read
+   23 ) image_pixel_type  =  2  type is: MODE , read, write
+          option / value
+          MONO16 / 2
+          MONO12P / 5
+   24 ) image_rowbytes  =  9216  type is: LONG , read
+   25 ) image_top_offset_bytes  =  0  type is: LONG , read
+   26 ) image_width  =  4608  type is: LONG , read
+   27 ) internal_frame_interval  =  0.008220416  type is: REAL , read
+   28 ) internal_frame_rate  =  121.64834480396127  type is: REAL , read
+   29 ) internal_line_interval  =  1.2608e-05  type is: REAL , read
+   30 ) internal_line_speed  =  0.43623096446700504  type is: REAL , read
+   31 ) number_of_output_trigger_connector  =  3  type is: LONG , read
+   32 ) output_trigger_active[0]  =  1  type is: MODE , read
+          option / value
+          EDGE / 1
+   33 ) output_trigger_delay[0]  =  0.0  type is: REAL , read, write
+   34 ) output_trigger_kind[0]  =  2  type is: MODE , read, write
+          option / value
+          LOW / 1
+          EXPOSURE / 2
+          PROGRAMABLE / 3
+          TRIGGER READY / 4
+          HIGH / 5
+   35 ) output_trigger_period[0]  =  1e-06  type is: REAL , read, write
+   36 ) output_trigger_polarity[0]  =  1  type is: MODE , read, write
+          option / value
+          NEGATIVE / 1
+          POSITIVE / 2
+   37 ) output_trigger_pre_hsync_count  =  3  type is: LONG , read, write
+   38 ) output_trigger_source[0]  =  3  type is: MODE , read, write
+          option / value
+          READOUT END / 2
+          VSYNC / 3
+   39 ) readout_direction  =  1  type is: MODE , read
+          option / value
+          FORWARD / 1
+   40 ) record_fixed_bytes_per_file  =  1024  type is: LONG , read
+   41 ) record_fixed_bytes_per_frame  =  17916928  type is: LONG , read
+   42 ) record_fixed_bytes_per_session  =  5120  type is: LONG , read
+   43 ) sensor_cooler_status  =  3  type is: MODE , read
+          option / value
+          BUSY / 3
+   44 ) sensor_mode  =  1  type is: MODE , read, write
+          option / value
+          AREA / 1
+          PROGRESSIVE / 12
+   45 ) subarray_hpos  =  0  type is: LONG , read, write
+   46 ) subarray_hsize  =  4608  type is: LONG , read, write
+   47 ) subarray_mode  =  1  type is: MODE , read, write
+          option / value
+          OFF / 1
+          ON / 2
+   48 ) subarray_vpos  =  0  type is: LONG , read, write
+   49 ) subarray_vsize  =  2592  type is: LONG , read, write
+   50 ) system_alive  =  2  type is: MODE , read
+          option / value
+          OFFLINE / 1
+          ONLINE / 2
+   51 ) time_stamp_producer  =  5  type is: MODE , read
+          option / value
+          IMAGING DEVICE / 5
+   52 ) timing_cyclic_trigger_period  =  0.0  type is: REAL , read
+   53 ) timing_exposure  =  3  type is: MODE , read
+          option / value
+          ROLLING / 3
+   54 ) timing_global_exposure_delay  =  0.008182592  type is: REAL , read
+   55 ) timing_invalid_exposure_period  =  0.0  type is: REAL , read
+   56 ) timing_min_trigger_blanking  =  0.0  type is: REAL , read
+   57 ) timing_min_trigger_interval  =  0.008182592  type is: REAL , read
+   58 ) timing_readout_time  =  0.008182592  type is: REAL , read
+   59 ) trigger_active  =  1  type is: MODE , read, write
+          option / value
+          EDGE / 1
+          LEVEL / 2
+          SYNCREADOUT / 3
+   60 ) trigger_connector  =  2  type is: MODE , read
+          option / value
+          BNC / 2
+   61 ) trigger_delay  =  0.0  type is: REAL , read, write
+   62 ) trigger_global_exposure  =  3  type is: MODE , read, write
+          option / value
+          DELAYED / 3
+          GLOBAL RESET / 5
+   63 ) trigger_mode  =  1  type is: MODE , read, write
+          option / value
+          NORMAL / 1
+          START / 6
+   64 ) trigger_polarity  =  1  type is: MODE , read, write
+          option / value
+          NEGATIVE / 1
+          POSITIVE / 2
+   65 ) trigger_source  =  1  type is: MODE , read, write
+          option / value
+          INTERNAL / 1
+          EXTERNAL / 2
+          SOFTWARE / 3
+   66 ) trigger_times  =  1  type is: LONG , read, write
