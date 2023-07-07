@@ -353,14 +353,11 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=False, update_etl=True):
-        if wait_until_done:
-            self.sig_state_request_and_wait_until_done.emit({'zoom' : zoom})
-            if update_etl:
-                self.sig_state_request_and_wait_until_done.emit({'set_etls_according_to_zoom' : zoom})
-        else:
-            self.sig_state_request.emit({'zoom' : zoom})
-            if update_etl:
-                self.sig_state_request.emit({'set_etls_according_to_zoom' : zoom})
+        if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+            self.move_absolute({'f': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=True)
+        self.sig_state_request.emit({'zoom' : zoom})
+        if update_etl:
+            self.sig_state_request.emit({'set_etls_according_to_zoom' : zoom})
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):

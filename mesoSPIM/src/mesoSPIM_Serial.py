@@ -17,7 +17,6 @@ from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Ti
 
 logger = logging.getLogger(__name__)
 
-
 class mesoSPIM_Serial(QtCore.QObject):
     '''This class handles mesoSPIM serial connections'''
     sig_finished = QtCore.pyqtSignal()

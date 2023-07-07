@@ -202,6 +202,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.state['galvo_amp_scale_w_zoom'] = self.cfg.scale_galvo_amp_with_zoom
         self.checkBoxScaleWZoom.setChecked(self.state['galvo_amp_scale_w_zoom'])
 
+        if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+            msg = f"Objective exchange in f-position {self.cfg.stage_parameters['f_objective_exchange']} ('f_objective_exchange' in stage parameters of the config file)."
+        else:
+            msg = "Objective exchange in the current f-position. To set the safe f-position for objective exchange, add 'f_objective_exchange' to the stage parameters in the config file."
+        logger.warning(msg)
+        print(msg)
+
     def open_webcam_window(self):
         """Open USB webcam window using cam ID specified in config file. Otherwise, try to open with ID=0"""
         if self.webcam_window is None: # first call
