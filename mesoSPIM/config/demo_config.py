@@ -23,7 +23,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'usb_webcam': False, # open USB web-camera in a separate window
                }
 
-logging_level = 'INFO' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
+logging_level = 'DEBUG' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
 
 '''
 Waveform output for Galvos, ETLs etc.
@@ -208,7 +208,7 @@ stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1contr
                     'z_min' : -3000,
                     'f_max' : 3000,
                     'f_min' : -3000,
-                    'f_objective_exchange': -3000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
+                    'f_objective_exchange': -2500, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }

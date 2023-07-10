@@ -8,6 +8,7 @@ filter wheels, zoom systems etc.
 
 import logging
 from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 ''' Import mesoSPIM modules '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
@@ -104,10 +105,13 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Wiring signals through to child objects '''
         self.parent.sig_move_relative.connect(self.move_relative)
-        self.parent.sig_move_relative_and_wait_until_done.connect(lambda sdict: self.move_relative(sdict, wait_until_done=True), type=3)
+        self.parent.sig_move_relative_and_wait_until_done.connect(lambda sdict: self.move_relative(sdict, wait_until_done=True))
 
         self.parent.sig_move_absolute.connect(self.move_absolute)
-        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True), type=3)
+        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True))
+        # WARNING: do not use type=Qt.BlockingQueuedConnection for _wait_until_done signals, as this will cause a deadlock!
+        # The mesoSPIM_Serial object is executed in the parent (Core) thread, and type=Qt.BlockingQueuedConnection can be used only between threads.
+        # Using type=Qt.BlockingQueuedConnection withing the same thread will cause a deadlock.
 
         self.parent.sig_zero_axes.connect(self.sig_zero_axes.emit)
         self.parent.sig_unzero_axes.connect(self.sig_unzero_axes.emit)
@@ -119,23 +123,14 @@ class mesoSPIM_Serial(QtCore.QObject):
     def state_request_handler(self, sdict, wait_until_done=False):
         for key, value in zip(sdict.keys(), sdict.values()):
             if key == 'filter':
-                if wait_until_done:
-                    self.set_filter(value, wait_until_done)
-                else:
-                    self.set_filter(value)
-                logger.info(f'state change: {key}: {value}')
+                self.set_filter(value, wait_until_done)
             if key == 'zoom':
-                if wait_until_done:
-                    self.set_zoom(value, wait_until_done)
-                else:
-                    self.set_zoom(value)
-                logger.info(f'state change: {key}: {value}')
+                self.set_zoom(value, wait_until_done)
             if key == 'stage_program':
                 self.execute_stage_program()
-                logger.info(f'state change: {key}: {value}')
             if key == 'ttl_movement_enabled_during_acq':
                 self.enable_ttl_motion(value)
-                logger.info(f'state change: {key}: {value}')
+            logger.info(f'state change: {key}: {value}')
 
     @QtCore.pyqtSlot(str)
     def send_status_message(self, string):
@@ -189,7 +184,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.state['filter'] = sfilter
 
     @QtCore.pyqtSlot(str)
-    def set_zoom(self, zoom, wait_until_done=False):
+    def set_zoom(self, zoom, wait_until_done=True):
         # logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
         ''' Here, the state parameters are set before sending the value to the zoom --
         this is to avoid laggy update loops with the GUI.'''

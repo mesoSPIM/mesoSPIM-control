@@ -33,7 +33,6 @@ from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
-# from .mesoSPIM_DemoSerial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
@@ -117,9 +116,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.set_image)
         #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         ''' Set the serial thread up '''
-        #self.serial_thread = QtCore.QThread()
+        #self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
         self.serial_worker = mesoSPIM_Serial(self)
-        # self.serial_worker.moveToThread(self.serial_thread)
+        # self.serial_worker.moveToThread(self.serial_thread) #legacy
         # If the stage (including the timer) is not manually moved to the serial thread, it will execute within the mesoSPIM_Core event loop - Fabian
         #self.serial_worker.stage.moveToThread(self.serial_thread)
         #self.serial_worker.stage.pos_timer.moveToThread(self.serial_thread)
@@ -133,7 +132,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Start the threads '''
         self.camera_thread.start()
-        #self.serial_thread.start()
+        # The serial_worker remains in the Core thread, not separate thread for serial_worker
+        #self.serial_thread.start() # legacy
 
         ''' Setting waveform generation up '''
         if self.cfg.waveformgeneration == 'NI':
@@ -352,10 +352,15 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'filter' : filter})
 
     @QtCore.pyqtSlot(dict)
-    def set_zoom(self, zoom, wait_until_done=False, update_etl=True):
+    def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
-            self.move_absolute({'f': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=True)
-        self.sig_state_request.emit({'zoom' : zoom})
+            if self.cfg.stage_parameters['f_min'] <= self.cfg.stage_parameters['f_objective_exchange'] <= self.cfg.stage_parameters['f_max']:
+                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=True)
+            else:
+                msg = 'f_objective_exchange is not within the allowed range of f_min and f_max'
+                logger.error(msg)
+                print(msg)
+        self.sig_state_request.emit({'zoom': zoom})
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom' : zoom})
 
@@ -394,11 +399,12 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_move_relative.emit(dict)
 
     @QtCore.pyqtSlot(dict)
-    def move_absolute(self, dict, wait_until_done=False):
+    def move_absolute(self, sdict, wait_until_done=False):
         if wait_until_done:
-            self.sig_move_absolute_and_wait_until_done.emit(dict)
+            logger.debug('Core: move_absolute_and_wait_until_done signal emitted')
+            self.sig_move_absolute_and_wait_until_done.emit(sdict)
         else:
-            self.sig_move_absolute.emit(dict)
+            self.sig_move_absolute.emit(sdict)
 
     @QtCore.pyqtSlot(list)
     def zero_axes(self, list):
@@ -632,7 +638,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
             self.set_filter(acq_list[0]['filter'])
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
-            self.set_zoom(acq_list[0]['zoom'], wait_until_done=False, update_etl=False)
+            self.set_zoom(acq_list[0]['zoom'], update_etl=False)
             ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
 
@@ -676,7 +682,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Setting Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.sig_status_message.emit('Setting Zoom & Laser')
-        self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
+        self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=False)
         self.set_laser(acq['laser'], wait_until_done=False, update_etl=False)
         # Deprecated: This was for the GUI to update properly, otherwise ETL values for previous laser might be displayed
@@ -712,7 +718,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
         self.sig_status_message.emit('Setting Zoom')
-        self.set_zoom(acq['zoom'], wait_until_done=False, update_etl=False)
+        self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
         ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''

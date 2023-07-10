@@ -8,6 +8,7 @@ from PyQt5 import QtCore
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 logger = logging.getLogger(__name__)
 
+
 class mesoSPIM_Stage(QtCore.QObject):
     '''
     DemoStage for a mesoSPIM microscope
@@ -186,7 +187,8 @@ class mesoSPIM_Stage(QtCore.QObject):
             self.theta_pos = theta_abs
 
         if wait_until_done is True:
-            time.sleep(3)
+            time.sleep(1)
+            print('Demo stage move (wait_until_done is True) complete')
 
     @QtCore.pyqtSlot()
     def stop(self):
