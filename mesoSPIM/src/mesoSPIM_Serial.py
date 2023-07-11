@@ -42,7 +42,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
         ''' Handling of state changing requests '''
         self.parent.sig_state_request.connect(self.state_request_handler)
-        self.parent.sig_state_request_and_wait_until_done.connect(lambda sdict: self.state_request_handler(sdict, wait_until_done=True), type=3)
+        self.parent.sig_state_request_and_wait_until_done.connect(lambda sdict: self.state_request_handler(sdict, wait_until_done=True))
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
@@ -153,7 +153,7 @@ class mesoSPIM_Serial(QtCore.QObject):
                 if not eval(condition):
                     self.send_status_message(f'Relative movement stopped: {axis} motion limit would be reached!')
                     return False
-        self.send_status_message('Stage limits OK')
+        #self.send_status_message('Stage limits OK')
         return True
 
     @QtCore.pyqtSlot(dict)

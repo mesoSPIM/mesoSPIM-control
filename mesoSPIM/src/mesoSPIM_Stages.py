@@ -148,18 +148,23 @@ class mesoSPIM_Stage(QtCore.QObject):
     def move_relative(self, sdict, wait_until_done=False):
         if 'x_rel' in sdict:
             self.x_pos = self.x_pos + sdict['x_rel']
+            print(f"INFO: x_pos = {self.x_pos}")
 
         if 'y_rel' in sdict:
             self.y_pos = self.y_pos + sdict['y_rel']
+            print(f"INFO: y_pos = {self.y_pos}")
 
         if 'z_rel' in sdict:
             self.z_pos = self.z_pos + sdict['z_rel']
+            print(f"INFO: z_pos = {self.z_pos}")
 
         if 'theta_rel' in sdict:
             self.theta_pos = self.theta_pos + sdict['theta_rel']
+            print(f"INFO: theta_pos = {self.theta_pos}")
 
         if 'f_rel' in sdict:
             self.f_pos = self.f_pos + sdict['f_rel']
+            print(f"INFO: f_pos = {self.f_pos}")
 
         if wait_until_done is True:
             time.sleep(0.1)
@@ -169,22 +174,27 @@ class mesoSPIM_Stage(QtCore.QObject):
         if 'x_abs' in dict:
             x_abs = dict['x_abs'] - self.int_x_pos_offset
             self.x_pos = x_abs
+            print(f"INFO: x_pos = {self.x_pos}")
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs'] - self.int_y_pos_offset
             self.y_pos = y_abs
+            print(f"INFO: y_pos = {self.y_pos}")
 
         if 'z_abs' in dict:
             z_abs = dict['z_abs'] - self.int_z_pos_offset
             self.z_pos = z_abs
+            print(f"INFO: z_pos = {self.z_pos}")
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs'] - self.int_f_pos_offset
             self.f_pos = f_abs
+            print(f"INFO: f_pos = {self.f_pos}")
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs'] - self.int_theta_pos_offset
             self.theta_pos = theta_abs
+            print(f"INFO: theta_pos = {self.theta_pos}")
 
         if wait_until_done is True:
             time.sleep(1)

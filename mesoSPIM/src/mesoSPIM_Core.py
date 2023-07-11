@@ -44,8 +44,10 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_finished = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+    # These signals have slots in both mesoSPIM_Serial and mesoSPIM_WaveFormGenerator classes. Potentially dangerous.
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
+
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
@@ -353,16 +355,25 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
+        # Move to the objective exchange position if necessary
+        f_pos_old = None
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
             if self.cfg.stage_parameters['f_min'] <= self.cfg.stage_parameters['f_objective_exchange'] <= self.cfg.stage_parameters['f_max']:
-                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=True)
+                f_pos_old = self.state['position']['f_pos']
+                self.send_status_message_to_gui('Moving to objective exchange position')
+                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
+                self.send_status_message_to_gui('At the objective exchange position')
             else:
                 msg = 'f_objective_exchange is not within the allowed range of f_min and f_max'
-                logger.error(msg)
-                print(msg)
-        self.sig_state_request.emit({'zoom': zoom})
+                logger.error(msg), print(msg), self.send_status_message_to_gui(msg)
+        self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
+        # Return to the previous f_pos
+        if f_pos_old is not None:
+            self.send_status_message_to_gui('Moving to the focus position')
+            self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done)
+        self.send_status_message_to_gui('Magnification (zoom) changed')
         if update_etl:
-            self.sig_state_request.emit({'set_etls_according_to_zoom' : zoom})
+            self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):
@@ -390,14 +401,12 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(float)
     def set_camera_line_interval(self, time):
         self.sig_state_request.emit({'camera_line_interval' : time})
-
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:
             self.sig_move_relative_and_wait_until_done.emit(dict)
         else:
             self.sig_move_relative.emit(dict)
-
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False):
         if wait_until_done:
@@ -405,11 +414,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_move_absolute_and_wait_until_done.emit(sdict)
         else:
             self.sig_move_absolute.emit(sdict)
-
     @QtCore.pyqtSlot(list)
     def zero_axes(self, list):
         self.sig_zero_axes.emit(list)
-
     @QtCore.pyqtSlot(list)
     def unzero_axes(self, list):
         self.sig_unzero_axes.emit(list)
