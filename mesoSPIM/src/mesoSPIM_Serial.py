@@ -172,6 +172,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
+        self.state['position'] = sdict
         self.sig_position.emit({'position': sdict})
 
     @QtCore.pyqtSlot()
