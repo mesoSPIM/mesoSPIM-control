@@ -160,8 +160,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.shutter_left = Demo_Shutter(left_shutter_line)
             self.shutter_right = Demo_Shutter(right_shutter_line)
 
-        self.shutter_left.close()
-        self.shutter_right.close()
         self.shutterswitch = self.cfg.shutterswitch if hasattr(self.cfg, 'shutterswitch') else False # backward compatibility with older config files
         self.state['shutterstate'] = False
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
@@ -171,9 +169,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
         elif self.cfg.laser == 'Demo':
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
-
-        self.set_filter(self.cfg.startup['filter'])
-        self.set_zoom(self.cfg.startup['zoom'])
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
@@ -202,12 +197,17 @@ class mesoSPIM_Core(QtCore.QObject):
         '''
         try:
             self.camera_thread.quit()
-            #self.serial_thread.quit()
-
             self.camera_thread.wait()
-            #self.serial_thread.wait()
         except:
             pass
+
+    def move_to_initial_positions(self):
+        '''Moves the hardware to the initial positions defined in the config file.
+        '''
+        self.shutter_left.close()
+        self.shutter_right.close()
+        self.set_filter(self.cfg.startup['filter'], wait_until_done=True)
+        self.set_zoom(self.cfg.startup['zoom'], wait_until_done=True)
 
 
     @QtCore.pyqtSlot(dict)
@@ -358,14 +358,10 @@ class mesoSPIM_Core(QtCore.QObject):
         # Move to the objective exchange position if necessary
         f_pos_old = None
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
-            if self.cfg.stage_parameters['f_min'] <= self.cfg.stage_parameters['f_objective_exchange'] <= self.cfg.stage_parameters['f_max']:
-                f_pos_old = self.state['position']['f_pos']
-                self.send_status_message_to_gui('Moving to objective exchange position')
-                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
-                self.send_status_message_to_gui('At the objective exchange position')
-            else:
-                msg = 'f_objective_exchange is not within the allowed range of f_min and f_max'
-                logger.error(msg), print(msg), self.send_status_message_to_gui(msg)
+            f_pos_old = self.state['position']['f_pos']
+            self.send_status_message_to_gui('Moving to objective exchange position')
+            self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
+            self.send_status_message_to_gui('At the objective exchange position')
         self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
         # Return to the previous f_pos
         if f_pos_old is not None:

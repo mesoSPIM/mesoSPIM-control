@@ -177,8 +177,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         logger.debug(f'Main Window: Core priority: {self.core_thread.priority()}')
 
         self.joystick = mesoSPIM_JoystickHandler(self)
-
         self.enable_gui_updates_from_state(False)
+
+        # After all signals are connected, move the hardware to initial positions
+        self.core.move_to_initial_positions()
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.
@@ -204,6 +206,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
             msg = f"Objective exchange in f-position {self.cfg.stage_parameters['f_objective_exchange']} ('f_objective_exchange' in stage parameters of the config file)."
+            if self.cfg.stage_parameters['f_min'] <= self.cfg.stage_parameters['f_objective_exchange'] <= self.cfg.stage_parameters['f_max']:
+                pass
+            else:
+                msg = "ERROR: 'f_objective_exchange' is not within the allowed range of 'f_min' and 'f_max'"
+                logger.error(msg), print(msg)
         else:
             msg = "Objective exchange in the current f-position. To set the safe f-position for objective exchange, add 'f_objective_exchange' to the stage parameters in the config file."
         logger.warning(msg)
