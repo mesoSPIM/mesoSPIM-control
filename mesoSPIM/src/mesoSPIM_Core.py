@@ -641,7 +641,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
             self.set_filter(acq_list[0]['filter'])
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
-            self.set_zoom(acq_list[0]['zoom'], update_etl=False)
+            if self.state['zoom'] != acq_list[0]['zoom']:
+                self.set_zoom(acq_list[0]['zoom'], update_etl=False)
             ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
 
@@ -685,7 +686,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Setting Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.sig_status_message.emit('Setting Zoom & Laser')
-        self.set_zoom(acq['zoom'], update_etl=False)
+        if self.state['zoom'] != acq['zoom']:
+            self.sig_status_message.emit('Setting magnification (zoom)')
+            self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=False)
         self.set_laser(acq['laser'], wait_until_done=False, update_etl=False)
         # Deprecated: This was for the GUI to update properly, otherwise ETL values for previous laser might be displayed
@@ -720,8 +723,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
-        self.sig_status_message.emit('Setting Zoom')
-        self.set_zoom(acq['zoom'], update_etl=False)
+        if self.state['zoom'] != acq['zoom']:
+            self.sig_status_message.emit('Setting magnification (zoom)')
+            self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
         ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''

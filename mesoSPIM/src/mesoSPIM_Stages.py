@@ -385,6 +385,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 ''' Conversion to mm and command emission'''
                 f_abs = f_abs / 1000
                 self.pidevice.MOV({5: f_abs})
+                logger.debug('Moving to f_abs: %s' % f_abs)
             else:
                 self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 
@@ -398,7 +399,9 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done:
+            logger.debug('Waiting for target')
             self.pitools.waitontarget(self.pidevice)
+            logger.debug('Target reached')
 
     def stop(self):
         self.pidevice.STP(noraise=True)
