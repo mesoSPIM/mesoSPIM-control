@@ -382,10 +382,10 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             f_abs = dict['f_abs']
             f_abs = f_abs - self.int_f_pos_offset
             if self.f_min < f_abs < self.f_max:
+                logger.debug('Moving to f_abs: %s' % f_abs)
                 ''' Conversion to mm and command emission'''
                 f_abs = f_abs / 1000
                 self.pidevice.MOV({5: f_abs})
-                logger.debug('Moving to f_abs: %s' % f_abs)
             else:
                 self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
 

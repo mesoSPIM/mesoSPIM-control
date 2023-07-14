@@ -5,6 +5,7 @@ import tifffile
 import logging
 import time
 from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import Qt
 from PyQt5.uic import loadUi
 
 ''' Disabled taskbar button progress display due to problems with Anaconda default'''
@@ -24,6 +25,7 @@ from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
 logger = logging.getLogger(__name__)
+
 
 class LogDisplayHandler(QtCore.QObject, logging.Handler):
     """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
@@ -64,6 +66,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_move_relative = QtCore.pyqtSignal(dict)
     # sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
+    sig_move_to_ini_position = QtCore.pyqtSignal()
     # sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_zero_axes = QtCore.pyqtSignal(list)
     sig_unzero_axes = QtCore.pyqtSignal(list)
@@ -157,6 +160,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+        # Set stages, revolver, filter to initialization positions defined in the config file:
+        self.sig_move_to_ini_position.connect(self.core.move_to_ini_position, type=Qt.BlockingQueuedConnection)
 
         self.optimizer = None
         self.contrast_window = None
@@ -180,7 +185,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.enable_gui_updates_from_state(False)
 
         # After all signals are connected, move the hardware to initial positions
-        self.core.move_to_initial_positions()
+        # self.core.move_to_initial_positions() # don't do this, it changes the Core into the Main thread. Do it with signal/slot.
+        self.sig_move_to_ini_position.emit()
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.

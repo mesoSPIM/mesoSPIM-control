@@ -201,14 +201,15 @@ class mesoSPIM_Core(QtCore.QObject):
         except:
             pass
 
+    @QtCore.pyqtSlot()
     def move_to_initial_positions(self):
         '''Moves the hardware to the initial positions defined in the config file.
         '''
+        self.send_status_message_to_gui('Moving to initial positions...')
         self.shutter_left.close()
         self.shutter_right.close()
         self.set_filter(self.cfg.startup['filter'], wait_until_done=True)
         self.set_zoom(self.cfg.startup['zoom'], wait_until_done=True)
-
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -348,6 +349,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_filter(self, filter, wait_until_done=False):
+        self.send_status_message_to_gui('Setting filter to '+filter)
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'filter' : filter})
         else:
@@ -355,6 +357,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
+        self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
         # Move to the objective exchange position if necessary
         f_pos_old = None
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
