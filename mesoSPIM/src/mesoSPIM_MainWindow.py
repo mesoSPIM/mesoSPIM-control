@@ -14,7 +14,6 @@ from PyQt5.uic import loadUi
 
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
-from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
@@ -136,8 +135,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # This shit below does not work, everything remains in the main thread. Why?
         # Even if "moved" to core thread, all these objects actually run in the main thread.
         # It is a working solution, but not ideal. Ideally these workers must run in self.core_thread.
-        #self.core.serial_worker.moveToThread(self.core_thread)
-        #self.core.serial_worker.stage.moveToThread(self.core_thread)
+        self.core.serial_worker.moveToThread(self.core_thread)
+        self.core.serial_worker.stage.moveToThread(self.core_thread)
         #self.core.serial_worker.stage.asi_stages.moveToThread(self.core_thread)
         #self.core.serial_worker.stage.pos_timer.moveToThread(self.core_thread)
 
@@ -570,6 +569,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def scale_galvo_amp_w_zoom(self):
         self.state['galvo_amp_scale_w_zoom'] = self.checkBoxScaleWZoom.isChecked()
 
+    @QtCore.pyqtSlot()
     def update_GUI_by_shutter_state(self):
         ''' Disables controls for the opposite ETL to avoid overriding parameters '''
         if self.ShutterComboBox.currentText() == 'Left':

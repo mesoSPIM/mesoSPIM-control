@@ -44,6 +44,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     sig_finished = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+    sig_update_gui_from_shutter_state = QtCore.pyqtSignal() # dirty hack to update the shutter state in the GUI
     # These signals have slots in both mesoSPIM_Serial and mesoSPIM_WaveFormGenerator classes. Potentially dangerous.
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
@@ -107,6 +108,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
+
+        self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state)
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
@@ -427,7 +430,7 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(str)
     def set_shutterconfig(self, shutterconfig):
         self.sig_state_request.emit({'shutterconfig': shutterconfig})
-        self.parent.update_GUI_by_shutter_state()
+        self.sig_update_gui_from_shutter_state.emit()
 
     @QtCore.pyqtSlot()
     def open_shutters(self):
