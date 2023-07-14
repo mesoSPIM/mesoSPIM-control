@@ -158,7 +158,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
         # Set stages, revolver, filter to initialization positions defined in the config file:
-        self.sig_move_to_ini_position.connect(self.core.move_to_initial_positions)
+        self.sig_move_to_ini_position.connect(self.core.move_to_initial_positions, type=QtCore.Qt.QueuedConnection)
 
         self.optimizer = None
         self.contrast_window = None
