@@ -1,9 +1,12 @@
 '''
 mesoSPIM State class
 '''
+import threading
+
 import numpy as np
 from PyQt5 import QtCore
-
+import logging
+logger = logging.getLogger(__name__)
 from .utils.acquisitions import AcquisitionList
 
 class mesoSPIM_StateSingleton():
@@ -19,10 +22,16 @@ class mesoSPIM_StateSingleton():
     '''
 
     instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
         if not mesoSPIM_StateSingleton.instance:
-            mesoSPIM_StateSingleton.instance = mesoSPIM_StateSingleton.__StateObject()
+            with cls._lock:
+                # Another thread could have created the instance
+                # before we acquired the lock. So check that the
+                # instance is still nonexistent.
+                if not mesoSPIM_StateSingleton.instance:
+                    mesoSPIM_StateSingleton.instance = mesoSPIM_StateSingleton.__StateObject()
 
         return mesoSPIM_StateSingleton.instance
 
@@ -114,6 +123,7 @@ class mesoSPIM_StateSingleton():
             '''
             with QtCore.QMutexLocker(self.mutex):
                 self._state_dict.__setitem__(key, value)
+                logger.debug('State changed: {} = {}'.format(key, value))
             self.sig_updated.emit()
 
         def __getitem__(self, key):

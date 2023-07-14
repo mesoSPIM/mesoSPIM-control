@@ -198,17 +198,17 @@ Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_an
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI', etc, see above
-                    'y_load_position': -86000,
-                    'y_unload_position': -120000,
+                    'y_load_position': -10000,
+                    'y_unload_position': 10000,
                     'x_max' : 6000,
                     'x_min' : -6000,
                     'y_max' : 6000,
                     'y_min' : -6000,
                     'z_max' : 6000,
                     'z_min' : -6000,
-                    'f_max' : 6000,
-                    'f_min' : -6000,
-                    'f_objective_exchange': -2500, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
+                    'f_max' : 98000,
+                    'f_min' : 0,
+                    'f_objective_exchange': 2000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -364,7 +364,7 @@ startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
-'position' : {'x_pos':0,'y_pos':1,'z_pos':2,'f_pos':3,'theta_pos':180},
+'position' : {'x_pos':0,'y_pos':100,'z_pos':200,'f_pos':5000,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'folder' : 'D:/tmp/',
 'snap_folder' : 'D:/tmp/',

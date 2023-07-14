@@ -28,7 +28,6 @@ class mesoSPIM_Stage(QtCore.QObject):
 
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
-
     sig_pause = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent = None):
@@ -44,7 +43,6 @@ class mesoSPIM_Stage(QtCore.QObject):
         Therefore, the signals are emitted by the parent of the parent, which
         is slightly confusing and dirty.
         '''
-
         self.parent.sig_stop_movement.connect(self.stop)
         self.parent.sig_zero_axes.connect(self.zero_axes)
         self.parent.sig_unzero_axes.connect(self.unzero_axes)
@@ -63,7 +61,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.x_pos = 0
         self.y_pos = 0
         self.z_pos = 0
-        self.f_pos = 0
+        self.f_pos = 2500 # for testing purposes
         self.theta_pos = 0
 
         '''Internal (software) positions'''
@@ -190,6 +188,17 @@ class mesoSPIM_Stage(QtCore.QObject):
             self.f_pos = f_abs
             print(f"INFO: f_pos = {self.f_pos}")
 
+        if 'f_abs' in dict:
+            f_abs = dict['f_abs']
+            f_abs = f_abs - self.int_f_pos_offset
+            if self.f_min < f_abs < self.f_max:
+                logger.debug('Moving to f_abs: %s' % f_abs)
+                time.sleep(0.2)
+            else:
+                msg = f' f_abs={f_abs} absolute movement stopped: F motion limits ({self.f_min},{self.f_max}) would be reached!'
+                self.sig_status_message.emit(msg)
+                logger.debug(msg)
+
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs'] - self.int_theta_pos_offset
             self.theta_pos = theta_abs
@@ -280,6 +289,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
 
             logger.info("Axis %d (%s) reference status: %s" % (ii, tStage, msg))
 
+        self.report_position()
         ''' Stage 5 referencing hack '''
         # self.pidevice.FRF(5)
         # logger.info('M-406 Emergency referencing hack: Waiting for referencing move')

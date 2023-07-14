@@ -364,7 +364,9 @@ class mesoSPIM_Core(QtCore.QObject):
         # Move to the objective exchange position if necessary
         f_pos_old = None
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+            self.serial_worker.stage.report_position()
             f_pos_old = self.state['position']['f_pos']
+            logger.debug('f_pos_old: '+str(f_pos_old))
             self.send_status_message_to_gui('Moving to objective exchange position')
             self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
             self.send_status_message_to_gui('At the objective exchange position')
