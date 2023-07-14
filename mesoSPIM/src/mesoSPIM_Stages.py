@@ -387,7 +387,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 f_abs = f_abs / 1000
                 self.pidevice.MOV({5: f_abs})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
+                self.sig_status_message.emit(f' f_abs={f_abs} absolute movement stopped: F motion limits ({self.f_min},{self.f_max}) would be reached!')
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs']
