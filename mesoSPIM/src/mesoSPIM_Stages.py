@@ -36,7 +36,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.parent = parent
         self.cfg = parent.cfg
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         ''' The movement signals are emitted by the mesoSPIM_Core, which in turn
         instantiates the mesoSPIM_Serial thread.
@@ -139,9 +139,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
-
-        # self.state['position'] = self.int_position_dict
-
+        self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
 
     # @QtCore.pyqtSlot(dict)
@@ -168,6 +166,7 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         if wait_until_done is True:
             time.sleep(0.1)
+            self.report_position()
 
     # @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
@@ -198,6 +197,7 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         if wait_until_done is True:
             time.sleep(1)
+            self.report_position()
             print('Demo stage move (wait_until_done is True) complete')
 
     @QtCore.pyqtSlot()
@@ -309,7 +309,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
-        # self.state['position'] = self.int_position_dict
+        self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
 
     def move_relative(self, sdict, wait_until_done=False):
@@ -339,6 +339,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
 
         if wait_until_done:
             self.pitools.waitontarget(self.pidevice)
+            self.report_position()
 
     def move_absolute(self, dict, wait_until_done=False):
         '''
@@ -404,6 +405,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             logger.debug('Waiting for target')
             self.pitools.waitontarget(self.pidevice)
             logger.debug('Target reached')
+            self.report_position()
 
     def stop(self):
         self.pidevice.STP(noraise=True)
@@ -776,7 +778,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -876,7 +878,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
-
+        self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
         # print(self.int_position_dict)
 
@@ -1037,7 +1039,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -1289,7 +1291,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
