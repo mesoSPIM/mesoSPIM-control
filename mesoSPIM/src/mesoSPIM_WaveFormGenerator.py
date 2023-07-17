@@ -303,9 +303,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                       'etl_r_amplitude' : etl_r_amplitude}
 
                     '''  Now the GUI needs to be updated '''
+                    time.sleep(0.1)
                     logger.info(f'Parameters set from csv: {parameter_dict}')
                     self.state.set_parameters(parameter_dict)
-                    time.sleep(0.1)  # allow GUI to update
 
         if match_found:
             '''Update waveforms with the new parameters'''
