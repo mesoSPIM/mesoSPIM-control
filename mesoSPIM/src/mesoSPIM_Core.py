@@ -203,16 +203,6 @@ class mesoSPIM_Core(QtCore.QObject):
         except:
             pass
 
-    # @QtCore.pyqtSlot()
-    # def move_to_initial_positions(self):
-    #     '''Moves the hardware to the initial positions defined in the config file.
-    #     '''
-    #     self.send_status_message_to_gui('Moving to initial positions...')
-    #     self.shutter_left.close()
-    #     self.shutter_right.close()
-    #     self.set_filter(self.cfg.startup['filter'], wait_until_done=True)
-    #     self.set_zoom(self.cfg.startup['zoom'], wait_until_done=True)
-
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(),dict.values()):
@@ -353,9 +343,11 @@ class mesoSPIM_Core(QtCore.QObject):
     def set_filter(self, filter, wait_until_done=False):
         self.send_status_message_to_gui('Setting filter to '+filter)
         if wait_until_done:
-            self.sig_state_request_and_wait_until_done.emit({'filter' : filter})
+            logger.debug('Setting filter to '+filter)
+            self.serial_worker.set_filter(filter, wait_until_done=True)
+            logger.debug('Done setting filter to '+filter)
         else:
-            self.sig_state_request.emit({'filter' : filter})
+            self.sig_state_request.emit({'filter': filter})
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
