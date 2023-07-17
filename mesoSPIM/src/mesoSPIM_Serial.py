@@ -107,8 +107,8 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_move_relative.connect(self.move_relative)
         self.parent.sig_move_relative_and_wait_until_done.connect(lambda sdict: self.move_relative(sdict, wait_until_done=True))
 
-        self.parent.sig_move_absolute.connect(self.move_absolute)
-        self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True))
+        # self.parent.sig_move_absolute.connect(self.move_absolute)
+        # self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True))
         # WARNING: do not use type=Qt.BlockingQueuedConnection for _wait_until_done signals, as this will cause a deadlock!
         # The mesoSPIM_Serial object is executed in the parent (Core) thread, and type=Qt.BlockingQueuedConnection can be used only between threads.
         # Using type=Qt.BlockingQueuedConnection withing the same thread will cause a deadlock.

@@ -109,6 +109,7 @@ class mesoSPIM_StateSingleton():
                             'remaining_acq_list_time':1,
                             'package_directory': '',
                             'galvo_amp_scale_w_zoom': False,
+                            'moving_to_target': False, # A dirty way to know if moving with wait_untile_done=True is finished from another thread
                             }
 
         def __len__(self):

@@ -69,7 +69,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_move_relative = QtCore.pyqtSignal(dict)
     sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
-    sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
+    #sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_zero_axes = QtCore.pyqtSignal(list)
     sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
@@ -85,7 +85,7 @@ class mesoSPIM_Core(QtCore.QObject):
         super().__init__()
 
         ''' Assign the parent class to a instance variable for callbacks '''
-        self.parent = parent
+        self.parent = parent # mesoSPIM_MainWindow class
         self.package_directory = self.parent.package_directory
         self.cfg = self.parent.cfg
 
@@ -96,20 +96,17 @@ class mesoSPIM_Core(QtCore.QObject):
         # Note the name duplication (shadowing)!!
         # parent.sig_state_request -> self.state_request_handler
         # self.sig_state_request -> self.waveformer.state_request_handler
-        self.parent.sig_state_request.connect(self.state_request_handler)
-        self.parent.sig_execute_script.connect(self.execute_script)
-        self.parent.sig_move_relative.connect(self.move_relative)
-        # self.parent.sig_move_relative_and_wait_until_done.connect(lambda dict: self.move_relative(dict, wait_until_done=True))
-        self.parent.sig_move_absolute.connect(self.move_absolute)
-        # self.parent.sig_move_absolute_and_wait_until_done.connect(lambda dict: self.move_absolute(dict, wait_until_done=True))
-        self.parent.sig_zero_axes.connect(self.zero_axes)
-        self.parent.sig_unzero_axes.connect(self.unzero_axes)
-        self.parent.sig_stop_movement.connect(self.stop_movement)
-        self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
-        self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
-        self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit)
-
-        self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state)
+        self.parent.sig_state_request.connect(self.state_request_handler, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_execute_script.connect(self.execute_script, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_move_relative.connect(self.move_relative, type=QtCore.Qt.QueuedConnection)
+        #self.parent.sig_move_absolute.connect(self.move_absolute, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_zero_axes.connect(self.zero_axes, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_unzero_axes.connect(self.unzero_axes, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_stop_movement.connect(self.stop_movement, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_load_sample.connect(self.sig_load_sample.emit, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit, type=QtCore.Qt.QueuedConnection)
+        self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state, type=QtCore.Qt.QueuedConnection)
 
         ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
@@ -134,6 +131,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.serial_worker.sig_pause.connect(self.pause)
         self.sig_polling_stage_position_start.connect(self.serial_worker.stage.pos_timer.start)
         self.sig_polling_stage_position_stop.connect(self.serial_worker.stage.pos_timer.stop)
+        self.sig_move_absolute.connect(self.serial_worker.move_absolute)
+        #self.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.serial_worker.move_absolute(sdict, wait_until_done=True))
 
         ''' Start the threads '''
         self.camera_thread.start()
@@ -204,15 +203,15 @@ class mesoSPIM_Core(QtCore.QObject):
         except:
             pass
 
-    @QtCore.pyqtSlot()
-    def move_to_initial_positions(self):
-        '''Moves the hardware to the initial positions defined in the config file.
-        '''
-        self.send_status_message_to_gui('Moving to initial positions...')
-        self.shutter_left.close()
-        self.shutter_right.close()
-        self.set_filter(self.cfg.startup['filter'], wait_until_done=True)
-        self.set_zoom(self.cfg.startup['zoom'], wait_until_done=True)
+    # @QtCore.pyqtSlot()
+    # def move_to_initial_positions(self):
+    #     '''Moves the hardware to the initial positions defined in the config file.
+    #     '''
+    #     self.send_status_message_to_gui('Moving to initial positions...')
+    #     self.shutter_left.close()
+    #     self.shutter_right.close()
+    #     self.set_filter(self.cfg.startup['filter'], wait_until_done=True)
+    #     self.set_zoom(self.cfg.startup['zoom'], wait_until_done=True)
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -364,7 +363,7 @@ class mesoSPIM_Core(QtCore.QObject):
         # Move to the objective exchange position if necessary
         f_pos_old = None
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
-            self.serial_worker.stage.report_position()
+            #self.serial_worker.stage.report_position()
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))
             self.send_status_message_to_gui('Moving to objective exchange position')
@@ -405,22 +404,28 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(float)
     def set_camera_line_interval(self, time):
         self.sig_state_request.emit({'camera_line_interval' : time})
+
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:
             self.sig_move_relative_and_wait_until_done.emit(dict)
         else:
             self.sig_move_relative.emit(dict)
+
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False):
         if wait_until_done:
-            logger.debug('Core: move_absolute_and_wait_until_done signal emitted')
-            self.sig_move_absolute_and_wait_until_done.emit(sdict)
+            logger.debug('Core: move_absolute (wait_until_done=True) has started')
+            #self.sig_move_absolute_and_wait_until_done.emit(sdict) # THIS was running in MainWindow thread, very stubbornly, unless changed to direct call. Otherwise it was causing a lot of synchronization problems.
+            self.serial_worker.move_absolute(sdict, wait_until_done=True)
+            logger.debug('Core: move_absolute (wait_until_done=True) has finished')
         else:
             self.sig_move_absolute.emit(sdict)
+
     @QtCore.pyqtSlot(list)
     def zero_axes(self, list):
         self.sig_zero_axes.emit(list)
+
     @QtCore.pyqtSlot(list)
     def unzero_axes(self, list):
         self.sig_unzero_axes.emit(list)
@@ -727,7 +732,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
-        self.move_absolute(startpoint, wait_until_done=True)
+        self.move_absolute(startpoint, wait_until_done=True) # This executes in the MainWindow thread and messes up the timing
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)

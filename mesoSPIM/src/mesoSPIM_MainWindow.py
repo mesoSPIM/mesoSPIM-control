@@ -61,10 +61,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_execute_script = QtCore.pyqtSignal(str)
     sig_move_relative = QtCore.pyqtSignal(dict)
-    # sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
-    sig_move_to_ini_position = QtCore.pyqtSignal()
-    # sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_zero_axes = QtCore.pyqtSignal(list)
     sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
@@ -86,7 +83,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         # Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
-        self.state.sig_updated.connect(self.update_gui_from_state)
+        self.state.sig_updated.connect(self.update_gui_from_state, type=Qt.DirectConnection)
         self.state['package_directory'] = package_directory
 
         # Setting up the user interface windows
@@ -132,9 +129,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.waveformer.moveToThread(self.core_thread)
         # This shit below does not work, everything remains in the main thread. Why?
         # Even if "moved" to core thread, all these objects actually run in the main thread.
-        # It is a working solution, but not ideal. Ideally these workers must run in self.core_thread.
-        self.core.serial_worker.moveToThread(self.core_thread)
-        self.core.serial_worker.stage.moveToThread(self.core_thread)
+        # It is a working solution, but not ideal. Ideally these workers must run in self.core_thread. Nikita
+        #self.core.serial_worker.moveToThread(self.core_thread)
+        #self.core.serial_worker.stage.moveToThread(self.core_thread)
         #self.core.serial_worker.stage.asi_stages.moveToThread(self.core_thread)
         #self.core.serial_worker.stage.pos_timer.moveToThread(self.core_thread)
 
@@ -151,14 +148,17 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.create_widget_list(self.parent_widgets_to_block, self.widgets_to_block)
 
         # The signal switchboard, Core -> MainWindow
+        # Memo: with type=QtCore.Qt.DirectConnection the slot is invoked immediately when the signal is emitted. The slot is executed in the signalling thread (Core).
         self.core.sig_finished.connect(self.finished)
-        self.core.sig_position.connect(self.update_position_indicators)
-        self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
+        self.core.sig_position.connect(self.update_position_indicators, type=QtCore.Qt.DirectConnection)
+        self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state, type=QtCore.Qt.DirectConnection)
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+
+        self.sig_move_absolute.connect(self.core.move_absolute, type=QtCore.Qt.QueuedConnection)
         # Set stages, revolver, filter to initialization positions defined in the config file:
-        self.sig_move_to_ini_position.connect(self.core.move_to_initial_positions, type=QtCore.Qt.QueuedConnection)
+        #self.sig_move_to_ini_position.connect(self.core.move_to_initial_positions, type=QtCore.Qt.QueuedConnection)
 
         self.optimizer = None
         self.contrast_window = None
@@ -176,14 +176,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         except:
             logger.error(f'Main Window: Printing Thread priority failed.')
 
-        logger.debug(f'Main Window: Core priority: {self.core_thread.priority()}')
+        logger.debug(f'Main Window: Core {self.core_thread.currentThreadId()} priority: {self.core_thread.priority()}')
 
         self.joystick = mesoSPIM_JoystickHandler(self)
         self.enable_gui_updates_from_state(False)
-
-        # After all signals are connected, move the hardware to initial positions
-        # self.core.move_to_initial_positions() # don't do this, it changes the Core into the Main thread. Do it with signal/slot.
-        self.sig_move_to_ini_position.emit()
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.
@@ -610,10 +606,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         combobox.addItems(option_list)
         if not int_conversion:
-            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}))
+            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
             combobox.setCurrentText(self.cfg.startup[state_parameter])
         else:
-            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}))
+            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
             combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
@@ -630,7 +626,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                        in seconds and the spinbox displays
                                        microseconds: conversion_factor = 1000000
         '''
-        spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}))
+        spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}), type=QtCore.Qt.QueuedConnection)
         spinbox.setValue(self.cfg.startup[state_parameter]*conversion_factor)
 
     @QtCore.pyqtSlot(str)

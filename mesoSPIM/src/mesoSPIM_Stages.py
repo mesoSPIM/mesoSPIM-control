@@ -30,7 +30,7 @@ class mesoSPIM_Stage(QtCore.QObject):
     sig_status_message = QtCore.pyqtSignal(str)
     sig_pause = QtCore.pyqtSignal(bool)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.cfg = parent.cfg
@@ -38,7 +38,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.state = mesoSPIM_StateSingleton()
 
         ''' The movement signals are emitted by the mesoSPIM_Core, which in turn
-        instantiates the mesoSPIM_Serial thread.
+        instantiates the mesoSPIM_Serial object, both (must be) running in the same Core thread.
 
         Therefore, the signals are emitted by the parent of the parent, which
         is slightly confusing and dirty.
@@ -127,6 +127,7 @@ class mesoSPIM_Stage(QtCore.QObject):
                                   'theta_pos': self.int_theta_pos,
                                   }
 
+    @QtCore.pyqtSlot()
     def report_position(self):
         self.create_position_dict()
 
@@ -140,7 +141,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
 
-    # @QtCore.pyqtSlot(dict)
+    @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
         if 'x_rel' in sdict:
             self.x_pos = self.x_pos + sdict['x_rel']
@@ -163,10 +164,12 @@ class mesoSPIM_Stage(QtCore.QObject):
             print(f"INFO: f_pos = {self.f_pos}")
 
         if wait_until_done is True:
+            self.state['moving_to_target'] = True
             time.sleep(0.1)
             self.report_position()
+            self.state['moving_to_target'] = False
 
-    # @QtCore.pyqtSlot(dict)
+    @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
         if 'x_abs' in dict:
             x_abs = dict['x_abs'] - self.int_x_pos_offset
@@ -205,9 +208,13 @@ class mesoSPIM_Stage(QtCore.QObject):
             print(f"INFO: theta_pos = {self.theta_pos}")
 
         if wait_until_done is True:
+            self.state['moving_to_target'] = True
             time.sleep(1)
             self.report_position()
-            print('Demo stage move (wait_until_done is True) complete')
+            self.state['moving_to_target'] = False
+            msg = 'Demo stage move (wait_until_done is True) complete'
+            print(msg)
+            logger.debug(msg)
 
     @QtCore.pyqtSlot()
     def stop(self):
@@ -322,6 +329,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
 
+    @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
         ''' PI move relative method
 
@@ -348,10 +356,13 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             self.pidevice.MVR({5: f_rel})
 
         if wait_until_done:
+            self.state['moving_to_target'] = True
             self.pitools.waitontarget(self.pidevice)
             self.report_position()
+            self.state['moving_to_target'] = False
 
-    def move_absolute(self, dict, wait_until_done=False):
+    @QtCore.pyqtSlot(dict)
+    def move_absolute(self, sdict, wait_until_done=False):
         '''
         Lots of implementation details in here, should be replaced by a facade
 
@@ -359,8 +370,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         TODO: DRY principle violated
         '''
 
-        if 'x_abs' in dict:
-            x_abs = dict['x_abs']
+        if 'x_abs' in sdict:
+            x_abs = sdict['x_abs']
             x_abs = x_abs - self.int_x_pos_offset
             if self.x_min < x_abs < self.x_max:
                 ''' Conversion to mm and command emission'''
@@ -369,8 +380,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!')
 
-        if 'y_abs' in dict:
-            y_abs = dict['y_abs']
+        if 'y_abs' in sdict:
+            y_abs = sdict['y_abs']
             y_abs = y_abs - self.int_y_pos_offset
             if self.y_min < y_abs < self.y_max:
                 ''' Conversion to mm and command emission'''
@@ -379,8 +390,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!')
 
-        if 'z_abs' in dict:
-            z_abs = dict['z_abs']
+        if 'z_abs' in sdict:
+            z_abs = sdict['z_abs']
             z_abs = z_abs - self.int_z_pos_offset
             if self.z_min < z_abs < self.z_max:
                 ''' Conversion to mm and command emission'''
@@ -389,8 +400,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!')
 
-        if 'f_abs' in dict:
-            f_abs = dict['f_abs']
+        if 'f_abs' in sdict:
+            f_abs = sdict['f_abs']
             f_abs = f_abs - self.int_f_pos_offset
             if self.f_min < f_abs < self.f_max:
                 logger.debug('Moving to f_abs: %s' % f_abs)
@@ -402,8 +413,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 self.sig_status_message.emit(msg)
                 logger.debug(msg)
 
-        if 'theta_abs' in dict:
-            theta_abs = dict['theta_abs']
+        if 'theta_abs' in sdict:
+            theta_abs = sdict['theta_abs']
             theta_abs = theta_abs - self.int_theta_pos_offset
             if self.theta_min < theta_abs < self.theta_max:
                 ''' No Conversion to mm !!!! and command emission'''
@@ -412,11 +423,14 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done:
-            logger.debug('Waiting for target')
+            self.state['moving_to_target'] = True
+            logger.debug('Waiting for target (wait_until_done=True)')
             self.pitools.waitontarget(self.pidevice)
-            logger.debug('Target reached')
+            logger.debug('Target reached (wait_until_done=True)')
             self.report_position()
+            self.state['moving_to_target'] = False
 
+    @QtCore.pyqtSlot()
     def stop(self):
         self.pidevice.STP(noraise=True)
 
