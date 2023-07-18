@@ -421,8 +421,8 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def set_binning(self, binningstring):
         self.hcam.setPropertyValue("binning", binningstring)
-        self.x_binning = int(binning_string[0])
-        self.y_binning = int(binning_string[2])
+        self.x_binning = int(binningstring[0])
+        self.y_binning = int(binningstring[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
