@@ -127,13 +127,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        # This shit below does not work, everything remains in the main thread. Why?
-        # Even if "moved" to core thread, all these objects actually run in the main thread.
-        # It is a working solution, but not ideal. Ideally these workers must run in self.core_thread. Nikita
-        #self.core.serial_worker.moveToThread(self.core_thread)
-        #self.core.serial_worker.stage.moveToThread(self.core_thread)
-        #self.core.serial_worker.stage.asi_stages.moveToThread(self.core_thread)
-        #self.core.serial_worker.stage.pos_timer.moveToThread(self.core_thread)
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -179,6 +172,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         logger.debug(f'Main Window: Core thread priority: {self.core_thread.priority()}')
 
         self.joystick = mesoSPIM_JoystickHandler(self)
+        #self.sig_state_request.emit({'zoom': self.cfg.startup['zoom']})
         self.enable_gui_updates_from_state(False)
 
     def check_config_file(self):
@@ -326,7 +320,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
                 self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
                 self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
-                #self.state['position'] = dict['position'] # this must be (also) done in the core thread for faster update
+                #self.state['position'] = dict['position'] # this must be done in the core thread
 
     @QtCore.pyqtSlot(dict)
     def update_progressbars(self,dict):
@@ -606,11 +600,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         combobox.addItems(option_list)
         if not int_conversion:
-            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+            self.sig_state_request.emit({state_parameter: self.cfg.startup[state_parameter]})  # force update of the state
             combobox.setCurrentText(self.cfg.startup[state_parameter])
+            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+
         else:
-            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+            self.sig_state_request.emit({state_parameter: int(self.cfg.startup[state_parameter])})  # force update of the state
             combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
+            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
         '''

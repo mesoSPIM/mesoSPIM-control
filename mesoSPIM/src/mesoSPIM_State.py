@@ -61,7 +61,7 @@ class mesoSPIM_StateSingleton():
                             'snap_folder' : 'tmp',
                             'file_prefix' : '',
                             'file_suffix' : '000001',
-                            'zoom' : '2x',
+                            'zoom' : '2x', # TODO: proper zoom initialization. If this zoom is not in config file, ETL parameters do not update at the startup
                             'pixelsize' : 1.0,
                             'laser' : '488 nm',
                             'max_laser_voltage':1,
