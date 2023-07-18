@@ -25,7 +25,10 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         ''' The editor needs to know the config of the filters'''
 
         current_item = index.model().data(index, role=QtCore.Qt.EditRole)
-        current_index = self.option_list.index(current_item)
+        if current_item in self.option_list:
+            current_index = self.option_list.index(current_item)
+        else:
+            current_index = 0 # fixes the case when '1x' zoom is not an option in the config file.
 
         editor.setCurrentIndex(current_index)
         editor.blockSignals(False)
