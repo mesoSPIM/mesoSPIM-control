@@ -35,7 +35,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 
         ''' Instance variables '''
         self.x_start = self.x_end = self.y_start = self.y_end = self.z_start = self.z_end = 0
-        self.z_step = 5
+        self.z_step = 10
         self.x_offset = self.y_offset = 0
         self.zoom = '1x'
         self.x_pixels = self.cfg.camera_parameters['x_pixels'] if self.cfg else 2048
