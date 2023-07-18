@@ -145,7 +145,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.state['camera_display_acquisition_subsampling'] = factor
 
     def set_camera_binning(self, value):
-        print('Setting camera binning: '+value)
+        logger.info('Setting camera binning: '+value)
         self.camera.set_binning(value)
         self.state['camera_binning'] = value
 
@@ -156,12 +156,9 @@ class mesoSPIM_Camera(QtCore.QObject):
         '''
         logger.info('Camera: Preparing Image Series')
         self.stopflag = False
-
         self.image_writer.prepare_acquisition(acq, acq_list)
-
         self.max_frame = acq.get_image_count()
         self.processing_options_string = acq['processing']
-
         self.camera.initialize_image_series()
         self.cur_image = 0
         logger.info(f'Camera: Finished Preparing Image Series')
