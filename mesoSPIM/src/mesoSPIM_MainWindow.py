@@ -326,7 +326,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
                 self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
                 self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
-                #self.state['position'] = dict['position'] # this must be (also) done in the core thread for faster update
+                self.state['position'] = dict['position'] # this must be (also) done in the core thread for faster update
 
     @QtCore.pyqtSlot(dict)
     def update_progressbars(self,dict):
