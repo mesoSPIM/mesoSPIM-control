@@ -870,7 +870,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             logger.info(f'Main Window: Chose ETL Config File: {path}')
             self.sig_state_request.emit({'ETL_cfg_file' : path})
         else:
-            logger.error(f'Main Window: Choose ETL Config File cancelled')
+            logger.debug(f'Choose ETL Config File cancelled')
 
     def save_etl_config(self):
         ''' Save current ETL parameters into config '''
