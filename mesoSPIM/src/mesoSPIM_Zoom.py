@@ -95,6 +95,5 @@ class MitutoyoZoom(QtCore.QObject):
     def __del__(self):
         if self.revolver_connection is not None:
             self.revolver_connection.close()
-            logger.info("Mitutoyo revolver closed")
         else:
-            logger.error("Mitutoyo revolver not initialized")
+            pass
