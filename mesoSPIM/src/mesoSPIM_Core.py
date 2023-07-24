@@ -355,12 +355,18 @@ class mesoSPIM_Core(QtCore.QObject):
         # Move to the objective exchange position if necessary
         f_pos_old = None
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
-            #self.serial_worker.stage.report_position()
+            self.unzero_axes(['f'])
+            time.sleep(0.1)
+            logger.debug('unzeroed f-axis')
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))
-            self.send_status_message_to_gui('Moving to objective exchange position')
-            self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
-            self.send_status_message_to_gui('At the objective exchange position')
+            if abs(f_pos_old) > 0.0001:
+                self.send_status_message_to_gui('Moving to objective exchange position')
+                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
+                self.send_status_message_to_gui('At the objective exchange position')
+            else:
+                msg = f'Old f-position is near zero ({f_pos_old}), not moving to objective exchange position'
+                print('Error: ' + msg); logger.error(msg)
         self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
         # Return to the previous f_pos
         if f_pos_old is not None:

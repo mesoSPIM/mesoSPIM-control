@@ -172,7 +172,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         logger.debug(f'Main Window: Core thread priority: {self.core_thread.priority()}')
 
         self.joystick = mesoSPIM_JoystickHandler(self)
-        #self.sig_state_request.emit({'zoom': self.cfg.startup['zoom']})
         self.enable_gui_updates_from_state(False)
 
     def check_config_file(self):
