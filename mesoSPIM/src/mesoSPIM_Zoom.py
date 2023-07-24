@@ -87,5 +87,14 @@ class MitutoyoZoom(QtCore.QObject):
                 msg = f"Error in Mitutoyo revolver command, response:{message}."
                 logger.error(msg)
                 print(msg)
+            if wait_until_done:
+                time.sleep(1) #  wait for the revolver to move
         else:
             return ValueError(f"Zoom {zoom} not in 'zoomdict', check your config file")
+
+    def __del__(self):
+        if self.revolver_connection is not None:
+            self.revolver_connection.close()
+            logger.info("Mitutoyo revolver closed")
+        else:
+            logger.error("Mitutoyo revolver not initialized")
