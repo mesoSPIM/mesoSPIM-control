@@ -354,28 +354,22 @@ class mesoSPIM_Core(QtCore.QObject):
         self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
         # Move to the objective exchange position if necessary
         f_pos_old = None
-        abort_zoom_change = False
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
-            self.unzero_axes(['f'])
+            self.unzero_axes(['f']) # in case [ZERO F] button is active
             time.sleep(0.1) # wait for the stage to unzero
             logger.debug('unzeroed f-axis')
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))
-            if abs(f_pos_old) > 0.0001:
-                self.send_status_message_to_gui('Moving to objective exchange position')
-                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
-                self.send_status_message_to_gui('At the objective exchange position')
-            else:
-                msg = f'Initial F-position is near zero ({f_pos_old}), axis is zeroed, F-stage move aborted'
-                print('Error: ' + msg); logger.error(msg); self.send_status_message_to_gui('Error: ' + msg)
-                abort_zoom_change = True
-        if not abort_zoom_change:
-            # Set the zoom/revolver
-            self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
-            # Return to the previous f_pos
+            self.send_status_message_to_gui('Moving to objective exchange position')
+            self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done)
+            self.send_status_message_to_gui('At the objective exchange position')
+        # Set the zoom/revolver
+        self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
+        # Return to the previous f_pos
+        if f_pos_old is not None:
             self.send_status_message_to_gui('Moving to the focus position')
             self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done)
-            self.send_status_message_to_gui('Magnification (zoom) changed')
+        self.send_status_message_to_gui('Magnification (zoom) changed')
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
 

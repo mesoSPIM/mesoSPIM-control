@@ -16,6 +16,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_y_buttons' : True,
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
+              'enable_f_zero_button' : True, # set to False if objective change requires F-stage movement (e.g. mesoSPIM v6-Revolver), for safety reasons
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
               'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
@@ -275,7 +276,7 @@ filterdict = {'Empty' : 0, # Every config should contain at least this entry
               '529 542-27' : 6,
               '561LP' : 7,
               '594LP' : 8,
-              '417 447-60' : 9}
+              'Empty-1' : 9} # Dictionary labels must be unique!
 
 '''
 Zoom configuration

@@ -418,6 +418,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.enable_move_buttons('f', False)
                 self.focusZeroButton.setEnabled(False)
 
+            if 'enable_f_zero_button' in self.cfg.ui_options.keys():
+                self.focusZeroButton.setEnabled(self.cfg.ui_options['enable_f_zero_button'])
+
             if self.cfg.ui_options['enable_rotation_buttons'] is False:
                 self.enable_move_buttons('theta', False)
                 self.rotZeroButton.setEnabled(False)
