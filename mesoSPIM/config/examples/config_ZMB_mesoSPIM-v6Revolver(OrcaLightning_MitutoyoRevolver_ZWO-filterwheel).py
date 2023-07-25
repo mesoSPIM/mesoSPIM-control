@@ -14,6 +14,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_y_buttons' : True, 
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
+              'enable_f_zero_button' : False, # set to False if objective change requires F-stage movement (e.g. mesoSPIM v6-Revolver), for safety reasons
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
               'button_sleep_ms_xyzft' : (300, 0, 300, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
@@ -200,7 +201,7 @@ Mixed stage types, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 
 stage_parameters = {'stage_type' : 'PI', # 'PI' or 'DemoStage'
                     'startfocus' : 48000,
-                    'y_load_position': 50000,
+                    'y_load_position': 35000,
                     'y_unload_position': 1500,
                     'x_max' : 40000,
                     'x_min' : 5500,
@@ -283,7 +284,7 @@ For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be 
 '''
 zoom_parameters = {'zoom_type' : 'Mitu', # # 'Demo', 'Dynamixel', or 'Mitu'
                    'servo_id' :  1, # only for 'Dynamixel'
-                   'COMport' : 'COM22', # Todo: UPDATE
+                   'COMport' : 'COM22', # 
                    'baudrate' : 9600}
 
 '''
@@ -366,7 +367,7 @@ startup = {
 'max_laser_voltage':5, # TOPTICA MLE
 'intensity' : 15,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Left', # Can be "Left", "Right","Both"
+'shutterconfig':'Right', # Can be "Left", "Right","Both"
 'laser_interleaving':False,
 'filter' : '405-488-561-640-Quadrupleblock',
 'etl_l_delay_%' : 5,
@@ -380,12 +381,12 @@ startup = {
 'etl_r_amplitude' : 0.1,
 'etl_r_offset' : 2.5,
 'galvo_l_frequency' : 99.9,
-'galvo_l_amplitude' : 1.7,
+'galvo_l_amplitude' : 2.0,
 'galvo_l_offset' : -0.09,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 1.7,
+'galvo_r_amplitude' : 2.0,
 'galvo_r_offset' : -0.15,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
