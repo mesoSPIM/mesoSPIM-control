@@ -19,7 +19,7 @@ class DemoZoom(QtCore.QObject):
     def set_zoom(self, zoom, wait_until_done=True):
         if zoom in self.zoomdict:
             if wait_until_done:
-                time.sleep(1)
+                time.sleep(0.1)
    
 
 class DynamixelZoom(Dynamixel):
