@@ -567,8 +567,8 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         print('Setting line interval is not implemented, set the interval in the config file')
 
     def set_binning(self, binningstring):
-        self.x_binning = int(binning_string[0])
-        self.y_binning = int(binning_string[2])
+        self.x_binning = int(binningstring[0])
+        self.y_binning = int(binningstring[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.pvcam.binning = (self.x_binning, self.y_binning)
