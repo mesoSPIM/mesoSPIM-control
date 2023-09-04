@@ -818,7 +818,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     time_remaining = self.state['predicted_acq_list_time'] - time_passed
 
                 self.state['remaining_acq_list_time'] = time_remaining
-                framerate = self.image_count / time_passed
+                # framerate = self.image_count / time_passed
 
                 ''' Every 100 images, update the predicted acquisition time '''
                 if self.image_count % 100 == 0:

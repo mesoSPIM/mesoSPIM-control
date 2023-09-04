@@ -46,4 +46,13 @@ def write_line(file, key='', value=''):
     else:
         file.write('\n')
 
-        
+def gb_size_of_array_shape(shape):
+        '''Given a tuple of array shape, return the size in GB of at uint16 array'''
+        for idx,ii in enumerate(shape):
+            if idx == 0:
+                total = ii
+            else:
+                total *= ii
+        total = total * 16 / 8
+        return total / 1024**3
+
