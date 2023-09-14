@@ -35,7 +35,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
 
         ''' Instance variables '''
         self.x_start = self.x_end = self.y_start = self.y_end = self.z_start = self.z_end = 0
-        self.z_step = 10
+        self.z_step = 5
         self.x_offset = self.y_offset = 0
         self.zoom = '1x'
         self.x_pixels = self.cfg.camera_parameters['x_pixels'] if self.cfg else 2048
@@ -52,7 +52,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         
         self.setWindowTitle('Tiling Wizard')
 
-        self.channel1, self.channel2, self.channel3, self.channel4, self.folderpage = 4, 5, 6, 7, 8
+        self.channel1, self.channel2, self.channel3, self.channel4, self.channel5, self.folderpage = 4, 5, 6, 7, 8, 9
         self.setPage(0, TilingWelcomePage(self))
         self.setPage(1, DefineBoundingBoxPage(self))
         self.setPage(2, DefineGeneralParametersPage(self))
@@ -61,10 +61,11 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         self.setPage(self.channel2, SecondChannelPage(self))
         self.setPage(self.channel3, ThirdChannelPage(self))
         self.setPage(self.channel4, FourthChannelPage(self))
+        self.setPage(self.channel5, FifthChannelPage(self))
         self.setPage(self.folderpage, DefineFolderPage(self))
-        self.setPage(9, FinishedTilingPage(self))
+        self.setPage(10, FinishedTilingPage(self))
         self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
-        self.setStyleSheet(''' font-size: 16px; ''')
+        self.setStyleSheet(''' font-size: 20px; ''')
         self.show()
 
         self.button(QtWidgets.QWizard.BackButton).clicked.connect(self.go_back)
@@ -156,8 +157,7 @@ class DefineBoundingBoxPage(QtWidgets.QWizardPage):
         self.parent = parent
 
         self.setTitle("Define the bounding box of the tiling acquisition")
-        self.setSubTitle("Define bounding box by corners OR edges. "
-                         "Move XY stages to the positions before pressing the bounding box buttons.")
+        self.setSubTitle("Move the sample in XYZ and define bounding box by corners OR walls by pressing the buttons below. ")
 
         self.button_xy_start = QtWidgets.QPushButton(self)
         self.button_xy_start.setText('Set XY Start Corner')
@@ -268,13 +268,12 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
-
+        N_CHANNELS = 5
         self.setTitle("Define other parameters")
-
         self.channelLabel = QtWidgets.QLabel('# Channels')
         self.channelSpinBox = QtWidgets.QSpinBox(self)
         self.channelSpinBox.setMinimum(1)
-        self.channelSpinBox.setMaximum(4)
+        self.channelSpinBox.setMaximum(N_CHANNELS)
 
         self.zoomLabel = QtWidgets.QLabel('Zoom')
         self.zoomComboBox = QtWidgets.QComboBox(self)
@@ -630,7 +629,18 @@ class FourthChannelPage(GenericChannelPage):
         super().__init__(parent, 3)
 
     def nextId(self):
-        return self.parent.folderpage 
+        if self.parent.channelcount == 4:
+            return self.parent.folderpage
+        else:
+            return self.parent.channel5
+
+
+class FifthChannelPage(GenericChannelPage):
+    def __init__(self, parent=None):
+        super().__init__(parent, 4)
+
+    def nextId(self):
+        return self.parent.folderpage
 
 
 class DefineFolderPage(QtWidgets.QWizardPage):
