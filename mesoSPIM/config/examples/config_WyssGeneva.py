@@ -88,7 +88,7 @@ If shutterswitch = False or missing:
 '''
 shutter = 'NI' # 'Demo' or 'NI'
 shutterswitch = False # see legend above
-shutteroptions = ('Left', 'Right') # Shutter options of the GUI
+shutteroptions = ('Left', 'Right','Both') # Shutter options of the GUI
 shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
               'shutter_right' : 'PXI6259/port2/line0'}
               
@@ -359,7 +359,7 @@ startup = {
 'shutterstate':False, # Is the shutter open or not?
 'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
-'filter' : 'LP561',
+'filter' : '530/43',
 'etl_l_delay_%' : 7.5,
 'etl_l_ramp_rising_%' : 85,
 'etl_l_ramp_falling_%' : 2.5,
@@ -372,12 +372,12 @@ startup = {
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
 'galvo_l_amplitude' : 3.16,
-'galvo_l_offset' : -0.49,
+'galvo_l_offset' : 0.19,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
 'galvo_r_amplitude' : 3.16,
-'galvo_r_offset' : 0.33,
+'galvo_r_offset' : 0.20,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
 'laser_l_delay_%' : 10,
