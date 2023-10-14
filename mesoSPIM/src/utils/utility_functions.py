@@ -56,3 +56,8 @@ def gb_size_of_array_shape(shape):
         total = total * 16 / 8
         return total / 1024**3
 
+
+def replace_with_underscores(string):
+    ''' Replaces spaces and slashes with underscores '''
+    s = string.replace(' ', '_').replace('/', '_')
+    return s

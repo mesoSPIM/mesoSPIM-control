@@ -37,7 +37,7 @@ from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line
+from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores
 
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -932,7 +932,7 @@ class mesoSPIM_Core(QtCore.QObject):
         Appends a metadata.txt file
         Path contains the file to be written
         '''
-        path = acq['folder'] + '/' + acq['filename']
+        path = acq['folder'] + '/' + replace_with_underscores(acq['filename'])
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
         with open(metadata_path, 'a') as file:
             write_line(file, 'TIMING INFORMATION')

@@ -15,7 +15,7 @@ from distutils.version import StrictVersion
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import write_line, gb_size_of_array_shape
+from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -117,7 +117,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
-        self.filename = acq['filename']
+        self.filename = replace_with_underscores(acq['filename'])
         self.path = os.path.realpath(self.folder+'/'+self.filename)
         self.file_root, self.file_extension = os.path.splitext(self.path)
         logger.info(f'Image Writer: Save path: {self.path}')
