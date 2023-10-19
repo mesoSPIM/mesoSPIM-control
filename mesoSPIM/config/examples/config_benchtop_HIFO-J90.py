@@ -184,7 +184,7 @@ Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 
 stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
                     'y_load_position': 10000,
-                    'y_unload_position': -23000,
+                    'y_unload_position': -45000,
                     'x_max' : 51000,
                     'x_min' : -46000,
                     'y_max' : 160000,
@@ -225,7 +225,6 @@ For a benchtop mesoSPIM with an ASI Tiger controller, the following parameters a
 The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc)
 which are the values of the dict.
 '''
-
 asi_parameters = {'COMport' : 'COM23',
                   'baudrate' : 115200,
                   'stage_assignment': {'y':'V', 'z':'Z', 'theta':'R', 'x':'X', 'f':'Y'},
@@ -261,19 +260,19 @@ For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
 
 filterdict = {'Empty' : 0, # Every config should contain this
               '405-488-561-640-Quadrupleblock' : 1,
+              '535/22 Brightline': 2,
+              '595/31 Brightline': 3,
               }
 
 
 '''
 Zoom configuration
+For the 'Demo', 'servo_id', 'COMport' and 'baudrate' do not matter. 
+For a 'Dynamixel' servo-driven zoom, 'servo_id', 'COMport' and 'baudrate' (default 1000000) must be specified
+For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be specified
 '''
-
-'''
-For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel zoom,
-these values have to be there
-'''
-zoom_parameters = {'zoom_type' : 'DemoZoom', # 'DemoZoom' or 'Dynamixel'
-                   'servo_id' :  1,
+zoom_parameters = {'zoom_type' : 'Demo', # # 'Demo', 'Dynamixel', or 'Mitu'
+                   'servo_id' :  1, # only for 'Dynamixel'
                    'COMport' : 'COM9',
                    'baudrate' : 115200} # 57142
 
@@ -292,6 +291,7 @@ zoomdict = {'0.5x' : 0,
             '5x' : 6,
             '7.5x' : 7,
             '10x' : 8,
+            '20x' : 9,
             }
 '''
 Pixelsize in micron
@@ -305,6 +305,7 @@ pixelsize = {'0.5x' : 4.25/0.5,
             '5x' : 4.25/5,
             '7.5x' : 4.25/7.5,
             '10x' : 4.25/10,
+            '20x' : 4.25/20,
             }
 
 '''
@@ -318,6 +319,10 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'transpose_xy' : False, # True for Hamamatsu, False for Photometrix, possibly due to different coordinate systems.
         }
 
+buffering = {'use_ram_buffer': True, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
+             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
+             }
+             
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
@@ -393,5 +398,5 @@ startup = {
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
-'average_frame_rate': 3.44,
+'average_frame_rate': 2.5,
 }
