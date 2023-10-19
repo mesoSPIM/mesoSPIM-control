@@ -18,11 +18,10 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
-			  'enable_loading_buttons' : True,
-			  'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'window_pos': (100, 100), # position of the main window on the screen, top left corner.
                }
-			   
+
+
 '''
 Waveform output for Galvos, ETLs etc.
 '''
@@ -46,13 +45,13 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'camera_trigger_out_line' : '/PXI6259/ctr0',
                         'galvo_etl_task_line' : 'PXI6259/ao0:3',
                         'galvo_etl_task_trigger_source' : '/PXI6259/PFI0',
-                        'laser_task_line' :  'PXI6733/ao0:5',
+                        'laser_task_line' :  'PXI6733/ao0:3',
                         'laser_task_trigger_source' : '/PXI6259/PFI0'}
 
 '''
 Human interface device (Joystick)
 '''
-sidepanel = 'FarmSimulator' #'Demo' or 'FarmSimulator'
+sidepanel = 'Demo' #'Demo' or 'FarmSimulator'
 
 '''
 Digital laser enable lines
@@ -63,12 +62,11 @@ laser = 'NI' # 'Demo' or 'NI'
 ''' The laserdict keys are the laser designation that will be shown
 in the user interface '''
 
-laserdict = {'405 nm': 'PXI6733/port0/line2',
+laserdict = {'445 nm': 'PXI6733/port0/line2',
              '488 nm': 'PXI6733/port0/line3',
-             '515 nm': 'PXI6733/port0/line4',
-             '561 nm': 'PXI6733/port0/line5',
-             '594 nm': 'PXI6733/port0/line6',
-             '647 nm': 'PXI6733/port0/line7'}
+             '561 nm': 'PXI6733/port0/line4',
+             '640 nm': 'PXI6733/port0/line5',
+             }
 
 
 '''
@@ -76,11 +74,12 @@ Shutter configuration
 '''
 
 shutter = 'NI' # 'Demo' or 'NI'
-shutterdict = {'shutter_left' : 'PXI6259/port0/line0',
-              'shutter_right' : 'PXI6259/port2/line0'}
+shutterdict = {'shutter_left' : 'PXI6259/port0/line0', # shutter
+              'shutter_right' : 'PXI6259/port2/line0', # shutter, also switching module signal
+              }
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
-shutteroptions = ('Left','Right','Both')
+shutteroptions = ('Left','Right')
 
 '''
 Camera configuration
@@ -90,34 +89,16 @@ Camera configuration
 For a DemoCamera, only the following options are necessary
 (x_pixels and y_pixels can be chosen arbitrarily):
 
-camera_parameters = {'x_pixels' : 2048,
-                     'y_pixels' : 2048,
-                     'x_pixel_size_in_microns' : 6,
-                     'y_pixel_size_in_microns' : 6,
+camera_parameters = {'x_pixels' : 1024,
+                     'y_pixels' : 1024,
+                     'x_pixel_size_in_microns' : 6.09,
+                     'y_pixel_size_in_microns' : 6.09,
                      'subsampling' : [1,2,4]}
 
 For a Hamamatsu Orca Flash 4.0 V2 or V3, the following parameters are necessary:
 
 camera_parameters = {'x_pixels' : 2048,
                      'y_pixels' : 2048,
-                     'x_pixel_size_in_microns' : 6,
-                     'y_pixel_size_in_microns' : 6,
-                     'subsampling' : [1,2,4],
-                     'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
-                     'defect_correct_mode': 2,
-                     'binning' : '1x1',
-                     'readout_speed' : 1,
-                     'trigger_active' : 1,
-                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
-                     'trigger_polarity' : 2, # positive pulse
-                     'trigger_source' : 2, # external
-                    }
-
-For a Hamamatsu Orca Fusion, the following parameters are necessary:
-
-camera_parameters = {'x_pixels' : 2304,
-                     'y_pixels' : 2304,
                      'x_pixel_size_in_microns' : 6.09,
                      'y_pixel_size_in_microns' : 6.09,
                      'subsampling' : [1,2,4],
@@ -148,7 +129,7 @@ camera_parameters = {'x_pixels' : 5056,
                     }
 
 '''
-camera = 'HamamatsuOrca' # 'DemoCamera' or 'HamamatsuOrca' or 'PhotometricsIris15'
+camera = 'HamamatsuOrca' # 'DemoCamera' or 'HamamatsuOrcaFlash' or 'PhotometricsIris15'
 
 camera_parameters = {'x_pixels' : 2048,
                      'y_pixels' : 2048,
@@ -179,19 +160,23 @@ where sample rotation is safe. Additional hardware dictionaries (e.g. pi_paramet
 define the stage configuration details.
 '''
 
-stage_parameters = {'stage_type' : 'PI', # 'DemoStage' or 'PI' or other configs found in mesoSPIM_serial.py
-                    'y_load_position': 75000,
-                    'y_unload_position': 20000,
-                    'x_max' : 30000,
-                    'x_min' : 8500,
+stage_parameters = {'stage_type' : 'PI', # 'PI' or 'Debug'
+                    #'startfocus' : 70000,#deprecated
+                    'y_load_position': 80000,
+                    'y_unload_position': 33000,
+                    'x_max' : 52000,
+                    'x_min' : 0,
                     'y_max' : 99000,
-                    'y_min' : 20000,
-                    'z_max' : 41000,
-                    'z_min' : 1000,
+                    'y_min' : 0,
+                    'z_max' : 52000,
+                    'z_min' : 0,
                     'f_max' : 99000,
                     'f_min' : 0,
                     'theta_max' : 999,
                     'theta_min' : -999,
+                    #'x_rot_position': 23597,#deprecated
+                    #'y_rot_position': 50000,#deprecated
+                    #'z_rot_position': 34616,#deprecated
                     }
 
 '''
@@ -200,24 +185,37 @@ Depending on the stage hardware, further dictionaries define further details of 
 For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the
 serialnumber with the one of your controller):
 
-For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
-serialnumber with the one of your controller):
-
-'''
-
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('M-112K033','L-406.40DG10','M-112K033','M-116.DG','M-406.4PD','NOSTAGE'),
                  'refmode' : ('FRF',),
-                 'serialnum' : ('118015798'),
+                 'serialnum' : ('118015797'),
                  }
+
+For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
+serialnumber with the one of your controller):
+
+pi_parameters = {'controllername' : 'C-884',
+                 'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
+                 'refmode' : ('FRF',),
+                 'serialnum' : ('118015799'),
 '''
 
+pi_parameters = {'controllername' : 'C-884',
+                 'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
+                 'refmode' : ('FRF',),
+                 'serialnum' : ('119004197'),
+                 }
+
+'''
 Filterwheel configuration
+'''
+
+'''
 For a DemoFilterWheel, no COMport needs to be specified, for a Ludl Filterwheel,
 a valid COMport is necessary.
 '''
-filterwheel_parameters = {'filterwheel_type' : 'Ludl',
-                          'COMport' : 'COM10'}
+filterwheel_parameters = {'filterwheel_type' : 'Ludl', #'DemoFilterWheel'
+                          'COMport' : 'COM6'}
 
 # Ludl marking 10 = position 0
 
@@ -227,18 +225,16 @@ A Ludl double filter wheel can be
 '''
 
 filterdict = {'Empty-Alignment' : (0,0),
-              '405-488-647-Tripleblock' : (1,0),
-              '405-488-561-640-Quadrupleblock' : (2,0),
-              '435 460-50' : (3,0),
-              '498 509-22' : (4,0),
-              '508 530-43' : (5,0),
-              '515LP' : (7,0),
-              '520 535-30' : (6,0),
-              '553 565-24' : (8,0),
-              '561LP' : (9,0),
-              '565 585-40' : (0,1),
-              '594LP' : (0,2),
-              '633LP' : (0,3),
+              '498 509-22' : (1,0), # previously 'F39 508SG 509 22'
+              '508 530-43': (2,0), # Before swap: '502 520-35', old name 'F37 520SG 520 35 BL HC'
+              '562LP' : (3,0), # previously 'F75 562SG RAZOR EDGE LP'
+              '425 450-50' : (4,0), # previously '450 50'
+              '405 445 514 561 640' : (5,0), # previously '405 445 514 561 640'
+              '460LP' : (6,0),
+              '528 542-27' : (7,0), # previously  'F37 542SG 452 27' 
+              '508 530-43 copy 2' : (8,0), # previously 'F37 535SG 530 43'
+              '647LP' : (9,0), # previously 'F76 647SG LP'
+              '553 565-24' : (0,1), # previously 'F37 565SG 565 24'
              }
 
 '''
@@ -250,18 +246,19 @@ For the DemoZoom, servo_id, COMport and baudrate do not matter. For a Dynamixel 
 these values have to be there
 '''
 zoom_parameters = {'zoom_type' : 'Dynamixel',
-                   'servo_id' :  3,
-                   'COMport' : 'COM19',
-                   'baudrate' : 1000000}
+                   'servo_id' :  1,
+                   'COMport' : 'COM8',
+                   'baudrate' : 1000000,
+                   }
 
 '''
 The keys in the zoomdict define what zoom positions are displayed in the selection box
 (combobox) in the user interface.
 '''
 
-zoomdict = {#'0.63x' : 3423,
-            #'0.8x' : 3071,
-            #'1x' : 2707,
+zoomdict = {'0.63x' : 3423,
+            '0.8x' : 3071,
+            '1x' : 2707,
             '1.25x' : 2389,
             '1.6x' : 2047,
             '2x' : 1706,
@@ -273,9 +270,9 @@ zoomdict = {#'0.63x' : 3423,
 '''
 Pixelsize in micron
 '''
-pixelsize = {#'0.63x' : 9.89,
-            #'0.8x' : 7.83,
-            #'1x' : 6.09,
+pixelsize = {'0.63x' : 9.89,
+            '0.8x' : 7.83,
+            '1x' : 6.09,
             '1.25x' : 4.93,
             '1.6x' : 3.84,
             '2x' : 3.06,
@@ -295,9 +292,12 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'flip_xyz': (True, True, False) # match BigStitcher coordinates to mesoSPIM axes.
         }
 
+'''
+Rescale the galvo amplitude when zoom is changed
+For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
+'''        
+scale_galvo_amp_with_zoom = True
 
-scale_galvo_amp_with_zoom = True # If e.g. 'galvo_l_amplitude' is defined at zoom '1x', rescale the amplitude when zoom is interactively changed
-		
 '''
 Initial acquisition parameters
 
@@ -315,21 +315,21 @@ startup = {
 'samplerate' : 100000,
 'sweeptime' : 0.2,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
-'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-Nikita-BABB-40mm.csv',
-'filepath' : '/tmp/file.tif',
-'folder' : '/tmp/',
-'snap_folder' : '/C:/Users/ptyimg_np.MT00200169/Documents/Temp/',
+'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-Nikita-DBE-40mm.csv',
+'filepath' : 'H:/tmp/file.raw',
+'folder' : 'H:/tmp/',
+'snap_folder' : 'C:/Users/User/Documents/Temp/',
 'file_prefix' : '',
-'file_suffix' : '000000',
-'zoom' : '1.25x',
-'pixelsize' : 4.93,
+#'file_suffix' : '000001',
+'zoom' : '1x',
+'pixelsize' : 6.09,
 'laser' : '488 nm',
-'max_laser_voltage':10,
+'max_laser_voltage':5,
 'intensity' : 10,
 'shutterstate':False, # Is the shutter open or not?
 'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
-'filter' : '405-488-561-640-Quadrupleblock',
+'filter' : 'Empty-Alignment',
 'etl_l_delay_%' : 7.5,
 'etl_l_ramp_rising_%' : 85,
 'etl_l_ramp_falling_%' : 2.5,
@@ -340,14 +340,14 @@ startup = {
 'etl_r_ramp_falling_%' : 85,
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
-'galvo_l_frequency' : 199.195,
-'galvo_l_amplitude' : 3.55, # cannot go higher than 3.66V for these galvos
-'galvo_l_offset' : 0.15,
+'galvo_l_frequency' : 198.9,
+'galvo_l_amplitude' : 1.8,
+'galvo_l_offset' : -0.60,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
-'galvo_r_frequency' : 199.195,
-'galvo_r_amplitude' : 3.55, # cannot go higher than 3.66V for these galvos
-'galvo_r_offset' : 0.23,
+'galvo_r_frequency' : 198.9,
+'galvo_r_amplitude' : 1.8,
+'galvo_r_offset' : 0.24,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
 'laser_l_delay_%' : 10,
@@ -361,7 +361,7 @@ startup = {
 'camera_exposure_time':0.01,
 'camera_line_interval':0.000075,
 'camera_display_live_subsampling': 2,
-#'camera_display_snap_subsampling': 1, # deprecated
+#'camera_display_snap_subsampling': 1, deprecated
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
