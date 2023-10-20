@@ -665,7 +665,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def preview_acquisition(self, z_update=True):
         self.stopflag = False
         row = self.state['selected_row']
-        #self.sig_update_gui_from_state.emit(True) #deprecated
+        self.sig_update_gui_from_state.emit(True) # Don't delete this, otherwise GUI updates from the state become unreliable
         acq = self.state['acq_list'][row]
 
         ''' Rotation handling goes here '''
@@ -699,8 +699,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=False)
         self.set_laser(acq['laser'], wait_until_done=False, update_etl=False)
-        # This was for the GUI to update properly, otherwise ETL values for previous laser might be displayed
-        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
@@ -709,7 +707,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.sig_status_message.emit('Ready for preview...')
         self.sig_update_gui_from_state.emit(False)
-
         self.state['state'] = 'idle'
 
     def prepare_acquisition(self, acq, acq_list):
