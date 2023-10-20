@@ -356,7 +356,7 @@ class mesoSPIM_Core(QtCore.QObject):
         f_pos_old = None
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
             self.unzero_axes(['f']) # in case [ZERO F] button is active
-            time.sleep(0.1) # wait for the stage to unzero
+            #time.sleep(0.1) # wait for the stage to unzero
             logger.debug('unzeroed f-axis')
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))
@@ -652,7 +652,7 @@ class mesoSPIM_Core(QtCore.QObject):
             if self.state['zoom'] != acq_list[0]['zoom']:
                 self.set_zoom(acq_list[0]['zoom'], update_etl=False)
             ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
 
             self.sig_state_request.emit({'etl_l_amplitude' : acq_list[0]['etl_l_amplitude']})
             self.sig_state_request.emit({'etl_r_amplitude' : acq_list[0]['etl_r_amplitude']})
@@ -699,8 +699,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=False)
         self.set_laser(acq['laser'], wait_until_done=False, update_etl=False)
-        # Deprecated: This was for the GUI to update properly, otherwise ETL values for previous laser might be displayed
-        #QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+        # This was for the GUI to update properly, otherwise ETL values for previous laser might be displayed
+        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
@@ -727,7 +727,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
-        self.move_absolute(startpoint, wait_until_done=True) # This executes in the MainWindow thread and messes up the timing
+        self.move_absolute(startpoint, wait_until_done=True)
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
@@ -737,7 +737,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
         ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
@@ -803,7 +803,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     time.sleep(0.02)
                     QtWidgets.QApplication.processEvents()
                 
-                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 1)
+                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 10)
                 self.image_count += 1
 
                 ''' Keep track of passed time and predict remaining time '''
