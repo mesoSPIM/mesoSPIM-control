@@ -2,11 +2,9 @@
 Contains Nonlinear Filename Wizard Class: autogenerates Filenames
 '''
 
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5 import QtCore, QtWidgets
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import pyqtProperty
-
+from .utility_functions import replace_with_underscores
 from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import logging
@@ -54,12 +52,6 @@ class FilenameWizard(QtWidgets.QWizard):
 
         super().done(r)
 
-    def replace_spaces_with_underscores(self, string):
-        return string.replace(' ','_')
-
-    def replace_dots_with_underscores(self, string):
-        return string.replace('.','_')
-
     def generate_filename_list(self, increment_number=True):
         '''
         Go through the model, entry for entry and populate the filenames
@@ -73,7 +65,7 @@ class FilenameWizard(QtWidgets.QWizard):
             filename = ''
             if self.file_format == 'raw':
                 if self.field('DescriptionRaw'):
-                    filename += self.replace_spaces_with_underscores(self.field('DescriptionRaw')) + '_'
+                    filename += replace_with_underscores(self.field('DescriptionRaw')) + '_'
 
                 if self.field('xyPosition'):
                     '''Round to nearest integer '''
@@ -86,13 +78,13 @@ class FilenameWizard(QtWidgets.QWizard):
                     filename += 'rot_' + rot_position_string + '_'
 
                 if self.field('Laser'):
-                    filename += self.replace_spaces_with_underscores(self.parent.model.getLaser(row)) + '_'
+                    filename += replace_with_underscores(self.parent.model.getLaser(row)) + '_'
 
                 if self.field('Filter'):
-                    filename += self.replace_spaces_with_underscores(self.parent.model.getFilter(row)) + '_'
+                    filename += replace_with_underscores(self.parent.model.getFilter(row)) + '_'
 
-                if self.field('Zoom'):
-                    filename += self.replace_dots_with_underscores(self.parent.model.getZoom(row)) + '_'
+                # if self.field('Zoom'):
+                #     filename += replace_with_underscores(self.parent.model.getZoom(row)) + '_'
 
                 if self.field('Shutterconfig'):
                     filename += self.parent.model.getShutterconfig(row) + '_'
@@ -105,10 +97,10 @@ class FilenameWizard(QtWidgets.QWizard):
 
             elif self.file_format in {'tiff', 'btf'}:
                 if self.field('DescriptionTIFF'):
-                    filename += self.replace_spaces_with_underscores(self.field('DescriptionTIFF')) + '_'
+                    filename += replace_with_underscores(self.field('DescriptionTIFF')) + '_'
 
                 if self.field('DescriptionBigTIFF'):
-                    filename += self.replace_spaces_with_underscores(self.field('DescriptionBigTIFF')) + '_'
+                    filename += replace_with_underscores(self.field('DescriptionBigTIFF')) + '_'
 
                 if self.parent.model.getNShutterConfigs() > 1:
                     shutter_id = 0 if self.parent.model.getShutterconfig(row) == 'Left' else 1
@@ -126,7 +118,7 @@ class FilenameWizard(QtWidgets.QWizard):
 
             elif self.file_format == 'h5':
                 if self.field('DescriptionHDF5'):
-                    filename += self.replace_spaces_with_underscores(self.field('DescriptionHDF5')) + '_'
+                    filename += replace_with_underscores(self.field('DescriptionHDF5')) + '_'
                 filename += f'Mag{self.parent.model.getZoom(0)}'
                 laser_list = self.parent.model.getLaserList()
                 for laser in laser_list:

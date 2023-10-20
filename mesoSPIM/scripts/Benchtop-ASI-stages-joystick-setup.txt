@@ -1,0 +1,20 @@
+'''
+The following commands must be sent to ASI Tiger controller to make the default joystick-axis assignment for Benchtop mesoSPIM.
+- controller axes V/W = Benchtop axis Y : assigned to joystick up/down : "J V=103 W=0"
+- controller axis X = Benchtop axis X: assigned to joystyck left/right "J X=102"
+- controller axis Y = Benchtop axis F: to left wheel "J Y=123"
+- controller axis Z = Benchtop axis Z: to right wheel "J Z=122"
+- controller axis T (or R): Benchtop axis Theta, not on a joystick "J T=100"
+
+All together:
+'''
+J V=103 W=0
+J X=102
+J Y=123
+J Z=122
+J T=100
+1 SS Z
+2 SS Z
+3 SS Z
+SAVESET
+RESET
