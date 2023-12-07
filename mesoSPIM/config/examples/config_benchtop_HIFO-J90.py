@@ -227,9 +227,9 @@ which are the values of the dict.
 '''
 asi_parameters = {'COMport' : 'COM23',
                   'baudrate' : 115200,
-                  'stage_assignment': {'y':'V', 'z':'Z', 'theta':'R', 'x':'X', 'f':'Y'},
-                  'encoder_conversion': {'V': 10., 'Z': 10., 'R': 100., 'X': 10., 'Y': 10.}, # num of encoder counts per um or degree, depending on stage type.
-                  'speed': {'V': 3., 'Z': 3., 'R': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s. ASI rotation stage is very slow no matter the speed setting.
+                  'stage_assignment': {'y':'V', 'z':'Z', 'theta':'T', 'x':'X', 'f':'Y'},
+                  'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # num of encoder counts per um or degree, depending on stage type.
+                  'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
                   'stage_trigger_source': '/PXI1Slot4/PFI0',
                   'stage_trigger_out_line': '/PXI1Slot4/ctr1',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
@@ -373,12 +373,12 @@ startup = {
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
 'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : 0,
+'galvo_l_offset' : -0.38,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/7,
 'galvo_r_frequency' : 99.9,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0,
+'galvo_r_offset' : 0.36,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 10,

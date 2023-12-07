@@ -1810,7 +1810,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             self.y_pos = position_dict[self.mesoSPIM2ASIdict['y']]
             self.z_pos = position_dict[self.mesoSPIM2ASIdict['z']]
             self.f_pos = position_dict[self.mesoSPIM2ASIdict['f']]
-            self.theta_pos = position_dict[self.mesoSPIM2ASIdict['theta']]/100
+            self.theta_pos = position_dict[self.mesoSPIM2ASIdict['theta']]
 
             self.create_position_dict()
 
@@ -1854,8 +1854,8 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             if 'theta_rel' in sdict:
                 theta_rel = sdict['theta_rel']
                 if self.theta_min < self.theta_pos + theta_rel < self.theta_max:
-                    ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
-                    motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_rel*100)})
+                    ''' 1° equals 1000 cts'''
+                    motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_rel)})
                 else:
                     self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
@@ -1917,8 +1917,8 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             theta_abs = dict['theta_abs']
             theta_abs = theta_abs - self.int_theta_pos_offset
             if self.theta_min < theta_abs < self.theta_max:
-                ''' 1° equals 1000 cts, but there is a factor 10 in asicontrol.py '''
-                motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_abs*100)})
+                ''' 1° equals 1000 cts'''
+                motion_dict.update({self.mesoSPIM2ASIdict['theta'] : int(theta_abs)})
             else:
                 logger.error(f"The theta-move is outside of min-max range, check your config file, 'theta_min' and 'theta_max'.")
 
