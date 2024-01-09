@@ -1,3 +1,7 @@
+## Release candidate 2024 [1.8.3]
+### User Interface
+:gem: Light-sheet direction is shown in the camera window as an image overlay. It interactively changes depending on the Left/Right/Both arms illimination state.
+
 ## Release January 2023 [1.8.2]
 ### Hardware control 
 - New filter wheel [ZWO EFWmini](https://astronomy-imaging-camera.com/product/efw-mini) supported

@@ -55,14 +55,29 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.crosspen = pg.mkPen({'color': "r", 'width': 1})
         self.vLine = pg.InfiniteLine(pos=self.x_image_width/2, angle=90, movable=False, pen=self.crosspen)
         self.hLine = pg.InfiniteLine(pos=self.y_image_width/2, angle=0, movable=False, pen=self.crosspen)
-        self.image_view.addItem(self.vLine, ignoreBounds=True)
-        self.image_view.addItem(self.hLine, ignoreBounds=True)
+        self.image_view.addItem(self.vLine)
+        self.image_view.addItem(self.hLine)
 
         # Create overlay ROIs
         self.overlay = None  # None, 'box'
         w, h = self.x_image_width//self.subsampling, self.y_image_width//self.subsampling
         self.roi_box = pg.RectROI((0, 0), (w, h), sideScalers=True)
         self.roi_drawn = False
+
+        # Create polygons that show light-sheet direction
+        points_R = np.array([[0, self.y_image_width//self.subsampling//2 - 25],
+                             [0, self.y_image_width//self.subsampling//2 + 25],
+                             [100, self.y_image_width//self.subsampling//2]])
+        points_L = np.array([[self.x_image_width//self.subsampling, self.y_image_width//self.subsampling//2 - 25],
+                             [self.x_image_width//self.subsampling, self.y_image_width//self.subsampling//2 + 25],
+                             [self.x_image_width//self.subsampling - 100, self.y_image_width//self.subsampling//2]])
+        self.lightsheet_marker_R = pg.PolyLineROI(positions=points_R, closed=True, pen='y', movable=False, rotatable=False, removable=False, aspectLocked=True)
+        self.lightsheet_marker_L = pg.PolyLineROI(positions=points_L, closed=True, pen='y', movable=False, rotatable=False, removable=False, aspectLocked=True)
+        self.image_view.addItem(self.lightsheet_marker_R)
+        self.image_view.addItem(self.lightsheet_marker_L)
+        for roi in (self.lightsheet_marker_R, self.lightsheet_marker_L):
+            for handle in roi.getHandles():
+                handle.setOpacity(0)
 
         # Set up internal CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
@@ -131,8 +146,19 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.status_label.setText(f"Image dimensions: {roi.shape}")
 
     def draw_crosshairs(self):
-        self.image_view.addItem(self.vLine, ignoreBounds=True)
-        self.image_view.addItem(self.hLine, ignoreBounds=True)
+        self.image_view.addItem(self.vLine)
+        self.image_view.addItem(self.hLine)
+
+    def draw_lightsheet_marker(self):
+        if self.state['shutterconfig'] == 'Left':
+            self.lightsheet_marker_R.setOpacity(0)
+            self.lightsheet_marker_L.setOpacity(1)
+        elif self.state['shutterconfig'] == 'Right':
+            self.lightsheet_marker_R.setOpacity(1)
+            self.lightsheet_marker_L.setOpacity(0)
+        elif self.state['shutterconfig'] == 'Both':
+            self.lightsheet_marker_R.setOpacity(1)
+            self.lightsheet_marker_L.setOpacity(1)
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
@@ -152,4 +178,5 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.x_image_width, self.y_image_width = w, h
             self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
         self.draw_crosshairs()
+        self.draw_lightsheet_marker()
 
