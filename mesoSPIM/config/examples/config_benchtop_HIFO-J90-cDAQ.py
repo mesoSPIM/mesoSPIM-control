@@ -1,3 +1,7 @@
+'''
+Testing cDAQ configuration: 2x NI-9401 (digital) cards and 1x NI-9264 (analog) card.
+'''
+
 import numpy as np
 
 logging_level = 'DEBUG'
@@ -23,20 +27,33 @@ Card designations need to be the same as in NI MAX, if necessary, use NI MAX
 to rename your cards correctly.
 
 Physical connections:
-- 'master_trigger_out_line' ('PXI1Slot4/port0/line0') must be physically connected to BNC-2110 "PFI0 / AI start" terminal.
-- 'camera_trigger_out_line' to PFI12 / P2.4 ('/PXI1Slot4/ctr0') terminal
-- 'stage_trigger_out_line' to PFI13 / P2.5 ('/PXI1Slot4/ctr1') terminal
-- galvos, ETL controllers to 'PXI1Slot4/ao0:3' terminals
-- laser analog modulation cables to 'PXI1Slot4/ao4:7' terminals
+DIGITAL OUTPUTS (P0.0-P0.3, NI-9401 card in slot 1, 'cDAQ1Mod1'):
+- 'master_trigger_out_line' (aka 'cDAQ1Mod1/port0/line0', P0.0/PFI0, Pin14) must be physically connected to P0.4/PFI4 terminal (pin20) of the same card cDAQ1Mod1.
+- 'camera_trigger_out_line' to '/cDAQ1Mod1/port0/line1' (Pin16 of cDAQ1Mod1 card)
+- 'stage_trigger_out_line' to '/cDAQ1Mod1/port0/line2' (Pin17 of cDAQ1Mod1 card)
+
+Connecting BNC cables: 
+(Signal-Ground, label)
+Pin14-Pin1, 'master_trigger_out_line'
+Pin16-Pin3, 'camera_trigger_out_line'
+Pin17-Pin3, 'stage_trigger_out_line'
+Pin20-Pin7, '/cDAQ1Mod1/PFI4' ('camera_trigger_source', 'galvo_etl_task_trigger_source', 'laser_task_trigger_source', and 'stage_trigger_source')
+
+DIGITAL INPUTS (P0.4, NI-9401 card in slot 1, 'cDAQ1Mod1'):
+- '/cDAQ1Mod1/PFI4' (aka P0.4/PFI4, pin20) of the same card cDAQ1Mod1. Triggers camera, stage, galvo/ETL tasks.
+
+ANALOG OUTPUTS (NI-9264 card in slot 3, 'cDAQ1Mod3'):
+- galvos, ETL controllers to 'cDAQ1Mod3/ao0:3' terminals
+- laser analog modulation cables to 'cDAQ1Mod3/ao4:7' terminals
 '''
 
-acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
-                        'camera_trigger_source' : '/PXI1Slot4/PFI0',
-                        'camera_trigger_out_line' : '/PXI1Slot4/ctr0',
-                        'galvo_etl_task_line' : 'PXI1Slot4/ao0:3',
-                        'galvo_etl_task_trigger_source' : '/PXI1Slot4/PFI0',
-                        'laser_task_line' :  'PXI1Slot4/ao4:7',
-                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0'}
+acquisition_hardware = {'master_trigger_out_line' : 'cDAQ1Mod1/port0/line0',
+                        'camera_trigger_source' : '/cDAQ1Mod1/PFI4',
+                        'camera_trigger_out_line' : '/cDAQ1Mod1/port0/line1',
+                        'galvo_etl_task_line' : 'cDAQ1Mod3/ao0:3',
+                        'galvo_etl_task_trigger_source' : '/cDAQ1Mod1/PFI4',
+                        'laser_task_line' :  'cDAQ1Mod3/ao4:7',
+                        'laser_task_trigger_source' : '/cDAQ1Mod1/PFI4'}
 
 '''
 Human interface device (Joystick)
@@ -55,10 +72,10 @@ laser_blanking = 'images' # 'images' by default, unless laser enable is connecte
 Values are DO ports used for laser ENABLE digital signal.
 Critical: keys must be sorted by increasing wavelength order: 405, 488, 561, etc.
 '''
-laserdict = {'405 nm': 'PXI1Slot4/port0/line2',
-             '488 nm': 'PXI1Slot4/port0/line3',
-             '561 nm': 'PXI1Slot4/port0/line4', 
-             '638 nm': 'PXI1Slot4/port0/line5',
+laserdict = {'405 nm': 'cDAQ1Mod2/port0/line0',
+             '488 nm': 'cDAQ1Mod2/port0/line1',
+             '561 nm': 'cDAQ1Mod2/port0/line2',
+             '638 nm': 'cDAQ1Mod2/port0/line3
              }
 
 '''
@@ -230,8 +247,8 @@ asi_parameters = {'COMport' : 'COM23',
                   'stage_assignment': {'y':'V', 'z':'Z', 'theta':'T', 'x':'X', 'f':'Y'},
                   'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # num of encoder counts per um or degree, depending on stage type.
                   'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
-                  'stage_trigger_source': '/PXI1Slot4/PFI0',
-                  'stage_trigger_out_line': '/PXI1Slot4/ctr1',
+                  'stage_trigger_source': '/cDAQ1Mod1/PFI4',
+                  'stage_trigger_out_line': '/cDAQ1Mod1/port0/line2',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
