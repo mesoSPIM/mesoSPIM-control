@@ -75,7 +75,6 @@ class FocusTrackingWizard(QtWidgets.QWizard):
             outputlist.extend(output_values)
         return outputlist       
 
-    
     def update_focus_positions_in_model(self):
         row_count = self.parent.model.rowCount()
         z_start_column =  self.parent.model.getColumnByName('Z_start')

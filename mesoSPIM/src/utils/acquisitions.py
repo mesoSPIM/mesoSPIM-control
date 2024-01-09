@@ -7,6 +7,9 @@ Helper classes for mesoSPIM acquisitions
 
 import indexed
 import os.path
+import logging
+logger = logging.getLogger(__name__)
+
 
 class Acquisition(indexed.IndexedOrderedDict):
     '''
@@ -178,7 +181,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'f_abs': self['f_end'],
                 }
 
-    def get_focus_stepsize_generator(self):
+    def get_focus_stepsize_generator(self, f_stage_min_step_um=0.25):
         ''''
         Provides a generator object to correct rounding errors for focus tracking acquisitions.
 
@@ -189,33 +192,31 @@ class Acquisition(indexed.IndexedOrderedDict):
         Therefore, the generator tracks the rounding error and applies correcting steps here and there
         to minimize the error.
 
-        This assumes a minimum step size of around 0.1 micron that the focus stage is capable of.
+        This assumes a minimum step size of around 0.25 micron that the focus stage is capable of.
 
         This method contains lots of round functions to keep residual rounding errors at bay.
         '''
-        steps = self.get_image_count()
+        steps = self.get_image_count() + 1
         f_step = abs((self['f_end'] - self['f_start'])/steps)
+        feasible_f_step = max(f_stage_min_step_um * (f_step // f_stage_min_step_um),
+                              f_stage_min_step_um)  # Round to nearest multiple of f_stage_min_step_um
         if self['f_end'] < self['f_start']:
             f_step = -f_step
+            feasible_f_step = -feasible_f_step
 
-        standard_f_step = round(f_step , 1) # Minimum step size: 0.1 micron
-        focus_error = 0
         expected_focus = 0
         focus = 0
         for i in range(steps):
-            if abs(focus_error) < 0.1:
-                focus += standard_f_step
-                yield standard_f_step
+            focus_error = round(expected_focus - focus, 5)
+            logger.debug(f"Focus: actual, expected, error: {focus, expected_focus, focus_error}, um")
+            if abs(focus_error) < f_stage_min_step_um/2.0:
+                yield 0
             else:
-                if focus_error < 0:
-                    focus += standard_f_step - 0.1
-                    yield round(standard_f_step - 0.1,1)
-                else:
-                    focus += standard_f_step + 0.1
-                    yield round(standard_f_step + 0.1,1)
+                new_step = round(focus_error / f_stage_min_step_um) * f_stage_min_step_um + feasible_f_step # this can be zero, and it is correct
+                focus += new_step
+                yield new_step
             focus = round(focus, 5)
             expected_focus += f_step
-            focus_error = round(expected_focus - focus, 5)
 
 
 class AcquisitionList(list):
