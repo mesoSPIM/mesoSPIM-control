@@ -770,13 +770,14 @@ class mesoSPIM_Core(QtCore.QObject):
                 f_step = self.f_step_generator.__next__()
                 if f_step != 0:
                     move_dict.update({'f_rel':f_step})
-                else: # clear the previous f_step
-                    move_dict.update({'f_rel':0})
+                else: # clear key if no F-step is required
+                    move_dict.pop('f_rel', None)
 
                 ''' The pauseflag allows:
                     - pausing running acquisitions
                     - wait for slow hardware to catch up (e.g. slow stages)
                 '''
+                logger.debug(f'move_dict: {move_dict}')
                 self.move_relative(move_dict)
 
                 while self.pauseflag is True:
