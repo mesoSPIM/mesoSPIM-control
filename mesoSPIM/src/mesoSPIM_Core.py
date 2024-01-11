@@ -769,8 +769,9 @@ class mesoSPIM_Core(QtCore.QObject):
                 ''' Get the current correct f_step'''
                 f_step = self.f_step_generator.__next__()
                 if f_step != 0:
-                    # print('F step: ', f_step)
                     move_dict.update({'f_rel':f_step})
+                else: # clear the previous f_step
+                    move_dict.update({'f_rel':0})
 
                 ''' The pauseflag allows:
                     - pausing running acquisitions

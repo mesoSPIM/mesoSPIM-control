@@ -208,9 +208,9 @@ class Acquisition(indexed.IndexedOrderedDict):
         focus = 0
         for i in range(steps):
             focus_error = round(expected_focus - focus, 5)
-            logger.debug(f"Relative focus: actual, expected, error: {focus, expected_focus, focus_error}, um")
             new_step = round(focus_error / f_stage_min_step_um) * f_stage_min_step_um + feasible_f_step # this can be zero, and it is correct
             yield new_step
+            logger.debug(f"Relative focus: new_step, actual, expected, error: {new_step, focus, expected_focus, focus_error}, um")
             focus += new_step
             focus = round(focus, 5)
             expected_focus += f_step
