@@ -1,7 +1,12 @@
 ## Release candidate 2024 [1.8.3]
-### User Interface
+
+### User Interface :lollipop:
 :gem: Light-sheet direction is shown in the camera window as an image overlay. It interactively changes depending on the Left/Right/Both arms illimination state.
-### Bugfixes
+
+### Hardware control :wrench:
+- Added ZWO 2" 7-position filterwheel support (PR#79 by Fabian Voigt)
+
+### Bugfixes :bug: 
 - incorrect focus stage steps when interpolating between two focus positions in a stack. Reported and tested by Ivana Gantar and Laura Batti (Wyss Center Geneva). Affected small-amplitude focus interpolation, where required F-stage steps between planes were smaller than minimum feasible stage step. The minimum feasible stage step changed from 0.1 to 0.25 µm in function `get_focus_stepsize_generator(self, f_stage_min_step_um=0.25)`.
 
 ## Release January 2023 [1.8.2]

@@ -130,8 +130,8 @@ class EFW(object):
         for ID in self.IDs: 
             self.Open(ID)
             self.slotNums[ID] = (self.GetProperty(ID)['slotNum'])
-            self.SetDirection(ID, True)
-            self.SetPosition(ID, 0)            
+            self.SetPosition(ID, 0)
+            #self.SetDirection(ID, True)
 
     def GetNum(self): #ok
         return self.dll.EFWGetNum()
