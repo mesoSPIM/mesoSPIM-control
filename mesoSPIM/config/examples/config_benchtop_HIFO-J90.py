@@ -282,8 +282,7 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 There should be always '1x' zoom present, for correct initialization of the software.
 '''
 
-zoomdict = {'0.5x' : 0,
-            '0.9x' : 1,
+zoomdict = {'0.9x' : 1,
             '1x' : 2,
             '1.2x' : 3,
             '2x' : 4,
@@ -296,8 +295,7 @@ zoomdict = {'0.5x' : 0,
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.5x' : 4.25/0.5,
-            '0.9x' : 4.25/0.9,
+pixelsize = {'0.9x' : 4.25/0.9,
             '1x': 4.25,
             '1.2x' : 4.25/1.2,
             '2x' : 4.25/2,

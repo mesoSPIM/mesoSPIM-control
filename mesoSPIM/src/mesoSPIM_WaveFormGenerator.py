@@ -434,7 +434,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         if self.ao_cards == 2:
-            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'])
+            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val=-5, max_val=5)
             self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
@@ -447,7 +447,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                         samps_per_chan=samples)
             self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
         else:
-            self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'])
+            self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
+                                                                      min_val=-5, max_val=5)
             self.galvo_etl_laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
