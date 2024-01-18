@@ -61,6 +61,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                              f"({self.cfg.acquisition_hardware['laser_task_line']}) "
                              f"must be equal to num(lasers) in 'laserdict' ({len(self.cfg.laserdict)}). "
                              f"Check assignment of AO channels in 'laser_task_line'.")
+        if self.state['max_laser_voltage'] > 10:
+            self.state['max_laser_voltage'] = 10
+            msg = f"Config parameter 'max_laser_voltage' ({self.state['max_laser_voltage']}) is > 10V, which can damage the hardware. Setting to 10V."
+            print(msg); logger.warning(msg)
+        elif self.state['max_laser_voltage'] > 5:
+            msg = f"Config parameter 'max_laser_voltage' ({self.state['max_laser_voltage']}) is > 5V, which may damage the laser controller."
+            print(msg); logger.warning(msg)
 
     def rescale_galvo_amplitude_by_zoom(self, zoom: float):
         if self.state['galvo_amp_scale_w_zoom'] is True:
@@ -433,22 +440,30 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(trig_source)
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
-        if self.ao_cards == 2:
+        if self.ao_cards == 2: # mesoSPIM v5 configuration
             self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val=-5, max_val=5)
+            msg = "Galvo and ETL AO task voltage range is set to -5V to 5V. Check if this is safe for your hardware."
+            logger.warning(msg)
             self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
             self.galvo_etl_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
 
             '''Housekeeping: Setting up the AO task for the ETL and lasers and setting the trigger input'''
-            self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'])
+            self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'],
+                                                            min_val=-self.state['max_laser_voltage'],
+                                                            max_val=self.state['max_laser_voltage'])
+            msg = f"Laser AO task voltage range is set {-self.state['max_laser_voltage']}V to {self.state['max_laser_voltage']}V. Check if this is safe for your hardware."
+            logger.warning(msg)
             self.laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                         sample_mode=AcquisitionType.FINITE,
                                                         samps_per_chan=samples)
             self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
-        else:
+        else: # Benchtop configuration
             self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
                                                                       min_val=-5, max_val=5)
+            msg = "Galvo-ETL-Laser AO task voltage range is set to -5V to 5V. Check if this is correct for your hardware."
+            logger.warning(msg)
             self.galvo_etl_laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)

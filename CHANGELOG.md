@@ -5,6 +5,7 @@
 
 ### Hardware control :wrench:
 - Added ZWO 2" 7-position filterwheel support (PR#79 by Fabian Voigt)
+- added checks and warnings for AO maximum voltage range (5V or 10V, which depends on hardware, but can be damaging if not set correctly).
 
 ### Bugfixes :bug: 
 - incorrect focus stage steps when interpolating between two focus positions in a stack. Reported and tested by Ivana Gantar and Laura Batti (Wyss Center Geneva). Affected small-amplitude focus interpolation, where required F-stage steps between planes were smaller than minimum feasible stage step. The minimum feasible stage step changed from 0.1 to 0.25 µm in function `get_focus_stepsize_generator(self, f_stage_min_step_um=0.25)`.

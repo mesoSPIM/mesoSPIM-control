@@ -375,7 +375,7 @@ startup = {
 'zoom' : '1x',
 'pixelsize' : 6.55,
 'laser' : '488 nm',
-'max_laser_voltage':10,
+'max_laser_voltage':5,
 'intensity' : 10,
 'shutterstate':False, # Is the shutter open or not?
 'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
