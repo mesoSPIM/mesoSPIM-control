@@ -110,7 +110,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         '''
         Method to return the number of planes in the acquisition
         '''
-        return abs(int((self['z_end'] - self['z_start'])/self['z_step'])) + 1
+        return abs(round((self['z_end'] - self['z_start'])/self['z_step'])) + 1
 
     def get_acquisition_time(self, framerate):
         '''
