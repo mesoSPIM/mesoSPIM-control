@@ -110,7 +110,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         '''
         Method to return the number of planes in the acquisition
         '''
-        return abs(int((self['z_end'] - self['z_start'])/self['z_step']))
+        return abs(int((self['z_end'] - self['z_start'])/self['z_step'])) + 1
 
     def get_acquisition_time(self, framerate):
         '''
@@ -126,7 +126,7 @@ class Acquisition(indexed.IndexedOrderedDict):
 
         return self.get_image_count()/framerate
 
-    def get_delta_z_and_delta_f_dict(self, inverted = False):
+    def get_delta_z_and_delta_f_dict(self, inverted=False):
         ''' Returns relative movement dict for z- and f-steps '''
         if self['z_end'] > self['z_start']:
             z_rel = abs(self['z_step'])
