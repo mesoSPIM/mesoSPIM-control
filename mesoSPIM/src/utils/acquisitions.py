@@ -135,7 +135,10 @@ class Acquisition(indexed.IndexedOrderedDict):
 
         ''' Calculate f-step '''
         image_count = self.get_image_count()
-        f_rel = abs((self['f_end'] - self['f_start'])/image_count)
+        if image_count >= 1:
+            f_rel = abs((self['f_end'] - self['f_start'])/image_count)
+        else:
+            f_rel = 0
         if self['f_end'] < self['f_start']:
             f_rel = -f_rel
         
