@@ -16,10 +16,10 @@ class DemoZoom(QtCore.QObject):
         super().__init__()
         self.zoomdict = zoomdict
 
-    def set_zoom(self, zoom, wait_until_done=False):
+    def set_zoom(self, zoom, wait_until_done=True):
         if zoom in self.zoomdict:
             if wait_until_done:
-                time.sleep(1)
+                time.sleep(0.1)
    
 
 class DynamixelZoom(Dynamixel):
@@ -27,7 +27,7 @@ class DynamixelZoom(Dynamixel):
         super().__init__(COMport, identifier, baudrate)
         self.zoomdict = zoomdict
 
-    def set_zoom(self, zoom, wait_until_done=False):
+    def set_zoom(self, zoom, wait_until_done=True):
         """Changes zoom after checking that the commanded value exists"""
         if zoom in self.zoomdict:
             self._move(self.zoomdict[zoom], wait_until_done)
@@ -77,7 +77,7 @@ class MitutoyoZoom(QtCore.QObject):
         else:
             logger.error("Serial port not initialized")
 
-    def set_zoom(self, zoom, wait_until_done=False):
+    def set_zoom(self, zoom, wait_until_done=True):
         if zoom in self.zoomdict:
             position = self.zoomdict[zoom]
             assert position in ('A', 'B', 'C', 'D', 'E'), "Revolver position must be one of ('A', 'B', 'C', 'D', 'E')"
@@ -87,5 +87,13 @@ class MitutoyoZoom(QtCore.QObject):
                 msg = f"Error in Mitutoyo revolver command, response:{message}."
                 logger.error(msg)
                 print(msg)
+            if wait_until_done:
+                time.sleep(1) #  wait for the revolver to move
         else:
             return ValueError(f"Zoom {zoom} not in 'zoomdict', check your config file")
+
+    def __del__(self):
+        if self.revolver_connection is not None:
+            self.revolver_connection.close()
+        else:
+            pass

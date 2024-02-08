@@ -16,6 +16,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_y_buttons' : True,
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
+              'enable_f_zero_button' : True, # set to False if objective change requires F-stage movement (e.g. mesoSPIM v6-Revolver), for safety reasons
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
               'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
@@ -198,16 +199,17 @@ Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_an
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI', etc, see above
-                    'y_load_position': -86000,
-                    'y_unload_position': -120000,
-                    'x_max' : 3000,
-                    'x_min' : -3000,
-                    'y_max' : 3000,
-                    'y_min' : -3000,
-                    'z_max' : 3000,
-                    'z_min' : -3000,
-                    'f_max' : 3000,
-                    'f_min' : -3000,
+                    'y_load_position': -10000,
+                    'y_unload_position': 10000,
+                    'x_max' : 6000,
+                    'x_min' : -6000,
+                    'y_max' : 6000,
+                    'y_min' : -6000,
+                    'z_max' : 6000,
+                    'z_min' : -6000,
+                    'f_max' : 98000,
+                    'f_min' : 0,
+                    'f_objective_exchange': 2000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -274,7 +276,7 @@ filterdict = {'Empty' : 0, # Every config should contain at least this entry
               '529 542-27' : 6,
               '561LP' : 7,
               '594LP' : 8,
-              '417 447-60' : 9}
+              'Empty-1' : 9} # Dictionary labels must be unique!
 
 '''
 Zoom configuration
@@ -366,7 +368,7 @@ startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
-'position' : {'x_pos':0,'y_pos':1,'z_pos':2,'f_pos':3,'theta_pos':180},
+'position' : {'x_pos':0,'y_pos':100,'z_pos':200,'f_pos':5000,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'folder' : 'D:/tmp/',
 'snap_folder' : 'D:/tmp/',

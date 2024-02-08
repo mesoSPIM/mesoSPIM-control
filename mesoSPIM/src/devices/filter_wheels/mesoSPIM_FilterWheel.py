@@ -52,9 +52,16 @@ class ZwoFilterWheel(QtCore.QObject):
         if filter in self.filterdict:
             self.device.SetPosition(self.device.IDs[0], self.filterdict[filter], wait_until_done)
             self.filter = filter
+            if wait_until_done:
+                time.sleep(1)
         else:
             raise ValueError(f'Filter {filter} not found in the configuration file, please update config file')
 
+    def __del__(self):
+        if self.device is not None:
+            self.device.Close(self.device.IDs[0])
+        else:
+            pass
 
 class DynamixelFilterWheel(Dynamixel):
     def __init__(self, filterdict, COMport, identifier=1, baudrate=115200):

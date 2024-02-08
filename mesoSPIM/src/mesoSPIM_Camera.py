@@ -145,7 +145,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.state['camera_display_acquisition_subsampling'] = factor
 
     def set_camera_binning(self, value):
-        print('Setting camera binning: '+value)
+        logger.info('Setting camera binning: '+value)
         self.camera.set_binning(value)
         self.state['camera_binning'] = value
 
@@ -156,12 +156,9 @@ class mesoSPIM_Camera(QtCore.QObject):
         '''
         logger.info('Camera: Preparing Image Series')
         self.stopflag = False
-
         self.image_writer.prepare_acquisition(acq, acq_list)
-
         self.max_frame = acq.get_image_count()
         self.processing_options_string = acq['processing']
-
         self.camera.initialize_image_series()
         self.cur_image = 0
         logger.info(f'Camera: Finished Preparing Image Series')
@@ -421,8 +418,8 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def set_binning(self, binningstring):
         self.hcam.setPropertyValue("binning", binningstring)
-        self.x_binning = int(binning_string[0])
-        self.y_binning = int(binning_string[2])
+        self.x_binning = int(binningstring[0])
+        self.y_binning = int(binningstring[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.state['camera_binning'] = str(self.x_binning)+'x'+str(self.y_binning)
@@ -570,8 +567,8 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         print('Setting line interval is not implemented, set the interval in the config file')
 
     def set_binning(self, binningstring):
-        self.x_binning = int(binning_string[0])
-        self.y_binning = int(binning_string[2])
+        self.x_binning = int(binningstring[0])
+        self.y_binning = int(binningstring[2])
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.pvcam.binning = (self.x_binning, self.y_binning)

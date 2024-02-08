@@ -8,6 +8,7 @@ from PyQt5 import QtCore
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 logger = logging.getLogger(__name__)
 
+
 class mesoSPIM_Stage(QtCore.QObject):
     '''
     DemoStage for a mesoSPIM microscope
@@ -27,23 +28,21 @@ class mesoSPIM_Stage(QtCore.QObject):
 
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
-
     sig_pause = QtCore.pyqtSignal(bool)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.cfg = parent.cfg
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         ''' The movement signals are emitted by the mesoSPIM_Core, which in turn
-        instantiates the mesoSPIM_Serial thread.
+        instantiates the mesoSPIM_Serial object, both (must be) running in the same Core thread.
 
         Therefore, the signals are emitted by the parent of the parent, which
         is slightly confusing and dirty.
         '''
-
         self.parent.sig_stop_movement.connect(self.stop)
         self.parent.sig_zero_axes.connect(self.zero_axes)
         self.parent.sig_unzero_axes.connect(self.unzero_axes)
@@ -62,7 +61,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.x_pos = 0
         self.y_pos = 0
         self.z_pos = 0
-        self.f_pos = 0
+        self.f_pos = 2500 # for testing purposes
         self.theta_pos = 0
 
         '''Internal (software) positions'''
@@ -128,6 +127,7 @@ class mesoSPIM_Stage(QtCore.QObject):
                                   'theta_pos': self.int_theta_pos,
                                   }
 
+    @QtCore.pyqtSlot()
     def report_position(self):
         self.create_position_dict()
 
@@ -138,55 +138,83 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
-
-        # self.state['position'] = self.int_position_dict
-
+        self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
 
-    # @QtCore.pyqtSlot(dict)
+    @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
         if 'x_rel' in sdict:
             self.x_pos = self.x_pos + sdict['x_rel']
+            print(f"INFO: x_pos = {self.x_pos}")
 
         if 'y_rel' in sdict:
             self.y_pos = self.y_pos + sdict['y_rel']
+            print(f"INFO: y_pos = {self.y_pos}")
 
         if 'z_rel' in sdict:
             self.z_pos = self.z_pos + sdict['z_rel']
+            print(f"INFO: z_pos = {self.z_pos}")
 
         if 'theta_rel' in sdict:
             self.theta_pos = self.theta_pos + sdict['theta_rel']
+            print(f"INFO: theta_pos = {self.theta_pos}")
 
         if 'f_rel' in sdict:
             self.f_pos = self.f_pos + sdict['f_rel']
+            print(f"INFO: f_pos = {self.f_pos}")
 
         if wait_until_done is True:
+            self.state['moving_to_target'] = True
             time.sleep(0.1)
+            self.report_position()
+            self.state['moving_to_target'] = False
 
-    # @QtCore.pyqtSlot(dict)
+    @QtCore.pyqtSlot(dict)
     def move_absolute(self, dict, wait_until_done=False):
         if 'x_abs' in dict:
             x_abs = dict['x_abs'] - self.int_x_pos_offset
             self.x_pos = x_abs
+            print(f"INFO: x_pos = {self.x_pos}")
 
         if 'y_abs' in dict:
             y_abs = dict['y_abs'] - self.int_y_pos_offset
             self.y_pos = y_abs
+            print(f"INFO: y_pos = {self.y_pos}")
 
         if 'z_abs' in dict:
             z_abs = dict['z_abs'] - self.int_z_pos_offset
             self.z_pos = z_abs
+            print(f"INFO: z_pos = {self.z_pos}")
 
         if 'f_abs' in dict:
             f_abs = dict['f_abs'] - self.int_f_pos_offset
             self.f_pos = f_abs
+            print(f"INFO: f_pos = {self.f_pos}")
+
+        if 'f_abs' in dict:
+            f_abs = dict['f_abs']
+            f_abs = f_abs - self.int_f_pos_offset
+            if self.f_min < f_abs < self.f_max:
+                logger.debug('Moving to f_abs: %s' % f_abs)
+                time.sleep(0.2)
+            else:
+                msg = f' f_abs={f_abs} absolute movement stopped: F motion limits ({self.f_min},{self.f_max}) would be reached!'
+                self.sig_status_message.emit(msg)
+                logger.debug(msg)
 
         if 'theta_abs' in dict:
             theta_abs = dict['theta_abs'] - self.int_theta_pos_offset
             self.theta_pos = theta_abs
+            print(f"INFO: theta_pos = {self.theta_pos}")
 
         if wait_until_done is True:
-            time.sleep(3)
+            self.state['moving_to_target'] = True
+            time.sleep(1)
+            self.report_position()
+            self.state['moving_to_target'] = False
+            msg = 'Demo stage move (wait_until_done is True) complete'
+            print(msg)
+            logger.debug(msg)
 
     @QtCore.pyqtSlot()
     def stop(self):
@@ -268,6 +296,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
 
             logger.info("Axis %d (%s) reference status: %s" % (ii, tStage, msg))
 
+        self.report_position()
         ''' Stage 5 referencing hack '''
         # self.pidevice.FRF(5)
         # logger.info('M-406 Emergency referencing hack: Waiting for referencing move')
@@ -297,9 +326,10 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
-        # self.state['position'] = self.int_position_dict
+        self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
 
+    @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
         ''' PI move relative method
 
@@ -326,9 +356,13 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             self.pidevice.MVR({5: f_rel})
 
         if wait_until_done:
+            self.state['moving_to_target'] = True
             self.pitools.waitontarget(self.pidevice)
+            self.report_position()
+            self.state['moving_to_target'] = False
 
-    def move_absolute(self, dict, wait_until_done=False):
+    @QtCore.pyqtSlot(dict)
+    def move_absolute(self, sdict, wait_until_done=False):
         '''
         Lots of implementation details in here, should be replaced by a facade
 
@@ -336,8 +370,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
         TODO: DRY principle violated
         '''
 
-        if 'x_abs' in dict:
-            x_abs = dict['x_abs']
+        if 'x_abs' in sdict:
+            x_abs = sdict['x_abs']
             x_abs = x_abs - self.int_x_pos_offset
             if self.x_min < x_abs < self.x_max:
                 ''' Conversion to mm and command emission'''
@@ -346,8 +380,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: X Motion limit would be reached!')
 
-        if 'y_abs' in dict:
-            y_abs = dict['y_abs']
+        if 'y_abs' in sdict:
+            y_abs = sdict['y_abs']
             y_abs = y_abs - self.int_y_pos_offset
             if self.y_min < y_abs < self.y_max:
                 ''' Conversion to mm and command emission'''
@@ -356,8 +390,8 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: Y Motion limit would be reached!')
 
-        if 'z_abs' in dict:
-            z_abs = dict['z_abs']
+        if 'z_abs' in sdict:
+            z_abs = sdict['z_abs']
             z_abs = z_abs - self.int_z_pos_offset
             if self.z_min < z_abs < self.z_max:
                 ''' Conversion to mm and command emission'''
@@ -366,18 +400,21 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
             else:
                 self.sig_status_message.emit('Absolute movement stopped: Z Motion limit would be reached!')
 
-        if 'f_abs' in dict:
-            f_abs = dict['f_abs']
+        if 'f_abs' in sdict:
+            f_abs = sdict['f_abs']
             f_abs = f_abs - self.int_f_pos_offset
             if self.f_min < f_abs < self.f_max:
+                logger.debug('Moving to f_abs: %s' % f_abs)
                 ''' Conversion to mm and command emission'''
-                f_abs = f_abs / 1000
-                self.pidevice.MOV({5: f_abs})
+                f_abs_mm = f_abs / 1000
+                self.pidevice.MOV({5: f_abs_mm})
             else:
-                self.sig_status_message.emit('Absolute movement stopped: F Motion limit would be reached!')
+                msg = f' f_abs={f_abs} absolute movement stopped: F motion limits ({self.f_min},{self.f_max}) would be reached!'
+                self.sig_status_message.emit(msg)
+                logger.debug(msg)
 
-        if 'theta_abs' in dict:
-            theta_abs = dict['theta_abs']
+        if 'theta_abs' in sdict:
+            theta_abs = sdict['theta_abs']
             theta_abs = theta_abs - self.int_theta_pos_offset
             if self.theta_min < theta_abs < self.theta_max:
                 ''' No Conversion to mm !!!! and command emission'''
@@ -386,8 +423,14 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
                 self.sig_status_message.emit('Absolute movement stopped: Theta Motion limit would be reached!')
 
         if wait_until_done:
+            self.state['moving_to_target'] = True
+            logger.debug('Waiting for target (wait_until_done=True)')
             self.pitools.waitontarget(self.pidevice)
+            logger.debug('Target reached (wait_until_done=True)')
+            self.report_position()
+            self.state['moving_to_target'] = False
 
+    @QtCore.pyqtSlot()
     def stop(self):
         self.pidevice.STP(noraise=True)
 
@@ -759,7 +802,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -859,7 +902,7 @@ class mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(mesoSPIM_Stage):
         self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
         self.create_internal_position_dict()
-
+        self.state['position'] = self.int_position_dict
         self.sig_position.emit(self.int_position_dict)
         # print(self.int_position_dict)
 
@@ -1020,7 +1063,7 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -1272,7 +1315,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # self.state = mesoSPIM_StateSingleton()
+        self.state = mesoSPIM_StateSingleton()
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)

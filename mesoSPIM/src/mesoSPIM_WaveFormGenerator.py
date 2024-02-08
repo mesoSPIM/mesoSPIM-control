@@ -310,17 +310,18 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                       'etl_r_amplitude' : etl_r_amplitude}
 
                     '''  Now the GUI needs to be updated '''
-                    logger.info('Parameters set from csv')
+                    # time.sleep(0.2) # possible freezing here
+                    logger.info(f'Parameters set from csv: {parameter_dict}')
                     self.state.set_parameters(parameter_dict)
 
         if match_found:
             '''Update waveforms with the new parameters'''
             self.create_waveforms()
-            self.sig_update_gui_from_state.emit(False)
         else:
             err_message = f"Laser {laser} - zoom {zoom} combination not found in ETL file. Update the file:\n{cfg_path}"
             print("Error: " + err_message)
             logger.error(err_message)
+        self.sig_update_gui_from_state.emit(False)
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):
