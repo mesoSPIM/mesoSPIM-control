@@ -59,7 +59,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.image_view.addItem(self.hLine)
 
         # Create overlay ROIs
-        self.overlay = None  # None, 'box'
+        self.overlay = 'LS marker' # 'box', None, 'LS marker'
         w, h = self.x_image_width//self.subsampling, self.y_image_width//self.subsampling
         self.roi_box = pg.RectROI((0, 0), (w, h), sideScalers=True)
         self.roi_drawn = False
@@ -103,6 +103,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.set_roi('box', (w//2 - 50, h//2 - 50, 100, 100))
         elif overlay_name == 'Overlay: none':
             self.set_roi(None, (0, 0, w, h))
+        elif overlay_name == 'LS marker':
+            self.set_roi('LS marker', (0, 0, w, h))
 
     def get_roi(self):
         im_item = self.image_view.getImageItem()
@@ -118,12 +120,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         return roi
 
     def set_roi(self, mode='box', x_y_w_h=(0, 0, 100, 100)):
-        assert mode in ('box', None), f"Mode must be in ('box', None), received {mode} instead"
+        assert mode in ('box', None, 'LS marker'), f"Mode must be in ('box', None, 'LS marker'), received {mode} instead"
         self.overlay = mode
         x, y, w, h = x_y_w_h
         self.roi_box.setPos((x, y))
         self.roi_box.setSize((w, h))
-        if self.overlay is None and self.roi_drawn:
+        if self.overlay in (None, 'LS marker') and self.roi_drawn:
             self.image_view.removeItem(self.roi_box)
             self.roi_drawn = False
         elif self.overlay == 'box' and not self.roi_drawn:
@@ -142,6 +144,13 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.status_label.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
                                       f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
                                       f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
+            self.hide_light_sheet_marker()
+        elif self.overlay == None:
+            self.hide_light_sheet_marker()
+            self.status_label.setText(f"Image dimensions: {roi.shape}")
+        elif self.overlay == 'LS marker':
+            self.draw_lightsheet_marker()
+            print('LS marker drawn')
         else:
             self.status_label.setText(f"Image dimensions: {roi.shape}")
 
@@ -159,6 +168,10 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         elif self.state['shutterconfig'] == 'Both':
             self.lightsheet_marker_R.setOpacity(1)
             self.lightsheet_marker_L.setOpacity(1)
+
+    def hide_light_sheet_marker(self):
+        self.lightsheet_marker_R.setOpacity(0)
+        self.lightsheet_marker_L.setOpacity(0)
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
@@ -178,5 +191,4 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.x_image_width, self.y_image_width = w, h
             self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
         self.draw_crosshairs()
-        self.draw_lightsheet_marker()
 

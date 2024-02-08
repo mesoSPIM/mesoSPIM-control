@@ -78,6 +78,11 @@
        </property>
        <item>
         <property name="text">
+         <string>LS marker</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Overlay: none</string>
         </property>
        </item>
