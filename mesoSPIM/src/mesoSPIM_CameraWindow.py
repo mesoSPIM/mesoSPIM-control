@@ -150,7 +150,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.status_label.setText(f"Image dimensions: {roi.shape}")
         elif self.overlay == 'LS marker':
             self.draw_lightsheet_marker()
-            print('LS marker drawn')
         else:
             self.status_label.setText(f"Image dimensions: {roi.shape}")
 
