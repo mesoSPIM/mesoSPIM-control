@@ -415,7 +415,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''Housekeeping: Setting up the DO master trigger task'''
         self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
                                                          line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
-        self.master_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+        #self.master_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
         '''Calculate camera high time and initial delay:
         Disadvantage: high time and delay can only be set after a task has been created
@@ -429,7 +429,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                                     initial_delay=self.camera_delay)
 
         self.camera_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['camera_trigger_source'])
-        self.camera_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+        #self.camera_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
         '''Housekeeping: Setting up the counter task for the stage TTL trigger for certain stages'''
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
@@ -442,7 +442,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             stage_delay = stage_delay_percent * 0.01 * sweeptime
             self.stage_trigger_task.co_channels.add_co_pulse_chan_time(trig_line, high_time=stage_high_time, initial_delay=stage_delay)
             self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(trig_source)
-            self.stage_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+            #self.stage_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         if self.ao_cards == 2: # default mesoSPIM v5 configuration
@@ -453,7 +453,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
             self.galvo_etl_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
-            self.galvo_etl_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+            #self.galvo_etl_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
             '''Housekeeping: Setting up the AO task for the ETL and lasers and setting the trigger input'''
             self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'],
@@ -465,7 +465,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                         sample_mode=AcquisitionType.FINITE,
                                                         samps_per_chan=samples)
             self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
-            self.laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+            #self.laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
         else: # Benchtop single-card PXI NI-6733 or cDAQ NI-9264 configuration
             self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
@@ -476,7 +476,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
             self.galvo_etl_laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
-            self.galvo_etl_laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+            #self.galvo_etl_laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
     def write_waveforms_to_tasks(self):
         """Write the waveforms to the slave tasks"""
