@@ -30,8 +30,7 @@ class mesoSPIM_StateSingleton():
                 # Another thread could have created the instance
                 # before we acquired the lock. So check that the
                 # instance is still nonexistent.
-                if not mesoSPIM_StateSingleton.instance:
-                    mesoSPIM_StateSingleton.instance = mesoSPIM_StateSingleton.__StateObject()
+                mesoSPIM_StateSingleton.instance = mesoSPIM_StateSingleton.__StateObject()
 
         return mesoSPIM_StateSingleton.instance
 
