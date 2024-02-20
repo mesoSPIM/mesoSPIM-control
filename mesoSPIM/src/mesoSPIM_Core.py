@@ -132,6 +132,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_polling_stage_position_start.connect(self.serial_worker.stage.pos_timer.start)
         self.sig_polling_stage_position_stop.connect(self.serial_worker.stage.pos_timer.stop)
         self.sig_move_absolute.connect(self.serial_worker.move_absolute)
+        self.sig_move_relative.connect(self.serial_worker.move_relative)
+        self.sig_move_relative_and_wait_until_done.connect(lambda sdict: self.serial_worker.move_relative(sdict, wait_until_done=True))
+        self.sig_state_request.connect(self.serial_worker.state_request_handler)
+        self.sig_state_request_and_wait_until_done.connect(lambda sdict: self.serial_worker.state_request_handler(sdict, wait_until_done=True))
         #self.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.serial_worker.move_absolute(sdict, wait_until_done=True))
 
         ''' Start the threads '''

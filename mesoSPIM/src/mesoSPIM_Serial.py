@@ -40,10 +40,6 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.cfg = parent.cfg
         self.state = mesoSPIM_StateSingleton()
 
-        ''' Handling of state changing requests '''
-        self.parent.sig_state_request.connect(self.state_request_handler)
-        self.parent.sig_state_request_and_wait_until_done.connect(lambda sdict: self.state_request_handler(sdict, wait_until_done=True))
-
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
             self.filterwheel = LudlFilterWheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
@@ -102,10 +98,6 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage.sig_position.connect(self.report_position)
         except:
             print('Stage not initalized! Please check the config file')
-
-        ''' Wiring signals through to child objects '''
-        self.parent.sig_move_relative.connect(self.move_relative)
-        self.parent.sig_move_relative_and_wait_until_done.connect(lambda sdict: self.move_relative(sdict, wait_until_done=True))
 
         # self.parent.sig_move_absolute.connect(self.move_absolute)
         # self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True))
