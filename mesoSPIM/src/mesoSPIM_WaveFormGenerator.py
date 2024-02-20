@@ -83,6 +83,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(), dict.values()):
+            self.sig_update_gui_from_state.emit(True) # Notify GUI about the change
             if key in ('samplerate',
                        'sweeptime',
                        'intensity',
@@ -117,16 +118,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'camera_pulse_%',
                        'shutterconfig',
                        ):
-                ''' Notify GUI about the change '''
-                self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
-                self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
             elif key == 'zoom':
-                self.sig_update_gui_from_state.emit(True)
                 self.state[key] = value
                 self.rescale_galvo_amplitude_by_zoom(float(value[:-1])) # truncate and convert string eg '1.2x' -> 1.2
-                self.sig_update_gui_from_state.emit(False)
                 self.create_waveforms()
             elif key == 'ETL_cfg_file':
                 self.state[key] = value
@@ -135,10 +131,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.update_etl_parameters_from_zoom(value)
             elif key == 'set_etls_according_to_laser':
                 self.update_etl_parameters_from_laser(value)
-
             elif key == 'state':
                 if value == 'live':
                     logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+            self.sig_update_gui_from_state.emit(False) # Stop updating GUI about the change
 
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
