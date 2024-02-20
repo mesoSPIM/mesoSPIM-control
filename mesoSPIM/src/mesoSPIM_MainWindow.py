@@ -83,7 +83,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         # Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
-        self.state.sig_updated.connect(self.update_gui_from_state, type=Qt.DirectConnection)
+        self.state.sig_updated.connect(self.update_gui_from_state)
         self.state['package_directory'] = package_directory
 
         # Setting up the user interface windows
@@ -663,6 +663,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
                 self.update_widget_from_state(widget, state_parameter, conversion_factor)                
             self.block_signals_from_controls(False)
+            logger.debug('GUI updated from state')
 
     def run_snap(self):
         self.sig_state_request.emit({'state':'snap'})
