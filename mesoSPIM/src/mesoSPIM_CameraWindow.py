@@ -75,6 +75,10 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.lightsheet_marker_L = pg.PolyLineROI(positions=points_L, closed=True, pen='y', movable=False, rotatable=False, removable=False, aspectLocked=True)
         self.image_view.addItem(self.lightsheet_marker_R)
         self.image_view.addItem(self.lightsheet_marker_L)
+        # hide the draggable handles:
+        for roi in (self.lightsheet_marker_R, self.lightsheet_marker_L):
+            for handle in roi.getHandles():
+                handle.setOpacity(0)
         self.hide_light_sheet_marker()
 
         # Set up internal CameraWindow signals
