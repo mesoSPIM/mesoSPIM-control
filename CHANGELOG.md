@@ -1,14 +1,18 @@
-## Release candidate 2024 [1.8.3]
+## Release February 2024 [1.8.3]
 
 ### User Interface :lollipop:
 :gem: Light-sheet direction is shown in the camera window as an image overlay. It interactively changes depending on the Left/Right/Both arms illimination state.
 
 ### Hardware control :wrench:
-- Added ZWO 2" 7-position filterwheel support (PR#79 by Fabian Voigt)
-- added checks and warnings for AO maximum voltage range (5V or 10V, which depends on hardware, but can be damaging if not set correctly).
+- Support of Mitutoyo 5-position objective turret (revolver, part #378-726D), for mesoSPIM v4-5 [upgrade](https://github.com/mesoSPIM/benchtop-hardware/tree/main/v4-5-upgrade-2023).
+- Safety movement of the focus stage backward to `f_objective_exchange` position for motorized objective exchange. The `f_objective_exchange` parameter is defined in the config file.
+- Optional buffering of images into RAM and flushing to disk when RAM is full or the stack is finished, [PR#72](https://github.com/mesoSPIM/mesoSPIM-control/pull/72) by [@AlanMWatson](https://github.com/AlanMWatson). Controlled by adding `buffering` dictionary to the config file.
+- support of ZWO 2" 7-position filterwheel support (PR#79 by Fabian Voigt)
+- checks and warnings for AO maximum voltage range (5V or 10V, which depends on hardware, but can be damaging if not set correctly).
 
 ### Bugfixes :bug: 
 - incorrect focus stage steps when interpolating between two focus positions in a stack. Reported and tested by Ivana Gantar and Laura Batti (Wyss Center Geneva). Affected small-amplitude focus interpolation, where required F-stage steps between planes were smaller than minimum feasible stage step. The minimum feasible stage step changed from 0.1 to 0.25 µm in function `get_focus_stepsize_generator(self, f_stage_min_step_um=0.25)`.
+- no more dropped frames during long acquisitions with slow disks.
 
 ## Release January 2023 [1.8.2]
 ### Hardware control 
