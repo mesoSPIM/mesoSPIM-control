@@ -402,14 +402,19 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         # Check if 1 or 2 DAQ cards are used for AO waveform generation
         self.ao_cards = 1 if ah['galvo_etl_task_line'].split('/')[-2] == ah['laser_task_line'].split('/')[-2] else 2
-        logger.info(f"Using {self.ao_cards} DAQmx card(s) for AO waveform generation.")
+        # DEBUG: For testing without DAQmx card
+        #self.ao_cards = 0
+        #logger.info(f"Using {self.ao_cards} DAQmx card(s) for AO waveform generation.")
 
         if self.ao_cards == 1:
             # These AO tasks than must be bundled into one task if a single DAQmx card is used (e.g. PXI-6733)
             self.galvo_etl_laser_task = nidaqmx.Task()
-        else:
+        elif self.ao_cards == 2:
             self.galvo_etl_task = nidaqmx.Task()
             self.laser_task = nidaqmx.Task()
+        else:
+            self.galvo_etl_laser_task = nidaqmx.Task()
+            print("AO card in debug mode.")
 
         '''Housekeeping: Setting up the DO master trigger task'''
         self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
@@ -466,7 +471,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
             self.laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
-        else: # Benchtop single-card PXI NI-6733 or cDAQ NI-9264 configuration
+        elif self.ao_cards == 1: # Benchtop single-card PXI NI-6733 or cDAQ NI-9264 configuration
             self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
                                                                       min_val=-5, max_val=5)
             msg = "Galvo-ETL-Laser AO task voltage range is set to -5V to 5V. Check if this is correct for your hardware."
@@ -476,14 +481,23 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                        samps_per_chan=samples)
             self.galvo_etl_laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
             self.galvo_etl_laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+        else: #debugging
+            print("AO card in simulation mode.")
+            self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val=-5, max_val=5)
+            self.galvo_etl_laser_task.timing.cfg_samp_clk_timing(rate=1000, sample_mode=AcquisitionType.FINITE, samps_per_chan=200)
+            self.galvo_etl_laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+            print(f"AO card in simulation mode configured: samplerate {samplerate}, samps_per_chan: {samples}.")
 
     def write_waveforms_to_tasks(self):
         """Write the waveforms to the slave tasks"""
         if self.ao_cards == 2:
             self.galvo_etl_task.write(self.galvo_and_etl_waveforms)
             self.laser_task.write(self.laser_waveforms)
-        else:
+        elif self.ao_cards == 1:
             self.galvo_etl_laser_task.write(np.vstack((self.galvo_and_etl_waveforms, self.laser_waveforms)))
+        else:
+            self.galvo_etl_laser_task.write(self.galvo_and_etl_waveforms)
+            print(f"Debugging write_waveforms_to_tasks(): galvo and etl waveforms written into (ah['galvo_etl_task_line'])")
 
     def start_tasks(self):
         """Starts the tasks for camera triggering and analog outputs
@@ -497,8 +511,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         if self.ao_cards == 2:
             self.galvo_etl_task.start()
             self.laser_task.start()
+        elif self.ao_cards == 1:
+            self.galvo_etl_laser_task.start()
         else:
             self.galvo_etl_laser_task.start()
+            print("Debuggng start_tasks(): software mode, no trigger.")
 
     def run_tasks(self):
         """Runs the tasks for triggering, analog and counter outputs
@@ -515,8 +532,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         if self.ao_cards == 2:
             self.galvo_etl_task.wait_until_done()
             self.laser_task.wait_until_done()
+        elif self.ao_cards == 1:
+            self.galvo_etl_laser_task.wait_until_done()
         else:
             self.galvo_etl_laser_task.wait_until_done()
+            print("Debug run_tasks(): waiting for AO task to be done.")
         self.camera_trigger_task.wait_until_done()
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
             self.stage_trigger_task.wait_until_done()
@@ -526,8 +546,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         if self.ao_cards == 2:
             self.galvo_etl_task.stop()
             self.laser_task.stop()
+        elif self.ao_cards == 1:
+            self.galvo_etl_laser_task.stop()
         else:
             self.galvo_etl_laser_task.stop()
+            print("Debug stop_tasks(): stopping AO task.")
         self.camera_trigger_task.stop()
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
             self.stage_trigger_task.stop()
@@ -540,8 +563,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         if self.ao_cards == 2:
             self.galvo_etl_task.close()
             self.laser_task.close()
+        elif self.ao_cards == 1:
+            self.galvo_etl_laser_task.close()
         else:
             self.galvo_etl_laser_task.close()
+            print("Debug close_tasks(): closing AO task.")
         self.camera_trigger_task.close()
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
             self.stage_trigger_task.close()

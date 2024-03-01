@@ -136,7 +136,7 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.serial_thread.start()
 
         ''' Setting waveform generation up '''
-        if self.cfg.waveformgeneration == 'NI':
+        if self.cfg.waveformgeneration in ('NI', 'cDAQ'):
             self.waveformer = mesoSPIM_WaveFormGenerator(self)
         elif self.cfg.waveformgeneration == 'DemoWaveFormGeneration':
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
@@ -177,6 +177,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
         self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
         self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
+        self.state['samplerate'] = self.cfg.startup['samplerate']
 
         self.start_time = 0
         self.stopflag = False
