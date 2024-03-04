@@ -211,7 +211,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.image_to_disk(acq, acq_list)
 
     def image_to_disk(self, acq, acq_list):
-        self.parent.parent.sig_status_message.emit('RAM Buffer Full: Flushing data to disk before continuing acquisition')
+        self.parent.parent.sig_status_message.emit('Flushing data to disk...')
         while True:
             image = self.image_buffer[self.cur_image_counter % self.image_buffer.shape[0]]
             xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
