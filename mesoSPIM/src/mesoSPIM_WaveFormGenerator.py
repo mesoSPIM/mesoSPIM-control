@@ -516,7 +516,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         pulse_array = np.ones(int(self.pulse_duration_ms*self.state['samplerate']/1000.0 + 2), dtype=bool)
         pulse_array[0] = pulse_array[-1] = False
         self.master_trigger_task.write(pulse_array, auto_start=True)
-        self.master_trigger_task.wait_until_done()
 
         '''Wait until everything is done - this is effectively a sleep function.'''
         if self.ao_cards == 2:
