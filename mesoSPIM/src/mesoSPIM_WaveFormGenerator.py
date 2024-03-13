@@ -409,16 +409,14 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.laser_task = nidaqmx.Task()
 
         '''Housekeeping: Setting up the DO master trigger task'''
-        # Note that NI-6733 does not have internal clock for DO tasks, so we need to circumvent this by using sample rate with 1 sample
         self.pulse_duration_ms = self.cfg.startup['master_trigger_duration_ms'] if 'master_trigger_duration_ms' in self.cfg.startup.keys() else 1
-        pulse_adjusted_samplerate_Hz =  int(1000/self.pulse_duration_ms)
         self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
                                                          line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
         self.master_trigger_task.timing.cfg_samp_clk_timing(
-            rate=pulse_adjusted_samplerate_Hz,  # Sample rate in Hz
+            rate=samplerate,  # Sample rate in Hz
             active_edge=nidaqmx.constants.Edge.RISING,  # Rising edge trigger
             sample_mode=nidaqmx.constants.AcquisitionType.FINITE,  # Finite acquisition mode
-            samps_per_chan=1  # Only 1 sample at a time, due to NI-6373 limitation on DO timing
+            samps_per_chan=int(self.pulse_duration_ms*samplerate/1000 + 2)  # Number of samples per channel
         )
         #self.master_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
@@ -497,7 +495,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         If the tasks are configured to be triggered, they won't output any
         signals until run_tasks() is called.
         """
-        self.master_trigger_task.start()
         self.camera_trigger_task.start()
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
             self.stage_trigger_task.start()
@@ -516,9 +513,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         For this to work, all analog output and counter tasks have to be started so
         that they are waiting for the trigger signal.
         """
-        self.master_trigger_task.write(True)
-        self.master_trigger_task.wait_until_done()
-        self.master_trigger_task.write(False)
+        pulse_array = np.ones(int(self.pulse_duration_ms*self.state['samplerate']/1000.0 + 2), dtype=bool)
+        pulse_array[0] = pulse_array[-1] = False
+        self.master_trigger_task.write(pulse_array, auto_start=True)
         self.master_trigger_task.wait_until_done()
 
         '''Wait until everything is done - this is effectively a sleep function.'''
