@@ -416,8 +416,15 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             print("AO card in simulation mode.")
 
         '''Housekeeping: Setting up the DO master trigger task'''
+        self.pulse_duration_ms = self.cfg.startup['master_trigger_duration_ms'] if 'master_trigger_duration_ms' in self.cfg.startup.keys() else 1
         self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
                                                          line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+        self.master_trigger_task.timing.cfg_samp_clk_timing(
+            rate=samplerate,  # Sample rate in Hz
+            active_edge=nidaqmx.constants.Edge.RISING,  # Rising edge trigger
+            sample_mode=nidaqmx.constants.AcquisitionType.FINITE,  # Finite acquisition mode
+            samps_per_chan=int(self.pulse_duration_ms*samplerate/1000 + 2)  # Number of samples per channel
+        )
         self.master_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
         '''Calculate camera high time and initial delay:
@@ -519,7 +526,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         For this to work, all analog output and counter tasks have to be started so
         that they are waiting for the trigger signal.
         """
-        self.master_trigger_task.write([False, True, True, True, False], auto_start=True)
+        pulse_array = np.ones(int(self.pulse_duration_ms*self.state['samplerate']/1000.0 + 2), dtype=bool)
+        pulse_array[0] = pulse_array[-1] = False
+        self.master_trigger_task.write(pulse_array, auto_start=True)
 
         '''Wait until everything is done - this is effectively a sleep function.'''
         if self.ao_cards == 2:
