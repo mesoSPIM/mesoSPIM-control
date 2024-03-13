@@ -519,7 +519,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         For this to work, all analog output and counter tasks have to be started so
         that they are waiting for the trigger signal.
         """
-        self.master_trigger_task.write([False, True, True, True, False], auto_start=True)
+        self.master_trigger_task.write([False, True, True, True, True, True, False], auto_start=True)
 
         '''Wait until everything is done - this is effectively a sleep function.'''
         if self.ao_cards == 2:
