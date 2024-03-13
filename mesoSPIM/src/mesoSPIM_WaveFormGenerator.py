@@ -505,8 +505,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         For this to work, all analog output and counter tasks have to be started so
         that they are waiting for the trigger signal.
+
+        Warning: `master_trigger_task` does not have explicit sample rate, because some cards like NI-6733 do not support this for DO lines.
+        So the master pulse duration varies depening on the device. Can be as short as small as 1 micro-second!
         """
-        self.master_trigger_task.write([False, True, True, True, False], auto_start=True)
+        self.master_trigger_task.write([False, True, True, True, True, True, False], auto_start=True)
 
         '''Wait until everything is done - this is effectively a sleep function.'''
         if self.ao_cards == 2:
