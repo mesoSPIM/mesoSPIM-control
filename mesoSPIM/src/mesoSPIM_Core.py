@@ -151,21 +151,23 @@ class mesoSPIM_Core(QtCore.QObject):
         left_shutter_line = self.cfg.shutterdict['shutter_left']
         right_shutter_line = self.cfg.shutterdict['shutter_right']
 
-        if self.cfg.shutter == 'NI':
+        if self.cfg.shutter in ('NI', 'cDAQ'):
             self.shutter_left = NI_Shutter(left_shutter_line)
             self.shutter_right = NI_Shutter(right_shutter_line)
         elif self.cfg.shutter == 'Demo':
             self.shutter_left = Demo_Shutter(left_shutter_line)
             self.shutter_right = Demo_Shutter(right_shutter_line)
 
-        self.shutter_left.close()
-        self.shutter_right.close()
+        if self.shutter_left:
+            self.shutter_left.close()
+        if self.shutter_right:
+            self.shutter_right.close()
         self.shutterswitch = self.cfg.shutterswitch if hasattr(self.cfg, 'shutterswitch') else False # backward compatibility with older config files
         self.state['shutterstate'] = False
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
         ''' Setting the laser enabler up '''
-        if self.cfg.laser == 'NI':
+        if self.cfg.laser in ('NI', 'cDAQ'):
             self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
         elif self.cfg.laser == 'Demo':
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
@@ -431,26 +433,38 @@ class mesoSPIM_Core(QtCore.QObject):
         shutterconfig = self.state['shutterconfig']
         if shutterconfig == 'Both':
             if self.shutterswitch is False:
-                self.shutter_left.open()
-                self.shutter_right.open()
+                if self.shutter_left:
+                    self.shutter_left.open()
+                if self.shutter_right:
+                    self.shutter_right.open()
         elif shutterconfig == 'Left':
             if self.shutterswitch is False:
-                self.shutter_left.open()
-                self.shutter_right.close()
+                if self.shutter_left:
+                    self.shutter_left.open()
+                if self.shutter_right:
+                    self.shutter_right.close()
             else:
-                self.shutter_left.open() # open the general shutter
-                self.shutter_right.close() # set side-switch to false 
+                if self.shutter_left:
+                    self.shutter_left.open() # open the general shutter
+                if self.shutter_right:
+                    self.shutter_right.close() # set side-switch to false 
 
         elif shutterconfig == 'Right':
             if self.shutterswitch is False:
-                self.shutter_right.open()
-                self.shutter_left.close()
+                if self.shutter_right:
+                    self.shutter_right.open()
+                if self.shutter_left:
+                    self.shutter_left.close()
             else:
-                self.shutter_left.open() # open the general shutter
-                self.shutter_right.open() # set side-switch to true
+                if self.shutter_left:
+                    self.shutter_left.open() # open the general shutter
+                if self.shutter_right:
+                    self.shutter_right.open() # set side-switch to true
         else: # BOTH open
-            self.shutter_right.open()
-            self.shutter_left.open()
+            if self.shutter_right:
+                self.shutter_right.open()
+            if self.shutter_left:
+                self.shutter_left.open()
 
         self.state['shutterstate'] = True
 
@@ -462,11 +476,14 @@ class mesoSPIM_Core(QtCore.QObject):
         and the shutter_right line is the left/right switch (Right==True)
         '''
         if self.shutterswitch is False:
-            self.shutter_left.close()
-            self.shutter_right.close()
+            if self.shutter_right:
+                self.shutter_right.close()
+            if self.shutter_left:
+                self.shutter_left.close()
         else:
-            self.shutter_left.close()
-        
+            if self.shutter_left:
+                self.shutter_left.close()
+       
         self.state['shutterstate'] = False
 
     '''
