@@ -451,7 +451,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(trig_source)
             if self.cfg.waveformgeneration == 'cDAQ':
                 self.stage_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
-                logger.debug("Stage trigger task reserved.")
+                logger.debug("Stage trigger CO task reserved.")
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         if self.ao_cards == 2: # default mesoSPIM v5 configuration
@@ -478,7 +478,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
             if self.cfg.waveformgeneration == 'cDAQ':
                 self.laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
-                logger.debug("Laser task reserved.")
+                logger.debug("Laser AO task reserved.")
 
         elif self.ao_cards == 1: # Benchtop single-card PXI NI-6733 or cDAQ NI-9264 configuration
             self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],

@@ -23,7 +23,7 @@ Card designations need to be the same as in NI MAX, if necessary, use NI MAX
 to rename your cards correctly.
 
 Physical connections:
-- 'master_trigger_out_line' ('PXI1Slot4/port0/line0') must be physically connected to BNC-2110 "PFI0 / AI start" terminal.
+- 'master_trigger_out_line' must be physically connected to 'PXI1Slot4/port0/line0' terminal
 - 'camera_trigger_out_line' to PFI12 / P2.4 ('/PXI1Slot4/ctr0') terminal
 - 'stage_trigger_out_line' to PFI13 / P2.5 ('/PXI1Slot4/ctr1') terminal
 - galvos, ETL controllers to 'PXI1Slot4/ao0:3' terminals
@@ -72,6 +72,7 @@ shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # empty terminal here,
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
 shutteroptions = ('Left','Right')
+#shutteroptions = ('Right',)
 
 ''' A bit of a hack: Assumes that the shutter_left line is the general shutter
 and the shutter_right line is the left/right switch (Right==True)'''
@@ -192,7 +193,7 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' o
                     'z_max' : 99000,
                     'z_min' : -99000,
                     'f_max' : 99000,
-                    'f_min' : -99000,
+                    'f_min' : -8500,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -356,7 +357,7 @@ startup = {
 'max_laser_voltage': 5.0,
 'intensity' : 10,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
+'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
 'filter' : 'Empty',
 'etl_l_delay_%' : 5,
@@ -371,12 +372,12 @@ startup = {
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
 'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : -0.38,
+'galvo_l_offset' : 0.0,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/7,
 'galvo_r_frequency' : 99.9,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.36,
+'galvo_r_offset' : 0.0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 10,

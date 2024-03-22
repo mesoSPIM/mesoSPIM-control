@@ -45,10 +45,11 @@ Physical connections:
 DIGITAL OUTPUTS (P0.0-P0.3, NI-9401 card in slot 1, 'cDAQ1Mod1'):
 - 'master_trigger_out_line' (aka 'cDAQ1Mod1/port0/line0', P0.0/PFI0, Pin14) must be physically connected to P0.4/PFI4 terminal (pin20) of the same card cDAQ1Mod1.
 - 'camera_trigger_out_line' to '/cDAQ1Mod1/ctr0' (Pin19 of cDAQ1Mod1 card)
-- 'stage_trigger_out_line' to '/cDAQ1Mod1/port0/line2' (Pin17 of cDAQ1Mod1 card)
+- 'stage_trigger_out_line' to '/cDAQ1Mod1/ctr2' (Pin16 of cDAQ1Mod1 card)
 
 DIGITAL INPUTS (P0.4, NI-9401 card in slot 1, 'cDAQ1Mod1'):
-- '/cDAQ1Mod1/PFI4' (aka P0.4/PFI4, pin20, see above) of the same card cDAQ1Mod1. Triggers camera, stage, galvo/ETL tasks.
+- '/cDAQ1Mod1/PFI4' (aka P0.4/PFI4, pin20, see above) of the same card cDAQ1Mod1. Triggers camera, stage, galvo/ETL tasks. 
+Note: This also makes four pins P0.4-0.7 cofigured for input-only.
 
 ANALOG OUTPUTS (NI-9264 card in slot 3, 'cDAQ1Mod3'):
 - galvos, ETL controllers to 'cDAQ1Mod3/ao0:3' terminals. Pins 1-4, ground pins on the opposite side.
@@ -62,12 +63,12 @@ Signal pin - Ground pin, label:
 
 'cDAQ1Mod1', NI-9401 (digital) card in slot 1:
 Pin14-Pin1, 'master_trigger_out_line'
-Pin19-Pin6, 'camera_trigger_out_line' 
+Pin19-Pin6, 'camera_trigger_out_line', must be counter-out type of pin
 Pin16-Pin3, 'shutter_right', arm switching
-Pin17-Pin3, 'stage_trigger_out_line'
 Pin20-Pin7, '/cDAQ1Mod1/PFI4' ('camera_trigger_source', 'galvo_etl_task_trigger_source', 'laser_task_trigger_source', and 'stage_trigger_source'). Could this be done via internal wiring instead?
 
 'cDAQ1Mod2', NI-9401 (digital) card in slot 2:
+Pin25-Pin3, 'stage_trigger_out_line', must be counter-out type of pin
 Pin14-Pin1, 'cDAQ1Mod2/port0/line0', laser enable line for 405 nm
 Pin16-Pin3, 'cDAQ1Mod2/port0/line1', laser enable line for 488 nm
 Pin17-Pin4, 'cDAQ1Mod2/port0/line2', laser enable line for 561 nm
@@ -121,7 +122,7 @@ Shutter configuration
 
 shutter = 'cDAQ' # 'Demo' or 'NI' or 'cDAQ'
 shutterdict = {'shutter_left' : None, # empty terminal, general shutter, optional
-              'shutter_right' : '/cDAQ1Mod1/port0/line1', # arm switching
+              'shutter_right' : '/cDAQ1Mod1/port0/line2', # arm switching
               }
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
@@ -160,22 +161,22 @@ camera_parameters = {'x_pixels' : 1024,
                      'subsampling' : [1,2,4]}
 '''
 
-camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
+camera = 'Photometrics' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
-camera_parameters = {'x_pixels' : 1024,
-                     'y_pixels' : 1024,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
+                     'x_pixel_size_in_microns' : 4.25,
+                     'y_pixel_size_in_microns' : 4.25,
                      'subsampling' : [1,2,4],
-                     'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
-                     'defect_correct_mode': 2,
+                     'speed_table_index': 0,
+                     'exp_mode' : 'Edge Trigger', # Lots of options in PyVCAM --> see constants.py
+                     'readout_port': 0,
+                     'gain_index': 1,
+                     'exp_out_mode': 4, # 4: line out
                      'binning' : '1x1',
-                     'readout_speed' : 1,
-                     'trigger_active' : 1,
-                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
-                     'trigger_polarity' : 2, # positive pulse
-                     'trigger_source' : 2, # external
+                     'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
+                     'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
+                     'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us
                     }
 
 binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
@@ -195,7 +196,7 @@ PI stage support: 'stage_type' : 'PI' or 'PI_1controllerNstages' (equivalent), '
 Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy', 
 '''
 
-stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
+stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
                     'y_load_position': 10000,
                     'y_unload_position': -45000,
                     'x_max' : 51000,
@@ -205,7 +206,7 @@ stage_parameters = {'stage_type' : 'DemoStage', # 'DemoStage', 'PI', 'TigerASI' 
                     'z_max' : 99000,
                     'z_min' : -99000,
                     'f_max' : 99000,
-                    'f_min' : -99000,
+                    'f_min' : -8500,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -221,7 +222,7 @@ asi_parameters = {'COMport' : 'COM23',
                   'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # num of encoder counts per um or degree, depending on stage type.
                   'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
                   'stage_trigger_source': '/cDAQ1Mod1/PFI4',
-                  'stage_trigger_out_line': '/cDAQ1Mod1/port0/line2',
+                  'stage_trigger_out_line': '/cDAQ1Mod1/ctr2', # must be COUNTER-OUT (CO) type of pin. 
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
@@ -234,7 +235,7 @@ For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Dynamixel', 'ZWO'
+filterwheel_parameters = {'filterwheel_type' : 'ZWO', # 'Demo', 'Ludl', 'Dynamixel', 'ZWO'
                           'COMport' : 'COM31', # irrelevant for 'ZWO'
                           'baudrate' : 115200, # relevant only for 'Dynamixel'
                           'servo_id' :  1, # relevant only for 'Dynamixel'
@@ -359,12 +360,12 @@ startup = {
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
 'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : 0.0,
+'galvo_l_offset' : -0.24,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/7,
 'galvo_r_frequency' : 99.9,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.0,
+'galvo_r_offset' : 0.16,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 10,
