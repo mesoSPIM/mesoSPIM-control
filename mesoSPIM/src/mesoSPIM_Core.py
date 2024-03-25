@@ -756,19 +756,18 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list)
+        self.open_shutters() # Needs to be before prepare_image_series() to avoid blocking cDAQ tasks
+        laser = self.state['laser']
+        self.laserenabler.enable(laser)
         self.prepare_image_series()
         self.sig_write_metadata.emit(acq, acq_list)
 
     def run_acquisition(self, acq, acq_list):
         steps = acq.get_image_count()
         self.sig_status_message.emit('Running Acquisition')
-        self.open_shutters()
         self.image_acq_start_time = time.time()
         self.image_acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
-
         move_dict = acq.get_delta_dict()
-        laser = self.state['laser']
-        self.laserenabler.enable(laser)
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         for i in range(steps):
             if self.stopflag is True:
@@ -779,11 +778,6 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 self.snap_image_in_series(laser_blanking)
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
-                #time.sleep(0.02)
-                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
-
-                # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-
                 ''' Get the current correct f_step'''
                 f_step = self.f_step_generator.__next__()
                 if f_step != 0:
