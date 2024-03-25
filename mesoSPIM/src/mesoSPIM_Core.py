@@ -830,14 +830,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
 
-        self.close_shutters()
-
     def close_acquisition(self, acq, acq_list):
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
         if self.stopflag is False:
-            # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
             self.sig_end_image_series.emit(acq, acq_list)
+        self.close_shutters()
 
         if self.TTL_mode_enabled_in_cfg is True:
             logger.debug('Attempting to set TTL mode to False')
