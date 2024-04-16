@@ -227,9 +227,9 @@ which are the values of the dict.
 '''
 asi_parameters = {'COMport' : 'COM23',
                   'baudrate' : 115200,
-                  'stage_assignment': {'y':'V', 'z':'Z', 'theta':'T', 'x':'X', 'f':'Y'}, # The dictionary order is important here! Must match the ASI cards 1,2,3, let to right. WARNING: this particular ASI controller has reversed cards order: VZTXY.
-                  'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # Num of encoder counts per um or degree, depending on stage type. The order match the 'stage_assignment' dictionary order.
-                  'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
+                  'stage_assignment': {'x':'X', 'f':'Y', 'z':'Z', 'theta':'T', 'y':'V'}, # The dictionary order is important here! Must match the ASI cards 1,2,3, let to right. This is standard ASI cards order: XYZTV
+                  'encoder_conversion': {'X': 10., 'Y': 10., 'Z': 10., 'T': 1000., 'V': 10.}, # Num of encoder counts per um or degree, depending on stage type. The order match the 'stage_assignment' dictionary order.
+                  'speed': {'X': 3., 'Y': 3., 'Z': 3., 'T': 30., 'V': 3.}, # mm/s or deg/s.
                   'stage_trigger_source': '/PXI1Slot4/PFI0',
                   'stage_trigger_out_line': '/PXI1Slot4/ctr1',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
