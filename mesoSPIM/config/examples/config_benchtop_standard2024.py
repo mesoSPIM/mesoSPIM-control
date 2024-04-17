@@ -235,7 +235,7 @@ asi_parameters = {'COMport' : 'COM23',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
-                  'ttl_cards':(2,3),
+                  'ttl_cards':(1,2),
                   }
                   
 '''
