@@ -16,7 +16,7 @@ from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
-
+from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
@@ -100,6 +100,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
+
+        self.tile_view_window = mesoSPIM_TileViewWindow(self)
 
         self.webcam_window = None
 
@@ -222,6 +224,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else: # open previously close window
             self.webcam_window.show()
 
+    def open_tile_view_window(self):
+        self.tile_view_window.show()
+
+
     def __del__(self):
         """Cleans the threads up after deletion, waits until the threads
         have truly finished their life.
@@ -245,6 +251,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
         if self.contrast_window:
             self.contrast_window.close()
+        self.tile_view_window.close()
         self.close()
 
     def open_tiff(self):
@@ -370,6 +377,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
         self.actionOpen_Webcam_Window.triggered.connect(self.open_webcam_window)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
+        self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
     def initialize_and_connect_widgets(self):
@@ -377,16 +385,24 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
         ''' Connecting the movement & zero buttons '''
-        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': -self.xyzIncrementSpinbox.value()}))
-        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': self.xyzIncrementSpinbox.value()}))
-        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': self.xyzIncrementSpinbox.value()}))
-        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': -self.xyzIncrementSpinbox.value()}))
-        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': self.xyzIncrementSpinbox.value()}))
-        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': -self.xyzIncrementSpinbox.value()}))
-        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': self.focusIncrementSpinbox.value()}))
-        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': -self.focusIncrementSpinbox.value()}))
-        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': self.rotIncrementSpinbox.value()}))
-        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': -self.rotIncrementSpinbox.value()}))
+        if 'flip_XYZFT_button_polarity' in self.cfg.ui_options.keys():
+            x_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][0] else 1
+            y_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][1] else 1
+            z_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][2] else 1
+            f_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][3] else 1
+            t_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][4] else 1
+        else:
+            logger.warning('flip_XYZFT_button_polarity key not found in config file. Assuming all buttons are positive.')
+        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': - x_sign*self.xyzIncrementSpinbox.value()}))
+        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': x_sign*self.xyzIncrementSpinbox.value()}))
+        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': y_sign*self.xyzIncrementSpinbox.value()}))
+        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': - y_sign*self.xyzIncrementSpinbox.value()}))
+        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': z_sign*self.xyzIncrementSpinbox.value()}))
+        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': - z_sign*self.xyzIncrementSpinbox.value()}))
+        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': f_sign*self.focusIncrementSpinbox.value()}))
+        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': - f_sign*self.focusIncrementSpinbox.value()}))
+        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': t_sign*self.rotIncrementSpinbox.value()}))
+        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': - t_sign*self.rotIncrementSpinbox.value()}))
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 

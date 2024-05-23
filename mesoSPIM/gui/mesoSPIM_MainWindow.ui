@@ -888,6 +888,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>Make current position 0 (relative)</string>
+              </property>
               <property name="text">
                <string>ZERO
  XY</string>
@@ -1015,6 +1018,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>Make current position 0 (relative)</string>
+              </property>
               <property name="text">
                <string>ZERO
  Z</string>
@@ -1072,7 +1078,7 @@
               <number>500</number>
              </property>
             </widget>
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>160</x>
@@ -1236,6 +1242,9 @@
                <italic>false</italic>
                <bold>false</bold>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Make current position 0 (relative)</string>
              </property>
              <property name="text">
               <string>ZERO
@@ -1505,6 +1514,9 @@ Focus</string>
              </property>
              <property name="singleStep">
               <double>0.010000000000000</double>
+             </property>
+             <property name="value">
+              <double>5.000000000000000</double>
              </property>
             </widget>
             <widget class="QPushButton" name="rotZeroButton">
@@ -3515,6 +3527,7 @@ Focus</string>
     <addaction name="actionOpen_Camera_Window"/>
     <addaction name="actionOpen_Webcam_Window"/>
     <addaction name="actionOpen_Acquisition_Manager"/>
+    <addaction name="actionOpen_Tile_Overview"/>
     <addaction name="actionCascade_windows"/>
    </widget>
    <addaction name="menuFile"/>
@@ -3586,6 +3599,11 @@ Focus</string>
    </property>
    <property name="toolTip">
     <string>Open Webcam Window, if configured</string>
+   </property>
+  </action>
+  <action name="actionOpen_Tile_Overview">
+   <property name="text">
+    <string>Open Tile Overview</string>
    </property>
   </action>
  </widget>

@@ -19,6 +19,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_zero_button' : True, # set to False if objective change requires F-stage movement (e.g. mesoSPIM v6-Revolver), for safety reasons
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'flip_XYZFT_button_polarity': (True, False, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
               'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'window_pos': (100, 100), # position of the main window on the screen, top left corner.
               'usb_webcam_ID': 0, # open USB web-camera (if available): 0 (first cam), 1 (second cam), ...
@@ -163,8 +164,8 @@ camera_parameters = {'x_pixels' : 2048, #5056
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
-camera_parameters = {'x_pixels' : 1024,
-                     'y_pixels' : 1024,
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
@@ -203,12 +204,12 @@ stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1contr
                     'y_unload_position': 6000,
                     'x_center_position': 0, # x-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
                     'z_center_position': 0, # z-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
-                    'x_max' : 6000,
-                    'x_min' : -6000,
-                    'y_max' : 6000,
-                    'y_min' : -6000,
-                    'z_max' : 6000,
-                    'z_min' : -6000,
+                    'x_max' : 25000,
+                    'x_min' : -25000,
+                    'y_max' : 50000,
+                    'y_min' : -50000,
+                    'z_max' : 25000,
+                    'z_min' : -25000,
                     'f_max' : 98000,
                     'f_min' : 0,
                     'f_objective_exchange': 2000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
@@ -370,7 +371,7 @@ startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
-'position' : {'x_pos':0,'y_pos':100,'z_pos':200,'f_pos':5000,'theta_pos':180},
+'position' : {'x_pos':0,'y_pos':1000,'z_pos':2000,'f_pos':5000,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'folder' : 'D:/tmp/',
 'snap_folder' : 'D:/tmp/',
