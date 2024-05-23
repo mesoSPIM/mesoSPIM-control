@@ -185,6 +185,8 @@ Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
                     'y_load_position': -25000,
                     'y_unload_position': 10000,
+                    'x_center_position': 2000,
+                    'z_center_position': 500,
                     'x_max' : 51000,
                     'x_min' : -46000,
                     'y_max' : 160000,

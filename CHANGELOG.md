@@ -1,3 +1,10 @@
+## Development branch 2024
+### User Interface :lollipop:
+- :gem: Center Button added in the Main Window GUI, for bringing the sample holder in the X- and Z- center relative to the light-sheet and detection objective. 
+This has to be set up in the config file with `'x_center_position'` and `'z_center_position'` parameters for stage motion.
+- Buttons for movement in horizontal plane got shorter, for more intuitive navigation.
+- Tooltips were added to the navigation buttons.
+
 ## Release February 2024 [1.8.3]
 
 ### User Interface :lollipop:
