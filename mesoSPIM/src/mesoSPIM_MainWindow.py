@@ -67,6 +67,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_stop_movement = QtCore.pyqtSignal()
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
+    sig_center_sample = QtCore.pyqtSignal()
 
     sig_save_etl_config = QtCore.pyqtSignal()
     sig_poke_demo_thread = QtCore.pyqtSignal()
@@ -396,6 +397,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
+        self.centerButton.clicked.connect(self.sig_center_sample.emit)
         self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'etl_offset', 'amplitude': 0.5}))
         self.ContrastWindowButton.clicked.connect(lambda: self.sig_launch_contrast_window.emit())
 

@@ -199,8 +199,10 @@ Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_an
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI', etc, see above
-                    'y_load_position': -10000,
-                    'y_unload_position': 10000,
+                    'y_load_position': -6000,
+                    'y_unload_position': 6000,
+                    'x_center_position': 0, # x-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
+                    'z_center_position': 0, # z-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
                     'x_max' : 6000,
                     'x_min' : -6000,
                     'y_max' : 6000,

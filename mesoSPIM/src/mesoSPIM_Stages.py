@@ -48,6 +48,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.parent.sig_unzero_axes.connect(self.unzero_axes)
         self.parent.sig_load_sample.connect(self.load_sample)
         self.parent.sig_unload_sample.connect(self.unload_sample)
+        self.parent.sig_center_sample.connect(self.center_sample)
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -238,7 +239,23 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.y_pos = self.cfg.stage_parameters['y_load_position']
 
     def unload_sample(self):
-        self.y_pos = self.cfg.stage_parameters['y_unload_position']
+        self.y_pos = self.cfg.stage_parameters['y_unload_position']    
+        
+    def center_sample(self):
+        if 'x_center_position' in self.cfg.stage_parameters.keys():
+            self.x_center = self.cfg.stage_parameters['x_center_position']
+            self.move_absolute({'x_abs': self.x_center}, wait_until_done=True)
+        else:
+            self.x_center = self.x_pos
+            msg = 'Centering X position not defined in config file'
+            logger.info(msg); print(msg)
+        if 'z_center_position' in self.cfg.stage_parameters.keys():
+            self.z_center = self.cfg.stage_parameters['z_center_position']
+            self.move_absolute({'z_abs': self.z_center}, wait_until_done=True)
+        else:
+            self.z_center = self.z_pos
+            msg = 'Centering Z position not defined in config file'
+            logger.info(msg); print(msg)
 
 
 class mesoSPIM_DemoStage(mesoSPIM_Stage):

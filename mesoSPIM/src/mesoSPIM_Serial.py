@@ -28,6 +28,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_stop_movement = QtCore.pyqtSignal()
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
+    sig_center_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
     sig_status_message = QtCore.pyqtSignal(str)
     sig_pause = QtCore.pyqtSignal(bool)
@@ -110,6 +111,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_stop_movement.connect(self.sig_stop_movement.emit)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
+        self.parent.sig_center_sample.connect(self.sig_center_sample.emit)
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):

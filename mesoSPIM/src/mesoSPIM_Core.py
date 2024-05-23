@@ -75,6 +75,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_stop_movement = QtCore.pyqtSignal()
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
+    sig_center_sample = QtCore.pyqtSignal()
 
     sig_polling_stage_position_start, sig_polling_stage_position_stop = QtCore.pyqtSignal(), QtCore.pyqtSignal()
 
@@ -105,6 +106,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_stop_movement.connect(self.stop_movement, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_center_sample.connect(self.sig_center_sample.emit, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit, type=QtCore.Qt.QueuedConnection)
         self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state, type=QtCore.Qt.QueuedConnection)
 
