@@ -158,12 +158,20 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         ''' Little helper method to provide the first row out of a selection range '''
         try:
             indices = self.selection_model.selectedIndexes()
-            rows = self.selection_model.selectedRows()
+            #rows = self.selection_model.selectedRows()
             row = indices[0].row()
         except:
             row = None
-
         return row
+
+    def get_selected_rows(self):
+        ''' Little helper method to provide the selected rows '''
+        try:
+            indices = self.selection_model.selectedIndexes()
+            rows = [index.row() for index in indices]
+        except:
+            rows = None
+        return rows
 
     def set_selected_row(self, row):
         ''' Little helper method to allow setting the selected row '''

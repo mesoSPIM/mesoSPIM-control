@@ -16,7 +16,7 @@ from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
-
+from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
@@ -100,6 +100,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
+
+        self.tile_view_window = mesoSPIM_TileViewWindow(self)
 
         self.webcam_window = None
 
@@ -222,6 +224,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else: # open previously close window
             self.webcam_window.show()
 
+    def open_tile_view_window(self):
+        self.tile_view_window.show()
+
+
     def __del__(self):
         """Cleans the threads up after deletion, waits until the threads
         have truly finished their life.
@@ -245,6 +251,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
         if self.contrast_window:
             self.contrast_window.close()
+        self.tile_view_window.close()
         self.close()
 
     def open_tiff(self):
@@ -370,6 +377,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
         self.actionOpen_Webcam_Window.triggered.connect(self.open_webcam_window)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
+        self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
     def initialize_and_connect_widgets(self):

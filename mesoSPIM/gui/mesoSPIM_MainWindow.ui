@@ -1072,7 +1072,7 @@
               <number>500</number>
              </property>
             </widget>
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
                <x>160</x>
@@ -3515,6 +3515,7 @@ Focus</string>
     <addaction name="actionOpen_Camera_Window"/>
     <addaction name="actionOpen_Webcam_Window"/>
     <addaction name="actionOpen_Acquisition_Manager"/>
+    <addaction name="actionOpen_Tile_Overview"/>
     <addaction name="actionCascade_windows"/>
    </widget>
    <addaction name="menuFile"/>
@@ -3586,6 +3587,11 @@ Focus</string>
    </property>
    <property name="toolTip">
     <string>Open Webcam Window, if configured</string>
+   </property>
+  </action>
+  <action name="actionOpen_Tile_Overview">
+   <property name="text">
+    <string>Open Tile Overview</string>
    </property>
   </action>
  </widget>
