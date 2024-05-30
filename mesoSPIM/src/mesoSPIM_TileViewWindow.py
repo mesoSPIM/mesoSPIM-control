@@ -56,14 +56,24 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         #tile.setBrush(brush)
         acq_list = self.state['acq_list']
         selected_row = self.acquisition_manager_window.get_first_selected_row()
-        print(selected_row)
+        start_points_xy_list = []
         for ind, acq in enumerate(acq_list):
-            startpoint = acq.get_startpoint()
-            # Define the rectangle's position and size
-            rect = QRectF(startpoint['x_abs']*scale_factor, startpoint['y_abs']*scale_factor, tile_size_x*scale_factor, tile_size_y*scale_factor)
+            start_point_x, start_point_y = acq.get_startpoint()['x_abs'], acq.get_startpoint()['y_abs']
+            if (start_point_x, start_point_y) not in start_points_xy_list: # remove duplicates
+                start_points_xy_list.append((start_point_x, start_point_y))
+                rect = QRectF(start_point_x*scale_factor, start_point_y*scale_factor, tile_size_x*scale_factor, tile_size_y*scale_factor)
+                tile = QGraphicsRectItem(rect)
+                if ind == selected_row:
+                    tile.setPen(pen_selected)
+                else:
+                    tile.setPen(pen_default)
+                self.scene.addItem(tile)
+
+        # plot selected tile on top
+        if selected_row is not None:
+            acq = acq_list[selected_row]
+            start_point_x, start_point_y = acq.get_startpoint()['x_abs'], acq.get_startpoint()['y_abs']
+            rect = QRectF(start_point_x*scale_factor, start_point_y*scale_factor, tile_size_x*scale_factor, tile_size_y*scale_factor)
             tile = QGraphicsRectItem(rect)
-            if ind == selected_row:
-                tile.setPen(pen_selected)
-            else:
-                tile.setPen(pen_default)
+            tile.setPen(pen_selected)
             self.scene.addItem(tile)
