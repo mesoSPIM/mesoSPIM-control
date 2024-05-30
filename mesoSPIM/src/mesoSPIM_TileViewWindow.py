@@ -36,6 +36,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
         self.subsampling = self.cfg.startup['camera_display_live_subsampling']
+        self.scale_factor = 0.01
         self.scene = QGraphicsScene()
         self.tile_overview.setScene(self.scene)
         self.show_tiles()
@@ -47,12 +48,11 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
     def show_tiles(self):
         self.scene.clear()
         self.pixel_size = self.cfg.pixelsize[self.state['zoom']]
-        tile_size_x, tile_size_y = self.x_image_width * self.pixel_size, self.y_image_width * self.pixel_size
-        scale_factor = 0.01
+        self.tile_size_x, self.tile_size_y = self.x_image_width * self.pixel_size, self.y_image_width * self.pixel_size
         # Optional: Set brush and pen to color the rectangle
         #brush = QBrush(Qt.green)
         pen_default = QPen(Qt.white);  pen_default.setWidth(2)
-        pen_selected = QPen(Qt.yellow);  pen_selected.setWidth(2)
+        pen_selected = QPen(Qt.yellow);  pen_selected.setWidth(3)
         #tile.setBrush(brush)
         acq_list = self.state['acq_list']
         selected_row = self.acquisition_manager_window.get_first_selected_row()
@@ -61,7 +61,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
             start_point_x, start_point_y = acq.get_startpoint()['x_abs'], acq.get_startpoint()['y_abs']
             if (start_point_x, start_point_y) not in start_points_xy_list: # remove duplicates
                 start_points_xy_list.append((start_point_x, start_point_y))
-                rect = QRectF(start_point_x*scale_factor, start_point_y*scale_factor, tile_size_x*scale_factor, tile_size_y*scale_factor)
+                rect = QRectF(start_point_x*self.scale_factor, start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
                 tile = QGraphicsRectItem(rect)
                 if ind == selected_row:
                     tile.setPen(pen_selected)
@@ -69,11 +69,21 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
                     tile.setPen(pen_default)
                 self.scene.addItem(tile)
 
-        # plot selected tile on top
+        # plot selected tile on top in yellow
         if selected_row is not None:
             acq = acq_list[selected_row]
             start_point_x, start_point_y = acq.get_startpoint()['x_abs'], acq.get_startpoint()['y_abs']
-            rect = QRectF(start_point_x*scale_factor, start_point_y*scale_factor, tile_size_x*scale_factor, tile_size_y*scale_factor)
+            rect = QRectF(start_point_x*self.scale_factor, start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
             tile = QGraphicsRectItem(rect)
             tile.setPen(pen_selected)
             self.scene.addItem(tile)
+
+        self.show_current_FOV()
+
+    def show_current_FOV(self):
+        start_point_x, start_point_y = self.state['position']['x_pos'], self.state['position']['y_pos']
+        rect = QRectF(start_point_x*self.scale_factor, start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
+        pen_current_FOV = QPen(Qt.white);  pen_current_FOV.setWidth(1); pen_current_FOV.setStyle(Qt.DotLine)
+        tile = QGraphicsRectItem(rect)
+        tile.setPen(pen_current_FOV)
+        self.scene.addItem(tile)
