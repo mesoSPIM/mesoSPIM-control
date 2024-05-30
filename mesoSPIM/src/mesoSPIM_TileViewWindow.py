@@ -16,6 +16,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 logger = logging.getLogger(__name__)
 
 class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
+    sig_scale_changed = QtCore.pyqtSignal(float)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -45,6 +46,12 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.timer.timeout.connect(self.show_tiles)
         self.timer.start(1000)  # 1000 milliseconds = 1 second
 
+        self.doubleSpinBox_scale.valueChanged.connect(lambda: self.on_scale_changed(self.doubleSpinBox_scale.value()))
+
+    def on_scale_changed(self, value=0.01):
+        self.scale_factor = value
+        self.show_tiles()
+
     def show_tiles(self):
         self.scene.clear()
         self.pixel_size = self.cfg.pixelsize[self.state['zoom']]
@@ -57,33 +64,31 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         acq_list = self.state['acq_list']
         selected_row = self.acquisition_manager_window.get_first_selected_row()
         start_points_xy_list = []
+        global_offset_x, global_offset_y = acq_list[0].get_startpoint()['x_abs'], acq_list[0].get_startpoint()['y_abs']
         for ind, acq in enumerate(acq_list):
-            start_point_x, start_point_y = acq.get_startpoint()['x_abs'], acq.get_startpoint()['y_abs']
+            start_point_x, start_point_y = acq.get_startpoint()['x_abs'] - global_offset_x, acq.get_startpoint()['y_abs'] - global_offset_y
             if (start_point_x, start_point_y) not in start_points_xy_list: # remove duplicates
                 start_points_xy_list.append((start_point_x, start_point_y))
                 rect = QRectF(start_point_x*self.scale_factor, start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
                 tile = QGraphicsRectItem(rect)
-                if ind == selected_row:
-                    tile.setPen(pen_selected)
-                else:
-                    tile.setPen(pen_default)
+                tile.setPen(pen_default)
                 self.scene.addItem(tile)
 
         # plot selected tile on top in yellow
         if selected_row is not None:
             acq = acq_list[selected_row]
-            start_point_x, start_point_y = acq.get_startpoint()['x_abs'], acq.get_startpoint()['y_abs']
+            start_point_x, start_point_y = acq.get_startpoint()['x_abs'] - global_offset_x, acq.get_startpoint()['y_abs'] - global_offset_y
             rect = QRectF(start_point_x*self.scale_factor, start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
             tile = QGraphicsRectItem(rect)
             tile.setPen(pen_selected)
             self.scene.addItem(tile)
 
-        self.show_current_FOV()
+        self.show_current_FOV(global_offset_x, global_offset_y)
 
-    def show_current_FOV(self):
-        start_point_x, start_point_y = self.state['position']['x_pos'], self.state['position']['y_pos']
+    def show_current_FOV(self, global_offset_x, global_offset_y):
+        start_point_x, start_point_y = self.state['position']['x_pos'] - global_offset_x, self.state['position']['y_pos'] - global_offset_y
         rect = QRectF(start_point_x*self.scale_factor, start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
-        pen_current_FOV = QPen(Qt.white);  pen_current_FOV.setWidth(1); pen_current_FOV.setStyle(Qt.DotLine)
+        pen_current_FOV = QPen(Qt.white);  pen_current_FOV.setWidth(1.5); pen_current_FOV.setStyle(Qt.DotLine)
         tile = QGraphicsRectItem(rect)
         tile.setPen(pen_current_FOV)
         self.scene.addItem(tile)

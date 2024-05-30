@@ -203,12 +203,12 @@ stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1contr
                     'y_unload_position': 6000,
                     'x_center_position': 0, # x-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
                     'z_center_position': 0, # z-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
-                    'x_max' : 6000,
-                    'x_min' : -6000,
-                    'y_max' : 6000,
-                    'y_min' : -6000,
-                    'z_max' : 6000,
-                    'z_min' : -6000,
+                    'x_max' : 25000,
+                    'x_min' : -25000,
+                    'y_max' : 50000,
+                    'y_min' : -50000,
+                    'z_max' : 25000,
+                    'z_min' : -25000,
                     'f_max' : 98000,
                     'f_min' : 0,
                     'f_objective_exchange': 2000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
@@ -370,7 +370,7 @@ startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
-'position' : {'x_pos':0,'y_pos':100,'z_pos':200,'f_pos':5000,'theta_pos':180},
+'position' : {'x_pos':0,'y_pos':1000,'z_pos':2000,'f_pos':5000,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'folder' : 'D:/tmp/',
 'snap_folder' : 'D:/tmp/',
