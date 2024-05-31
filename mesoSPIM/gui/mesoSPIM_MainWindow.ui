@@ -888,6 +888,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>Make current position 0 (relative)</string>
+              </property>
               <property name="text">
                <string>ZERO
  XY</string>
@@ -1014,6 +1017,9 @@
                 <italic>false</italic>
                 <bold>false</bold>
                </font>
+              </property>
+              <property name="toolTip">
+               <string>Make current position 0 (relative)</string>
               </property>
               <property name="text">
                <string>ZERO
@@ -1236,6 +1242,9 @@
                <italic>false</italic>
                <bold>false</bold>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Make current position 0 (relative)</string>
              </property>
              <property name="text">
               <string>ZERO
@@ -1505,6 +1514,9 @@ Focus</string>
              </property>
              <property name="singleStep">
               <double>0.010000000000000</double>
+             </property>
+             <property name="value">
+              <double>5.000000000000000</double>
              </property>
             </widget>
             <widget class="QPushButton" name="rotZeroButton">

@@ -385,16 +385,24 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
         ''' Connecting the movement & zero buttons '''
-        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': -self.xyzIncrementSpinbox.value()}))
-        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': self.xyzIncrementSpinbox.value()}))
-        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': self.xyzIncrementSpinbox.value()}))
-        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': -self.xyzIncrementSpinbox.value()}))
-        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': self.xyzIncrementSpinbox.value()}))
-        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': -self.xyzIncrementSpinbox.value()}))
-        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': self.focusIncrementSpinbox.value()}))
-        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': -self.focusIncrementSpinbox.value()}))
-        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': self.rotIncrementSpinbox.value()}))
-        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': -self.rotIncrementSpinbox.value()}))
+        if 'flip_XYZFT_button_polarity' in self.cfg.ui_options.keys():
+            x_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][0] else 1
+            y_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][1] else 1
+            z_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][2] else 1
+            f_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][3] else 1
+            t_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][4] else 1
+        else:
+            logger.warning('flip_XYZFT_button_polarity key not found in config file. Assuming all buttons are positive.')
+        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': - x_sign*self.xyzIncrementSpinbox.value()}))
+        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': x_sign*self.xyzIncrementSpinbox.value()}))
+        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': y_sign*self.xyzIncrementSpinbox.value()}))
+        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': - y_sign*self.xyzIncrementSpinbox.value()}))
+        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': z_sign*self.xyzIncrementSpinbox.value()}))
+        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': - z_sign*self.xyzIncrementSpinbox.value()}))
+        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': f_sign*self.focusIncrementSpinbox.value()}))
+        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': - f_sign*self.focusIncrementSpinbox.value()}))
+        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': t_sign*self.rotIncrementSpinbox.value()}))
+        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': - t_sign*self.rotIncrementSpinbox.value()}))
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
