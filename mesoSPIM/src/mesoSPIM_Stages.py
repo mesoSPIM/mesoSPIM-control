@@ -244,14 +244,14 @@ class mesoSPIM_Stage(QtCore.QObject):
     def center_sample(self):
         if 'x_center_position' in self.cfg.stage_parameters.keys():
             self.x_center = self.cfg.stage_parameters['x_center_position']
-            self.move_absolute({'x_abs': self.x_center}, wait_until_done=True)
+            self.move_absolute({'x_abs': self.x_center})
         else:
             self.x_center = self.x_pos
             msg = 'Centering X position not defined in config file'
             logger.info(msg); print(msg)
         if 'z_center_position' in self.cfg.stage_parameters.keys():
             self.z_center = self.cfg.stage_parameters['z_center_position']
-            self.move_absolute({'z_abs': self.z_center}, wait_until_done=True)
+            self.move_absolute({'z_abs': self.z_center})
         else:
             self.z_center = self.z_pos
             msg = 'Centering Z position not defined in config file'
