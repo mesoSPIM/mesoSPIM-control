@@ -1,5 +1,7 @@
 ## Development branch 2024
 ### User Interface :lollipop:
+- :gem: A long awaited feature: **Tile Overview** window (*View/Open Tile Overview*), showing the entire acquisition area with tile positions, their overlap, and current FOV position relative to them.
+    - Some setups need to flip x- and/or y-stage polarity for correct tile display: use `'flip_XYZFT_button_polarity': (True, False, False, False, False),` in the config file.
 - :gem: Center Button added in the Main Window GUI, for bringing the sample holder in the X- and Z- center relative to the light-sheet and detection objective. 
 This has to be set up in the config file with `'x_center_position'` and `'z_center_position'` parameters for stage motion.
 - Buttons for movement in horizontal plane got shorter, for more intuitive navigation.

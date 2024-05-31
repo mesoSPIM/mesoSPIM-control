@@ -87,6 +87,10 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
             rect = QRectF(self.x_sign*start_point_x*self.scale_factor, self.y_sign*start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
             tile = QGraphicsRectItem(rect)
             tile.setPen(pen_selected)
+            label = QtWidgets.QGraphicsTextItem("Selected tile")
+            label.setDefaultTextColor(Qt.yellow)
+            label.setPos(rect.topLeft())
+            self.scene.addItem(label)
             self.scene.addItem(tile)
 
         self.show_current_FOV(global_offset_x, global_offset_y)
@@ -94,7 +98,12 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
     def show_current_FOV(self, global_offset_x, global_offset_y):
         start_point_x, start_point_y = self.state['position']['x_pos'] - global_offset_x, self.state['position']['y_pos'] - global_offset_y
         rect = QRectF(self.x_sign*start_point_x*self.scale_factor, self.y_sign*start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
-        pen_current_FOV = QPen(Qt.white);  pen_current_FOV.setWidth(1.5); pen_current_FOV.setStyle(Qt.DotLine)
+        label = QtWidgets.QGraphicsTextItem("Current FOV")
+        label.setDefaultTextColor(Qt.white)
+        label.setPos(rect.topLeft())
+        self.scene.addItem(label)
+
+        pen_current_FOV = QPen(Qt.white);  pen_current_FOV.setWidth(2); pen_current_FOV.setStyle(Qt.DotLine)
         tile = QGraphicsRectItem(rect)
         tile.setPen(pen_current_FOV)
         self.scene.addItem(tile)
