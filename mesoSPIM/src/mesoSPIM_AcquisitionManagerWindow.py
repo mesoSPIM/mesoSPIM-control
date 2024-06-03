@@ -34,6 +34,8 @@ from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
 from .utils.utility_functions import convert_seconds_to_string
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QMessageBox
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +123,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
         self.FilenameWizardButton.clicked.connect(self.generate_filenames)
         self.FocusTrackingWizardButton.clicked.connect(self.run_focus_tracking_wizard)
+        self.AutoIlliminationButton.clicked.connect(self.auto_illumination)
         self.ImageProcessingWizardButton.clicked.connect(self.run_image_processing_wizard)
 
         self.DeleteAllButton.clicked.connect(self.delete_all_rows)
@@ -474,9 +477,38 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.display_warning('No row selected!')
 
     def display_warning(self, string):
-        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
+        warning = QtWidgets.QMessageBox.warning(None,'Warning',
                 string, QtWidgets.QMessageBox.Ok) 
+    def display_information(self, string, fontsize=12):
+        msg_box = QMessageBox(QtWidgets.QMessageBox.Information, 'Info', string)
+        msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, 'Info', string)
+        font = msg_box.font()
+        font.setPointSize(fontsize)  
+        msg_box.setFont(font)
+        msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        return msg_box.exec_()
 
-
-
+    def auto_illumination(self, margin_um=500):
+        message = 'Illumination (Left/Right) will be changed based on x-positions of tiles on the grid.\n\n'
+        message += f'Only tiles closest to the grid edges will be changed, within 500 µm from the "x_min" and "x_max" of the acquisition table.\n\n'
+        message += 'The best illumination for tiles that are closer to the grid center is sample-dependent and must be selected manually.'
+        message_box =  self.display_information(message,12)
+        if message_box == QMessageBox.Cancel:
+            return
+        x_pos_list = []
+        # collect all x positions
+        for row in range(0,self.model.rowCount()):
+            x_pos = self.model.getXPosition(row)
+            x_pos_list.append(x_pos)
+        # for edge positions, set the illumination based on them
+        x_min = min(x_pos_list)
+        x_max = max(x_pos_list)
+        for row in range(0,self.model.rowCount()):
+            x_pos = self.model.getXPosition(row)
+            if x_pos <= x_min + margin_um:
+                self.model.setShutterconfig(row, 'Left')
+            elif x_pos >= x_max - margin_um:
+                self.model.setShutterconfig(row, 'Right')
+            else:
+                pass
 

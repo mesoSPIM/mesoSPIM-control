@@ -54,18 +54,18 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="1" column="2">
-        <widget class="QPushButton" name="DeleteAllButton">
+       <item row="0" column="1">
+        <widget class="QPushButton" name="CopyButton">
          <property name="font">
           <font>
            <pointsize>14</pointsize>
           </font>
          </property>
          <property name="toolTip">
-          <string>Deletes all rows in the table</string>
+          <string>Duplicates a row in the table</string>
          </property>
          <property name="text">
-          <string>Delete all Rows</string>
+          <string>Duplicate Row</string>
          </property>
         </widget>
        </item>
@@ -84,78 +84,18 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
-        <widget class="QPushButton" name="CopyButton">
+       <item row="1" column="2">
+        <widget class="QPushButton" name="DeleteAllButton">
          <property name="font">
           <font>
            <pointsize>14</pointsize>
           </font>
          </property>
          <property name="toolTip">
-          <string>Duplicates a row in the table</string>
+          <string>Deletes all rows in the table</string>
          </property>
          <property name="text">
-          <string>Duplicate Row</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <widget class="QPushButton" name="MoveUpButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="toolTip">
-          <string>Moves selected row up</string>
-         </property>
-         <property name="text">
-          <string>Move Row Up</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QPushButton" name="AddButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="toolTip">
-          <string>Adds another row to the table</string>
-         </property>
-         <property name="text">
-          <string>Add Row</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QPushButton" name="SaveButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="toolTip">
-          <string>Saves the table</string>
-         </property>
-         <property name="text">
-          <string>Save Table</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="9">
-        <widget class="QPushButton" name="MarkCurrentRotationButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="toolTip">
-          <string>Copies current sample rotation angle into the selected row.</string>
-         </property>
-         <property name="text">
-          <string>Mark Rotation</string>
+          <string>Delete all Rows</string>
          </property>
         </widget>
        </item>
@@ -207,48 +147,63 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="6">
-        <widget class="QPushButton" name="FocusTrackingWizardButton">
+       <item row="0" column="4">
+        <widget class="QPushButton" name="SaveButton">
          <property name="font">
           <font>
            <pointsize>14</pointsize>
           </font>
          </property>
          <property name="toolTip">
-          <string>Generates start/end focus positions for the table.</string>
+          <string>Saves the table</string>
          </property>
          <property name="text">
-          <string>Focus Tracking Wiz</string>
+          <string>Save Table</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="3">
-        <widget class="QPushButton" name="MoveDownButton">
+       <item row="0" column="9">
+        <widget class="QPushButton" name="MarkCurrentRotationButton">
          <property name="font">
           <font>
            <pointsize>14</pointsize>
           </font>
          </property>
          <property name="toolTip">
-          <string>Moves selected row down</string>
+          <string>Copies current sample rotation angle into the selected row.</string>
          </property>
          <property name="text">
-          <string>Move Row Down</string>
+          <string>Mark Rotation</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="8">
-        <widget class="QPushButton" name="MarkCurrentStateButton">
+       <item row="0" column="3">
+        <widget class="QPushButton" name="MoveUpButton">
          <property name="font">
           <font>
            <pointsize>14</pointsize>
           </font>
          </property>
          <property name="toolTip">
-          <string>Copies current laser, intensity, zoom &amp; filter settings into the selected row.</string>
+          <string>Moves selected row up</string>
          </property>
          <property name="text">
-          <string>Mark State</string>
+          <string>Move Row Up</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="AddButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Adds another row to the table</string>
+         </property>
+         <property name="text">
+          <string>Add Row</string>
          </property>
         </widget>
        </item>
@@ -282,6 +237,51 @@
          </property>
         </widget>
        </item>
+       <item row="1" column="6">
+        <widget class="QPushButton" name="FocusTrackingWizardButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Generates start/end focus positions for the table.</string>
+         </property>
+         <property name="text">
+          <string>Focus Tracking Wiz</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="8">
+        <widget class="QPushButton" name="MarkCurrentStateButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Copies current laser, intensity, zoom &amp; filter settings into the selected row.</string>
+         </property>
+         <property name="text">
+          <string>Mark State</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QPushButton" name="MoveDownButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Moves selected row down</string>
+         </property>
+         <property name="text">
+          <string>Move Row Down</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="4">
         <widget class="QPushButton" name="LoadButton">
          <property name="font">
@@ -294,24 +294,6 @@
          </property>
          <property name="text">
           <string>Load Table</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="5">
-        <widget class="QPushButton" name="TilingWizardButton">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="toolTip">
-          <string>Generates a tiling acquisition through a series of steps.</string>
-         </property>
-         <property name="text">
-          <string>Tiling Wizard</string>
          </property>
         </widget>
        </item>
@@ -363,36 +345,21 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
-        <widget class="QLabel" name="label">
+       <item row="0" column="5">
+        <widget class="QPushButton" name="TilingWizardButton">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="font">
           <font>
            <pointsize>14</pointsize>
           </font>
          </property>
          <property name="toolTip">
-          <string>Predicted acquisition time in hh:mm:ss.</string>
+          <string>Generates a tiling acquisition through a series of steps.</string>
          </property>
          <property name="text">
-          <string>Estimated time &amp; size:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="5">
-        <widget class="QPushButton" name="SetFoldersButton">
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="toolTip">
-          <string>Sets all the save folders for the entire table.</string>
-         </property>
-         <property name="text">
-          <string>Set Folders</string>
+          <string>Tiling Wizard</string>
          </property>
         </widget>
        </item>
@@ -411,6 +378,24 @@
          </property>
         </widget>
        </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="label">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Predicted acquisition time in hh:mm:ss.</string>
+         </property>
+         <property name="text">
+          <string>Estimated time &amp; size:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
        <item row="2" column="4">
         <widget class="QLabel" name="PredictedSizeLabel">
          <property name="font">
@@ -423,6 +408,42 @@
          </property>
          <property name="text">
           <string>0 G</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="5">
+        <widget class="QPushButton" name="SetFoldersButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Sets all the save folders for the entire table.</string>
+         </property>
+         <property name="text">
+          <string>Set Folders</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="6">
+        <widget class="QPushButton" name="AutoIlliminationButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Set the illumination direction (Left/Right) of edge tiles based on their position (minimize light-sheet travel and scattering).</string>
+         </property>
+         <property name="text">
+          <string>Auto L/R illumination</string>
          </property>
         </widget>
        </item>

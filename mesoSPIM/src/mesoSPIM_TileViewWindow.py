@@ -100,7 +100,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         rect = QRectF(self.x_sign*start_point_x*self.scale_factor, self.y_sign*start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
         label = QtWidgets.QGraphicsTextItem("Current FOV")
         label.setDefaultTextColor(Qt.white)
-        label.setPos(rect.topLeft())
+        label.setPos(rect.bottomLeft())
         self.scene.addItem(label)
 
         pen_current_FOV = QPen(Qt.white);  pen_current_FOV.setWidth(2); pen_current_FOV.setStyle(Qt.DotLine)

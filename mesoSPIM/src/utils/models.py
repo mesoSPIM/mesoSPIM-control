@@ -345,6 +345,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         self._table = table
         self.modelReset.emit()
 
+    def setShutterconfig(self, row, shutterconfig):
+        self._table[row]['shutterconfig'] = shutterconfig
+    
     def loadModel(self, filename):
         self.modelAboutToBeReset.emit()
         with open(filename, "rb" ) as file:
