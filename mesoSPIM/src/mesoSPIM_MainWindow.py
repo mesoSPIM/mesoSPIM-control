@@ -102,6 +102,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.show()
 
         self.tile_view_window = mesoSPIM_TileViewWindow(self)
+        self.tile_view_window.show()
 
         self.webcam_window = None
 
@@ -114,6 +115,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             window_pos = (100, 100)
         self.move(window_pos[0], window_pos[1])
         self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
+        self.tile_view_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1])
         self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
         if self.webcam_window:
             self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 50, window_pos[1])
