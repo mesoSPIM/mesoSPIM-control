@@ -1503,8 +1503,14 @@ Focus</string>
                <pointsize>14</pointsize>
               </font>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
              <property name="suffix">
               <string>°</string>
+             </property>
+             <property name="decimals">
+              <number>1</number>
              </property>
              <property name="minimum">
               <double>-181.000000000000000</double>
@@ -1513,7 +1519,7 @@ Focus</string>
               <double>181.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.010000000000000</double>
+              <double>0.100000000000000</double>
              </property>
              <property name="value">
               <double>5.000000000000000</double>

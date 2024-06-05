@@ -122,7 +122,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         if state_parameter in ('x_pos','y_pos','z_pos','f_pos'):
             new_value = round(self.state['position'][state_parameter],2)
         elif state_parameter == 'rot':
-            new_value = round(self.state['position']['theta_pos'],2)
+            new_value = round(self.state['position']['theta_pos'],1)
         else:
             new_value = self.state[state_parameter]
 
