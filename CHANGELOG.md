@@ -7,6 +7,7 @@
 - during acqusition, the currently acquiring row is highlighted in **Acquisition Manager** and in **Tile Overview** windows. 
 This has to be set up in the config file with `'x_center_position'` and `'z_center_position'` parameters for stage motion.
 - Buttons for movement in horizontal plane got shorter, for more intuitive navigation.
+- current FPS shown in the progress bar
 - Tooltips were added to the navigation buttons.
 
 ### Bugfixes :bug: 

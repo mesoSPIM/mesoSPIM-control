@@ -862,6 +862,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     framerate = self.image_count / time_passed
                     self.state['predicted_acq_list_time'] = self.total_image_count / framerate
+                    self.state['current_framerate'] = framerate
 
                 self.send_progress(self.acquisition_count,
                                    self.total_acquisition_count,
