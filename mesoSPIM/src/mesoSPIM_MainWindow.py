@@ -105,8 +105,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.tile_view_window.show()
 
         self.webcam_window = None
-
         self.check_config_file()
+        self.open_webcam_window()
 
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
@@ -118,7 +118,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.tile_view_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1])
         self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
         if self.webcam_window:
-            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 50, window_pos[1])
+            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1] + self.height())
 
         # set up some Acq manager signals
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
@@ -214,16 +214,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         print(msg)
 
     def open_webcam_window(self):
-        """Open USB webcam window using cam ID specified in config file. Otherwise, try to open with ID=0"""
+        """Open USB webcam window using cam ID specified in config file."""
         if self.webcam_window is None: # first call
             if hasattr(self.cfg, 'ui_options') and ('usb_webcam_ID' in self.cfg.ui_options.keys()):
-                if self.cfg.ui_options['usb_webcam_ID'] >= 0:
-                    self.webcam_window = WebcamWindow(self.cfg.ui_options['usb_webcam_ID'])
-                    self.webcam_window.show()
-            else:
-                self.webcam_window = WebcamWindow(0)
-                self.webcam_window.show()
-        else: # open previously close window
+                self.webcam_window = WebcamWindow(self.cfg.ui_options['usb_webcam_ID'])
+            else: # create a dummy 
+                self.webcam_window = WebcamWindow(None)
+        else: # open previously closed window
             self.webcam_window.show()
 
     def open_tile_view_window(self):
