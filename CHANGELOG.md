@@ -9,6 +9,9 @@ This has to be set up in the config file with `'x_center_position'` and `'z_cent
 - Buttons for movement in horizontal plane got shorter, for more intuitive navigation.
 - Tooltips were added to the navigation buttons.
 
+### Bugfixes :bug: 
+- check motion limits for all tiles before starting the acquisition list
+
 ## Release February 2024 [1.8.3]
 
 ### User Interface :lollipop:

@@ -581,6 +581,7 @@ class mesoSPIM_Core(QtCore.QObject):
         files_without_extensions = acq_list.check_filename_extensions()
         free_disk_space_bytes = self.get_free_disk_space(acq_list)
         total_required_bytes = self.get_required_disk_space(acq_list)
+        acqusitions_outside_motion_limits = self.check_motion_limits(acq_list)
 
         if nonexisting_folders_list:
             self.sig_warning.emit('The following folders do not exist - stopping! \n'+self.list_to_string_with_carriage_return(nonexisting_folders_list))
@@ -599,6 +600,9 @@ class mesoSPIM_Core(QtCore.QObject):
                                   f'Free {format_data_size(free_disk_space_bytes)} \n'
                                   f'Required {format_data_size(total_required_bytes)}. \n'
                                   f'Stopping! \n')
+            self.sig_finished.emit()
+        elif len(acqusitions_outside_motion_limits) > 0:
+            self.sig_warning.emit(f'The acquisition list contains positions {acqusitions_outside_motion_limits} outside the motion limits - stopping!')
             self.sig_finished.emit()
         else:
             self.sig_update_gui_from_state.emit(True)
@@ -626,7 +630,33 @@ class mesoSPIM_Core(QtCore.QObject):
         px_per_image = self.camera_worker.x_pixels * self.camera_worker.y_pixels
         total_bytes_required = acq_list.get_image_count() * px_per_image * BYTES_PER_PIXEL
         return total_bytes_required
+    
+    def check_motion_limits(self, acq_list):
+        """
+        Check if the motion limits of the stage are violated for each acquisition in the given list.
 
+        Args:
+            acq_list (list): A list of dictionaries representing acquisitions, where each dictionary contains
+                             the x, y, and z positions.
+
+        Returns:
+            list: A list of indices of acquisitions in the input list that violate the motion limits.
+
+        """
+        unsafe_list = []
+        for i in range(len(acq_list)):
+            if not (self.cfg.stage_parameters['x_min'] <= acq_list[i]['x_pos'] <= self.cfg.stage_parameters['x_max']):
+                unsafe_list.append(i)
+            elif not (self.cfg.stage_parameters['y_min'] <= acq_list[i]['y_pos'] <= self.cfg.stage_parameters['y_max']):
+                unsafe_list.append(i)
+            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_start'] <= self.cfg.stage_parameters['z_max']):
+                unsafe_list.append(i)
+            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_end'] <= self.cfg.stage_parameters['z_max']):
+                unsafe_list.append(i)
+            else:
+                continue
+        return unsafe_list
+            
     def prepare_acquisition_list(self, acq_list):
         ''' Housekeeping: Prepare the acquisition list '''
         self.image_count = 0
