@@ -720,6 +720,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def prepare_acquisition(self, acq, acq_list):
         ''' Housekeeping: Prepare the acquisition  '''
         logger.info(f'Core: Running Acquisition #{self.acquisition_count} with Filename: {acq["filename"]}')
+        self.state['selected_row'] = self.acquisition_count # this make sure that the correct row is selected in the GUI
         self.sig_status_message.emit('Going to start position')
         current_rotation = self.state['position']['theta_pos']
         startpoint = acq.get_startpoint()

@@ -681,7 +681,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if self.update_gui_from_state_flag:
             self.block_signals_from_controls(True)
             for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
-                self.update_widget_from_state(widget, state_parameter, conversion_factor)                
+                self.update_widget_from_state(widget, state_parameter, conversion_factor)   
+            self.acquisition_manager_window.set_selected_row(self.state['selected_row'])             
             self.block_signals_from_controls(False)
             logger.debug('GUI updated from state')
 
