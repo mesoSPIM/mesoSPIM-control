@@ -846,23 +846,11 @@ class mesoSPIM_Core(QtCore.QObject):
 
                 ''' Keep track of passed time and predict remaining time '''
                 time_passed = time.time() - self.start_time
-                time_remaining = self.state['predicted_acq_list_time'] - time_passed
+                time_remaining = time_passed / self.image_count * (self.total_image_count - self.image_count)
 
-                ''' If the time to set up everything is longer than the predicted 
-                acq time, the remaining time turns negative - here a different 
-                calcuation should be employed here: '''
-                if time_remaining < 0:
-                    time_passed = time.time() - self.image_acq_start_time
-                    time_remaining = self.state['predicted_acq_list_time'] - time_passed
-
-                self.state['remaining_acq_list_time'] = time_remaining
-                # framerate = self.image_count / time_passed
-
-                ''' Every 100 images, update the predicted acquisition time '''
+                ''' Every 100 images, update the frame rate'''
                 if self.image_count % 100 == 0:
-                    framerate = self.image_count / time_passed
-                    self.state['predicted_acq_list_time'] = self.total_image_count / framerate
-                    self.state['current_framerate'] = framerate
+                    self.state['current_framerate'] = self.image_count / time_passed
 
                 self.send_progress(self.acquisition_count,
                                    self.total_acquisition_count,

@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2108</width>
+    <width>2458</width>
     <height>376</height>
    </rect>
   </property>
@@ -386,7 +386,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Predicted acquisition time in hh:mm:ss.</string>
+          <string>Predicted acquisition time in hh:mm:ss, based framerate in the config file.</string>
          </property>
          <property name="text">
           <string>Estimated time &amp; size:</string>

@@ -105,7 +105,6 @@ class mesoSPIM_StateSingleton():
                             'camera_sensor_mode':'ASLM',
                             'current_framerate':2.5,
                             'predicted_acq_list_time':1,
-                            'remaining_acq_list_time':1,
                             'package_directory': '',
                             'galvo_amp_scale_w_zoom': False,
                             'moving_to_target': False, # A dirty way to know if moving with wait_untile_done=True is finished from another thread

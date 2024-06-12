@@ -118,12 +118,11 @@ class Acquisition(indexed.IndexedOrderedDict):
         framerate.
 
         Args:
-            float: framerate Framerate of the microscope 
+            float: framerate of the microscope 
 
         Returns:
             float: Acquisition time in seconds
         '''
-
         return self.get_image_count()/framerate
 
     def get_delta_z_and_delta_f_dict(self, inverted=False):
