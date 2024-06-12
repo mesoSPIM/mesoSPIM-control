@@ -42,15 +42,17 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
             self.x_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][0] else 1
             self.y_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][1] else 1
         else:
-            logger.warning('flip_XYZFT_button_polarity key not found in config file. Assuming all buttons are positive.')
+            self.x_sign = self.y_sign = 1
+            msg = "'flip_XYZFT_button_polarity' key not found in config file. Assuming all buttons are positive."; logger.warning(msg); print(msg)
 
         self.scene = QGraphicsScene()
+        self.scene.setSceneRect(-300, -400, 600, 800)
         self.tile_overview.setScene(self.scene)
         self.show_tiles()
         # update the tiles every second
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.show_tiles)
-        self.timer.start(1000)  # 1000 milliseconds = 1 second
+        self.timer.start(500)  # milliseconds
 
         self.doubleSpinBox_scale.valueChanged.connect(lambda: self.on_scale_changed(self.doubleSpinBox_scale.value()))
 
@@ -62,6 +64,10 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.scene.clear()
         self.pixel_size = self.cfg.pixelsize[self.state['zoom']]
         self.tile_size_x, self.tile_size_y = self.x_image_width * self.pixel_size, self.y_image_width * self.pixel_size
+        self.fov_scene_offset_x = self.tile_size_x / 2 * self.scale_factor # offset of the FOV in the scene coordinates
+        self.fov_scene_offset_y = self.tile_size_y / 2 * self.scale_factor
+        self.show_current_FOV()
+        global_offset_x, global_offset_y = self.state['position']['x_pos'], self.state['position']['y_pos'] # offset of the FOV in global (stage) coordinates
         # Optional: Set brush and pen to color the rectangle
         #brush = QBrush(Qt.green)
         pen_default = QPen(Qt.white);  pen_default.setWidth(2)
@@ -70,12 +76,14 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         acq_list = self.state['acq_list']
         selected_row = self.acquisition_manager_window.get_first_selected_row()
         start_points_xy_list = []
-        global_offset_x, global_offset_y = acq_list[0].get_startpoint()['x_abs'], acq_list[0].get_startpoint()['y_abs']
         for ind, acq in enumerate(acq_list):
             start_point_x, start_point_y = acq.get_startpoint()['x_abs'] - global_offset_x, acq.get_startpoint()['y_abs'] - global_offset_y
             if (start_point_x, start_point_y) not in start_points_xy_list: # remove duplicates
                 start_points_xy_list.append((start_point_x, start_point_y))
-                rect = QRectF(self.x_sign*start_point_x*self.scale_factor, self.y_sign*start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
+                rect = QRectF(self.x_sign*start_point_x*self.scale_factor - self.fov_scene_offset_x, 
+                              self.y_sign*start_point_y*self.scale_factor - self.fov_scene_offset_y, 
+                              self.tile_size_x*self.scale_factor, 
+                              self.tile_size_y*self.scale_factor)
                 tile = QGraphicsRectItem(rect)
                 tile.setPen(pen_default)
                 self.scene.addItem(tile)
@@ -84,7 +92,10 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         if selected_row is not None:
             acq = acq_list[selected_row]
             start_point_x, start_point_y = acq.get_startpoint()['x_abs'] - global_offset_x, acq.get_startpoint()['y_abs'] - global_offset_y
-            rect = QRectF(self.x_sign*start_point_x*self.scale_factor, self.y_sign*start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
+            rect = QRectF(self.x_sign*start_point_x*self.scale_factor - self.fov_scene_offset_x, 
+                          self.y_sign*start_point_y*self.scale_factor - self.fov_scene_offset_y, 
+                          self.tile_size_x*self.scale_factor, 
+                          self.tile_size_y*self.scale_factor)
             tile = QGraphicsRectItem(rect)
             tile.setPen(pen_selected)
             label = QtWidgets.QGraphicsTextItem("Selected tile")
@@ -93,11 +104,10 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
             self.scene.addItem(label)
             self.scene.addItem(tile)
 
-        self.show_current_FOV(global_offset_x, global_offset_y)
-
-    def show_current_FOV(self, global_offset_x, global_offset_y):
-        start_point_x, start_point_y = self.state['position']['x_pos'] - global_offset_x, self.state['position']['y_pos'] - global_offset_y
-        rect = QRectF(self.x_sign*start_point_x*self.scale_factor, self.y_sign*start_point_y*self.scale_factor, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
+    def show_current_FOV(self):
+        """Show the current FOV in the center of the scene"""	
+        start_point_x, start_point_y = -self.fov_scene_offset_x, -self.fov_scene_offset_y
+        rect = QRectF(start_point_x, start_point_y, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
         label = QtWidgets.QGraphicsTextItem("Current FOV")
         label.setDefaultTextColor(Qt.white)
         label.setPos(rect.bottomLeft())
