@@ -82,7 +82,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         ''' Setting the model up '''
         self.model = AcquisitionModel()
 
-        self.table.setModel(self.model)
+        self.table.setModel(self.model) # self.table is a QTableView object
         self.model.dataChanged.connect(self.set_state)
         self.model.dataChanged.connect(self.update_acquisition_time_prediction)
         self.model.dataChanged.connect(self.update_acquisition_size_prediction)
@@ -179,7 +179,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def set_selected_row(self, row):
         ''' Little helper method to allow setting the selected row '''
         index = self.model.createIndex(row,0)
-        # self.selection_model.clearCurrentIndex()
         self.selection_model.select(index,QtCore.QItemSelectionModel.ClearAndSelect)
 
     def start_selected(self):
@@ -306,7 +305,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         framerate = self.state['current_framerate']
         total_time = self.state['acq_list'].get_acquisition_time(framerate)
         self.state['predicted_acq_list_time'] = total_time
-        self.state['remaining_acq_list_time'] = total_time
         time_string = convert_seconds_to_string(total_time)
         self.AcquisitionTimeLabel.setText(time_string)
 
@@ -506,9 +504,17 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         for row in range(0,self.model.rowCount()):
             x_pos = self.model.getXPosition(row)
             if x_pos <= x_min + margin_um:
-                self.model.setShutterconfig(row, 'Left')
+                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
+                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Right'.")
+                    self.model.setShutterconfig(row, 'Right')
+                else:
+                    self.model.setShutterconfig(row, 'Left')
             elif x_pos >= x_max - margin_um:
-                self.model.setShutterconfig(row, 'Right')
+                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
+                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Left'.")
+                    self.model.setShutterconfig(row, 'Left')
+                else:
+                    self.model.setShutterconfig(row, 'Right')
             else:
                 pass
 
