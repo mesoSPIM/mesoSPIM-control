@@ -471,6 +471,20 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def generate_filenames(self):
         wizard = FilenameWizard(self)
 
+    def append_time_index_to_filenames(self, time_index):
+        ''' Appends the time index to each filename '''
+        row_count = self.model.rowCount()
+        filename_column = self.model.getFilenameColumn()
+        for row in range(0, row_count):
+            index = self.model.createIndex(row, filename_column)
+            filename = self.model.data(index)
+            base, extention = os.path.splitext(filename)
+            base_no_time = base.split('_Time')[0]
+            base_new = base_no_time + f'_Time{time_index:03d}'
+            index = self.model.createIndex(row, filename_column)
+            filename_new = base_new + extention
+            self.model.setData(index, filename_new)
+
     def display_no_row_selected_warning(self):
         self.display_warning('No row selected!')
 

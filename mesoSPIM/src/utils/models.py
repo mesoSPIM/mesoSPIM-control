@@ -68,7 +68,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Vertical:
                 return 'Stack ' + str(section)
 
-    def data(self, index, role):
+    def data(self, index, role = QtCore.Qt.DisplayRole):
         ''' Data allows to fetch one item'''
 
         row = index.row()
