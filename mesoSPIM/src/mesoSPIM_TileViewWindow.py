@@ -86,7 +86,11 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
                               self.tile_size_y*self.scale_factor)
                 tile = QGraphicsRectItem(rect)
                 tile.setPen(pen_default)
+                label = QtWidgets.QGraphicsTextItem("tile")
+                label.setDefaultTextColor(Qt.white)
+                label.setPos(rect.topLeft())
                 self.scene.addItem(tile)
+                self.scene.addItem(label)
 
         # plot selected tile on top in yellow
         if selected_row is not None:
@@ -98,9 +102,9 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
                           self.tile_size_y*self.scale_factor)
             tile = QGraphicsRectItem(rect)
             tile.setPen(pen_selected)
-            label = QtWidgets.QGraphicsTextItem("Selected tile")
+            label = QtWidgets.QGraphicsTextItem("Selected")
             label.setDefaultTextColor(Qt.yellow)
-            label.setPos(rect.topLeft())
+            label.setPos(rect.center().x() - label.boundingRect().width() / 2, rect.center().y() - label.boundingRect().height() / 2 - rect.height() / 4)
             self.scene.addItem(label)
             self.scene.addItem(tile)
 
@@ -108,12 +112,14 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         """Show the current FOV in the center of the scene"""	
         start_point_x, start_point_y = -self.fov_scene_offset_x, -self.fov_scene_offset_y
         rect = QRectF(start_point_x, start_point_y, self.tile_size_x*self.scale_factor, self.tile_size_y*self.scale_factor)
-        label = QtWidgets.QGraphicsTextItem("Current FOV")
+        label = QtWidgets.QGraphicsTextItem("FOV")
         label.setDefaultTextColor(Qt.white)
-        label.setPos(rect.bottomLeft())
-        self.scene.addItem(label)
+        label.setPos(rect.center().x() - label.boundingRect().width() / 2, rect.center().y() - label.boundingRect().height() / 2)
 
         pen_current_FOV = QPen(Qt.white);  pen_current_FOV.setWidth(2); pen_current_FOV.setStyle(Qt.DotLine)
+        brush = QBrush(Qt.gray)
         tile = QGraphicsRectItem(rect)
+        tile.setBrush(brush)
         tile.setPen(pen_current_FOV)
         self.scene.addItem(tile)
+        self.scene.addItem(label)
