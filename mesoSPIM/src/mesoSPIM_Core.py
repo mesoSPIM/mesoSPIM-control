@@ -198,6 +198,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
         self.state['state'] = 'idle'
+        self.time_counter = 0
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads

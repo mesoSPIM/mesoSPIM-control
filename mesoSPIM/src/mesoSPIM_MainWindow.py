@@ -747,6 +747,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setVisible(False)
         '''
 
+    def run_timepoint(self):
+        self.acquisition_manager_window.append_time_index_to_filenames(self.core.time_counter)
+        self.run_acquisition_list()
+        self.core.time_counter += 1
+
     @QtCore.pyqtSlot(dict)
     def launch_optimizer(self, ini_dict=None):
         self.sig_move_relative.emit({'f_rel': 5})  # a hack to fix Galil stage coupling, between F and X/Y stages.
