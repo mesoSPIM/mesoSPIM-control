@@ -125,7 +125,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window.sig_move_absolute.connect(self.sig_move_absolute.emit)
 
         # Setting up the threads
-        logger.debug('Ideal thread count: '+str(int(QtCore.QThread.idealThreadCount())))
         self.core_thread = QtCore.QThread()
         # Entry point: Work on thread affinity here
         self.core = mesoSPIM_Core(self.cfg, self)
@@ -148,7 +147,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # The signal switchboard, Core -> MainWindow
         # Memo: with type=QtCore.Qt.DirectConnection the slot is invoked immediately when the signal is emitted. The slot is executed in the signalling thread (Core).
         self.core.sig_finished.connect(self.finished)
-        self.core.sig_position.connect(self.update_position_indicators)
         self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
@@ -178,6 +176,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.joystick = mesoSPIM_JoystickHandler(self)
         self.enable_gui_updates_from_state(False)
+
+        self.pos_timer = QtCore.QTimer()
+        self.pos_timer.timeout.connect(self.update_position_indicators)
+        self.pos_timer.start(100)
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.
@@ -315,18 +317,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         """ Little helper method for converting positions to strings """
         return '%.1f' % position
 
-    @QtCore.pyqtSlot(dict)
-    def update_position_indicators(self, dict):
-        for key, pos_dict in dict.items():
-            if key == 'position':
-                self.x_position, self.y_position, self.z_position = pos_dict['x_pos'], pos_dict['y_pos'], pos_dict['z_pos']
-                self.f_position, self.theta_position = pos_dict['f_pos'], pos_dict['theta_pos']
+    def update_position_indicators(self):
+                self.x_position, self.y_position, self.z_position = self.state['position']['x_pos'], self.state['position']['y_pos'], self.state['position']['z_pos']
+                self.f_position, self.theta_position = self.state['position']['f_pos'], self.state['position']['theta_pos']
                 self.X_Position_Indicator.setText(self.pos2str(self.x_position)+' µm')
                 self.Y_Position_Indicator.setText(self.pos2str(self.y_position)+' µm')
                 self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
                 self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
                 self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
-                #self.state['position'] = dict['position'] # this must be done in the core thread
 
     @QtCore.pyqtSlot(dict)
     def update_progressbars(self,dict):
