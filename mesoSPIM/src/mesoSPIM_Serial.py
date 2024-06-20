@@ -166,7 +166,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
-        #self.state['position'] = sdict # this moves the serial comunication to MainWindow thread and creates unsafe conditions
+        self.state['position'] = sdict
         self.sig_position.emit({'position': sdict})
 
     @QtCore.pyqtSlot()
@@ -180,6 +180,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=True):
+        # logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
         ''' Here, the state parameters are set before sending the value to the zoom --
         this is to avoid laggy update loops with the GUI.'''
         self.state['zoom'] = zoom
