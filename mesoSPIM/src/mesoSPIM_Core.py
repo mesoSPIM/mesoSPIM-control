@@ -683,8 +683,8 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.move_absolute({'theta_abs':target_rotation}, wait_until_done=True)
 
             self.state['state'] = 'idle'
-            self.move_absolute(acq_list.get_startpoint())
-
+            self.move_absolute(acq_list.get_startpoint(), wait_until_done=True)
+            self.sig_polling_stage_position_start.emit()  # resume asking stages about their position
             self.set_filter(acq_list[0]['filter'])
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
             if self.state['zoom'] != acq_list[0]['zoom']:
@@ -758,6 +758,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acq_start_time = time.time()
         self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
 
+        # stop asking stages about their positions, to avoid messing up serial comm during acquisition:
+        self.sig_polling_stage_position_stop.emit()
         self.sig_status_message.emit('Going to start position')
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
@@ -789,9 +791,6 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.1)
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq': True})
             time.sleep(0.05)
-
-        # stop asking stages about their positions, to avoid messing up serial comm during acquisition:
-        self.sig_polling_stage_position_stop.emit()
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list)
@@ -879,9 +878,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : False})
             time.sleep(0.05)  # buffer time
             logger.debug('TTL mode set to False')
-
-        # resume asking stages about their position
-        self.sig_polling_stage_position_start.emit()
 
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")

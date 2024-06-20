@@ -1881,7 +1881,6 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
 
             self.create_internal_position_dict()
-
             self.sig_position.emit(self.int_position_dict)
 
     def move_relative(self, sdict, wait_until_done=False):

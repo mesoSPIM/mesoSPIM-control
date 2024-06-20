@@ -132,6 +132,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
+        self.core.serial_worker.moveToThread(self.core_thread) # does not really affect the thread affinity, todo
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -679,7 +680,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.block_signals_from_controls(True)
             for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
                 self.update_widget_from_state(widget, state_parameter, conversion_factor)   
-            self.acquisition_manager_window.set_selected_row(self.state['selected_row'])             
+            self.acquisition_manager_window.set_selected_row(self.state['selected_row'])
             self.block_signals_from_controls(False)
             logger.debug('GUI updated from state')
 
