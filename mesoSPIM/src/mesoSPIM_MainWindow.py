@@ -148,7 +148,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # The signal switchboard, Core -> MainWindow
         # Memo: with type=QtCore.Qt.DirectConnection the slot is invoked immediately when the signal is emitted. The slot is executed in the signalling thread (Core).
         self.core.sig_finished.connect(self.finished)
-        self.core.sig_position.connect(self.update_position_indicators, type=QtCore.Qt.DirectConnection)
+        self.core.sig_position.connect(self.update_position_indicators)
         self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
