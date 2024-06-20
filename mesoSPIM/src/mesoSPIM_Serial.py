@@ -167,6 +167,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
         self.state['position'] = sdict
+        self.sig_position.emit({'position': sdict})
 
     @QtCore.pyqtSlot()
     def go_to_rotation_position(self, wait_until_done=False):
