@@ -127,7 +127,6 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.serial_worker.stage.moveToThread(self.serial_thread)
         #self.serial_worker.stage.pos_timer.moveToThread(self.serial_thread)
 
-        #self.serial_worker.sig_position.connect(lambda dict: self.sig_position.emit(dict))
         self.serial_worker.sig_position.connect(self.sig_position.emit)
         self.serial_worker.sig_status_message.connect(self.send_status_message_to_gui)
         self.serial_worker.sig_pause.connect(self.pause)
@@ -645,13 +644,13 @@ class mesoSPIM_Core(QtCore.QObject):
         """
         unsafe_list = []
         for i in range(len(acq_list)):
-            if not (self.cfg.stage_parameters['x_min'] <= acq_list[i]['x_pos'] <= self.cfg.stage_parameters['x_max']):
+            if not (self.cfg.stage_parameters['x_min'] <= acq_list[i]['x_pos'] - self.serial_worker.stage.int_x_pos_offset <= self.cfg.stage_parameters['x_max']):
                 unsafe_list.append(i)
-            elif not (self.cfg.stage_parameters['y_min'] <= acq_list[i]['y_pos'] <= self.cfg.stage_parameters['y_max']):
+            elif not (self.cfg.stage_parameters['y_min'] <= acq_list[i]['y_pos'] - self.serial_worker.stage.int_y_pos_offset <= self.cfg.stage_parameters['y_max']):
                 unsafe_list.append(i)
-            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_start'] <= self.cfg.stage_parameters['z_max']):
+            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_start'] - self.serial_worker.stage.int_z_pos_offset <= self.cfg.stage_parameters['z_max']):
                 unsafe_list.append(i)
-            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_end'] <= self.cfg.stage_parameters['z_max']):
+            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_end'] - self.serial_worker.stage.int_z_pos_offset <= self.cfg.stage_parameters['z_max']):
                 unsafe_list.append(i)
             else:
                 continue
@@ -685,6 +684,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.state['state'] = 'idle'
             self.move_absolute(acq_list.get_startpoint(), wait_until_done=True)
             self.sig_polling_stage_position_start.emit()  # resume asking stages about their position
+
             self.set_filter(acq_list[0]['filter'])
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
             if self.state['zoom'] != acq_list[0]['zoom']:
@@ -757,7 +757,6 @@ class mesoSPIM_Core(QtCore.QObject):
         target_rotation = startpoint['theta_abs']
         self.acq_start_time = time.time()
         self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
-
         # stop asking stages about their positions, to avoid messing up serial comm during acquisition:
         self.sig_polling_stage_position_stop.emit()
         self.sig_status_message.emit('Going to start position')

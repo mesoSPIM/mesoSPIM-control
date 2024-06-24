@@ -1,4 +1,4 @@
-## Development branch 2024 [1.9.0]
+## Release candidate [1.9.0]
 ### User Interface :lollipop:
 - :gem:  "Auto L/R illumination" button in the Acquisition manager to select tile illumination based on its x-position.
 - :gem: A long awaited feature: **Tile Overview** window (*View/Open Tile Overview*), showing the entire acquisition area with tile positions, their overlap, and current FOV position relative to them.
@@ -12,7 +12,8 @@ This has to be set up in the config file with `'x_center_position'` and `'z_cent
 - Tooltips were added to the navigation buttons.
 
 ### Bugfixes :bug: 
-- check motion limits for all tiles before starting the acquisition list
+- occasional glitch with ASI stages caused by updating stage positions between acquisitions, with serial communication going in two separate threads (mainWindow vs Core).
+- check motion limits for all tiles before starting the acquisition list, in absolute or relative coodinates (zeroed axes or not).
 - estimated remaining acquisition time is now calculated correctly, based on the current frame rate.
 
 ## Release February 2024 [1.8.3]

@@ -224,7 +224,7 @@ class mesoSPIM_Stage(QtCore.QObject):
     def zero_axes(self, list):
         for axis in list:
             try:
-                exec('self.int_' + axis + '_pos_offset = -self.' + axis + '_pos')
+                exec('self.int_' + axis + '_pos_offset = -self.' + axis + '_pos') # update the position offset
             except:
                 logger.info('Zeroing of axis: ', axis, 'failed')
 
