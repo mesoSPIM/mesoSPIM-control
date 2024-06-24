@@ -147,7 +147,7 @@ class mesoSPIM_Serial(QtCore.QObject):
                 if not eval(condition):
                     self.send_status_message(f'Relative movement stopped: {axis} motion limit would be reached!')
                     return False
-        #self.send_status_message('Stage limits OK')
+        self.send_status_message('')
         return True
 
     @QtCore.pyqtSlot(dict)
