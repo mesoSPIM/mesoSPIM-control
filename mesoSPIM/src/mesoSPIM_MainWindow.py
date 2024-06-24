@@ -133,6 +133,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
         self.core.serial_worker.moveToThread(self.core_thread) # does not really affect the thread affinity, todo
+        self.core.serial_worker.stage.moveToThread(self.core_thread)
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
