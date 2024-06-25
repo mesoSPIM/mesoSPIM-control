@@ -299,7 +299,6 @@ class mesoSPIM_Core(QtCore.QObject):
             self.preview_acquisition(z_update=False)
 
         elif state == 'idle':
-            # print('Core: Stopping requested')
             self.sig_state_request.emit({'state':'idle'})
             self.stop()
 
@@ -317,6 +316,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.stopflag = True
         ''' This stopflag is a bit risky, needs to be updated'''
         self.camera_worker.image_writer.abort_writing()
+        self.sig_polling_stage_position_start.emit()
         self.state['state'] = 'idle'
         self.sig_update_gui_from_state.emit(False)
         self.sig_finished.emit()
