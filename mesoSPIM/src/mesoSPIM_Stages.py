@@ -231,7 +231,7 @@ class mesoSPIM_Stage(QtCore.QObject):
     def unzero_axes(self, list):
         for axis in list:
             try:
-                exec('self.int_' + axis + '_pos_offset = 0')
+                exec('self.int_' + axis + '_pos_offset = 0') # zero the position offset
             except:
                 logger.info('Unzeroing of axis: ', axis, 'failed')
 
@@ -336,6 +336,7 @@ class mesoSPIM_PI_1toN(mesoSPIM_Stage):
 
         self.create_position_dict()
 
+        # relative positions, with the offset
         self.int_x_pos = self.x_pos + self.int_x_pos_offset
         self.int_y_pos = self.y_pos + self.int_y_pos_offset
         self.int_z_pos = self.z_pos + self.int_z_pos_offset
