@@ -52,7 +52,8 @@ class mesoSPIM_StateSingleton():
                             'selected_row': -2,
                             'samplerate' : 100000,
                             'sweeptime' : 0.2,
-                            'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
+                            'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0}, # relative position, including user-specified offset
+                            'position_absolute' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0}, 
                             'ttl_movement_enabled_during_acq' : False,
                             'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
                             'filename' : 'file.tif',

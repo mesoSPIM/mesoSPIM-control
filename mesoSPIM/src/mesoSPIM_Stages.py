@@ -119,6 +119,7 @@ class mesoSPIM_Stage(QtCore.QObject):
                               'f_pos': self.f_pos,
                               'theta_pos': self.theta_pos,
                               }
+        self.state['position_absolute'] = self.position_dict
 
     def create_internal_position_dict(self):
         self.int_position_dict = {'x_pos': self.int_x_pos,
@@ -1175,9 +1176,8 @@ class mesoSPIM_PI_rot_and_Galil_xyzf_Stages(mesoSPIM_Stage):
         except:
             logger.info('Error while unpacking Galil stage position values')
 
-            self.create_position_dict()
-
         self.theta_pos = positions['1']
+        self.create_position_dict()
 
         self.int_x_pos = self.x_pos + self.int_x_pos_offset
         self.int_y_pos = self.y_pos + self.int_y_pos_offset
@@ -1407,10 +1407,9 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
         except:
             logger.info('Error while unpacking Galil stage position values')
 
-        self.create_position_dict()
-
         self.z_pos = round(positions['2'] * 1000, 2)
         self.theta_pos = positions['1']
+        self.create_position_dict()
 
         self.int_x_pos = self.x_pos + self.int_x_pos_offset
         self.int_y_pos = self.y_pos + self.int_y_pos_offset
