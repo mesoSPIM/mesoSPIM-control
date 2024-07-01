@@ -412,11 +412,11 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_move_relative.emit(dict)
 
     @QtCore.pyqtSlot(dict)
-    def move_absolute(self, sdict, wait_until_done=False):
+    def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
         if wait_until_done:
             logger.debug('Core: move_absolute (wait_until_done=True) has started')
             #self.sig_move_absolute_and_wait_until_done.emit(sdict) # THIS was running in MainWindow thread, very stubbornly, unless changed to direct call. Otherwise it was causing a lot of synchronization problems.
-            self.serial_worker.move_absolute(sdict, wait_until_done=True)
+            self.serial_worker.move_absolute(sdict, wait_until_done=True, use_internal_position=use_internal_position)
             logger.debug('Core: move_absolute (wait_until_done=True) has finished')
         else:
             self.sig_move_absolute.emit(sdict)

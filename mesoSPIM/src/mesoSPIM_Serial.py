@@ -158,11 +158,8 @@ class mesoSPIM_Serial(QtCore.QObject):
             logger.info('Stage limits reached: motion stopped')
 
     @QtCore.pyqtSlot(dict)
-    def move_absolute(self, sdict, wait_until_done=False):
-        if self.stage_limits_OK(sdict):
-            self.stage.move_absolute(sdict, wait_until_done=wait_until_done)
-        else:
-            logger.info('Stage limits reached: motion stopped')
+    def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
+        self.stage.move_absolute(sdict, wait_until_done=wait_until_done, use_internal_position=use_internal_position)
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
