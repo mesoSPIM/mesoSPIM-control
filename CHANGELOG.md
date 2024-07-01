@@ -15,6 +15,7 @@ This has to be set up in the config file with `'x_center_position'` and `'z_cent
 - occasional glitch with ASI stages caused by updating stage positions between acquisitions, with serial communication going in two separate threads (mainWindow vs Core).
 - check motion limits for all tiles before starting the acquisition list, in absolute or relative coodinates (zeroed axes or not).
 - estimated remaining acquisition time is now calculated correctly, based on the current frame rate.
+- sample centering and objectiv exchange positions work also when in zeroed-stage regime (local coordinates, user-defined). No need to inactivate `Zero F-stage` button for safe revolver operation.
 
 ## Release February 2024 [1.8.3]
 

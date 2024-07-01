@@ -72,16 +72,16 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_PI_1toN(self)
         elif self.cfg.stage_parameters['stage_type'] == 'PI_NcontrollersNstages':
             self.stage = mesoSPIM_PI_NtoN(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
-            self.stage = mesoSPIM_GalilStages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
-            self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PI_f_rot_and_Galil_xyz':
-            self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
+        #     self.stage = mesoSPIM_GalilStages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
+        #     self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'PI_f_rot_and_Galil_xyz':
+        #     self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
-            self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
+        #     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
         elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
             self.stage = mesoSPIM_ASI_Tiger_Stage(self)
             self.stage.sig_pause.connect(self.pause)
