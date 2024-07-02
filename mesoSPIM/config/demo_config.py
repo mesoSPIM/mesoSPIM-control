@@ -165,8 +165,8 @@ camera_parameters = {'x_pixels' : 2048, #5056
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
-camera_parameters = {'x_pixels' : 2528,
-                     'y_pixels' : 1480,
+camera_parameters = {'x_pixels' : 2000,
+                     'y_pixels' : 1000,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
@@ -301,17 +301,11 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 '''
 The 'Dynamixel' servo default zoom positions
 '''
-zoomdict = {'0.63x' : 3423,
-            '0.8x' : 3071,
-            '1x' : 2707,
-            '1.25x' : 2389,
-            '1.6x' : 2047,
+zoomdict = {'1x' : 2707,
             '2x' : 1706,
-            '2.5x' : 1354,
-            '3.2x' : 967,
             '4x' : 637,
             '5x' : 318,
-            '6.3x' : 0}    
+            }    
 
 
 '''
@@ -327,17 +321,11 @@ zoomdict = {'2x': 'A',
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.63x' : 10.52,
-            '0.8x' : 8.23,
-            '1x' : 6.55,
-            '1.25x' : 5.26,
-            '1.6x' : 4.08,
-            '2x' : 3.26,
-            '2.5x' : 2.6,
-            '3.2x' : 2.03,
-            '4x' : 1.60,
-            '5x' : 1.27,
-            '6.3x' : 1.03}
+pixelsize = {
+            '1x' : 1,
+            '2x' : 2.0,
+            '4x' : 4.0,
+            '5x' : 5.0,}
 
 '''
  HDF5 parameters, if this format is used for data saving (optional).
@@ -379,7 +367,7 @@ startup = {
 'file_prefix' : '',
 'file_suffix' : '000001',
 'zoom' : '1x',
-'pixelsize' : 6.55,
+'pixelsize' : 1.0,
 'laser' : '488 nm',
 'max_laser_voltage':5,
 'intensity' : 10,
