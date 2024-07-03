@@ -1,4 +1,4 @@
-## Release candidate [1.9.0]
+## Release July 2024 [1.9.0]
 ### User Interface :lollipop:
 - :gem:  "Auto L/R illumination" button in the Acquisition manager to select tile illumination based on its x-position.
 - :gem: A long awaited feature: **Tile Overview** window (*View/Open Tile Overview*), showing the entire acquisition area with tile positions, their overlap, and current FOV position relative to them.
