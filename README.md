@@ -20,6 +20,8 @@ cleared tissue samples. It is compatible with all major clearing approaches and 
 * Python >=3.7, we recommend [Anaconda](https://www.anaconda.com/download/)
 
 ### Device drivers
+#### National Instruments DAQ devices
+Download and install the latest [NI DAQmx drivers](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html) with default parameters.
 #### Cameras
 * Hamamatsu Orca Flash 4.0 V2/V3 camera: [Hamamatsu DCAM API](https://dcam-api.com/). To test camera functionality, [HCImage](https://dcam-api.com/hamamatsu-software/) can be used.
 * Photometrics camera: [PVCAM and PVCAM-SDK](https://www.photometrics.com/support/software/). 
