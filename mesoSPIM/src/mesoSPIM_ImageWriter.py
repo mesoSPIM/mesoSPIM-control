@@ -60,22 +60,20 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         '''Return a tuple of acquisition shape (z,y,x)'''
         return (self.max_frame, self.x_pixels, self.y_pixels)
 
-    def allocate_np(self):
-        '''Return a numpy array filled with zeros the shape of the acquisition array'''
-        return np.zeros(self.acquisition_shape(), dtype='uint16')
-
     def allocate_ram(self):
         '''Return a numpy array filled with zeros that maximizes for available RAM
         but leaves a percentage of RAM free.
 
         If shape of the acquisition is smaller, allocate the smaller array.
         '''
+        self.buffering_on = False
         if not hasattr(self.cfg, 'buffering') or not self.cfg.buffering['use_ram_buffer']:
             msg = 'No RAM buffer specified in config file. Continuing without RAM buffer. To turn on RAM buffering, add a "buffering" dictionary to the config file.'
             logger.info(msg)
             print(msg)
             buffer_shape = (1, self.x_pixels, self.y_pixels)
         else:
+            self.buffering_on = True
             percent_ram_free = self.cfg.buffering['percent_ram_free']
             ram = psutil.virtual_memory()
             must_remain_free_GB = ram.total*(percent_ram_free/100)
@@ -201,19 +199,24 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.image_buffer = self.allocate_ram()
 
     def write_image(self, image, acq, acq_list):
-        self.image_buffer[self.written_image_counter % self.image_buffer.shape[0]] = image
+        if self.buffering_on:
+            logger.debug('Copy image to RAM buffer started')
+            self.image_buffer[self.written_image_counter % self.image_buffer.shape[0]] = image # this single operation takes 40-50 ms to complete. Note that both 0 % 1 and 0 % 1 == 0, dangerous!
+            logger.debug('Copy image to RAM buffer ended') 
         self.written_image_counter += 1
-        # ## Only for test purposes
-        # percent_ram_remaining = self.ram_percent_remaing_free()
-        # print(f'Percent RAM remaining is {round(percent_ram_remaining,2)}')
-        # ##
         if (self.written_image_counter % self.image_buffer.shape[0] == 0) or (self.written_image_counter == self.max_frame) or self.abort_flag:
-            self.image_to_disk(acq, acq_list)
+            self.image_to_disk(acq, acq_list, image)
 
-    def image_to_disk(self, acq, acq_list):
+    def image_to_disk(self, acq, acq_list, image):
+        logger.debug('image_to_disk() started') # 60 ms total in demo mode, v.1.9.0
         self.parent.parent.sig_status_message.emit('Flushing data to disk...')
         while True:
-            image = self.image_buffer[self.cur_image_counter % self.image_buffer.shape[0]]
+            if self.buffering_on:
+                logger.debug('Copy image from RAM buffer started')
+                image = self.image_buffer[self.cur_image_counter % self.image_buffer.shape[0]] # Note that both 0 % 1 and 1 % 1 == 0, dangerous!
+                logger.debug('Copy image from RAM buffer ended')
+            else:
+                pass # use the 'image' directly
             xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
             if self.file_extension == '.h5':
                 self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
@@ -235,8 +238,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.mip_image[:] = np.maximum(self.mip_image, image)
 
             self.cur_image_counter += 1
-            # Terminate loop if the full buffer has been dumped to disk or if all images from acquisition have been dumpped to disk
-            if self.cur_image_counter % self.image_buffer.shape[0] == 0 or self.cur_image_counter == self.max_frame:
+            # Terminate loop if the full buffer has been dumped to disk or if all images from acquisition have been dumped to disk
+            if self.cur_image_counter % self.image_buffer.shape[0] == 0 or self.cur_image_counter == self.max_frame or self.buffering_on == False:
                 self.parent.parent.sig_status_message.emit('Running Acquisition')
                 break
             elif self.abort_flag and self.cur_image_counter == self.written_image_counter:
@@ -245,6 +248,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         if not self.running_flag:
             logger.info("No image, running terminated")
+        logger.debug('image_to_disk() ended')
 
     def abort_writing(self):
         """Terminate writing and close all files if STOP button is pressed"""

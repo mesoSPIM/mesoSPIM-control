@@ -392,6 +392,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             f_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][3] else 1
             t_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][4] else 1
         else:
+            x_sign, y_sign, z_sign, f_sign, t_sign = 1, 1, 1, 1, 1
             logger.warning('flip_XYZFT_button_polarity key not found in config file. Assuming all buttons are positive.')
         self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': - x_sign*self.xyzIncrementSpinbox.value()}))
         self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': x_sign*self.xyzIncrementSpinbox.value()}))
