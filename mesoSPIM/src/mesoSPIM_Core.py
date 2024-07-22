@@ -832,7 +832,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     - wait for slow hardware to catch up (e.g. slow stages)
                 '''
                 logger.debug(f'move_dict: {move_dict}')
-                self.move_relative(move_dict, wait_until_done=True)
+                self.move_relative(move_dict)
 
                 while self.pauseflag is True:
                     time.sleep(0.02)
