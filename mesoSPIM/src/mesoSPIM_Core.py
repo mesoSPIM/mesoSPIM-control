@@ -57,7 +57,7 @@ class mesoSPIM_Core(QtCore.QObject):
     ''' Camera-related signals '''
     sig_prepare_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_add_images_to_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
-    sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal(Acquisition, AcquisitionList)
+    # sig_add_images_to_image_series_and_wait_until_done = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_end_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_write_metadata = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_prepare_live = QtCore.pyqtSignal()

@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
-__version__ = "1.9.0"
+__version__ = "1.9.1"
 
 import time
 import logging
@@ -139,6 +139,7 @@ def main(embed_console=False, demo_mode=False):
             cfg, config_fname = load_config_UI(os.path.join(package_directory, 'config'))
     logger = get_logger(cfg, package_directory)
     logger.info(f'Config file loaded: {config_fname}')
+    logger.info(f'mesoSPIM-control version: {__version__}')
     app = QtWidgets.QApplication(sys.argv)
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)

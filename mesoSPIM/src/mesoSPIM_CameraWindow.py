@@ -176,7 +176,9 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
+        logger.debug(f"setImage() with shape {image.shape} started")
         self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
+        logger.debug(f"setImage() finished")
         # update roi size if subsampling has changed interactively:
         if self.overlay == 'box' and self.subsampling != self.state['camera_display_live_subsampling']:
             subsampling_ratio = self.subsampling / self.state['camera_display_live_subsampling']
