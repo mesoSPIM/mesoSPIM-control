@@ -140,7 +140,7 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.serial_worker.move_absolute(sdict, wait_until_done=True))
 
         ''' Start the threads '''
-        self.camera_thread.start()
+        self.camera_thread.start(QtCore.QThread.HighestPriority)
         # The serial_worker remains in the Core thread, not separate thread for serial_worker
         #self.serial_thread.start() # legacy
 
