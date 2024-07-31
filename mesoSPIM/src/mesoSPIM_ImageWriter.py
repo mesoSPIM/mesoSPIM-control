@@ -362,6 +362,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_metadata(self, acq, acq_list):
+        logger.debug("write_metadata() started")
         ''' Writes a metadata.txt file. Path contains the file to be written '''
         path = acq['folder'] + '/' + acq['filename']
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
@@ -421,3 +422,4 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
         write_line(self.metadata_file)
         self.metadata_file.close()
+        logger.debug("write_metadata() ended")
