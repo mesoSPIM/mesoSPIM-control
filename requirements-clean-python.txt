@@ -5,7 +5,7 @@ ctypes
 importlib
 argparse
 glob
-numpy==1.17.0
+numpy==1.21.6
 scipy==1.2.1
 PyQt5==5.13.1
 nidaqmx==0.5.7
