@@ -2160,7 +2160,7 @@ Focus</string>
               <double>10.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>1000.000000000000000</double>
+              <double>10000.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>1.000000000000000</double>
@@ -2343,7 +2343,7 @@ Focus</string>
               <double>3.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>1000.000000000000000</double>
+              <double>5000.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>1.000000000000000</double>
