@@ -15,7 +15,7 @@ import glob
 import os
 import sys
 import importlib.util
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 package_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(package_directory)) # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
 from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
@@ -105,7 +105,7 @@ def get_logger(cfg, package_directory):
     timestr = time.strftime("%Y%m%d-%H%M%S")
     logging_filename = os.path.join(package_directory, 'log', timestr + '.log')
     logging.basicConfig(filename=logging_filename, level=LOGGING_LEVEL,
-                        format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
+                        format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(module)s:%(funcName)s:%(message)s')
     logger = logging.getLogger(__name__)
     return logger
 
@@ -119,6 +119,7 @@ def main(embed_console=False, demo_mode=False):
      - if there are multiple config files, bring up the UI loader.
     """
     print('Starting control software')
+    QtCore.QThread.currentThread().setObjectName('MainThread')
     demo_fname = os.path.join(package_directory, 'config', 'demo_config.py')
     if not os.path.exists(demo_fname):
         raise ValueError(f"Demo file not found: {demo_fname}")

@@ -80,6 +80,7 @@ class mesoSPIM_Camera(QtCore.QObject):
             self.camera = mesoSPIM_DemoCamera(self)
 
         self.camera.open_camera()
+        logger.info('Camera initialized')
 
     def __del__(self):
         try:
@@ -100,7 +101,7 @@ class mesoSPIM_Camera(QtCore.QObject):
                 exec('self.set_'+key+'(value)')
             elif key == 'state':
                 if value == 'live':
-                    logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+                    logger.debug('Thread name during live: '+ (QtCore.QThread.currentThread().objectName()))
 
     def set_state(self, value):
         pass
@@ -167,11 +168,13 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
-            logger.debug('Thread ID during add images: '+str(int(QtCore.QThread.currentThreadId())))
+            logger.debug('Thread name during add images: '+ QtCore.QThread.currentThread().objectName())
 
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
+                logger.debug(f'Adding images to series')
                 images = self.camera.get_images_in_series()
+                logger.debug(f'Got {len(images)} images')
                 for image in images:
                     image = np.rot90(image)
                     self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,

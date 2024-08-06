@@ -87,8 +87,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
         self.sig_update_status.connect(self.update_status)
 
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
     def adjust_levels(self, pct_low=25, pct_hi=99.99):
         ''''Adjust histogram levels'''
         img = self.image_view.getImageItem().image

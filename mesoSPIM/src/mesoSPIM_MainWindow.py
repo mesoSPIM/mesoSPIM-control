@@ -168,7 +168,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
-
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
             logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
@@ -298,7 +297,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         for widget in list:
             if list != ([] or None):
                 if self.check_instances(widget):
-                    # print(widget.objectName())
                     widget_list.append(widget)
                 list = widget.children()
                 self.create_widget_list(list, widget_list)
@@ -693,7 +691,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
-        logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
         self.sig_poke_demo_thread.emit()
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)

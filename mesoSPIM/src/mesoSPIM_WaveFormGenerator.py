@@ -133,7 +133,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.update_etl_parameters_from_laser(value)
             elif key == 'state':
                 if value == 'live':
-                    logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+                    logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
             self.sig_update_gui_from_state.emit(False) # Stop updating GUI about the change
 
     def calculate_samples(self):

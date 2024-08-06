@@ -271,8 +271,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if state == 'live':
             self.state['state'] = 'live'
             self.sig_state_request.emit({'state':'live'})
-            logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
-            logger.debug('Core internal thread affinity in live: '+str(id(self.thread())))
+            logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
             self.live()
 
         if state == 'snap':

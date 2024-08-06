@@ -134,9 +134,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         font.setPointSize(14)
         self.table.horizontalHeader().setFont(font)
         self.table.verticalHeader().setFont(font)
-
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
 
     def enable(self):
