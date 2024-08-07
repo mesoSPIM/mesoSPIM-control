@@ -198,6 +198,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         #Create a RAM buffer for acquisition that keeps {self.percent_ram_free} of total RAM free
         self.image_buffer = self.allocate_ram()
 
+    @QtCore.pyqtSlot(np.ndarray, Acquisition, AcquisitionList)
     def write_image(self, image, acq, acq_list):
         if self.buffering_on:
             logger.debug('Copy image to RAM buffer started')
@@ -209,7 +210,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     def image_to_disk(self, acq, acq_list, image):
         logger.debug('image_to_disk() started') # 60 ms total in demo mode, v.1.9.0
-        self.parent.parent.sig_status_message.emit('Flushing data to disk...')
+        self.parent.sig_status_message.emit('Flushing data to disk...')
+        #time.sleep(0.5) # Add delay to emulate slow disk writing
         while True:
             if self.buffering_on:
                 logger.debug('Copy image from RAM buffer started')
@@ -240,10 +242,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.cur_image_counter += 1
             # Terminate loop if the full buffer has been dumped to disk or if all images from acquisition have been dumped to disk
             if self.cur_image_counter % self.image_buffer.shape[0] == 0 or self.cur_image_counter == self.max_frame or self.buffering_on == False:
-                self.parent.parent.sig_status_message.emit('Running Acquisition')
+                self.parent.sig_status_message.emit('Running Acquisition')
                 break
             elif self.abort_flag and self.cur_image_counter == self.written_image_counter:
-                self.parent.parent.sig_status_message.emit('Running Acquisition')
+                self.parent.sig_status_message.emit('Running Acquisition')
                 break
 
         if not self.running_flag:
@@ -272,6 +274,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         else:
             pass
 
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_acquisition(self, acq, acq_list):
         logger.info("end_acquisition() started")
         if self.file_extension == '.h5':

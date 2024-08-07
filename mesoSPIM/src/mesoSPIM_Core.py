@@ -34,6 +34,7 @@ from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
+from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores
@@ -110,16 +111,22 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit, type=QtCore.Qt.QueuedConnection)
         self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state, type=QtCore.Qt.QueuedConnection)
 
-        ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
         self.camera_worker = mesoSPIM_Camera(self)
-        #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
         self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.set_image)
-        #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
-        ''' Set the serial thread up '''
+        self.sig_end_image_series.connect(self.camera_worker.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
+
+        self.image_writer_thread = QtCore.QThread()
+        self.image_writer = mesoSPIM_ImageWriter(self)
+        self.image_writer.moveToThread(self.image_writer_thread)
+        self.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
+        self.sig_end_image_series.connect(self.image_writer.end_acquisition, type=QtCore.Qt.BlockingQueuedConnection)
+
+        self.camera_worker.sig_write_image.connect(self.image_writer.write_image, type=QtCore.Qt.QueuedConnection)
+
         #self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
         self.serial_worker = mesoSPIM_Serial(self)
         # self.serial_worker.moveToThread(self.serial_thread) #legacy
@@ -141,6 +148,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Start the threads '''
         self.camera_thread.start(QtCore.QThread.HighestPriority)
+        self.image_writer_thread.start(QtCore.QThread.HighestPriority)
         # The serial_worker remains in the Core thread, not separate thread for serial_worker
         #self.serial_thread.start() # legacy
 
@@ -207,6 +215,8 @@ class mesoSPIM_Core(QtCore.QObject):
         try:
             self.camera_thread.quit()
             self.camera_thread.wait()
+            self.image_writer_thread.quit()
+            self.image_writer_thread.wait()
         except:
             pass
 
@@ -314,7 +324,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def stop(self):
         self.stopflag = True
         ''' This stopflag is a bit risky, needs to be updated'''
-        self.camera_worker.image_writer.abort_writing()
+        self.image_writer.abort_writing()
         self.sig_polling_stage_position_start.emit()
         self.state['state'] = 'idle'
         self.sig_update_gui_from_state.emit(False)
@@ -790,7 +800,8 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.05)
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
-        self.sig_prepare_image_series.emit(acq, acq_list)
+        self.sig_prepare_image_series.emit(acq, acq_list) # signal to the Camera
+        self.image_writer.prepare_acquisition(acq, acq_list)
         self.prepare_image_series()
         self.sig_write_metadata.emit(acq, acq_list)
 

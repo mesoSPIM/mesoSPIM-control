@@ -16,13 +16,14 @@ except:
     logger.info('Error: Hamamatsu camera could not be imported')
 '''
 from .mesoSPIM_State import mesoSPIM_StateSingleton
-from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
+
 from .utils.acquisitions import AcquisitionList, Acquisition
 
 
 class mesoSPIM_Camera(QtCore.QObject):
     '''Top-level class for all cameras'''
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
+    sig_write_image = QtCore.pyqtSignal(np.ndarray, Acquisition, AcquisitionList)
     sig_finished = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
     sig_status_message = QtCore.pyqtSignal(str)
@@ -34,7 +35,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.cfg = parent.cfg
 
         self.state = mesoSPIM_StateSingleton()
-        self.image_writer = mesoSPIM_ImageWriter(self)
+        #self.image_writer = mesoSPIM_ImageWriter(self)
         self.stopflag = False
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
@@ -60,9 +61,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.parent.sig_prepare_image_series.connect(self.prepare_image_series, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_add_images_to_image_series.connect(self.add_images_to_series, type=QtCore.Qt.QueuedConnection)
         # self.parent.sig_add_images_to_image_series_and_wait_until_done.connect(self.add_images_to_series, type=QtCore.Qt.BlockingQueuedConnection)
-        self.parent.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
-        # The following connection can cause problems when disk is too slow (e.g. writing TIFF files on HDD drive):
-        self.parent.sig_end_image_series.connect(self.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
+        #self.parent.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
 
         self.parent.sig_prepare_live.connect(self.prepare_live, type=QtCore.Qt.BlockingQueuedConnection)
         self.parent.sig_get_live_image.connect(self.get_live_image)
@@ -157,7 +156,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         '''
         logger.info('Camera: Preparing Image Series')
         self.stopflag = False
-        self.image_writer.prepare_acquisition(acq, acq_list)
+        #self.image_writer.prepare_acquisition(acq, acq_list)
         self.max_frame = acq.get_image_count()
         self.processing_options_string = acq['processing']
         self.camera.initialize_image_series()
@@ -179,7 +178,7 @@ class mesoSPIM_Camera(QtCore.QObject):
                     image = np.rot90(image)
                     self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
                                                0:self.y_pixels:self.camera_display_acquisition_subsampling])
-                    self.image_writer.write_image(image, acq, acq_list)
+                    self.sig_write_image.emit(image, acq, acq_list)
                     self.cur_image += 1
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
@@ -191,7 +190,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         except Exception as e:
             logger.error(f'Camera: Image Series could not be closed: {e}')
 
-        self.image_writer.end_acquisition(acq, acq_list)
+        #self.image_writer.end_acquisition(acq, acq_list)
 
         self.end_time = time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
@@ -205,7 +204,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         image = np.rot90(image)[::self.camera_display_acquisition_subsampling, ::self.camera_display_acquisition_subsampling]
         self.sig_camera_frame.emit(image)
         if write_flag:
-            self.image_writer.write_snap_image(image)
+            self.parent.image_writer.write_snap_image(image) # Dangerous, not thread safe
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
