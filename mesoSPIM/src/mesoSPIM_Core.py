@@ -814,11 +814,6 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 self.snap_image_in_series(laser_blanking)
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
-                #time.sleep(0.02)
-                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
-
-                # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-
                 ''' Get the current correct f_step'''
                 f_step = self.f_step_generator.__next__()
                 if f_step != 0:
