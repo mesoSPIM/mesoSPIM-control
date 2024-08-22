@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
-__version__ = "1.9.1"
+__version__ = "1.10.0"
 
 import time
 import logging
@@ -105,7 +105,7 @@ def get_logger(cfg, package_directory):
     timestr = time.strftime("%Y%m%d-%H%M%S")
     logging_filename = os.path.join(package_directory, 'log', timestr + '.log')
     logging.basicConfig(filename=logging_filename, level=LOGGING_LEVEL,
-                        format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(module)s:%(funcName)s:%(message)s')
+                        format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
     logger = logging.getLogger(__name__)
     return logger
 

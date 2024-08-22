@@ -3,9 +3,9 @@ import tifffile
 import logging
 import time
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.uic import loadUi
-
+import gc
 ''' Disabled taskbar button progress display due to problems with Anaconda default'''
 # if sys.platform == 'win32':
 #     from PyQt5.QtWinExtras import QWinTaskbarButton
@@ -178,6 +178,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.joystick = mesoSPIM_JoystickHandler(self)
         self.enable_gui_updates_from_state(False)
+
+        # Periodic garbage collection for the entire process
+        self.gc_timer = QTimer()
+        self.gc_timer.timeout.connect(gc.collect)
+        self.gc_timer.start(10000)  # Run garbage collection every 10 seconds
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.

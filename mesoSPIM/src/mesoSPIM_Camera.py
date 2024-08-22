@@ -180,6 +180,7 @@ class mesoSPIM_Camera(QtCore.QObject):
                                                0:self.y_pixels:self.camera_display_acquisition_subsampling])
                     self.sig_write_image.emit(image, acq, acq_list)
                     self.cur_image += 1
+                del images # Free up memory
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):

@@ -251,6 +251,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if not self.running_flag:
             logger.info("No image, running terminated")
         logger.debug('image_to_disk() ended')
+        image = None # Free RAM
 
     def abort_writing(self):
         """Terminate writing and close all files if STOP button is pressed"""
