@@ -19,12 +19,13 @@ from .utils.utility_functions import write_line, gb_size_of_array_shape, replace
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
-    def __init__(self, parent=None):
+    def __init__(self, parent, frame_queue):
         '''Image and metadata writer class. Parent is mesoSPIM_Camera() object'''
         super().__init__()
 
         self.parent = parent # a mesoSPIM_Camera() object
         self.cfg = parent.cfg
+        self.frame_queue = frame_queue
 
         self.state = mesoSPIM_StateSingleton()
         self.running_flag = self.abort_flag = False
@@ -198,55 +199,61 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         #Create a RAM buffer for acquisition that keeps {self.percent_ram_free} of total RAM free
         self.image_buffer = self.allocate_ram()
 
-    @QtCore.pyqtSlot(np.ndarray, Acquisition, AcquisitionList)
-    def write_image(self, image, acq, acq_list):
-        if self.buffering_on:
-            logger.debug('Copy image to RAM buffer started')
-            self.image_buffer[self.written_image_counter % self.image_buffer.shape[0]] = image # this single operation takes 40-50 ms to complete. Note that both 0 % 1 and 0 % 1 == 0, dangerous!
-            logger.debug('Copy image to RAM buffer ended') 
-        self.written_image_counter += 1
-        if (self.written_image_counter % self.image_buffer.shape[0] == 0) or (self.written_image_counter == self.max_frame) or self.abort_flag:
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def write_images(self, acq, acq_list):
+        """Write images to disk. 
+        The actual images are passed via queue from the Camera thread, NOT via the signal/slot mechanism"""
+        # if self.buffering_on:
+        #     logger.debug('Copy image to RAM buffer started')
+        #     self.image_buffer[self.written_image_counter % self.image_buffer.shape[0]] = image # this single operation takes 40-50 ms to complete. Note that both 0 % 1 and 0 % 1 == 0, dangerous!
+        #     logger.debug('Copy image to RAM buffer ended') 
+        # self.written_image_counter += 1
+        # if (self.written_image_counter % self.image_buffer.shape[0] == 0) or (self.written_image_counter == self.max_frame) or self.abort_flag:
+        #     self.image_to_disk(acq, acq_list, image)
+        while len(self.frame_queue) > 0:
+            logger.debug('image queue length: ' + str(len(self.frame_queue)))
+            image = np.rot90(self.frame_queue.popleft())
             self.image_to_disk(acq, acq_list, image)
 
     def image_to_disk(self, acq, acq_list, image):
         logger.debug('image_to_disk() started') # 60 ms total in demo mode, v.1.9.0
         self.parent.sig_status_message.emit('Flushing data to disk...')
         #time.sleep(0.5) # Add delay to emulate slow disk writing
-        while True:
-            if self.buffering_on:
-                logger.debug('Copy image from RAM buffer started')
-                image = self.image_buffer[self.cur_image_counter % self.image_buffer.shape[0]] # Note that both 0 % 1 and 1 % 1 == 0, dangerous!
-                logger.debug('Copy image from RAM buffer ended')
-            else:
-                pass # use the 'image' directly
-            xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
-            if self.file_extension == '.h5':
-                self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
-                                             illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
-                                             channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                             angle=acq_list.find_value_index(acq['rot'], 'rot'),
-                                             tile=acq_list.get_tile_index(acq)
-                                             )
-            elif self.file_extension == '.raw':
-                self.xy_stack[self.cur_image_counter * self.fsize:(self.cur_image_counter + 1) * self.fsize] = image.flatten()
-            elif self.file_extension in self.tiff_aliases:
-                self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
-                                       metadata={'spacing': acq['z_step'], 'unit': 'um'})
-            elif self.file_extension in self.bigtiff_aliases:
-                self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
-                                       metadata={'spacing': acq['z_step'], 'unit': 'um'})
+        # while True:
+        #     if self.buffering_on:
+        #         logger.debug('Copy image from RAM buffer started')
+        #         image = self.image_buffer[self.cur_image_counter % self.image_buffer.shape[0]] # Note that both 0 % 1 and 1 % 1 == 0, dangerous!
+        #         logger.debug('Copy image from RAM buffer ended')
+        #     else:
+        #         pass # use the 'image' directly
+        xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
+        if self.file_extension == '.h5':
+            self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
+                                            illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                            channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                            angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                            tile=acq_list.get_tile_index(acq)
+                                            )
+        elif self.file_extension == '.raw':
+            self.xy_stack[self.cur_image_counter * self.fsize:(self.cur_image_counter + 1) * self.fsize] = image.flatten()
+        elif self.file_extension in self.tiff_aliases:
+            self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
+                                    metadata={'spacing': acq['z_step'], 'unit': 'um'})
+        elif self.file_extension in self.bigtiff_aliases:
+            self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
+                                    metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
-            if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
-                self.mip_image[:] = np.maximum(self.mip_image, image)
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+            self.mip_image[:] = np.maximum(self.mip_image, image)
 
-            self.cur_image_counter += 1
-            # Terminate loop if the full buffer has been dumped to disk or if all images from acquisition have been dumped to disk
-            if self.cur_image_counter % self.image_buffer.shape[0] == 0 or self.cur_image_counter == self.max_frame or self.buffering_on == False:
-                self.parent.sig_status_message.emit('Running Acquisition')
-                break
-            elif self.abort_flag and self.cur_image_counter == self.written_image_counter:
-                self.parent.sig_status_message.emit('Running Acquisition')
-                break
+        self.cur_image_counter += 1
+        # Terminate loop if the full buffer has been dumped to disk or if all images from acquisition have been dumped to disk
+        if self.cur_image_counter == self.max_frame or self.buffering_on == False:
+            self.parent.sig_status_message.emit('Running Acquisition')
+        #    break
+        elif self.abort_flag and self.cur_image_counter == self.written_image_counter:
+            self.parent.sig_status_message.emit('Running Acquisition')
+        #    break
 
         if not self.running_flag:
             logger.info("No image, running terminated")

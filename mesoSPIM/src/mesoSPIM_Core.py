@@ -8,7 +8,7 @@ import time
 import platform
 import io
 import traceback
-
+from collections import deque
 import logging
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state = mesoSPIM_StateSingleton()
         self.state['state'] = 'init'
 
+        self.frame_queue = deque([])
+
         ''' The signal-slot switchboard '''
         # Note the name duplication (shadowing)!!
         # parent.sig_state_request -> self.state_request_handler
@@ -112,7 +114,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state, type=QtCore.Qt.QueuedConnection)
 
         self.camera_thread = QtCore.QThread()
-        self.camera_worker = mesoSPIM_Camera(self)
+        self.camera_worker = mesoSPIM_Camera(self, self.frame_queue)
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
@@ -120,12 +122,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_end_image_series.connect(self.camera_worker.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
 
         self.image_writer_thread = QtCore.QThread()
-        self.image_writer = mesoSPIM_ImageWriter(self)
+        self.image_writer = mesoSPIM_ImageWriter(self, self.frame_queue)
         self.image_writer.moveToThread(self.image_writer_thread)
         self.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
         self.sig_end_image_series.connect(self.image_writer.end_acquisition, type=QtCore.Qt.BlockingQueuedConnection)
 
-        self.camera_worker.sig_write_image.connect(self.image_writer.write_image, type=QtCore.Qt.QueuedConnection)
+        self.camera_worker.sig_write_images.connect(self.image_writer.write_images, type=QtCore.Qt.QueuedConnection)
 
         #self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
         self.serial_worker = mesoSPIM_Serial(self)
@@ -148,7 +150,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         ''' Start the threads '''
         self.camera_thread.start(QtCore.QThread.HighestPriority)
-        self.image_writer_thread.start(QtCore.QThread.HighestPriority)
+        self.image_writer_thread.start(QtCore.QThread.TimeCriticalPriority)
         # The serial_worker remains in the Core thread, not separate thread for serial_worker
         #self.serial_thread.start() # legacy
 

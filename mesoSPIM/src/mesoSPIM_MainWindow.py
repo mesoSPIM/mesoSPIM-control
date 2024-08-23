@@ -180,9 +180,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.enable_gui_updates_from_state(False)
 
         # Periodic garbage collection for the entire process
-        self.gc_timer = QTimer()
-        self.gc_timer.timeout.connect(gc.collect)
-        self.gc_timer.start(10000)  # Run garbage collection every 10 seconds
+        # self.gc_timer = QTimer()
+        # self.gc_timer.timeout.connect(gc.collect)
+        # self.gc_timer.start(60000)  # Run garbage collection every 60 seconds. Not sure if this is a good idea.
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.

@@ -4,7 +4,6 @@ mesoSPIM Camera class, intended to run in its own thread
 
 import time
 import numpy as np
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -23,16 +22,17 @@ from .utils.acquisitions import AcquisitionList, Acquisition
 class mesoSPIM_Camera(QtCore.QObject):
     '''Top-level class for all cameras'''
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
-    sig_write_image = QtCore.pyqtSignal(np.ndarray, Acquisition, AcquisitionList)
+    sig_write_images = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_finished = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal(bool)
     sig_status_message = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent, frame_queue):
         super().__init__()
 
         self.parent = parent # a mesoSPIM_Core() object
         self.cfg = parent.cfg
+        self.frame_queue = frame_queue
 
         self.state = mesoSPIM_StateSingleton()
         #self.image_writer = mesoSPIM_ImageWriter(self)
@@ -174,13 +174,15 @@ class mesoSPIM_Camera(QtCore.QObject):
                 logger.debug(f'Adding images to series')
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
-                for image in images:
-                    image = np.rot90(image)
-                    self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
+                self.frame_queue.extend(images) # push the list of images into queue
+                # show the first image
+                image = np.rot90(images[0]) 
+                self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
                                                0:self.y_pixels:self.camera_display_acquisition_subsampling])
-                    self.sig_write_image.emit(image, acq, acq_list)
-                    self.cur_image += 1
-                del images # Free up memory
+                # tell the image writer to write the images in queue
+                self.sig_write_images.emit(acq, acq_list)
+                self.cur_image += len(images)
+
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):
