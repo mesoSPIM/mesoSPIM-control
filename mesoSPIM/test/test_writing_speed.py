@@ -30,7 +30,7 @@ def test_write_large_TIFF_stack():
     print(f"Frame rate: {framerate:1.2f} planes per second")
 
     # Clean up the files
-    #os.remove(filepath)
+    os.remove(filepath)
     print(f"TIFF file {filepath} cleaned up successfully")
 
 test_write_large_TIFF_stack()
