@@ -1,3 +1,10 @@
+## Release candidate August 2024 [1.10.0]
+### Performance :rocket:
+- improved acquisition speed from 2.5 to 5 FPS, by moving image writing to a separate thread and using `collections.deque` mechanism for frame sharing between the camera and image writing threads, instead of less-performant `QThread` signal/slot mechanism.
+- best writing speed and lowest CPU overhead is achieved with NVMe SSD disks, recommended.
+- the option `buffering = {...}` in config file is deprecated from v.1.10.0 and will be ignored, due to improved program performance.
+- dependencies are updated to the latest versions: `numpy`, `scipy`, `tifffile`, etc.
+
 ## Release July 2024 [1.9.0]
 ### User Interface :lollipop:
 - :gem:  "Auto L/R illumination" button in the Acquisition manager to select tile illumination based on its x-position.

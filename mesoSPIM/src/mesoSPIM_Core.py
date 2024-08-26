@@ -709,6 +709,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_intensity(acq_list[0]['intensity'])
             time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
             self.sig_finished.emit()
+            self.send_status_message_to_gui('Acquisition list closed')
+        else:
+            self.send_status_message_to_gui('Acquisition stopped')
 
     def preview_acquisition(self, z_update=True):
         self.stopflag = False
