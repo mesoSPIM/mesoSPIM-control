@@ -451,7 +451,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
         self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
-        #self.StopButton.clicked.connect(lambda: print('Stopping'))
         self.LightsheetSwitchingModeButton.clicked.connect(self.run_lightsheet_alignment_mode)
         self.VisualModeButton.clicked.connect(self.run_visual_mode)
 

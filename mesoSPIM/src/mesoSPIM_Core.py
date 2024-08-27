@@ -49,7 +49,7 @@ class mesoSPIM_Core(QtCore.QObject):
     # These signals have slots in both mesoSPIM_Serial and mesoSPIM_WaveFormGenerator classes. Potentially dangerous.
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
-
+    sig_stop_aquisition = QtCore.pyqtSignal()
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
@@ -120,12 +120,14 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
         self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.set_image)
         self.sig_end_image_series.connect(self.camera_worker.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
+        self.sig_stop_aquisition.connect(self.camera_worker.stop, type=QtCore.Qt.QueuedConnection)
 
         self.image_writer_thread = QtCore.QThread()
         self.image_writer = mesoSPIM_ImageWriter(self, self.frame_queue)
         self.image_writer.moveToThread(self.image_writer_thread)
         self.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
         self.sig_end_image_series.connect(self.image_writer.end_acquisition, type=QtCore.Qt.BlockingQueuedConnection)
+        self.sig_stop_aquisition.connect(self.image_writer.abort_writing, type=QtCore.Qt.QueuedConnection)
 
         self.camera_worker.sig_write_images.connect(self.image_writer.write_images, type=QtCore.Qt.QueuedConnection)
 
@@ -324,13 +326,13 @@ class mesoSPIM_Core(QtCore.QObject):
             self.visual_mode()
 
     def stop(self):
-        self.stopflag = True
-        ''' This stopflag is a bit risky, needs to be updated'''
-        self.image_writer.abort_writing()
+        self.stopflag = True # This stopflag is a bit risky, needs to be updated to a more robust solution
+        self.sig_stop_aquisition.emit() # send STOP signal to both Camera and ImageWriter threads
         self.sig_polling_stage_position_start.emit()
         self.state['state'] = 'idle'
         self.sig_update_gui_from_state.emit(False)
         self.sig_finished.emit()
+        self.frame_queue.clear() # clear the frame queue
 
     @QtCore.pyqtSlot(bool)
     def pause(self, boolean):
