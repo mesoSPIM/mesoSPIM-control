@@ -49,7 +49,7 @@ class mesoSPIM_Core(QtCore.QObject):
     # These signals have slots in both mesoSPIM_Serial and mesoSPIM_WaveFormGenerator classes. Potentially dangerous.
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
-    sig_stop_aquisition = QtCore.pyqtSignal()
+    sig_stop_aquisition = QtCore.pyqtSignal() # STOP signal to both Camera and ImageWriter threads
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
