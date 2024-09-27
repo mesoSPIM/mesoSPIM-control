@@ -9,7 +9,7 @@ pyserial==3.5
 pyqtgraph==0.12.4
 pywinusb==0.4.2
 tifffile==2021.11.2
-qdarkstyle==3.2.3
+qdarkstyle==2.8.1
 npy2bdv==1.0.8
 future==1.0.0
 matplotlib==3.5.2
