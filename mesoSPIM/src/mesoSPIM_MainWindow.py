@@ -239,6 +239,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
 
     def close_app(self):
+        self.log_display_handler.flushOnClose = False
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:

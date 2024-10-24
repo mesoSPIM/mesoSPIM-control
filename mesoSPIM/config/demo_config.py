@@ -165,8 +165,8 @@ camera_parameters = {'x_pixels' : 2048, #5056
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
-camera_parameters = {'x_pixels' : 2000,
-                     'y_pixels' : 1000,
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
@@ -338,9 +338,6 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
 
-buffering = {'use_ram_buffer': False, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
-             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
-             }
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
@@ -406,9 +403,9 @@ startup = {
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075, # Hamamatsu-specific parameter
 'camera_display_live_subsampling': 2,
-'camera_display_temporal_subsampling': 2, 
+'camera_display_temporal_subsampling': 2, # affects overall performance! Default value 2. Increase to 3 or 4 if the CPUs are not powerful enough (freezing of GUI during acquisition).
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
-'average_frame_rate': 2.5,
+'average_frame_rate': 4.5,
 }
