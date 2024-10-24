@@ -16,8 +16,8 @@ cleared tissue samples. It is compatible with all major clearing approaches and 
 ## Installation
 
 ### Prerequisites
-* Windows 7 or Windows 10, 64-bit
-* Python >=3.7, we recommend [Anaconda](https://www.anaconda.com/download/)
+* Windows >=7, 64-bit
+* Python >=3.12, we recommend [Miniforge](https://github.com/conda-forge/miniforge). The Anaconda distribution is not recommended since the change of its terms of service in 2020.
 
 ### Device drivers
 #### National Instruments DAQ devices
@@ -41,27 +41,27 @@ If using USB connection, check ASI instructions on [USB support](http://www.asii
 
 ![image](https://user-images.githubusercontent.com/10835134/198991579-df1e5acc-d246-425b-a345-03ba93a1f0bb.png)
 
-2. Open Anaconda prompt, create and activate a new environment `mesoSPIM-py37`:
+2. Open Miniforge prompt, create and activate a new environment `mesoSPIM-py312`:
 ```
-conda create -p C:/Users/Public/conda/envs/mesoSPIM-py37 python=3.7
-conda activate C:/Users/Public/conda/envs/mesoSPIM-py37
+mamba create -p C:/Users/Public/mamba/envs/mesoSPIM-py312 python=3.12
+mamba activate C:/Users/Public/mamba/envs/mesoSPIM-py312
 ```
 3. Install mesoSPIM-specific libraries: 
 ```
 cd C:/Users/Public/mesoSPIM-control
-pip install -r requirements-anaconda.txt
+pip install -r requirements-mamba.txt
 ```
 
 ## Launching
 
-### Anaconda prompt
+### Miniforge prompt
 1. `cd C:/Users/Public/mesoSPIM-control/mesoSPIM`
 2. `python mesoSPIM_Control.py` (with argument `-D` for demo mode)
 
 ### Desktop shortcut (fast launch)
-From Anaconda prompt, type `where conda`, and enter the result (e.g. `C:\Users\Nikita\anaconda3\Scripts\activate.bat`) into line 10 of `mesoSPIM.bat` file:
+From Miniforge prompt, type `where mamba`, and enter the result (e.g. `C:\Users\Nikita\miniforge3\Scripts\activate.bat`) into line 10 of `mesoSPIM.bat` file:
 ```
-"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\anaconda3\Scripts\activate.bat" "C:\Users\Public\conda\envs\mesoSPIM-py37" && python "mesoSPIM_Control.py""
+"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\miniforge3\Scripts\activate.bat" "C:\Users\Public\conda\envs\mesoSPIM-py313" && python "mesoSPIM_Control.py""
 ```
 Save changes and double-click the `mesoSPIM.bat` file - this should launch the control software. If this does ot happen, check the Anaconda path. Once this works, create a shortcut and place it on your desktop for quick launching.  
 
@@ -74,7 +74,6 @@ If you have multiple config files you will be prompted to choose one that corres
 
 Once your hardware is connected and turned on, change the `Demo` devices to hardware-specific names, set their parameters, and test each device.
 See [Wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file) for details.
-
 
 
 ## Updating existing installation
