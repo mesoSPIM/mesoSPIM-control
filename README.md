@@ -17,7 +17,7 @@ cleared tissue samples. It is compatible with all major clearing approaches and 
 
 ### Prerequisites
 * Windows >=7, 64-bit
-* Python >=3.12, we recommend [Miniforge](https://github.com/conda-forge/miniforge). The Anaconda distribution is not recommended since the change of its terms of service in 2020.
+* Python >=3.12, we recommend [Miniforge](https://github.com/conda-forge/miniforge) and `mamba` package manager that comes with it. The Anaconda distribution is not recommended since the change of its terms of service in 2020. If you have existing Anaconda installation, you can still use `conda` instead of `mamba` in the instructsions below.
 
 ### Device drivers
 #### National Instruments DAQ devices

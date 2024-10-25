@@ -1,10 +1,3 @@
-csv
-traceback
-pprint
-ctypes
-importlib
-argparse
-glob
 numpy>=1.21.6
 scipy>=1.7.3
 PyQt5>=5.13.2
@@ -20,3 +13,4 @@ qdarkstyle==2.8.1
 npy2bdv==1.0.8
 future>=1.0.0
 matplotlib>=3.5.2
+

@@ -1,4 +1,11 @@
-## Release candidate August 2024 [1.10.0]
+## Release cadidate October 2024 [1.10.2].
+### Performance :rocket:
+- migration to Python 3.12 for better performance and compatibility with the latest libraries.
+- subsampling of the camera image for less frequent rendering in the GUI (less CPU load) during acquisition, controlled by `'camera_display_temporal_subsampling': 2,` parameter in the config file. Value `1` means no subsampling (show every image during acquisition).
+- change recommended package manager to `mamba` to avoid Anaconda license issues.
+- change the default timer for stage position update from 50 ms to 100 ms, to reduce communication and logging overhead. ASI stages updated every 200 ms, PI stages every 100 ms.
+
+## Release candidate August 2024 [1.10.0]. Cancelled due to performance issues on some setups.
 ### Performance :rocket:
 - improved acquisition speed from 2.5 to 5 FPS, by moving image writing to a separate thread and using `collections.deque` mechanism for frame sharing between the camera and image writing threads, instead of less-performant `QThread` signal/slot mechanism.
 - best writing speed and lowest CPU overhead is achieved with NVMe SSD disks, recommended.

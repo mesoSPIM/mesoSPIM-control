@@ -52,7 +52,7 @@ class mesoSPIM_Stage(QtCore.QObject):
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
-        self.pos_timer.start(50)
+        self.pos_timer.start(100) # previously 50, which is unnecessary fast
 
         '''Initial setting of all positions
 
@@ -1348,7 +1348,7 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
-        self.pos_timer.start(50)
+        self.pos_timer.start(100) # previously 50, but this was too fast, a lot of unnecessary updates
         '''
         Galil-specific code
         '''
@@ -1849,7 +1849,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
         self.set_speed_from_config()
-        self.pos_timer.setInterval(250)
+        self.pos_timer.setInterval(200)
         logger.info('ASI stages initialized')
         
     def __del__(self):
