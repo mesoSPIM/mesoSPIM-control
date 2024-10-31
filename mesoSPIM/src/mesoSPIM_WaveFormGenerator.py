@@ -480,6 +480,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.galvo_etl_task.write(self.galvo_and_etl_waveforms)
             self.laser_task.write(self.laser_waveforms)
         else:
+            logger.debug(f"Writing analog waveforms: self.galvo_and_etl_waveforms, min {self.galvo_and_etl_waveforms.min()}, max {self.galvo_and_etl_waveforms.max()}")
+            logger.debug(f"Writing analog waveforms: self.laser_waveforms, min {self.laser_waveforms.min()}, max {self.laser_waveforms.max()}")
             self.galvo_etl_laser_task.write(np.vstack((self.galvo_and_etl_waveforms, self.laser_waveforms)))
 
     def start_tasks(self):
