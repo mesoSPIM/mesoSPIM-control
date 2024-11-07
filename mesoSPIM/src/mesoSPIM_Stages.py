@@ -1849,7 +1849,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
         self.set_speed_from_config()
-        self.pos_timer.setInterval(200)
+        self.pos_timer.setInterval(250)
         logger.info('ASI stages initialized')
         
     def __del__(self):
