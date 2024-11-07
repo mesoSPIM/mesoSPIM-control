@@ -49,7 +49,7 @@ mamba activate C:/Users/Public/mamba/envs/mesoSPIM-py312
 3. Install mesoSPIM-specific libraries: 
 ```
 cd C:/Users/Public/mesoSPIM-control
-pip install -r requirements-mamba.txt
+pip install -r requirements-conda-mamba.txt
 ```
 
 ## Launching
