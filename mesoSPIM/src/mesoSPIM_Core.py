@@ -420,11 +420,9 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:
-            #self.sig_move_relative_and_wait_until_done.emit(dict)
-            self.serial_worker.move_relative(dict, wait_until_done=wait_until_done) # intended to force execution in the core thread
+            self.sig_move_relative_and_wait_until_done.emit(dict)
         else:
-            #self.sig_move_relative.emit(dict)
-            self.serial_worker.move_relative(dict, wait_until_done=wait_until_done) # intended to force execution in the core thread
+            self.sig_move_relative.emit(dict)
 
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
