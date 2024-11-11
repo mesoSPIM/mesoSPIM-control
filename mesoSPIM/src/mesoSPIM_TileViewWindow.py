@@ -93,7 +93,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
                 self.scene.addItem(label)
 
         # plot selected tile on top in yellow
-        if selected_row is not None:
+        if selected_row is not None and selected_row < len(acq_list):
             acq = acq_list[selected_row]
             start_point_x, start_point_y = acq.get_startpoint()['x_abs'] - global_offset_x, acq.get_startpoint()['y_abs'] - global_offset_y
             rect = QRectF(self.x_sign*start_point_x*self.scale_factor - self.fov_scene_offset_x, 

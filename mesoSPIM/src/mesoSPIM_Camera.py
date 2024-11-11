@@ -227,7 +227,6 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         for image in images:
             image = np.rot90(image)
-
             self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_live_subsampling,
                                        0:self.y_pixels:self.camera_display_live_subsampling])
             self.live_image_count += 1
