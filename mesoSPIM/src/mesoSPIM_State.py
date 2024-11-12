@@ -27,14 +27,16 @@ class mesoSPIM_StateSingleton(QObject):
     mutex = QMutex()
 
     def __new__(cls, *args, **kwargs):
-        if not mesoSPIM_StateSingleton.instance:
+        if cls.instance is None:
             with cls._lock:
-                cls.instance = super(mesoSPIM_StateSingleton, cls).__new__(cls, *args, **kwargs)
+                cls.instance = super().__new__(cls, *args, **kwargs)
         return cls.instance
 
     def __init__(self):
         super().__init__()
-        self._state_dict = {
+        if not hasattr(self,"initialized"):
+            self.initialized = True
+            self._state_dict = {
                         'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script', 'run_acquisition_list', 'run_selected_acquisition', 'lightsheet_alignment_mode'
                         'acq_list' : AcquisitionList(),
                         'selected_row': -2,

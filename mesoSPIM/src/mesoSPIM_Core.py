@@ -163,6 +163,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
 
         self.waveformer.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
+        # Signals from Core
         self.sig_state_request.connect(self.waveformer.state_request_handler)
         self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
         ''' If this line is activated while the waveformer and the core live in the same thread, a deadlock results '''
@@ -389,6 +390,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.send_status_message_to_gui('Magnification (zoom) changed')
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
+        
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):

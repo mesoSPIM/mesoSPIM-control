@@ -122,7 +122,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.create_waveforms()
             elif key == 'zoom':
                 self.state[key] = value
-                self.rescale_galvo_amplitude_by_zoom(float(value[:-1])) # truncate and convert string eg '1.2x' -> 1.2
+                self.rescale_galvo_amplitude_by_zoom(float(value.split('x')[0])) # truncate and convert string eg '1.2x BlahBlah' -> 1.2
                 self.create_waveforms()
             elif key == 'ETL_cfg_file':
                 self.state[key] = value

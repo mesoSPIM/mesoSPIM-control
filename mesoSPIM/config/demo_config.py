@@ -322,10 +322,10 @@ zoomdict = {'2x': 'A',
 Pixelsize in micron
 '''
 pixelsize = {
-            '1x' : 1,
-            '2x' : 2.0,
-            '4x' : 4.0,
-            '5x' : 5.0,}
+            '1x' : 5.0,
+            '2x' : 2.5,
+            '4x' : 1.25,
+            '5x' : 1.0,}
 
 '''
  HDF5 parameters, if this format is used for data saving (optional).
