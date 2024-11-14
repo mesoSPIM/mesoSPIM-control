@@ -5,7 +5,7 @@ mesoSPIM Stage classes
 import time
 import logging
 from PyQt5 import QtCore
-from .mesoSPIM_State import mesoSPIM_StateSingleton
+#from .mesoSPIM_State import mesoSPIM_StateSingleton
 logger = logging.getLogger(__name__)
 
 
@@ -32,10 +32,10 @@ class mesoSPIM_Stage(QtCore.QObject):
 
     def __init__(self, parent=None):
         super().__init__()
-        self.parent = parent
+        self.parent = parent # 
         self.cfg = parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         ''' The movement signals are emitted by the mesoSPIM_Core, which in turn
         instantiates the mesoSPIM_Serial object, both (must be) running in the same Core thread.
@@ -1343,8 +1343,8 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        self.state = mesoSPIM_StateSingleton()
+        self.parent = parent
+        self.state = self.parent.state  # mesoSPIM_StateSingleton()
 
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
@@ -1832,8 +1832,8 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        self.state = mesoSPIM_StateSingleton()
+        self.parent = parent
+        self.state = self.parent.state  # mesoSPIM_StateSingleton()
         from .devices.stages.asi.asicontrol import StageControlASITiger
         
         ''' Setting up the ASI stages '''
@@ -2053,10 +2053,10 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
     '''
     sig_pause = QtCore.pyqtSignal(bool)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent):
         super().__init__(parent)
-
-        self.state = mesoSPIM_StateSingleton()
+        self.parent = parent
+        self.state = self.parent.state  # mesoSPIM_StateSingleton()
         '''
         ASI-specific code
         '''

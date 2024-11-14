@@ -11,7 +11,6 @@ from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
 from PyQt5.uic import loadUi
 #import pyqtgraph as pg
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.parent = parent # the mesoSPIM_MainWindow() instance
         self.acquisition_manager_window = parent.acquisition_manager_window
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         '''Set up the UI'''
         if __name__ == '__main__':

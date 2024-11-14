@@ -11,9 +11,6 @@ import logging
 logger = logging.getLogger(__name__)
 from mesoSPIM.src.devices.servos.dynamixel.dynamixel import Dynamixel
 from mesoSPIM.src.devices.filter_wheels.ZWO_EFW import pyzwoefw
-from mesoSPIM.src.mesoSPIM_State import mesoSPIM_StateSingleton
-
-state = mesoSPIM_StateSingleton()
 
 class mesoSPIM_DemoFilterWheel(QtCore.QObject):
     def __init__(self, filterdict):
@@ -38,8 +35,10 @@ class mesoSPIM_DemoFilterWheel(QtCore.QObject):
 
 class ZwoFilterWheel(QtCore.QObject):
     '''Astronomy filter wheels from https://astronomy-imaging-camera.com'''
-    def __init__(self, filterdict):
-        dll_path = os.path.join(state['package_directory'], 'src', 'devices', 'filter_wheels', 'ZWO_EFW', 'lib', 'Win64', 'EFW_filter.dll')
+    def __init__(self, filterdict, parent=None):
+        self.parent = parent
+        self.state = parent.state
+        dll_path = os.path.join(self.state['package_directory'], 'src', 'devices', 'filter_wheels', 'ZWO_EFW', 'lib', 'Win64', 'EFW_filter.dll')
         self.device = pyzwoefw.EFW(dll_path)
         logger.info(f"Number of ZWO EFW filter wheels connected: {self.device.GetNum()}")
         self.n_slots = self.device.GetProperty(self.device.IDs[0])['slotNum']

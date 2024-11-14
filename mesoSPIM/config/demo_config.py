@@ -68,10 +68,10 @@ Keys are the laser designation that will be shown in the user interface
 Values are DO ports used for laser ENABLE digital signal.
 Critical: entries must be sorted in the increasing wavelength order: 405, 488, etc.
 '''
-laserdict = {'488 nm': 'PXI6733/port0/line2',
-             '520 nm': 'PXI6733/port0/line3',
-             '568 nm': 'PXI6733/port0/line4',
-             '638 nm': 'PXI6733/port0/line5',
+laserdict = {'405 nm': 'PXI1Slot4/port0/line2',
+             '488 nm': 'PXI1Slot4/port0/line3',
+             '561 nm': 'PXI1Slot4/port0/line4', 
+             '638 nm': 'PXI1Slot4/port0/line5',
              }
 
 

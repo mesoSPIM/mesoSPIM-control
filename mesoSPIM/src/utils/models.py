@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore, QtDesigner
 
 from .acquisitions import Acquisition, AcquisitionList
 
-from ..mesoSPIM_State import mesoSPIM_StateSingleton
+#from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import copy
 import pickle
@@ -19,7 +19,10 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     '''
     def __init__(self, table=None, parent=None):
         super().__init__(parent)
-        
+        if parent is not None:
+            self.parent = parent
+        else:
+            raise ValueError('Parent is None')
         if table is None:
             self._table = AcquisitionList()
         else:
@@ -28,7 +31,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         ''' Get the headers as the capitalized keys from the first acquisition '''
         self._headers = self._table.get_capitalized_keylist()
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         self.dataChanged.connect(self.updatePlanes)
 

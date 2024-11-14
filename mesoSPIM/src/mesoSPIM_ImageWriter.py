@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
 from distutils.version import StrictVersion
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores
@@ -26,7 +25,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.cfg = parent.cfg
         self.frame_queue = frame_queue
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # a mesoSPIM_StateSingleton() object
         self.running_flag = self.abort_flag = False
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']

@@ -79,12 +79,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.cfg = config
         self.package_directory = package_directory
         self.script_window_counter = 0
-        self.update_gui_from_state_flag = False
 
         # Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
-        self.state.sig_updated.connect(self.update_gui_from_state)
-        self.state['package_directory'] = package_directory
+        self.state.set_parameters(self.cfg.startup)
 
         # Setting up the user interface windows
         loadUi(self.package_directory + '/gui/mesoSPIM_MainWindow.ui', self)
@@ -149,7 +147,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Memo: with type=QtCore.Qt.DirectConnection the slot is invoked immediately when the signal is emitted. The slot is executed in the signalling thread (Core).
         self.core.sig_finished.connect(self.finished)
         self.core.sig_position.connect(self.update_position_indicators)
-        self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
+        self.core.sig_update_gui_from_state.connect(self.update_gui_from_state)
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
@@ -161,6 +159,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.optimizer = None
         self.contrast_window = None
 
+        # Signal from state to GUI
+        #self.state.sig_updated.connect(self.update_gui_from_state) # too frequent updates because of stage polling
         # The signal switchboard, MainWindow -> Core
         self.sig_launch_optimizer.connect(self.launch_optimizer)
         self.sig_launch_contrast_window.connect(self.launch_contrast_window)
@@ -176,7 +176,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         logger.debug(f'Main Window: Core thread priority: {self.core_thread.priority()}')
 
         self.joystick = mesoSPIM_JoystickHandler(self)
-        self.enable_gui_updates_from_state(False)
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.
@@ -649,38 +648,20 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def execute_script(self, script):
         self.sig_execute_script.emit(script)
 
-    def block_signals_from_controls(self, bool):
-        '''
-        Helper method to allow blocking of signals from all kinds of controls.
-
-        Needs a list in self.widgets_to_block which has to be created during 
-        mesoSPIM_MainWindow.__init__()
-        
-        Args:
-            bool (bool): True if widgets are supposed to be blocked, False if unblocking is desired.
-        '''
-        for widget in self.widgets_to_block:
-            widget.blockSignals(bool)
-
     def update_widget_from_state(self, widget, state_parameter_string, conversion_factor):
         if isinstance(widget, QtWidgets.QComboBox):
             widget.setCurrentText(self.state[state_parameter_string])
-        elif isinstance(widget, (QtWidgets.QSlider,QtWidgets.QDoubleSpinBox,QtWidgets.QSpinBox)):
-            widget.setValue(self.state[state_parameter_string]*conversion_factor)
+        elif isinstance(widget, (QtWidgets.QSlider, QtWidgets.QSpinBox)):
+            widget.setValue(int(self.state[state_parameter_string]*conversion_factor))
+        elif isinstance(widget, (QtWidgets.QDoubleSpinBox)):
+            widget.setValue(float(self.state[state_parameter_string]*conversion_factor))
     
     @QtCore.pyqtSlot()
     def update_gui_from_state(self):
-        '''
-        Updates the GUI controls after a state_change
-        if the self.update_gui_from_state_flag is enabled.
-        '''
-        if self.update_gui_from_state_flag:
-            self.block_signals_from_controls(True)
-            for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
-                self.update_widget_from_state(widget, state_parameter, conversion_factor)   
-            self.acquisition_manager_window.set_selected_row(self.state['selected_row'])
-            self.block_signals_from_controls(False)
-            logger.debug('GUI updated from state')
+        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+            self.update_widget_from_state(widget, state_parameter, conversion_factor)   
+        self.acquisition_manager_window.set_selected_row(self.state['selected_row'])
+        logger.debug('GUI updated from state')
 
     def run_snap(self):
         self.sig_state_request.emit({'state':'snap'})
@@ -706,7 +687,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.state['selected_row'] = row
             self.sig_state_request.emit({'state':'run_selected_acquisition'})
             self.enable_mode_control_buttons(False)
-            self.enable_gui_updates_from_state(True)
             self.enable_stop_button(True)
             self.enable_gui(False)
             ''' Disabled taskbar button progress display due to problems with Anaconda default
@@ -718,7 +698,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.state['selected_row'] = -1
         self.sig_state_request.emit({'state':'run_acquisition_list'})
         self.enable_mode_control_buttons(False)
-        self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)
         self.enable_gui(False)
         ''' Disabled taskbar button progress display due to problems with Anaconda default
@@ -767,10 +746,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.contrast_window.active = True
             self.contrast_window.show()
 
-    @QtCore.pyqtSlot(bool)
-    def enable_gui_updates_from_state(self, boolean):
-        self.update_gui_from_state_flag = boolean
-
     def enable_stop_button(self, boolean):
         self.StopButton.setEnabled(boolean)
     
@@ -788,7 +763,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LightsheetSwitchingModeButton.setEnabled(boolean)
 
     def finished(self):
-        self.enable_gui_updates_from_state(False)
         self.enable_stop_button(False)
         self.enable_mode_control_buttons(True)
         self.enable_gui(True)

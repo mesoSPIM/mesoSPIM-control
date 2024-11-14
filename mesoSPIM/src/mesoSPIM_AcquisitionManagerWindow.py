@@ -10,7 +10,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 ''' mesoSPIM imports '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .utils.utility_functions import format_data_size
 from .utils.models import AcquisitionModel
 
@@ -66,7 +65,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.parent = parent # mesoSPIM_MainWindow instance
         self.cfg = parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # mesoSPIM_StateSingleton instance
 
         loadUi(self.parent.package_directory + '/gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
@@ -80,7 +79,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.statusBar = QtWidgets.QStatusBar()
 
         ''' Setting the model up '''
-        self.model = AcquisitionModel()
+        self.model = AcquisitionModel(table=None, parent=self)
 
         self.table.setModel(self.model) # self.table is a QTableView object
         self.model.dataChanged.connect(self.set_state)

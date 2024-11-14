@@ -8,7 +8,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
-from ..mesoSPIM_State import mesoSPIM_StateSingleton
+#from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 class FocusTrackingWizard(QtWidgets.QWizard):
     '''
@@ -18,14 +18,14 @@ class FocusTrackingWizard(QtWidgets.QWizard):
     '''
     wizard_done = QtCore.pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super().__init__(parent)
 
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         self.f_1 = 0
         self.f_2 = 0

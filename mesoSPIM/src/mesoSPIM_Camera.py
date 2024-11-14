@@ -14,7 +14,6 @@ try:
 except:
     logger.info('Error: Hamamatsu camera could not be imported')
 '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 
@@ -24,7 +23,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
     sig_write_images = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_finished = QtCore.pyqtSignal()
-    sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+    sig_update_gui_from_state = QtCore.pyqtSignal()
     sig_status_message = QtCore.pyqtSignal(str)
 
     def __init__(self, parent, frame_queue):
@@ -34,7 +33,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.cfg = parent.cfg
         self.frame_queue = frame_queue
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # a mesoSPIM_StateSingleton() object
         #self.image_writer = mesoSPIM_ImageWriter(self)
         self.stopflag = False
 
@@ -72,7 +71,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.parent.sig_get_snap_image.connect(self.snap_image)
         self.parent.sig_end_live.connect(self.end_live, type=QtCore.Qt.BlockingQueuedConnection)
 
-        ''' Set up the camera '''
+        ''' Set up the actual camera '''
         if self.cfg.camera == 'HamamatsuOrca':
             self.camera = mesoSPIM_HamamatsuCamera(self)
         elif self.cfg.camera == 'Photometrics':
@@ -123,9 +122,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         '''
         self.camera.set_exposure_time(time)
         self.camera_exposure_time = time
-        self.sig_update_gui_from_state.emit(True)
         self.state['camera_exposure_time'] = time
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
 
     def set_camera_line_interval(self, time):
         '''
@@ -136,9 +134,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         '''
         self.camera.set_line_interval(time)
         self.camera_line_interval = time
-        self.sig_update_gui_from_state.emit(True)
         self.state['camera_line_interval'] = time
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
 
     def set_camera_display_live_subsampling(self, factor):
         self.camera_display_live_subsampling = factor
@@ -243,12 +240,12 @@ class mesoSPIM_Camera(QtCore.QObject):
 class mesoSPIM_GenericCamera(QtCore.QObject):
     ''' Generic mesoSPIM camera class meant for subclassing.'''
 
-    def __init__(self, parent = None):
+    def __init__(self, parent):
         super().__init__()
         self.parent = parent
         self.cfg = parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() object
 
         self.stopflag = False
 
@@ -311,7 +308,7 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
 
 
 class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
-    def __init__(self, parent = None):
+    def __init__(self, parent):
         super().__init__(parent)
 
         self.count = 0
@@ -351,7 +348,7 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
 
 
 class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
-    def __init__(self, parent = None):
+    def __init__(self, parent):
         super().__init__(parent)
 
     def open_camera(self):
@@ -461,7 +458,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
 
 class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
-    def __init__(self, parent = None):
+    def __init__(self, parent):
         super().__init__(parent)
 
     def open_camera(self):
@@ -618,7 +615,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         
 
 class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
-    def __init__(self, parent = None):
+    def __init__(self, parent):
         super().__init__(parent)
         logger.info('PCO Cam initialized')
     

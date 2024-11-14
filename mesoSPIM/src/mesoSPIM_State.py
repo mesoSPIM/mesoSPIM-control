@@ -34,9 +34,7 @@ class mesoSPIM_StateSingleton(QObject):
 
     def __init__(self):
         super().__init__()
-        if not hasattr(self,"initialized"):
-            self.initialized = True
-            self._state_dict = {
+        self._state_dict = {
                         'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script', 'run_acquisition_list', 'run_selected_acquisition', 'lightsheet_alignment_mode'
                         'acq_list' : AcquisitionList(),
                         'selected_row': -2,

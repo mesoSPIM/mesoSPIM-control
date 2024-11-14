@@ -22,7 +22,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 # from nidaqmx.types import CtrTime
 
 ''' Import mesoSPIM modules '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 from .devices.shutters.Demo_Shutter import Demo_Shutter
 from .devices.shutters.NI_Shutter import NI_Shutter
@@ -44,7 +43,7 @@ class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM'''
 
     sig_finished = QtCore.pyqtSignal()
-    sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+    sig_update_gui_from_state = QtCore.pyqtSignal()
     sig_update_gui_from_shutter_state = QtCore.pyqtSignal() # dirty hack to update the shutter state in the GUI
     # These signals have slots in both mesoSPIM_Serial and mesoSPIM_WaveFormGenerator classes. Potentially dangerous.
     sig_state_request = QtCore.pyqtSignal(dict)
@@ -91,7 +90,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.package_directory = self.parent.package_directory
         self.cfg = self.parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # mesoSPIM_StateSingleton class
         self.state['state'] = 'init'
 
         self.frame_queue = deque([])
@@ -114,7 +113,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state, type=QtCore.Qt.QueuedConnection)
 
         self.camera_thread = QtCore.QThread()
-        self.camera_worker = mesoSPIM_Camera(self, self.frame_queue)
+        self.camera_worker = mesoSPIM_Camera(parent=self, frame_queue=self.frame_queue)
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
@@ -331,7 +330,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_stop_aquisition.emit() # send STOP signal to both Camera and ImageWriter threads
         self.sig_polling_stage_position_start.emit()
         self.state['state'] = 'idle'
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
         self.sig_finished.emit()
         self.frame_queue.clear() # clear the frame queue
 
@@ -616,11 +615,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_warning.emit(f'The acquisition list contains positions {acqusitions_outside_motion_limits} outside the motion limits - stopping!')
             self.sig_finished.emit()
         else:
-            self.sig_update_gui_from_state.emit(True)
             self.prepare_acquisition_list(acq_list)
             self.run_acquisition_list(acq_list)
             self.close_acquisition_list(acq_list)
-            self.sig_update_gui_from_state.emit(False)
+            self.sig_update_gui_from_state.emit()
 
     def get_free_disk_space(self, acq_list):
         """Take the disk location of the first file and compute the free disk space"""
@@ -718,7 +716,6 @@ class mesoSPIM_Core(QtCore.QObject):
     def preview_acquisition(self, z_update=True):
         self.stopflag = False
         row = self.state['selected_row']
-        self.sig_update_gui_from_state.emit(True) # Don't delete this, otherwise GUI updates from the state become unreliable
         acq = self.state['acq_list'][row]
 
         ''' Rotation handling goes here '''
@@ -759,7 +756,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
 
         self.sig_status_message.emit('Ready for preview...')
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
         self.state['state'] = 'idle'
 
     def prepare_acquisition(self, acq, acq_list):
@@ -897,7 +894,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
-        self.sig_update_gui_from_state.emit(True)
         self.state['state'] = 'running_script'
         try:
             exec(script)
@@ -905,7 +901,7 @@ class mesoSPIM_Core(QtCore.QObject):
             traceback.print_exc()
         self.sig_finished.emit()
         self.state['state']='idle'
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
 
     def lightsheet_alignment_mode(self):
         '''Switches shutters after each image to allow coalignment of both lightsheets'''

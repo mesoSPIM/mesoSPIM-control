@@ -8,7 +8,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 import pyqtgraph as pg
 from .utils.optimization import shannon_dct
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         self.parent = parent # the mesoSPIM_MainWindow() instance
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         pg.setConfigOptions(imageAxisOrder='row-major')
         if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\

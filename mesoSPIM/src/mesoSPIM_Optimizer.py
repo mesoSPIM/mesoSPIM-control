@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 
 class mesoSPIM_Optimizer(QtWidgets.QWidget):
@@ -28,7 +27,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.parent = parent # the mesoSPIM_MainWindow() object
         self.core = parent.core
         self.cfg = parent.cfg # initial config file
-        self.state = mesoSPIM_StateSingleton() # current state
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() object
         self.results_window = self.graphics_widget = None
         self.modes_list = ['etl_offset', 'etl_amp', 'focus']
         self.mode = self.modes_list[0]

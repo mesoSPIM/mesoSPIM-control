@@ -16,7 +16,6 @@ from nidaqmx.constants import LineGrouping, DigitalWidthUnits
 from nidaqmx.types import CtrTime
 
 '''mesoSPIM imports'''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
 
 from PyQt5 import QtCore
@@ -28,13 +27,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     the responsible class for actually causing that state change in hardware.
 
     '''
-    sig_update_gui_from_state = QtCore.pyqtSignal(bool) # -> mesoSPIM_Core.sig_update_gui_from_state -> MainWindow.enable_gui_updates_from_state
+    sig_update_gui_from_state = QtCore.pyqtSignal() # -> mesoSPIM_Core.sig_update_gui_from_state -> MainWindow.update_gui_from_state
 
     def __init__(self, parent):
         super().__init__()
         self.cfg = parent.cfg
         self.parent = parent # mesoSPIM_Core object
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # mesoSPIM_StateSingleton object
         self.parent.sig_save_etl_config.connect(self.save_etl_parameters_to_csv)
         cfg_file = self.parent.read_config_parameter('ETL_cfg_file', self.cfg.startup)
         self.state['ETL_cfg_file'] = cfg_file
@@ -83,7 +82,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(), dict.values()):
-            self.sig_update_gui_from_state.emit(True) # Notify GUI about the change
             if key in ('samplerate',
                        'sweeptime',
                        'intensity',
@@ -134,7 +132,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             elif key == 'state':
                 if value == 'live':
                     logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
-            self.sig_update_gui_from_state.emit(False) # Stop updating GUI about the change
+            self.sig_update_gui_from_state.emit() 
 
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
@@ -284,7 +282,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         ETL-Right-Offset
         ETL-Right-Amp
         """
-        self.sig_update_gui_from_state.emit(True)
         full_path = os.path.join(self.parent.package_directory, cfg_path)
         with open(full_path) as file:
             reader = csv.DictReader(file, delimiter=';')
@@ -305,8 +302,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                       'etl_r_offset' : etl_r_offset,
                                       'etl_r_amplitude' : etl_r_amplitude}
 
-                    '''  Now the GUI needs to be updated '''
-                    # time.sleep(0.2) # possible freezing here
                     logger.info(f'Parameters set from csv: {parameter_dict}')
                     self.state.set_parameters(parameter_dict)
 
@@ -317,7 +312,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             err_message = f"Laser {laser} - zoom {zoom} combination not found in ETL file. Update the file:\n{cfg_path}"
             print("Error: " + err_message)
             logger.error(err_message)
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):

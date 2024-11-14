@@ -10,7 +10,6 @@ import logging
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 ''' Import mesoSPIM modules '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
@@ -39,7 +38,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
@@ -53,7 +52,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
             self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'ZWO':
-            self.filterwheel = ZwoFilterWheel(self.cfg.filterdict)
+            self.filterwheel = ZwoFilterWheel(self.cfg.filterdict, self)
         else:
             raise ValueError(f"Filter wheel type unknown: {self.cfg.filterwheel_parameters['filterwheel_type']}")
 
