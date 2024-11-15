@@ -846,11 +846,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''Set the amplitude of both galvos to zero, or back to where it was, depending on button state'''
         if self.freezeGalvoButton.isChecked():
             self.galvo_amp_backup = self.LeftGalvoAmplitudeSpinBox.value()
-            self.LeftGalvoAmplitudeSpinBox.setValue(0)
+            self.state['galvo_l_amplitude'] = 0
+            self.state['galvo_r_amplitude'] = 0
             self.freezeGalvoButton.setText('Unfreeze galvos')
         else:
-            self.LeftGalvoAmplitudeSpinBox.setValue(self.galvo_amp_backup)
+            self.state['galvo_l_amplitude'] = self.galvo_amp_backup
+            self.state['galvo_r_amplitude'] = self.galvo_amp_backup
             self.freezeGalvoButton.setText('Freeze galvos')
+        self.sig_state_request.emit({'galvo_l_amplitude': self.state['galvo_l_amplitude']})
+        self.sig_state_request.emit({'galvo_r_amplitude': self.state['galvo_r_amplitude']})
 
     def choose_etl_config(self):
         ''' File dialog for choosing the config file
