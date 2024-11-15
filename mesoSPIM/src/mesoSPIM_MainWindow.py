@@ -641,8 +641,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                        in seconds and the spinbox displays
                                        microseconds: conversion_factor = 1000000
         '''
-        spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}), type=QtCore.Qt.QueuedConnection)
-        #spinbox.setValue(self.cfg.startup[state_parameter]*conversion_factor)
+        spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}))
+        spinbox.setDisabled(True)  # Disable the spinbox to allow state take change
+        QTimer.singleShot(100, spinbox.setDisabled(False))  # Re-enable after 100 ms
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
