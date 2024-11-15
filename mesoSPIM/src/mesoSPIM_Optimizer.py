@@ -198,7 +198,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.results_window.discardButton.clicked.connect(self.discard_new_state)
 
     def plot_results(self):
-        layout = pg.QtGui.QGridLayout()
+        layout = QtWidgets.QGridLayout()
         self.results_window.setLayout(layout)
 
         self.graphics_widget = pg.GraphicsLayoutWidget(show=True)
