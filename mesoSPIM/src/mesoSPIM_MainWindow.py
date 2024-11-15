@@ -642,7 +642,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                        microseconds: conversion_factor = 1000000
         '''
         spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}), type=QtCore.Qt.QueuedConnection)
-        spinbox.setValue(self.cfg.startup[state_parameter]*conversion_factor)
+        #spinbox.setValue(self.cfg.startup[state_parameter]*conversion_factor)
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
