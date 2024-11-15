@@ -642,8 +642,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                        microseconds: conversion_factor = 1000000
         '''
         spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}))
-        spinbox.setDisabled(True)  # Disable the spinbox to allow state take change
-        QTimer.singleShot(100, spinbox.setDisabled(False))  # Re-enable after 100 ms
+        spinbox.valueChanged.connect(lambda: self.slow_down_spinbox(spinbox)) # dirty hack
+
+    def slow_down_spinbox(self, spinbox):
+        spinbox.setReadOnly(True)  # Disable the spinbox to allow state take change
+        QTimer.singleShot(200, lambda: spinbox.setReadOnly(False))  # Re-enable after 100 ms to prevent conflicting updates of values
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
