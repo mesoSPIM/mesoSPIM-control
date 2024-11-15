@@ -22,7 +22,7 @@ dependencies = [
     "indexed==1.3.0",
     "pipython==2.10.2.1",
     "pyserial==3.5",
-    "pyqtgraph>=0.12.4",
+    "pyqtgraph>=0.13.7",
     "pywinusb==0.4.2",
     "tifffile==2024.9.20",
     "qdarkstyle==2.8.1",
