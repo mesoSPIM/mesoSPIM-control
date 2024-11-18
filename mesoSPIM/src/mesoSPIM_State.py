@@ -1,5 +1,6 @@
 '''
-mesoSPIM State class
+mesoSPIM State class. 
+Only nominally a singleton class, but actually inherited by classes from their parent class.
 '''
 import threading
 
@@ -23,7 +24,7 @@ class mesoSPIM_StateSingleton(QObject):
 
     instance = None
     _lock = threading.Lock()
-    sig_updated = pyqtSignal()
+    #sig_updated = pyqtSignal()
     mutex = QMutex()
 
     def __new__(cls, *args, **kwargs):
@@ -112,7 +113,7 @@ class mesoSPIM_StateSingleton(QObject):
         with QMutexLocker(self.mutex):
             self._state_dict.__setitem__(key, value)
             logger.debug('State changed: {} = {}'.format(key, value))
-        self.sig_updated.emit()
+        #self.sig_updated.emit()
 
     def __getitem__(self, key):
         '''
@@ -133,7 +134,7 @@ class mesoSPIM_StateSingleton(QObject):
         with QMutexLocker(self.mutex):
             for key, value in dict.items():
                 self._state_dict.__setitem__(key, value)
-        self.sig_updated.emit()
+        #self.sig_updated.emit()
 
     def get_parameter_dict(self, list):
         '''

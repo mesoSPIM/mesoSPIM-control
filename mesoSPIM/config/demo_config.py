@@ -303,8 +303,8 @@ The 'Dynamixel' servo default zoom positions
 '''
 zoomdict = {'1x' : 2707,
             '2x' : 1706,
-            '4x' : 637,
-            '5x' : 318,
+            '4x Olympus' : 637,
+            '5x Mitutoyo' : 318,
             }    
 
 
@@ -324,8 +324,8 @@ Pixelsize in micron
 pixelsize = {
             '1x' : 5.0,
             '2x' : 2.5,
-            '4x' : 1.25,
-            '5x' : 1.0,}
+            '4x Olympus' : 1.25,
+            '5x Mitutoyo' : 1.0,}
 
 '''
  HDF5 parameters, if this format is used for data saving (optional).
