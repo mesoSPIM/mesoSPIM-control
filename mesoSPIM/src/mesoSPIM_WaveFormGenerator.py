@@ -53,7 +53,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             print("INFO: Config file: The 'laser_designation' dictionary is obsolete, you can remove it.")
         if hasattr(self.cfg, 'galvo_etl_designation'):
             print("INFO: Config file: The 'galvo_etl_designation' dictionary is obsolete, you can remove it.")
-        laser_task_line_start = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[0][-1])
+        laser_task_line_start = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[0].split('/')[1].split('ao')[1])
         laser_task_line_end = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[1])
         if (laser_task_line_end - laser_task_line_start + 1) != len(self.cfg.laserdict):
             raise ValueError(f"Config file: number of AO lines in 'laser_task_line' "
