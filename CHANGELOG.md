@@ -7,6 +7,7 @@
 - change the default timer for stage position update from 50 ms to 100 ms, to reduce communication and logging overhead. ASI stages updated every 200 ms, PI stages every 100 ms.
 - zoom dictionary can include multi-word names like `5x Mitutoyo` instead of `5x` for better UI and meta-infomation.
 - spinboxes are limited in scroll speed to allow hardware catch up with UI in the interactive mode
+- #82: uploading [UCL config file]() by @TchLenn and parsing of double-digit `aoNN` strings.
 
 ### :wrench: system changes
 - pip depenencies are frozen for staibilty
