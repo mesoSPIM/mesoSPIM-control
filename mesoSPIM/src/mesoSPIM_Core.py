@@ -452,7 +452,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.shutter_right.open()
         elif shutterconfig == 'Left':
             if self.shutterswitch is False:
-                self.shutter_left.open()
+              #  self.shutter_left.open()
                 self.shutter_right.close()
             else:
                 self.shutter_left.open() # open the general shutter
@@ -461,7 +461,7 @@ class mesoSPIM_Core(QtCore.QObject):
         elif shutterconfig == 'Right':
             if self.shutterswitch is False:
                 self.shutter_right.open()
-                self.shutter_left.close()
+                # self.shutter_left.close()
             else:
                 self.shutter_left.open() # open the general shutter
                 self.shutter_right.open() # set side-switch to true
