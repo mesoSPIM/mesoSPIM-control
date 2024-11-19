@@ -282,12 +282,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         ETL-Right-Offset
         ETL-Right-Amp
         """
+        zoom_clean = zoom.split('x')[0] + 'x' # cleanup the zoom string for backwards compatibility with existing ETL files
         full_path = os.path.join(self.parent.package_directory, cfg_path)
         with open(full_path) as file:
             reader = csv.DictReader(file, delimiter=';')
             match_found = False
             for row in reader:
-                if row['Wavelength'] == laser and row['Zoom'] == zoom:
+                if row['Wavelength'] == laser and (row['Zoom'] == zoom_clean or row['Zoom'] == zoom):
                     match_found = True
                     # Some diagnostic tracing statements
                     # print(row)
