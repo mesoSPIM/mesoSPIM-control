@@ -490,7 +490,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.GalvoFrequencySpinBox,'galvo_r_frequency',1),
             (self.GalvoFrequencySpinBox,'galvo_l_frequency',1),
             (self.LeftGalvoAmplitudeSpinBox,'galvo_l_amplitude',1),
-            (self.LeftGalvoAmplitudeSpinBox,'galvo_r_amplitude',1),
+            #(self.LeftGalvoAmplitudeSpinBox,'galvo_r_amplitude',1),
             (self.LeftGalvoPhaseSpinBox,'galvo_l_phase',1),
             (self.RightGalvoPhaseSpinBox,'galvo_r_phase',1),
             (self.LeftGalvoOffsetSpinBox, 'galvo_l_offset',1),
@@ -603,7 +603,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         Helper method to (currently) connect spinboxes
         '''
-        if isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+        if isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)): 
             self.connect_spinbox_to_state_parameter(widget, state_parameter, conversion_factor)
 
     def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter, int_conversion = False):
@@ -641,8 +641,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                        in seconds and the spinbox displays
                                        microseconds: conversion_factor = 1000000
         '''
-        spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}))
-        spinbox.valueChanged.connect(lambda: self.slow_down_spinbox(spinbox)) # dirty hack
+        spinbox.valueChanged.connect(lambda new_value: self.spinbox_to_state_parameter(new_value, spinbox, state_parameter, conversion_factor))
+
+    def spinbox_to_state_parameter(self, new_value, spinbox, state_parameter, conversion_factor):
+        self.sig_state_request.emit({state_parameter : new_value/conversion_factor})
+        self.slow_down_spinbox(spinbox)
 
     def slow_down_spinbox(self, spinbox):
         spinbox.setReadOnly(True)  # Disable the spinbox to allow state take change
@@ -851,14 +854,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if self.freezeGalvoButton.isChecked():
             self.galvo_amp_backup = self.LeftGalvoAmplitudeSpinBox.value()
             self.state['galvo_l_amplitude'] = 0
-            self.state['galvo_r_amplitude'] = 0
+            #self.state['galvo_r_amplitude'] = 0
             self.freezeGalvoButton.setText('Unfreeze galvos')
         else:
             self.state['galvo_l_amplitude'] = self.galvo_amp_backup
-            self.state['galvo_r_amplitude'] = self.galvo_amp_backup
+            #self.state['galvo_r_amplitude'] = self.galvo_amp_backup
             self.freezeGalvoButton.setText('Freeze galvos')
         self.sig_state_request.emit({'galvo_l_amplitude': self.state['galvo_l_amplitude']})
-        self.sig_state_request.emit({'galvo_r_amplitude': self.state['galvo_r_amplitude']})
+        #self.sig_state_request.emit({'galvo_r_amplitude': self.state['galvo_r_amplitude']})
 
     def choose_etl_config(self):
         ''' File dialog for choosing the config file

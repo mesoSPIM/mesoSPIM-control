@@ -261,7 +261,7 @@ class mesoSPIM_Core(QtCore.QObject):
                        'galvo_l_duty_cycle',
                        'galvo_l_phase',
                        'galvo_r_frequency',
-                       'galvo_r_amplitude',
+                       #'galvo_r_amplitude',
                        'galvo_r_offset',
                        'galvo_r_duty_cycle',
                        'galvo_r_phase',

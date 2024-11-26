@@ -39,7 +39,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state['ETL_cfg_file'] = cfg_file
         self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
         self.state['galvo_l_amplitude'] = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
-        self.state['galvo_r_amplitude'] = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
+        #self.state['galvo_r_amplitude'] = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
         self.state['galvo_l_frequency'] = self.parent.read_config_parameter('galvo_l_frequency', self.cfg.startup)
         self.state['galvo_r_frequency'] = self.parent.read_config_parameter('galvo_r_frequency', self.cfg.startup)
         self.state['galvo_l_offset'] = self.parent.read_config_parameter('galvo_l_offset', self.cfg.startup)
@@ -71,10 +71,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     def rescale_galvo_amplitude_by_zoom(self, zoom: float):
         if self.state['galvo_amp_scale_w_zoom'] is True:
             galvo_l_amplitude_ini = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
-            galvo_r_amplitude_ini = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
+            #galvo_r_amplitude_ini = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
             zoom_ini = float(self.parent.read_config_parameter('zoom', self.cfg.startup)[:-1])
             self.state['galvo_l_amplitude'] = galvo_l_amplitude_ini * zoom_ini / zoom
-            self.state['galvo_r_amplitude'] = galvo_r_amplitude_ini * zoom_ini / zoom
+            #self.state['galvo_r_amplitude'] = galvo_r_amplitude_ini * zoom_ini / zoom
             logger.info(f"Galvo amplitudes rescaled by {zoom_ini / zoom}")
         else:
             logger.debug('No rescaling of galvo amplitude')
@@ -101,7 +101,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'galvo_l_duty_cycle',
                        'galvo_l_phase',
                        'galvo_r_frequency',
-                       'galvo_r_amplitude',
+                       #'galvo_r_amplitude',
                        'galvo_r_offset',
                        'galvo_r_duty_cycle',
                        'galvo_r_phase',
@@ -186,9 +186,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state.get_parameter_list(['galvo_l_frequency', 'galvo_l_amplitude', 'galvo_l_offset',
         'galvo_l_duty_cycle', 'galvo_l_phase'])
 
-        galvo_r_frequency, galvo_r_amplitude, galvo_r_offset, galvo_r_duty_cycle, galvo_r_phase =\
-        self.state.get_parameter_list(['galvo_r_frequency', 'galvo_r_amplitude', 'galvo_r_offset',
-        'galvo_r_duty_cycle', 'galvo_r_phase'])
+        galvo_r_frequency, galvo_r_offset, galvo_r_duty_cycle, galvo_r_phase =\
+        self.state.get_parameter_list(['galvo_r_frequency', 'galvo_r_offset',  'galvo_r_duty_cycle', 'galvo_r_phase'])
+
+        galvo_r_amplitude = galvo_l_amplitude # always use same amplitude for both galvos
 
         '''Create Galvo waveforms:'''
         self.galvo_l_waveform = sawtooth(samplerate = samplerate,
