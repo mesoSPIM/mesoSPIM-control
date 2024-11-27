@@ -9,6 +9,9 @@
 - spinboxes are limited in scroll speed to allow hardware catch up with UI in the interactive mode
 - #82: uploading UCL-Bechtop config file `config/examples/config_benchtop_UCL_5laser.py` by @TchLenn and parsing of double-digit strings like `ao21:22` in config file.
 
+### User Interface :lollipop:
+- ETL config files (.csv) are automatically checked and updated with the `laser`-`zoom` combination selected in GUI, to avoid errors in the acquisition. User can even start with an empty ETL config file, it will be auto-filled with the `laser`-`zoom` combinations on the go.
+
 ### :wrench: system changes
 - pip depenencies are frozen for staibilty
 - `mesoSPIM_State` is only nominally a singleton, but actually inherited by classes from their parent class to ensure unique state and thread safety.

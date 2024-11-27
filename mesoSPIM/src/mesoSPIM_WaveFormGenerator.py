@@ -311,9 +311,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             '''Update waveforms with the new parameters'''
             self.create_waveforms()
         else:
-            err_message = f"Laser {laser} - zoom {zoom} combination not found in ETL file. Update the file:\n{cfg_path}"
-            print("Error: " + err_message)
-            logger.error(err_message)
+            err_message = f"Combination {laser} - {zoom} not found in ETL file. The file will be updated:\n{cfg_path}"
+            self.parent.sig_warning.emit(err_message)
+            self.save_etl_parameters_to_csv()
         self.sig_update_gui_from_state.emit()
 
     @QtCore.pyqtSlot()
@@ -334,15 +334,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         """
 
         etl_cfg_file, laser, zoom, etl_l_offset, etl_l_amplitude, etl_r_offset, etl_r_amplitude = \
-        self.state.get_parameter_list(['ETL_cfg_file', 'laser', 'zoom',
-        'etl_l_offset', 'etl_l_amplitude', 'etl_r_offset','etl_r_amplitude'])
+        self.state.get_parameter_list(['ETL_cfg_file', 'laser', 'zoom', 'etl_l_offset', 'etl_l_amplitude', 'etl_r_offset','etl_r_amplitude'])
 
         '''Temporary filepath'''
         etl_cfg_file = os.path.join(self.parent.package_directory, etl_cfg_file)
         tmp_etl_cfg_file = etl_cfg_file+'_tmp'
         with open(etl_cfg_file,'r') as input_file, open(tmp_etl_cfg_file,'w') as outputfile:
-            reader = csv.DictReader(input_file,delimiter=';')
-            #print('created reader')
+            reader = csv.DictReader(input_file, delimiter=';')
             fieldnames = ['Objective',
                           'Wavelength',
                           'Zoom',
@@ -351,9 +349,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                           'ETL-Right-Offset',
                           'ETL-Right-Amp']
 
-            writer = csv.DictWriter(outputfile,fieldnames=fieldnames,dialect='excel',delimiter=';')
+            writer = csv.DictWriter(outputfile, fieldnames=fieldnames, dialect='excel', delimiter=';')
             writer.writeheader()
+            match_found = False
             for row in reader:
+                # update values if the laser and zoom are already in the file
                 if row['Wavelength'] == laser and row['Zoom'] == zoom:
                         writer.writerow({'Objective' : '1x',
                                          'Wavelength' : laser,
@@ -363,9 +363,19 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                          'ETL-Right-Offset' : etl_r_offset,
                                          'ETL-Right-Amp' : etl_r_amplitude,
                                          })
+                        match_found = True
                 else:
+                    # copy all other rows
                     writer.writerow(row)
-            writer.writerows(reader)
+            if not match_found:
+                writer.writerow({'Objective' : '1x',
+                                 'Wavelength' : laser,
+                                 'Zoom' : zoom,
+                                 'ETL-Left-Offset' : etl_l_offset,
+                                 'ETL-Left-Amp' : etl_l_amplitude,
+                                 'ETL-Right-Offset' : etl_r_offset,
+                                 'ETL-Right-Amp' : etl_r_amplitude,
+                                 })
         os.remove(etl_cfg_file)
         os.rename(tmp_etl_cfg_file, etl_cfg_file)
 
