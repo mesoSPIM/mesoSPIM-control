@@ -649,7 +649,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def slow_down_spinbox(self, spinbox):
         spinbox.setReadOnly(True)  # Disable the spinbox to allow state take change
-        QTimer.singleShot(200, lambda: spinbox.setReadOnly(False))  # Re-enable after 100 ms to prevent conflicting updates of values
+        QTimer.singleShot(250, lambda: spinbox.setReadOnly(False))  # Re-enable after 250 ms to prevent looping between state->GUI and GUI->state updates
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
