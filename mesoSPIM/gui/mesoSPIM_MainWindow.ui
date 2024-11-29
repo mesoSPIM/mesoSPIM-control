@@ -663,7 +663,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>3</number>
           </property>
           <widget class="QWidget" name="MovementTabWidget">
            <attribute name="title">
@@ -2089,29 +2089,6 @@ Focus</string>
             </property>
             <property name="text">
              <string>New Scripting Editor</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QWidget" name="LogTabWidget">
-           <attribute name="title">
-            <string>Log</string>
-           </attribute>
-           <widget class="QPlainTextEdit" name="LogTextDisplay">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>20</y>
-              <width>871</width>
-              <height>681</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="autoFillBackground">
-             <bool>false</bool>
             </property>
            </widget>
           </widget>

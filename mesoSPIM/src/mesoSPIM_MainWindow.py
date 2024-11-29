@@ -22,33 +22,33 @@ from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandle
 
 logger = logging.getLogger(__name__)
 
+# discontinued to increase performance. Not actually useful for the user.
+# class LogDisplayHandler(QtCore.QObject, logging.Handler):
+#     """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
+#     new_record = QtCore.pyqtSignal(object)
 
-class LogDisplayHandler(QtCore.QObject, logging.Handler):
-    """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
-    new_record = QtCore.pyqtSignal(object)
+#     def __init__(self, parent):
+#         super().__init__(parent)
+#         super(logging.Handler).__init__()
+#         formatter = Formatter('%(levelname)s:%(module)s:%(funcName)s:%(message)s')
+#         self.setFormatter(formatter)
 
-    def __init__(self, parent):
-        super().__init__(parent)
-        super(logging.Handler).__init__()
-        formatter = Formatter('%(levelname)s:%(module)s:%(funcName)s:%(message)s')
-        self.setFormatter(formatter)
-
-    def emit(self, record):
-        msg = self.format(record)
-        self.new_record.emit(msg)  # <---- emit signal here
+#     def emit(self, record):
+#         msg = self.format(record)
+#         self.new_record.emit(msg)  # <---- emit signal here
 
 
-class Formatter(logging.Formatter):
-    """ Formatter of the LogDisplayHandler class."""
-    def formatException(self, ei):
-        result = super(Formatter, self).formatException(ei)
-        return result
+# class Formatter(logging.Formatter):
+#     """ Formatter of the LogDisplayHandler class."""
+#     def formatException(self, ei):
+#         result = super(Formatter, self).formatException(ei)
+#         return result
 
-    def format(self, record):
-        s = super(Formatter, self).format(record)
-        if record.exc_text:
-            s = s.replace('\n', '')
-        return s
+#     def format(self, record):
+#         s = super(Formatter, self).format(record)
+#         if record.exc_text:
+#             s = s.replace('\n', '')
+#         return s
 
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
@@ -88,9 +88,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         loadUi(self.package_directory + '/gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle(title)
 
+        # Discontinued
         # Connect log display widget
-        self.log_display_handler = LogDisplayHandler(self)
-        self.log_display_handler.new_record.connect(self.LogTextDisplay.appendPlainText)
+#        self.log_display_handler = LogDisplayHandler(self)
+#        self.log_display_handler.new_record.connect(self.LogTextDisplay.appendPlainText)
 
         self.camera_window = mesoSPIM_CameraWindow(self)
         self.camera_window.show()
@@ -238,7 +239,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
 
     def close_app(self):
-        self.log_display_handler.flushOnClose = False
+        #self.log_display_handler.flushOnClose = False #discontinued
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:

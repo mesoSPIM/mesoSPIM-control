@@ -147,8 +147,8 @@ def main(embed_console=False, demo_mode=False):
     ex = mesoSPIM_MainWindow(package_directory, cfg, "mesoSPIM Main Window, v. " + __version__)
     ex.show()
 
-    # hook up the log display widget
-    logging.getLogger().addHandler(ex.log_display_handler)
+    # hook up the log display widget: discontinued
+    #logging.getLogger().addHandler(ex.log_display_handler)
 
     if embed_console:
         from traitlets.config import Config

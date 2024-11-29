@@ -8,6 +8,7 @@
 - zoom dictionary can include multi-word names like `5x Mitutoyo` instead of `5x` for better UI and meta-infomation.
 - spinboxes are limited in scroll speed to allow hardware catch up with UI in the interactive mode
 - #82: uploading UCL-Bechtop config file `config/examples/config_benchtop_UCL_5laser.py` by @TchLenn and parsing of double-digit strings like `ao21:22` in config file.
+- remove `Log` tab from the GUI, as it was not used by the users and was causing unnecessary overhead, esp. in DEBUG mode.
 
 ### User Interface :lollipop:
 - ETL config files (.csv) are automatically checked and updated with the `laser`-`zoom` combination selected in GUI, to avoid errors in the acquisition. User can even start with an empty ETL config file, it will be auto-filled with the `laser`-`zoom` combinations on the go.
