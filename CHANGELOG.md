@@ -1,4 +1,4 @@
-## Release candidate November 2024 [1.10.2].
+## Release candidate December 2024 [1.10.2].
 ### Performance :rocket:
 - migration to Python 3.12 for better performance and compatibility with the latest libraries.
 - faster loading and response time of the GUI
@@ -12,6 +12,7 @@
 
 ### User Interface :lollipop:
 - ETL config files (.csv) are automatically checked and updated with the `laser`-`zoom` combination selected in GUI, to avoid errors in the acquisition. User can even start with an empty ETL config file, it will be auto-filled with the `laser`-`zoom` combinations on the go.
+- more tooltips added to the GUI elements for better user experience.
 
 ### :wrench: system changes
 - pip depenencies are frozen for staibilty
