@@ -5,9 +5,11 @@
 # mesoSPIM-control
 Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. 
 A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. 
-Currently, more than 20 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
+Currently, more than 30 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
 
-Parts lists, drawings, and instructions for building a mesoSPIM can be found in the [mesoSPIM wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation).
+Parts lists, drawings, and instructions for building a mesoSPIM can be found in the wiki pages:
+- [Benchtop mesoSPIM]([https://github.com/mesoSPIM/mesoSPIM-hardware-documentation](https://github.com/mesoSPIM/benchtop-hardware/wiki))
+- [mesoSPIM v4-5](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation)
 
 ## Overview
 The mesoSPIM is a versatile light-sheet microscope for imaging
@@ -61,7 +63,7 @@ pip install -r requirements-conda-mamba.txt
 ### Desktop shortcut (fast launch)
 From Miniforge prompt, type `where mamba`, and enter the result (e.g. `C:\Users\Nikita\miniforge3\Scripts\activate.bat`) into line 10 of `mesoSPIM.bat` file:
 ```
-"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\miniforge3\Scripts\activate.bat" "C:\Users\Public\conda\envs\mesoSPIM-py313" && python "mesoSPIM_Control.py""
+"%windir%\System32\cmd.exe" /k ""C:\Users\Nikita\miniforge3\Scripts\activate.bat" "C:\Users\Public\conda\envs\mesoSPIM-py312" && python "mesoSPIM_Control.py""
 ```
 Save changes and double-click the `mesoSPIM.bat` file - this should launch the control software. If this does ot happen, check the Anaconda path. Once this works, create a shortcut and place it on your desktop for quick launching.  
 
@@ -75,13 +77,16 @@ If you have multiple config files you will be prompted to choose one that corres
 Once your hardware is connected and turned on, change the `Demo` devices to hardware-specific names, set their parameters, and test each device.
 See [Wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file) for details.
 
-
 ## Updating existing installation
-To ensure safe transition to a new version, we recommend fresh installation of each new version into a separate folder (e.g. `mesoSPIM-control-Nov2022`) using the steps above. In order to unlock all new features, please review and add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) to your old configuration file.
+To ensure safe transition to a new version, we recommend fresh installation of each new version into a separate folder (e.g. `mesoSPIM-control-Jan2025`) using the steps above. In order to unlock all new features, please review and add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) to your old configuration file.
+
+## Troubleshooting
+Any errors during software startup and acquisition can be displayed in the mamba/conda terminal, and will be recorded in the time stamped log file in `mesoSPIM/log` folder. The log file is individual for each session, named by date, eg `mesoSPIM/log/20241210-154845.log`.
 
 ## Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation:
-* [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation), 
+* ZMB (Univerity of Zurich) guides on [mesoSPIM start-up, setting up, and acquisition](https://zmb.dozuki.com/c/Lightsheet_microscopy#Section_MesoSPIM)
+* [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation) (outdated version), 
 * youtube [channel](https://www.youtube.com/c/mesoSPIM), 
 * subscribe to our [mailing list](http://eepurl.com/hPBRhj).
 
