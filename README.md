@@ -81,7 +81,7 @@ See [Wiki](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/meso
 To ensure safe transition to a new version, we recommend fresh installation of each new version into a separate folder (e.g. `mesoSPIM-control-Jan2025`) using the steps above. In order to unlock all new features, please review and add new sections from the [demo config file](/mesoSPIM/config/demo_config.py) to your old configuration file.
 
 ## Troubleshooting
-Any errors during software startup and acquisition can be displayed in the mamba/conda terminal, and will be recorded in the time stamped log file in `mesoSPIM/log` folder. The log file is individual for each session, named by date, eg `mesoSPIM/log/20241210-154845.log`.
+Some errors during software startup and acquisition can be displayed in the mamba/conda terminal, while a highly detailed log will be recorded in the time-stamped file in `mesoSPIM/log` folder. This log file is individual for each session, named by date and time of software start-up, eg `mesoSPIM/log/20241210-154845.log`.
 
 ## Documentation for users
 For instructions on how to use mesoSPIM-control, please check out the documentation:
