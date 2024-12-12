@@ -45,6 +45,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state['galvo_l_offset'] = self.parent.read_config_parameter('galvo_l_offset', self.cfg.startup)
         self.state['galvo_r_offset'] = self.parent.read_config_parameter('galvo_r_offset', self.cfg.startup)
         self.state['max_laser_voltage'] = self.parent.read_config_parameter('max_laser_voltage', self.cfg.startup)
+        self.MAX_GALVO_ETL_VOLT = 5
         self.config_check()
 
     def config_check(self):
@@ -53,7 +54,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             print("INFO: Config file: The 'laser_designation' dictionary is obsolete, you can remove it.")
         if hasattr(self.cfg, 'galvo_etl_designation'):
             print("INFO: Config file: The 'galvo_etl_designation' dictionary is obsolete, you can remove it.")
-        laser_task_line_start = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[0].split('/')[1].split('ao')[1])
+        laser_task_line_start = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[0].split('ao')[-1])
         laser_task_line_end = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[1])
         if (laser_task_line_end - laser_task_line_start + 1) != len(self.cfg.laserdict):
             raise ValueError(f"Config file: number of AO lines in 'laser_task_line' "
@@ -67,6 +68,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         elif self.state['max_laser_voltage'] > 5:
             msg = f"Config parameter 'max_laser_voltage' ({self.state['max_laser_voltage']}) is > 5V, which may damage the laser controller."
             print(msg); logger.warning(msg)
+        
+        logger.warning(f"Laser AO task voltage range is +/- {self.state['max_laser_voltage']}V. Check if this is safe for your hardware.")
+
+        logger.warning("Galvo and ETL AO task voltage range is set to -5V to 5V. Check if this is safe for your hardware.")
+        self.MAX_GALVO_ETL_VOLT = 5
 
     def rescale_galvo_amplitude_by_zoom(self, zoom: float):
         if self.state['galvo_amp_scale_w_zoom'] is True:
@@ -449,9 +455,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         if self.ao_cards == 2: # default mesoSPIM v5 configuration
-            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val=-5, max_val=5)
-            msg = "Galvo and ETL AO task voltage range is set to -5V to 5V. Check if this is safe for your hardware."
-            logger.warning(msg)
+            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val = -self.MAX_GALVO_ETL_VOLT, max_val = self.MAX_GALVO_ETL_VOLT)
             self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
@@ -462,8 +466,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'],
                                                             min_val=-self.state['max_laser_voltage'],
                                                             max_val=self.state['max_laser_voltage'])
-            msg = f"Laser AO task voltage range is set {-self.state['max_laser_voltage']}V to {self.state['max_laser_voltage']}V. Check if this is safe for your hardware."
-            logger.warning(msg)
             self.laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                         sample_mode=AcquisitionType.FINITE,
                                                         samps_per_chan=samples)
@@ -472,9 +474,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         else: # Benchtop single-card PXI NI-6733 or cDAQ NI-9264 configuration
             self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
-                                                                      min_val=-5, max_val=5)
-            msg = "Galvo-ETL-Laser AO task voltage range is set to -5V to 5V. Check if this is correct for your hardware."
-            logger.warning(msg)
+                                                                      min_val = -self.MAX_GALVO_ETL_VOLT, max_val = self.MAX_GALVO_ETL_VOLT)
             self.galvo_etl_laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)

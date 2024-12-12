@@ -19,6 +19,7 @@
 - `mesoSPIM_State` is only nominally a singleton, but actually inherited by classes from their parent class to ensure unique state and thread safety.
 - no signal from `mesoSPIM_State` every time the state is updated. The GUI is updated from state by a separate signal/slot from member classes, on demand.
 - bugfix: serial communication with ASI stages is now thread-safe, with no conflicts between GUI (Main) and Core threads.
+- bugfix: parsing config file with either `'laser_task_line' :  'PXI6733/ao0:3'` or `'/PXI6733/ao0:3'` notation (Alan Watson).
 
 ## Release candidate August 2024 [1.10.0]. Cancelled due to performance issues on some setups.
 ### Performance :rocket:
