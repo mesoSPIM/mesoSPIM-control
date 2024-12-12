@@ -3,17 +3,16 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 # mesoSPIM-control
-Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. 
-A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. 
-Currently, more than 30 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
+Image acquisition software for [mesoSPIM](http://mesospim.org/) light-sheet microscopes. Compatible with all official versions of mesoSPIM hardware (Benchtop, v4, v5), and multple alternative configurations.
 
+## Overview
+The mesoSPIM (mesoscale selective plane illumination microscope) is a family of versatile open-source microscopes optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution. 
+Currently, more than 30 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
 Parts lists, drawings, and instructions for building a mesoSPIM can be found in the wiki pages:
 - [Benchtop mesoSPIM](https://github.com/mesoSPIM/benchtop-hardware)
 - [mesoSPIM v4-5](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation)
 
-## Overview
-The mesoSPIM is a versatile light-sheet microscope for imaging
-cleared tissue samples. It is compatible with all major clearing approaches and optimized for quickly creating large-field-of-view overview datasets.
+The `mesoSPIM-control` is python-based acquisition software with user-friendly GUI, based on PyQt5 framework.
 
 ## Installation
 
@@ -38,7 +37,7 @@ When installing the MS Visual C++ tools, make sure to check [C++ build tools](ht
 * ASI stages: [ASI Tiger drivers](http://www.asiimaging.com/support/downloads/tiger-controller-console/). 
 If using USB connection, check ASI instructions on [USB support](http://www.asiimaging.com/support/downloads/usb-support-on-ms-2000-wk-controllers/)
 
-## Installation steps 
+### Installation steps 
 1. Clone this repository either by via GitHub Desktop (recommended) or by downloading and unpacking the ZIP file into folder `C:/Users/Public/mesoSPIM-control`
 
 ![image](https://user-images.githubusercontent.com/10835134/198991579-df1e5acc-d246-425b-a345-03ba93a1f0bb.png)
