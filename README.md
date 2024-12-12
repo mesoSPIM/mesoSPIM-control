@@ -8,7 +8,7 @@ A mesoSPIM (mesoscale selective plane illumination microscope) is optimized for 
 Currently, more than 30 mesoSPIM setups are operational [around the world](http://mesospim.org/setups/).
 
 Parts lists, drawings, and instructions for building a mesoSPIM can be found in the wiki pages:
-- [Benchtop mesoSPIM]([https://github.com/mesoSPIM/mesoSPIM-hardware-documentation](https://github.com/mesoSPIM/benchtop-hardware/wiki))
+- [Benchtop mesoSPIM](https://github.com/mesoSPIM/benchtop-hardware)
 - [mesoSPIM v4-5](https://github.com/mesoSPIM/mesoSPIM-hardware-documentation)
 
 ## Overview
