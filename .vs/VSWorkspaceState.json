@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\docs",
+    "\\docs\\source",
+    "\\docs\\source\\pdf",
+    "\\mesoSPIM",
+    "\\mesoSPIM\\config",
+    "\\mesoSPIM\\gui",
+    "\\mesoSPIM\\scripts",
+    "\\mesoSPIM\\src",
+    "\\mesoSPIM\\src\\utils"
+  ],
+  "SelectedNode": "\\mesoSPIM\\scripts\\probing_etl_offsets.py",
+  "PreviewInSolutionExplorer": false
+}

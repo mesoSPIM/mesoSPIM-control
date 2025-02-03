@@ -129,6 +129,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
 
+        self.CheckRotList.clicked.connect(self.check_acquisition_angles)
+
         font = QtGui.QFont()
         font.setPointSize(14)
         self.table.horizontalHeader().setFont(font)
@@ -436,6 +438,30 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.mark_current_focus()
         self.mark_current_etl_parameters()
         self.mark_current_state()
+    
+    #Marco test function 
+    def check_acquisition_angles(self):
+        #function to check whether all rows in an acquisition window have the same acquisition angle. If this is not true, a window shows with a warning that angles are not the same.
+        #Info for the first selected row is acquired. If no rows are selected, error pops up.
+        firstrow = self.get_first_selected_row()
+        if firstrow is None:
+            self.display_no_row_selected_warning()
+        else:
+            #Rotation angle for the first selected row is recorded
+            firstrowrot = self.model.getRotationPosition(firstrow)
+            #Function iterates through the rest of the rows comparing the rotation angles with the one from the first selected row
+            for row in range(0,self.model.rowCount()):
+                rowrot = self.model.getRotationPosition(row)
+                #if the two rotation values do not coincide, a warning message pops up, prompting to continue or to abolish the check (either by clicking "OK" or "cancel")
+                if rowrot != firstrowrot:
+                    message = "Stack " + str(row) + " has different rotation angle from stack 0! Pressing OK will continue the check to the next stacks"
+                    message_box =  self.display_information(message,12)
+                    if message_box == QMessageBox.Cancel:
+                        return
+                    else:
+                        pass
+
+
 
     def preview_acquisition(self):
         row = self.get_first_selected_row()
