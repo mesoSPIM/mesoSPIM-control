@@ -1,4 +1,7 @@
-## Release candidate December 2024 [1.10.2].
+## Release candidate
+- implementation of time lapse function via script. See example script at `mesoSPIM/scripts/timelapse.py` for details.
+
+## Release December 2024 [1.10.2].
 ### Performance :rocket:
 - migration to Python 3.12 for better performance and compatibility with the latest libraries.
 - faster loading and response time of the GUI

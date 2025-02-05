@@ -993,3 +993,12 @@ class mesoSPIM_Core(QtCore.QObject):
             write_line(file, 'Frame rate during taking images, img/s:', str(round(self.state['current_framerate'], 2)))
             write_line(file, '===================== END OF ACQUISITION ======================')
             write_line(file)
+
+    def run_time_lapse(self, tpoints=1, time_interval_sec=60):
+        '''A quick and dirty implementation of time lapse via recursive function.'''	
+        if tpoints <= 0:
+            print("Timer sequence finished")
+            return
+        print(f"Remaining timepoints: {tpoints}")
+        QtCore.QTimer.singleShot(time_interval_sec*1000, lambda: self.run_time_lapse(tpoints - 1, time_interval_sec))
+        self.parent.run_timepoint()

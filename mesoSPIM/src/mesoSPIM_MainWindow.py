@@ -78,7 +78,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Initial housekeeping
         self.cfg = config
         self.package_directory = package_directory
-        self.script_window_counter = 0
 
         # Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
@@ -251,6 +250,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if self.contrast_window:
             self.contrast_window.close()
         self.tile_view_window.close()
+        if self.scriptwindow:
+            self.scriptwindow.close()
         self.close()
 
     def open_tiff(self):
@@ -357,17 +358,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def create_script_window(self):
         """
-        Creates a script window and binds it to a self.scriptwindow0 ... n instanceself.
-
-        This happens dynamically using exec which should be replaced at
-        some point with a factory pattern.
+        Creates a script window for the user to input Python code.
         """
-        windowstring = 'self.scriptwindow'+str(self.script_window_counter)
-        exec(windowstring+ '= mesoSPIM_ScriptWindow(self)')
-        exec(windowstring+'.setWindowTitle("Script Window #'+str(self.script_window_counter)+'")')
-        exec(windowstring+'.show()')
-        exec(windowstring+'.sig_execute_script.connect(self.execute_script)')
-        self.script_window_counter += 1
+        self.scriptwindow = mesoSPIM_ScriptWindow(self)
+        self.scriptwindow.setWindowTitle("Script Window")
+        self.scriptwindow.show()
+        self.scriptwindow.sig_execute_script.connect(self.execute_script)
 
     def initialize_and_connect_menubar(self):
         self.actionExit.triggered.connect(self.close_app)
