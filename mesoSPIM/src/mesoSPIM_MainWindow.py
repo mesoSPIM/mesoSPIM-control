@@ -729,10 +729,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setVisible(False)
         '''
 
-    def run_timepoint(self):
-        self.acquisition_manager_window.append_time_index_to_filenames(self.core.time_counter)
+    @QtCore.pyqtSlot(int)
+    def run_timepoint(self, timepoint):
+        self.acquisition_manager_window.append_time_index_to_filenames(timepoint)
         self.run_acquisition_list()
-        self.core.time_counter += 1
 
     @QtCore.pyqtSlot(dict)
     def launch_optimizer(self, ini_dict=None):

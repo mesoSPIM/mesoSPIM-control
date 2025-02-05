@@ -53,6 +53,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
     sig_progress = QtCore.pyqtSignal(dict)
+    sig_run_timepoint = QtCore.pyqtSignal(int)
 
     ''' Camera-related signals '''
     sig_prepare_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
@@ -99,6 +100,7 @@ class mesoSPIM_Core(QtCore.QObject):
         # Note the name duplication (shadowing)!!
         # parent.sig_state_request -> self.state_request_handler
         # self.sig_state_request -> self.waveformer.state_request_handler
+        self.sig_run_timepoint.connect(self.parent.run_timepoint, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_state_request.connect(self.state_request_handler, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_execute_script.connect(self.execute_script, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_move_relative.connect(self.move_relative, type=QtCore.Qt.QueuedConnection)
@@ -996,9 +998,11 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def run_time_lapse(self, tpoints=1, time_interval_sec=60):
         '''A quick and dirty implementation of time lapse via recursive function.'''	
-        if tpoints <= 0:
+        if self.time_counter >= tpoints:
             print("Timer sequence finished")
+            self.time_counter = 0
             return
-        print(f"Remaining timepoints: {tpoints}")
-        QtCore.QTimer.singleShot(time_interval_sec*1000, lambda: self.run_time_lapse(tpoints - 1, time_interval_sec))
-        self.parent.run_timepoint()
+        print(f"Running time point {self.time_counter} out of {tpoints - 1}...")
+        QtCore.QTimer.singleShot(time_interval_sec*1000, lambda: self.run_time_lapse(tpoints, time_interval_sec))
+        self.sig_run_timepoint.emit(self.time_counter)
+        self.time_counter += 1
