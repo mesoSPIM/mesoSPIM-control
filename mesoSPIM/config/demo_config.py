@@ -68,10 +68,10 @@ Keys are the laser designation that will be shown in the user interface
 Values are DO ports used for laser ENABLE digital signal.
 Critical: entries must be sorted in the increasing wavelength order: 405, 488, etc.
 '''
-laserdict = {'488 nm': 'PXI6733/port0/line2',
-             '520 nm': 'PXI6733/port0/line3',
-             '568 nm': 'PXI6733/port0/line4',
-             '638 nm': 'PXI6733/port0/line5',
+laserdict = {'405 nm': 'PXI1Slot4/port0/line2',
+             '488 nm': 'PXI1Slot4/port0/line3',
+             '561 nm': 'PXI1Slot4/port0/line4', 
+             '638 nm': 'PXI1Slot4/port0/line5',
              }
 
 
@@ -165,8 +165,8 @@ camera_parameters = {'x_pixels' : 2048, #5056
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
-camera_parameters = {'x_pixels' : 2528,
-                     'y_pixels' : 1480,
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
@@ -301,17 +301,11 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 '''
 The 'Dynamixel' servo default zoom positions
 '''
-zoomdict = {'0.63x' : 3423,
-            '0.8x' : 3071,
-            '1x' : 2707,
-            '1.25x' : 2389,
-            '1.6x' : 2047,
+zoomdict = {'1x' : 2707,
             '2x' : 1706,
-            '2.5x' : 1354,
-            '3.2x' : 967,
-            '4x' : 637,
-            '5x' : 318,
-            '6.3x' : 0}    
+            '4x Olympus' : 637,
+            '5x Mitutoyo' : 318,
+            }    
 
 
 '''
@@ -327,17 +321,11 @@ zoomdict = {'2x': 'A',
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.63x' : 10.52,
-            '0.8x' : 8.23,
-            '1x' : 6.55,
-            '1.25x' : 5.26,
-            '1.6x' : 4.08,
-            '2x' : 3.26,
-            '2.5x' : 2.6,
-            '3.2x' : 2.03,
-            '4x' : 1.60,
-            '5x' : 1.27,
-            '6.3x' : 1.03}
+pixelsize = {
+            '1x' : 5.0,
+            '2x' : 2.5,
+            '4x Olympus' : 1.25,
+            '5x Mitutoyo' : 1.0,}
 
 '''
  HDF5 parameters, if this format is used for data saving (optional).
@@ -350,9 +338,6 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
 
-buffering = {'use_ram_buffer': False, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
-             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
-             }
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
@@ -379,7 +364,7 @@ startup = {
 'file_prefix' : '',
 'file_suffix' : '000001',
 'zoom' : '1x',
-'pixelsize' : 6.55,
+'pixelsize' : 1.0,
 'laser' : '488 nm',
 'max_laser_voltage':5,
 'intensity' : 10,
@@ -403,7 +388,7 @@ startup = {
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 2.5,
+#'galvo_r_amplitude' : 0.0, # currently not used
 'galvo_r_offset' : 0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
@@ -418,9 +403,9 @@ startup = {
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075, # Hamamatsu-specific parameter
 'camera_display_live_subsampling': 2,
-#'camera_display_snap_subsampling': 1, #deprecated
+'camera_display_temporal_subsampling': 2, # affects overall performance! Default value 2. Increase to 3 or 4 if the CPUs are not powerful enough (freezing of GUI during acquisition).
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
-'average_frame_rate': 2.5,
+'average_frame_rate': 4.5,
 }

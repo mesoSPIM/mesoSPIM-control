@@ -8,7 +8,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 import pyqtgraph as pg
 from .utils.optimization import shannon_dct
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         self.parent = parent # the mesoSPIM_MainWindow() instance
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         pg.setConfigOptions(imageAxisOrder='row-major')
         if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\
@@ -86,8 +85,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
         self.sig_update_status.connect(self.update_status)
-
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def adjust_levels(self, pct_low=25, pct_hi=99.99):
         ''''Adjust histogram levels'''
@@ -176,7 +173,9 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(np.ndarray)
     def set_image(self, image):
+        logger.debug(f"setImage() with shape {image.shape} started")
         self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
+        logger.debug(f"setImage() finished")
         # update roi size if subsampling has changed interactively:
         if self.overlay == 'box' and self.subsampling != self.state['camera_display_live_subsampling']:
             subsampling_ratio = self.subsampling / self.state['camera_display_live_subsampling']

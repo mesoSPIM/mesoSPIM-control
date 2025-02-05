@@ -16,7 +16,6 @@ from nidaqmx.constants import LineGrouping, DigitalWidthUnits
 from nidaqmx.types import CtrTime
 
 '''mesoSPIM imports'''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
 
 from PyQt5 import QtCore
@@ -28,24 +27,25 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     the responsible class for actually causing that state change in hardware.
 
     '''
-    sig_update_gui_from_state = QtCore.pyqtSignal(bool) # -> mesoSPIM_Core.sig_update_gui_from_state -> MainWindow.enable_gui_updates_from_state
+    sig_update_gui_from_state = QtCore.pyqtSignal() # -> mesoSPIM_Core.sig_update_gui_from_state -> MainWindow.update_gui_from_state
 
     def __init__(self, parent):
         super().__init__()
         self.cfg = parent.cfg
         self.parent = parent # mesoSPIM_Core object
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # mesoSPIM_StateSingleton object
         self.parent.sig_save_etl_config.connect(self.save_etl_parameters_to_csv)
         cfg_file = self.parent.read_config_parameter('ETL_cfg_file', self.cfg.startup)
         self.state['ETL_cfg_file'] = cfg_file
         self.update_etl_parameters_from_csv(cfg_file, self.state['laser'], self.state['zoom'])
         self.state['galvo_l_amplitude'] = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
-        self.state['galvo_r_amplitude'] = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
+        #self.state['galvo_r_amplitude'] = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
         self.state['galvo_l_frequency'] = self.parent.read_config_parameter('galvo_l_frequency', self.cfg.startup)
         self.state['galvo_r_frequency'] = self.parent.read_config_parameter('galvo_r_frequency', self.cfg.startup)
         self.state['galvo_l_offset'] = self.parent.read_config_parameter('galvo_l_offset', self.cfg.startup)
         self.state['galvo_r_offset'] = self.parent.read_config_parameter('galvo_r_offset', self.cfg.startup)
         self.state['max_laser_voltage'] = self.parent.read_config_parameter('max_laser_voltage', self.cfg.startup)
+        self.MAX_GALVO_ETL_VOLT = 5
         self.config_check()
 
     def config_check(self):
@@ -54,7 +54,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             print("INFO: Config file: The 'laser_designation' dictionary is obsolete, you can remove it.")
         if hasattr(self.cfg, 'galvo_etl_designation'):
             print("INFO: Config file: The 'galvo_etl_designation' dictionary is obsolete, you can remove it.")
-        laser_task_line_start = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[0][-1])
+        laser_task_line_start = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[0].split('ao')[-1])
         laser_task_line_end = int(self.cfg.acquisition_hardware['laser_task_line'].split(':')[1])
         if (laser_task_line_end - laser_task_line_start + 1) != len(self.cfg.laserdict):
             raise ValueError(f"Config file: number of AO lines in 'laser_task_line' "
@@ -68,14 +68,19 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         elif self.state['max_laser_voltage'] > 5:
             msg = f"Config parameter 'max_laser_voltage' ({self.state['max_laser_voltage']}) is > 5V, which may damage the laser controller."
             print(msg); logger.warning(msg)
+        
+        logger.warning(f"Laser AO task voltage range is +/- {self.state['max_laser_voltage']}V. Check if this is safe for your hardware.")
+
+        logger.warning("Galvo and ETL AO task voltage range is set to -5V to 5V. Check if this is safe for your hardware.")
+        self.MAX_GALVO_ETL_VOLT = 5
 
     def rescale_galvo_amplitude_by_zoom(self, zoom: float):
         if self.state['galvo_amp_scale_w_zoom'] is True:
             galvo_l_amplitude_ini = self.parent.read_config_parameter('galvo_l_amplitude', self.cfg.startup)
-            galvo_r_amplitude_ini = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
+            #galvo_r_amplitude_ini = self.parent.read_config_parameter('galvo_r_amplitude', self.cfg.startup)
             zoom_ini = float(self.parent.read_config_parameter('zoom', self.cfg.startup)[:-1])
             self.state['galvo_l_amplitude'] = galvo_l_amplitude_ini * zoom_ini / zoom
-            self.state['galvo_r_amplitude'] = galvo_r_amplitude_ini * zoom_ini / zoom
+            #self.state['galvo_r_amplitude'] = galvo_r_amplitude_ini * zoom_ini / zoom
             logger.info(f"Galvo amplitudes rescaled by {zoom_ini / zoom}")
         else:
             logger.debug('No rescaling of galvo amplitude')
@@ -83,7 +88,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(), dict.values()):
-            self.sig_update_gui_from_state.emit(True) # Notify GUI about the change
             if key in ('samplerate',
                        'sweeptime',
                        'intensity',
@@ -103,7 +107,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'galvo_l_duty_cycle',
                        'galvo_l_phase',
                        'galvo_r_frequency',
-                       'galvo_r_amplitude',
+                       #'galvo_r_amplitude',
                        'galvo_r_offset',
                        'galvo_r_duty_cycle',
                        'galvo_r_phase',
@@ -122,7 +126,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.create_waveforms()
             elif key == 'zoom':
                 self.state[key] = value
-                self.rescale_galvo_amplitude_by_zoom(float(value[:-1])) # truncate and convert string eg '1.2x' -> 1.2
+                self.rescale_galvo_amplitude_by_zoom(float(value.split('x')[0])) # truncate and convert string eg '1.2x BlahBlah' -> 1.2
                 self.create_waveforms()
             elif key == 'ETL_cfg_file':
                 self.state[key] = value
@@ -133,8 +137,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                 self.update_etl_parameters_from_laser(value)
             elif key == 'state':
                 if value == 'live':
-                    logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
-            self.sig_update_gui_from_state.emit(False) # Stop updating GUI about the change
+                    logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
+            self.sig_update_gui_from_state.emit() 
 
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
@@ -188,9 +192,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.state.get_parameter_list(['galvo_l_frequency', 'galvo_l_amplitude', 'galvo_l_offset',
         'galvo_l_duty_cycle', 'galvo_l_phase'])
 
-        galvo_r_frequency, galvo_r_amplitude, galvo_r_offset, galvo_r_duty_cycle, galvo_r_phase =\
-        self.state.get_parameter_list(['galvo_r_frequency', 'galvo_r_amplitude', 'galvo_r_offset',
-        'galvo_r_duty_cycle', 'galvo_r_phase'])
+        galvo_r_frequency, galvo_r_offset, galvo_r_duty_cycle, galvo_r_phase =\
+        self.state.get_parameter_list(['galvo_r_frequency', 'galvo_r_offset',  'galvo_r_duty_cycle', 'galvo_r_phase'])
+
+        galvo_r_amplitude = galvo_l_amplitude # always use same amplitude for both galvos
 
         '''Create Galvo waveforms:'''
         self.galvo_l_waveform = sawtooth(samplerate = samplerate,
@@ -284,13 +289,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         ETL-Right-Offset
         ETL-Right-Amp
         """
-        self.sig_update_gui_from_state.emit(True)
+        zoom_clean = zoom.split('x')[0] + 'x' # cleanup the zoom string for backwards compatibility with existing ETL files
         full_path = os.path.join(self.parent.package_directory, cfg_path)
         with open(full_path) as file:
             reader = csv.DictReader(file, delimiter=';')
             match_found = False
             for row in reader:
-                if row['Wavelength'] == laser and row['Zoom'] == zoom:
+                if row['Wavelength'] == laser and (row['Zoom'] == zoom_clean or row['Zoom'] == zoom):
                     match_found = True
                     # Some diagnostic tracing statements
                     # print(row)
@@ -305,8 +310,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                       'etl_r_offset' : etl_r_offset,
                                       'etl_r_amplitude' : etl_r_amplitude}
 
-                    '''  Now the GUI needs to be updated '''
-                    # time.sleep(0.2) # possible freezing here
                     logger.info(f'Parameters set from csv: {parameter_dict}')
                     self.state.set_parameters(parameter_dict)
 
@@ -314,10 +317,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             '''Update waveforms with the new parameters'''
             self.create_waveforms()
         else:
-            err_message = f"Laser {laser} - zoom {zoom} combination not found in ETL file. Update the file:\n{cfg_path}"
-            print("Error: " + err_message)
-            logger.error(err_message)
-        self.sig_update_gui_from_state.emit(False)
+            err_message = f"Combination {laser} - {zoom} not found in ETL file. The file will be updated:\n{cfg_path}"
+            self.parent.sig_warning.emit(err_message)
+            self.save_etl_parameters_to_csv()
+        self.sig_update_gui_from_state.emit()
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):
@@ -337,15 +340,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         """
 
         etl_cfg_file, laser, zoom, etl_l_offset, etl_l_amplitude, etl_r_offset, etl_r_amplitude = \
-        self.state.get_parameter_list(['ETL_cfg_file', 'laser', 'zoom',
-        'etl_l_offset', 'etl_l_amplitude', 'etl_r_offset','etl_r_amplitude'])
+        self.state.get_parameter_list(['ETL_cfg_file', 'laser', 'zoom', 'etl_l_offset', 'etl_l_amplitude', 'etl_r_offset','etl_r_amplitude'])
 
         '''Temporary filepath'''
         etl_cfg_file = os.path.join(self.parent.package_directory, etl_cfg_file)
         tmp_etl_cfg_file = etl_cfg_file+'_tmp'
         with open(etl_cfg_file,'r') as input_file, open(tmp_etl_cfg_file,'w') as outputfile:
-            reader = csv.DictReader(input_file,delimiter=';')
-            #print('created reader')
+            reader = csv.DictReader(input_file, delimiter=';')
             fieldnames = ['Objective',
                           'Wavelength',
                           'Zoom',
@@ -354,9 +355,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                           'ETL-Right-Offset',
                           'ETL-Right-Amp']
 
-            writer = csv.DictWriter(outputfile,fieldnames=fieldnames,dialect='excel',delimiter=';')
+            writer = csv.DictWriter(outputfile, fieldnames=fieldnames, dialect='excel', delimiter=';')
             writer.writeheader()
+            match_found = False
             for row in reader:
+                # update values if the laser and zoom are already in the file
                 if row['Wavelength'] == laser and row['Zoom'] == zoom:
                         writer.writerow({'Objective' : '1x',
                                          'Wavelength' : laser,
@@ -366,9 +369,19 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                          'ETL-Right-Offset' : etl_r_offset,
                                          'ETL-Right-Amp' : etl_r_amplitude,
                                          })
+                        match_found = True
                 else:
+                    # copy all other rows
                     writer.writerow(row)
-            writer.writerows(reader)
+            if not match_found:
+                writer.writerow({'Objective' : '1x',
+                                 'Wavelength' : laser,
+                                 'Zoom' : zoom,
+                                 'ETL-Left-Offset' : etl_l_offset,
+                                 'ETL-Left-Amp' : etl_l_amplitude,
+                                 'ETL-Right-Offset' : etl_r_offset,
+                                 'ETL-Right-Amp' : etl_r_amplitude,
+                                 })
         os.remove(etl_cfg_file)
         os.rename(tmp_etl_cfg_file, etl_cfg_file)
 
@@ -442,9 +455,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         '''Housekeeping: Setting up the AO task for the Galvo and setting the trigger input'''
         if self.ao_cards == 2: # default mesoSPIM v5 configuration
-            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val=-5, max_val=5)
-            msg = "Galvo and ETL AO task voltage range is set to -5V to 5V. Check if this is safe for your hardware."
-            logger.warning(msg)
+            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val = -self.MAX_GALVO_ETL_VOLT, max_val = self.MAX_GALVO_ETL_VOLT)
             self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
@@ -455,8 +466,6 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'],
                                                             min_val=-self.state['max_laser_voltage'],
                                                             max_val=self.state['max_laser_voltage'])
-            msg = f"Laser AO task voltage range is set {-self.state['max_laser_voltage']}V to {self.state['max_laser_voltage']}V. Check if this is safe for your hardware."
-            logger.warning(msg)
             self.laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                         sample_mode=AcquisitionType.FINITE,
                                                         samps_per_chan=samples)
@@ -465,9 +474,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
         else: # Benchtop single-card PXI NI-6733 or cDAQ NI-9264 configuration
             self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
-                                                                      min_val=-5, max_val=5)
-            msg = "Galvo-ETL-Laser AO task voltage range is set to -5V to 5V. Check if this is correct for your hardware."
-            logger.warning(msg)
+                                                                      min_val = -self.MAX_GALVO_ETL_VOLT, max_val = self.MAX_GALVO_ETL_VOLT)
             self.galvo_etl_laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
                                                        sample_mode=AcquisitionType.FINITE,
                                                        samps_per_chan=samples)
@@ -480,6 +487,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.galvo_etl_task.write(self.galvo_and_etl_waveforms)
             self.laser_task.write(self.laser_waveforms)
         else:
+            logger.debug(f"Writing analog waveforms: self.galvo_and_etl_waveforms, min {self.galvo_and_etl_waveforms.min()}, max {self.galvo_and_etl_waveforms.max()}")
+            logger.debug(f"Writing analog waveforms: self.laser_waveforms, min {self.laser_waveforms.min()}, max {self.laser_waveforms.max()}")
             self.galvo_etl_laser_task.write(np.vstack((self.galvo_and_etl_waveforms, self.laser_waveforms)))
 
     def start_tasks(self):

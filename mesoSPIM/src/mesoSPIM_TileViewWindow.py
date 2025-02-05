@@ -11,7 +11,6 @@ from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
 from PyQt5.uic import loadUi
 #import pyqtgraph as pg
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.parent = parent # the mesoSPIM_MainWindow() instance
         self.acquisition_manager_window = parent.acquisition_manager_window
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         '''Set up the UI'''
         if __name__ == '__main__':
@@ -93,7 +92,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
                 self.scene.addItem(label)
 
         # plot selected tile on top in yellow
-        if selected_row is not None:
+        if selected_row is not None and selected_row < len(acq_list):
             acq = acq_list[selected_row]
             start_point_x, start_point_y = acq.get_startpoint()['x_abs'] - global_offset_x, acq.get_startpoint()['y_abs'] - global_offset_y
             rect = QRectF(self.x_sign*start_point_x*self.scale_factor - self.fov_scene_offset_x, 

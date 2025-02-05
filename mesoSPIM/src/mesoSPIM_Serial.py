@@ -10,11 +10,10 @@ import logging
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 ''' Import mesoSPIM modules '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
-from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_GalilStages, mesoSPIM_PI_f_rot_and_Galil_xyz_Stages, mesoSPIM_PI_rot_and_Galil_xyzf_Stages, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_PI_rotzf_and_Galil_xy_Stages
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
@@ -53,7 +52,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
             self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'ZWO':
-            self.filterwheel = ZwoFilterWheel(self.cfg.filterdict)
+            self.filterwheel = ZwoFilterWheel(self.cfg.filterdict, self)
         else:
             raise ValueError(f"Filter wheel type unknown: {self.cfg.filterwheel_parameters['filterwheel_type']}")
 
@@ -72,16 +71,16 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_PI_1toN(self)
         elif self.cfg.stage_parameters['stage_type'] == 'PI_NcontrollersNstages':
             self.stage = mesoSPIM_PI_NtoN(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
-            self.stage = mesoSPIM_GalilStages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
-            self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PI_f_rot_and_Galil_xyz':
-            self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'GalilStage':
+        #     self.stage = mesoSPIM_GalilStages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'PI_rot_and_Galil_xyzf':
+        #     self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'PI_f_rot_and_Galil_xyz':
+        #     self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)
         elif self.cfg.stage_parameters['stage_type'] == 'PI_rotz_and_Galil_xyf':
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
-            self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
+        # elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
+        #     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
         elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
             self.stage = mesoSPIM_ASI_Tiger_Stage(self)
             self.stage.sig_pause.connect(self.pause)
@@ -147,7 +146,7 @@ class mesoSPIM_Serial(QtCore.QObject):
                 if not eval(condition):
                     self.send_status_message(f'Relative movement stopped: {axis} motion limit would be reached!')
                     return False
-        #self.send_status_message('Stage limits OK')
+        self.send_status_message('')
         return True
 
     @QtCore.pyqtSlot(dict)
@@ -158,11 +157,8 @@ class mesoSPIM_Serial(QtCore.QObject):
             logger.info('Stage limits reached: motion stopped')
 
     @QtCore.pyqtSlot(dict)
-    def move_absolute(self, sdict, wait_until_done=False):
-        if self.stage_limits_OK(sdict):
-            self.stage.move_absolute(sdict, wait_until_done=wait_until_done)
-        else:
-            logger.info('Stage limits reached: motion stopped')
+    def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
+        self.stage.move_absolute(sdict, wait_until_done=wait_until_done, use_internal_position=use_internal_position)
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
@@ -180,7 +176,6 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=True):
-        # logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
         ''' Here, the state parameters are set before sending the value to the zoom --
         this is to avoid laggy update loops with the GUI.'''
         self.state['zoom'] = zoom

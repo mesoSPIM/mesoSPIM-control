@@ -1,4 +1,34 @@
-## Development branch 2024 [1.9.0]
+## Release candidate December 2024 [1.10.2].
+### Performance :rocket:
+- migration to Python 3.12 for better performance and compatibility with the latest libraries.
+- faster loading and response time of the GUI
+- subsampling of the camera image for less frequent rendering in the GUI (less CPU load) during acquisition, controlled by `'camera_display_temporal_subsampling': 2,` parameter in the config file. Value `1` means no subsampling (show every image during acquisition).
+- change recommended package manager to `mamba` to avoid Anaconda license issues.
+- change the default timer for stage position update from 50 ms to 100 ms, to reduce communication and logging overhead. ASI stages updated every 200 ms, PI stages every 100 ms.
+- zoom dictionary can include multi-word names like `5x Mitutoyo` instead of `5x` for better UI and meta-infomation.
+- spinboxes are limited in scroll speed to allow hardware catch up with UI in the interactive mode
+- #82: uploading UCL-Bechtop config file `config/examples/config_benchtop_UCL_5laser.py` by @TchLenn and parsing of double-digit strings like `ao21:22` in config file.
+- remove `Log` tab from the GUI, as it was not used by the users and was causing unnecessary overhead, esp. in DEBUG mode.
+
+### User Interface :lollipop:
+- ETL config files (.csv) are automatically checked and updated with the `laser`-`zoom` combination selected in GUI, to avoid errors in the acquisition. User can even start with an empty ETL config file, it will be auto-filled with the `laser`-`zoom` combinations on the go.
+- more tooltips added to the GUI elements for better user experience.
+
+### :wrench: system changes
+- pip depenencies are frozen for staibilty
+- `mesoSPIM_State` is only nominally a singleton, but actually inherited by classes from their parent class to ensure unique state and thread safety.
+- no signal from `mesoSPIM_State` every time the state is updated. The GUI is updated from state by a separate signal/slot from member classes, on demand.
+- bugfix: serial communication with ASI stages is now thread-safe, with no conflicts between GUI (Main) and Core threads.
+- bugfix: parsing config file with either `'laser_task_line' :  'PXI6733/ao0:3'` or `'/PXI6733/ao0:3'` notation (Alan Watson).
+
+## Release candidate August 2024 [1.10.0]. Cancelled due to performance issues on some setups.
+### Performance :rocket:
+- improved acquisition speed from 2.5 to 5 FPS, by moving image writing to a separate thread and using `collections.deque` mechanism for frame sharing between the camera and image writing threads, instead of less-performant `QThread` signal/slot mechanism.
+- best writing speed and lowest CPU overhead is achieved with NVMe SSD disks, recommended.
+- the option `buffering = {...}` in config file is deprecated from v.1.10.0 and will be ignored, due to improved program performance.
+- dependencies are updated to the latest versions: `numpy`, `scipy`, `tifffile`, etc.
+
+## Release July 2024 [1.9.0]
 ### User Interface :lollipop:
 - :gem:  "Auto L/R illumination" button in the Acquisition manager to select tile illumination based on its x-position.
 - :gem: A long awaited feature: **Tile Overview** window (*View/Open Tile Overview*), showing the entire acquisition area with tile positions, their overlap, and current FOV position relative to them.
@@ -12,8 +42,10 @@ This has to be set up in the config file with `'x_center_position'` and `'z_cent
 - Tooltips were added to the navigation buttons.
 
 ### Bugfixes :bug: 
-- check motion limits for all tiles before starting the acquisition list
+- occasional glitch with ASI stages caused by updating stage positions between acquisitions, with serial communication going in two separate threads (mainWindow vs Core).
+- check motion limits for all tiles before starting the acquisition list, in absolute or relative coodinates (zeroed axes or not).
 - estimated remaining acquisition time is now calculated correctly, based on the current frame rate.
+- sample centering and objectiv exchange positions work also when in zeroed-stage regime (local coordinates, user-defined). No need to inactivate `Zero F-stage` button for safe revolver operation.
 
 ## Release February 2024 [1.8.3]
 

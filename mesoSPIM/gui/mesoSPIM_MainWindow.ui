@@ -1668,6 +1668,9 @@ Focus</string>
                <pointsize>14</pointsize>
               </font>
              </property>
+             <property name="toolTip">
+              <string>ETL settings are specific for (laser, zoom, arm), eg (488, 5x, Left). After adjustment, save into the .csv file.</string>
+             </property>
              <property name="suffix">
               <string> V</string>
              </property>
@@ -1736,6 +1739,9 @@ Focus</string>
               <font>
                <pointsize>14</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>ETL settings are specific for (laser, zoom, arm), eg (488, 5x, Right). After adjustment, save into the .csv file.</string>
              </property>
              <property name="suffix">
               <string> V</string>
@@ -1836,6 +1842,9 @@ Focus</string>
                <bold>false</bold>
               </font>
              </property>
+             <property name="toolTip">
+              <string>The file stores ETL offsets and amplitudes, which are specific for zoom (FOV width), medium refractive index, and immersion chamber (its width).</string>
+             </property>
              <property name="text">
               <string>Choose ETL config file</string>
              </property>
@@ -1859,6 +1868,9 @@ Focus</string>
                <italic>false</italic>
                <bold>false</bold>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Always save your ETL parameters before switching laser or zoom.</string>
              </property>
              <property name="text">
               <string>Save current parameters to csv</string>
@@ -1971,6 +1983,9 @@ Focus</string>
                <bold>false</bold>
               </font>
              </property>
+             <property name="toolTip">
+              <string>Set the right ETL scanning amplitude to 0, to bring the beam waist to FOV center.</string>
+             </property>
              <property name="text">
               <string>AmpR=0</string>
              </property>
@@ -1995,6 +2010,9 @@ Focus</string>
               <italic>false</italic>
               <bold>false</bold>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>Set the left ETL scanning amplitude to 0, to bring the beam waist to FOV center.</string>
             </property>
             <property name="text">
              <string>AmpL=0</string>
@@ -2038,7 +2056,7 @@ Focus</string>
                  </font>
                 </property>
                 <property name="toolTip">
-                 <string>Set amplitude of both galvos to 0</string>
+                 <string>DANGER of sample bleaching. Set amplitude of both galvos to 0, i.e. stop scanning. Before pressing, move the sample away from the laser.</string>
                 </property>
                 <property name="text">
                  <string>Freeze galvos</string>
@@ -2054,6 +2072,9 @@ Focus</string>
                  <font>
                   <pointsize>14</pointsize>
                  </font>
+                </property>
+                <property name="toolTip">
+                 <string>Experimental features, autofocus and ETL parameter optimization on a sample. Success depends on the sample.</string>
                 </property>
                 <property name="text">
                  <string>Launch Optimizer</string>
@@ -2089,29 +2110,6 @@ Focus</string>
             </property>
             <property name="text">
              <string>New Scripting Editor</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QWidget" name="LogTabWidget">
-           <attribute name="title">
-            <string>Log</string>
-           </attribute>
-           <widget class="QPlainTextEdit" name="LogTextDisplay">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>20</y>
-              <width>871</width>
-              <height>681</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="autoFillBackground">
-             <bool>false</bool>
             </property>
            </widget>
           </widget>
@@ -2160,7 +2158,7 @@ Focus</string>
               <double>10.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>1000.000000000000000</double>
+              <double>10000.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>1.000000000000000</double>
@@ -2340,10 +2338,10 @@ Focus</string>
               <string> ms</string>
              </property>
              <property name="minimum">
-              <double>3.000000000000000</double>
+              <double>1.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>1000.000000000000000</double>
+              <double>5000.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>1.000000000000000</double>
@@ -2811,7 +2809,7 @@ Focus</string>
               </font>
              </property>
              <property name="toolTip">
-              <string>Defines vertical scanning range.</string>
+              <string>Defines vertical scanning range (heights of the light sheet illuminated area)</string>
              </property>
              <property name="suffix">
               <string> V</string>

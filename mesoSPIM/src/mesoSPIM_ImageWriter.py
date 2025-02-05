@@ -5,28 +5,27 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 import os
 import time
 import numpy as np
-import psutil
 import tifffile
 import logging
 logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
 from distutils.version import StrictVersion
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
-    def __init__(self, parent=None):
+    def __init__(self, parent, frame_queue):
         '''Image and metadata writer class. Parent is mesoSPIM_Camera() object'''
         super().__init__()
 
         self.parent = parent # a mesoSPIM_Camera() object
         self.cfg = parent.cfg
+        self.frame_queue = frame_queue
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # a mesoSPIM_StateSingleton() object
         self.running_flag = self.abort_flag = False
 
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
@@ -56,71 +55,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         tifffile.TiffWriter.write = self.tiff_write # rename the entire class method if necessary
 
-    def acquisition_shape(self):
-        '''Return a tuple of acquisition shape (z,y,x)'''
-        return (self.max_frame, self.x_pixels, self.y_pixels)
-
-    def allocate_np(self):
-        '''Return a numpy array filled with zeros the shape of the acquisition array'''
-        return np.zeros(self.acquisition_shape(), dtype='uint16')
-
-    def allocate_ram(self):
-        '''Return a numpy array filled with zeros that maximizes for available RAM
-        but leaves a percentage of RAM free.
-
-        If shape of the acquisition is smaller, allocate the smaller array.
-        '''
-        if not hasattr(self.cfg, 'buffering') or not self.cfg.buffering['use_ram_buffer']:
-            msg = 'No RAM buffer specified in config file. Continuing without RAM buffer. To turn on RAM buffering, add a "buffering" dictionary to the config file.'
+        if hasattr(self.cfg, 'buffering'):
+            msg = "Option 'buffering = {...}' in config file is deprecated from v.1.10.0 and will be ignored, \
+ due to improved program performance. You can delete it from the config file."
             logger.info(msg)
             print(msg)
-            buffer_shape = (1, self.x_pixels, self.y_pixels)
-        else:
-            percent_ram_free = self.cfg.buffering['percent_ram_free']
-            ram = psutil.virtual_memory()
-            must_remain_free_GB = ram.total*(percent_ram_free/100)
-            max_amount_useable = ram.available - must_remain_free_GB
-            size_of_1_image = self.y_pixels * self.x_pixels * 16 / 8 # Assume np.uint16
-
-            if max_amount_useable < size_of_1_image:
-                # Case where there is not enough RAM for even 1 image
-                msg = f'There is not enough RAM available to maintain {percent_ram_free} percent free RAM: Continuing acquisition without RAM buffer'
-                logger.warning(msg)
-                print(msg)
-
-            z_layers_to_allocate = int(max_amount_useable // size_of_1_image) - 1
-            z_layers_to_allocate = z_layers_to_allocate if z_layers_to_allocate >= 1 else 1
-
-            if gb_size_of_array_shape(self.acquisition_shape()) <= max_amount_useable/1024**3:
-                buffer_shape = self.acquisition_shape()
-            else:
-                buffer_shape = (z_layers_to_allocate, self.x_pixels, self.y_pixels)
-        return np.zeros(buffer_shape, dtype='uint16')
-
-    def less_than_gb(self, gb):
-        '''Is the size of the acquisition array smaller than some size in gigabytes'''
-        num_pix = self.max_frame * self.y_pixels * self.x_pixels
-        size = (num_pix*16/8) / (1024**3) # in gigabytes
-        if size < gb:
-            return True
-        else:
-            return False
-
-    def remove_image_buffer(self):
-        self.image_buffer = None  # Clear RAM
-
-    def ram_percent_remaing_free(self):
-        ram = psutil.virtual_memory()
-        total = ram.total
-        free = ram.free
-        return (free/total)*100
 
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
         self.filename = replace_with_underscores(acq['filename'])
         self.path = os.path.realpath(self.folder+'/'+self.filename)
         self.file_root, self.file_extension = os.path.splitext(self.path)
-        logger.info(f'Image Writer: Save path: {self.path}')
+        logger.info(f'Save path: {self.path}')
 
         self.binning_string = self.state['camera_binning'] # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
@@ -190,68 +136,57 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.mip_image = np.zeros((self.y_pixels, self.x_pixels), 'uint16')
 
         self.cur_image_counter = 0
-        self.written_image_counter = 0
         self.abort_flag = False
         self.running_flag = True
-
         self.acq = acq
         self.acq_list = acq_list
 
-        #Create a RAM buffer for acquisition that keeps {self.percent_ram_free} of total RAM free
-        self.image_buffer = self.allocate_ram()
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    def write_images(self, acq, acq_list):
+        """Write available images to disk. 
+        The actual images are passed via `self.frame_queue` from the Camera thread, NOT via the signal/slot mechanism as before,\
+             starting from v.1.10.0. This is to avoid the overhead of signal/slot mechanism and to improve performance."""
+        if self.running_flag:
+            while len(self.frame_queue) > 0:
+                logger.debug('image queue length: ' + str(len(self.frame_queue)))
+                image = np.rot90(self.frame_queue.popleft())
+                self.image_to_disk(acq, acq_list, image)
+        else:
+            logger.debug('self.running_flag = False, no images written')
 
-    def write_image(self, image, acq, acq_list):
-        self.image_buffer[self.written_image_counter % self.image_buffer.shape[0]] = image
-        self.written_image_counter += 1
-        # ## Only for test purposes
-        # percent_ram_remaining = self.ram_percent_remaing_free()
-        # print(f'Percent RAM remaining is {round(percent_ram_remaining,2)}')
-        # ##
-        if (self.written_image_counter % self.image_buffer.shape[0] == 0) or (self.written_image_counter == self.max_frame) or self.abort_flag:
-            self.image_to_disk(acq, acq_list)
+    def image_to_disk(self, acq, acq_list, image):
+        logger.debug('image_to_disk() started') 
+        self.parent.sig_status_message.emit('Flushing to disk...')
+        xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
+        if self.file_extension == '.h5':
+            self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
+                                            illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                            channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                            angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                            tile=acq_list.get_tile_index(acq)
+                                            )
+        elif self.file_extension == '.raw':
+            self.xy_stack[self.cur_image_counter * self.fsize:(self.cur_image_counter + 1) * self.fsize] = image.flatten()
+        elif self.file_extension in self.tiff_aliases:
+            self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
+                                    metadata={'spacing': acq['z_step'], 'unit': 'um'})
+        elif self.file_extension in self.bigtiff_aliases:
+            self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
+                                    metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
-    def image_to_disk(self, acq, acq_list):
-        self.parent.parent.sig_status_message.emit('Flushing data to disk...')
-        while True:
-            image = self.image_buffer[self.cur_image_counter % self.image_buffer.shape[0]]
-            xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
-            if self.file_extension == '.h5':
-                self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
-                                             illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
-                                             channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                             angle=acq_list.find_value_index(acq['rot'], 'rot'),
-                                             tile=acq_list.get_tile_index(acq)
-                                             )
-            elif self.file_extension == '.raw':
-                self.xy_stack[self.cur_image_counter * self.fsize:(self.cur_image_counter + 1) * self.fsize] = image.flatten()
-            elif self.file_extension in self.tiff_aliases:
-                self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
-                                       metadata={'spacing': acq['z_step'], 'unit': 'um'})
-            elif self.file_extension in self.bigtiff_aliases:
-                self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
-                                       metadata={'spacing': acq['z_step'], 'unit': 'um'})
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+            self.mip_image[:] = np.maximum(self.mip_image, image)
 
-            if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
-                self.mip_image[:] = np.maximum(self.mip_image, image)
-
-            self.cur_image_counter += 1
-            # Terminate loop if the full buffer has been dumped to disk or if all images from acquisition have been dumpped to disk
-            if self.cur_image_counter % self.image_buffer.shape[0] == 0 or self.cur_image_counter == self.max_frame:
-                self.parent.parent.sig_status_message.emit('Running Acquisition')
-                break
-            elif self.abort_flag and self.cur_image_counter == self.written_image_counter:
-                self.parent.parent.sig_status_message.emit('Running Acquisition')
-                break
-
-        if not self.running_flag:
-            logger.info("No image, running terminated")
-
+        self.cur_image_counter += 1
+        logger.debug('image_to_disk() ended')
+        image = None # Free RAM
+    
+    @QtCore.pyqtSlot()
     def abort_writing(self):
         """Terminate writing and close all files if STOP button is pressed"""
         self.abort_flag = True
         if self.running_flag:
             try:
-                self.image_to_disk(self.acq, self.acq_list)  # Flush remaining buffer to disk
                 if self.file_extension == '.h5':
                     self.bdv_writer.close()
                 elif self.file_extension == '.raw':
@@ -261,13 +196,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.metadata_file.close()
             except Exception as e:
                 logger.error(f'{e}')
-            print("Writing terminated, files closed")
+            self.parent.sig_status_message.emit("Writing terminated, files closed")
             self.running_flag = False
-            self.remove_image_buffer() #Free RAM
             self.abort_flag = False
         else:
             pass
 
+    @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_acquisition(self, acq, acq_list):
         logger.info("end_acquisition() started")
         if self.file_extension == '.h5':
@@ -302,7 +237,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 logger.error(f'{e}')
 
         self.running_flag = False
-        self.remove_image_buffer()  # Free RAM
 
     def write_snap_image(self, image):
         timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -346,7 +280,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             write_line(file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
             write_line(file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
             write_line(file, 'galvo_l_offset', self.state['galvo_l_offset'])
-            write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+            #write_line(file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
             write_line(file, 'galvo_r_offset', self.state['galvo_r_offset'])
             write_line(file)
             write_line(file, 'CAMERA PARAMETERS')
@@ -358,6 +292,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_metadata(self, acq, acq_list):
+        logger.debug("write_metadata() started")
         ''' Writes a metadata.txt file. Path contains the file to be written '''
         path = acq['folder'] + '/' + acq['filename']
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
@@ -406,7 +341,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'galvo_l_frequency', self.state['galvo_l_frequency'])
         write_line(self.metadata_file, 'galvo_l_amplitude', self.state['galvo_l_amplitude'])
         write_line(self.metadata_file, 'galvo_l_offset', self.state['galvo_l_offset'])
-        write_line(self.metadata_file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
+        #write_line(self.metadata_file, 'galvo_r_amplitude', self.state['galvo_r_amplitude'])
         write_line(self.metadata_file, 'galvo_r_offset', self.state['galvo_r_offset'])
         write_line(self.metadata_file)
         write_line(self.metadata_file, 'CAMERA PARAMETERS')
@@ -417,3 +352,4 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
         write_line(self.metadata_file)
         self.metadata_file.close()
+        logger.debug("write_metadata() ended")
