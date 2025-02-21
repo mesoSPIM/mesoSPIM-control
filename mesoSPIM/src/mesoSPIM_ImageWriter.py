@@ -133,7 +133,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             self.tiff_mip_writer = tifffile.TiffWriter(self.file_root + "_MAX.tiff", imagej=True)
-            self.mip_image = np.zeros((self.y_pixels, self.x_pixels), 'uint16')
+            self.mip_image = np.zeros((self.x_pixels, self.y_pixels), 'uint16')
 
         self.cur_image_counter = 0
         self.abort_flag = False

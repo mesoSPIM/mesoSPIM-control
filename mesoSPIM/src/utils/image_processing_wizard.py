@@ -58,10 +58,10 @@ class ImageProcessingWizard(QtWidgets.QWizard):
          
         for row in range(0, row_count):
             index = self.parent.model.createIndex(row, processing_column)
-            if self.field('maxProjEnabled'):
-                self.parent.model.setData(index, 'MAX')
+            if not self.field('maxProjEnabled'):
+                self.parent.model.setData(index, '')
             else:
-                self.parent.model.setData(index,  '')
+                self.parent.model.setData(index,  'MAX')
 
 class ImageProcessingWizardWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
