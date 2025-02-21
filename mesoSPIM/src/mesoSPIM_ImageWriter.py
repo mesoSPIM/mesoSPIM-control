@@ -156,7 +156,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     def image_to_disk(self, acq, acq_list, image):
         logger.debug('image_to_disk() started') 
-        self.parent.sig_status_message.emit('Flushing to disk...')
+        self.parent.sig_status_message.emit('Writing to disk...')
         xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
         if self.file_extension == '.h5':
             self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
@@ -165,6 +165,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                             angle=acq_list.find_value_index(acq['rot'], 'rot'),
                                             tile=acq_list.get_tile_index(acq)
                                             )
+            # flush H5 every 100 frames or at the end of acquisition
+            if ((self.cur_image_counter + 1) % 100 == 0) or ((self.cur_image_counter + 1) == self.max_frame):
+                self.bdv_writer._file_object_h5.flush()
+                logger.debug(f'flushed at {self.cur_image_counter + 1} frames to disk')
         elif self.file_extension == '.raw':
             self.xy_stack[self.cur_image_counter * self.fsize:(self.cur_image_counter + 1) * self.fsize] = image.flatten()
         elif self.file_extension in self.tiff_aliases:

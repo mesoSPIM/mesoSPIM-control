@@ -105,6 +105,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.check_config_file()
         self.open_webcam_window()
 
+        self.scriptwindow = None
+
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
             window_pos = self.cfg.ui_options['window_pos']
@@ -239,6 +241,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def close_app(self):
         #self.log_display_handler.flushOnClose = False #discontinued
+        logger.info('Closing the application')
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:
