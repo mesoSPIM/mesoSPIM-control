@@ -65,6 +65,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.folder = acq['folder']
         self.filename = replace_with_underscores(acq['filename'])
         self.path = os.path.realpath(self.folder+'/'+self.filename)
+        self.MIP_path = os.path.realpath(self.folder +'/MAX_'+ self.filename + '.tiff')
         self.file_root, self.file_extension = os.path.splitext(self.path)
         logger.info(f'Save path: {self.path}')
 
@@ -132,7 +133,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.tiff_writer = tifffile.TiffWriter(self.path, bigtiff=True)
 
         if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
-            self.tiff_mip_writer = tifffile.TiffWriter(self.file_root + "_MAX.tiff", imagej=True)
+            self.tiff_mip_writer = tifffile.TiffWriter(self.MIP_path, imagej=True)
             self.mip_image = np.zeros((self.x_pixels, self.y_pixels), 'uint16')
 
         self.cur_image_counter = 0
