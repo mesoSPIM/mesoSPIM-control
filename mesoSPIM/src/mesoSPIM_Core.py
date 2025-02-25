@@ -95,6 +95,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state'] = 'init'
 
         self.frame_queue = deque([])
+        self.frame_queue_display = deque([], maxlen=1)    
 
         ''' The signal-slot switchboard '''
         # Note the name duplication (shadowing)!!
@@ -115,11 +116,11 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state, type=QtCore.Qt.QueuedConnection)
 
         self.camera_thread = QtCore.QThread()
-        self.camera_worker = mesoSPIM_Camera(parent=self, frame_queue=self.frame_queue)
+        self.camera_worker = mesoSPIM_Camera(parent=self, frame_queue=self.frame_queue, frame_queue_display=self.frame_queue_display)
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
-        self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.set_image)
+        self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.update_image_from_deque)
         self.sig_end_image_series.connect(self.camera_worker.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
         self.sig_stop_aquisition.connect(self.camera_worker.stop, type=QtCore.Qt.QueuedConnection)
 

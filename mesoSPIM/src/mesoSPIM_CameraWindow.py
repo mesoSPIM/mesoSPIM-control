@@ -192,3 +192,10 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
         self.draw_crosshairs()
 
+    @QtCore.pyqtSlot()
+    def update_image_from_deque(self):
+        if len(self.parent.core.frame_queue_display) > 0:
+            image = self.parent.core.frame_queue_display.popleft()
+            self.set_image(image)
+        else:
+            return

@@ -20,18 +20,19 @@ from .utils.acquisitions import AcquisitionList, Acquisition
 
 class mesoSPIM_Camera(QtCore.QObject):
     '''Top-level class for all cameras'''
-    sig_camera_frame = QtCore.pyqtSignal(np.ndarray)
+    sig_camera_frame = QtCore.pyqtSignal()
     sig_write_images = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_finished = QtCore.pyqtSignal()
     sig_update_gui_from_state = QtCore.pyqtSignal()
     sig_status_message = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent, frame_queue):
+    def __init__(self, parent, frame_queue, frame_queue_display):
         super().__init__()
 
         self.parent = parent # a mesoSPIM_Core() object
         self.cfg = parent.cfg
         self.frame_queue = frame_queue
+        self.frame_queue_display = frame_queue_display
 
         self.state = self.parent.state # a mesoSPIM_StateSingleton() object
         #self.image_writer = mesoSPIM_ImageWriter(self)
@@ -176,11 +177,8 @@ class mesoSPIM_Camera(QtCore.QObject):
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
                 self.frame_queue.extend(images) # push the list of images into queue
-                # show an image every 'camera_display_temporal_subsampling frames' timepoint
-                if self.cur_image % self.camera_display_temporal_subsampling == 0:
-                    image = np.rot90(images[0]) 
-                    self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_acquisition_subsampling,
-                                                0:self.y_pixels:self.camera_display_acquisition_subsampling])
+                self.frame_queue_display.append(np.rot90(images[0])) # push the first image into the display queue
+                self.sig_camera_frame.emit() # signal the GUI to update the display
                 # tell the image writer to write the images in queue
                 self.sig_write_images.emit(acq, acq_list)
                 self.cur_image += len(images)
@@ -205,11 +203,11 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot(bool)
     def snap_image(self, write_flag=True):
         """"Snap an image and display it"""
-        image = self.camera.get_image()
-        image = np.rot90(image)[::self.camera_display_acquisition_subsampling, ::self.camera_display_acquisition_subsampling]
-        self.sig_camera_frame.emit(image)
+        image = np.rot90(self.camera.get_image())
+        self.frame_queue_display.append(image) # push the first image into the display queue
+        self.sig_camera_frame.emit() # signal the GUI to update the display
         if write_flag:
-            self.parent.image_writer.write_snap_image(image) # Dangerous, not thread safe
+            self.parent.image_writer.write_snap_image(image) # Dangerous, not thread safe!
 
     @QtCore.pyqtSlot()
     def prepare_live(self):
@@ -223,9 +221,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         images = self.camera.get_live_image()
 
         for image in images:
-            image = np.rot90(image)
-            self.sig_camera_frame.emit(image[0:self.x_pixels:self.camera_display_live_subsampling,
-                                       0:self.y_pixels:self.camera_display_live_subsampling])
+            self.frame_queue_display.append(np.rot90(image)) # push the first image into the display queue
+            self.sig_camera_frame.emit() # signal the GUI to update the display
             self.live_image_count += 1
             #self.sig_camera_status.emit(str(self.live_image_count))
 
