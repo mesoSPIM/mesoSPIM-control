@@ -166,8 +166,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                             angle=acq_list.find_value_index(acq['rot'], 'rot'),
                                             tile=acq_list.get_tile_index(acq)
                                             )
-            # flush H5 every 100 frames or at the end of acquisition
-            if ((self.cur_image_counter + 1) % 100 == 0) or ((self.cur_image_counter + 1) == self.max_frame):
+            # flush H5 every 100 frames 
+            if (self.cur_image_counter + 1) % 100 == 0:
                 self.bdv_writer._file_object_h5.flush()
                 logger.debug(f'flushed at {self.cur_image_counter + 1} frames to disk')
         elif self.file_extension == '.raw':
@@ -184,7 +184,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         self.cur_image_counter += 1
         logger.debug('image_to_disk() ended')
-        image = None # Free RAM
     
     @QtCore.pyqtSlot()
     def abort_writing(self):
@@ -223,6 +222,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                     self.bdv_writer.close()
                 except:
                     logger.error(f'HDF5 file could not be closed: {sys.exc_info()}')
+            else:
+                self.bdv_writer._file_object_h5.flush()
+                logger.info(f'flushed H5')
         elif self.file_extension == '.raw':
             try:
                 del self.xy_stack
