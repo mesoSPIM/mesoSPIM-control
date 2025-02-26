@@ -53,12 +53,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
-        self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
-        self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
-        if 'camera_display_temporal_subsampling' in self.cfg.startup.keys():
-            self.camera_display_temporal_subsampling = self.cfg.startup['camera_display_temporal_subsampling']
-        else:
-            self.camera_display_temporal_subsampling = 2
+        #self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
+        #self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
 
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler) # from mesoSPIM_Core() to mesoSPIM_Camera()
@@ -98,8 +94,8 @@ class mesoSPIM_Camera(QtCore.QObject):
             if key in ('camera_exposure_time',
                         'camera_line_interval',
                         'state',
-                        'camera_display_live_subsampling',
-                        'camera_display_acquisition_subsampling',
+                        #'camera_display_live_subsampling',
+                        #'camera_display_acquisition_subsampling',
                         'camera_binning'):
                 exec('self.set_'+key+'(value)')
             elif key == 'state':
@@ -138,13 +134,13 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.state['camera_line_interval'] = time
         self.sig_update_gui_from_state.emit()
 
-    def set_camera_display_live_subsampling(self, factor):
-        self.camera_display_live_subsampling = factor
-        self.state['camera_display_live_subsampling'] = factor
+    # def set_camera_display_live_subsampling(self, factor):
+    #     self.camera_display_live_subsampling = factor
+    #     self.state['camera_display_live_subsampling'] = factor
 
-    def set_camera_display_acquisition_subsampling(self, factor):
-        self.camera_display_acquisition_subsampling = factor
-        self.state['camera_display_acquisition_subsampling'] = factor
+    # def set_camera_display_acquisition_subsampling(self, factor):
+    #     self.camera_display_acquisition_subsampling = factor
+    #     self.state['camera_display_acquisition_subsampling'] = factor
 
     def set_camera_binning(self, value):
         logger.info('Setting camera binning: '+value)

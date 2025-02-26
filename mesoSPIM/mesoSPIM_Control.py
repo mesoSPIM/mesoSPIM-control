@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
-__version__ = "1.10.2"
+__version__ = "1.11.0"
 
 import time
 import logging
@@ -16,6 +16,7 @@ import os
 import sys
 import importlib.util
 from PyQt5 import QtWidgets, QtCore
+import qdarkstyle
 package_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(package_directory)) # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
 from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
@@ -92,7 +93,6 @@ def get_parser():
 
 def dark_mode_check(cfg, app):
     if (hasattr(cfg, 'dark_mode') and cfg.dark_mode) or (hasattr(cfg, 'ui_options') and cfg.ui_options['dark_mode']):
-        import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
 

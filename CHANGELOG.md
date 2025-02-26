@@ -1,5 +1,16 @@
-## Release candidate
+## Release candidate 2025 [1.11.0].
+### Performance :rocket:
 - implementation of time lapse function via script. See example script at `mesoSPIM/scripts/timelapse.py` for details.
+- images can now be displayed at full resolution during either live mode or acquisition, with no performance penalty. Deprecated config parameters:
+``` python
+'camera_display_live_subsampling': 2,
+'camera_display_acquisition_subsampling': 2, 
+```
+to enjoy full-resolution image in real time. The corresponding GUI elements for controlling the downsampling were removed.
+
+### Bugfixes :bug: 
+- duplication of sub-stacks while writing large H5 files (>0.5 TB) and freezing at the end of acquisition. Fixed by replacing signal/slot mechanism for CameraWindow image update to deque mechanism. Boosted performance and stability.
+- `MAX` projection is always on by default, if the dataset is asvaed in TIFF or RAW format. No need to check the box in the Image Processing Wizard. This generates maximum intensity projection as TIFF file for each stack in the acquisition list.
 
 ## Release December 2024 [1.10.2].
 ### Performance :rocket:

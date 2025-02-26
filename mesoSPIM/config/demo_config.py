@@ -402,9 +402,8 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075, # Hamamatsu-specific parameter
-'camera_display_live_subsampling': 2,
-'camera_display_temporal_subsampling': 2, # affects overall performance! Default value 2. Increase to 3 or 4 if the CPUs are not powerful enough (freezing of GUI during acquisition).
-'camera_display_acquisition_subsampling': 2,
+'camera_display_live_subsampling': 2, # deprecated
+#'camera_display_acquisition_subsampling': 1, # deprecated  
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
 'average_frame_rate': 4.5,
