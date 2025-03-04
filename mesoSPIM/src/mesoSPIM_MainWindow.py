@@ -177,6 +177,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         logger.debug(f'Main Window: Core thread priority: {self.core_thread.priority()}')
 
+        self.acquisition_manager_window.mark_all_current_parameters() # initialize the first dummy raw with the current state
         self.joystick = mesoSPIM_JoystickHandler(self)
 
     def check_config_file(self):

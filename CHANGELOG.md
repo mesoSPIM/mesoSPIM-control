@@ -11,6 +11,7 @@ to enjoy full-resolution image in real time. The corresponding GUI elements for 
 ### Bugfixes :bug: 
 - duplication of sub-stacks while writing large H5 files (>0.5 TB) and freezing at the end of acquisition. Fixed by replacing signal/slot mechanism for CameraWindow image update to deque mechanism. Boosted performance and stability.
 - `MAX` projection is always on by default, if the dataset is asvaed in TIFF or RAW format. No need to check the box in the Image Processing Wizard. This generates maximum intensity projection as TIFF file for each stack in the acquisition list.
+- explicit initialization of the first raw in Acquisition Manager, to avoid undefined GUI widget states.
 
 ## Release December 2024 [1.10.2].
 ### Performance :rocket:
