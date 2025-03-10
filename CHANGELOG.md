@@ -1,4 +1,4 @@
-## Release candidate 2025 [1.11.0].
+## Release March 2025 [1.11.0].
 ### Performance :rocket:
 - implementation of time lapse function via script. See example script at `mesoSPIM/scripts/timelapse.py` for details.
 - images can now be displayed at full resolution during either live mode or acquisition, with no performance penalty. Deprecated config parameters:
