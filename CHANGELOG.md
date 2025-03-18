@@ -1,3 +1,8 @@
+## Release candidate 2025 
+### Bugfixes :bug: 
+- fixed autofocus (AF) function in the GUI.
+
+
 ## Release March 2025 [1.11.0].
 ### Performance :rocket:
 - implementation of time lapse function via script. See example script at `mesoSPIM/scripts/timelapse.py` for details.

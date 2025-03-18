@@ -201,6 +201,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         """"Snap an image and display it"""
         image = np.rot90(self.camera.get_image())
         self.frame_queue_display.append(image) # push the first image into the display queue
+        logger.info(f"Image appended to display queue: len(frame_queue_display)={len(self.frame_queue_display)}")
         self.sig_camera_frame.emit() # signal the GUI to update the display
         if write_flag:
             self.parent.image_writer.write_snap_image(image) # Dangerous, not thread safe!
