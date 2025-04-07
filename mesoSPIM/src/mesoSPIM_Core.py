@@ -378,7 +378,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
         # Move to the objective exchange position if necessary
         f_pos_old = None
+        self.parent.ZoomComboBox.setEnabled(False)
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+            self.sig_warning.emit('Please wait until the zoom change is complete')
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))
             self.send_status_message_to_gui('Moving to objective exchange position')
@@ -391,6 +393,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.send_status_message_to_gui('Moving to the focus position')
             self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done, use_internal_position=True)
         self.send_status_message_to_gui('Magnification (zoom) changed')
+        self.parent.ZoomComboBox.setEnabled(True)
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
         
