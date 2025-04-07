@@ -120,7 +120,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera.set_exposure_time(time)
         self.camera_exposure_time = time
         self.state['camera_exposure_time'] = time
-        self.sig_update_gui_from_state.emit()
+        #self.sig_update_gui_from_state.emit()
 
     def set_camera_line_interval(self, time):
         '''
@@ -132,7 +132,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera.set_line_interval(time)
         self.camera_line_interval = time
         self.state['camera_line_interval'] = time
-        self.sig_update_gui_from_state.emit()
+        #self.sig_update_gui_from_state.emit()
 
     # def set_camera_display_live_subsampling(self, factor):
     #     self.camera_display_live_subsampling = factor
