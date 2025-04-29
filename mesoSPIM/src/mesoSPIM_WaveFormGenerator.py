@@ -88,6 +88,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(), dict.values()):
+            logger.info(f"state change: {key}: {value}")
             if key in ('samplerate',
                        'sweeptime',
                        'intensity',
@@ -117,32 +118,26 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'laser_r_delay_%',
                        'laser_r_pulse_%',
                        'laser_r_max_amplitude',
-                        'laser',
+                       'laser',
                        'camera_delay_%',
                        'camera_pulse_%',
                        'shutterconfig',
                        ):
                 self.state[key] = value
-                self.create_waveforms()
+                self.create_waveforms() # no GUI update feeding back, one-way signal from the GUI to the hardware
             elif key == 'zoom':
                 self.state[key] = value
                 self.rescale_galvo_amplitude_by_zoom(float(value.split('x')[0])) # truncate and convert string eg '1.2x BlahBlah' -> 1.2
                 self.create_waveforms()
             elif key == 'ETL_cfg_file':
                 self.state[key] = value
-                self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
+                self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom']) # feeding back state change to the GUI
             elif key == 'set_etls_according_to_zoom':
-                self.update_etl_parameters_from_zoom(value)
+                self.update_etl_parameters_from_zoom(value) # feeding back state change to the GUI
             elif key == 'set_etls_according_to_laser':
-                self.update_etl_parameters_from_laser(value)
-            elif key == 'state':
-                if value == 'live':
-                    logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
-            self.sig_update_gui_from_state.emit() 
-
-    def calculate_samples(self):
-        samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
-        self.samples = int(samplerate*sweeptime)
+                self.update_etl_parameters_from_laser(value) # feeding back state change to the GUI
+            else:
+                pass
 
     def create_waveforms(self):
         logger.info("waveforms updated")
@@ -152,6 +147,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''Bundle everything'''
         self.bundle_galvo_and_etl_waveforms()
         self.create_laser_waveforms()
+        #self.sig_update_gui_from_state.emit() # not necessary, and to minimize looping between state changes and GUI
+
+    def calculate_samples(self):
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
+        self.samples = int(samplerate*sweeptime)
 
     def create_etl_waveforms(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
