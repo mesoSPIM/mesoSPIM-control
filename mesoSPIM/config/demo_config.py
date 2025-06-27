@@ -402,8 +402,8 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075, # Hamamatsu-specific parameter
-'camera_display_live_subsampling': 2, # deprecated
-#'camera_display_acquisition_subsampling': 1, # deprecated  
+'camera_display_live_subsampling': 2, # un-deprecated for older computers
+'camera_display_acquisition_subsampling': 2, # un-deprecated for older computers  
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
 'average_frame_rate': 4.5,

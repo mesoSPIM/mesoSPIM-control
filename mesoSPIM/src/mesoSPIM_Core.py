@@ -196,8 +196,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
-        #self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
-        #self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
+        self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
+        self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
 
         self.start_time = 0
         self.stopflag = False
@@ -277,8 +277,8 @@ class mesoSPIM_Core(QtCore.QObject):
                        'laser_r_max_amplitude',
                        'camera_delay_%',
                        'camera_pulse_%',
-                       #'camera_display_live_subsampling',
-                       #'camera_display_acquisition_subsampling',
+                       'camera_display_live_subsampling',
+                       'camera_display_acquisition_subsampling',
                        'camera_sensor_mode',
                        'camera_binning',
                        'galvo_amp_scale_w_zoom',

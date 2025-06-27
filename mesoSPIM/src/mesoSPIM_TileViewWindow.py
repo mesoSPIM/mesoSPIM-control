@@ -35,7 +35,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
-        self.subsampling = 1 # self.cfg.startup['camera_display_live_subsampling']
+        self.subsampling = self.cfg.startup['camera_display_live_subsampling']
         self.scale_factor = 0.01
         if 'flip_XYZFT_button_polarity' in self.cfg.ui_options.keys():
             self.x_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][0] else 1

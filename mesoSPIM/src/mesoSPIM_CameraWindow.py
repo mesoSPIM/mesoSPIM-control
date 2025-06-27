@@ -48,7 +48,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
-        self.subsampling = 1 # self.cfg.startup['camera_display_live_subsampling']
+        self.subsampling = self.cfg.startup['camera_display_live_subsampling']
 
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "r", 'width': 1})
@@ -171,15 +171,17 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.lightsheet_marker_R.setOpacity(0)
         self.lightsheet_marker_L.setOpacity(0)
 
-    @QtCore.pyqtSlot(np.ndarray)
+    #@QtCore.pyqtSlot(np.ndarray) # deprecated due to low performance
     def set_image(self, image):
+        ''' Generally deprecated, use set_image_from_deque() instead. 
+        '''
         logger.debug(f"setImage() with shape {image.shape} started")
-        self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
+        subsampling_ratio = self.state['camera_display_live_subsampling']
+        self.image_view.setImage(image[::subsampling_ratio, ::subsampling_ratio], 
+                                 autoLevels=False, autoHistogramRange=False, autoRange=False)
         logger.debug(f"setImage() finished")
         # update roi size if subsampling has changed interactively:
         if self.overlay == 'box':
-            subsampling_ratio = 1
-            #self.subsampling = self.state['camera_display_live_subsampling']
             x, y = self.roi_box.pos()
             w, h = self.roi_box.size()
             self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
