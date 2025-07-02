@@ -132,13 +132,14 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         return self.image_view.getImageItem().image.shape
 
     @QtCore.pyqtSlot()
-    def update_status(self):
+    def update_status(self, subsampling=2.0):
         roi = self.get_roi()
         if self.overlay == 'box':
             w, h = self.roi_box.size()
-            self.status_label.setText(f"ROI: w {int(self.px2um(w, self.ini_subsampling)):,} \u03BCm, "
-                                      f"h {int(self.px2um(h, self.ini_subsampling)):,} \u03BCm, "
-                                      f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
+            self.status_label.setText(f"Screen ROI size: W {int(w)} px, {int(self.px2um(w, subsampling)):,} \u03BCm. "
+                                      f"H {int(h)} px, {int(self.px2um(h, subsampling)):,} \u03BCm. "
+                                      f"Screen subsampling {subsampling}.")
+                                      #f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
             self.hide_light_sheet_marker()
         elif self.overlay == None:
             self.hide_light_sheet_marker()
@@ -180,12 +181,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
                                  autoLevels=False, autoHistogramRange=False, autoRange=False)
         logger.debug(f"setImage() finished")
         # update roi size if subsampling has changed interactively:
-        if self.overlay == 'box':
-            x, y = self.roi_box.pos()
-            w, h = self.roi_box.size()
-            self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
-            self.roi_box.setSize((w * subsampling_ratio, h * subsampling_ratio))
-        self.update_status()
+        # if self.overlay == 'box':
+        #     x, y = self.roi_box.pos()
+        #     w, h = self.roi_box.size()
+        #     self.roi_box.setPos((x / subsampling_ratio, y / subsampling_ratio))
+        #     self.roi_box.setSize((w / subsampling_ratio, h / subsampling_ratio))
+        self.update_status(subsampling_ratio)
 
         h, w = image.shape[-2]//subsampling_ratio, image.shape[-1]//subsampling_ratio  # works for both 2D and 3/4D loaded TIFF files.
         if h != self.y_image_width or w != self.x_image_width:
