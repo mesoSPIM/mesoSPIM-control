@@ -163,17 +163,19 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.lightsheet_marker_R.setOpacity(1)
             self.lightsheet_marker_L.setOpacity(1)
 
-
     def hide_light_sheet_marker(self):
         self.lightsheet_marker_R.setOpacity(0)
         self.lightsheet_marker_L.setOpacity(0)
 
-    #@QtCore.pyqtSlot(np.ndarray) # deprecated due to low performance
+    #@QtCore.pyqtSlot(np.ndarray) # deprecated due to slow performance
     def set_image(self, image):
-        ''' Generally deprecated, use set_image_from_deque() instead. 
-        '''
         logger.debug(f"setImage() with shape {image.shape} started")
-        subsampling_ratio = self.state['camera_display_live_subsampling']
+        if self.state['state'] in ('live', 'idle'):
+            subsampling_ratio = self.state['camera_display_live_subsampling']
+        elif self.state['state'] in ('run_acquisition_list', 'run_selected_acquisition'):
+            subsampling_ratio = self.state['camera_display_acquisition_subsampling']
+        else:
+            subsampling_ratio = self.ini_subsampling
         self.image_view.setImage(image[::subsampling_ratio, ::subsampling_ratio], 
                                  autoLevels=False, autoHistogramRange=False, autoRange=False)
         logger.debug(f"setImage() finished")
