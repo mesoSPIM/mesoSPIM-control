@@ -7,15 +7,20 @@ Use this file as a starting point to set up all mesoSPIM hardware by replacing t
 with real hardware one-by-one. Make sure to rename your new configuration file to a different filename
 (The extension has to be .py).
 '''
+logging_level = 'DEBUG' # 'INFO' or 'DEBUG'
 
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled   
               'enable_y_buttons' : True, 
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
+              'enable_f_zero_button' : True, # 
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'flip_XYZFT_button_polarity': (True, True, True, True, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
+              'button_sleep_ms_xyzft' : (400, 0, 400, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
 			  'window_pos': (400, 100), # position of the main window on the screen, top left corner.
+              'usb_webcam_ID': 0, # open USB web-camera (if available): 0 (first cam), 1 (second cam), ...
                }
 			   
 '''
@@ -47,7 +52,7 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
 '''
 Human interface device (Joystick)
 '''
-sidepanel = 'FarmSimulator' #'Demo' or 'FarmSimulator'
+sidepanel = 'Demo' #'Demo' or 'FarmSimulator'
 
 '''
 Digital laser enable lines
@@ -198,21 +203,21 @@ Mixed stage types, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 
 stage_parameters = {'stage_type' : 'PI', # 'PI' or 'DemoStage'
                     'startfocus' : 48000,
-                    'y_load_position': 70000,
-                    'y_unload_position': 20000,
+                    'y_load_position': 35000,
+                    'y_unload_position': 1500,
                     'x_max' : 40000,
                     'x_min' : 5500,
-                    'y_max' : 99000,
+                    'y_max' : 90000,
                     'y_min' : 0,
                     'z_max' : 40000,
                     'z_min' : 5000,
-                    'f_max' : 99000,
+                    'f_max' : 82000, # DANGER ZONE: position must be safe to avoid objective collision with excitation arms
+					'f_objective_exchange': 2000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position. Must be at least 1.5 mm from either f_min or f_max limit.
                     'f_min' : 0,
                     'theta_max' : 999,
                     'theta_min' : -999,
-                    #'x_rot_position': 22000, # deprecated
-                    #'y_rot_position': 40000, # deprecated
-                    #'z_rot_position': 22000, # deprecated
+                    'x_center_position': 24000, # x-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
+                    'z_center_position': 27000, # z-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
                     }
 
 pi_parameters = {'controllername' : 'C-884',
@@ -263,11 +268,9 @@ For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
 
 filterdict = {'Empty' : 0,
               '405-488-561-640-Quadrupleblock' : 1,
-              #'508 520-35' : 2, # Removed after upgrade
-              '515LP' : 2,
-              '561LP' : 3,
-              '594LP' : 4,
-              #'590' : 6, # Removed after upgrade
+              '520/35' : 2,
+              'Empty-1' : 3,
+              '590/36' : 4, 
               }
 
 '''
@@ -282,7 +285,7 @@ For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be 
 '''
 zoom_parameters = {'zoom_type' : 'Mitu', # # 'Demo', 'Dynamixel', or 'Mitu'
                    'servo_id' :  1, # only for 'Dynamixel'
-                   'COMport' : 'COM9', # Todo: UPDATE
+                   'COMport' : 'COM17', # 
                    'baudrate' : 9600}
 
 '''
@@ -329,6 +332,11 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
 		'transpose_xy': False # flip it if X-Y order in BigStitcher is incorrect
         }
+        
+buffering = {'use_ram_buffer': True, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
+             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
+             }
+             
 
 '''
 Rescale the galvo amplitude when zoom is changed
@@ -353,7 +361,7 @@ startup = {
 'samplerate' : 100000,
 'sweeptime' : 0.180, # manually adjusted for Orca Lightning camera, for 2x-20x magnification range.
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
-'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
+'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-upgrade2023.csv',
 'filepath' : '/tmp/file.tif',
 'folder' : '/tmp/',
 'snap_folder' : 'D:/Data/mesoSPIM_snapped_images',
@@ -365,7 +373,7 @@ startup = {
 'max_laser_voltage':5, # TOPTICA MLE
 'intensity' : 15,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Left', # Can be "Left", "Right","Both"
+'shutterconfig':'Right', # Can be "Left", "Right","Both"
 'laser_interleaving':False,
 'filter' : '405-488-561-640-Quadrupleblock',
 'etl_l_delay_%' : 5,
@@ -379,13 +387,13 @@ startup = {
 'etl_r_amplitude' : 0.1,
 'etl_r_offset' : 2.5,
 'galvo_l_frequency' : 99.9,
-'galvo_l_amplitude' : 2.5,
-'galvo_l_offset' : 0,
+'galvo_l_amplitude' : 2.0,
+'galvo_l_offset' : 0.18,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 2.5,
-'galvo_r_offset' : 0,
+'galvo_r_amplitude' : 2.0,
+'galvo_r_offset' : 0.0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
 'laser_l_delay_%' : 10,
@@ -403,5 +411,5 @@ startup = {
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', #Hamamatsu-specific parameter
-'average_frame_rate': 3.0,
+'average_frame_rate': 5.1,
 }

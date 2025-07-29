@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 
 class mesoSPIM_Optimizer(QtWidgets.QWidget):
@@ -28,17 +27,17 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.parent = parent # the mesoSPIM_MainWindow() object
         self.core = parent.core
         self.cfg = parent.cfg # initial config file
-        self.state = mesoSPIM_StateSingleton() # current state
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() object
         self.results_window = self.graphics_widget = None
         self.modes_list = ['etl_offset', 'etl_amp', 'focus']
         self.mode = self.modes_list[0]
         self.n_points = 5
         self.search_amplitude = 0.5
         self.state_key = None
-        self.image = self.roi = self.roi_dims = self.img_subsampling = None
+        self.image = self.roi = self.roi_dims = None
         self.ini_state = self.ini_metric = self.new_state = self.min_value = self.max_value = None
         self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
-        self.delay_s = 0.5  # time delay between snaps to avoid state update hickups, esp for heavy lens-camera assembly during AF
+        self.delay_s = 0.4  # time delay between snaps to avoid state update hickups, esp for heavy lens-camera assembly during AF
 
         loadUi('gui/mesoSPIM_Optimizer.ui', self)
         self.setWindowTitle('mesoSPIM-Optimizer')
@@ -48,7 +47,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         #self.set_parameters({'mode': 'etl_offset', 'amplitude': 0.5, 'n_points': 7})
 
         # signal switchboard
-        self.core.camera_worker.sig_camera_frame.connect(self.set_image)
+        self.core.camera_worker.sig_camera_frame.connect(self.update_image)
         self.runButton.clicked.connect(self.run_optimization)
         self.closeButton.clicked.connect(self.close_window)
 
@@ -56,9 +55,10 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.sig_move_absolute.connect(self.core.move_absolute)
         self.comboBoxMode.currentTextChanged.connect(self.set_mode_from_gui)
 
-    @QtCore.pyqtSlot(np.ndarray)
-    def set_image(self, image):
-        self.image = image
+    @QtCore.pyqtSlot()
+    def update_image(self):
+        logger.debug(f"Optimizer: updating image, len(self.parent.core.frame_queue_display) = {len(self.parent.core.frame_queue_display)}")
+        self.image = self.parent.core.frame_queue_display[0]
         self.roi = self.image[self.roi_dims[1]:self.roi_dims[1] + self.roi_dims[3],
                    self.roi_dims[0]:self.roi_dims[0] + self.roi_dims[2]]
 
@@ -163,9 +163,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.max_value = self.ini_state + self.search_amplitude
         assert self.n_points % 2 == 1, f"Number of points must be odd, got {self.n_points} instead."
         self.search_grid = np.linspace(self.min_value, self.max_value, self.n_points)
-        self.img_subsampling = self.core.camera_worker.camera_display_acquisition_subsampling
         self.metric_array = np.zeros(len(self.search_grid))
-        print(f"Image subsampling: {self.img_subsampling}")
         print(f"Initial value: {self.ini_state:.3f}, searching in ({self.min_value:.3f}, {self.max_value:.3f}), n_points {self.n_points}")
         for i, v in enumerate(self.search_grid):
             self.set_state(v)
@@ -199,7 +197,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.results_window.discardButton.clicked.connect(self.discard_new_state)
 
     def plot_results(self):
-        layout = pg.QtGui.QGridLayout()
+        layout = QtWidgets.QGridLayout()
         self.results_window.setLayout(layout)
 
         self.graphics_widget = pg.GraphicsLayoutWidget(show=True)
@@ -233,7 +231,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def accept_new_state(self):
-        self.set_state(self.new_state)
+        self.set_state(float(self.new_state))
         print(f"Fitted value: {self.new_state:.3f}")
         time.sleep(self.delay_s)
         self.core.snap(write_flag=False, laser_blanking=True)

@@ -64,7 +64,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                  etl_l_amplitude=0,
                  etl_r_offset=0,
                  etl_r_amplitude=0,
-                 processing=''):
+                 processing='MAX'):
 
         super().__init__()
 
@@ -118,12 +118,11 @@ class Acquisition(indexed.IndexedOrderedDict):
         framerate.
 
         Args:
-            float: framerate Framerate of the microscope 
+            float: framerate of the microscope 
 
         Returns:
             float: Acquisition time in seconds
         '''
-
         return self.get_image_count()/framerate
 
     def get_delta_z_and_delta_f_dict(self, inverted=False):
@@ -201,6 +200,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         '''
         steps = self.get_image_count()
         f_step = abs((self['f_end'] - self['f_start'])/steps)
+        logger.debug(f"Focus interpolation: f_start, f_end, f_step, steps: {self['f_start'], self['f_end'], f_step, steps}")
         feasible_f_step = max(f_stage_min_step_um * (f_step // f_stage_min_step_um),
                               f_stage_min_step_um)  # Round to nearest multiple of f_stage_min_step_um
         if self['f_end'] < self['f_start']:

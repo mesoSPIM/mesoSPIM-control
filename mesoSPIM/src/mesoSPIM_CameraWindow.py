@@ -8,7 +8,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 import pyqtgraph as pg
 from .utils.optimization import shannon_dct
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         self.parent = parent # the mesoSPIM_MainWindow() instance
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         pg.setConfigOptions(imageAxisOrder='row-major')
         if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\
@@ -49,7 +48,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
-        self.subsampling = self.cfg.startup['camera_display_live_subsampling']
+        self.ini_subsampling = self.cfg.startup['camera_display_live_subsampling']
 
         ''' Initialize crosshairs '''
         self.crosspen = pg.mkPen({'color': "r", 'width': 1})
@@ -60,32 +59,28 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
         # Create overlay ROIs
         self.overlay = 'LS marker' # 'box', None, 'LS marker'
-        w, h = self.x_image_width//self.subsampling, self.y_image_width//self.subsampling
+        w, h = self.x_image_width//self.ini_subsampling, self.y_image_width//self.ini_subsampling
         self.roi_box = pg.RectROI((0, 0), (w, h), sideScalers=True)
         self.roi_drawn = False
 
         # Create polygons that show light-sheet direction
-        points_R = np.array([[0, self.y_image_width//self.subsampling//2 - 25],
-                             [0, self.y_image_width//self.subsampling//2 + 25],
-                             [100, self.y_image_width//self.subsampling//2]])
-        points_L = np.array([[self.x_image_width//self.subsampling, self.y_image_width//self.subsampling//2 - 25],
-                             [self.x_image_width//self.subsampling, self.y_image_width//self.subsampling//2 + 25],
-                             [self.x_image_width//self.subsampling - 100, self.y_image_width//self.subsampling//2]])
-        self.lightsheet_marker_R = pg.PolyLineROI(positions=points_R, closed=True, pen='y', movable=False, rotatable=False, removable=False, aspectLocked=True)
-        self.lightsheet_marker_L = pg.PolyLineROI(positions=points_L, closed=True, pen='y', movable=False, rotatable=False, removable=False, aspectLocked=True)
+        self.points_R = np.array([[0, self.y_image_width//self.ini_subsampling//2 - 25],
+                             [0, self.y_image_width//self.ini_subsampling//2 + 25],
+                             [100, self.y_image_width//self.ini_subsampling//2]])
+        self.points_L = np.array([[self.x_image_width//self.ini_subsampling, self.y_image_width//self.ini_subsampling//2 - 25],
+                             [self.x_image_width//self.ini_subsampling, self.y_image_width//self.ini_subsampling//2 + 25],
+                             [self.x_image_width//self.ini_subsampling - 100, self.y_image_width//self.ini_subsampling//2]])
+        self.lightsheet_marker_R = pg.PolyLineROI(positions=self.points_R, closed=True, pen='y', movable=False, rotatable=False, removable=False, aspectLocked=True)
+        self.lightsheet_marker_L = pg.PolyLineROI(positions=self.points_L, closed=True, pen='y', movable=False, rotatable=False, removable=False, aspectLocked=True)
         self.image_view.addItem(self.lightsheet_marker_R)
         self.image_view.addItem(self.lightsheet_marker_L)
-        for roi in (self.lightsheet_marker_R, self.lightsheet_marker_L):
-            for handle in roi.getHandles():
-                handle.setOpacity(0)
+        self.hide_light_sheet_marker()
 
         # Set up internal CameraWindow signals
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
         self.sig_update_status.connect(self.update_status)
-
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
 
     def adjust_levels(self, pct_low=25, pct_hi=99.99):
         ''''Adjust histogram levels'''
@@ -137,13 +132,14 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         return self.image_view.getImageItem().image.shape
 
     @QtCore.pyqtSlot()
-    def update_status(self):
+    def update_status(self, subsampling=2.0):
         roi = self.get_roi()
         if self.overlay == 'box':
             w, h = self.roi_box.size()
-            self.status_label.setText(f"ROI: w {int(self.px2um(w, self.subsampling)):,} \u03BCm, "
-                                      f"h {int(self.px2um(h, self.subsampling)):,} \u03BCm, "
-                                      f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
+            self.status_label.setText(f"Screen ROI size: W {int(w)} px, {int(self.px2um(w, subsampling)):,} \u03BCm. "
+                                      f"H {int(h)} px, {int(self.px2um(h, subsampling)):,} \u03BCm. "
+                                      f"Screen subsampling {subsampling}.")
+                                      #f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
             self.hide_light_sheet_marker()
         elif self.overlay == None:
             self.hide_light_sheet_marker()
@@ -172,22 +168,46 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.lightsheet_marker_R.setOpacity(0)
         self.lightsheet_marker_L.setOpacity(0)
 
-    @QtCore.pyqtSlot(np.ndarray)
+    #@QtCore.pyqtSlot(np.ndarray) # deprecated due to slow performance
     def set_image(self, image):
-        self.image_view.setImage(image, autoLevels=False, autoHistogramRange=False, autoRange=False)
+        logger.debug(f"setImage() with shape {image.shape} started")
+        if self.state['state'] in ('live', 'idle'):
+            subsampling_ratio = self.state['camera_display_live_subsampling']
+        elif self.state['state'] in ('run_acquisition_list', 'run_selected_acquisition'):
+            subsampling_ratio = self.state['camera_display_acquisition_subsampling']
+        else:
+            subsampling_ratio = self.ini_subsampling
+        self.image_view.setImage(image[::subsampling_ratio, ::subsampling_ratio], 
+                                 autoLevels=False, autoHistogramRange=False, autoRange=False)
+        logger.debug(f"setImage() finished")
         # update roi size if subsampling has changed interactively:
-        if self.overlay == 'box' and self.subsampling != self.state['camera_display_live_subsampling']:
-            subsampling_ratio = self.subsampling / self.state['camera_display_live_subsampling']
-            self.subsampling = self.state['camera_display_live_subsampling']
-            x, y = self.roi_box.pos()
-            w, h = self.roi_box.size()
-            self.roi_box.setPos((x * subsampling_ratio, y * subsampling_ratio))
-            self.roi_box.setSize((w * subsampling_ratio, h * subsampling_ratio))
-        self.update_status()
+        # if self.overlay == 'box':
+        #     x, y = self.roi_box.pos()
+        #     w, h = self.roi_box.size()
+        #     self.roi_box.setPos((x / subsampling_ratio, y / subsampling_ratio))
+        #     self.roi_box.setSize((w / subsampling_ratio, h / subsampling_ratio))
+        self.update_status(subsampling_ratio)
 
-        h, w = image.shape[-2], image.shape[-1]  # works for both 2D and 3/4D loaded TIFF files.
+        h, w = image.shape[-2]//subsampling_ratio, image.shape[-1]//subsampling_ratio  # works for both 2D and 3/4D loaded TIFF files.
         if h != self.y_image_width or w != self.x_image_width:
             self.x_image_width, self.y_image_width = w, h
-            self.vLine.setPos(self.x_image_width/2.), self.hLine.setPos(self.y_image_width/2.)
+            self.vLine.setPos(self.x_image_width/2.)
+            self.hLine.setPos(self.y_image_width/2.)
+            new_points_R = [p/(subsampling_ratio/self.ini_subsampling) for p in self.points_R]
+            new_points_L = [p/(subsampling_ratio/self.ini_subsampling) for p in self.points_L]
+            self.lightsheet_marker_R.setPoints(new_points_R)
+            self.lightsheet_marker_L.setPoints(new_points_L)
+            # hide the light sheet marker draggable handles:
+            for h in self.lightsheet_marker_R.getHandles():
+                h.setVisible(False)
+            for h in self.lightsheet_marker_L.getHandles():
+                h.setVisible(False)
         self.draw_crosshairs()
 
+    @QtCore.pyqtSlot()
+    def update_image_from_deque(self):
+        if len(self.parent.core.frame_queue_display) > 0:
+            image = self.parent.core.frame_queue_display[0]
+            self.set_image(image)
+        else:
+            return

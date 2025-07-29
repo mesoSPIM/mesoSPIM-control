@@ -5,7 +5,7 @@ Contains Nonlinear Filename Wizard Class: autogenerates Filenames
 from PyQt5 import QtCore, QtWidgets
 
 from .utility_functions import replace_with_underscores
-from ..mesoSPIM_State import mesoSPIM_StateSingleton
+#from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import logging
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class FilenameWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
         self.file_format = None  # 'raw', 'h5', 'tiff', 'btf'
         self.setWindowTitle('Filename Wizard')
         self.setPage(0, FilenameWizardWelcomePage(self))
@@ -48,7 +48,7 @@ class FilenameWizard(QtWidgets.QWizard):
             logger.info('Filename Wizard was closed properly')
             self.update_filenames_in_model()
         else:
-            logger.info('Filename Wizard provided return code: ', r)
+            logger.info(f'Filename Wizard provided return code: {r}')
 
         super().done(r)
 

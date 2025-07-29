@@ -66,7 +66,7 @@
          <widget class="QLabel" name="label_2">
           <property name="font">
            <font>
-            <pointsize>15</pointsize>
+            <pointsize>14</pointsize>
            </font>
           </property>
           <property name="text">
@@ -78,7 +78,7 @@
          <widget class="QProgressBar" name="AcquisitionProgressBar">
           <property name="font">
            <font>
-            <pointsize>15</pointsize>
+            <pointsize>14</pointsize>
            </font>
           </property>
           <property name="layoutDirection">
@@ -102,7 +102,7 @@
          <widget class="QLabel" name="label_6">
           <property name="font">
            <font>
-            <pointsize>15</pointsize>
+            <pointsize>14</pointsize>
            </font>
           </property>
           <property name="text">
@@ -114,7 +114,7 @@
          <widget class="QProgressBar" name="TotalProgressBar">
           <property name="font">
            <font>
-            <pointsize>15</pointsize>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <property name="value">
@@ -168,7 +168,7 @@
             <widget class="QLineEdit" name="X_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>12</pointsize>
+               <pointsize>11</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -201,7 +201,7 @@
             <widget class="QLineEdit" name="Y_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>12</pointsize>
+               <pointsize>11</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -234,7 +234,7 @@
             <widget class="QLineEdit" name="Z_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>12</pointsize>
+               <pointsize>11</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -270,7 +270,7 @@
              </property>
              <property name="font">
               <font>
-               <pointsize>12</pointsize>
+               <pointsize>11</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -303,7 +303,7 @@
             <widget class="QLineEdit" name="Focus_Position_Indicator">
              <property name="font">
               <font>
-               <pointsize>12</pointsize>
+               <pointsize>11</pointsize>
               </font>
              </property>
              <property name="accessibleName">
@@ -731,6 +731,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y axis (UP)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -769,6 +772,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;X axis (Right)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -804,6 +810,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;X axis (Left)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -838,6 +847,9 @@
                 <weight>50</weight>
                 <bold>false</bold>
                </font>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y axis (Down)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string/>
@@ -876,6 +888,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>Make current position 0 (relative)</string>
+              </property>
               <property name="text">
                <string>ZERO
  XY</string>
@@ -912,9 +927,9 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>40</y>
+                <y>70</y>
                 <width>111</width>
-                <height>111</height>
+                <height>81</height>
                </rect>
               </property>
               <property name="font">
@@ -923,6 +938,9 @@
                 <italic>false</italic>
                 <bold>false</bold>
                </font>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Move the sample forward&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string/>
@@ -950,7 +968,7 @@
                 <x>10</x>
                 <y>280</y>
                 <width>111</width>
-                <height>111</height>
+                <height>81</height>
                </rect>
               </property>
               <property name="font">
@@ -959,6 +977,9 @@
                 <italic>false</italic>
                 <bold>false</bold>
                </font>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Move the sample backward&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string/>
@@ -997,6 +1018,9 @@
                 <bold>false</bold>
                </font>
               </property>
+              <property name="toolTip">
+               <string>Make current position 0 (relative)</string>
+              </property>
               <property name="text">
                <string>ZERO
  Z</string>
@@ -1005,29 +1029,6 @@
                <bool>true</bool>
               </property>
              </widget>
-            </widget>
-            <widget class="QPushButton" name="xyzLoadButton">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>160</x>
-               <y>440</y>
-               <width>91</width>
-               <height>81</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>16</pointsize>
-               <weight>50</weight>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>LOAD</string>
-             </property>
             </widget>
             <widget class="QLabel" name="label_13">
              <property name="enabled">
@@ -1071,34 +1072,96 @@
               <string> µm </string>
              </property>
              <property name="maximum">
-              <number>500</number>
+              <number>1000</number>
              </property>
              <property name="value">
               <number>500</number>
              </property>
             </widget>
-            <widget class="QPushButton" name="xyzUnloadButton">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
+            <widget class="QWidget" name="layoutWidget">
              <property name="geometry">
               <rect>
-               <x>260</x>
+               <x>160</x>
                <y>440</y>
-               <width>111</width>
-               <height>81</height>
+               <width>349</width>
+               <height>91</height>
               </rect>
              </property>
-             <property name="font">
-              <font>
-               <pointsize>16</pointsize>
-               <weight>50</weight>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>UNLOAD</string>
-             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <item>
+               <widget class="QPushButton" name="xyzLoadButton">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>60</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>16</pointsize>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Move the sample down to a pre-defined position.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Load ↓</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="xyzUnloadButton">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>60</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>16</pointsize>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Move the sample up to a pre-defined position.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Unload ↑</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="centerButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>60</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>16</pointsize>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Move the sample holder to the chamber center in XZ plane.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Center ⊙</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
            <widget class="QGroupBox" name="focusGroupbox">
@@ -1128,9 +1191,9 @@
              <property name="geometry">
               <rect>
                <x>20</x>
-               <y>70</y>
+               <y>100</y>
                <width>111</width>
-               <height>111</height>
+               <height>81</height>
               </rect>
              </property>
              <property name="font">
@@ -1139,6 +1202,9 @@
                <italic>false</italic>
                <bold>false</bold>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Move the detection objective (refocus)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string/>
@@ -1177,6 +1243,9 @@
                <bold>false</bold>
               </font>
              </property>
+             <property name="toolTip">
+              <string>Make current position 0 (relative)</string>
+             </property>
              <property name="text">
               <string>ZERO
  F</string>
@@ -1194,7 +1263,7 @@
                <x>20</x>
                <y>310</y>
                <width>111</width>
-               <height>111</height>
+               <height>81</height>
               </rect>
              </property>
              <property name="font">
@@ -1203,6 +1272,9 @@
                <italic>false</italic>
                <bold>false</bold>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Move the detection objective (refocus)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string/>
@@ -1431,8 +1503,14 @@ Focus</string>
                <pointsize>14</pointsize>
               </font>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
              <property name="suffix">
               <string>°</string>
+             </property>
+             <property name="decimals">
+              <number>1</number>
              </property>
              <property name="minimum">
               <double>-181.000000000000000</double>
@@ -1441,7 +1519,10 @@ Focus</string>
               <double>181.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.010000000000000</double>
+              <double>0.100000000000000</double>
+             </property>
+             <property name="value">
+              <double>5.000000000000000</double>
              </property>
             </widget>
             <widget class="QPushButton" name="rotZeroButton">
@@ -1491,6 +1572,9 @@ Focus</string>
               <weight>50</weight>
               <bold>false</bold>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Abort all motion.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>false</bool>
@@ -1584,6 +1668,9 @@ Focus</string>
                <pointsize>14</pointsize>
               </font>
              </property>
+             <property name="toolTip">
+              <string>ETL settings are specific for (laser, zoom, arm), eg (488, 5x, Left). After adjustment, save into the .csv file.</string>
+             </property>
              <property name="suffix">
               <string> V</string>
              </property>
@@ -1652,6 +1739,9 @@ Focus</string>
               <font>
                <pointsize>14</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>ETL settings are specific for (laser, zoom, arm), eg (488, 5x, Right). After adjustment, save into the .csv file.</string>
              </property>
              <property name="suffix">
               <string> V</string>
@@ -1752,6 +1842,9 @@ Focus</string>
                <bold>false</bold>
               </font>
              </property>
+             <property name="toolTip">
+              <string>The file stores ETL offsets and amplitudes, which are specific for zoom (FOV width), medium refractive index, and immersion chamber (its width).</string>
+             </property>
              <property name="text">
               <string>Choose ETL config file</string>
              </property>
@@ -1775,6 +1868,9 @@ Focus</string>
                <italic>false</italic>
                <bold>false</bold>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Always save your ETL parameters before switching laser or zoom.</string>
              </property>
              <property name="text">
               <string>Save current parameters to csv</string>
@@ -1887,6 +1983,9 @@ Focus</string>
                <bold>false</bold>
               </font>
              </property>
+             <property name="toolTip">
+              <string>Set the right ETL scanning amplitude to 0, to bring the beam waist to FOV center.</string>
+             </property>
              <property name="text">
               <string>AmpR=0</string>
              </property>
@@ -1911,6 +2010,9 @@ Focus</string>
               <italic>false</italic>
               <bold>false</bold>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>Set the left ETL scanning amplitude to 0, to bring the beam waist to FOV center.</string>
             </property>
             <property name="text">
              <string>AmpL=0</string>
@@ -1954,7 +2056,7 @@ Focus</string>
                  </font>
                 </property>
                 <property name="toolTip">
-                 <string>Set amplitude of both galvos to 0</string>
+                 <string>DANGER of sample bleaching. Set amplitude of both galvos to 0, i.e. stop scanning. Before pressing, move the sample away from the laser.</string>
                 </property>
                 <property name="text">
                  <string>Freeze galvos</string>
@@ -1970,6 +2072,9 @@ Focus</string>
                  <font>
                   <pointsize>14</pointsize>
                  </font>
+                </property>
+                <property name="toolTip">
+                 <string>Experimental features, autofocus and ETL parameter optimization on a sample. Success depends on the sample.</string>
                 </property>
                 <property name="text">
                  <string>Launch Optimizer</string>
@@ -2005,29 +2110,6 @@ Focus</string>
             </property>
             <property name="text">
              <string>New Scripting Editor</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QWidget" name="LogTabWidget">
-           <attribute name="title">
-            <string>Log</string>
-           </attribute>
-           <widget class="QPlainTextEdit" name="LogTextDisplay">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>20</y>
-              <width>871</width>
-              <height>681</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="autoFillBackground">
-             <bool>false</bool>
             </property>
            </widget>
           </widget>
@@ -2076,7 +2158,7 @@ Focus</string>
               <double>10.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>1000.000000000000000</double>
+              <double>10000.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>1.000000000000000</double>
@@ -2256,10 +2338,10 @@ Focus</string>
               <string> ms</string>
              </property>
              <property name="minimum">
-              <double>3.000000000000000</double>
+              <double>1.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>1000.000000000000000</double>
+              <double>5000.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>1.000000000000000</double>
@@ -2727,7 +2809,7 @@ Focus</string>
               </font>
              </property>
              <property name="toolTip">
-              <string>Defines vertical scanning range.</string>
+              <string>Defines vertical scanning range (heights of the light sheet illuminated area)</string>
              </property>
              <property name="suffix">
               <string> V</string>
@@ -3194,7 +3276,7 @@ Focus</string>
               <x>10</x>
               <y>310</y>
               <width>431</width>
-              <height>121</height>
+              <height>131</height>
              </rect>
             </property>
             <property name="font">
@@ -3209,7 +3291,7 @@ Focus</string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>30</y>
+               <y>40</y>
                <width>81</width>
                <height>81</height>
               </rect>
@@ -3231,7 +3313,7 @@ Focus</string>
              <property name="geometry">
               <rect>
                <x>100</x>
-               <y>30</y>
+               <y>40</y>
                <width>321</width>
                <height>81</height>
               </rect>
@@ -3253,9 +3335,9 @@ Focus</string>
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>450</y>
-              <width>431</width>
-              <height>121</height>
+              <y>440</y>
+              <width>401</width>
+              <height>151</height>
              </rect>
             </property>
             <property name="font">
@@ -3266,63 +3348,53 @@ Focus</string>
             <property name="title">
              <string>Display Subsampling</string>
             </property>
-            <widget class="QWidget" name="layoutWidget">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>40</y>
-               <width>342</width>
-               <height>77</height>
-              </rect>
-             </property>
-             <layout class="QFormLayout" name="formLayout">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_48">
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>during Live display</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QComboBox" name="LiveSubSamplingComboBox">
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_56">
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>in Snap &amp; Acquisitions</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="currentIndex">
-                 <number>-1</number>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
+            <layout class="QGridLayout" name="gridLayout_5">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_48">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>During Live display</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="LiveSubSamplingComboBox">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_56">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>During Acquisitions</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="currentIndex">
+                <number>-1</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </widget>
           <widget class="QWidget" name="AlignmentTabWidget">
@@ -3449,6 +3521,7 @@ Focus</string>
     <addaction name="actionOpen_Camera_Window"/>
     <addaction name="actionOpen_Webcam_Window"/>
     <addaction name="actionOpen_Acquisition_Manager"/>
+    <addaction name="actionOpen_Tile_Overview"/>
     <addaction name="actionCascade_windows"/>
    </widget>
    <addaction name="menuFile"/>
@@ -3520,6 +3593,11 @@ Focus</string>
    </property>
    <property name="toolTip">
     <string>Open Webcam Window, if configured</string>
+   </property>
+  </action>
+  <action name="actionOpen_Tile_Overview">
+   <property name="text">
+    <string>Open Tile Overview</string>
    </property>
   </action>
  </widget>

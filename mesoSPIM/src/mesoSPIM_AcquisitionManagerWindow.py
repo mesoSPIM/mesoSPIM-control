@@ -10,7 +10,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 ''' mesoSPIM imports '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .utils.utility_functions import format_data_size
 from .utils.models import AcquisitionModel
 
@@ -34,6 +33,8 @@ from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
 from .utils.utility_functions import convert_seconds_to_string
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QMessageBox
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.parent = parent # mesoSPIM_MainWindow instance
         self.cfg = parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # mesoSPIM_StateSingleton instance
 
         loadUi(self.parent.package_directory + '/gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
@@ -78,9 +79,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.statusBar = QtWidgets.QStatusBar()
 
         ''' Setting the model up '''
-        self.model = AcquisitionModel()
+        self.model = AcquisitionModel(table=None, parent=self)
 
-        self.table.setModel(self.model)
+        self.table.setModel(self.model) # self.table is a QTableView object
         self.model.dataChanged.connect(self.set_state)
         self.model.dataChanged.connect(self.update_acquisition_time_prediction)
         self.model.dataChanged.connect(self.update_acquisition_size_prediction)
@@ -121,6 +122,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.TilingWizardButton.clicked.connect(self.run_tiling_wizard)
         self.FilenameWizardButton.clicked.connect(self.generate_filenames)
         self.FocusTrackingWizardButton.clicked.connect(self.run_focus_tracking_wizard)
+        self.AutoIlliminationButton.clicked.connect(self.auto_illumination)
         self.ImageProcessingWizardButton.clicked.connect(self.run_image_processing_wizard)
 
         self.DeleteAllButton.clicked.connect(self.delete_all_rows)
@@ -131,9 +133,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         font.setPointSize(14)
         self.table.horizontalHeader().setFont(font)
         self.table.verticalHeader().setFont(font)
-
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
 
     def enable(self):
@@ -158,17 +157,24 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         ''' Little helper method to provide the first row out of a selection range '''
         try:
             indices = self.selection_model.selectedIndexes()
-            rows = self.selection_model.selectedRows()
+            #rows = self.selection_model.selectedRows()
             row = indices[0].row()
         except:
             row = None
-
         return row
+
+    def get_selected_rows(self):
+        ''' Little helper method to provide the selected rows '''
+        try:
+            indices = self.selection_model.selectedIndexes()
+            rows = [index.row() for index in indices]
+        except:
+            rows = None
+        return rows
 
     def set_selected_row(self, row):
         ''' Little helper method to allow setting the selected row '''
         index = self.model.createIndex(row,0)
-        # self.selection_model.clearCurrentIndex()
         self.selection_model.select(index,QtCore.QItemSelectionModel.ClearAndSelect)
 
     def start_selected(self):
@@ -295,7 +301,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         framerate = self.state['current_framerate']
         total_time = self.state['acq_list'].get_acquisition_time(framerate)
         self.state['predicted_acq_list_time'] = total_time
-        self.state['remaining_acq_list_time'] = total_time
         time_string = convert_seconds_to_string(total_time)
         self.AcquisitionTimeLabel.setText(time_string)
 
@@ -462,13 +467,64 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def generate_filenames(self):
         wizard = FilenameWizard(self)
 
+    def append_time_index_to_filenames(self, time_index):
+        ''' Appends the time index to each filename '''
+        row_count = self.model.rowCount()
+        filename_column = self.model.getFilenameColumn()
+        for row in range(0, row_count):
+            index = self.model.createIndex(row, filename_column)
+            filename = self.model.data(index)
+            base, extention = os.path.splitext(filename)
+            base_no_time = base.split('_Time')[0]
+            base_new = base_no_time + f'_Time{time_index:03d}'
+            index = self.model.createIndex(row, filename_column)
+            filename_new = base_new + extention
+            self.model.setData(index, filename_new)
+
     def display_no_row_selected_warning(self):
         self.display_warning('No row selected!')
 
     def display_warning(self, string):
-        warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning',
+        warning = QtWidgets.QMessageBox.warning(None,'Warning',
                 string, QtWidgets.QMessageBox.Ok) 
+    def display_information(self, string, fontsize=12):
+        msg_box = QMessageBox(QtWidgets.QMessageBox.Information, 'Info', string)
+        msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, 'Info', string)
+        font = msg_box.font()
+        font.setPointSize(fontsize)  
+        msg_box.setFont(font)
+        msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        return msg_box.exec_()
 
-
-
+    def auto_illumination(self, margin_um=500):
+        message = 'Illumination (Left/Right) will be changed based on x-positions of tiles on the grid.\n\n'
+        message += f'Only tiles closest to the grid edges will be changed, within 500 µm from the "x_min" and "x_max" of the acquisition table.\n\n'
+        message += 'The best illumination for tiles that are closer to the grid center is sample-dependent and must be selected manually.'
+        message_box =  self.display_information(message,12)
+        if message_box == QMessageBox.Cancel:
+            return
+        x_pos_list = []
+        # collect all x positions
+        for row in range(0,self.model.rowCount()):
+            x_pos = self.model.getXPosition(row)
+            x_pos_list.append(x_pos)
+        # for edge positions, set the illumination based on them
+        x_min = min(x_pos_list)
+        x_max = max(x_pos_list)
+        for row in range(0,self.model.rowCount()):
+            x_pos = self.model.getXPosition(row)
+            if x_pos <= x_min + margin_um:
+                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
+                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Right'.")
+                    self.model.setShutterconfig(row, 'Right')
+                else:
+                    self.model.setShutterconfig(row, 'Left')
+            elif x_pos >= x_max - margin_um:
+                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
+                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Left'.")
+                    self.model.setShutterconfig(row, 'Left')
+                else:
+                    self.model.setShutterconfig(row, 'Right')
+            else:
+                pass
 

@@ -21,14 +21,17 @@ class WebcamWindow(QtWidgets.QWidget):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
 
-    def __init__(self, webcam_id=0):
+    def __init__(self, webcam_id=None):
         super().__init__()
         #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.WEBCAM_ID = webcam_id
         loadUi('gui/WebcamWindow.ui', self)
         self.setWindowTitle(f'Webcam view, camera ID {self.WEBCAM_ID}')
         self.show()
-        self.start_capture()
+        if self.WEBCAM_ID is not None:
+            self.start_capture()
+        else:
+            print("Webcam ID is None, cannot start capture")
 
     def start_capture(self):
         webcams = QCameraInfo.availableCameras()

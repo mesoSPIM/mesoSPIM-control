@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov"
 __license__ = "GPL v3"
-__version__ = "1.8.2"
+__version__ = "1.11.0"
 
 import time
 import logging
@@ -15,7 +15,8 @@ import glob
 import os
 import sys
 import importlib.util
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
+import qdarkstyle
 package_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(package_directory)) # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
 from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
@@ -92,7 +93,6 @@ def get_parser():
 
 def dark_mode_check(cfg, app):
     if (hasattr(cfg, 'dark_mode') and cfg.dark_mode) or (hasattr(cfg, 'ui_options') and cfg.ui_options['dark_mode']):
-        import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
 
@@ -105,7 +105,7 @@ def get_logger(cfg, package_directory):
     timestr = time.strftime("%Y%m%d-%H%M%S")
     logging_filename = os.path.join(package_directory, 'log', timestr + '.log')
     logging.basicConfig(filename=logging_filename, level=LOGGING_LEVEL,
-                        format='%(asctime)-8s:%(levelname)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
+                        format='%(asctime)-8s:%(levelname)s:%(threadName)s:%(thread)d:%(module)s:%(funcName)s:%(message)s')
     logger = logging.getLogger(__name__)
     return logger
 
@@ -119,6 +119,7 @@ def main(embed_console=False, demo_mode=False):
      - if there are multiple config files, bring up the UI loader.
     """
     print('Starting control software')
+    QtCore.QThread.currentThread().setObjectName('MainThread')
     demo_fname = os.path.join(package_directory, 'config', 'demo_config.py')
     if not os.path.exists(demo_fname):
         raise ValueError(f"Demo file not found: {demo_fname}")
@@ -139,14 +140,15 @@ def main(embed_console=False, demo_mode=False):
             cfg, config_fname = load_config_UI(os.path.join(package_directory, 'config'))
     logger = get_logger(cfg, package_directory)
     logger.info(f'Config file loaded: {config_fname}')
+    logger.info(f'mesoSPIM-control version: {__version__}')
     app = QtWidgets.QApplication(sys.argv)
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
     ex = mesoSPIM_MainWindow(package_directory, cfg, "mesoSPIM Main Window, v. " + __version__)
     ex.show()
 
-    # hook up the log display widget
-    logging.getLogger().addHandler(ex.log_display_handler)
+    # hook up the log display widget: discontinued
+    #logging.getLogger().addHandler(ex.log_display_handler)
 
     if embed_console:
         from traitlets.config import Config

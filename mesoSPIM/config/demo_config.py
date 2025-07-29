@@ -16,11 +16,14 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_y_buttons' : True,
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
+              'enable_f_zero_button' : True, # set to False if objective change requires F-stage movement (e.g. mesoSPIM v6-Revolver), for safety reasons
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'flip_XYZFT_button_polarity': (True, False, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
               'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'window_pos': (100, 100), # position of the main window on the screen, top left corner.
-              'usb_webcam': False, # open USB web-camera in a separate window
+              'usb_webcam_ID': 0, # open USB web-camera (if available): None,  0 (first cam), 1 (second cam), ...
+              'flip_auto_LR_illumination': False, # flip the polarity of the "Auto L/R illumination" button in Acquisition Manager
                }
 
 logging_level = 'DEBUG' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
@@ -65,10 +68,10 @@ Keys are the laser designation that will be shown in the user interface
 Values are DO ports used for laser ENABLE digital signal.
 Critical: entries must be sorted in the increasing wavelength order: 405, 488, etc.
 '''
-laserdict = {'488 nm': 'PXI6733/port0/line2',
-             '520 nm': 'PXI6733/port0/line3',
-             '568 nm': 'PXI6733/port0/line4',
-             '638 nm': 'PXI6733/port0/line5',
+laserdict = {'405 nm': 'PXI1Slot4/port0/line2',
+             '488 nm': 'PXI1Slot4/port0/line3',
+             '561 nm': 'PXI1Slot4/port0/line4', 
+             '638 nm': 'PXI1Slot4/port0/line5',
              }
 
 
@@ -162,8 +165,8 @@ camera_parameters = {'x_pixels' : 2048, #5056
 '''
 camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
-camera_parameters = {'x_pixels' : 1024,
-                     'y_pixels' : 1024,
+camera_parameters = {'x_pixels' : 5056,
+                     'y_pixels' : 2960,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
@@ -198,16 +201,19 @@ Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_an
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI', etc, see above
-                    'y_load_position': -86000,
-                    'y_unload_position': -120000,
-                    'x_max' : 3000,
-                    'x_min' : -3000,
-                    'y_max' : 3000,
-                    'y_min' : -3000,
-                    'z_max' : 3000,
-                    'z_min' : -3000,
-                    'f_max' : 3000,
-                    'f_min' : -3000,
+                    'y_load_position': -6000,
+                    'y_unload_position': 6000,
+                    'x_center_position': 0, # x-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
+                    'z_center_position': 0, # z-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
+                    'x_max' : 25000,
+                    'x_min' : -25000,
+                    'y_max' : 50000,
+                    'y_min' : -50000,
+                    'z_max' : 25000,
+                    'z_min' : -25000,
+                    'f_max' : 98000,
+                    'f_min' : 0,
+                    'f_objective_exchange': 2000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -274,7 +280,7 @@ filterdict = {'Empty' : 0, # Every config should contain at least this entry
               '529 542-27' : 6,
               '561LP' : 7,
               '594LP' : 8,
-              '417 447-60' : 9}
+              'Empty-1' : 9} # Dictionary labels must be unique!
 
 '''
 Zoom configuration
@@ -295,17 +301,11 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 '''
 The 'Dynamixel' servo default zoom positions
 '''
-zoomdict = {'0.63x' : 3423,
-            '0.8x' : 3071,
-            '1x' : 2707,
-            '1.25x' : 2389,
-            '1.6x' : 2047,
+zoomdict = {'1x' : 2707,
             '2x' : 1706,
-            '2.5x' : 1354,
-            '3.2x' : 967,
-            '4x' : 637,
-            '5x' : 318,
-            '6.3x' : 0}    
+            '4x Olympus' : 637,
+            '5x Mitutoyo' : 318,
+            }    
 
 
 '''
@@ -321,17 +321,11 @@ zoomdict = {'2x': 'A',
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.63x' : 10.52,
-            '0.8x' : 8.23,
-            '1x' : 6.55,
-            '1.25x' : 5.26,
-            '1.6x' : 4.08,
-            '2x' : 3.26,
-            '2.5x' : 2.6,
-            '3.2x' : 2.03,
-            '4x' : 1.60,
-            '5x' : 1.27,
-            '6.3x' : 1.03}
+pixelsize = {
+            '1x' : 5.0,
+            '2x' : 2.5,
+            '4x Olympus' : 1.25,
+            '5x Mitutoyo' : 1.0,}
 
 '''
  HDF5 parameters, if this format is used for data saving (optional).
@@ -344,9 +338,6 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
 
-buffering = {'use_ram_buffer': True, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
-             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
-             }
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
@@ -366,14 +357,14 @@ startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
 'sweeptime' : 0.2,
-'position' : {'x_pos':0,'y_pos':1,'z_pos':2,'f_pos':3,'theta_pos':180},
+'position' : {'x_pos':0,'y_pos':1000,'z_pos':2000,'f_pos':5000,'theta_pos':180},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
 'folder' : 'D:/tmp/',
 'snap_folder' : 'D:/tmp/',
 'file_prefix' : '',
 'file_suffix' : '000001',
-'zoom' : '1x',
-'pixelsize' : 6.55,
+'zoom' : '2x',
+'pixelsize' : 1.0,
 'laser' : '488 nm',
 'max_laser_voltage':5,
 'intensity' : 10,
@@ -397,7 +388,7 @@ startup = {
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 2.5,
+#'galvo_r_amplitude' : 0.0, # currently not used
 'galvo_r_offset' : 0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/2,
@@ -411,10 +402,9 @@ startup = {
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075, # Hamamatsu-specific parameter
-'camera_display_live_subsampling': 2,
-#'camera_display_snap_subsampling': 1, #deprecated
-'camera_display_acquisition_subsampling': 2,
+'camera_display_live_subsampling': 2, # un-deprecated for older computers
+'camera_display_acquisition_subsampling': 2, # un-deprecated for older computers  
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
-'average_frame_rate': 2.5,
+'average_frame_rate': 4.5,
 }

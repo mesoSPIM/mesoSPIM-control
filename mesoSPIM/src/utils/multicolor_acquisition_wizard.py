@@ -13,7 +13,7 @@ from PyQt5.QtCore import pyqtProperty
 
 from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder
 from .filename_wizard import FilenameWizard
-from ..mesoSPIM_State import mesoSPIM_StateSingleton
+#from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 
 class MulticolorTilingWizard(QtWidgets.QWizard):
@@ -31,7 +31,7 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed through '''
         self.parent = parent
         self.cfg = parent.cfg if parent else None
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         ''' Instance variables '''
         self.x_start = self.x_end = self.y_start = self.y_end = self.z_start = self.z_end = 0
@@ -551,7 +551,7 @@ class GenericChannelPage(QtWidgets.QWizardPage):
 
     def update_page_from_state(self):
         self.laserComboBox.setCurrentText(self.parent.state['laser'])
-        self.intensitySlider.setValue(self.parent.state['intensity'])
+        self.intensitySlider.setValue(int(self.parent.state['intensity']))
         self.filterComboBox.setCurrentText(self.parent.state['filter'])
 
     def update_start_focus_position(self):

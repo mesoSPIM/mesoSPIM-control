@@ -1,56 +1,54 @@
-'''
-mesoSPIM MainWindow
-'''
+# mesoSPIM MainWindow
 import tifffile
 import logging
 import time
 from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.uic import loadUi
-
 ''' Disabled taskbar button progress display due to problems with Anaconda default'''
 # if sys.platform == 'win32':
 #     from PyQt5.QtWinExtras import QWinTaskbarButton
 
 from .mesoSPIM_CameraWindow import mesoSPIM_CameraWindow
 from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
-from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
-
+from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 
 logger = logging.getLogger(__name__)
 
-class LogDisplayHandler(QtCore.QObject, logging.Handler):
-    """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
-    new_record = QtCore.pyqtSignal(object)
+# discontinued to increase performance. Not actually useful for the user.
+# class LogDisplayHandler(QtCore.QObject, logging.Handler):
+#     """ Handler class to display log in a TextDisplay widget. A thread-safe version, callable from non-GUI threads."""
+#     new_record = QtCore.pyqtSignal(object)
 
-    def __init__(self, parent):
-        super().__init__(parent)
-        super(logging.Handler).__init__()
-        formatter = Formatter('%(levelname)s:%(module)s:%(funcName)s:%(message)s')
-        self.setFormatter(formatter)
+#     def __init__(self, parent):
+#         super().__init__(parent)
+#         super(logging.Handler).__init__()
+#         formatter = Formatter('%(levelname)s:%(module)s:%(funcName)s:%(message)s')
+#         self.setFormatter(formatter)
 
-    def emit(self, record):
-        msg = self.format(record)
-        self.new_record.emit(msg)  # <---- emit signal here
+#     def emit(self, record):
+#         msg = self.format(record)
+#         self.new_record.emit(msg)  # <---- emit signal here
 
 
-class Formatter(logging.Formatter):
-    """ Formatter of the LogDisplayHandler class."""
-    def formatException(self, ei):
-        result = super(Formatter, self).formatException(ei)
-        return result
+# class Formatter(logging.Formatter):
+#     """ Formatter of the LogDisplayHandler class."""
+#     def formatException(self, ei):
+#         result = super(Formatter, self).formatException(ei)
+#         return result
 
-    def format(self, record):
-        s = super(Formatter, self).format(record)
-        if record.exc_text:
-            s = s.replace('\n', '')
-        return s
+#     def format(self, record):
+#         s = super(Formatter, self).format(record)
+#         if record.exc_text:
+#             s = s.replace('\n', '')
+#         return s
 
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
@@ -62,14 +60,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_execute_script = QtCore.pyqtSignal(str)
     sig_move_relative = QtCore.pyqtSignal(dict)
-    # sig_move_relative_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
-    # sig_move_absolute_and_wait_until_done = QtCore.pyqtSignal(dict)
     sig_zero_axes = QtCore.pyqtSignal(list)
     sig_unzero_axes = QtCore.pyqtSignal(list)
     sig_stop_movement = QtCore.pyqtSignal()
     sig_load_sample = QtCore.pyqtSignal()
     sig_unload_sample = QtCore.pyqtSignal()
+    sig_center_sample = QtCore.pyqtSignal()
 
     sig_save_etl_config = QtCore.pyqtSignal()
     sig_poke_demo_thread = QtCore.pyqtSignal()
@@ -81,21 +78,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Initial housekeeping
         self.cfg = config
         self.package_directory = package_directory
-        self.script_window_counter = 0
-        self.update_gui_from_state_flag = False
 
         # Instantiate the one and only mesoSPIM state '''
         self.state = mesoSPIM_StateSingleton()
-        self.state.sig_updated.connect(self.update_gui_from_state)
-        self.state['package_directory'] = package_directory
+        self.state.set_parameters(self.cfg.startup)
 
         # Setting up the user interface windows
         loadUi(self.package_directory + '/gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle(title)
 
+        # Discontinued
         # Connect log display widget
-        self.log_display_handler = LogDisplayHandler(self)
-        self.log_display_handler.new_record.connect(self.LogTextDisplay.appendPlainText)
+#        self.log_display_handler = LogDisplayHandler(self)
+#        self.log_display_handler.new_record.connect(self.LogTextDisplay.appendPlainText)
 
         self.camera_window = mesoSPIM_CameraWindow(self)
         self.camera_window.show()
@@ -103,9 +98,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.acquisition_manager_window = mesoSPIM_AcquisitionManagerWindow(self)
         self.acquisition_manager_window.show()
 
-        self.webcam_window = None
+        self.tile_view_window = mesoSPIM_TileViewWindow(self)
+        self.tile_view_window.show()
 
+        self.webcam_window = None
         self.check_config_file()
+        self.open_webcam_window()
+
+        self.scriptwindow = None
 
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
@@ -114,9 +114,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             window_pos = (100, 100)
         self.move(window_pos[0], window_pos[1])
         self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
+        self.tile_view_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1])
         self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
         if self.webcam_window:
-            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 50, window_pos[1])
+            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1] + self.height())
 
         # set up some Acq manager signals
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
@@ -130,13 +131,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        # This shit below does not work, everything remains in the main thread. Why?
-        # Even if "moved" to core thread, all these objects actually run in the main thread.
-        # It is a working solution, but not ideal. Ideally these workers must run in self.core_thread.
-        #self.core.serial_worker.moveToThread(self.core_thread)
-        #self.core.serial_worker.stage.moveToThread(self.core_thread)
-        #self.core.serial_worker.stage.asi_stages.moveToThread(self.core_thread)
-        #self.core.serial_worker.stage.pos_timer.moveToThread(self.core_thread)
+        #self.core.serial_worker.moveToThread(self.core_thread) # Makes the move buttons freeze the SW, avoid
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -151,34 +146,39 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.create_widget_list(self.parent_widgets_to_block, self.widgets_to_block)
 
         # The signal switchboard, Core -> MainWindow
+        # Memo: with type=QtCore.Qt.DirectConnection the slot is invoked immediately when the signal is emitted. The slot is executed in the signalling thread (Core).
         self.core.sig_finished.connect(self.finished)
         self.core.sig_position.connect(self.update_position_indicators)
-        self.core.sig_update_gui_from_state.connect(self.enable_gui_updates_from_state)
+        self.core.sig_update_gui_from_state.connect(self.update_gui_from_state)
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
 
+        self.sig_move_absolute.connect(self.core.move_absolute, type=QtCore.Qt.QueuedConnection)
+        # Set stages, revolver, filter to initialization positions defined in the config file:
+        #self.sig_move_to_ini_position.connect(self.core.move_to_initial_positions, type=QtCore.Qt.QueuedConnection)
+
         self.optimizer = None
         self.contrast_window = None
 
+        # Signal from state to GUI
+        #self.state.sig_updated.connect(self.update_gui_from_state) # too frequent updates because of stage polling
         # The signal switchboard, MainWindow -> Core
         self.sig_launch_optimizer.connect(self.launch_optimizer)
         self.sig_launch_contrast_window.connect(self.launch_contrast_window)
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighPriority)
-
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
             logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
         except:
             logger.error(f'Main Window: Printing Thread priority failed.')
 
-        logger.debug(f'Main Window: Core priority: {self.core_thread.priority()}')
+        logger.debug(f'Main Window: Core thread priority: {self.core_thread.priority()}')
 
+        self.acquisition_manager_window.mark_all_current_parameters() # initialize the first dummy raw with the current state
         self.joystick = mesoSPIM_JoystickHandler(self)
-
-        self.enable_gui_updates_from_state(False)
 
     def check_config_file(self):
         """Checks missing blocks in config file and gives suggestions.
@@ -202,18 +202,31 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.state['galvo_amp_scale_w_zoom'] = self.cfg.scale_galvo_amp_with_zoom
         self.checkBoxScaleWZoom.setChecked(self.state['galvo_amp_scale_w_zoom'])
 
+        if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+            msg = f"Objective exchange in f-position {self.cfg.stage_parameters['f_objective_exchange']} ('f_objective_exchange' in stage parameters of the config file)."
+            if self.cfg.stage_parameters['f_min'] <= self.cfg.stage_parameters['f_objective_exchange'] <= self.cfg.stage_parameters['f_max']:
+                pass
+            else:
+                msg = "ERROR: 'f_objective_exchange' is not within the allowed range of 'f_min' and 'f_max'"
+                logger.error(msg), print(msg)
+        else:
+            msg = "Objective exchange in the current f-position. To set the safe f-position for objective exchange, add 'f_objective_exchange' to the stage parameters in the config file."
+        logger.warning(msg)
+        print(msg)
+
     def open_webcam_window(self):
-        """Open USB webcam window using cam ID specified in config file. Otherwise, try to open with ID=0"""
+        """Open USB webcam window using cam ID specified in config file."""
         if self.webcam_window is None: # first call
             if hasattr(self.cfg, 'ui_options') and ('usb_webcam_ID' in self.cfg.ui_options.keys()):
-                if self.cfg.ui_options['usb_webcam_ID'] >= 0:
-                    self.webcam_window = WebcamWindow(self.cfg.ui_options['usb_webcam_ID'])
-                    self.webcam_window.show()
-            else:
-                self.webcam_window = WebcamWindow(0)
-                self.webcam_window.show()
-        else: # open previously close window
+                self.webcam_window = WebcamWindow(self.cfg.ui_options['usb_webcam_ID'])
+            else: # create a dummy 
+                self.webcam_window = WebcamWindow(None)
+        else: # open previously closed window
             self.webcam_window.show()
+
+    def open_tile_view_window(self):
+        self.tile_view_window.show()
+
 
     def __del__(self):
         """Cleans the threads up after deletion, waits until the threads
@@ -228,6 +241,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
 
     def close_app(self):
+        #self.log_display_handler.flushOnClose = False #discontinued
+        logger.info('Closing the application')
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:
@@ -238,6 +253,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
         if self.contrast_window:
             self.contrast_window.close()
+        self.tile_view_window.close()
+        if self.scriptwindow:
+            self.scriptwindow.close()
         self.close()
 
     def open_tiff(self):
@@ -284,7 +302,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         for widget in list:
             if list != ([] or None):
                 if self.check_instances(widget):
-                    # print(widget.objectName())
                     widget_list.append(widget)
                 list = widget.children()
                 self.create_widget_list(list, widget_list)
@@ -313,7 +330,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
                 self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
                 self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
-                self.state['position'] = dict['position']
+                #self.state['position'] = dict['position'] # this must be done in the core thread
 
     @QtCore.pyqtSlot(dict)
     def update_progressbars(self,dict):
@@ -325,6 +342,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         image_count = dict['image_counter']
         time_passed_string = dict['time_passed_string']
         remaining_time_string = dict['remaining_time_string']
+        fps = self.state['current_framerate']
 
         self.AcquisitionProgressBar.setValue(int((cur_image+1)/images_in_acq*100))
         self.TotalProgressBar.setValue(int((image_count+1)/tot_images*100))
@@ -334,8 +352,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setValue(int((image_count+1)/tot_images*100))
         '''
 
-        self.AcquisitionProgressBar.setFormat('%p% Image '+ str(cur_image+1) +\
-                                        '/' + str(images_in_acq) + ' ')
+        self.AcquisitionProgressBar.setFormat('%p% Image: '+ str(cur_image+1) + '/' + str(images_in_acq) + '  FPS: ' + '{:.1f}'.format(fps))
         self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
                                         '/' + str(tot_acqs) +\
                                          ' ' + ' Image: '+ str(image_count) +\
@@ -345,17 +362,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def create_script_window(self):
         """
-        Creates a script window and binds it to a self.scriptwindow0 ... n instanceself.
-
-        This happens dynamically using exec which should be replaced at
-        some point with a factory pattern.
+        Creates a script window for the user to input Python code.
         """
-        windowstring = 'self.scriptwindow'+str(self.script_window_counter)
-        exec(windowstring+ '= mesoSPIM_ScriptWindow(self)')
-        exec(windowstring+'.setWindowTitle("Script Window #'+str(self.script_window_counter)+'")')
-        exec(windowstring+'.show()')
-        exec(windowstring+'.sig_execute_script.connect(self.execute_script)')
-        self.script_window_counter += 1
+        self.scriptwindow = mesoSPIM_ScriptWindow(self)
+        self.scriptwindow.setWindowTitle("Script Window")
+        self.scriptwindow.show()
+        self.scriptwindow.sig_execute_script.connect(self.execute_script)
 
     def initialize_and_connect_menubar(self):
         self.actionExit.triggered.connect(self.close_app)
@@ -363,6 +375,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Camera_Window.triggered.connect(self.camera_window.show)
         self.actionOpen_Webcam_Window.triggered.connect(self.open_webcam_window)
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
+        self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
     def initialize_and_connect_widgets(self):
@@ -370,16 +383,25 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
 
         ''' Connecting the movement & zero buttons '''
-        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': -self.xyzIncrementSpinbox.value()}))
-        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': self.xyzIncrementSpinbox.value()}))
-        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': self.xyzIncrementSpinbox.value()}))
-        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': -self.xyzIncrementSpinbox.value()}))
-        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': self.xyzIncrementSpinbox.value()}))
-        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': -self.xyzIncrementSpinbox.value()}))
-        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': self.focusIncrementSpinbox.value()}))
-        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': -self.focusIncrementSpinbox.value()}))
-        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': self.rotIncrementSpinbox.value()}))
-        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': -self.rotIncrementSpinbox.value()}))
+        if 'flip_XYZFT_button_polarity' in self.cfg.ui_options.keys():
+            x_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][0] else 1
+            y_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][1] else 1
+            z_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][2] else 1
+            f_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][3] else 1
+            t_sign = -1 if self.cfg.ui_options['flip_XYZFT_button_polarity'][4] else 1
+        else:
+            x_sign, y_sign, z_sign, f_sign, t_sign = 1, 1, 1, 1, 1
+            logger.warning('flip_XYZFT_button_polarity key not found in config file. Assuming all buttons are positive.')
+        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': - x_sign*self.xyzIncrementSpinbox.value()}))
+        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': x_sign*self.xyzIncrementSpinbox.value()}))
+        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': y_sign*self.xyzIncrementSpinbox.value()}))
+        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': - y_sign*self.xyzIncrementSpinbox.value()}))
+        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': z_sign*self.xyzIncrementSpinbox.value()}))
+        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': - z_sign*self.xyzIncrementSpinbox.value()}))
+        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': f_sign*self.focusIncrementSpinbox.value()}))
+        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': - f_sign*self.focusIncrementSpinbox.value()}))
+        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': t_sign*self.rotIncrementSpinbox.value()}))
+        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': - t_sign*self.rotIncrementSpinbox.value()}))
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
@@ -390,6 +412,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.rotZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['theta']) if bool is True else self.sig_unzero_axes.emit(['theta']))
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
+        self.centerButton.clicked.connect(self.sig_center_sample.emit)
         self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'etl_offset', 'amplitude': 0.5}))
         self.ContrastWindowButton.clicked.connect(lambda: self.sig_launch_contrast_window.emit())
 
@@ -412,6 +435,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.enable_move_buttons('f', False)
                 self.focusZeroButton.setEnabled(False)
 
+            if 'enable_f_zero_button' in self.cfg.ui_options.keys():
+                self.focusZeroButton.setEnabled(self.cfg.ui_options['enable_f_zero_button'])
+
             if self.cfg.ui_options['enable_rotation_buttons'] is False:
                 self.enable_move_buttons('theta', False)
                 self.rotZeroButton.setEnabled(False)
@@ -426,7 +452,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
         self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
-        #self.StopButton.clicked.connect(lambda: print('Stopping'))
         self.LightsheetSwitchingModeButton.clicked.connect(self.run_lightsheet_alignment_mode)
         self.VisualModeButton.clicked.connect(self.run_visual_mode)
 
@@ -466,7 +491,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.GalvoFrequencySpinBox,'galvo_r_frequency',1),
             (self.GalvoFrequencySpinBox,'galvo_l_frequency',1),
             (self.LeftGalvoAmplitudeSpinBox,'galvo_l_amplitude',1),
-            (self.LeftGalvoAmplitudeSpinBox,'galvo_r_amplitude',1),
+            #(self.LeftGalvoAmplitudeSpinBox,'galvo_r_amplitude',1),
             (self.LeftGalvoPhaseSpinBox,'galvo_l_phase',1),
             (self.RightGalvoPhaseSpinBox,'galvo_r_phase',1),
             (self.LeftGalvoOffsetSpinBox, 'galvo_l_offset',1),
@@ -550,6 +575,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def scale_galvo_amp_w_zoom(self):
         self.state['galvo_amp_scale_w_zoom'] = self.checkBoxScaleWZoom.isChecked()
 
+    @QtCore.pyqtSlot()
     def update_GUI_by_shutter_state(self):
         ''' Disables controls for the opposite ETL to avoid overriding parameters '''
         if self.ShutterComboBox.currentText() == 'Left':
@@ -578,7 +604,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         Helper method to (currently) connect spinboxes
         '''
-        if isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+        if isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)): 
             self.connect_spinbox_to_state_parameter(widget, state_parameter, conversion_factor)
 
     def connect_combobox_to_state_parameter(self, combobox, option_list, state_parameter, int_conversion = False):
@@ -592,11 +618,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''
         combobox.addItems(option_list)
         if not int_conversion:
-            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}))
+            self.sig_state_request.emit({state_parameter: self.cfg.startup[state_parameter]})  # force update of the state
             combobox.setCurrentText(self.cfg.startup[state_parameter])
+            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+
         else:
-            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}))
+            self.sig_state_request.emit({state_parameter: int(self.cfg.startup[state_parameter])})  # force update of the state
             combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
+            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
         '''
@@ -612,43 +642,34 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                                        in seconds and the spinbox displays
                                        microseconds: conversion_factor = 1000000
         '''
-        spinbox.valueChanged.connect(lambda currentValue: self.sig_state_request.emit({state_parameter : currentValue/conversion_factor}))
-        spinbox.setValue(self.cfg.startup[state_parameter]*conversion_factor)
+        spinbox.valueChanged.connect(lambda new_value: self.spinbox_to_state_parameter(new_value, spinbox, state_parameter, conversion_factor))
+
+    def spinbox_to_state_parameter(self, new_value, spinbox, state_parameter, conversion_factor):
+        self.sig_state_request.emit({state_parameter : new_value/conversion_factor})
+        self.slow_down_spinbox(spinbox)
+
+    def slow_down_spinbox(self, spinbox):
+        spinbox.setReadOnly(True)  # Disable the spinbox to allow state take change
+        QTimer.singleShot(250, lambda: spinbox.setReadOnly(False))  # Re-enable after 250 ms to prevent looping between state->GUI and GUI->state updates
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
         self.sig_execute_script.emit(script)
 
-    def block_signals_from_controls(self, bool):
-        '''
-        Helper method to allow blocking of signals from all kinds of controls.
-
-        Needs a list in self.widgets_to_block which has to be created during 
-        mesoSPIM_MainWindow.__init__()
-        
-        Args:
-            bool (bool): True if widgets are supposed to be blocked, False if unblocking is desired.
-        '''
-        for widget in self.widgets_to_block:
-            widget.blockSignals(bool)
-
     def update_widget_from_state(self, widget, state_parameter_string, conversion_factor):
         if isinstance(widget, QtWidgets.QComboBox):
             widget.setCurrentText(self.state[state_parameter_string])
-        elif isinstance(widget, (QtWidgets.QSlider,QtWidgets.QDoubleSpinBox,QtWidgets.QSpinBox)):
-            widget.setValue(self.state[state_parameter_string]*conversion_factor)
+        elif isinstance(widget, (QtWidgets.QSlider, QtWidgets.QSpinBox)):
+            widget.setValue(int(self.state[state_parameter_string]*conversion_factor))
+        elif isinstance(widget, (QtWidgets.QDoubleSpinBox)):
+            widget.setValue(float(self.state[state_parameter_string]*conversion_factor))
     
     @QtCore.pyqtSlot()
     def update_gui_from_state(self):
-        '''
-        Updates the GUI controls after a state_change
-        if the self.update_gui_from_state_flag is enabled.
-        '''
-        if self.update_gui_from_state_flag:
-            self.block_signals_from_controls(True)
-            for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
-                self.update_widget_from_state(widget, state_parameter, conversion_factor)                
-            self.block_signals_from_controls(False)
+        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+            self.update_widget_from_state(widget, state_parameter, conversion_factor)   
+        self.acquisition_manager_window.set_selected_row(self.state['selected_row'])
+        logger.debug('GUI updated from state')
 
     def run_snap(self):
         self.sig_state_request.emit({'state':'snap'})
@@ -658,7 +679,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
-        logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
+        logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
         self.sig_poke_demo_thread.emit()
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
@@ -674,7 +695,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.state['selected_row'] = row
             self.sig_state_request.emit({'state':'run_selected_acquisition'})
             self.enable_mode_control_buttons(False)
-            self.enable_gui_updates_from_state(True)
             self.enable_stop_button(True)
             self.enable_gui(False)
             ''' Disabled taskbar button progress display due to problems with Anaconda default
@@ -686,7 +706,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.state['selected_row'] = -1
         self.sig_state_request.emit({'state':'run_acquisition_list'})
         self.enable_mode_control_buttons(False)
-        self.enable_gui_updates_from_state(True)
         self.enable_stop_button(True)
         self.enable_gui(False)
         ''' Disabled taskbar button progress display due to problems with Anaconda default
@@ -714,6 +733,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setVisible(False)
         '''
 
+    @QtCore.pyqtSlot(int)
+    def run_timepoint(self, timepoint):
+        self.acquisition_manager_window.append_time_index_to_filenames(timepoint)
+        self.run_acquisition_list()
+
     @QtCore.pyqtSlot(dict)
     def launch_optimizer(self, ini_dict=None):
         self.sig_move_relative.emit({'f_rel': 5})  # a hack to fix Galil stage coupling, between F and X/Y stages.
@@ -735,10 +759,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.contrast_window.active = True
             self.contrast_window.show()
 
-    @QtCore.pyqtSlot(bool)
-    def enable_gui_updates_from_state(self, boolean):
-        self.update_gui_from_state_flag = boolean
-
     def enable_stop_button(self, boolean):
         self.StopButton.setEnabled(boolean)
     
@@ -756,7 +776,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LightsheetSwitchingModeButton.setEnabled(boolean)
 
     def finished(self):
-        self.enable_gui_updates_from_state(False)
         self.enable_stop_button(False)
         self.enable_mode_control_buttons(True)
         self.enable_gui(True)
@@ -840,11 +859,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         '''Set the amplitude of both galvos to zero, or back to where it was, depending on button state'''
         if self.freezeGalvoButton.isChecked():
             self.galvo_amp_backup = self.LeftGalvoAmplitudeSpinBox.value()
-            self.LeftGalvoAmplitudeSpinBox.setValue(0)
+            self.state['galvo_l_amplitude'] = 0
+            #self.state['galvo_r_amplitude'] = 0
             self.freezeGalvoButton.setText('Unfreeze galvos')
         else:
-            self.LeftGalvoAmplitudeSpinBox.setValue(self.galvo_amp_backup)
+            self.state['galvo_l_amplitude'] = self.galvo_amp_backup
+            #self.state['galvo_r_amplitude'] = self.galvo_amp_backup
             self.freezeGalvoButton.setText('Freeze galvos')
+        self.sig_state_request.emit({'galvo_l_amplitude': self.state['galvo_l_amplitude']})
+        #self.sig_state_request.emit({'galvo_r_amplitude': self.state['galvo_r_amplitude']})
 
     def choose_etl_config(self):
         ''' File dialog for choosing the config file
@@ -858,7 +881,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             logger.info(f'Main Window: Chose ETL Config File: {path}')
             self.sig_state_request.emit({'ETL_cfg_file' : path})
         else:
-            logger.error(f'Main Window: Choose ETL Config File cancelled')
+            logger.debug(f'Choose ETL Config File cancelled')
 
     def save_etl_config(self):
         ''' Save current ETL parameters into config '''

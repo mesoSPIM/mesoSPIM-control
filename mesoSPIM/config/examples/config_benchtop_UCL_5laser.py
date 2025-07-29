@@ -9,6 +9,8 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'flip_XYZFT_button_polarity': (True, False, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
+              'button_sleep_ms_xyzft' : (0, 0, 0, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'usb_webcam_ID': 0, # open USB web-camera (if available): 0 (first cam), 1 (second cam), ...
                }
 
@@ -23,21 +25,21 @@ Card designations need to be the same as in NI MAX, if necessary, use NI MAX
 to rename your cards correctly.
 
 Physical connections:
-- 'master_trigger_out_line' must be physically connected to 'PXI1Slot4/port0/line0' terminal
-- 'camera_trigger_out_line' to PFI12 / P2.4 ('/PXI1Slot4/ctr0') terminal
-- 'stage_trigger_out_line' to PFI13 / P2.5 ('/PXI1Slot4/ctr1') terminal
-- galvos, ETL controllers to 'PXI1Slot4/ao0:3' terminals
-- laser analog modulation cables to 'PXI1Slot4/ao4:7' terminals
+- 'master_trigger_out_line' ('PXI1Slot2/port0/line0') must be physically connected to BNC-2110 "PFI0 / AI start" terminal.
+- 'camera_trigger_out_line' to PFI12 / P2.4 ('/PXI1Slot2/ctr0') terminal
+- 'stage_trigger_out_line' to PFI13 / P2.5 ('/PXI1Slot2/ctr1') terminal
+- galvos, ETL controllers to 'PXI1Slot2/ao0:3' terminals
+- laser analog modulation cables to 'PXI1Slot2/ao20:24' terminals
 '''
 
-acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
-                        'camera_trigger_source' : '/PXI1Slot4/PFI0',
-                        'camera_trigger_out_line' : '/PXI1Slot4/ctr0',
-                        'galvo_etl_task_line' : 'PXI1Slot4/ao0:3',
-                        'galvo_etl_task_trigger_source' : '/PXI1Slot4/PFI0',
-                        'laser_task_line' :  'PXI1Slot4/ao4:7',
-                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0'}
-
+acquisition_hardware = {'master_trigger_out_line' : '/PXI1Slot2/PFI0',
+                        'camera_trigger_source' : '/PXI1Slot2/PFI0',
+                        'camera_trigger_out_line' : '/PXI1Slot2/ctr0',
+                        'galvo_etl_task_line' : 'PXI1Slot2/ao0:3',
+                        'galvo_etl_task_trigger_source' : '/PXI1Slot2/PFI0',
+                        'laser_task_line' :  'PXI1Slot2/ao20:24',
+                        'laser_task_trigger_source' : '/PXI1Slot2/PFI0'}
+ 
 '''
 Human interface device (Joystick)
 '''
@@ -55,10 +57,11 @@ laser_blanking = 'images' # 'images' by default, unless laser enable is connecte
 Values are DO ports used for laser ENABLE digital signal.
 Critical: keys must be sorted by increasing wavelength order: 405, 488, 561, etc.
 '''
-laserdict = {'405 nm': 'PXI1Slot4/port0/line2',
-             '488 nm': 'PXI1Slot4/port0/line3',
-             '561 nm': 'PXI1Slot4/port0/line4', 
-             '638 nm': 'PXI1Slot4/port0/line5',
+laserdict = {'445 nm': 'PXI1Slot2/port1/line1',
+             '488 nm': 'PXI1Slot2/port1/line3',
+             '515 nm': 'PXI1Slot2/port1/line4',
+             '561 nm': 'PXI1Slot2/port1/line5',  
+             '638 nm': 'PXI1Slot2/port1/line6',
              }
 
 '''
@@ -66,13 +69,12 @@ Shutter configuration
 '''
 
 shutter = 'NI' # 'Demo' or 'NI'
-shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # empty terminal here, general shutter
-              'shutter_right' : '/PXI1Slot4/port0/line1', # flip mirror control
+shutterdict = {'shutter_left' : '/PXI1Slot2/port1/line7', # empty terminal here, general shutter
+              'shutter_right' : '/PXI1Slot2/port0/line1', # flip mirror control
               }
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
 shutteroptions = ('Left','Right')
-#shutteroptions = ('Right',)
 
 ''' A bit of a hack: Assumes that the shutter_left line is the general shutter
 and the shutter_right line is the left/right switch (Right==True)'''
@@ -184,8 +186,10 @@ Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 '''
 
 stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
-                    'y_load_position': 10000,
-                    'y_unload_position': -45000,
+                    'y_load_position': -25000,
+                    'y_unload_position': 10000,
+                    'x_center_position': 2000,
+                    'z_center_position': 500,
                     'x_max' : 51000,
                     'x_min' : -46000,
                     'y_max' : 160000,
@@ -193,7 +197,7 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' o
                     'z_max' : 99000,
                     'z_min' : -99000,
                     'f_max' : 99000,
-                    'f_min' : -8500,
+                    'f_min' : -99000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -226,17 +230,17 @@ For a benchtop mesoSPIM with an ASI Tiger controller, the following parameters a
 The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc)
 which are the values of the dict.
 '''
-asi_parameters = {'COMport' : 'COM23',
+asi_parameters = {'COMport' : 'COM6',
                   'baudrate' : 115200,
-                  'stage_assignment': {'y':'V', 'z':'Z', 'theta':'T', 'x':'X', 'f':'Y'}, # The dictionary order is important here! Must match the ASI cards 1,2,3, let to right. WARNING: this particular ASI controller has reversed cards order: VZTXY.
-                  'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # Num of encoder counts per um or degree, depending on stage type. The order match the 'stage_assignment' dictionary order.
-                  'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
-                  'stage_trigger_source': '/PXI1Slot4/PFI0',
-                  'stage_trigger_out_line': '/PXI1Slot4/ctr1',
+                  'stage_assignment': {'x':'X', 'f':'Y', 'z':'Z', 'theta':'T', 'y':'V'}, # The dictionary order is important here! Must match the ASI cards 1,2,3, let to right. This is standard ASI cards order: XYZTV
+                  'encoder_conversion': {'X': 10., 'Y': 10., 'Z': 10., 'T': 1000., 'V': 10.}, # Num of encoder counts per um or degree, depending on stage type. The order match the 'stage_assignment' dictionary order.
+                  'speed': {'X': 3., 'Y': 3., 'Z': 3., 'T': 30., 'V': 3.}, # mm/s or deg/s.
+                  'stage_trigger_source': '/PXI1Slot2/PFI0',
+                  'stage_trigger_out_line': '/PXI1Slot2/ctr1',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
-                  'ttl_cards':(2,3),
+                  'ttl_cards':(1,2),
                   }
                   
 '''
@@ -246,9 +250,9 @@ For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
 filterwheel_parameters = {'filterwheel_type' : 'ZWO', # 'Demo', 'Ludl', 'Dynamixel', 'ZWO'
-                          'COMport' : 'COM31', # irrelevant for 'ZWO'
-                          'baudrate' : 115200, # relevant only for 'Dynamixel'
-                          'servo_id' :  1, # relevant only for 'Dynamixel'
+                          #'COMport' : 'COM31', # irrelevant for 'ZWO'
+                          #'baudrate' : 115200, # relevant only for 'Dynamixel'
+                          #'servo_id' :  1, # relevant only for 'Dynamixel'
                           }
 
 '''
@@ -260,10 +264,14 @@ For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
 '''
 
 filterdict = {'Empty' : 0, # Every config should contain this
-              '405-488-561-640-Quadrupleblock' : 1,
-              '535/22 Brightline': 2,
-              '595/31 Brightline': 3,
-              }
+              '480/40 CFP' : 1,
+              '514/30 GFP': 2,
+              '535/22 YFP': 3,
+              'Empty1' : 4,
+              '600/52 RFP/mCherry': 5,
+              '650 LP FarRed': 6,
+	      'Empty2': 7,	
+}
 
 
 '''
@@ -283,26 +291,18 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 There should be always '1x' zoom present, for correct initialization of the software.
 '''
 
-zoomdict = {'0.9x' : 1,
-            '1x' : 2,
-            '1.2x' : 3,
-            '2x' : 4,
-            '4x' : 5,
-            '5x' : 6,
-            '7.5x' : 7,
-            '10x' : 8,
-            '20x' : 9,
+zoomdict = {'1x' : 0,
+            '2x' : 1,
+            '5x' : 2,
+            '10x' : 3,
+            '20x' : 4,
             }
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.9x' : 4.25/0.9,
-            '1x': 4.25,
-            '1.2x' : 4.25/1.2,
+pixelsize = {'1x': 4.25,
             '2x' : 4.25/2,
-            '4x' : 4.25/4,
             '5x' : 4.25/5,
-            '7.5x' : 4.25/7.5,
             '10x' : 4.25/10,
             '20x' : 4.25/20,
             }
@@ -345,19 +345,19 @@ startup = {
 'samplerate' : 100000,
 'sweeptime' : 0.26734,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
-'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-BT-DBE.csv',
-'filepath' : 'F:/Test/file.tif',
-'folder' : 'F:/Test/',
-'snap_folder' : 'F:/Test/',
+'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-benchtop.csv',
+'filepath' : 'C:/Users/BTMesoSPIM/SPIMTest/file.tiff',
+'folder' : 'C:/Users/BTMesoSPIM/SPIMTest/',
+'snap_folder' : 'C:/Users/BTMesoSPIM/SPIMTest/',
 'file_prefix' : '',
 'file_suffix' : '000001',
-'zoom' : '5x',
-'pixelsize' : pixelsize['5x'],
+'zoom' : '2x',
+'pixelsize' : pixelsize['2x'],
 'laser' : '488 nm',
 'max_laser_voltage': 5.0,
 'intensity' : 10,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
+'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
 'filter' : 'Empty',
 'etl_l_delay_%' : 5,
@@ -371,13 +371,13 @@ startup = {
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
-'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : 0.0,
+'galvo_l_amplitude' : 1.5, #0.8V at 5x
+'galvo_l_offset' : -0.38,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/7,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.0,
+'galvo_r_amplitude' : 1.5, #0.8V at 5x
+'galvo_r_offset' : 0.02,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 10,

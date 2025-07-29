@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore, QtDesigner
 
 from .acquisitions import Acquisition, AcquisitionList
 
-from ..mesoSPIM_State import mesoSPIM_StateSingleton
+#from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import copy
 import pickle
@@ -19,7 +19,10 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     '''
     def __init__(self, table=None, parent=None):
         super().__init__(parent)
-        
+        if parent is not None:
+            self.parent = parent
+        else:
+            raise ValueError('Parent is None')
         if table is None:
             self._table = AcquisitionList()
         else:
@@ -28,7 +31,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         ''' Get the headers as the capitalized keys from the first acquisition '''
         self._headers = self._table.get_capitalized_keylist()
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
         self.dataChanged.connect(self.updatePlanes)
 
@@ -68,7 +71,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Vertical:
                 return 'Stack ' + str(section)
 
-    def data(self, index, role):
+    def data(self, index, role = QtCore.Qt.DisplayRole):
         ''' Data allows to fetch one item'''
 
         row = index.row()
@@ -122,7 +125,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         if state_parameter in ('x_pos','y_pos','z_pos','f_pos'):
             new_value = round(self.state['position'][state_parameter],2)
         elif state_parameter == 'rot':
-            new_value = round(self.state['position']['theta_pos'],2)
+            new_value = round(self.state['position']['theta_pos'],1)
         else:
             new_value = self.state[state_parameter]
 
@@ -345,6 +348,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
         self._table = table
         self.modelReset.emit()
 
+    def setShutterconfig(self, row, shutterconfig):
+        self._table[row]['shutterconfig'] = shutterconfig
+    
     def loadModel(self, filename):
         self.modelAboutToBeReset.emit()
         with open(filename, "rb" ) as file:

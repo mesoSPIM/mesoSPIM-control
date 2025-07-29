@@ -9,7 +9,10 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'flip_XYZFT_button_polarity': (True, True, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
+              'button_sleep_ms_xyzft' : (0, 0, 0, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'usb_webcam_ID': 0, # open USB web-camera (if available): 0 (first cam), 1 (second cam), ...
+              'flip_auto_LR_illumination': False, # flip the polarity of the "Auto L/R illumination" button in Acquisition Manager
                }
 
 '''
@@ -23,7 +26,7 @@ Card designations need to be the same as in NI MAX, if necessary, use NI MAX
 to rename your cards correctly.
 
 Physical connections:
-- 'master_trigger_out_line' must be physically connected to 'PXI1Slot4/port0/line0' terminal
+- 'master_trigger_out_line' ('PXI1Slot4/port0/line0') must be physically connected to BNC-2110 "PFI0 / AI start" terminal.
 - 'camera_trigger_out_line' to PFI12 / P2.4 ('/PXI1Slot4/ctr0') terminal
 - 'stage_trigger_out_line' to PFI13 / P2.5 ('/PXI1Slot4/ctr1') terminal
 - galvos, ETL controllers to 'PXI1Slot4/ao0:3' terminals
@@ -72,7 +75,6 @@ shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # empty terminal here,
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
 shutteroptions = ('Left','Right')
-#shutteroptions = ('Right',)
 
 ''' A bit of a hack: Assumes that the shutter_left line is the general shutter
 and the shutter_right line is the left/right switch (Right==True)'''
@@ -184,16 +186,18 @@ Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 '''
 
 stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
-                    'y_load_position': 10000,
-                    'y_unload_position': -45000,
-                    'x_max' : 51000,
-                    'x_min' : -46000,
-                    'y_max' : 160000,
-                    'y_min' : -160000,
-                    'z_max' : 99000,
-                    'z_min' : -99000,
-                    'f_max' : 99000,
-                    'f_min' : -8500,
+                    'y_load_position': 35000,
+                    'y_unload_position': -20000,
+                    'x_center_position': 500,
+                    'z_center_position': 500,
+                    'x_max' : 25000,
+                    'x_min' : -25000,
+                    'y_max' : 550000,
+                    'y_min' : -25000,
+                    'z_max' : 50000,
+                    'z_min' : -55000,
+                    'f_max' : 50000,
+                    'f_min' : -55000,
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
@@ -228,15 +232,15 @@ which are the values of the dict.
 '''
 asi_parameters = {'COMport' : 'COM23',
                   'baudrate' : 115200,
-                  'stage_assignment': {'y':'V', 'z':'Z', 'theta':'T', 'x':'X', 'f':'Y'}, # The dictionary order is important here! Must match the ASI cards 1,2,3, let to right. WARNING: this particular ASI controller has reversed cards order: VZTXY.
-                  'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # Num of encoder counts per um or degree, depending on stage type. The order match the 'stage_assignment' dictionary order.
-                  'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
+                  'stage_assignment': {'x':'X', 'f':'Y', 'z':'Z', 'theta':'T', 'y':'V'}, # The dictionary order is important here! Must match the ASI cards 1,2,3, let to right. This is standard ASI cards order: XYZTV
+                  'encoder_conversion': {'X': 10., 'Y': 10., 'Z': 10., 'T': 1000., 'V': 10.}, # Num of encoder counts per um or degree, depending on stage type. The order match the 'stage_assignment' dictionary order.
+                  'speed': {'X': 3., 'Y': 3., 'Z': 3., 'T': 30., 'V': 3.}, # mm/s or deg/s.
                   'stage_trigger_source': '/PXI1Slot4/PFI0',
                   'stage_trigger_out_line': '/PXI1Slot4/ctr1',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
-                  'ttl_cards':(2,3),
+                  'ttl_cards':(1,2),
                   }
                   
 '''
@@ -314,7 +318,7 @@ Imaris can open these files if no subsampling and no compression is used.
 '''
 hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
-        'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
+        'flip_xyz': (True, False, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy' : False, # True for Hamamatsu, False for Photometrix, possibly due to different coordinate systems.
         }
 
@@ -357,7 +361,7 @@ startup = {
 'max_laser_voltage': 5.0,
 'intensity' : 10,
 'shutterstate':False, # Is the shutter open or not?
-'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
+'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
 'filter' : 'Empty',
 'etl_l_delay_%' : 5,
@@ -372,12 +376,12 @@ startup = {
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
 'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : 0.0,
+'galvo_l_offset' : -0.38,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/7,
 'galvo_r_frequency' : 99.9,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.0,
+'galvo_r_offset' : 0.23,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 10,
@@ -397,5 +401,5 @@ startup = {
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
-'average_frame_rate': 2.5,
+'average_frame_rate': 3.1,
 }

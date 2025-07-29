@@ -8,7 +8,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
-from ..mesoSPIM_State import mesoSPIM_StateSingleton
+#from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 class ImageProcessingWizard(QtWidgets.QWizard):
     '''
@@ -25,7 +25,7 @@ class ImageProcessingWizard(QtWidgets.QWizard):
         through '''
         self.parent = parent
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
   
         self.setWindowTitle('Image Processing Wizard')
 
@@ -58,10 +58,10 @@ class ImageProcessingWizard(QtWidgets.QWizard):
          
         for row in range(0, row_count):
             index = self.parent.model.createIndex(row, processing_column)
-            if self.field('maxProjEnabled'):
-                self.parent.model.setData(index, 'MAX')
+            if not self.field('maxProjEnabled'):
+                self.parent.model.setData(index, '')
             else:
-                self.parent.model.setData(index,  '')
+                self.parent.model.setData(index,  'MAX')
 
 class ImageProcessingWizardWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):

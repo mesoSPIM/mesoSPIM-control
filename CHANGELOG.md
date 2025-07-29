@@ -1,14 +1,88 @@
-## Release candidate 2024 [1.8.3]
+## Release candidate 2025 
+### Bugfixes :bug: 
+- fixed autofocus (AF) function in the GUI.
+- returned `'camera_display_live_subsampling': 2, ` and `'camera_display_acquisition_subsampling': 2,` into the config file, to reduce load on older computers
+
+
+## Release March 2025 [1.11.0].
+### Performance :rocket:
+- implementation of time lapse function via script. See example script at `mesoSPIM/scripts/timelapse.py` for details.
+- images can now be displayed at full resolution during either live mode or acquisition, with no performance penalty. Deprecated config parameters:
+``` python
+'camera_display_live_subsampling': 2,
+'camera_display_acquisition_subsampling': 2, 
+```
+to enjoy full-resolution image in real time. The corresponding GUI elements for controlling the downsampling were removed.
+
+### Bugfixes :bug: 
+- duplication of sub-stacks while writing large H5 files (>0.5 TB) and freezing at the end of acquisition. Fixed by replacing signal/slot mechanism for CameraWindow image update to deque mechanism. Boosted performance and stability.
+- `MAX` projection is always on by default, if the dataset is asvaed in TIFF or RAW format. No need to check the box in the Image Processing Wizard. This generates maximum intensity projection as TIFF file for each stack in the acquisition list.
+- explicit initialization of the first raw in Acquisition Manager, to avoid undefined GUI widget states.
+
+## Release December 2024 [1.10.2].
+### Performance :rocket:
+- migration to Python 3.12 for better performance and compatibility with the latest libraries.
+- faster loading and response time of the GUI
+- subsampling of the camera image for less frequent rendering in the GUI (less CPU load) during acquisition, controlled by `'camera_display_temporal_subsampling': 2,` parameter in the config file. Value `1` means no subsampling (show every image during acquisition).
+- change recommended package manager to `mamba` to avoid Anaconda license issues.
+- change the default timer for stage position update from 50 ms to 100 ms, to reduce communication and logging overhead. ASI stages updated every 200 ms, PI stages every 100 ms.
+- zoom dictionary can include multi-word names like `5x Mitutoyo` instead of `5x` for better UI and meta-infomation.
+- spinboxes are limited in scroll speed to allow hardware catch up with UI in the interactive mode
+- #82: uploading UCL-Bechtop config file `config/examples/config_benchtop_UCL_5laser.py` by @TchLenn and parsing of double-digit strings like `ao21:22` in config file.
+- remove `Log` tab from the GUI, as it was not used by the users and was causing unnecessary overhead, esp. in DEBUG mode.
+
+### User Interface :lollipop:
+- ETL config files (.csv) are automatically checked and updated with the `laser`-`zoom` combination selected in GUI, to avoid errors in the acquisition. User can even start with an empty ETL config file, it will be auto-filled with the `laser`-`zoom` combinations on the go.
+- more tooltips added to the GUI elements for better user experience.
+
+### :wrench: system changes
+- pip depenencies are frozen for staibilty
+- `mesoSPIM_State` is only nominally a singleton, but actually inherited by classes from their parent class to ensure unique state and thread safety.
+- no signal from `mesoSPIM_State` every time the state is updated. The GUI is updated from state by a separate signal/slot from member classes, on demand.
+- bugfix: serial communication with ASI stages is now thread-safe, with no conflicts between GUI (Main) and Core threads.
+- bugfix: parsing config file with either `'laser_task_line' :  'PXI6733/ao0:3'` or `'/PXI6733/ao0:3'` notation (Alan Watson).
+
+## Release candidate August 2024 [1.10.0]. Cancelled due to performance issues on some setups.
+### Performance :rocket:
+- improved acquisition speed from 2.5 to 5 FPS, by moving image writing to a separate thread and using `collections.deque` mechanism for frame sharing between the camera and image writing threads, instead of less-performant `QThread` signal/slot mechanism.
+- best writing speed and lowest CPU overhead is achieved with NVMe SSD disks, recommended.
+- the option `buffering = {...}` in config file is deprecated from v.1.10.0 and will be ignored, due to improved program performance.
+- dependencies are updated to the latest versions: `numpy`, `scipy`, `tifffile`, etc.
+
+## Release July 2024 [1.9.0]
+### User Interface :lollipop:
+- :gem:  "Auto L/R illumination" button in the Acquisition manager to select tile illumination based on its x-position.
+- :gem: A long awaited feature: **Tile Overview** window (*View/Open Tile Overview*), showing the entire acquisition area with tile positions, their overlap, and current FOV position relative to them.
+    - Some setups need to flip x- and/or y-stage polarity for correct tile display: use `'flip_XYZFT_button_polarity': (True, False, False, False, False),` in the config file.
+- :gem: Center Button added in the Main Window GUI, for bringing the sample holder in the X- and Z- center relative to the light-sheet and detection objective.
+- during acqusition, the currently acquiring row is highlighted in **Acquisition Manager** and in **Tile Overview** windows. 
+This has to be set up in the config file with `'x_center_position'` and `'z_center_position'` parameters for stage motion.
+- Buttons for movement in horizontal plane got shorter, for more intuitive navigation.
+- Current FPS shown in the progress bar.
+- Webcam window always opens at startup, empty if no camera is present in config file: `'usb_webcam_ID': 0, # open USB web-camera (if available): None,  0 (first cam), 1 (second cam), ...`
+- Tooltips were added to the navigation buttons.
+
+### Bugfixes :bug: 
+- occasional glitch with ASI stages caused by updating stage positions between acquisitions, with serial communication going in two separate threads (mainWindow vs Core).
+- check motion limits for all tiles before starting the acquisition list, in absolute or relative coodinates (zeroed axes or not).
+- estimated remaining acquisition time is now calculated correctly, based on the current frame rate.
+- sample centering and objectiv exchange positions work also when in zeroed-stage regime (local coordinates, user-defined). No need to inactivate `Zero F-stage` button for safe revolver operation.
+
+## Release February 2024 [1.8.3]
 
 ### User Interface :lollipop:
 :gem: Light-sheet direction is shown in the camera window as an image overlay. It interactively changes depending on the Left/Right/Both arms illimination state.
 
 ### Hardware control :wrench:
-- Added ZWO 2" 7-position filterwheel support (PR#79 by Fabian Voigt)
-- added checks and warnings for AO maximum voltage range (5V or 10V, which depends on hardware, but can be damaging if not set correctly).
+- Support of Mitutoyo 5-position objective turret (revolver, part #378-726D), for mesoSPIM v4-5 [upgrade](https://github.com/mesoSPIM/benchtop-hardware/tree/main/v4-5-upgrade-2023).
+- Safety movement of the focus stage backward to `f_objective_exchange` position for motorized objective exchange. The `f_objective_exchange` parameter is defined in the config file.
+- Optional buffering of images into RAM and flushing to disk when RAM is full or the stack is finished, [PR#72](https://github.com/mesoSPIM/mesoSPIM-control/pull/72) by [@AlanMWatson](https://github.com/AlanMWatson). Controlled by adding `buffering` dictionary to the config file.
+- support of ZWO 2" 7-position filterwheel support (PR#79 by Fabian Voigt)
+- checks and warnings for AO maximum voltage range (5V or 10V, which depends on hardware, but can be damaging if not set correctly).
 
 ### Bugfixes :bug: 
 - incorrect focus stage steps when interpolating between two focus positions in a stack. Reported and tested by Ivana Gantar and Laura Batti (Wyss Center Geneva). Affected small-amplitude focus interpolation, where required F-stage steps between planes were smaller than minimum feasible stage step. The minimum feasible stage step changed from 0.1 to 0.25 µm in function `get_focus_stepsize_generator(self, f_stage_min_step_um=0.25)`.
+- no more dropped frames during long acquisitions with slow disks.
 
 ## Release January 2023 [1.8.2]
 ### Hardware control 
