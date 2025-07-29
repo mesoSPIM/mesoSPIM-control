@@ -829,10 +829,12 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.05)
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
-        self.sig_prepare_image_series.emit(acq, acq_list)
-        self.open_shutters() # Needs to be before prepare_image_series() to avoid blocking cDAQ tasks
-        laser = self.state['laser']
-        self.laserenabler.enable(laser)
+# cDAQ deprecated code:
+        #self.open_shutters() # Needs to be before prepare_image_series() to avoid blocking cDAQ tasks
+        #laser = self.state['laser']
+        #self.laserenabler.enable(laser)
+        self.sig_prepare_image_series.emit(acq, acq_list) # signal to the Camera
+        self.image_writer.prepare_acquisition(acq, acq_list)
         self.prepare_image_series()
         self.sig_write_metadata.emit(acq, acq_list)
 
