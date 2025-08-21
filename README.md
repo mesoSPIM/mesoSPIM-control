@@ -84,7 +84,7 @@ To ensure safe transition to a new version, we recommend fresh installation of e
 ## Troubleshooting
 Some errors during software startup and acquisition can be displayed in the mamba/conda terminal, while a highly detailed log will be recorded in the time-stamped file in `mesoSPIM/log` folder. This log file is individual for each session, named by date and time of software start-up, eg `mesoSPIM/log/20241210-154845.log`.
 
-## Documentation for users
+## Further resources
 For instructions on how to use mesoSPIM-control, please check out the documentation:
 * ZMB (Univerity of Zurich) guides on [mesoSPIM start-up, setting up, and acquisition](https://zmb.dozuki.com/c/Lightsheet_microscopy#Section_MesoSPIM)
 * [PPT](https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation) (outdated version), 
