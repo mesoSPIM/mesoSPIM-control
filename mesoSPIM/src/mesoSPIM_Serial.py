@@ -114,6 +114,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):
+        logger.debug(f'mesoSPIM_Serial state request: {sdict}')
         for key, value in zip(sdict.keys(), sdict.values()):
             if key == 'filter':
                 self.set_filter(value, wait_until_done)
@@ -162,6 +163,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
+        logger.debug(f'mesoSPIM_Serial reporting position: {sdict}')
         self.state['position'] = sdict
         self.sig_position.emit({'position': sdict})
 

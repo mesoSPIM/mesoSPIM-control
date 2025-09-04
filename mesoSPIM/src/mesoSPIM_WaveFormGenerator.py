@@ -518,6 +518,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         Warning: `master_trigger_task` does not have explicit sample rate, because some cards like NI-6733 do not support this for DO lines.
         So the master pulse duration varies depening on the device. Can be as short as small as 1 micro-second!
         """
+        logger.info("Starting master trigger")
         self.master_trigger_task.write([False, True, True, True, True, True, False], auto_start=True)
 
         '''Wait until everything is done - this is effectively a sleep function.'''
@@ -532,6 +533,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""
+        logger.info("Stopping tasks")
         if self.ao_cards == 2:
             self.galvo_etl_task.stop()
             self.laser_task.stop()
@@ -546,6 +548,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         """Closes the tasks for triggering, analog and counter outputs.
         Tasks should only be closed are they are stopped.
         """
+        logger.info("Closing tasks")
         if self.ao_cards == 2:
             self.galvo_etl_task.close()
             self.laser_task.close()
@@ -566,6 +569,7 @@ class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
 
     def create_tasks(self):
         """"Demo version of the actual DAQmx-based function."""
+        logger.info("Demo: create tasks")
         self.calculate_samples()
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
         camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%','camera_delay_%'])
@@ -574,20 +578,25 @@ class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
 
     def write_waveforms_to_tasks(self):
         """Demo: write the waveforms to the slave tasks """
+        logger.info("Demo: write waveforms to tasks")
         pass
 
     def start_tasks(self):
         """Demo: starts the tasks for camera triggering and analog outputs. """
+        logger.info("Demo: start tasks")
         pass
 
     def run_tasks(self):
         """Demo: runs the tasks for triggering, analog and counter outputs. """
+        logger.info("Demo: run tasks")
         time.sleep(self.state['sweeptime'])
 
     def stop_tasks(self):
         """"Demo: stop tasks"""
+        logger.info("Demo: stop tasks")
         pass
 
     def close_tasks(self):
         """Demo: closes the tasks for triggering, analog and counter outputs. """
+        logger.info("Demo: close tasks")
         pass
