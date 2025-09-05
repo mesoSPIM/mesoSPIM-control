@@ -13,4 +13,4 @@ qdarkstyle==2.8.1
 npy2bdv==1.0.8
 future==1.0.0
 matplotlib==3.9.2
-
+psutil>=7.0.0
