@@ -16,6 +16,7 @@ except:
 '''
 
 from .utils.acquisitions import AcquisitionList, Acquisition
+from .utils.utility_functions import log_cpu_core
 
 
 class mesoSPIM_Camera(QtCore.QObject):
@@ -170,6 +171,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
                 logger.debug(f'Adding images to series')
+                log_cpu_core(logger, msg='add_images_to_series()')
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
                 self.frame_queue.extend(images) # push the list of images into queue
@@ -199,6 +201,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot(bool)
     def snap_image(self, write_flag=True):
         """"Snap an image and display it"""
+        log_cpu_core(logger, msg='snap_image()')
         image = np.rot90(self.camera.get_image())
         self.frame_queue_display.append(image) # push the first image into the display queue
         logger.info(f"Image appended to display queue: len(frame_queue_display)={len(self.frame_queue_display)}")
@@ -216,7 +219,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot()
     def get_live_image(self):
         images = self.camera.get_live_image()
-
+        log_cpu_core(logger, msg='get_live_image()')
         for image in images:
             self.frame_queue_display.append(np.rot90(image)) # push the first image into the display queue
             self.sig_camera_frame.emit() # signal the GUI to update the display

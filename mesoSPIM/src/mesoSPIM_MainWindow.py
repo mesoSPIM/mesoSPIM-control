@@ -19,6 +19,7 @@ from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
+from .utils.utility_functions import log_cpu_core
 
 logger = logging.getLogger(__name__)
 

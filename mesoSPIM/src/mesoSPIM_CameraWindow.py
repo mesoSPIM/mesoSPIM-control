@@ -8,6 +8,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 import pyqtgraph as pg
 from .utils.optimization import shannon_dct
+from .utils.utility_functions import log_cpu_core
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     #@QtCore.pyqtSlot(np.ndarray) # deprecated due to slow performance
     def set_image(self, image):
+        log_cpu_core(logger, msg='set_image()')
         logger.debug(f"setImage() with shape {image.shape} started")
         if self.state['state'] in ('live', 'idle'):
             subsampling_ratio = self.state['camera_display_live_subsampling']

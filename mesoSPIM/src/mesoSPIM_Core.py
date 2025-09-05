@@ -36,7 +36,7 @@ from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_Dem
 from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores
+from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores, log_cpu_core
 
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -527,6 +527,7 @@ class mesoSPIM_Core(QtCore.QObject):
         but there is additional overhead due to the need to write the
         waveforms into the buffers of the NI cards.
         '''
+        log_cpu_core(logger, msg='snap_image()')
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
@@ -546,6 +547,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def snap_image_in_series(self, laser_blanking=True):
         '''Snaps and image from a series without waveform update'''
+        log_cpu_core(logger, msg='snap_image_in_series()')
         laser = self.state['laser']
         if laser_blanking:
             self.laserenabler.enable(laser)
@@ -557,6 +559,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
+        log_cpu_core(logger, msg='close_image_series()')
         self.waveformer.close_tasks()
         logger.debug("close_image_series() finished")
 

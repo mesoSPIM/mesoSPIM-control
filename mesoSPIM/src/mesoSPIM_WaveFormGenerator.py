@@ -17,6 +17,7 @@ from nidaqmx.types import CtrTime
 
 '''mesoSPIM imports'''
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
+from .utils.utility_functions import log_cpu_core
 
 from PyQt5 import QtCore
 
