@@ -129,10 +129,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core_thread = QtCore.QThread()
         # Entry point: Work on thread affinity here
         self.core = mesoSPIM_Core(self.cfg, self)
-
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        self.core.serial_worker.moveToThread(self.core_thread) # Makes the move buttons freeze the SW, avoid
+        self.core.serial_worker.moveToThread(self.core_thread) # Made the move buttons freeze the SW on Benchtop systems, possibly flawed.
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()

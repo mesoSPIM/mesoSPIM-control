@@ -56,6 +56,11 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
         self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
+        if 'camera_display_temporal_subsampling' in self.cfg.startup.keys():
+            self.camera_display_temporal_subsampling = self.cfg.startup['camera_display_temporal_subsampling']
+        else:
+            self.camera_display_temporal_subsampling = 2
+        logger.debug(f'Camera display temporal subsampling factor: {self.camera_display_temporal_subsampling}')
 
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler) # from mesoSPIM_Core() to mesoSPIM_Camera()
@@ -175,12 +180,13 @@ class mesoSPIM_Camera(QtCore.QObject):
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
                 self.frame_queue.extend(images) # push the list of images into queue
-                self.frame_queue_display.append(np.rot90(images[0])) # push the first image into the display queue
-                self.sig_camera_frame.emit() # signal the GUI to update the display
+                # show an image every other timepoint to prevent GUI freezing in long acquisitions
+                if self.cur_image % self.camera_display_temporal_subsampling == 0:
+                    self.frame_queue_display.append(np.rot90(images[0])) # push the first image into the display queue
+                    self.sig_camera_frame.emit() # signal the GUI to update the display
                 # tell the image writer to write the images in queue
                 self.sig_write_images.emit(acq, acq_list)
                 self.cur_image += len(images)
-
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):

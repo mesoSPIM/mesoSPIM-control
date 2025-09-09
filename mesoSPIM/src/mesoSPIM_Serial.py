@@ -40,6 +40,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent = parent
         self.cfg = parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
+        self.stage_limits_warning = False
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
@@ -149,8 +150,11 @@ class mesoSPIM_Serial(QtCore.QObject):
                 condition = f"(self.stage.{axis}_min < self.stage.{axis}_pos + {safety_margin_n_moves} * sdict['{key}'] < self.stage.{axis}_max)"
                 if not eval(condition):
                     self.send_status_message(f'Relative movement stopped: {axis} motion limit would be reached!')
+                    self.stage_limits_warning = True
                     return False
-        self.send_status_message('')
+        if self.stage_limits_warning: # clear previous warning message
+            self.send_status_message('') 
+            self.stage_limits_warning = False
         return True
 
     @QtCore.pyqtSlot(dict)

@@ -365,13 +365,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_filter(self, filter, wait_until_done=False):
-        self.send_status_message_to_gui('Setting filter to '+filter)
+        self.send_status_message_to_gui('Filter changed to '+filter)
         if wait_until_done:
             logger.debug('Setting filter to '+filter)
             self.serial_worker.set_filter(filter, wait_until_done=True)
             logger.debug('Done setting filter to '+filter)
         else:
             self.sig_state_request.emit({'filter': filter})
+        self.send_status_message_to_gui('')
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
@@ -709,8 +710,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
             if self.state['zoom'] != acq_list[0]['zoom']:
                 self.set_zoom(acq_list[0]['zoom'], update_etl=False)
-            ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+            ''' This is for the GUI to update properly'''
+            QtWidgets.QApplication.processEvents()
 
             self.sig_state_request.emit({'etl_l_amplitude' : acq_list[0]['etl_l_amplitude']})
             self.sig_state_request.emit({'etl_r_amplitude' : acq_list[0]['etl_r_amplitude']})
@@ -795,8 +796,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
-        ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+        ''' This is for the GUI to update properly'''
+        QtWidgets.QApplication.processEvents()
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
@@ -857,7 +858,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     time.sleep(0.02)
                     QtWidgets.QApplication.processEvents()
                 
-                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 10)
+                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                 self.image_count += 1
 
                 ''' Keep track of passed time and predict remaining time '''
@@ -868,14 +869,15 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     self.state['current_framerate'] = self.image_count / time_passed
 
-                self.send_progress(self.acquisition_count,
-                                   self.total_acquisition_count,
-                                   i,
-                                   steps,
-                                   self.total_image_count,
-                                   self.image_count,
-                                   convert_seconds_to_string(time_passed),
-                                   convert_seconds_to_string(time_remaining))
+                if (self.image_count % 5 == 0) or (self.total_image_count % (self.image_count + 1) == 0):
+                    self.send_progress(self.acquisition_count,
+                                    self.total_acquisition_count,
+                                    i + 1,
+                                    steps,
+                                    self.total_image_count,
+                                    self.image_count + 1,
+                                    convert_seconds_to_string(time_passed),
+                                    convert_seconds_to_string(time_remaining))
         self.laserenabler.disable_all()
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
