@@ -869,7 +869,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     self.state['current_framerate'] = self.image_count / time_passed
 
-                if (self.image_count % 5 == 0) or (self.total_image_count % (self.image_count + 1) == 0):
+                if ((self.image_count + 1) % 5 == 0) or (self.total_image_count % (self.image_count + 1) == 0):
                     self.send_progress(self.acquisition_count,
                                     self.total_acquisition_count,
                                     i + 1,
