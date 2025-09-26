@@ -1,3 +1,9 @@
+## Release candidate 2025 
+### Bugfixes :bug: 
+- fixed autofocus (AF) function in the GUI.
+- returned `'camera_display_live_subsampling': 2, ` and `'camera_display_acquisition_subsampling': 2,` into the config file, to reduce load on older computers
+
+
 ## Release March 2025 [1.11.0].
 ### Performance :rocket:
 - implementation of time lapse function via script. See example script at `mesoSPIM/scripts/timelapse.py` for details.

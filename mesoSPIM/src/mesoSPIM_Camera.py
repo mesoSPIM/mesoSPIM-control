@@ -16,6 +16,7 @@ except:
 '''
 
 from .utils.acquisitions import AcquisitionList, Acquisition
+from .utils.utility_functions import log_cpu_core
 
 
 class mesoSPIM_Camera(QtCore.QObject):
@@ -53,8 +54,13 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera_line_interval = self.cfg.startup['camera_line_interval']
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
-        #self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
-        #self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
+        self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
+        self.camera_display_acquisition_subsampling = self.cfg.startup['camera_display_acquisition_subsampling']
+        if 'camera_display_temporal_subsampling' in self.cfg.startup.keys():
+            self.camera_display_temporal_subsampling = self.cfg.startup['camera_display_temporal_subsampling']
+        else:
+            self.camera_display_temporal_subsampling = 2
+        logger.debug(f'Camera display temporal subsampling factor: {self.camera_display_temporal_subsampling}')
 
         ''' Wiring signals '''
         self.parent.sig_state_request.connect(self.state_request_handler) # from mesoSPIM_Core() to mesoSPIM_Camera()
@@ -94,8 +100,8 @@ class mesoSPIM_Camera(QtCore.QObject):
             if key in ('camera_exposure_time',
                         'camera_line_interval',
                         'state',
-                        #'camera_display_live_subsampling',
-                        #'camera_display_acquisition_subsampling',
+                        'camera_display_live_subsampling',
+                        'camera_display_acquisition_subsampling',
                         'camera_binning'):
                 exec('self.set_'+key+'(value)')
             elif key == 'state':
@@ -120,7 +126,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera.set_exposure_time(time)
         self.camera_exposure_time = time
         self.state['camera_exposure_time'] = time
-        self.sig_update_gui_from_state.emit()
+        #self.sig_update_gui_from_state.emit()
 
     def set_camera_line_interval(self, time):
         '''
@@ -132,15 +138,15 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.camera.set_line_interval(time)
         self.camera_line_interval = time
         self.state['camera_line_interval'] = time
-        self.sig_update_gui_from_state.emit()
+        #self.sig_update_gui_from_state.emit()
 
-    # def set_camera_display_live_subsampling(self, factor):
-    #     self.camera_display_live_subsampling = factor
-    #     self.state['camera_display_live_subsampling'] = factor
+    def set_camera_display_live_subsampling(self, factor):
+        self.camera_display_live_subsampling = factor
+        self.state['camera_display_live_subsampling'] = factor
 
-    # def set_camera_display_acquisition_subsampling(self, factor):
-    #     self.camera_display_acquisition_subsampling = factor
-    #     self.state['camera_display_acquisition_subsampling'] = factor
+    def set_camera_display_acquisition_subsampling(self, factor):
+        self.camera_display_acquisition_subsampling = factor
+        self.state['camera_display_acquisition_subsampling'] = factor
 
     def set_camera_binning(self, value):
         logger.info('Setting camera binning: '+value)
@@ -170,15 +176,17 @@ class mesoSPIM_Camera(QtCore.QObject):
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
                 logger.debug(f'Adding images to series')
+                log_cpu_core(logger, msg='add_images_to_series()')
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
                 self.frame_queue.extend(images) # push the list of images into queue
-                self.frame_queue_display.append(np.rot90(images[0])) # push the first image into the display queue
-                self.sig_camera_frame.emit() # signal the GUI to update the display
+                # show an image every other timepoint to prevent GUI freezing in long acquisitions
+                if self.cur_image % self.camera_display_temporal_subsampling == 0:
+                    self.frame_queue_display.append(np.rot90(images[0])) # push the first image into the display queue
+                    self.sig_camera_frame.emit() # signal the GUI to update the display
                 # tell the image writer to write the images in queue
                 self.sig_write_images.emit(acq, acq_list)
                 self.cur_image += len(images)
-
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_image_series(self, acq, acq_list):
@@ -199,8 +207,10 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot(bool)
     def snap_image(self, write_flag=True):
         """"Snap an image and display it"""
+        log_cpu_core(logger, msg='snap_image()')
         image = np.rot90(self.camera.get_image())
         self.frame_queue_display.append(image) # push the first image into the display queue
+        logger.info(f"Image appended to display queue: len(frame_queue_display)={len(self.frame_queue_display)}")
         self.sig_camera_frame.emit() # signal the GUI to update the display
         if write_flag:
             self.parent.image_writer.write_snap_image(image) # Dangerous, not thread safe!
@@ -215,7 +225,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     @QtCore.pyqtSlot()
     def get_live_image(self):
         images = self.camera.get_live_image()
-
+        log_cpu_core(logger, msg='get_live_image()')
         for image in images:
             self.frame_queue_display.append(np.rot90(image)) # push the first image into the display queue
             self.sig_camera_frame.emit() # signal the GUI to update the display

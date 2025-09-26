@@ -36,7 +36,7 @@ from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_Dem
 from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores
+from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores, log_cpu_core
 
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -196,8 +196,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
-        #self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
-        #self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
+        self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
+        self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
 
         self.start_time = 0
         self.stopflag = False
@@ -277,8 +277,8 @@ class mesoSPIM_Core(QtCore.QObject):
                        'laser_r_max_amplitude',
                        'camera_delay_%',
                        'camera_pulse_%',
-                       #'camera_display_live_subsampling',
-                       #'camera_display_acquisition_subsampling',
+                       'camera_display_live_subsampling',
+                       'camera_display_acquisition_subsampling',
                        'camera_sensor_mode',
                        'camera_binning',
                        'galvo_amp_scale_w_zoom',
@@ -365,20 +365,23 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_filter(self, filter, wait_until_done=False):
-        self.send_status_message_to_gui('Setting filter to '+filter)
+        self.send_status_message_to_gui('Filter changed to '+filter)
         if wait_until_done:
             logger.debug('Setting filter to '+filter)
             self.serial_worker.set_filter(filter, wait_until_done=True)
             logger.debug('Done setting filter to '+filter)
         else:
             self.sig_state_request.emit({'filter': filter})
+        self.send_status_message_to_gui('')
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
         self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
         # Move to the objective exchange position if necessary
         f_pos_old = None
+        self.parent.ZoomComboBox.setEnabled(False)
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+            self.sig_warning.emit('Please wait until the zoom change is complete')
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))
             self.send_status_message_to_gui('Moving to objective exchange position')
@@ -391,6 +394,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.send_status_message_to_gui('Moving to the focus position')
             self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done, use_internal_position=True)
         self.send_status_message_to_gui('Magnification (zoom) changed')
+        self.parent.ZoomComboBox.setEnabled(True)
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
         
@@ -524,6 +528,7 @@ class mesoSPIM_Core(QtCore.QObject):
         but there is additional overhead due to the need to write the
         waveforms into the buffers of the NI cards.
         '''
+        log_cpu_core(logger, msg='snap_image()')
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
@@ -543,6 +548,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def snap_image_in_series(self, laser_blanking=True):
         '''Snaps and image from a series without waveform update'''
+        log_cpu_core(logger, msg='snap_image_in_series()')
         laser = self.state['laser']
         if laser_blanking:
             self.laserenabler.enable(laser)
@@ -554,6 +560,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
+        log_cpu_core(logger, msg='close_image_series()')
         self.waveformer.close_tasks()
         logger.debug("close_image_series() finished")
 
@@ -703,8 +710,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
             if self.state['zoom'] != acq_list[0]['zoom']:
                 self.set_zoom(acq_list[0]['zoom'], update_etl=False)
-            ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+            ''' This is for the GUI to update properly'''
+            QtWidgets.QApplication.processEvents()
 
             self.sig_state_request.emit({'etl_l_amplitude' : acq_list[0]['etl_l_amplitude']})
             self.sig_state_request.emit({'etl_r_amplitude' : acq_list[0]['etl_r_amplitude']})
@@ -789,8 +796,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
-        ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+        ''' This is for the GUI to update properly'''
+        QtWidgets.QApplication.processEvents()
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
@@ -851,7 +858,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     time.sleep(0.02)
                     QtWidgets.QApplication.processEvents()
                 
-                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 10)
+                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                 self.image_count += 1
 
                 ''' Keep track of passed time and predict remaining time '''
@@ -862,14 +869,15 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     self.state['current_framerate'] = self.image_count / time_passed
 
-                self.send_progress(self.acquisition_count,
-                                   self.total_acquisition_count,
-                                   i,
-                                   steps,
-                                   self.total_image_count,
-                                   self.image_count,
-                                   convert_seconds_to_string(time_passed),
-                                   convert_seconds_to_string(time_remaining))
+                if ((self.image_count + 1) % 5 == 0) or (self.total_image_count % (self.image_count + 1) == 0):
+                    self.send_progress(self.acquisition_count,
+                                    self.total_acquisition_count,
+                                    i + 1,
+                                    steps,
+                                    self.total_image_count,
+                                    self.image_count + 1,
+                                    convert_seconds_to_string(time_passed),
+                                    convert_seconds_to_string(time_remaining))
         self.laserenabler.disable_all()
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")

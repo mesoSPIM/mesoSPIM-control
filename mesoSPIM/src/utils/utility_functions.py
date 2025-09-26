@@ -1,6 +1,12 @@
 '''
 Contains a variety of mesoSPIM utility functions
 '''
+import os
+import psutil
+import ctypes
+
+# Windows API binding
+GetCurrentProcessorNumber = ctypes.windll.kernel32.GetCurrentProcessorNumber
 
 def convert_seconds_to_string(delta_t):
     '''
@@ -61,3 +67,10 @@ def replace_with_underscores(string):
     ''' Replaces spaces and slashes with underscores '''
     s = string.replace(' ', '_').replace('/', '_')
     return s
+
+def log_cpu_core(logger, msg=""):
+    pid = os.getpid()
+    proc = psutil.Process(pid)
+    #core = proc.cpu_num()  # returns the current logical CPU number. Linux only.
+    core = GetCurrentProcessorNumber()  # Windows only.
+    logger.debug(f"{msg} running on logical CPU core: {core}")

@@ -19,6 +19,7 @@ from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
+from .utils.utility_functions import log_cpu_core
 
 logger = logging.getLogger(__name__)
 
@@ -128,10 +129,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core_thread = QtCore.QThread()
         # Entry point: Work on thread affinity here
         self.core = mesoSPIM_Core(self.cfg, self)
-
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        #self.core.serial_worker.moveToThread(self.core_thread) # Makes the move buttons freeze the SW, avoid
+        self.core.serial_worker.moveToThread(self.core_thread) # Made the move buttons freeze the SW on Benchtop systems, possibly flawed.
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -521,8 +521,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
         self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
         # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
-        #self.connect_combobox_to_state_parameter(self.LiveSubSamplingComboBox,subsampling_list,'camera_display_live_subsampling', int_conversion = True)
-        #self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
+        self.connect_combobox_to_state_parameter(self.LiveSubSamplingComboBox,subsampling_list,'camera_display_live_subsampling', int_conversion = True)
+        self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
         # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 

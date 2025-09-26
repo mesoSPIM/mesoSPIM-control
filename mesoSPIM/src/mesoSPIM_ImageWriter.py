@@ -13,7 +13,7 @@ from PyQt5 import QtCore
 from distutils.version import StrictVersion
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores
+from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -157,7 +157,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     def image_to_disk(self, acq, acq_list, image):
         logger.debug('image_to_disk() started') 
-        self.parent.sig_status_message.emit('Writing to disk...')
+        log_cpu_core(logger, msg='image_to_disk()')
+        if self.cur_image_counter % 5 == 0:
+            self.parent.sig_status_message.emit('Writing to disk...')
         xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
         if self.file_extension == '.h5':
             self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,

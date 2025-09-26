@@ -3276,7 +3276,7 @@ Focus</string>
               <x>10</x>
               <y>310</y>
               <width>431</width>
-              <height>121</height>
+              <height>131</height>
              </rect>
             </property>
             <property name="font">
@@ -3291,7 +3291,7 @@ Focus</string>
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>30</y>
+               <y>40</y>
                <width>81</width>
                <height>81</height>
               </rect>
@@ -3313,7 +3313,7 @@ Focus</string>
              <property name="geometry">
               <rect>
                <x>100</x>
-               <y>30</y>
+               <y>40</y>
                <width>321</width>
                <height>81</height>
               </rect>
@@ -3330,6 +3330,71 @@ Focus</string>
               <bool>true</bool>
              </property>
             </widget>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_3">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>440</y>
+              <width>401</width>
+              <height>151</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+             </font>
+            </property>
+            <property name="title">
+             <string>Display Subsampling</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_5">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_48">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>During Live display</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="LiveSubSamplingComboBox">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_56">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>During Acquisitions</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="currentIndex">
+                <number>-1</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </widget>
           <widget class="QWidget" name="AlignmentTabWidget">

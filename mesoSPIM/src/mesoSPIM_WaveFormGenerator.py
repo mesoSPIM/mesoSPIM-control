@@ -17,6 +17,7 @@ from nidaqmx.types import CtrTime
 
 '''mesoSPIM imports'''
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
+from .utils.utility_functions import log_cpu_core
 
 from PyQt5 import QtCore
 
@@ -88,6 +89,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
         for key, value in zip(dict.keys(), dict.values()):
+            logger.debug(f"state change: {key}: {value}")
             if key in ('samplerate',
                        'sweeptime',
                        'intensity',
@@ -117,32 +119,26 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                        'laser_r_delay_%',
                        'laser_r_pulse_%',
                        'laser_r_max_amplitude',
-                        'laser',
+                       'laser',
                        'camera_delay_%',
                        'camera_pulse_%',
                        'shutterconfig',
                        ):
                 self.state[key] = value
-                self.create_waveforms()
+                self.create_waveforms() # no GUI update feeding back, one-way signal from the GUI to the hardware
             elif key == 'zoom':
                 self.state[key] = value
                 self.rescale_galvo_amplitude_by_zoom(float(value.split('x')[0])) # truncate and convert string eg '1.2x BlahBlah' -> 1.2
                 self.create_waveforms()
             elif key == 'ETL_cfg_file':
                 self.state[key] = value
-                self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom'])
+                self.update_etl_parameters_from_csv(value, self.state['laser'], self.state['zoom']) # feeding back state change to the GUI
             elif key == 'set_etls_according_to_zoom':
-                self.update_etl_parameters_from_zoom(value)
+                self.update_etl_parameters_from_zoom(value) # feeding back state change to the GUI
             elif key == 'set_etls_according_to_laser':
-                self.update_etl_parameters_from_laser(value)
-            elif key == 'state':
-                if value == 'live':
-                    logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
-            self.sig_update_gui_from_state.emit() 
-
-    def calculate_samples(self):
-        samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
-        self.samples = int(samplerate*sweeptime)
+                self.update_etl_parameters_from_laser(value) # feeding back state change to the GUI
+            else:
+                pass
 
     def create_waveforms(self):
         logger.info("waveforms updated")
@@ -152,6 +148,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''Bundle everything'''
         self.bundle_galvo_and_etl_waveforms()
         self.create_laser_waveforms()
+        #self.sig_update_gui_from_state.emit() # not necessary, and to minimize looping between state changes and GUI
+
+    def calculate_samples(self):
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
+        self.samples = int(samplerate*sweeptime)
 
     def create_etl_waveforms(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
@@ -518,6 +519,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         Warning: `master_trigger_task` does not have explicit sample rate, because some cards like NI-6733 do not support this for DO lines.
         So the master pulse duration varies depening on the device. Can be as short as small as 1 micro-second!
         """
+        logger.debug("Starting master trigger")
         self.master_trigger_task.write([False, True, True, True, True, True, False], auto_start=True)
 
         '''Wait until everything is done - this is effectively a sleep function.'''
@@ -532,6 +534,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""
+        logger.debug("Stopping tasks")
         if self.ao_cards == 2:
             self.galvo_etl_task.stop()
             self.laser_task.stop()
@@ -546,6 +549,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         """Closes the tasks for triggering, analog and counter outputs.
         Tasks should only be closed are they are stopped.
         """
+        logger.debug("Closing tasks")
         if self.ao_cards == 2:
             self.galvo_etl_task.close()
             self.laser_task.close()
@@ -566,6 +570,7 @@ class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
 
     def create_tasks(self):
         """"Demo version of the actual DAQmx-based function."""
+        logger.debug("Demo: create tasks")
         self.calculate_samples()
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate','sweeptime'])
         camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%','camera_delay_%'])
@@ -574,20 +579,25 @@ class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
 
     def write_waveforms_to_tasks(self):
         """Demo: write the waveforms to the slave tasks """
+        logger.debug("Demo: write waveforms to tasks")
         pass
 
     def start_tasks(self):
         """Demo: starts the tasks for camera triggering and analog outputs. """
+        logger.debug("Demo: start tasks")
         pass
 
     def run_tasks(self):
         """Demo: runs the tasks for triggering, analog and counter outputs. """
+        logger.debug("Demo: run tasks")
         time.sleep(self.state['sweeptime'])
 
     def stop_tasks(self):
         """"Demo: stop tasks"""
+        logger.debug("Demo: stop tasks")
         pass
 
     def close_tasks(self):
         """Demo: closes the tasks for triggering, analog and counter outputs. """
+        logger.debug("Demo: close tasks")
         pass
