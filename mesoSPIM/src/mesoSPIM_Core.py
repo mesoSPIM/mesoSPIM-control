@@ -95,7 +95,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state'] = 'init'
 
         self.frame_queue = deque([])
-        self.frame_queue_display = deque([], maxlen=1)    
+        self.frame_queue_display = deque([], maxlen=1)
 
         ''' The signal-slot switchboard '''
         # Note the name duplication (shadowing)!!
@@ -397,7 +397,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.ZoomComboBox.setEnabled(True)
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
-        
+
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):
@@ -464,7 +464,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def open_shutters(self):
         '''Here the left/right mode is hacked in
         If shutterswitch = True in the config:
-        Assumes that the shutter_left line is the general shutter 
+        Assumes that the shutter_left line is the general shutter
         and the shutter_right line is the left/right switch (Right==True)
         '''
         shutterconfig = self.state['shutterconfig']
@@ -478,7 +478,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.shutter_right.close()
             else:
                 self.shutter_left.open() # open the general shutter
-                self.shutter_right.close() # set side-switch to false 
+                self.shutter_right.close() # set side-switch to false
 
         elif shutterconfig == 'Right':
             if self.shutterswitch is False:
@@ -497,7 +497,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def close_shutters(self):
         '''
         If shutterswitch = True in the config:
-        Assumes that the shutter_left line is the general shutter 
+        Assumes that the shutter_left line is the general shutter
         and the shutter_right line is the left/right switch (Right==True)
         '''
         if self.shutterswitch is False:
@@ -505,7 +505,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.shutter_right.close()
         else:
             self.shutter_left.close()
-        
+
         self.state['shutterstate'] = False
 
     '''
@@ -595,7 +595,7 @@ class mesoSPIM_Core(QtCore.QObject):
         else:
             acquisition = self.state['acq_list'][row]
             acq_list = AcquisitionList([acquisition])
-            
+
         nonexisting_folders_list = acq_list.check_for_nonexisting_folders()
         filename_list = acq_list.check_for_existing_filenames()
         duplicates_list = acq_list.check_for_duplicated_filenames()
@@ -641,7 +641,7 @@ class mesoSPIM_Core(QtCore.QObject):
             print(f"Free disk {disk_name} space {format_data_size(free_bytes.value)}")
             return free_bytes.value
         else: # non-Windows case, untested!
-            st = os.statvfs(disk_name)
+            st = os.statvfs('/')
             return st.f_bavail * st.f_frsize
 
     def get_required_disk_space(self, acq_list):
@@ -650,7 +650,7 @@ class mesoSPIM_Core(QtCore.QObject):
         px_per_image = self.camera_worker.x_pixels * self.camera_worker.y_pixels
         total_bytes_required = acq_list.get_image_count() * px_per_image * BYTES_PER_PIXEL
         return total_bytes_required
-    
+
     def check_motion_limits(self, acq_list):
         """
         Check if the motion limits of the stage are violated for each acquisition in the given list.
@@ -676,7 +676,7 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 continue
         return unsafe_list
-            
+
     def prepare_acquisition_list(self, acq_list):
         ''' Housekeeping: Prepare the acquisition list '''
         self.image_count = 0
@@ -786,7 +786,7 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Check if sample has to be rotated, allow some tolerance '''
         if current_rotation > target_rotation+0.1 or current_rotation < target_rotation-0.1:
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
-        
+
         self.move_absolute(startpoint, wait_until_done=True)
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
@@ -857,7 +857,7 @@ class mesoSPIM_Core(QtCore.QObject):
                 while self.pauseflag is True:
                     time.sleep(0.02)
                     QtWidgets.QApplication.processEvents()
-                
+
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                 self.image_count += 1
 
@@ -973,7 +973,7 @@ class mesoSPIM_Core(QtCore.QObject):
     def list_to_string_with_carriage_return(self, input_list):
         mystring = ''
         for i in input_list:
-            mystring = mystring + ' \n ' + i    
+            mystring = mystring + ' \n ' + i
         return mystring
 
     def read_config_parameter(self, key, dictionary):
@@ -1006,7 +1006,7 @@ class mesoSPIM_Core(QtCore.QObject):
             write_line(file)
 
     def run_time_lapse(self, tpoints=1, time_interval_sec=60):
-        '''A quick and dirty implementation of time lapse via recursive function.'''	
+        '''A quick and dirty implementation of time lapse via recursive function.'''
         if self.time_counter >= tpoints:
             print("Timer sequence finished")
             self.time_counter = 0

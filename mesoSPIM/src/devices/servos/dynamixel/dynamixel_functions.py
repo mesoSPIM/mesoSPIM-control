@@ -39,7 +39,14 @@ from ctypes import cdll
 import os.path
 
 # stupid workaround for the problem that ctypes only loads from an absolute path, not a relative one
-dll_name = "dxl_x64_c.dll"
+
+if os.name == 'nt':
+    # Windows
+    dll_name = "dxl_x64_c.dll"
+else:
+    # Linux
+    dll_name = "libdxl_x64_c.so"
+
 dllabspath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + dll_name
 #myDll = ctypes.CDLL(dllabspath)
 dxl_lib = cdll.LoadLibrary(dllabspath)
@@ -76,10 +83,10 @@ isPacketTimeout = dxl_lib.isPacketTimeout
 # packet_handler
 packetHandler = dxl_lib.packetHandler
 
-printTxRxResult = dxl_lib.printTxRxResult
+# printTxRxResult = dxl_lib.printTxRxResult -> deprecated function
 getTxRxResult = dxl_lib.getTxRxResult
 getTxRxResult.restype = ctypes.c_char_p
-printRxPacketError = dxl_lib.printRxPacketError
+# printRxPacketError = dxl_lib.printRxPacketError  -> deprecated function
 getRxPacketError = dxl_lib.getRxPacketError
 getRxPacketError.restype = ctypes.c_char_p
 

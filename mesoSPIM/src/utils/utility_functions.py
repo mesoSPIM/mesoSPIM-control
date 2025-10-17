@@ -6,7 +6,9 @@ import psutil
 import ctypes
 
 # Windows API binding
-GetCurrentProcessorNumber = ctypes.windll.kernel32.GetCurrentProcessorNumber
+if os.name == 'nt':
+    # Windows
+    GetCurrentProcessorNumber = ctypes.windll.kernel32.GetCurrentProcessorNumber
 
 def convert_seconds_to_string(delta_t):
     '''
@@ -71,6 +73,6 @@ def replace_with_underscores(string):
 def log_cpu_core(logger, msg=""):
     pid = os.getpid()
     proc = psutil.Process(pid)
-    #core = proc.cpu_num()  # returns the current logical CPU number. Linux only.
-    core = GetCurrentProcessorNumber()  # Windows only.
+    core = proc.cpu_num()  # returns the current logical CPU number. Linux only.
+    #core = GetCurrentProcessorNumber()  # Windows only.
     logger.debug(f"{msg} running on logical CPU core: {core}")
