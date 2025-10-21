@@ -13,7 +13,8 @@ from PyQt5 import QtCore
 from distutils.version import StrictVersion
 import npy2bdv
 from ngio import create_empty_ome_zarr
-import dask.array as da
+from ngio.tables import GenericTable
+import pandas as pd
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
 
@@ -137,11 +138,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         elif self.file_extension == '.zarr':
             shape = (acq_list.get_n_lasers(), self.max_frame, self.x_pixels, self.y_pixels)
-            print(shape)
 
             px_size_um = self.cfg.pixelsize[acq['zoom']]
-            print(acq_list.find_value_index(acq['laser'], 'laser'))
-            print(acq['laser'])
 
             if acq == acq_list[0]:
                 self.omezarr = create_empty_ome_zarr(
@@ -155,6 +153,43 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                         channel_labels=acq_list.get_unique_attr_list('laser'),
                                         channel_wavelengths=acq_list.get_unique_attr_list('laser'),
                                         overwrite=True)
+
+                columns = [
+                    "laser_nm",
+                    "intensity_percent",
+                    "zoom",
+                    "pixel_size_um",
+                    "filter",
+                    "shutter",
+                    "x_pos",
+                    "y_pos",
+                    "f_start",
+                    "f_end",
+                    "z_start",
+                    "z_end",
+                    "z_stepsize",
+                    "z_planes",
+                    "rotation_deg",
+                    "etl_cfg_file",
+                    "etl_l_offset",
+                    "etl_l_amplitude",
+                    "etl_r_offset",
+                    "etl_r_amplitude",
+                    "galvo_l_frequency",
+                    "galvo_l_amplitude",
+                    "galvo_l_offset",
+                    "galvo_r_offset",
+                    "camera_type",
+                    "camera_exposure_s",
+                    "camera_line_interval_s",
+                    "x_pixels",
+                    "y_pixels",
+                ]
+
+                metadata_df = pd.DataFrame(columns=columns)
+
+                metadata_table = GenericTable(table_data=metadata_df)
+                self.omezarr.add_table("metadata", metadata_table, overwrite=True)
 
             self.dask_image = self.omezarr.get_image("0").get_as_dask()
 
@@ -209,7 +244,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
                                     metadata={'spacing': acq['z_step'], 'unit': 'um'})
         elif self.file_extension == '.zarr':
-            print(self.acq_list.find_value_index(acq['laser'], 'laser'))
             self.dask_image[acq_list.find_value_index(acq['laser'], 'laser'),self.cur_image_counter,...] = image
 
         if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
@@ -346,8 +380,60 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.metadata_file = open(metadata_path, 'w')
             else:
                 self.metadata_file = open(metadata_path, 'a')
+        elif acq['filename'][-5:] == '.zarr':
+
+            row = {
+                "laser_nm": acq['laser'],
+                "intensity_percent": acq['intensity'],
+                "zoom": acq['zoom'],
+                "pixel_size_um": self.state['pixelsize'],
+                "filter": acq['filter'],
+                "shutter": acq['shutterconfig'],
+                "x_pos": acq['x_pos'],
+                "y_pos": acq['y_pos'],
+                "f_start": acq['f_start'],
+                "f_end": acq['f_end'],
+                "z_start": acq['z_start'],
+                "z_end": acq['z_end'],
+                "z_stepsize": acq['z_step'],
+                "z_planes": acq.get_image_count(),
+                "rotation_deg": acq['rot'],
+                "etl_cfg_file": self.state['ETL_cfg_file'],
+                "etl_l_offset": self.state['etl_l_offset'],
+                "etl_l_amplitude": self.state['etl_l_amplitude'],
+                "etl_r_offset": self.state['etl_r_offset'],
+                "etl_r_amplitude": self.state['etl_r_amplitude'],
+                "galvo_l_frequency": self.state['galvo_l_frequency'],
+                "galvo_l_amplitude": self.state['galvo_l_amplitude'],
+                "galvo_l_offset": self.state['galvo_l_offset'],
+                "galvo_r_offset": self.state['galvo_r_offset'],
+                "camera_type": self.cfg.camera,
+                "camera_exposure_s": self.state['camera_exposure_time'],
+                "camera_line_interval_s": self.state['camera_line_interval'],
+                "x_pixels": self.cfg.camera_parameters['x_pixels'],
+                "y_pixels": self.cfg.camera_parameters['y_pixels'],
+            }
+
+            new_row = pd.DataFrame([row])
+
+            metadata_table = self.omezarr.get_table('metadata')
+            print(metadata_table)
+
+            if acq == acq_list[0]:
+                self.metadata_file = open(metadata_path, 'w')
+                metadata_table.set_table_data(new_row)
+            else:
+                self.metadata_file = open(metadata_path, 'a')
+                updated_metadata_table = pd.concat(
+                    [metadata_table.dataframe, new_row],
+                    ignore_index=True)
+                metadata_table.set_table_data(updated_metadata_table)
+
+            self.omezarr.add_table("metadata", metadata_table, overwrite=True)
+
         else:
             self.metadata_file = open(metadata_path, 'w')
+
 
         write_line(self.metadata_file, 'Metadata for file', path)
         write_line(self.metadata_file)
