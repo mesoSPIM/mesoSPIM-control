@@ -130,8 +130,8 @@ For a Photometrics Iris 15, the following parameters are necessary:
 
 camera_parameters = {'x_pixels' : 5056, 
                      'y_pixels' : 2960, 
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
+                     'x_pixel_size_in_microns' : 4.25,
+                     'y_pixel_size_in_microns' : 4.25,
                      'subsampling' : [1,2,4],
                      'speed_table_index': 0,
                      'exp_mode' : 'Edge Trigger', # Lots of options in PyVCAM --> see constants.py
