@@ -127,9 +127,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                     path=self.path,
                     max_workers=os.cpu_count() // 2,
                     chunk_scheme=scheme,
-                    compressor=compressor,  # keep off for max ingest speed
-                    # compressor=BloscCodec(cname="zstd", clevel=5, shuffle=BloscShuffle.bitshuffle),
-                    # compressor=BloscCodec(cname="lz4", clevel=1, shuffle=BloscShuffle.bitshuffle),
+                    compressor=compressor,
                     shard_shape=shard_shape,
                     flush_pad=FlushPad.DUPLICATE_LAST,  # keeps alignment, no RMW
                     async_close=async_finalize,
