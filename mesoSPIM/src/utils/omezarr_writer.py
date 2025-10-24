@@ -1,5 +1,3 @@
-#!/h20/home/lab/miniconda3/envs/mesospim_dev/bin/python -i
-
 import os, concurrent.futures
 from pathlib import Path
 import math
@@ -548,84 +546,5 @@ class Live3DPyramidWriter:
 
         # propagate upward with further XY decimation
         self._emit_next(level + 1, ds2_mean_uint16(out_3d))
-
-
-
-
-
-
-if __name__ == '__main__':
-    import time
-
-
-    file = '/CBI_FastStore/test_data/mesospim/04CL02_Zhao_Kidney_4x_561_ONLY_2_2_5/kidney_4_Tile6_Ch561_Sh0.btf'
-    voxel = (5.0, 2.0, 2.0) # microns (z,y,x)
-    file = "/CBI_FastStore/test_data/mesospim/120424/two_color_brain_8x_Tile14_Ch561_Sh0.btf"
-    voxel = (2.0, 1.0, 1.0) # microns (z,y,x)
-
-    image = mesospim_btf_helper(file)
-    image = image[:]
-    print(f'Shape of Image = {image.shape}')
-
-    Z_EST, Y, X  = image.shape
-
-    xy_levels = compute_xy_only_levels(voxel)
-    levels = plan_levels(Y, X, Z_EST, xy_levels, min_dim=64)
-
-    spec = PyramidSpec(
-        z_size_estimate=Z_EST,  # big upper bound; we'll truncate at the end
-        y=Y, x=X, levels=levels,
-        #xy_downsample_only=False  # set True if anisotropic Z (fastest)
-    )
-
-    # shard_shape = (128, 1024*4, 1024*4)
-    shard_shape = None
-
-    scheme = ChunkScheme(base=(256, 256, 256), target=(256, 256, 256))
-
-    with Live3DPyramidWriter(
-        spec,
-        voxel_size=voxel,
-        path="/CBI_FastStore/tmp/volume17.ome.zarr",
-        max_workers=os.cpu_count() // 2,
-        chunk_scheme=scheme,
-        # compressor=None,  # keep off for max ingest speed
-        compressor=BloscCodec(cname="zstd", clevel=5, shuffle=BloscShuffle.bitshuffle),
-        # compressor=BloscCodec(cname="lz4", clevel=1, shuffle=BloscShuffle.bitshuffle),
-        shard_shape=shard_shape,
-        flush_pad=FlushPad.DUPLICATE_LAST,  # keeps alignment, no RMW
-        async_close = False,
-    ) as writer:
-
-        start = time.time()
-        for k in range(image.shape[0]):  # your camera loop
-            frame = image[k]  # returns np.ndarray (Y,X) uint16
-            writer.push_slice(frame)
-            frames_per_sec = round(k / (time.time() - start), 2)
-            print(f'Frame per sec: {frames_per_sec}')
-    fut = writer.finalize_future
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
