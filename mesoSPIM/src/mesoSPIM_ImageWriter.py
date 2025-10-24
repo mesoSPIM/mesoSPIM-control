@@ -368,7 +368,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def write_metadata(self, acq, acq_list):
         logger.debug("write_metadata() started")
         ''' Writes a metadata.txt file. Path contains the file to be written '''
-        path = acq['folder'] + '/' + acq['filename']
+        path = acq['folder'] + '/' + self.filename
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
 
         if acq['filename'][-3:] == '.h5':
