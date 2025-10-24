@@ -94,12 +94,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 shards = self.cfg.ome_zarr['shards']
                 base_chunks = self.cfg.ome_zarr['base_chunks']
                 target_chunks = self.cfg.ome_zarr['target_chunks']
+                async_finalize = self.cfg.ome_zarr['async_finalize']
             else:
                 compression = 'zstd'
                 compression_level = 5
                 shards = None
                 base_chunks = (256,256,256)
                 target_chunks = (256,256,256)
+                async_finalize = True
 
             Z_EST, Y, X = (self.max_frame, self.x_pixels, self.y_pixels)
             px_size_zyx = (acq['z_step'], self.cfg.pixelsize[acq['zoom']], self.cfg.pixelsize[acq['zoom']])
@@ -130,7 +132,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                     # compressor=BloscCodec(cname="lz4", clevel=1, shuffle=BloscShuffle.bitshuffle),
                     shard_shape=shard_shape,
                     flush_pad=FlushPad.DUPLICATE_LAST,  # keeps alignment, no RMW
-                    async_close=True,
+                    async_close=async_finalize,
             )
 
         elif self.file_extension == '.h5':

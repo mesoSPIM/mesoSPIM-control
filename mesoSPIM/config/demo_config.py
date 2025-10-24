@@ -341,25 +341,35 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
 '''
 OME.ZARR parameters
 This will write a ome.zarr v3 multiscale on the fly during acquisition.
-The default parameter will work pretty well for most setups with little to no performance degradation
+The default parameter should work pretty well for most setups with little to no performance degradation
 during acquisition. Defaults include compression which will save disk space and can also improve
-performance because less data is written to disk. Chunks can be adjusted in accross the multiscale. 
-Base and target chunks can be defined and will start at base and automatically shift towards target
-with each scale. IO is the main concern with chunks. Bigger chunks less and more efficient IO, 
-smaller chunks will degrade performance on some hardware.
+performance because less data is written to disk. Data are written into shards which limits the number of
+files generated on disk. 
 
-shards can be defined but in general do not work well and shows peformance degredation. We suggest that
-shards are shallow in Z and as large as you camera sensor in XY.
+Chunks can be set to adjust with each multiscale. Base and target chunks are defined and will start 
+with the base shape and automatically shift towards target with each scale. Chunks have a big influence on IO.
+Bigger chunks means less and more efficient IO, very small chunks will degrade performance on some hardware.
+
+compression: default: zstd-5. This is a good trade off of compute and compression. In our tests, there is 
+little to no performance degradation when using this setting.
+
+shards are defined by default. Be careful, shard shape must be defined carefully to prevent performance 
+degradation. We suggest that shards are shallow in Z and as large as you camera sensor in XY. 
+For best performance set the base and target chunks to the same z-depth as your shards.
+
+async_finalize, default True: Enables acquisition of the next tile to proceed immediately while the multiscale 
+is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
+Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
+to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
 '''
 ome_zarr = {
     'compression': 'zstd', # None, 'zstd', 'lz4'
-    'compression_level': 5,
-    'shards': (64,6000,6000), # Specify Max shard size: Works poorly, slows acquisition, suggest None, (64, 6000,6000)
-    'base_chunks': (16,256,256), # Starting chunk size (level 0). Bigger chunks, less files
-    'target_chunks': (64,64,64), # Approx ending chunks shape (level 5). Bigger chunks, less files
+    'compression_level': 5, # 1-9
+    'shards': (64,6000,6000), # Specify Max shard size: suggest None for best performance, (64, 6000,6000) (axes: z,y,x)
+    'base_chunks': (64,256,256), # Starting chunk size (level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (64,64,64), # Approx ending chunks shape (level 5). Bigger chunks, less files (axes: z,y,x)
+    'async_finalize': True, # True, False
     }
-
-
 
 '''
 Rescale the galvo amplitude when zoom is changed
