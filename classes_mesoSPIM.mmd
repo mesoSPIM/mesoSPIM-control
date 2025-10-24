@@ -79,6 +79,8 @@ classDiagram
   }
   class FilenameWizardSingleHDF5SelectionPage {
   }
+  FilenameWizardSingleOmeZarrSelectionPage {
+  }
   class FilenameWizardTiffSelectionPage {
   }
   class FilenameWizardWelcomePage {
@@ -264,6 +266,7 @@ classDiagram
   FilenameWizardBigTiffSelectionPage --|> AbstractSelectionPage
   FilenameWizardSingleHDF5SelectionPage --|> AbstractSelectionPage
   FilenameWizardTiffSelectionPage --|> AbstractSelectionPage
+  FilenameWizardSingleOmeZarrSelectionPage  --|> AbstractSelectionPage
   FifthChannelPage --|> GenericChannelPage
   FirstChannelPage --|> GenericChannelPage
   FourthChannelPage --|> GenericChannelPage

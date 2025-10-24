@@ -3,6 +3,7 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 '''
 
 import os
+from pathlib import Path
 import time
 import numpy as np
 import tifffile
@@ -14,6 +15,11 @@ from distutils.version import StrictVersion
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
+from .utils.omezarr_writer import (PyramidSpec, ChunkScheme,
+                                   Live3DPyramidWriter, plan_levels,
+                                   compute_xy_only_levels, FlushPad,
+                                   BloscCodec, BloscShuffle
+                                   )
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -39,7 +45,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
-        self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
+        self.bdv_writer = self.tiff_writer\
+            = self.tiff_mip_writer = self.mip_image\
+            = self.omezarr_writer = None
         self.tiff_aliases = ('.tif', '.tiff')
         self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
@@ -66,7 +74,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.filename = replace_with_underscores(acq['filename'])
         self.path = os.path.realpath(self.folder+'/'+self.filename)
         self.MIP_path = os.path.realpath(self.folder +'/MAX_'+ self.filename + '.tiff')
-        self.file_root, self.file_extension = os.path.splitext(self.path)
+        # self.file_root, self.file_extension = os.path.splitext(self.path)
+        self.file_extension = ''.join(Path(self.path).suffixes)
         logger.info(f'Save path: {self.path}')
 
         self.binning_string = self.state['camera_binning'] # Should return a string in the form '2x4'
@@ -77,7 +86,54 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.max_frame = acq.get_image_count()
 
-        if self.file_extension == '.h5':
+        print(f'{self.file_extension=}')
+        if self.file_extension == '.ome.zarr':
+            if hasattr(self.cfg, "ome_zarr"):
+                compression = self.cfg.ome_zarr['compression']
+                compression_level = self.cfg.ome_zarr['compression_level']
+                shards = self.cfg.ome_zarr['shards']
+                base_chunks = self.cfg.ome_zarr['base_chunks']
+                target_chunks = self.cfg.ome_zarr['target_chunks']
+            else:
+                compression = 'zstd'
+                compression_level = 5
+                shards = None
+                base_chunks = (256,256,256)
+                target_chunks = (256,256,256)
+
+            Z_EST, Y, X = (self.max_frame, self.x_pixels, self.y_pixels)
+            px_size_zyx = (acq['z_step'], self.cfg.pixelsize[acq['zoom']], self.cfg.pixelsize[acq['zoom']])
+
+            xy_levels = compute_xy_only_levels(px_size_zyx)
+            levels = plan_levels(Y, X, Z_EST, xy_levels, min_dim=64)
+
+            spec = PyramidSpec(
+                z_size_estimate=Z_EST,  # big upper bound; we'll truncate at the end
+                y=Y, x=X, levels=levels,
+            )
+
+            shard_shape = shards
+            scheme = ChunkScheme(base=base_chunks, target=target_chunks)
+
+            compressor = compression
+            if compression:
+                compressor = BloscCodec(cname=compression, clevel=compression_level, shuffle=BloscShuffle.bitshuffle)
+
+            self.omezarr_writer = Live3DPyramidWriter(
+                    spec,
+                    voxel_size=px_size_zyx,
+                    path=self.path,
+                    max_workers=os.cpu_count() // 2,
+                    chunk_scheme=scheme,
+                    compressor=compressor,  # keep off for max ingest speed
+                    # compressor=BloscCodec(cname="zstd", clevel=5, shuffle=BloscShuffle.bitshuffle),
+                    # compressor=BloscCodec(cname="lz4", clevel=1, shuffle=BloscShuffle.bitshuffle),
+                    shard_shape=shard_shape,
+                    flush_pad=FlushPad.DUPLICATE_LAST,  # keeps alignment, no RMW
+                    async_close=True,
+            )
+
+        elif self.file_extension == '.h5':
             if hasattr(self.cfg, "hdf5"):
                 subsamp = self.cfg.hdf5['subsamp']
                 compression = self.cfg.hdf5['compression']
@@ -161,7 +217,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.cur_image_counter % 5 == 0:
             self.parent.sig_status_message.emit('Writing to disk...')
         xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
-        if self.file_extension == '.h5':
+
+        if self.file_extension == '.ome.zarr':
+            self.omezarr_writer.push_slice(image)
+        elif self.file_extension == '.h5':
             self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
                                             illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                             channel=acq_list.find_value_index(acq['laser'], 'laser'),
@@ -193,7 +252,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.abort_flag = True
         if self.running_flag:
             try:
-                if self.file_extension == '.h5':
+                if self.file_extension == '.ome.zarr':
+                    self.omezarr_writer.__exit__(None, None, None)
+                elif self.file_extension == '.h5':
                     self.bdv_writer.close()
                 elif self.file_extension == '.raw':
                     del self.xy_stack
@@ -211,7 +272,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_acquisition(self, acq, acq_list):
         logger.info("end_acquisition() started")
-        if self.file_extension == '.h5':
+        if self.file_extension == '.ome.zarr':
+            self.omezarr_writer.__exit__(None, None, None)
+        elif self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:
                     self.bdv_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))

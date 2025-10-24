@@ -339,6 +339,29 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         }
 
 '''
+OME.ZARR parameters
+This will write a ome.zarr v3 multiscale on the fly during acquisition.
+The default parameter will work pretty well for most setups with little to no performance degradation
+during acquisition. Defaults include compression which will save disk space and can also improve
+performance because less data is written to disk. Chunks can be adjusted in accross the multiscale. 
+Base and target chunks can be defined and will start at base and automatically shift towards target
+with each scale. IO is the main concern with chunks. Bigger chunks less and more efficient IO, 
+smaller chunks will degrade performance on some hardware.
+
+shards can be defined but in general do not work well and shows peformance degredation. We suggest that
+shards are shallow in Z and as large as you camera sensor in XY.
+'''
+ome_zarr = {
+    'compression': 'zstd', # None, 'zstd', 'lz4'
+    'compression_level': 5,
+    'shards': (64,6000,6000), # Specify Max shard size: Works poorly, slows acquisition, suggest None, (64, 6000,6000)
+    'base_chunks': (16,256,256), # Starting chunk size (level 0). Bigger chunks, less files
+    'target_chunks': (64,64,64), # Approx ending chunks shape (level 5). Bigger chunks, less files
+    }
+
+
+
+'''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
 '''        
