@@ -12,9 +12,12 @@ import sys
 from PyQt5 import QtCore
 from distutils.version import StrictVersion
 import npy2bdv
+<<<<<<< HEAD
 from ngio import create_empty_ome_zarr
 from ngio.tables import GenericTable
 import pandas as pd
+=======
+>>>>>>> parent of fa7da41b (implemented prototype for ome zarr export (multichannel is supported, multi-tile and metadata table handling not yet))
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
 
@@ -42,7 +45,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
-        self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = self.omezarr = None
+        self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
         self.tiff_aliases = ('.tif', '.tiff')
         self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
@@ -70,7 +73,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.path = os.path.realpath(self.folder+'/'+self.filename)
         self.MIP_path = os.path.realpath(self.folder +'/MAX_'+ self.filename + '.tiff')
         self.file_root, self.file_extension = os.path.splitext(self.path)
-        print(self.file_extension)
         logger.info(f'Save path: {self.path}')
 
         self.binning_string = self.state['camera_binning'] # Should return a string in the form '2x4'
@@ -136,6 +138,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         elif self.file_extension in self.bigtiff_aliases:
             self.tiff_writer = tifffile.TiffWriter(self.path, bigtiff=True)
 
+<<<<<<< HEAD
         elif self.file_extension == '.zarr':
             shape = (acq_list.get_n_lasers(), self.max_frame, self.x_pixels, self.y_pixels)
 
@@ -194,6 +197,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.dask_image = self.omezarr.get_image("0").get_as_dask()
 
 
+=======
+>>>>>>> parent of fa7da41b (implemented prototype for ome zarr export (multichannel is supported, multi-tile and metadata table handling not yet))
         if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             self.tiff_mip_writer = tifffile.TiffWriter(self.MIP_path, imagej=True)
             self.mip_image = np.zeros((self.x_pixels, self.y_pixels), 'uint16')
@@ -206,10 +211,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_images(self, acq, acq_list):
-        """Write available images to disk.
+        """Write available images to disk. 
         The actual images are passed via `self.frame_queue` from the Camera thread, NOT via the signal/slot mechanism as before,\
              starting from v.1.10.0. This is to avoid the overhead of signal/slot mechanism and to improve performance."""
-        logger.debug('entered write_images')
         if self.running_flag:
             while len(self.frame_queue) > 0:
                 logger.debug('image queue length: ' + str(len(self.frame_queue)))
@@ -219,7 +223,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             logger.debug('self.running_flag = False, no images written')
 
     def image_to_disk(self, acq, acq_list, image):
-        logger.debug('image_to_disk() started')
+        logger.debug('image_to_disk() started') 
         log_cpu_core(logger, msg='image_to_disk()')
         if self.cur_image_counter % 5 == 0:
             self.parent.sig_status_message.emit('Writing to disk...')
@@ -231,7 +235,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                             angle=acq_list.find_value_index(acq['rot'], 'rot'),
                                             tile=acq_list.get_tile_index(acq)
                                             )
-            # flush H5 every 100 frames
+            # flush H5 every 100 frames 
             if (self.cur_image_counter + 1) % 100 == 0:
                 self.bdv_writer._file_object_h5.flush()
                 logger.debug(f'flushed at {self.cur_image_counter + 1} frames to disk')
@@ -243,15 +247,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         elif self.file_extension in self.bigtiff_aliases:
             self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
                                     metadata={'spacing': acq['z_step'], 'unit': 'um'})
+<<<<<<< HEAD
         elif self.file_extension == '.zarr':
             self.dask_image[acq_list.find_value_index(acq['laser'], 'laser'),self.cur_image_counter,...] = image
+=======
+>>>>>>> parent of fa7da41b (implemented prototype for ome zarr export (multichannel is supported, multi-tile and metadata table handling not yet))
 
         if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             self.mip_image[:] = np.maximum(self.mip_image, image)
 
         self.cur_image_counter += 1
         logger.debug('image_to_disk() ended')
-
+    
     @QtCore.pyqtSlot()
     def abort_writing(self):
         """Terminate writing and close all files if STOP button is pressed"""
@@ -302,10 +309,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.tiff_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
-        elif self.file_extension == '.zarr':
-            zarr_image = self.omezarr.get_image('0')
-            zarr_image.set_array(self.dask_image)
-            zarr_image.consolidate()
 
         if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
             try:

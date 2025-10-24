@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 class FilenameWizard(QtWidgets.QWizard):
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 7
-    (welcome, raw, tiff, bigtiff, single_hdf5, omezarr, finished) = range(num_of_pages)
+    num_of_pages = 6
+    (welcome, raw, tiff, bigtiff, single_hdf5, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         '''Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
@@ -32,8 +32,7 @@ class FilenameWizard(QtWidgets.QWizard):
         self.setPage(2, FilenameWizardTiffSelectionPage(self))
         self.setPage(3, FilenameWizardBigTiffSelectionPage(self))
         self.setPage(4, FilenameWizardSingleHDF5SelectionPage(self))
-        self.setPage(5, FilenameWizardOmeZarrPage(self))
-        self.setPage(6, FilenameWizardCheckResultsPage(self))
+        self.setPage(5, FilenameWizardCheckResultsPage(self))
         self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
 
@@ -126,21 +125,12 @@ class FilenameWizard(QtWidgets.QWizard):
                     filename += '_ch' + laser[:-3]
                 file_suffix = '_bdv.' + self.file_format
 
-            elif self.file_format == 'ome.zarr':
-                if self.field('DescriptionOmeZarr'):
-                    filename += replace_with_underscores(self.field('DescriptionOmeZarr')) + '_'
-                filename += f'Mag{self.parent.model.getZoom(0)}'
-                laser_list = self.parent.model.getLaserList()
-                for laser in laser_list:
-                    filename += '_ch' + laser[:-3]
-                file_suffix = '.' + self.file_format
-
             else:
                 raise ValueError(f"file suffix invalid: {self.file_format}")
 
             filename += file_suffix
             self.filename_list.append(filename)
-
+            
     def update_filenames_in_model(self):
         row_count = self.parent.model.rowCount()
         filename_column = self.parent.model.getFilenameColumn()
@@ -163,20 +153,19 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.tiff_string = 'ImageJ TIFF files: ~.tiff'
         self.bigtiff_string = 'BigTIFF files: ~.btf'
         self.single_hdf5_string = 'BigDataViewer HDF5 file: ~.h5'
-        self.omezarr_string = 'OME Zarr file: ~.ome.zarr'
 
         self.SaveAsComboBoxLabel = QtWidgets.QLabel('Save as:')
         self.SaveAsComboBox = QtWidgets.QComboBox()
-        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string, self.bigtiff_string, self.single_hdf5_string, self.omezarr_string])
+        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string, self.bigtiff_string, self.single_hdf5_string])
         self.SaveAsComboBox.setCurrentIndex(3)
 
         self.registerField('SaveAs', self.SaveAsComboBox, 'currentIndex')
-
+        
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.SaveAsComboBoxLabel, 0, 0)
         self.layout.addWidget(self.SaveAsComboBox, 0, 1)
         self.setLayout(self.layout)
-
+    
     def nextId(self):
         if self.SaveAsComboBox.currentText() == self.raw_string:
             self.parent.file_format = 'raw'
@@ -190,9 +179,6 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         elif self.SaveAsComboBox.currentText() == self.single_hdf5_string:
             self.parent.file_format = 'h5'
             return self.parent.single_hdf5
-        elif self.SaveAsComboBox.currentText() == self.omezarr_string:
-            self.parent.file_format = 'ome.zarr'
-            return self.parent.omezarr
 
 
 class AbstractSelectionPage(QtWidgets.QWizardPage):
@@ -267,7 +253,7 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         self.registerField('Filter', self.FilterCheckBox)
         self.registerField('Zoom', self.ZoomCheckBox)
         self.registerField('Shutterconfig', self.ShutterCheckBox)
-
+        
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.DescriptionCheckBox, 0, 0)
         self.layout.addWidget(self.DescriptionLineEdit, 0, 1)
@@ -300,19 +286,6 @@ class FilenameWizardSingleHDF5SelectionPage(AbstractSelectionPage):
         return super().validatePage()
 
 
-class FilenameWizardOmeZarrPage(AbstractSelectionPage):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setTitle("Autogenerate omezarr filename")
-        self.setSubTitle("All raw data saved into one omezarr file, metadata is saved into metadata table."
-                         "\nFilename example: {Description}_Mag1x_ch488_ch561_bdv.ome.zarr")
-        self.registerField('DescriptionOmeZarr', self.DescriptionLineEdit)
-
-    def validatePage(self):
-        self.parent.generate_filename_list(increment_number=False)
-        return super().validatePage()
-
-
 class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -324,7 +297,7 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.TextEdit = QtWidgets.QPlainTextEdit(self)
         self.TextEdit.setReadOnly(True)
 
-        self.mystring = ''
+        self.mystring = ''        
         self.TextEdit.setPlainText(self.mystring)
 
         self.layout = QtWidgets.QGridLayout()
@@ -336,15 +309,14 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
             file_list = self.parent.filename_list
         elif self.parent.file_format == 'h5':
             file_list = [self.parent.filename_list[0]]
-        elif self.parent.file_format == 'ome.zarr':
-            file_list = [self.parent.filename_list[0]]
         else:
-            raise ValueError(f"file_format must be in ('raw', 'tiff', 'btf', 'h5', 'ome.zarr'), received {self.parent.file_format}")
+            raise ValueError(f"file_format must be in ('raw', 'tiff', 'btf', 'h5'), received {self.parent.file_format}")
 
         for f in file_list:
             self.mystring += f
             self.mystring += '\n'
-        self.TextEdit.setPlainText(self.mystring)
+        self.TextEdit.setPlainText(self.mystring)        
 
     def cleanupPage(self):
         self.mystring = ''
+

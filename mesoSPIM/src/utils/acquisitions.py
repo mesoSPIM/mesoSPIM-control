@@ -114,11 +114,11 @@ class Acquisition(indexed.IndexedOrderedDict):
 
     def get_acquisition_time(self, framerate):
         '''
-        Method to return the time the acquisition will take at a certain
+        Method to return the time the acquisition will take at a certain 
         framerate.
 
         Args:
-            float: framerate of the microscope
+            float: framerate of the microscope 
 
         Returns:
             float: Acquisition time in seconds
@@ -140,7 +140,7 @@ class Acquisition(indexed.IndexedOrderedDict):
             f_rel = 0
         if self['f_end'] < self['f_start']:
             f_rel = -f_rel
-
+        
         if not inverted:
             return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : z_rel, 'f_rel' : f_rel, 'theta_rel': 0}
         else:
@@ -336,7 +336,7 @@ class AcquisitionList(list):
         filenames = []
         # Create a list of full file paths
         for i in range(len(self)):
-            if not self[i]['filename'].endswith(('.h5', '.zarr')):
+            if self[i]['filename'][-3:] != '.h5':
                 filename = self[i]['folder']+'/'+self[i]['filename']
                 filenames.append(filename)
         duplicates = self.get_duplicates_in_list(filenames)
@@ -350,7 +350,7 @@ class AcquisitionList(list):
             folder = self[i]['folder']
             if not os.path.isdir(folder):
                 nonexisting_folders.append(folder)
-
+        
         return nonexisting_folders
 
     def get_duplicates_in_list(self, in_list):
@@ -435,3 +435,6 @@ class AcquisitionList(list):
         unique_list = self.get_unique_attr_list(key)
         assert value in unique_list, f"Value({value}) not found in list {unique_list}"
         return unique_list.index(value)
+
+
+
