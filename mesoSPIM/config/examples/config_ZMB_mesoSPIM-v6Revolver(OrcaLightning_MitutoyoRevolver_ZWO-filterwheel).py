@@ -411,5 +411,5 @@ startup = {
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', #Hamamatsu-specific parameter
-'average_frame_rate': 3.0,
+'average_frame_rate': 5.1,
 }

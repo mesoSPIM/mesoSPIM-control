@@ -10,7 +10,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
 ''' mesoSPIM imports '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .utils.utility_functions import format_data_size
 from .utils.models import AcquisitionModel
 
@@ -66,7 +65,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.parent = parent # mesoSPIM_MainWindow instance
         self.cfg = parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # mesoSPIM_StateSingleton instance
 
         loadUi(self.parent.package_directory + '/gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
@@ -80,7 +79,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.statusBar = QtWidgets.QStatusBar()
 
         ''' Setting the model up '''
-        self.model = AcquisitionModel()
+        self.model = AcquisitionModel(table=None, parent=self)
 
         self.table.setModel(self.model) # self.table is a QTableView object
         self.model.dataChanged.connect(self.set_state)
@@ -134,9 +133,6 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         font.setPointSize(14)
         self.table.horizontalHeader().setFont(font)
         self.table.verticalHeader().setFont(font)
-
-        logger.info('Thread ID at Startup: '+str(int(QtCore.QThread.currentThreadId())))
-
         self.selection_model.selectionChanged.connect(self.selected_row_changed)
 
     def enable(self):
@@ -470,6 +466,20 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
     def generate_filenames(self):
         wizard = FilenameWizard(self)
+
+    def append_time_index_to_filenames(self, time_index):
+        ''' Appends the time index to each filename '''
+        row_count = self.model.rowCount()
+        filename_column = self.model.getFilenameColumn()
+        for row in range(0, row_count):
+            index = self.model.createIndex(row, filename_column)
+            filename = self.model.data(index)
+            base, extention = os.path.splitext(filename)
+            base_no_time = base.split('_Time')[0]
+            base_new = base_no_time + f'_Time{time_index:03d}'
+            index = self.model.createIndex(row, filename_column)
+            filename_new = base_new + extention
+            self.model.setData(index, filename_new)
 
     def display_no_row_selected_warning(self):
         self.display_warning('No row selected!')

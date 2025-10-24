@@ -1,5 +1,5 @@
 import numpy as np
-
+EXPOSURE_SCALING = 5 # scaling factor relative to the standard exposure (20ms), so EXPOSURE_SCALING = 5 gives 100 ms exposure time
 logging_level = 'DEBUG'
 
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
@@ -165,7 +165,7 @@ camera_parameters = {'x_pixels' : 5056,
                      'binning' : '1x1',
                      'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
                      'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
-                     'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us
+                     'scan_line_delay' : 6 * EXPOSURE_SCALING, # 10.26 us x factor, a factor = 6 equals 71.82 us
                     }
 
 binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
@@ -347,7 +347,7 @@ When setting up a new mesoSPIM, make sure that:
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
-'sweeptime' : 0.26734,
+'sweeptime' : 0.26734 * EXPOSURE_SCALING,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-BT-DBE.csv',
 'filepath' : 'F:/Test/file.tif',
@@ -394,12 +394,12 @@ startup = {
 'stage_trigger_pulse_%' : 1,
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
-'camera_exposure_time':0.02,
-'camera_line_interval':0.000075,
+'camera_exposure_time': 0.02 * EXPOSURE_SCALING,
+'camera_line_interval': 0.000075,
 'camera_display_live_subsampling': 2,
 'camera_display_snap_subsampling': 1,
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
-'average_frame_rate': 3.1,
+'average_frame_rate': 3.1 / EXPOSURE_SCALING,
 }

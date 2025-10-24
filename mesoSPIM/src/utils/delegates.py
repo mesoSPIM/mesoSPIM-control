@@ -102,7 +102,7 @@ class IntensitySpinBoxDelegate(QtWidgets.QStyledItemDelegate):
 
     def setEditorData(self, editor, index):
         editor.blockSignals(True)
-        editor.setValue(index.model().data(index, role=QtCore.Qt.EditRole))
+        editor.setValue(int(index.model().data(index, role=QtCore.Qt.EditRole)))
         editor.blockSignals(False)
 
 

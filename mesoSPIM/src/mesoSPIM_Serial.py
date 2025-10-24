@@ -10,11 +10,11 @@ import logging
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 ''' Import mesoSPIM modules '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
 from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
+from .utils.utility_functions import log_cpu_core
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,8 @@ class mesoSPIM_Serial(QtCore.QObject):
         ''' Assign the parent class to a instance variable for callbacks '''
         self.parent = parent
         self.cfg = parent.cfg
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
+        self.stage_limits_warning = False
 
         ''' Attaching the filterwheel '''
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
@@ -53,7 +54,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
             self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'ZWO':
-            self.filterwheel = ZwoFilterWheel(self.cfg.filterdict)
+            self.filterwheel = ZwoFilterWheel(self.cfg.filterdict, self)
         else:
             raise ValueError(f"Filter wheel type unknown: {self.cfg.filterwheel_parameters['filterwheel_type']}")
 
@@ -115,6 +116,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):
+        logger.debug(f'mesoSPIM_Serial state request: {sdict}')
         for key, value in zip(sdict.keys(), sdict.values()):
             if key == 'filter':
                 self.set_filter(value, wait_until_done)
@@ -132,6 +134,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(bool)
     def pause(self, boolean):
+        logger.debug(f'Pause signal received: {boolean}')
         self.sig_pause.emit(boolean)
 
     @QtCore.pyqtSlot(bool)
@@ -140,18 +143,24 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     def stage_limits_OK(self, sdict, safety_margin_n_moves=3):
         '''Safety margin is added to deal with delays in position reporting.'''
+        logger.debug(f'Checking stage limits: {sdict}')
         for key in ('x_rel', 'y_rel', 'z_rel', 'theta_rel', 'f_rel'):
             if key in sdict:
                 axis = key[:-4]
                 condition = f"(self.stage.{axis}_min < self.stage.{axis}_pos + {safety_margin_n_moves} * sdict['{key}'] < self.stage.{axis}_max)"
                 if not eval(condition):
                     self.send_status_message(f'Relative movement stopped: {axis} motion limit would be reached!')
+                    self.stage_limits_warning = True
                     return False
-        self.send_status_message('')
+        if self.stage_limits_warning: # clear previous warning message
+            self.send_status_message('') 
+            self.stage_limits_warning = False
         return True
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
+        log_cpu_core(logger, msg='move_relative()')
+        logger.debug(f'mesoSPIM_Serial moving relative: {sdict}')
         if self.stage_limits_OK(sdict):
             self.stage.move_relative(sdict, wait_until_done=wait_until_done)
         else:
@@ -159,25 +168,29 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
+        logger.debug(f'mesoSPIM_Serial moving absolute: {sdict}')
         self.stage.move_absolute(sdict, wait_until_done=wait_until_done, use_internal_position=use_internal_position)
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
+        log_cpu_core(logger, msg='report_position()')
+        logger.debug(f'mesoSPIM_Serial reporting position: {sdict}')
         self.state['position'] = sdict
         self.sig_position.emit({'position': sdict})
 
     @QtCore.pyqtSlot()
     def go_to_rotation_position(self, wait_until_done=False):
+        logger.debug('Going to rotation position')
         self.stage.go_to_rotation_position(wait_until_done=wait_until_done)
 
     @QtCore.pyqtSlot(str)
     def set_filter(self, sfilter, wait_until_done=False):
+        logger.debug(f'Setting filter to {sfilter}')
         self.filterwheel.set_filter(sfilter, wait_until_done=wait_until_done)
         self.state['filter'] = sfilter
 
     @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=True):
-        # logger.info('Thread ID during set zoom: '+str(int(QtCore.QThread.currentThreadId())))
         ''' Here, the state parameters are set before sending the value to the zoom --
         this is to avoid laggy update loops with the GUI.'''
         self.state['zoom'] = zoom

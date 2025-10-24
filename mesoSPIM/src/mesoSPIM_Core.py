@@ -8,7 +8,7 @@ import time
 import platform
 import io
 import traceback
-
+from collections import deque
 import logging
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 # from nidaqmx.types import CtrTime
 
 ''' Import mesoSPIM modules '''
-from .mesoSPIM_State import mesoSPIM_StateSingleton
 
 from .devices.shutters.Demo_Shutter import Demo_Shutter
 from .devices.shutters.NI_Shutter import NI_Shutter
@@ -34,25 +33,27 @@ from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
+from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores
+from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores, log_cpu_core
 
 
 class mesoSPIM_Core(QtCore.QObject):
     '''This class is the pacemaker of a mesoSPIM'''
 
     sig_finished = QtCore.pyqtSignal()
-    sig_update_gui_from_state = QtCore.pyqtSignal(bool)
+    sig_update_gui_from_state = QtCore.pyqtSignal()
     sig_update_gui_from_shutter_state = QtCore.pyqtSignal() # dirty hack to update the shutter state in the GUI
     # These signals have slots in both mesoSPIM_Serial and mesoSPIM_WaveFormGenerator classes. Potentially dangerous.
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_state_request_and_wait_until_done = QtCore.pyqtSignal(dict)
-
+    sig_stop_aquisition = QtCore.pyqtSignal() # STOP signal to both Camera and ImageWriter threads
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
     sig_progress = QtCore.pyqtSignal(dict)
+    sig_run_timepoint = QtCore.pyqtSignal(int)
 
     ''' Camera-related signals '''
     sig_prepare_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
@@ -90,13 +91,17 @@ class mesoSPIM_Core(QtCore.QObject):
         self.package_directory = self.parent.package_directory
         self.cfg = self.parent.cfg
 
-        self.state = mesoSPIM_StateSingleton()
+        self.state = self.parent.state # mesoSPIM_StateSingleton class
         self.state['state'] = 'init'
+
+        self.frame_queue = deque([])
+        self.frame_queue_display = deque([], maxlen=1)    
 
         ''' The signal-slot switchboard '''
         # Note the name duplication (shadowing)!!
         # parent.sig_state_request -> self.state_request_handler
         # self.sig_state_request -> self.waveformer.state_request_handler
+        self.sig_run_timepoint.connect(self.parent.run_timepoint, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_state_request.connect(self.state_request_handler, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_execute_script.connect(self.execute_script, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_move_relative.connect(self.move_relative, type=QtCore.Qt.QueuedConnection)
@@ -110,16 +115,24 @@ class mesoSPIM_Core(QtCore.QObject):
         self.parent.sig_save_etl_config.connect(self.sig_save_etl_config.emit, type=QtCore.Qt.QueuedConnection)
         self.sig_update_gui_from_shutter_state.connect(self.parent.update_GUI_by_shutter_state, type=QtCore.Qt.QueuedConnection)
 
-        ''' Set the Camera thread up '''
         self.camera_thread = QtCore.QThread()
-        self.camera_worker = mesoSPIM_Camera(self)
-        #logger.info('Camera worker thread affinity before moveToThread? Answer:'+str(id(self.camera_worker.thread())))
+        self.camera_worker = mesoSPIM_Camera(parent=self, frame_queue=self.frame_queue, frame_queue_display=self.frame_queue_display)
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_worker.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
         self.camera_worker.sig_status_message.connect(self.send_status_message_to_gui)
-        self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.set_image)
-        #logger.info('Camera worker thread affinity after moveToThread? Answer:'+str(id(self.camera_worker.thread())))
-        ''' Set the serial thread up '''
+        self.camera_worker.sig_camera_frame.connect(self.parent.camera_window.update_image_from_deque)
+        self.sig_end_image_series.connect(self.camera_worker.end_image_series, type=QtCore.Qt.BlockingQueuedConnection)
+        self.sig_stop_aquisition.connect(self.camera_worker.stop, type=QtCore.Qt.QueuedConnection)
+
+        self.image_writer_thread = QtCore.QThread()
+        self.image_writer = mesoSPIM_ImageWriter(self, self.frame_queue)
+        self.image_writer.moveToThread(self.image_writer_thread)
+        self.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
+        self.sig_end_image_series.connect(self.image_writer.end_acquisition, type=QtCore.Qt.BlockingQueuedConnection)
+        self.sig_stop_aquisition.connect(self.image_writer.abort_writing, type=QtCore.Qt.QueuedConnection)
+
+        self.camera_worker.sig_write_images.connect(self.image_writer.write_images, type=QtCore.Qt.QueuedConnection)
+
         #self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
         self.serial_worker = mesoSPIM_Serial(self)
         # self.serial_worker.moveToThread(self.serial_thread) #legacy
@@ -140,7 +153,8 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.serial_worker.move_absolute(sdict, wait_until_done=True))
 
         ''' Start the threads '''
-        self.camera_thread.start(QtCore.QThread.HighestPriority)
+        self.camera_thread.start(QtCore.QThread.HighPriority)
+        self.image_writer_thread.start(QtCore.QThread.HighPriority)
         # The serial_worker remains in the Core thread, not separate thread for serial_worker
         #self.serial_thread.start() # legacy
 
@@ -151,6 +165,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
 
         self.waveformer.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
+        # Signals from Core
         self.sig_state_request.connect(self.waveformer.state_request_handler)
         self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
         ''' If this line is activated while the waveformer and the core live in the same thread, a deadlock results '''
@@ -197,6 +212,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
         self.state['state'] = 'idle'
+        self.time_counter = 0
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -207,6 +223,8 @@ class mesoSPIM_Core(QtCore.QObject):
         try:
             self.camera_thread.quit()
             self.camera_thread.wait()
+            self.image_writer_thread.quit()
+            self.image_writer_thread.wait()
         except:
             pass
 
@@ -247,7 +265,7 @@ class mesoSPIM_Core(QtCore.QObject):
                        'galvo_l_duty_cycle',
                        'galvo_l_phase',
                        'galvo_r_frequency',
-                       'galvo_r_amplitude',
+                       #'galvo_r_amplitude',
                        'galvo_r_offset',
                        'galvo_r_duty_cycle',
                        'galvo_r_phase',
@@ -271,8 +289,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if state == 'live':
             self.state['state'] = 'live'
             self.sig_state_request.emit({'state':'live'})
-            logger.debug('Thread ID during live: '+str(int(QtCore.QThread.currentThreadId())))
-            logger.debug('Core internal thread affinity in live: '+str(id(self.thread())))
+            logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
             self.live()
 
         if state == 'snap':
@@ -313,13 +330,13 @@ class mesoSPIM_Core(QtCore.QObject):
             self.visual_mode()
 
     def stop(self):
-        self.stopflag = True
-        ''' This stopflag is a bit risky, needs to be updated'''
-        self.camera_worker.image_writer.abort_writing()
+        self.stopflag = True # This stopflag is a bit risky, needs to be updated to a more robust solution
+        self.sig_stop_aquisition.emit() # send STOP signal to both Camera and ImageWriter threads
         self.sig_polling_stage_position_start.emit()
         self.state['state'] = 'idle'
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
         self.sig_finished.emit()
+        self.frame_queue.clear() # clear the frame queue
 
     @QtCore.pyqtSlot(bool)
     def pause(self, boolean):
@@ -348,20 +365,23 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_filter(self, filter, wait_until_done=False):
-        self.send_status_message_to_gui('Setting filter to '+filter)
+        self.send_status_message_to_gui('Filter changed to '+filter)
         if wait_until_done:
             logger.debug('Setting filter to '+filter)
             self.serial_worker.set_filter(filter, wait_until_done=True)
             logger.debug('Done setting filter to '+filter)
         else:
             self.sig_state_request.emit({'filter': filter})
+        self.send_status_message_to_gui('')
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
         self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
         # Move to the objective exchange position if necessary
         f_pos_old = None
+        self.parent.ZoomComboBox.setEnabled(False)
         if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+            self.sig_warning.emit('Please wait until the zoom change is complete')
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))
             self.send_status_message_to_gui('Moving to objective exchange position')
@@ -374,8 +394,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.send_status_message_to_gui('Moving to the focus position')
             self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done, use_internal_position=True)
         self.send_status_message_to_gui('Magnification (zoom) changed')
+        self.parent.ZoomComboBox.setEnabled(True)
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
+        
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):
@@ -407,11 +429,9 @@ class mesoSPIM_Core(QtCore.QObject):
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
         if wait_until_done:
-            #self.sig_move_relative_and_wait_until_done.emit(dict)
-            self.serial_worker.move_relative(dict, wait_until_done=wait_until_done) # intended to force execution in the core thread
+            self.sig_move_relative_and_wait_until_done.emit(dict)
         else:
-            #self.sig_move_relative.emit(dict)
-            self.serial_worker.move_relative(dict, wait_until_done=wait_until_done) # intended to force execution in the core thread
+            self.sig_move_relative.emit(dict)
 
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
@@ -481,7 +501,7 @@ class mesoSPIM_Core(QtCore.QObject):
         and the shutter_right line is the left/right switch (Right==True)
         '''
         if self.shutterswitch is False:
-            self.shutter_left.close()
+          #  self.shutter_left.close()
             self.shutter_right.close()
         else:
             self.shutter_left.close()
@@ -508,6 +528,7 @@ class mesoSPIM_Core(QtCore.QObject):
         but there is additional overhead due to the need to write the
         waveforms into the buffers of the NI cards.
         '''
+        log_cpu_core(logger, msg='snap_image()')
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
@@ -527,6 +548,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def snap_image_in_series(self, laser_blanking=True):
         '''Snaps and image from a series without waveform update'''
+        log_cpu_core(logger, msg='snap_image_in_series()')
         laser = self.state['laser']
         if laser_blanking:
             self.laserenabler.enable(laser)
@@ -538,6 +560,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
+        log_cpu_core(logger, msg='close_image_series()')
         self.waveformer.close_tasks()
         logger.debug("close_image_series() finished")
 
@@ -603,11 +626,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_warning.emit(f'The acquisition list contains positions {acqusitions_outside_motion_limits} outside the motion limits - stopping!')
             self.sig_finished.emit()
         else:
-            self.sig_update_gui_from_state.emit(True)
             self.prepare_acquisition_list(acq_list)
             self.run_acquisition_list(acq_list)
             self.close_acquisition_list(acq_list)
-            self.sig_update_gui_from_state.emit(False)
+            self.sig_update_gui_from_state.emit()
 
     def get_free_disk_space(self, acq_list):
         """Take the disk location of the first file and compute the free disk space"""
@@ -688,8 +710,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_laser(acq_list[0]['laser'], wait_until_done=False, update_etl=False)
             if self.state['zoom'] != acq_list[0]['zoom']:
                 self.set_zoom(acq_list[0]['zoom'], update_etl=False)
-            ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+            ''' This is for the GUI to update properly'''
+            QtWidgets.QApplication.processEvents()
 
             self.sig_state_request.emit({'etl_l_amplitude' : acq_list[0]['etl_l_amplitude']})
             self.sig_state_request.emit({'etl_r_amplitude' : acq_list[0]['etl_r_amplitude']})
@@ -698,11 +720,13 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_intensity(acq_list[0]['intensity'])
             time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
             self.sig_finished.emit()
+            self.send_status_message_to_gui('Acquisition list closed')
+        else:
+            self.send_status_message_to_gui('Acquisition stopped')
 
     def preview_acquisition(self, z_update=True):
         self.stopflag = False
         row = self.state['selected_row']
-        self.sig_update_gui_from_state.emit(True) # Don't delete this, otherwise GUI updates from the state become unreliable
         acq = self.state['acq_list'][row]
 
         ''' Rotation handling goes here '''
@@ -743,7 +767,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_state_request.emit({'etl_r_offset' : acq['etl_r_offset']})
 
         self.sig_status_message.emit('Ready for preview...')
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
         self.state['state'] = 'idle'
 
     def prepare_acquisition(self, acq, acq_list):
@@ -772,8 +796,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.set_zoom(acq['zoom'], update_etl=False)
         self.set_intensity(acq['intensity'], wait_until_done=True)
         self.set_laser(acq['laser'], wait_until_done=True, update_etl=False)
-        ''' This is for the GUI to update properly, otherwise ETL values for previous laser might be displayed '''
-        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+        ''' This is for the GUI to update properly'''
+        QtWidgets.QApplication.processEvents()
 
         self.sig_state_request.emit({'etl_l_amplitude' : acq['etl_l_amplitude']})
         self.sig_state_request.emit({'etl_r_amplitude' : acq['etl_r_amplitude']})
@@ -791,7 +815,8 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.05)
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
-        self.sig_prepare_image_series.emit(acq, acq_list)
+        self.sig_prepare_image_series.emit(acq, acq_list) # signal to the Camera
+        self.image_writer.prepare_acquisition(acq, acq_list)
         self.prepare_image_series()
         self.sig_write_metadata.emit(acq, acq_list)
 
@@ -815,11 +840,6 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 self.snap_image_in_series(laser_blanking)
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
-                #time.sleep(0.02)
-                # self.sig_add_images_to_image_series_and_wait_until_done.emit()
-
-                # self.move_relative(acq.get_delta_z_dict(), wait_until_done=True)
-
                 ''' Get the current correct f_step'''
                 f_step = self.f_step_generator.__next__()
                 if f_step != 0:
@@ -838,7 +858,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     time.sleep(0.02)
                     QtWidgets.QApplication.processEvents()
                 
-                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 10)
+                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                 self.image_count += 1
 
                 ''' Keep track of passed time and predict remaining time '''
@@ -849,14 +869,15 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     self.state['current_framerate'] = self.image_count / time_passed
 
-                self.send_progress(self.acquisition_count,
-                                   self.total_acquisition_count,
-                                   i,
-                                   steps,
-                                   self.total_image_count,
-                                   self.image_count,
-                                   convert_seconds_to_string(time_passed),
-                                   convert_seconds_to_string(time_remaining))
+                if ((self.image_count + 1) % 5 == 0) or (self.total_image_count % (self.image_count + 1) == 0):
+                    self.send_progress(self.acquisition_count,
+                                    self.total_acquisition_count,
+                                    i + 1,
+                                    steps,
+                                    self.total_image_count,
+                                    self.image_count + 1,
+                                    convert_seconds_to_string(time_passed),
+                                    convert_seconds_to_string(time_remaining))
         self.laserenabler.disable_all()
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
@@ -885,7 +906,6 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
-        self.sig_update_gui_from_state.emit(True)
         self.state['state'] = 'running_script'
         try:
             exec(script)
@@ -893,7 +913,7 @@ class mesoSPIM_Core(QtCore.QObject):
             traceback.print_exc()
         self.sig_finished.emit()
         self.state['state']='idle'
-        self.sig_update_gui_from_state.emit(False)
+        self.sig_update_gui_from_state.emit()
 
     def lightsheet_alignment_mode(self):
         '''Switches shutters after each image to allow coalignment of both lightsheets'''
@@ -984,3 +1004,14 @@ class mesoSPIM_Core(QtCore.QObject):
             write_line(file, 'Frame rate during taking images, img/s:', str(round(self.state['current_framerate'], 2)))
             write_line(file, '===================== END OF ACQUISITION ======================')
             write_line(file)
+
+    def run_time_lapse(self, tpoints=1, time_interval_sec=60):
+        '''A quick and dirty implementation of time lapse via recursive function.'''	
+        if self.time_counter >= tpoints:
+            print("Timer sequence finished")
+            self.time_counter = 0
+            return
+        print(f"Running time point {self.time_counter} out of {tpoints - 1}...")
+        QtCore.QTimer.singleShot(time_interval_sec*1000, lambda: self.run_time_lapse(tpoints, time_interval_sec))
+        self.sig_run_timepoint.emit(self.time_counter)
+        self.time_counter += 1
