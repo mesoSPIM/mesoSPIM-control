@@ -194,6 +194,7 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                   chunk_scheme: ChunkScheme = ChunkScheme(),
                   compressor=None,
                   voxel_size=(1.0, 1.0, 1.0), unit="micrometer",
+                  translation: Tuple[int, int, int] = (0,0,0), # in units
                   xy_levels: int = 0,
                   shard_shape: Tuple[int,int,int] | None = None):
     root = zarr.open_group(path, mode="a")
@@ -240,7 +241,10 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
         s = [dz * zf, dy * yf, dx * xf]
         datasets.append({
             "path": f"s{l}",
-            "coordinateTransformations": [{"type": "scale", "scale": s}],
+            "coordinateTransformations": [
+                {"type": "scale", "scale": s},
+                {"type": "translation", "translation": list(translation)}
+                ],
         })
 
     axes = [
@@ -281,7 +285,8 @@ class Live3DPyramidWriter:
                  ingest_queue_size: int = 8,
                  max_inflight_chunks: int | None = None,
                  async_close: bool = True,
-                 shard_shape: Tuple[int, int, int] | None = None):
+                 shard_shape: Tuple[int, int, int] | None = None,
+                 translation: Tuple[int,int,int] = (0,0,0)):
 
         self.spec = spec
         self.chunk_scheme = chunk_scheme
@@ -295,6 +300,7 @@ class Live3DPyramidWriter:
             spec, path, chunk_scheme=chunk_scheme, compressor=compressor,
             voxel_size=voxel_size, xy_levels=self.xy_levels,
             shard_shape=shard_shape,
+            translation=translation
         )
 
         self.levels = spec.levels
