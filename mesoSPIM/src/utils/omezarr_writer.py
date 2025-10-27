@@ -216,8 +216,6 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                 raise ValueError(f"Existing {name}: {a.shape}/{a.dtype} != {lvl_shape}/uint16")
             if a.shape[0] < z_l:
                 a.resize((z_l, y_l, x_l))
-            if a.attrs.get("dimension_names") != ["z", "y", "x"]:
-                a.attrs["dimension_names"] = ["z", "y", "x"]
         else:
             kwargs = dict(name=name, shape=lvl_shape, chunks=chunks, dtype="uint16")
             if compressor is not None:
@@ -226,10 +224,10 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
             if shards_l is not None:
                 # v3: inner shard (must divide chunks)
                 kwargs["shards"] = shards_l
+            kwargs["dimension_names"] = ["z", "y", "x"]
             if VERBOSE:
                 print(f"[init] creating {name}: shape={lvl_shape} chunks={chunks} shards={shards_l}")
             a = root.create_array(**kwargs)
-            a.attrs["dimension_names"] = ["z", "y", "x"]
 
         arrs.append(a)
 
