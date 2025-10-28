@@ -131,6 +131,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                     shard_shape=shard_shape,
                     flush_pad=FlushPad.DUPLICATE_LAST,  # keeps alignment, no RMW
                     async_close=async_finalize,
+                    translation=(acq['z_start'], acq['y_pos'], acq['x_pos'])
             )
 
         elif self.file_extension == '.h5':

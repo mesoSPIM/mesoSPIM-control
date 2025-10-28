@@ -30,11 +30,12 @@ def ceil_div(a, b):  # integer ceil
 def ds2_mean_uint16(img: np.ndarray) -> np.ndarray:
     y, x = img.shape
     y2 = y - (y & 1); x2 = x - (x & 1)
-    a = img[:y2:2, :x2:2].astype(np.uint32)
-    b = img[1:y2:2, :x2:2].astype(np.uint32)
-    c = img[:y2:2, 1:x2:2].astype(np.uint32)
-    d = img[1:y2:2, 1:x2:2].astype(np.uint32)
-    out = (a + b + c + d + 2) >> 2              # +2 for rounding
+    out = img[:y2:2, :x2:2].astype(np.uint32)
+    out[:] += img[1:y2:2, :x2:2].astype(np.uint32)
+    out[:] += img[:y2:2, 1:x2:2].astype(np.uint32)
+    out[:] += img[1:y2:2, 1:x2:2].astype(np.uint32)
+    out += 2 # +2 to mean round divide by 4
+    out[:] = out >> 2
     # pad edge by replication if odd dims:
     if y & 1: out = np.vstack([out, out[-1:]])
     if x & 1: out = np.hstack([out, out[:, -1:]])
@@ -42,7 +43,11 @@ def ds2_mean_uint16(img: np.ndarray) -> np.ndarray:
 
 def dsZ2_mean_uint16(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """Mean of two uint16 slices -> uint16."""
-    return ((a.astype(np.uint32) + b.astype(np.uint32) + 1) >> 1).astype(np.uint16)
+    out = a.astype(np.uint32)
+    out += b.astype(np.uint32)
+    out += 1 # +1 for mean round divide by 2
+    out = out >> 1
+    return out.astype(np.uint16)
 
 def infer_n_levels(y, x, z_estimate, min_dim=256):
     """Stop when any axis would shrink below min_dim (spatial) or z_estimate//2**L < 1."""
@@ -189,6 +194,7 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                   chunk_scheme: ChunkScheme = ChunkScheme(),
                   compressor=None,
                   voxel_size=(1.0, 1.0, 1.0), unit="micrometer",
+                  translation: Tuple[int, int, int] = (0,0,0), # in units
                   xy_levels: int = 0,
                   shard_shape: Tuple[int,int,int] | None = None):
     root = zarr.open_group(path, mode="a")
@@ -210,8 +216,6 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                 raise ValueError(f"Existing {name}: {a.shape}/{a.dtype} != {lvl_shape}/uint16")
             if a.shape[0] < z_l:
                 a.resize((z_l, y_l, x_l))
-            if a.attrs.get("dimension_names") != ["z", "y", "x"]:
-                a.attrs["dimension_names"] = ["z", "y", "x"]
         else:
             kwargs = dict(name=name, shape=lvl_shape, chunks=chunks, dtype="uint16")
             if compressor is not None:
@@ -220,10 +224,10 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
             if shards_l is not None:
                 # v3: inner shard (must divide chunks)
                 kwargs["shards"] = shards_l
+            kwargs["dimension_names"] = ["z", "y", "x"]
             if VERBOSE:
                 print(f"[init] creating {name}: shape={lvl_shape} chunks={chunks} shards={shards_l}")
             a = root.create_array(**kwargs)
-            a.attrs["dimension_names"] = ["z", "y", "x"]
 
         arrs.append(a)
 
@@ -235,7 +239,10 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
         s = [dz * zf, dy * yf, dx * xf]
         datasets.append({
             "path": f"s{l}",
-            "coordinateTransformations": [{"type": "scale", "scale": s}],
+            "coordinateTransformations": [
+                {"type": "scale", "scale": s},
+                {"type": "translation", "translation": list(translation)}
+                ],
         })
 
     axes = [
@@ -276,7 +283,8 @@ class Live3DPyramidWriter:
                  ingest_queue_size: int = 8,
                  max_inflight_chunks: int | None = None,
                  async_close: bool = True,
-                 shard_shape: Tuple[int, int, int] | None = None):
+                 shard_shape: Tuple[int, int, int] | None = None,
+                 translation: Tuple[int,int,int] = (0,0,0)):
 
         self.spec = spec
         self.chunk_scheme = chunk_scheme
@@ -290,6 +298,7 @@ class Live3DPyramidWriter:
             spec, path, chunk_scheme=chunk_scheme, compressor=compressor,
             voxel_size=voxel_size, xy_levels=self.xy_levels,
             shard_shape=shard_shape,
+            translation=translation
         )
 
         self.levels = spec.levels
