@@ -86,6 +86,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.max_frame = acq.get_image_count()
 
+        if acq == acq_list[0]:
+            self.first_path = self.path
+
         print(f'{self.file_extension=}')
         if self.file_extension == '.ome.zarr':
             if hasattr(self.cfg, "ome_zarr"):
@@ -126,7 +129,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.omezarr_writer = Live3DPyramidWriter(
                     spec,
                     voxel_size=px_size_zyx,
-                    path=self.path + '/' + group_name,
+                    path=self.first_path + '/' + group_name,
                     max_workers=os.cpu_count() // 2,
                     chunk_scheme=scheme,
                     compressor=compressor,
