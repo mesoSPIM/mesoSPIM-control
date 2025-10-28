@@ -72,7 +72,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def prepare_acquisition(self, acq, acq_list):
         self.folder = acq['folder']
         self.filename = replace_with_underscores(acq['filename'])
-        self.path = os.path.realpath(self.folder+'/'+self.filename)
+        self.path = os.path.realpath(self.folder+'/ '+ self.filename)
         self.MIP_path = os.path.realpath(self.folder +'/MAX_'+ self.filename + '.tiff')
         # self.file_root, self.file_extension = os.path.splitext(self.path)
         self.file_extension = ''.join(Path(self.path).suffixes)
@@ -120,11 +120,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             compressor = compression
             if compression:
                 compressor = BloscCodec(cname=compression, clevel=compression_level, shuffle=BloscShuffle.bitshuffle)
-
+           
+            isetup = acq_list.index(acq)
+            group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0) # time = 0 for now
             self.omezarr_writer = Live3DPyramidWriter(
                     spec,
                     voxel_size=px_size_zyx,
-                    path=self.path,
+                    path=self.path + '/' + group_name,
                     max_workers=os.cpu_count() // 2,
                     chunk_scheme=scheme,
                     compressor=compressor,
