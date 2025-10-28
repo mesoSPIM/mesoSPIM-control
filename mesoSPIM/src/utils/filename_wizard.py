@@ -96,7 +96,7 @@ class FilenameWizard(QtWidgets.QWizard):
                     start_number += 1
                     start_number_string = str(start_number)
 
-            elif self.file_format in {'tiff', 'btf', 'ome.zarr'}:
+            elif self.file_format in {'tiff', 'btf'}:
                 if self.field('DescriptionTIFF'):
                     filename += replace_with_underscores(self.field('DescriptionTIFF')) + '_'
 
@@ -117,15 +117,18 @@ class FilenameWizard(QtWidgets.QWizard):
 
                 file_suffix = '.' + self.file_format
 
-            elif self.file_format == 'h5':
+            elif self.file_format in ('h5', 'ome.zarr'):
                 if self.field('DescriptionHDF5'):
                     filename += replace_with_underscores(self.field('DescriptionHDF5')) + '_'
+                    file_suffix = '_bdv.' + self.file_format
+                elif self.field('DescriptionOmeZarr'):
+                    filename += replace_with_underscores(self.field('DescriptionOmeZarr')) + '_'
+                    file_suffix = '.' + self.file_format
                 filename += f'Mag{self.parent.model.getZoom(0)}'
                 laser_list = self.parent.model.getLaserList()
                 for laser in laser_list:
                     filename += '_ch' + laser[:-3]
-                file_suffix = '_bdv.' + self.file_format
-
+                
             # elif self.file_format == 'ome.zarr':
             #     if self.field('DescriptionOmeZarr'):
             #         filename += replace_with_underscores(self.field('DescriptionOmeZarr')) + '_'

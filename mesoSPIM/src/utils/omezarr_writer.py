@@ -209,7 +209,7 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
         chunks = chunk_scheme.chunks_for_level(l, lvl_shape)
         shards_l = pick_shards_for_level(shard_shape, chunks, lvl_shape)
 
-        name = f"s{l}"
+        name = f"{l}"
         if name in root:
             a = root[name]
             if a.shape != lvl_shape or a.dtype != np.uint16:
@@ -231,14 +231,14 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
 
         arrs.append(a)
 
-    # multiscales with per-axis physical scales
+    # OME attributes: multiscales with per-axis physical scales
     dz, dy, dx = voxel_size
     datasets = []
     for l in range(spec.levels):
         zf, yf, xf = level_factors(l, xy_levels)
         s = [dz * zf, dy * yf, dx * xf]
         datasets.append({
-            "path": f"s{l}",
+            "path": f"{l}",
             "coordinateTransformations": [
                 {"type": "scale", "scale": s},
                 {"type": "translation", "translation": list(translation)}
