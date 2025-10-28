@@ -31,9 +31,9 @@ def ds2_mean_uint16(img: np.ndarray) -> np.ndarray:
     y, x = img.shape
     y2 = y - (y & 1); x2 = x - (x & 1)
     out = img[:y2:2, :x2:2].astype(np.uint32)
-    out[:] += img[1:y2:2, :x2:2].astype(np.uint32)
-    out[:] += img[:y2:2, 1:x2:2].astype(np.uint32)
-    out[:] += img[1:y2:2, 1:x2:2].astype(np.uint32)
+    out += img[1:y2:2, :x2:2].astype(np.uint32)
+    out += img[:y2:2, 1:x2:2].astype(np.uint32)
+    out += img[1:y2:2, 1:x2:2].astype(np.uint32)
     out += 2 # +2 to mean round divide by 4
     out[:] = out >> 2
     # pad edge by replication if odd dims:
@@ -46,7 +46,7 @@ def dsZ2_mean_uint16(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     out = a.astype(np.uint32)
     out += b.astype(np.uint32)
     out += 1 # +1 for mean round divide by 2
-    out = out >> 1
+    out[:] = out >> 1
     return out.astype(np.uint16)
 
 def infer_n_levels(y, x, z_estimate, min_dim=256):
