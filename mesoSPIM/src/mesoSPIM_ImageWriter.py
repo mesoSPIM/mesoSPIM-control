@@ -91,6 +91,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         print(f'{self.file_extension=}')
         if self.file_extension == '.ome.zarr':
+            if acq == acq_list[0]:
+                import zarr
+                zarr.open_group(self.first_path, mode="a")
             if hasattr(self.cfg, "ome_zarr"):
                 compression = self.cfg.ome_zarr['compression']
                 compression_level = self.cfg.ome_zarr['compression_level']
