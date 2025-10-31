@@ -85,10 +85,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.metadata_file_path = self.first_path + '_' + self.omezarr_group_name + '_meta.txt'
             self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.omezarr_group_name + '.tiff'
 
+        # Logic for h5 naming of acquisition files and metadata files
         elif self.file_extension == '.h5':
             isetup = acq_list.index(acq)
-            self.h5_group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0)  # time = 0 for now
-            self.current_acquire_file_path = self.first_path + '/' + self.h5_group_name
+            self.h5_group_name = 's{:d}-t{:d}'.format(isetup, 0)  # time = 0 for now
+            self.current_acquire_file_path = self.first_path
 
             self.metadata_file_path = self.first_path + '_' + self.h5_group_name + '_meta.txt'
             self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.h5_group_name + '.tiff'
