@@ -363,9 +363,10 @@ Slow IO can be improved by using bigger chunks. If bigger chunks do not help, us
 to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
 '''
 ome_zarr = {
+    'ome_version': '0.5', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
     'compression': 'zstd', # None, 'zstd', 'lz4'
     'compression_level': 5, # 1-9
-    'shards': (64,6000,6000), # Specify Max shard size: suggest None for best performance, (64, 6000,6000) (axes: z,y,x)
+    'shards': (64,6000,6000), # Specify Max shard size: suggest None for best performance, (64, 6000,6000) (axes: z,y,x), ignored if zarr v2
     'base_chunks': (64,256,256), # Starting chunk size (level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64,64,64), # Approx ending chunks shape (level 5). Bigger chunks, less files (axes: z,y,x)
     'async_finalize': True, # True, False

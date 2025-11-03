@@ -139,6 +139,39 @@ class ChunkScheme:
 def _validate_divisible(chunks: Tuple[int,int,int], shards: Tuple[int,int,int]) -> bool:
     return all(c % s == 0 for c, s in zip(chunks, shards))
 
+def _ensure_v2_compressor(compressor):
+    """
+    If a zarr v3 BloscCodec is passed (e.g., OME-Zarr 0.5 style), convert it to a
+    numcodecs.Blosc compatible with Zarr v2 (required for OME-Zarr 0.4).
+    Otherwise return compressor unchanged.
+    """
+
+    compressor_default = 'zstd'
+    clevel_default = 5
+    shuffle_default = 2
+
+    from numcodecs import Blosc as BloscV2
+    if BloscV2 is not None and isinstance(compressor, BloscCodec):
+        cname_attr = getattr(compressor, "cname", compressor_default)
+        # handle enum -> string
+        cname = getattr(cname_attr, "value", cname_attr)
+        if isinstance(cname, str):
+            cname = cname.lower()
+        clevel = int(getattr(compressor, "clevel", clevel_default))
+        shuffle_attr = getattr(compressor, "shuffle", shuffle_default)
+        # normalize shuffle to string key if enum
+        shuffle_str = getattr(shuffle_attr, "value", shuffle_attr)
+        if isinstance(shuffle_str, str):
+            shuffle_str = shuffle_str.lower()
+        shuffle_map = {
+            "noshuffle": 0,
+            "shuffle": 1,
+            "bitshuffle": 2,
+        }
+        shuffle_int = shuffle_map.get(shuffle_str, 1 if shuffle_str not in (0, 1, 2) else shuffle_str)
+        return BloscV2(cname=cname, clevel=clevel, shuffle=shuffle_int)
+
+
 def _coerce_shards(chunks: Tuple[int,int,int],
                    desired: Tuple[int,int,int]) -> Tuple[int,int,int]:
     """
@@ -196,8 +229,12 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                   voxel_size=(1.0, 1.0, 1.0), unit="micrometer",
                   translation: Tuple[int, int, int] = (0,0,0), # in units
                   xy_levels: int = 0,
-                  shard_shape: Tuple[int,int,int] | None = None):
-    root = zarr.open_group(path, mode="a")
+                  shard_shape: Tuple[int,int,int] | None = None,
+                  ome_version: str = "0.5"):
+
+    # Map OME-NGFF version to Zarr store version
+    zarr_version = 2 if ome_version == "0.4" else 3
+    root = zarr.open_group(path, mode="a", zarr_version=zarr_version)
     arrs = []
     for l in range(spec.levels):
         zf, yf, xf = level_factors(l, xy_levels)
@@ -207,7 +244,8 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
         lvl_shape = (z_l, y_l, x_l)
 
         chunks = chunk_scheme.chunks_for_level(l, lvl_shape)
-        shards_l = pick_shards_for_level(shard_shape, chunks, lvl_shape)
+        # shards_l = pick_shards_for_level(shard_shape, chunks, lvl_shape)
+        shards_l = pick_shards_for_level(shard_shape, chunks, lvl_shape) if zarr_version == 3 else None
 
         name = f"{l}"
         if name in root:
@@ -216,7 +254,7 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                 raise ValueError(f"Existing {name}: {a.shape}/{a.dtype} != {lvl_shape}/uint16")
             if a.shape[0] < z_l:
                 a.resize((z_l, y_l, x_l))
-        else:
+        elif zarr_version == 3:
             kwargs = dict(name=name, shape=lvl_shape, chunks=chunks, dtype="uint16")
             if compressor is not None:
                 # v3: list of codecs
@@ -228,6 +266,31 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
             if VERBOSE:
                 print(f"[init] creating {name}: shape={lvl_shape} chunks={chunks} shards={shards_l}")
             a = root.create_array(**kwargs)
+        else:
+            # Zarr v2 path
+            if VERBOSE:
+                print(f"[init] creating {name} (Zarr v2): shape={lvl_shape} chunks={chunks}")
+            v2_comp = _ensure_v2_compressor(compressor)
+
+            # optional: dimension hint for some tools
+            try:
+                a.attrs["_ARRAY_DIMENSIONS"] = ["z", "y", "x"]
+            except Exception:
+                pass
+
+            # Work around AsyncGroup.create_array() not accepting `dimension_separator`
+            from zarr import create as zcreate
+            a = zcreate(
+                shape = lvl_shape,
+                chunks = chunks,
+                dtype = "uint16",
+                compressor = v2_comp,  # numcodecs codec
+                overwrite = False,
+                store = root.store,  # same store as the group
+                path = name,  # create under this group
+                zarr_format = 2,  # v2 array
+                dimension_separator = "/",  # nested directories in .zarray
+            )
 
         arrs.append(a)
 
@@ -250,15 +313,24 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
         {"name": "y", "type": "space", "unit": unit},
         {"name": "x", "type": "space", "unit": unit},
     ]
-    root.attrs["ome"] = {
-        "version": "0.5",
-        "multiscales": [{
+    if ome_version == "0.5":
+        root.attrs["ome"] = {
+            "version": "0.5",
+            "multiscales": [{
+                "axes": axes,
+                "datasets": datasets,
+                "name": "image",
+                "type": "image",
+            }],
+        }
+    else:
+        # OME-Zarr 0.4 stores multiscales at top level
+        root.attrs["multiscales"] = [{
+            "version": "0.4",
             "axes": axes,
             "datasets": datasets,
             "name": "image",
-            "type": "image",
-        }],
-    }
+        }]
     return root, arrs
 
 
@@ -284,7 +356,8 @@ class Live3DPyramidWriter:
                  max_inflight_chunks: int | None = None,
                  async_close: bool = True,
                  shard_shape: Tuple[int, int, int] | None = None,
-                 translation: Tuple[int,int,int] = (0,0,0)):
+                 translation: Tuple[int,int,int] = (0,0,0),
+                 ome_version: str = "0.5"):
 
         self.spec = spec
         self.chunk_scheme = chunk_scheme
@@ -295,10 +368,11 @@ class Live3DPyramidWriter:
         self.finalize_future = None
 
         self.root, self.arrs = init_ome_zarr(
-            spec, path, chunk_scheme=chunk_scheme, compressor=compressor,
+            spec, path,
+            chunk_scheme=chunk_scheme, compressor=compressor,
             voxel_size=voxel_size, xy_levels=self.xy_levels,
-            shard_shape=shard_shape,
-            translation=translation
+            shard_shape=shard_shape, translation=translation,
+            ome_version=ome_version,
         )
 
         self.levels = spec.levels
