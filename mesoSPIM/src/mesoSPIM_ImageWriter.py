@@ -125,7 +125,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         if self.file_extension == '.ome.zarr':
             if hasattr(self.cfg, "ome_zarr"):
+                # Derive settings from the config file
                 ome_version = self.cfg.ome_zarr['ome_version']
+                generate_multiscales = self.cfg.ome_zarr['generate_multiscales']
                 compression = self.cfg.ome_zarr['compression']
                 compression_level = self.cfg.ome_zarr['compression_level']
                 shards = self.cfg.ome_zarr['shards']
@@ -133,12 +135,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 target_chunks = self.cfg.ome_zarr['target_chunks']
                 async_finalize = self.cfg.ome_zarr['async_finalize']
             else:
+                # Programmatically defined defaults if not set in the config file
                 ome_version = "0.5"
+                generate_multiscales = True
                 compression = 'zstd'
                 compression_level = 5
-                shards = None
-                base_chunks = (256,256,256)
-                target_chunks = (256,256,256)
+                shards = (64, self.y_pixels, self.x_pixels) # Auto set shards to XY image size
+                base_chunks = (64,256,256)
+                target_chunks = (64,256,256)
                 async_finalize = True
 
             if acq == acq_list[0]:
@@ -150,7 +154,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             px_size_zyx = (acq['z_step'], self.cfg.pixelsize[acq['zoom']], self.cfg.pixelsize[acq['zoom']])
 
             xy_levels = compute_xy_only_levels(px_size_zyx)
-            levels = plan_levels(Y, X, Z_EST, xy_levels, min_dim=64)
+            if generate_multiscales:
+                levels = plan_levels(Y, X, Z_EST, xy_levels, min_dim=64)
+            else:
+                levels = 1
 
             spec = PyramidSpec(
                 z_size_estimate=Z_EST,  # big upper bound; we'll truncate at the end
