@@ -3,11 +3,11 @@ from __future__ import annotations
 import importlib.util, sys, types, traceback, os
 from pathlib import Path
 from typing import Dict, Type, Iterable
-from .api import Writer, API_VERSION
+from .ImageWriterApi import Writer, API_VERSION
 
 # Default DIRS for builtin image writers
 DEFAULT_DIRS: list[Path] = [
-    Path.cwd() / "plugins",                           # ./plugins next to your app
+    Path.cwd() / "plugins/ImageWriters",
 ]
 
 class WriterRegistry:

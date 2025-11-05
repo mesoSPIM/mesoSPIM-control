@@ -14,7 +14,7 @@ from distutils.version import StrictVersion
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
-from .plugins.writers.manager import WriterRegistry
+from mesoSPIM.src.plugins.manager import WriterRegistry
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
     def __init__(self, parent, frame_queue):
