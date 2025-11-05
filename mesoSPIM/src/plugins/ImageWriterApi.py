@@ -4,7 +4,7 @@ This API is used as a minimal template for building all image writers
 '''
 
 from __future__ import annotations
-from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple
+from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
 from dataclasses import dataclass
 
 API_VERSION = "0.0.1"
@@ -42,6 +42,13 @@ class Writer(Protocol):
 
     @classmethod
     def capabilities(cls) -> WriterCapabilities: ...
+
+    @classmethod
+    def file_extensions(cls) -> Union[None, str, list[str]]:
+        """
+        Return None, a string or list of strings to specify the file extensions
+        supported by the Writer. Example: ['.ome.zarr', '.zarr']
+        """
 
     def open(self, req: WriteRequest) -> None:
         """Allocate outputs/stores; may create multiscales, groups, labels, etc."""
