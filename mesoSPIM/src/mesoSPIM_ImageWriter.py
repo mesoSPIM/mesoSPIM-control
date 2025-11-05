@@ -307,7 +307,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             try:
                 if self.file_extension == '.ome.zarr':
-                    self.omezarr_writer.__exit__(None, None, None)
+                    self.omezarr_writer.close()
                 elif self.file_extension == '.h5':
                     self.bdv_writer.close()
                 elif self.file_extension == '.raw':
@@ -327,7 +327,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def end_acquisition(self, acq, acq_list):
         logger.info("end_acquisition() started")
         if self.file_extension == '.ome.zarr':
-            self.omezarr_writer.__exit__(None, None, None)
+            self.omezarr_writer.close()
         elif self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:
