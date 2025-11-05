@@ -409,3 +409,10 @@ startup = {
 'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
 'average_frame_rate': 4.5,
 }
+
+plugins = {
+'paths_list': [
+"c:/code/mesospim_plugins",
+"c:/code/mesospim_plugins2",
+]
+}
