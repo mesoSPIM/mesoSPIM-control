@@ -1,4 +1,7 @@
 # mesospim/plugins/manager.py
+"""
+Manage MesoSPIM plugins through automatic import, validation and registration
+"""
 from __future__ import annotations
 import importlib.util, sys, types, traceback, os
 from pathlib import Path
@@ -7,8 +10,10 @@ from .ImageWriterApi import Writer, API_VERSION
 
 # Default DIRS for builtin image writers
 DEFAULT_DIRS: list[Path] = [
-    Path.cwd() / "plugins/ImageWriters",
+    Path.cwd() / "src/plugins/ImageWriters",
 ]
+
+MESOSPIM_PLUGIN_MODULE_PREFIX = 'mesospim_plugin'
 
 class WriterRegistry:
     def __init__(self, parent) -> None:
@@ -35,10 +40,12 @@ class WriterRegistry:
 
     def load_from_dirs(self) -> None:
         for d in self.plugins_dirs:
+            print(f'{d=}')
             print([x.exists() for x in self.plugins_dirs])
             # d.mkdir(parents=True, exist_ok=True)
             if d.exists():
                 for path in list(d.glob("*.py")) + [p for p in d.iterdir() if p.is_dir() and (p / "__init__.py").exists()]:
+                    if "__init__.py" in str(path): continue # Skip imports of __init__.py
                     try:
                         mod = _import_path(path)
                         # Two ways to register:
@@ -52,9 +59,17 @@ class WriterRegistry:
                     except Exception:
                         traceback.print_exc()
 
+        # Some import tests
+        for key, value in sys.modules.items():
+            if MESOSPIM_PLUGIN_MODULE_PREFIX in key:
+                print(f'{key=}')
+                writer = value.TiffWriter()
+                print(isinstance(writer, Writer))
+                print(writer.capabilities())
+
 def _import_path(path: Path) -> types.ModuleType:
     '''Import all modules in the paths'''
-    modname = f"mesospim_plugin_{path.stem}" # module name prefixed with mesospim_plugin_
+    modname = f"{MESOSPIM_PLUGIN_MODULE_PREFIX}_{path.stem}" # module name prefixed with mesospim_plugin_
     spec = importlib.util.spec_from_file_location(
         modname, path if path.suffix == ".py" else (path / "__init__.py")
     )

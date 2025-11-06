@@ -4,8 +4,10 @@ This API is used as a minimal template for building all image writers
 '''
 
 from __future__ import annotations
+from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
 from dataclasses import dataclass
+import numpy as np
 
 API_VERSION = "0.0.1"
 
@@ -23,19 +25,29 @@ class WriterCapabilities:
 @dataclass
 class WriteRequest:
     # Minimal, format-agnostic metadata needed by all writers
-    uri: str                             # file path or store URL
-    shape: Tuple[int, ...]               # e.g. (C, Z, Y, X) or (Z, Y, X)
+    uri: Path                            # file path or store URL
+    shape: Tuple[int, ...]               # e.g. (T, C, Z, Y, X), (C, Z, Y, X), (Z, Y, X), (Y, X)
     dtype: str
     axes: str                            # e.g. "CZYX", "ZXY", "TCZYX"
+    x_res: Optional[int] = 1
+    y_res: Optional[int] = 1
+    z_res: Optional[int] = 1
+    unit: Optional[str] = 'microns'
     chunks: Optional[Tuple[int, ...]] = None
     compression: Optional[str] = None
+    multiscales: Optional[int] = None
+    overwrite: Optional[bool] = None
     metadata: Dict[str, Any] = None      # imaging + acquisition metadata
 
 @runtime_checkable
 class Writer(Protocol):
     """A streaming-friendly writer interface."""
+
+    writer = None
+
     @classmethod
-    def api_version(cls) -> str: ...
+    def api_version(cls) -> str:
+        return API_VERSION
 
     @classmethod
     def name(cls) -> str: ...
@@ -50,8 +62,15 @@ class Writer(Protocol):
         supported by the Writer. Example: ['.ome.zarr', '.zarr']
         """
 
+    def compatible_suffix(self, req: WriteRequest) -> str:
+        return ''.join(req.uri.suffixes) in file_extensions()
+
     def open(self, req: WriteRequest) -> None:
-        """Allocate outputs/stores; may create multiscales, groups, labels, etc."""
+        """
+        Allocate outputs/stores; may create multiscales, groups, labels, etc.
+        Equivalent to prepare method in mesoSPIM_ImageWriter
+        Establish self.writer
+        """
 
     def write_frame(self, index: Tuple[slice, ...], data: memoryview | Any) -> None:
         """
@@ -61,7 +80,13 @@ class Writer(Protocol):
         """
 
     def finalize(self) -> None:
-        """Flush/close handles. Safe to call multiple times."""
+        """
+        Flush/close handles. Safe to call multiple times.
+        Close self.writer and set =None
+        """
 
     def abort(self) -> None:
-        """Best-effort cleanup on failure."""
+        """
+        Best-effort cleanup on failure.
+        Close self.writer and set =None
+        """
