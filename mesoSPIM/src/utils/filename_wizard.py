@@ -120,10 +120,9 @@ class FilenameWizard(QtWidgets.QWizard):
             elif self.file_format in ('h5', 'ome.zarr'):
                 if self.field('DescriptionHDF5'):
                     filename += replace_with_underscores(self.field('DescriptionHDF5')) + '_'
-                    file_suffix = '_bdv.' + self.file_format
                 elif self.field('DescriptionOmeZarr'):
                     filename += replace_with_underscores(self.field('DescriptionOmeZarr')) + '_'
-                    file_suffix = '.' + self.file_format
+                file_suffix = '.' + self.file_format
                 filename += f'Mag{self.parent.model.getZoom(0)}'
                 laser_list = self.parent.model.getLaserList()
                 for laser in laser_list:
