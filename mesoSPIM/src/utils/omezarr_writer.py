@@ -417,13 +417,16 @@ class Live3DPyramidWriter:
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        if self.async_close:
-            self.close_async()    # Background finalize
-        else:
-            self.close()          # synchronous finalize
+        self.close()
         return False
 
     def close(self):
+        if self.async_close:
+            self.close_async()    # Background finalize
+        else:
+            self.close_sync()     # synchronous finalize
+
+    def close_sync(self):
         self.stop.set()
         self.q.put(None)
         self.worker.join()
@@ -456,7 +459,6 @@ class Live3DPyramidWriter:
         return self.finalize_future
 
     def _finalize(self):
-        # exactly what your current close() does, but moved here
         self.stop.set()
         self.q.put(None)
         self.worker.join()
