@@ -14,7 +14,7 @@ from distutils.version import StrictVersion
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
-from mesoSPIM.src.plugins.manager import WriterRegistry
+from .plugins.utils import get_writer_plugins
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
     def __init__(self, parent, frame_queue):
@@ -44,7 +44,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
 
-        self.writerregistry = WriterRegistry(parent)
+        self.Writers = get_writer_plugins()
 
     def check_versions(self):
         """Take care of API changes in different library versions"""

@@ -9,6 +9,7 @@ import indexed
 import os.path
 import logging
 logger = logging.getLogger(__name__)
+from ..plugins.utils import get_writer_name_for_file_extension
 
 
 class Acquisition(indexed.IndexedOrderedDict):
@@ -64,7 +65,9 @@ class Acquisition(indexed.IndexedOrderedDict):
                  etl_l_amplitude=0,
                  etl_r_offset=0,
                  etl_r_amplitude=0,
-                 processing='MAX'):
+                 processing='MAX',
+                 image_writer_plugin=get_writer_name_for_file_extension('.tif'),
+                 ):
 
         super().__init__()
 
@@ -89,6 +92,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['etl_r_offset']=etl_r_offset
         self['etl_r_amplitude']=etl_r_amplitude
         self['processing']=processing
+        self['image_writer_plugin'] = image_writer_plugin
 
 
     def __setitem__(self, key, value):

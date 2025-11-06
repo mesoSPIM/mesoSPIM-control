@@ -6,6 +6,8 @@ from PyQt5 import QtCore, QtWidgets
 
 from .utility_functions import replace_with_underscores
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
+from ..plugins.utils import get_writer_plugins
+from pprint import pprint as print
 
 import logging
 logger = logging.getLogger(__name__)
@@ -14,8 +16,10 @@ logger = logging.getLogger(__name__)
 class FilenameWizard(QtWidgets.QWizard):
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 6
-    (welcome, raw, tiff, bigtiff, single_hdf5, finished) = range(num_of_pages)
+    Writers = get_writer_plugins()
+
+    num_of_pages = 2 + len(Writers)
+    # (welcome, raw, tiff, bigtiff, single_hdf5, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         '''Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
@@ -25,16 +29,32 @@ class FilenameWizard(QtWidgets.QWizard):
         through '''
         self.parent = parent
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
-        self.file_format = None  # 'raw', 'h5', 'tiff', 'btf'
+        self.selected_writer = None
+
+        # Set Writer ID #s for use in UI Wizard
+        for id, writer in enumerate(self.Writers):
+            writer['id'] = id+1
+        print(self.Writers)
+
         self.setWindowTitle('Filename Wizard')
         self.setPage(0, FilenameWizardWelcomePage(self))
-        self.setPage(1, FilenameWizardRawSelectionPage(self))
-        self.setPage(2, FilenameWizardTiffSelectionPage(self))
-        self.setPage(3, FilenameWizardBigTiffSelectionPage(self))
-        self.setPage(4, FilenameWizardSingleHDF5SelectionPage(self))
-        self.setPage(5, FilenameWizardCheckResultsPage(self))
+        for writer in self.Writers:
+            self.setPage(writer.get('id'), self.build_selection_page(self, writer))
+        self.setPage(self.num_of_pages-1, FilenameWizardCheckResultsPage(self))
         self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
+
+    def build_selection_page(self, parent, writer):
+        class SelectionPage(AbstractSelectionPage):
+            def __init__(self, parent=None, writer=None):
+                super().__init__(parent)
+                self.parent = parent
+                self.setTitle(writer.get('file_names').WindowTitle)
+                self.setSubTitle(
+                    writer.get('file_names').WindowSubTitle
+                )
+                self.registerField(writer.get('file_names').WindowDescription, self.DescriptionLineEdit)
+        return SelectionPage(parent, writer)
 
     def done(self, r):
         ''' Reimplementation of the done function
@@ -55,81 +75,145 @@ class FilenameWizard(QtWidgets.QWizard):
     def generate_filename_list(self, increment_number=True):
         '''
         Go through the model, entry for entry and populate the filenames
+        Use attributes from self.selected_writer to control naming
+        mesoSPIM/src/plugins/ImageWriterApi.py:FileNaming
+
+        Each writer is formated by:
+        mesoSPIM/src/plugins/utils.py:get_writer_plugins()
         '''
-        row_count = self.parent.model.rowCount()
+        if self.selected_writer.get('file_names').SingleFileFormat:
+            row_count = 1
+        else:
+            row_count = self.parent.model.rowCount()
         num_string = '000000'
         start_number = 0
         start_number_string = str(start_number)
         self.filename_list = []
         for row in range(0, row_count):
             filename = ''
-            if self.file_format == 'raw':
-                if self.field('DescriptionRaw'):
-                    filename += replace_with_underscores(self.field('DescriptionRaw')) + '_'
 
-                if self.field('xyPosition'):
-                    '''Round to nearest integer '''
-                    x_position_string = str(int(round(self.parent.model.getXPosition(row))))
-                    y_position_string = str(int(round(self.parent.model.getYPosition(row))))
-                    filename += 'X' + x_position_string + '_' + 'Y' + y_position_string + '_'
+            # Add custom description
+            WindowDescription = self.selected_writer.get('file_names').WindowDescription
+            if self.field(WindowDescription):
+                filename += replace_with_underscores(self.field(WindowDescription)) + '_'
 
-                if self.field('rotationPosition'):
-                    rot_position_string = str(int(round(self.parent.model.getRotationPosition(row))))
-                    filename += 'rot_' + rot_position_string + '_'
+            # Add Magnification
+            if self.selected_writer.get('file_names').IncludeMag:
+                filename += f'Mag{self.parent.model.getZoom(row)}_'
 
-                if self.field('Laser'):
-                    filename += replace_with_underscores(self.parent.model.getLaser(row)) + '_'
+            # Add Tile
+            if self.selected_writer.get('file_names').IncludeTile:
+                filename += f'Tile{self.parent.model.getTileIndex(row)}_'
 
-                if self.field('Filter'):
-                    filename += replace_with_underscores(self.parent.model.getFilter(row)) + '_'
+            # Add Channel(s)
+            if self.selected_writer.get('file_names').IncludeChannel:
+                if self.selected_writer.get('file_names').SingleFileFormat \
+                        and self.selected_writer.get('file_names').IncludeAllChannelsInSingleFileFormat:
+                    laser_list = self.parent.model.getLaserList()
+                    for laser in laser_list:
+                        filename += 'Ch' + laser[:-3] + '_'
+                else:
+                    filename += f'Ch{self.parent.model.getLaser(row)[:-3]}_'
 
-                # if self.field('Zoom'):
-                #     filename += replace_with_underscores(self.parent.model.getZoom(row)) + '_'
-
-                if self.field('Shutterconfig'):
-                    filename += self.parent.model.getShutterconfig(row) + '_'
-
-                file_suffix = num_string[:-len(start_number_string)] + start_number_string + '.' + self.file_format
-
-                if increment_number:
-                    start_number += 1
-                    start_number_string = str(start_number)
-
-            elif self.file_format in {'tiff', 'btf'}:
-                if self.field('DescriptionTIFF'):
-                    filename += replace_with_underscores(self.field('DescriptionTIFF')) + '_'
-
-                if self.field('DescriptionBigTIFF'):
-                    filename += replace_with_underscores(self.field('DescriptionBigTIFF')) + '_'
-
+            # Add Shutter
+            if self.selected_writer.get('file_names').IncludeShutter:
                 if self.parent.model.getNShutterConfigs() > 1:
                     shutter_id = 0 if self.parent.model.getShutterconfig(row) == 'Left' else 1
                 else:
                     shutter_id = 0
+                filename += f'Sh{shutter_id}_'
 
+            # Add Rotation/Angle
+            if self.selected_writer.get('file_names').IncludeRotation:
                 if self.parent.model.getNAngles() > 1:
                     angle = int(self.parent.model.getRotationPosition(row))
                 else:
                     angle = 0
+                filename += f'Rot{angle}_'
 
-                filename += f'Mag{self.parent.model.getZoom(row)}_Tile{self.parent.model.getTileIndex(row)}_Ch{self.parent.model.getLaser(row)[:-3]}_Sh{shutter_id}_Rot{angle}'
+            # Add Suffix
+            if self.selected_writer.get('file_names').IncludeSuffix:
+                filename += f'{self.selected_writer.get('file_names').IncludeSuffix}'
 
-                file_suffix = '.' + self.file_format
+            # Trim trailing _
+            if filename.endswith('_'):
+                filename = filename[:-1]
 
-            elif self.file_format == 'h5':
-                if self.field('DescriptionHDF5'):
-                    filename += replace_with_underscores(self.field('DescriptionHDF5')) + '_'
-                filename += f'Mag{self.parent.model.getZoom(0)}'
-                laser_list = self.parent.model.getLaserList()
-                for laser in laser_list:
-                    filename += '_ch' + laser[:-3]
-                file_suffix = '_bdv.' + self.file_format
+            # Add File Extension
+            extension = self.selected_writer['file_extensions'][0]
+            if extension.startswith('.'):
+                extension = extension[1:]
+            filename += '.' + extension
 
-            else:
-                raise ValueError(f"file suffix invalid: {self.file_format}")
-
-            filename += file_suffix
             self.filename_list.append(filename)
+
+            # if self.file_format == 'raw':
+            #     if self.field('DescriptionRaw'):
+            #         filename += replace_with_underscores(self.field('DescriptionRaw')) + '_'
+            #
+            #     if self.field('xyPosition'):
+            #         '''Round to nearest integer '''
+            #         x_position_string = str(int(round(self.parent.model.getXPosition(row))))
+            #         y_position_string = str(int(round(self.parent.model.getYPosition(row))))
+            #         filename += 'X' + x_position_string + '_' + 'Y' + y_position_string + '_'
+            #
+            #     if self.field('rotationPosition'):
+            #         rot_position_string = str(int(round(self.parent.model.getRotationPosition(row))))
+            #         filename += 'rot_' + rot_position_string + '_'
+            #
+            #     if self.field('Laser'):
+            #         filename += replace_with_underscores(self.parent.model.getLaser(row)) + '_'
+            #
+            #     if self.field('Filter'):
+            #         filename += replace_with_underscores(self.parent.model.getFilter(row)) + '_'
+            #
+            #     # if self.field('Zoom'):
+            #     #     filename += replace_with_underscores(self.parent.model.getZoom(row)) + '_'
+            #
+            #     if self.field('Shutterconfig'):
+            #         filename += self.parent.model.getShutterconfig(row) + '_'
+            #
+            #     file_suffix = num_string[:-len(start_number_string)] + start_number_string + '.' + self.file_format
+            #
+            #     if increment_number:
+            #         start_number += 1
+            #         start_number_string = str(start_number)
+            #
+            # elif self.file_format in {'tiff', 'btf'}:
+            #     if self.field('DescriptionTIFF'):
+            #         filename += replace_with_underscores(self.field('DescriptionTIFF')) + '_'
+            #
+            #     if self.field('DescriptionBigTIFF'):
+            #         filename += replace_with_underscores(self.field('DescriptionBigTIFF')) + '_'
+            #
+            #     if self.parent.model.getNShutterConfigs() > 1:
+            #         shutter_id = 0 if self.parent.model.getShutterconfig(row) == 'Left' else 1
+            #     else:
+            #         shutter_id = 0
+            #
+            #     if self.parent.model.getNAngles() > 1:
+            #         angle = int(self.parent.model.getRotationPosition(row))
+            #     else:
+            #         angle = 0
+            #
+            #     filename += f'Mag{self.parent.model.getZoom(row)}_Tile{self.parent.model.getTileIndex(row)}_Ch{self.parent.model.getLaser(row)[:-3]}_Sh{shutter_id}_Rot{angle}'
+            #
+            #     file_suffix = '.' + self.file_format
+            #
+            # elif self.file_format == 'h5':
+            #     if self.field('DescriptionHDF5'):
+            #         filename += replace_with_underscores(self.field('DescriptionHDF5')) + '_'
+            #     filename += f'Mag{self.parent.model.getZoom(0)}'
+            #     laser_list = self.parent.model.getLaserList()
+            #     for laser in laser_list:
+            #         filename += '_ch' + laser[:-3]
+            #     file_suffix = '_bdv.' + self.file_format
+            #
+            # else:
+            #     raise ValueError(f"file suffix invalid: {self.file_format}")
+            #
+            # filename += file_suffix
+            # self.filename_list.append(filename)
             
     def update_filenames_in_model(self):
         row_count = self.parent.model.rowCount()
@@ -144,20 +228,16 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
+        self.Writers = parent.Writers
 
         self.setStyleSheet(''' font-size: 16px; ''')
         self.setTitle("Autogenerate filenames")
         self.setSubTitle("How would you like to save your data?")
 
-        self.raw_string = 'Individual Raw Files: ~.raw'
-        self.tiff_string = 'ImageJ TIFF files: ~.tiff'
-        self.bigtiff_string = 'BigTIFF files: ~.btf'
-        self.single_hdf5_string = 'BigDataViewer HDF5 file: ~.h5'
-
         self.SaveAsComboBoxLabel = QtWidgets.QLabel('Save as:')
         self.SaveAsComboBox = QtWidgets.QComboBox()
-        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string, self.bigtiff_string, self.single_hdf5_string])
-        self.SaveAsComboBox.setCurrentIndex(3)
+        self.SaveAsComboBox.addItems([writer.get('file_names').FormatSelectionOption for writer in self.Writers])
+        self.SaveAsComboBox.setCurrentIndex(0)
 
         self.registerField('SaveAs', self.SaveAsComboBox, 'currentIndex')
         
@@ -167,18 +247,10 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
     
     def nextId(self):
-        if self.SaveAsComboBox.currentText() == self.raw_string:
-            self.parent.file_format = 'raw'
-            return self.parent.raw
-        elif self.SaveAsComboBox.currentText() == self.tiff_string:
-            self.parent.file_format = 'tiff'
-            return self.parent.tiff
-        elif self.SaveAsComboBox.currentText() == self.bigtiff_string:
-            self.parent.file_format = 'btf'
-            return self.parent.bigtiff
-        elif self.SaveAsComboBox.currentText() == self.single_hdf5_string:
-            self.parent.file_format = 'h5'
-            return self.parent.single_hdf5
+        for writer in self.Writers:
+            if self.SaveAsComboBox.currentText() == writer.get('file_names').FormatSelectionOption:
+                self.parent.selected_writer = writer
+                return writer.get('id')
 
 
 class AbstractSelectionPage(QtWidgets.QWizardPage):
@@ -200,7 +272,7 @@ class AbstractSelectionPage(QtWidgets.QWizardPage):
         return super().validatePage()
 
     def nextId(self):
-        return self.parent.finished
+        return self.parent.num_of_pages - 1 # Last page 'finished'
 
 
 class FilenameWizardTiffSelectionPage(AbstractSelectionPage):
@@ -270,7 +342,7 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
         return super().validatePage()
 
     def nextId(self):
-        return self.parent.finished
+        return self.parent.num_of_pages - 1 # Last page 'finished'
 
 
 class FilenameWizardSingleHDF5SelectionPage(AbstractSelectionPage):
@@ -305,12 +377,7 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def initializePage(self):
-        if self.parent.file_format in ('raw', 'tiff', 'btf'):
-            file_list = self.parent.filename_list
-        elif self.parent.file_format == 'h5':
-            file_list = [self.parent.filename_list[0]]
-        else:
-            raise ValueError(f"file_format must be in ('raw', 'tiff', 'btf', 'h5'), received {self.parent.file_format}")
+        file_list = self.parent.filename_list
 
         for f in file_list:
             self.mystring += f

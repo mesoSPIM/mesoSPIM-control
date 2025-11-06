@@ -24,7 +24,7 @@ class WriterCapabilities:
 
 @dataclass
 class WriteRequest:
-    # Minimal, format-agnostic metadata needed by all writers
+    # Minimal, format-agnostic metadata needed by all writers passed when initializing the writer
     uri: Path                            # file path or store URL
     shape: Tuple[int, ...]               # e.g. (T, C, Z, Y, X), (C, Z, Y, X), (Z, Y, X), (Y, X)
     dtype: str
@@ -38,6 +38,24 @@ class WriteRequest:
     multiscales: Optional[int] = None
     overwrite: Optional[bool] = None
     metadata: Dict[str, Any] = None      # imaging + acquisition metadata
+
+@dataclass
+class FileNaming:
+    # Passed to filename_wizard for guiding selection of file formats in UI
+    FormatSelectionOption: str # Selection Box Test when selecting file format
+    WindowTitle: str
+    WindowSubTitle: str
+    WindowDescription: str # Unique description to register with ui
+
+    # What attributes to include in the file names:
+    IncludeMag: bool = True
+    IncludeTile: bool = True
+    IncludeChannel: bool = True
+    IncludeShutter: bool = True
+    IncludeRotation: bool = True
+    IncludeSuffix: Optional[str] = None
+    SingleFileFormat: bool = True  # Will all tiles be written into 1 file (.h5 for example)
+    IncludeAllChannelsInSingleFileFormat: bool=True #Will put all channels in name if SingleFileFormat==True
 
 @runtime_checkable
 class Writer(Protocol):
@@ -63,6 +81,7 @@ class Writer(Protocol):
         """
 
     def compatible_suffix(self, req: WriteRequest) -> str:
+        '''Return True if the uri suffix is compatible with this writer'''
         return ''.join(req.uri.suffixes) in file_extensions()
 
     def open(self, req: WriteRequest) -> None:

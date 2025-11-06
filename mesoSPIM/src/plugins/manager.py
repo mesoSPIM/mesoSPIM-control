@@ -15,10 +15,10 @@ DEFAULT_DIRS: list[Path] = [
 
 MESOSPIM_PLUGIN_MODULE_PREFIX = 'mesospim_plugin'
 
-class WriterRegistry:
-    def __init__(self, parent) -> None:
-        self.parent = parent # mesoSPIM_Core instance
-        self.cfg = parent.cfg
+class PluginRegistry:
+    def __init__(self, cfg) -> None:
+        # self.parent = parent # mesoSPIM_MainWindow instance
+        self.cfg = cfg
 
         # Register paths where plugins are stored
         self.plugins_dirs = DEFAULT_DIRS
@@ -58,14 +58,6 @@ class WriterRegistry:
                             self.register(obj)  # harmless if not a Writer
                     except Exception:
                         traceback.print_exc()
-
-        # Some import tests
-        for key, value in sys.modules.items():
-            if MESOSPIM_PLUGIN_MODULE_PREFIX in key:
-                print(f'{key=}')
-                writer = value.TiffWriter()
-                print(isinstance(writer, Writer))
-                print(writer.capabilities())
 
 def _import_path(path: Path) -> types.ModuleType:
     '''Import all modules in the paths'''
