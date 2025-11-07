@@ -18,7 +18,7 @@ class TiffWriter(Writer):
 
     @classmethod
     def name(cls) -> str:
-        return 'Big_Tiff_Writer'
+        return 'H5_BDV_Writer'
 
     @classmethod
     def capabilities(cls):

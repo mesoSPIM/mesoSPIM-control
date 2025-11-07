@@ -34,10 +34,25 @@ class WriteRequest:
     z_res: Optional[int] = 1
     unit: Optional[str] = 'microns'
     chunks: Optional[Tuple[int, ...]] = None
-    compression: Optional[str] = None
+    compression_method: Optional[str] = None
+    compression_level: Optional[int] = None
     multiscales: Optional[int] = None
     overwrite: Optional[bool] = None
     metadata: Dict[str, Any] = None      # imaging + acquisition metadata
+
+@dataclass
+class WriteImage:
+    # Minimal, format-agnostic metadata needed by all writers passed when initializing the writer
+    image: np.ndarray               # z_frame to write
+    current_image_counter: int      # z_frame #
+    tile_number: int                # Tile number in acquisition grid
+    laser: str                      # Excitation laser
+    shutter: str                    # 'left', 'right'
+    rot: int                        # Angle of rotation
+    x_res: int                      # resolution x in unit
+    y_res: int                      # resolution y in unit
+    z_res: int                      # resolution z in unit
+    unit: str = 'microns'
 
 @dataclass
 class FileNaming:
@@ -77,12 +92,24 @@ class Writer(Protocol):
     def file_extensions(cls) -> Union[None, str, list[str]]:
         """
         Return None, a string or list of strings to specify the file extensions
-        supported by the Writer. Example: ['.ome.zarr', '.zarr']
+        supported by the Writer. Example: ['ome.zarr', 'zarr']
         """
+
+    def ensure_path(self, path_like):
+        if isinstance(path_like, Path):
+            return path_like
+        else:
+            return Path(path_like)
+
+    def remove_leading_dot(self,path:str) -> str:
+        return path[1:] if path.startswith('.') else path
 
     def compatible_suffix(self, req: WriteRequest) -> str:
         '''Return True if the uri suffix is compatible with this writer'''
-        return ''.join(req.uri.suffixes) in file_extensions()
+        path = self.ensure_path(req.uri)
+        suffix = ''.join(path.suffixes)
+        suffix = self.remove_leading_dot(suffix)
+        return suffix in self.file_extensions()
 
     def open(self, req: WriteRequest) -> None:
         """
@@ -91,7 +118,7 @@ class Writer(Protocol):
         Establish self.writer
         """
 
-    def write_frame(self, index: Tuple[slice, ...], data: memoryview | Any) -> None:
+    def write_frame(self, data: WriteImage) -> None:
         """
         Write a block into 'index' (same rank as req.shape).
         - 'data' should support the buffer protocol; accept numpy/dask chunks.

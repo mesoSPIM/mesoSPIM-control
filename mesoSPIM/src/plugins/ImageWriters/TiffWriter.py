@@ -3,9 +3,8 @@ import time
 import numpy as np
 import tifffile
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
-from mesoSPIM.src.plugins.ImageWriterApi import Writer, WriterCapabilities, WriteRequest, API_VERSION, FileNaming
-
-print(f"{'TIFFWRITER__'*10}")
+from mesoSPIM.src.plugins.ImageWriterApi import Writer, WriterCapabilities, WriteRequest, API_VERSION, FileNaming, \
+    WriteImage
 
 class TiffWriter(Writer):
     '''Write Images as Tiff Files'''
@@ -55,13 +54,13 @@ class TiffWriter(Writer):
         )
 
     def open(self, req: WriteRequest) -> None:
-        assert self.compatible_suffix(req), 'URI suffix not compatible with TiffWriter'
-        self.write_request = req
-        self.writer = tifffile.TiffWriter(self.write_request.uri, imagej=True)
+        assert self.compatible_suffix(req), f'URI suffix not compatible with {self.name()}'
+        uri = self.ensure_path(req.uri)
+        self.writer = tifffile.TiffWriter(uri, imagej=True)
 
-    def write_frame(self, image: memoryview | Any) -> None:
-        self.writer.write(image[np.newaxis, ...], contiguous=True, resolution=self.write_request.x_res,
-                       metadata={'spacing': self.write_request.z_res, 'unit': 'um'}) # Determine units programmatically
+    def write_frame(self, data: WriteImage) -> None:
+        self.writer.write(data.image[np.newaxis, ...], contiguous=True, resolution=data.x_res,
+                       metadata={'spacing': data.z_res, 'unit': 'um'}) # Determine units programmatically
 
     def finalize(self) -> None:
         try:
