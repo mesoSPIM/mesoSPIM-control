@@ -18,9 +18,10 @@ from .utils.utility_functions import write_line, gb_size_of_array_shape, replace
 from .utils.omezarr_writer import (PyramidSpec, ChunkScheme,
                                    Live3DPyramidWriter, plan_levels,
                                    compute_xy_only_levels, FlushPad,
-                                   BloscCodec, BloscShuffle
+                                   BloscCodec, BloscShuffle,
+                                   XmlWriter
                                    )
-
+import zarr
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
     def __init__(self, parent, frame_queue):
@@ -47,7 +48,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.file_extension = ''
         self.bdv_writer = self.tiff_writer\
             = self.tiff_mip_writer = self.mip_image\
-            = self.omezarr_writer = None
+            = self.omezarr_writer = self.xml_writer = None
         self.tiff_aliases = ('.tif', '.tiff')
         self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
@@ -145,13 +146,46 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 target_chunks = (64,256,256)
                 async_finalize = True
 
+            # create writer object if the view is first in the list
             if acq == acq_list[0]:
-                import zarr
                 zarr_version = 2 if ome_version == "0.4" else 3
                 zarr.open_group(self.first_path, mode="a", zarr_version=zarr_version)
-
-            Z_EST, Y, X = (self.max_frame, self.x_pixels, self.y_pixels)
+                # the BigStitcher XML overhead
+                self.xml_writer = XmlWriter(self.first_path + '.xml', 
+                                            nsetups=len(acq_list), 
+                                            nilluminations=acq_list.get_n_shutter_configs(),
+                                            nchannels=acq_list.get_n_lasers(),
+                                            nangles=acq_list.get_n_angles(),
+                                            ntiles=acq_list.get_n_tiles(),
+                                            ntimes=1)
+            flip_flags = self.cfg.hdf5['flip_xyz'] if hasattr(self.cfg, "hdf5") else (False, False, False)
             px_size_zyx = (acq['z_step'], self.cfg.pixelsize[acq['zoom']], self.cfg.pixelsize[acq['zoom']])
+            sign_xyz = (1 - np.array(flip_flags)) * 2 - 1
+            if hasattr(self.cfg, "hdf5") and ('transpose_xy' in self.cfg.hdf5.keys()) and self.cfg.hdf5['transpose_xy']:
+                tile_translation = (sign_xyz[1] * acq['y_pos'] / px_size_zyx[1],
+                                    sign_xyz[0] * acq['x_pos'] / px_size_zyx[2],
+                                    sign_xyz[2] * acq['z_start'] / px_size_zyx[0])
+            else:
+                tile_translation = (sign_xyz[0] * acq['x_pos'] / px_size_zyx[2],
+                                    sign_xyz[1] * acq['y_pos'] / px_size_zyx[1],
+                                    sign_xyz[2] * acq['z_start'] / px_size_zyx[0])
+            affine_matrix = np.array(((1.0, 0.0, 0.0, tile_translation[0]),
+                                        (0.0, 1.0, 0.0, tile_translation[1]),
+                                        (0.0, 0.0, 1.0, tile_translation[2])))
+            self.xml_writer.append_acquisition(iacq=acq_list.index(acq),
+                                        illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                        channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                        angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                        tile=acq_list.get_tile_index(acq),
+                                        voxel_units='um',
+                                        voxel_size_xyz=(px_size_zyx[2], px_size_zyx[1], px_size_zyx[0]),
+                                        calibration=(1.0, 1.0, px_size_zyx[0]/px_size_zyx[2]),
+                                        m_affine=affine_matrix,
+                                        name_affine="Translation to Regular Grid",
+                                        stack_shape_zyx=(self.max_frame, self.x_pixels, self.y_pixels) # x and y need to be exchanged to account for the image rotation
+                                        )
+            # ZARR Writer setup
+            Z_EST, Y, X = (self.max_frame, self.x_pixels, self.y_pixels)
 
             xy_levels = compute_xy_only_levels(px_size_zyx)
             if generate_multiscales:
@@ -328,6 +362,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         logger.info("end_acquisition() started")
         if self.file_extension == '.ome.zarr':
             self.omezarr_writer.close()
+            if acq == acq_list[-1]:
+                self.xml_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
+                self.xml_writer.set_attribute_labels('illumination', tuple(acq_list.get_unique_attr_list('shutterconfig')))
+                self.xml_writer.set_attribute_labels('angle', tuple(acq_list.get_unique_attr_list('rot')))
+                self.xml_writer.write()
         elif self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:

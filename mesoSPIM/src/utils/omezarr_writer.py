@@ -9,6 +9,7 @@ from zarr.codecs import BloscCodec, BloscShuffle, ShardingCodec
 from dataclasses import dataclass
 from typing import Union, Tuple, Optional
 from enum import Enum
+from xml.etree import ElementTree as ET
 
 ### Multiscale writer ###
 
@@ -425,6 +426,7 @@ class Live3DPyramidWriter:
             self.close_async()    # Background finalize
         else:
             self.close_sync()     # synchronous finalize
+        print("Live3DPyramidWriter: finalized.")
 
     def close_sync(self):
         self.stop.set()
@@ -633,3 +635,228 @@ class Live3DPyramidWriter:
         self._emit_next(level + 1, ds2_mean_uint16(out_3d))
 
 
+class XmlWriter:
+    def __init__(self, filename, nsetups=1, nilluminations=1, nchannels=1, ntiles=1, nangles=1, ntimes=1):
+        self.filename = filename
+        self.nsetups = nsetups  
+        self.nilluminations = nilluminations
+        self.nchannels = nchannels
+        self.ntiles = ntiles
+        self.nangles = nangles
+        self.ntimes = ntimes
+        self.__version__ = "1.0.0" 
+        self.affine_matrices = {}
+        self.affine_names = {}
+        self.calibrations = {}
+        self.voxel_size_xyz = {}
+        self.voxel_units = {}
+        self.exposure_time = {}
+        self.exposure_units = {}
+        self.attribute_labels = {}
+        self.attribute_counts = {'illumination': self.nilluminations, 'channel': self.nchannels,
+                                 'angle': self.nangles, 'tile': self.ntiles}
+        self.angle = {}
+        self.channel = {}
+        self.illumination = {}
+        self.tile = {}
+        self.stack_shape_zyx = {}
+
+
+    def append_acquisition(self, iacq, time=0, illumination=0, channel=0, tile=0, angle=0,
+                m_affine=None, name_affine='manually defined',
+                voxel_size_xyz=(1, 1, 1), voxel_units='px', calibration=(1, 1, 1),
+                exposure_time=0, exposure_units='s', stack_shape_zyx=(1,1,1)):
+        """
+        Append acquisition to XML file structure for BigSticher compatibility
+                Parameters:
+        -----------
+            iacq: int
+                Index of the acquisition, >= 0.
+            nsetups: int
+                Total number of setups.
+            time: int
+            illumination: int
+            channel: int
+            tile: int
+            angle: int
+                Indices of the view attributes, >= 0.
+            m_affine: a numpy array of shape (3,4), optional.
+                Coefficients of affine transformation matrix (m00, m01, ...). The last column is translation in (x,y,z).
+            name_affine: str, optional
+                Name of the affine transformation.
+            voxel_size_xyz: tuple of size 3, optional
+                The physical size of voxel, in voxel_units. Default (1, 1, 1).
+            voxel_units: str, optional
+                Spatial units, default is 'px'.    
+            calibration: tuple of size 3, optional
+                The anisotropy factors for (x,y,z) voxel calibration. Default (1, 1, 1).
+                Leave it default unless you know how it affects transformations.    
+            exposure_time: float, optional
+                Camera exposure time for this view, default 0.
+            exposure_units: str, optional
+                Time units for this view, default "s".
+            stack_shape_zyx: tuple of size 3, optional
+                Shape of the acquired stack in (z,y,x). Default (1,1,1)
+        """
+        if m_affine is not None:
+            self.affine_matrices[iacq] = m_affine.copy()
+            self.affine_names[iacq] = name_affine
+        self.calibrations[iacq] = calibration
+        self.voxel_size_xyz[iacq] = voxel_size_xyz
+        self.voxel_units[iacq] = voxel_units
+        self.exposure_time[iacq] = exposure_time
+        self.exposure_units[iacq] = exposure_units
+        self.angle[iacq] = angle
+        self.channel[iacq] = channel
+        self.illumination[iacq] = illumination
+        self.tile[iacq] = tile
+        self.stack_shape_zyx[iacq] = stack_shape_zyx
+
+    def set_attribute_labels(self, attribute: str, labels: tuple) -> None:
+        """
+        Set the view attribute labels that will be visible in BDV/BigStitcher, e.g. `'channel': ('488', '561')`.
+
+        Example: `writer.set_attribute_labels('channel', ('488', '561'))`.
+
+        Parameters:
+        -----------
+            attribute: str
+                One of the view attributes: 'illumination', 'channel', 'angle', 'tile'.
+
+            labels: array-like
+                Tuple of labels, e.g. for illumination, ('left', 'right'); for channel, ('488', '561').
+        """
+
+        assert attribute in self.attribute_counts.keys(), f'Attribute must be one of {self.attribute_counts.keys()}'
+        assert len(labels) == self.attribute_counts[attribute], f'Length of labels {len(labels)} must ' \
+                                                   f'match the number of attributes {self.attribute_counts[attribute]}'
+        self.attribute_labels[attribute] = labels
+
+    def write(self, camera_name="default",  microscope_name="default",
+                       microscope_version="0.0", user_name="user"):
+        """
+        Write XML header file for the OME-Zarr data file to enable BigStitcher compatibility.
+
+        Parameters:
+        -----------
+            camera_name: str, optional
+                Name of the camera (same for all setups at the moment)
+            microscope_name: str, optional
+            microscope_version: str, optional
+            user_name: str, optional
+        """
+        assert self.ntimes >= 1, "Total number of time points must be at least 1."
+        root = ET.Element('SpimData')
+        root.set('version', '0.2')
+        bp = ET.SubElement(root, 'BasePath')
+        bp.set('type', 'relative')
+        bp.text = '.'
+        # new XML data, added by @nvladimus
+        generator = ET.SubElement(root, 'generatedBy')
+        library = ET.SubElement(generator, 'library')
+        library.set('version', self.__version__)
+        library.text = "XmlWriter for OME-Zarr by nvladimus"
+        microscope = ET.SubElement(generator, 'microscope')
+        ET.SubElement(microscope, 'name').text = microscope_name
+        ET.SubElement(microscope, 'version').text = microscope_version
+        ET.SubElement(microscope, 'user').text = user_name
+        # end of new XML data
+
+        seqdesc = ET.SubElement(root, 'SequenceDescription')
+        imgload = ET.SubElement(seqdesc, 'ImageLoader')
+        imgload.set('format', 'bdv.multimg.zarr')
+        imgload.set('version', '3.0')
+        data_type = ET.SubElement(imgload, 'zarr')
+        zgroups = ET.SubElement(imgload, 'zgroups')
+        data_type.set('type', 'relative')
+        data_type.text = os.path.basename(self.filename).replace('.xml', '')
+        # write ViewSetups
+        viewsets = ET.SubElement(seqdesc, 'ViewSetups')
+        for isetup in range(self.nsetups): 
+            zgroup = ET.SubElement(zgroups, 'zgroup')
+            zgroup.set('setup', str(isetup))
+            zgroup.set('tp', '0')
+            zgroup.set('path', f's{isetup}-t0.zarr')
+            zgroup.set('indicies', '0 0') # stupid typo instead of 'indices' in BigStitcher :)
+            vs = ET.SubElement(viewsets, 'ViewSetup')
+            ET.SubElement(vs, 'id').text = str(isetup)
+            ET.SubElement(vs, 'name').text = 'setup ' + str(isetup)
+            nz, ny, nx = tuple(self.stack_shape_zyx[isetup])
+            ET.SubElement(vs, 'size').text = '{} {} {}'.format(nx, ny, nz)
+            vox = ET.SubElement(vs, 'voxelSize')
+            ET.SubElement(vox, 'unit').text = self.voxel_units[isetup]
+            dx, dy, dz = self.voxel_size_xyz[isetup]
+            ET.SubElement(vox, 'size').text = '{} {} {}'.format(dx, dy, dz)
+            # new XML data, added by @nvladimus
+            cam = ET.SubElement(vs, 'camera')
+            ET.SubElement(cam, 'name').text = camera_name
+            ET.SubElement(cam, 'exposureTime').text = '{}'.format(self.exposure_time[isetup])
+            ET.SubElement(cam, 'exposureUnits').text = self.exposure_units[isetup]
+            # end of new XML data
+            a = ET.SubElement(vs, 'attributes')
+            ET.SubElement(a, 'illumination').text = str(self.illumination[isetup])
+            ET.SubElement(a, 'channel').text = str(self.channel[isetup])
+            ET.SubElement(a, 'tile').text = str(self.tile[isetup])
+            ET.SubElement(a, 'angle').text = str(self.angle[isetup])
+
+        # write Attributes
+        for attribute in self.attribute_counts.keys():
+            attrs = ET.SubElement(viewsets, 'Attributes')
+            attrs.set('name', attribute)
+            for i_attr in range(self.attribute_counts[attribute]):
+                att = ET.SubElement(attrs, attribute.capitalize())
+                ET.SubElement(att, 'id').text = str(i_attr)
+                if attribute in self.attribute_labels.keys() and i_attr < len(self.attribute_labels[attribute]):
+                    name = str(self.attribute_labels[attribute][i_attr])
+                else:
+                    name = str(i_attr)
+                ET.SubElement(att, 'name').text = name
+
+        # Time points
+        tpoints = ET.SubElement(seqdesc, 'Timepoints')
+        tpoints.set('type', 'range')
+        ET.SubElement(tpoints, 'first').text = str(0)
+        ET.SubElement(tpoints, 'last').text = str(self.ntimes - 1)
+
+        # Transformations of coordinate system
+        vregs = ET.SubElement(root, 'ViewRegistrations')
+        for itime in range(self.ntimes):
+            for isetup in range(self.nsetups):
+                vreg = ET.SubElement(vregs, 'ViewRegistration')
+                vreg.set('timepoint', str(itime))
+                vreg.set('setup', str(isetup))
+                # write arbitrary affine transformation, specific for each view
+                if isetup in self.affine_matrices.keys():
+                    vt = ET.SubElement(vreg, 'ViewTransform')
+                    vt.set('type', 'affine')
+                    ET.SubElement(vt, 'Name').text = self.affine_names[isetup]
+                    mx_string = np.array2string(self.affine_matrices[isetup].flatten(), formatter={'float':lambda x: "%.6f" % x})
+                    ET.SubElement(vt, 'affine').text = mx_string[1:-1].strip()
+
+                # write registration transformation (calibration)
+                vt = ET.SubElement(vreg, 'ViewTransform')
+                vt.set('type', 'affine')
+                ET.SubElement(vt, 'Name').text = 'calibration'
+                calx, caly, calz = self.calibrations[isetup]
+                ET.SubElement(vt, 'affine').text = \
+                    '{} 0.0 0.0 0.0 0.0 {} 0.0 0.0 0.0 0.0 {} 0.0'.format(calx, caly, calz)
+
+        self._xml_indent(root)
+        tree = ET.ElementTree(root)
+        tree.write(self.filename, xml_declaration=True, encoding='utf-8', method="xml")
+
+    def _xml_indent(self, elem, level=0):
+        """Pretty printing function"""
+        i = "\n" + level * "  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self._xml_indent(elem, level + 1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
