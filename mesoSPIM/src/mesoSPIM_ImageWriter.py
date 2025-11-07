@@ -67,7 +67,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
 
         # Extract config values for writer from config file - field = 'name' attribute from Writer plugin
-        chunks = compression_method = compression_level = multiscales = overwrite = writer_specific_config_values = None
+        chunks = compression_method = compression_level = multiscales = overwrite = writer_config_file_values = None
         if hasattr(self.cfg, self.writer_name):
             writer_cfg_value = getattr(self.cfg, self.writer_name)
             chunks = writer_cfg_value.get('chunks', None)
