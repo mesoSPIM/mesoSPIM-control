@@ -6,6 +6,10 @@ from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, T
 from mesoSPIM.src.plugins.manager import MESOSPIM_PLUGIN_MODULE_PREFIX
 from mesoSPIM.src.plugins.ImageWriterApi import Writer
 
+# ------------------------------------------------------------------------------------------------------------------- #
+#                                        General Plugin-discovery utilities                                           #
+# ------------------------------------------------------------------------------------------------------------------- #
+
 def list_plugin_classes_of_type(mod: types.ModuleType, type: Protocol):
     """Return all valid subclasses of 'type' in a module."""
     class_list = []
@@ -25,6 +29,9 @@ def list_all_registered_mesospim_plugin_modules(prefix=MESOSPIM_PLUGIN_MODULE_PR
     '''Return a list of all registered mesospim plugin modules'''
     return [value for key, value in sys.modules.items() if key.startswith(prefix)]
 
+# ------------------------------------------------------------------------------------------------------------------- #
+#                                      ImageWriter Plugin-specific utilities                                          #
+# ------------------------------------------------------------------------------------------------------------------- #
 
 def list_writer_plugins():
     '''Return a list of all registered writer plugins'''
@@ -58,15 +65,27 @@ def get_writer_for_file_extension(file_extension: str):
             return writer
 
 def get_writer_name_for_file_extension(file_extension: str):
+    '''Return the name attribute of the writer for the given a compatible file extension'''
     writer = get_writer_for_file_extension(file_extension)
     return writer['name']
 
 def get_writer_from_name(name: str):
+    '''
+    Return the writer dict given its name attribute
+    Structure of writer is determined by function get_writer_plugins()
+    '''
     for writer in get_writer_plugins():
         if name == writer['name']:
             return writer
 
 def get_writer_class_from_name(name: str):
+    '''
+    Return the writer class given its name attribute
+    This writer class is used directly for writing data
+    writer = writer_class()
+    writer.open(WriteRequest)
+    writer.write_frame(image)
+    '''
     for writer in get_writer_plugins():
         if name == writer['name']:
             return writer['writer_class']

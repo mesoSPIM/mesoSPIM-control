@@ -61,12 +61,12 @@ class Acquisition(indexed.IndexedOrderedDict):
                  shutterconfig='Left',
                  folder='tmp',
                  filename='one.tif',
+                 image_writer_plugin=get_writer_name_for_file_extension('.tif'),
                  etl_l_offset=0,
                  etl_l_amplitude=0,
                  etl_r_offset=0,
                  etl_r_amplitude=0,
                  processing='MAX',
-                 image_writer_plugin=get_writer_name_for_file_extension('.tif'),
                  ):
 
         super().__init__()
@@ -87,12 +87,12 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['shutterconfig']=shutterconfig
         self['folder']=folder
         self['filename']=filename
+        self['image_writer_plugin'] = image_writer_plugin
         self['etl_l_offset']=etl_l_offset
         self['etl_l_amplitude']=etl_l_amplitude
         self['etl_r_offset']=etl_r_offset
         self['etl_r_amplitude']=etl_r_amplitude
         self['processing']=processing
-        self['image_writer_plugin'] = image_writer_plugin
 
 
     def __setitem__(self, key, value):

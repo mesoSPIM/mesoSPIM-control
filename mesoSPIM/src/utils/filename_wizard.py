@@ -216,12 +216,18 @@ class FilenameWizard(QtWidgets.QWizard):
             # self.filename_list.append(filename)
             
     def update_filenames_in_model(self):
+        '''Updates both filenames and selected ImageWriterPlugin'''
         row_count = self.parent.model.rowCount()
         filename_column = self.parent.model.getFilenameColumn()
+        image_writer_plugin_column = self.parent.model.getImageWriterPluginColumn()
         for row in range(0, row_count):
             filename = self.filename_list[row]
+            # Update Filename
             index = self.parent.model.createIndex(row, filename_column)
             self.parent.model.setData(index, filename)
+            # Update Selected ImageWriterPlugin
+            index = self.parent.model.createIndex(row, image_writer_plugin_column)
+            self.parent.model.setData(index, self.selected_writer.get('name'))
 
 
 class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
@@ -273,23 +279,6 @@ class AbstractSelectionPage(QtWidgets.QWizardPage):
 
     def nextId(self):
         return self.parent.num_of_pages - 1 # Last page 'finished'
-
-
-class FilenameWizardTiffSelectionPage(AbstractSelectionPage):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-        self.setTitle("Autogenerate TIFF filenames")
-        self.setSubTitle("Names will be in BigStitcher auto-loader format:\n {Description}_Mag{}_Tile{}_Ch{}_Sh{}_Rot{}.tiff")
-        self.registerField('DescriptionTIFF', self.DescriptionLineEdit)
-
-
-class FilenameWizardBigTiffSelectionPage(AbstractSelectionPage):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setTitle("Autogenerate BigTIFF filenames")
-        self.setSubTitle("Names will be in BigStitcher auto-loader format:\n {Description}_Mag{}_Tile{}_Ch{}_Sh{}_Rot{}.btf")
-        self.registerField('DescriptionBigTIFF', self.DescriptionLineEdit)
 
 
 class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
