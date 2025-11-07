@@ -11,10 +11,9 @@ logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
 from distutils.version import StrictVersion
-import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
-from .plugins.ImageWriterApi import WriteRequest, WriteImage
+from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
 from .plugins.utils import get_writer_from_name, get_writer_class_from_name
 
 
@@ -62,19 +61,21 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     def prepare_acquisition(self, acq, acq_list):
 
-        self.writer_name = acq['image_writer_plugin']
-        self.writer = get_writer_class_from_name(self.writer_name)() # Get and init () the writer class
+        if acq == acq_list[0]:
+            self.writer_name = acq['image_writer_plugin']
+            self.writer = get_writer_class_from_name(self.writer_name)() # Get and init () the writer class
 
 
-        chunks = compression_method = compression_level = multiscales = overwrite = metadata = None
+        # Extract config values for writer from config file - field = 'name' attribute from Writer plugin
+        chunks = compression_method = compression_level = multiscales = overwrite = writer_specific_config_values = None
         if hasattr(self.cfg, self.writer_name):
             writer_cfg_value = getattr(self.cfg, self.writer_name)
-            chunks = writer_cfg_value.get('chunks')
-            compression_method = writer_cfg_value.get('compression_method')
-            compression_level = writer_cfg_value.get('compression_level')
-            multiscales = writer_cfg_value.get('multiscales')
-            overwrite = writer_cfg_value.get('overwrite')
-            metadata = writer_cfg_value.get('metadata')
+            chunks = writer_cfg_value.get('chunks', None)
+            compression_method = writer_cfg_value.get('compression_method', None)
+            compression_level = writer_cfg_value.get('compression_level', 0)
+            multiscales = writer_cfg_value.get('multiscales', None)
+            overwrite = writer_cfg_value.get('overwrite', False)
+            writer_config_file_values = writer_cfg_value
 
         self.folder = acq['folder']
         self.filename = replace_with_underscores(acq['filename'])
@@ -107,7 +108,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             compression_level = compression_level,
             multiscales = multiscales,
             overwrite = overwrite,
-            metadata = metadata,
+            num_tiles = acq_list.get_n_tiles(),
+            num_channels = acq_list.get_n_lasers(),
+            num_rotations = acq_list.get_n_angles(),
+            num_shutters = acq_list.get_n_shutter_configs(),
+            acq = acq,
+            acq_list = acq_list,
+            writer_config_file_values = writer_config_file_values
         )
 
         self.writer.open(write_request)
@@ -231,6 +238,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             y_res=xy_res,
             z_res=acq['z_step'],
             unit='microns',
+            acq = acq,
+            acq_list = acq_list,
         )
 
         self.writer.write_frame(write)
@@ -310,9 +319,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_acquisition(self, acq, acq_list):
+        finalize_imsge = FinalizeImage(
+            acq = acq,
+            acq_list = acq_list,
+        )
         logger.info("end_acquisition() started")
         try:
-            self.writer.finalize()
+            self.writer.finalize(finalize_imsge)
         except Exception as e:
             logger.error(f'{e}')
         self.running_flag = False

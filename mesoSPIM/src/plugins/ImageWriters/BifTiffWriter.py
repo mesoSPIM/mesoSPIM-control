@@ -4,7 +4,8 @@ import numpy as np
 import tifffile
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
 from mesoSPIM.src.plugins.ImageWriterApi import Writer, WriterCapabilities, WriteRequest, API_VERSION, FileNaming, \
-    WriteImage
+    WriteImage, FinalizeImage
+
 
 class TiffWriter(Writer):
     '''Write Images as Tiff Files'''
@@ -62,7 +63,7 @@ class TiffWriter(Writer):
         self.writer.write(data.image[np.newaxis, ...], contiguous=False, resolution=data.x_res,
                     metadata={'spacing': data.z_res, 'unit': 'um'}) # Determine units programmatically
 
-    def finalize(self) -> None:
+    def finalize(self, finalize_image=FinalizeImage) -> None:
         try:
             self.writer.close()
             self.writer = None

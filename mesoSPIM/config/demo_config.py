@@ -101,6 +101,7 @@ Camera configuration
 
 For a DemoCamera, only the following options are necessary
 (x_pixels and y_pixels can be chosen arbitrarily):
+(x_pixels and y_pixels can be chosen arbitrarily):
 
 camera_parameters = {'x_pixels' : 1024,
                      'y_pixels' : 1024,
@@ -328,12 +329,12 @@ pixelsize = {
             '5x Mitutoyo' : 1.0,}
 
 '''
- HDF5 parameters, if this format is used for data saving (optional).
+H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
 Downsampling and compression slows down writing by 5x - 10x, use with caution.
 Imaris can open these files if no subsampling and no compression is used.
 '''
-hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
-        'compression': None, # None, 'gzip', 'lzf'
+H5_BDV_Writer = {'subsamp': ((1, 1, 1), (1, 2, 2), (1, 4, 4)), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+        'compression': 'lzf', # None, 'gzip', 'lzf'
         'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }

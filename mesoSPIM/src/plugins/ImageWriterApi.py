@@ -38,7 +38,13 @@ class WriteRequest:
     compression_level: Optional[int] = None
     multiscales: Optional[int] = None
     overwrite: Optional[bool] = None
-    metadata: Dict[str, Any] = None      # imaging + acquisition metadata
+    num_tiles: int = None
+    num_channels: int = None
+    num_rotations: int = None
+    num_shutters: int = None
+    acq: Dict = None  # imaging + acquisition metadata
+    acq_list: List = None
+    writer_config_file_values: Optional[Dict[str, Any]] = None
 
 @dataclass
 class WriteImage:
@@ -53,6 +59,13 @@ class WriteImage:
     y_res: int                      # resolution y in unit
     z_res: int                      # resolution z in unit
     unit: str = 'microns'
+    acq: Dict = None
+    acq_list: List = None
+
+@dataclass
+class FinalizeImage:
+    acq: Dict
+    acq_list: List
 
 @dataclass
 class FileNaming:
@@ -125,7 +138,7 @@ class Writer(Protocol):
         - Called repeatedly, possibly from multiple threads.
         """
 
-    def finalize(self) -> None:
+    def finalize(self, finalize_image: FinalizeImage) -> None:
         """
         Flush/close handles. Safe to call multiple times.
         Close self.writer and set =None

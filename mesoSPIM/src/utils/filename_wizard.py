@@ -147,6 +147,9 @@ class FilenameWizard(QtWidgets.QWizard):
 
             self.filename_list.append(filename)
 
+        if self.selected_writer.get('file_names').SingleFileFormat:
+            self.filename_list *= self.parent.model.rowCount()
+
             # if self.file_format == 'raw':
             #     if self.field('DescriptionRaw'):
             #         filename += replace_with_underscores(self.field('DescriptionRaw')) + '_'
