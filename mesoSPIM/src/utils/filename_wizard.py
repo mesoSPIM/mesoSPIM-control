@@ -6,7 +6,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from .utility_functions import replace_with_underscores
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
-from ..plugins.utils import get_writer_plugins
+from ..plugins.utils import get_image_writer_plugins
 from pprint import pprint as print
 
 import logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class FilenameWizard(QtWidgets.QWizard):
     wizard_done = QtCore.pyqtSignal()
 
-    Writers = get_writer_plugins()
+    Writers = get_image_writer_plugins()
 
     num_of_pages = 2 + len(Writers)
     # (welcome, raw, tiff, bigtiff, single_hdf5, finished) = range(num_of_pages)

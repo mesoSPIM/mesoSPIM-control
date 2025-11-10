@@ -3,11 +3,11 @@ import time
 import numpy as np
 import tifffile
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
-from mesoSPIM.src.plugins.ImageWriterApi import Writer, WriterCapabilities, WriteRequest, API_VERSION, FileNaming, \
+from mesoSPIM.src.plugins.ImageWriterApi import ImageWriter, WriterCapabilities, WriteRequest, API_VERSION, FileNaming, \
     WriteImage, FinalizeImage
 
 
-class TiffWriter(Writer):
+class TiffWriter(ImageWriter):
     '''Write Images as Tiff Files'''
 
     writer = None

@@ -14,7 +14,7 @@ from distutils.version import StrictVersion
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
 from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
-from .plugins.utils import get_writer_from_name, get_writer_class_from_name
+from .plugins.utils import get_image_writer_from_name, get_image_writer_class_from_name
 
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
@@ -63,7 +63,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         if acq == acq_list[0]:
             self.writer_name = acq['image_writer_plugin']
-            self.writer = get_writer_class_from_name(self.writer_name)() # Get and init () the writer class
+            self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
 
 
         # Extract config values for writer from config file - field = 'name' attribute from Writer plugin

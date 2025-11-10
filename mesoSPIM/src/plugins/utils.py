@@ -1,10 +1,12 @@
 # mesospim/plugins/utils.py
 import inspect
 import sys
+import logging
+logger = logging.getLogger(__name__)
 import types
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
 from mesoSPIM.src.plugins.manager import MESOSPIM_PLUGIN_MODULE_PREFIX
-from mesoSPIM.src.plugins.ImageWriterApi import Writer
+from mesoSPIM.src.plugins.ImageWriterApi import ImageWriter
 
 # ------------------------------------------------------------------------------------------------------------------- #
 #                                        General Plugin-discovery utilities                                           #
@@ -33,19 +35,19 @@ def list_all_registered_mesospim_plugin_modules(prefix=MESOSPIM_PLUGIN_MODULE_PR
 #                                      ImageWriter Plugin-specific utilities                                          #
 # ------------------------------------------------------------------------------------------------------------------- #
 
-def list_writer_plugins():
+def list_image_writer_plugins():
     '''Return a list of all registered writer plugins'''
     classes = []
     modules = list_all_registered_mesospim_plugin_modules(prefix=MESOSPIM_PLUGIN_MODULE_PREFIX)
     for mod in modules:
-        current_classes = list_plugin_classes_of_type(mod, type=Writer)
+        current_classes = list_plugin_classes_of_type(mod, type=ImageWriter)
         classes += current_classes
     return classes
 
-def get_writer_plugins():
+def get_image_writer_plugins():
     '''Return a list of dict of all registered writer plugins with names, file_extensions, capabilities and callable class'''
     writers = []
-    writer_classes = list_writer_plugins()
+    writer_classes = list_image_writer_plugins()
     for writer in writer_classes:
         current_writer = {
             'name': writer.name(),
@@ -57,28 +59,28 @@ def get_writer_plugins():
         writers.append(current_writer)
     return writers
 
-def get_writer_for_file_extension(file_extension: str):
+def get_image_writer_for_file_extension(file_extension: str):
     '''Return a writer class for the given file extension'''
-    for writer in get_writer_plugins():
+    for writer in get_image_writer_plugins():
         file_ext = file_extension[1:] if file_extension.startswith('.') else file_extension
         if file_ext in writer['file_extensions']:
             return writer
 
-def get_writer_name_for_file_extension(file_extension: str):
+def get_image_writer_name_for_file_extension(file_extension: str):
     '''Return the name attribute of the writer for the given a compatible file extension'''
-    writer = get_writer_for_file_extension(file_extension)
+    writer = get_image_writer_for_file_extension(file_extension)
     return writer['name']
 
-def get_writer_from_name(name: str):
+def get_image_writer_from_name(name: str):
     '''
     Return the writer dict given its name attribute
     Structure of writer is determined by function get_writer_plugins()
     '''
-    for writer in get_writer_plugins():
+    for writer in get_image_writer_plugins():
         if name == writer['name']:
             return writer
 
-def get_writer_class_from_name(name: str):
+def get_image_writer_class_from_name(name: str):
     '''
     Return the writer class given its name attribute
     This writer class is used directly for writing data
@@ -86,6 +88,6 @@ def get_writer_class_from_name(name: str):
     writer.open(WriteRequest)
     writer.write_frame(image)
     '''
-    for writer in get_writer_plugins():
+    for writer in get_image_writer_plugins():
         if name == writer['name']:
             return writer['writer_class']

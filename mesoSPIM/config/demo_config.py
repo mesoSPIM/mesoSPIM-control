@@ -8,6 +8,14 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 (The extension has to be .py).
 '''
 
+
+plugins = {
+    'paths_list': [
+        "C:/code/plugins",
+        "C:/code/plugins2",
+    ]
+}
+
 '''
 Dark mode: Renders the UI dark
 '''
@@ -333,8 +341,8 @@ H5_BDV_Writer plugin parameters, if this format is used for data saving (optiona
 Downsampling and compression slows down writing by 5x - 10x, use with caution.
 Imaris can open these files if no subsampling and no compression is used.
 '''
-H5_BDV_Writer = {'subsamp': ((1, 1, 1), (1, 2, 2), (1, 4, 4)), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
-        'compression': 'lzf', # None, 'gzip', 'lzf'
+H5_BDV_Writer = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+        'compression': None, # None, 'gzip', 'lzf'
         'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
@@ -409,11 +417,4 @@ startup = {
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', # Hamamatsu-specific parameter
 'average_frame_rate': 4.5,
-}
-
-plugins = {
-'paths_list': [
-"c:/code/mesospim_plugins",
-"c:/code/mesospim_plugins2",
-]
 }

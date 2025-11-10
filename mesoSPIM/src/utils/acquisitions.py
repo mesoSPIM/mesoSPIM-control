@@ -9,7 +9,7 @@ import indexed
 import os.path
 import logging
 logger = logging.getLogger(__name__)
-from ..plugins.utils import get_writer_name_for_file_extension
+from ..plugins.utils import get_image_writer_name_for_file_extension
 
 
 class Acquisition(indexed.IndexedOrderedDict):
@@ -61,7 +61,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                  shutterconfig='Left',
                  folder='tmp',
                  filename='one.tif',
-                 image_writer_plugin=get_writer_name_for_file_extension('.tif'),
+                 image_writer_plugin=get_image_writer_name_for_file_extension('.tif'),
                  etl_l_offset=0,
                  etl_l_amplitude=0,
                  etl_r_offset=0,

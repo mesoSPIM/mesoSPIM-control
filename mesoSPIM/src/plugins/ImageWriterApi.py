@@ -70,7 +70,7 @@ class FinalizeImage:
 @dataclass
 class FileNaming:
     # Passed to filename_wizard for guiding selection of file formats in UI
-    FormatSelectionOption: str # Selection Box Test when selecting file format
+    FormatSelectionOption: str # File naming wizard Selection Box Text for selecting a file format
     WindowTitle: str
     WindowSubTitle: str
     WindowDescription: str # Unique description to register with ui
@@ -86,7 +86,7 @@ class FileNaming:
     IncludeAllChannelsInSingleFileFormat: bool=True #Will put all channels in name if SingleFileFormat==True
 
 @runtime_checkable
-class Writer(Protocol):
+class ImageWriter(Protocol):
     """A streaming-friendly writer interface."""
 
     writer = None
