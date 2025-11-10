@@ -131,6 +131,7 @@ class ImageWriter(Protocol):
         Equivalent to prepare method in mesoSPIM_ImageWriter
         Establish self.writer
         """
+        self.req = req
 
     def write_frame(self, data: WriteImage) -> None:
         """
@@ -150,3 +151,40 @@ class ImageWriter(Protocol):
         Best-effort cleanup on failure.
         Close self.writer and set =None
         """
+
+    @property
+    def metadata_file_info(self) -> str:
+        """
+        Return the file name for the current metadata file.
+        This function should be updated as needed and is called after self.open() for each tile
+        Default appends '_meta.txt' to the filename (i.e. WriteRequest.uri)
+        Appends to attrs to be used for writing metadata
+            self.metadata_file                        # Actual file where metadata is stored
+            self.metadata_file_describes_this_path    # The specific file described by self.metadata_file
+
+        Reasonable defaults are set for ImageWriter that are 1_Tile=1_file
+        This may need to be overwritten if FileNaming(SingleFileFormat=True)
+        """
+
+        # Used in mesoSpim_ImageWriter.write_metadata
+        # Used in mesoSpim_Core.append_timing_info_to_metadata
+        self.metadata_file = self.req.uri + '_meta.txt'
+        # Used in mesoSpim_ImageWriter.write_metadata
+        self.metadata_file_describes_this_path = self.req.uri
+
+    def __getattribute__(self, name):
+        attr = object.__getattribute__(self, name)
+        if name == "open" and callable(attr):
+            def wrapped_open(request, **kwargs):
+                # Automatically append open(WriteRequest) to self.req for use by other methods and run self.metadata_file_info()
+                self.req = request
+                try:
+                    self.metadata_file_info()
+                except Exception:
+                    # So that self.metadata_file_info can be overwritten and not error
+                    # Overwritten methods will require that self.metadata_file_info() be called in the open method
+                    pass
+                return attr(request, **kwargs)
+
+            return wrapped_open
+        return attr

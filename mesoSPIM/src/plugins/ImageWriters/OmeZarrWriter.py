@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import time
 import logging
 logger = logging.getLogger(__name__)
@@ -258,6 +259,8 @@ class OMEZarrWriter(ImageWriter):
             ome_version=ome_version
         )
 
+        self.metadata_file_info()
+
 
 
     def write_frame(self, data: WriteImage):
@@ -277,3 +280,19 @@ class OMEZarrWriter(ImageWriter):
 
     def abort(self) -> None:
         self.omezarr_writer.close()
+
+    def metadata_file_info(self) -> str:
+        """
+        Return the file name for the current metadata file.
+        This function should be updated as needed and is called after self.open() for each tile
+        Default appends '_meta.txt' to the filename (i.e. WriteRequest.uri)
+        Appends to attrs to be used for writing metadata
+            self.metadata_file                        # Actual file where metadata is stored
+            self.metadata_file_describes_this_path    # The specific file described by self.metadata_file
+
+        Reasonable defaults are set for ImageWriter that are 1_Tile=1_file
+        This may need to be overwritten if FileNaming(SingleFileFormat=True)
+        """
+
+        self.metadata_file = self.req.uri + f'_{self.omezarr_group_name}_meta.txt'
+        self.metadata_file_describes_this_path = Path(self.current_acquire_file_path).as_posix()

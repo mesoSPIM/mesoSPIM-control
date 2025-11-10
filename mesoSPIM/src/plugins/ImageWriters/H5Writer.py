@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import time
 import logging
 logger = logging.getLogger(__name__)
@@ -111,6 +112,14 @@ class H5BDVWriter(ImageWriter):
         affine_matrix = np.array(((1.0, 0.0, 0.0, tile_translation[0]),
                                   (0.0, 1.0, 0.0, tile_translation[1]),
                                   (0.0, 0.0, 1.0, tile_translation[2])))
+
+        isetup = req.acq_list.index(req.acq)
+        self.h5_group_name = 's{:d}-t{:d}'.format(isetup, 0)  # time = 0 for now
+        self.current_acquire_file_path = req.uri
+
+        # self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.h5_group_name + '.tiff'
+        self.metadata_file_info()
+
         self.writer.append_view(stack=None, virtual_stack_dim=shape,
                                     illumination=req.acq_list.find_value_index(req.acq['shutterconfig'], 'shutterconfig'),
                                     channel=req.acq_list.find_value_index(req.acq['laser'], 'laser'),
@@ -164,3 +173,19 @@ class H5BDVWriter(ImageWriter):
 
     def abort(self) -> None:
         self.writer.close()
+
+    def metadata_file_info(self) -> str:
+        """
+        Return the file name for the current metadata file.
+        This function should be updated as needed and is called after self.open() for each tile
+        Default appends '_meta.txt' to the filename (i.e. WriteRequest.uri)
+        Appends to attrs to be used for writing metadata
+            self.metadata_file                        # Actual file where metadata is stored
+            self.metadata_file_describes_this_path    # The specific file described by self.metadata_file
+
+        Reasonable defaults are set for ImageWriter that are 1_Tile=1_file
+        This may need to be overwritten if FileNaming(SingleFileFormat=True)
+        """
+
+        self.metadata_file = self.req.uri + f'_{self.h5_group_name}_meta.txt'
+        self.metadata_file_describes_this_path = Path(self.current_acquire_file_path).as_posix()
