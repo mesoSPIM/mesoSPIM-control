@@ -6,7 +6,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from .utility_functions import replace_with_underscores
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
-from ..plugins.utils import get_image_writer_plugins
+from ..plugins.utils import get_image_writer_plugins, get_image_writer_from_name
 from pprint import pprint as print
 
 import logging
@@ -19,7 +19,6 @@ class FilenameWizard(QtWidgets.QWizard):
     Writers = get_image_writer_plugins()
 
     num_of_pages = 2 + len(Writers)
-    # (welcome, raw, tiff, bigtiff, single_hdf5, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         '''Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
@@ -28,13 +27,21 @@ class FilenameWizard(QtWidgets.QWizard):
         ''' By an instance variable, callbacks to window signals can be handed
         through '''
         self.parent = parent
+        self.cfg = self.parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
         self.selected_writer = None
 
         # Set Writer ID #s for use in UI Wizard
+        # Enable option to have a favorite writer at the top of the list
+        first_writer = None
+        if hasattr(self.cfg,'plugins'):
+            first_writer = self.cfg.plugins.get('first_image_writer', None) # Get name of writer from config
+            first_writer = get_image_writer_from_name(first_writer) # Get writer details
+        if first_writer:
+            self.Writers = [x for x in self.Writers if x['name'] != first_writer['name']]
+            self.Writers = [first_writer] + self.Writers
         for id, writer in enumerate(self.Writers):
             writer['id'] = id+1
-        print(self.Writers)
 
         self.setWindowTitle('Filename Wizard')
         self.setPage(0, FilenameWizardWelcomePage(self))
@@ -335,19 +342,6 @@ class FilenameWizardRawSelectionPage(QtWidgets.QWizardPage):
 
     def nextId(self):
         return self.parent.num_of_pages - 1 # Last page 'finished'
-
-
-class FilenameWizardSingleHDF5SelectionPage(AbstractSelectionPage):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setTitle("Autogenerate hdf5 filename")
-        self.setSubTitle("All raw data saved into one hdf5 file, accompanied by two metadata files."
-                         "\nFilename example: {Description}_Mag1x_ch488_ch561_bdv.h5")
-        self.registerField('DescriptionHDF5', self.DescriptionLineEdit)
-
-    def validatePage(self):
-        self.parent.generate_filename_list(increment_number=False)
-        return super().validatePage()
 
 
 class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):

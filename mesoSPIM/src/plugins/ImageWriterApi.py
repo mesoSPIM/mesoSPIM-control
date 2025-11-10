@@ -11,6 +11,7 @@ import numpy as np
 
 API_VERSION = "0.0.1"
 
+'''This is currently not used'''
 @dataclass(frozen=True)
 class WriterCapabilities:
     # What the writer can handle efficiently

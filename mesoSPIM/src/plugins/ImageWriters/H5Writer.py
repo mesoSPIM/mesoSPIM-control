@@ -10,7 +10,21 @@ from mesoSPIM.src.plugins.ImageWriterApi import ImageWriter, WriterCapabilities,
 
 
 class H5BDVWriter(ImageWriter):
-    '''Write Images as Tiff Files'''
+    '''
+    Write Tiles in Big Data Viewer .h5 format
+
+    H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
+    Downsampling and compression may slow down writing by 5x - 10x, use with caution.
+    Imaris can open these files if no subsampling and no compression is used.
+
+    OPTIONAL: Place the following entry into the mesoSPIM configuration file and change as needed
+
+    H5_BDV_Writer = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+            'compression': None, # None, 'gzip', 'lzf'
+            'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
+            'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
+            }
+    '''
 
     writer = None
     write_request = None
@@ -149,4 +163,4 @@ class H5BDVWriter(ImageWriter):
             logger.info(f'flushed H5')
 
     def abort(self) -> None:
-        self.close()
+        self.writer.close()

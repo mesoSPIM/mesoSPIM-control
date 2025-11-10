@@ -26,7 +26,8 @@ class PluginRegistry:
         self.plugins_dirs = DEFAULT_DIRS
         if hasattr(self.cfg, "plugins"):
             # Add paths defined in the mesospim config
-            self.plugins_dirs += [Path(x) for x in self.cfg.plugins["paths_list"]]
+            paths = self.cfg.plugins.get('path_list', [])
+            self.plugins_dirs += [Path(x) for x in paths]
 
         self._writers: Dict[str, Type[ImageWriter]] = {}
         self.load_from_dirs()

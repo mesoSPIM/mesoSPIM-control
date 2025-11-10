@@ -1,6 +1,7 @@
 # mesospim/plugins/utils.py
 import inspect
 import sys
+import subprocess
 import logging
 logger = logging.getLogger(__name__)
 import types
@@ -91,3 +92,35 @@ def get_image_writer_class_from_name(name: str):
     for writer in get_image_writer_plugins():
         if name == writer['name']:
             return writer['writer_class']
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
+#                                      Helpers to ensure functioning plugins                                          #
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def install_and_import(package_name, version=None):
+    """
+    Attempts to import a package. If not found, attempts to install
+    a specific version (if specified) or the latest version.
+    """
+
+    # Format the installation target
+    install_target = f"{package_name}=={version}" if version else package_name
+
+    try:
+        __import__(package_name)
+        # print(f"'{package_name}' already imported (version check might be needed).")
+    except ImportError:
+        print(f"'{package_name}' not found. Attempting to install {install_target}...")
+        try:
+            # Use the same Python executable to ensure pip installs into the correct environment
+            subprocess.check_call([sys.executable, "-m", "pip", "install", install_target])
+            print(f"'{install_target}' installed successfully.")
+            __import__(package_name)  # Import the newly installed package
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to install '{install_target}'. Error: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"An unexpected error occurred during installation: {e}")
+            sys.exit(1)
+

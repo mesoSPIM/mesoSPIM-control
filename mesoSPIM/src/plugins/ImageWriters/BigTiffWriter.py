@@ -8,7 +8,7 @@ from mesoSPIM.src.plugins.ImageWriterApi import ImageWriter, WriterCapabilities,
 
 
 class TiffWriter(ImageWriter):
-    '''Write Images as Tiff Files'''
+    '''Write Images as Big Tiff Files'''
 
     writer = None
     write_request = None
