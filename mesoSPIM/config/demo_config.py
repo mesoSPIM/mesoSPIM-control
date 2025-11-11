@@ -339,6 +339,48 @@ hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)
         }
 
 '''
+OME.ZARR parameters
+This write generates ome.zarr specification multiscale data on the fly during acquisition.
+The default parameter should work pretty well for most setups with little to no performance degradation
+during acquisition. Defaults include compression which will save disk space and can also improve
+performance because less data is written to disk. Data are written into shards which limits the number of
+files generated on disk. 
+
+Chunks can be set to adjust with each multiscale. Base and target chunks are defined and will start 
+with the base shape and automatically shift towards target with each scale. Chunks have a big influence on IO.
+Bigger chunks means less and more efficient IO, very small chunks will degrade performance on some hardware. 
+Test on your hardware.
+
+ome_version: default: "0.5". Selects whether to write ome-zarr v0.5 (zarr v3 and support for sharding) or 
+v0.4 (zarr v2 and NO support for sharding). If "0.4" is selected, the 'shards' option is ignored.
+
+compression: default: zstd-5. This is a good trade off of compute and compression. In our tests, there is 
+little to no performance degradation when using this setting.
+
+generate_multiscales: default: True. True will generate ome-zarr specification multiscale during acquisition.
+False will only save the original resolution data.
+
+shards are defined by default. Be careful, shard shape must be defined carefully to prevent performance 
+degradation. We suggest that shards are shallow in Z and as large as you camera sensor in XY. 
+For best performance set the base and target chunks to the same z-depth as your shards.
+
+async_finalize: default: True. Enables acquisition of the next tile to proceed immediately while the multiscale 
+is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
+Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
+to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
+'''
+ome_zarr = {
+    'ome_version': '0.5', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': 'zstd', # None, 'zstd', 'lz4'
+    'compression_level': 5, # 1-9
+    'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    'base_chunks': (64,256,256), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (64,64,64), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+    'async_finalize': True, # True, False
+    }
+
+'''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
 '''        

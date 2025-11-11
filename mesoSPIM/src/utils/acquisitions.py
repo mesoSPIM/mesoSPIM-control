@@ -4,7 +4,7 @@ acquisitions.py
 
 Helper classes for mesoSPIM acquisitions
 '''
-
+from pathlib import Path
 import indexed
 import os.path
 import logging
@@ -336,7 +336,8 @@ class AcquisitionList(list):
         filenames = []
         # Create a list of full file paths
         for i in range(len(self)):
-            if self[i]['filename'][-3:] != '.h5':
+            file_extension = ''.join(Path(self[i]['filename']).suffixes)
+            if file_extension not in ('.h5', '.ome.zarr'):
                 filename = self[i]['folder']+'/'+self[i]['filename']
                 filenames.append(filename)
         duplicates = self.get_duplicates_in_list(filenames)

@@ -3,6 +3,7 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 '''
 
 import os
+from pathlib import Path
 import time
 import numpy as np
 import tifffile
@@ -14,7 +15,13 @@ from distutils.version import StrictVersion
 import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
-
+from .utils.omezarr_writer import (PyramidSpec, ChunkScheme,
+                                   Live3DPyramidWriter, plan_levels,
+                                   compute_xy_only_levels, FlushPad,
+                                   BloscCodec, BloscShuffle,
+                                   XmlWriter
+                                   )
+import zarr
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
     def __init__(self, parent, frame_queue):
@@ -39,10 +46,55 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
-        self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
+        self.bdv_writer = self.tiff_writer\
+            = self.tiff_mip_writer = self.mip_image\
+            = self.omezarr_writer = self.xml_writer = None
         self.tiff_aliases = ('.tif', '.tiff')
         self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
+
+    def compute_filenames(self, acq, acq_list):
+        '''
+        Set the filenames to class for the current file
+        Called at the top of self.prepare_acquisition
+        '''
+
+        # unmodified from the current acq list
+        self.folder = acq['folder']                                       # Current folder in the acquisition list
+        self.filename = replace_with_underscores(acq['filename'])         # Current filename in the acquisition list
+        self.path = os.path.realpath(self.folder + '/' + self.filename)   # Current full path folder/filename in the acquisition list
+        self.file_extension = ''.join(Path(self.path).suffixes)
+        if acq == acq_list[0]:
+            self.first_folder = self.folder                               # First folder in the acquisition list
+            self.first_filename = self.filename                           # First filename in the acquisition list
+            self.first_path = self.path                                   # First full path folder/filename in the acquisition list
+
+
+        # for general downstream usage and can be modified if needed for specific file types
+        # Defaults set here, modifications made as needed below
+        self.current_acquire_file_path = self.path                 # Points to the specific file/folder location \
+                                                                   # for the specific tile being acquired
+        self.MIP_path = os.path.realpath(self.folder + '/MAX_' + self.filename + '.tiff')
+        self.metadata_file_path = self.path + '_meta.txt'
+
+        # Logic for ome.zarr naming of acquisition files and metadata files
+        if self.file_extension == '.ome.zarr':
+            isetup = acq_list.index(acq)
+            self.omezarr_group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0)  # time = 0 for now
+            self.current_acquire_file_path = self.first_path + '/' + self.omezarr_group_name
+
+            self.metadata_file_path = self.first_path + '_' + self.omezarr_group_name + '_meta.txt'
+            self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.omezarr_group_name + '.tiff'
+
+        # Logic for h5 naming of acquisition files and metadata files
+        elif self.file_extension == '.h5':
+            isetup = acq_list.index(acq)
+            self.h5_group_name = 's{:d}-t{:d}'.format(isetup, 0)  # time = 0 for now
+            self.current_acquire_file_path = self.first_path
+
+            self.metadata_file_path = self.first_path + '_' + self.h5_group_name + '_meta.txt'
+            self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.h5_group_name + '.tiff'
+
 
     def check_versions(self):
         """Take care of API changes in different library versions"""
@@ -62,12 +114,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             print(msg)
 
     def prepare_acquisition(self, acq, acq_list):
-        self.folder = acq['folder']
-        self.filename = replace_with_underscores(acq['filename'])
-        self.path = os.path.realpath(self.folder+'/'+self.filename)
-        self.MIP_path = os.path.realpath(self.folder +'/MAX_'+ self.filename + '.tiff')
-        self.file_root, self.file_extension = os.path.splitext(self.path)
-        logger.info(f'Save path: {self.path}')
+        self.compute_filenames(acq, acq_list) # Ensure most current names
 
         self.binning_string = self.state['camera_binning'] # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
@@ -77,7 +124,102 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.max_frame = acq.get_image_count()
 
-        if self.file_extension == '.h5':
+        if self.file_extension == '.ome.zarr':
+            if hasattr(self.cfg, "ome_zarr"):
+                # Derive settings from the config file
+                ome_version = self.cfg.ome_zarr['ome_version']
+                generate_multiscales = self.cfg.ome_zarr['generate_multiscales']
+                compression = self.cfg.ome_zarr['compression']
+                compression_level = self.cfg.ome_zarr['compression_level']
+                shards = self.cfg.ome_zarr['shards']
+                base_chunks = self.cfg.ome_zarr['base_chunks']
+                target_chunks = self.cfg.ome_zarr['target_chunks']
+                async_finalize = self.cfg.ome_zarr['async_finalize']
+            else:
+                # Programmatically defined defaults if not set in the config file
+                ome_version = "0.5"
+                generate_multiscales = True
+                compression = 'zstd'
+                compression_level = 5
+                shards = (64, self.y_pixels, self.x_pixels) # Auto set shards to XY image size
+                base_chunks = (64,256,256)
+                target_chunks = (64,256,256)
+                async_finalize = True
+
+            # create writer object if the view is first in the list
+            if acq == acq_list[0]:
+                zarr_version = 2 if ome_version == "0.4" else 3
+                zarr.open_group(self.first_path, mode="a", zarr_version=zarr_version)
+                # the BigStitcher XML overhead
+                self.xml_writer = XmlWriter(self.first_path + '.xml', 
+                                            nsetups=len(acq_list), 
+                                            nilluminations=acq_list.get_n_shutter_configs(),
+                                            nchannels=acq_list.get_n_lasers(),
+                                            nangles=acq_list.get_n_angles(),
+                                            ntiles=acq_list.get_n_tiles(),
+                                            ntimes=1)
+            flip_flags = self.cfg.hdf5['flip_xyz'] if hasattr(self.cfg, "hdf5") else (False, False, False)
+            px_size_zyx = (acq['z_step'], self.cfg.pixelsize[acq['zoom']], self.cfg.pixelsize[acq['zoom']])
+            sign_xyz = (1 - np.array(flip_flags)) * 2 - 1
+            if hasattr(self.cfg, "hdf5") and ('transpose_xy' in self.cfg.hdf5.keys()) and self.cfg.hdf5['transpose_xy']:
+                tile_translation = (sign_xyz[1] * acq['y_pos'] / px_size_zyx[1],
+                                    sign_xyz[0] * acq['x_pos'] / px_size_zyx[2],
+                                    sign_xyz[2] * acq['z_start'] / px_size_zyx[0])
+            else:
+                tile_translation = (sign_xyz[0] * acq['x_pos'] / px_size_zyx[2],
+                                    sign_xyz[1] * acq['y_pos'] / px_size_zyx[1],
+                                    sign_xyz[2] * acq['z_start'] / px_size_zyx[0])
+            affine_matrix = np.array(((1.0, 0.0, 0.0, tile_translation[0]),
+                                        (0.0, 1.0, 0.0, tile_translation[1]),
+                                        (0.0, 0.0, 1.0, tile_translation[2])))
+            self.xml_writer.append_acquisition(iacq=acq_list.index(acq),
+                                        illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+                                        channel=acq_list.find_value_index(acq['laser'], 'laser'),
+                                        angle=acq_list.find_value_index(acq['rot'], 'rot'),
+                                        tile=acq_list.get_tile_index(acq),
+                                        voxel_units='um',
+                                        voxel_size_xyz=(px_size_zyx[2], px_size_zyx[1], px_size_zyx[0]),
+                                        calibration=(1.0, 1.0, px_size_zyx[0]/px_size_zyx[2]),
+                                        m_affine=affine_matrix,
+                                        name_affine="Translation to Regular Grid",
+                                        stack_shape_zyx=(self.max_frame, self.x_pixels, self.y_pixels) # x and y need to be exchanged to account for the image rotation
+                                        )
+            # ZARR Writer setup
+            Z_EST, Y, X = (self.max_frame, self.x_pixels, self.y_pixels)
+
+            xy_levels = compute_xy_only_levels(px_size_zyx)
+            if generate_multiscales:
+                levels = plan_levels(Y, X, Z_EST, xy_levels, min_dim=64)
+            else:
+                levels = 1
+
+            spec = PyramidSpec(
+                z_size_estimate=Z_EST,  # big upper bound; we'll truncate at the end
+                y=Y, x=X, levels=levels,
+            )
+
+            shard_shape = shards
+            scheme = ChunkScheme(base=base_chunks, target=target_chunks)
+
+            compressor = compression
+            if compression:
+                compressor = BloscCodec(cname=compression, clevel=compression_level, shuffle=BloscShuffle.bitshuffle)
+
+            self.omezarr_writer = Live3DPyramidWriter(
+                    spec,
+                    voxel_size=px_size_zyx,
+                    path=self.current_acquire_file_path,
+                    max_workers=os.cpu_count() // 2,
+                    chunk_scheme=scheme,
+                    compressor=compressor,
+                    shard_shape=shard_shape,
+                    flush_pad=FlushPad.DUPLICATE_LAST,  # keeps alignment, no RMW
+                    async_close=async_finalize,
+                    translation=(acq['z_start'], acq['y_pos'], acq['x_pos']),
+                    ome_version=ome_version
+            )
+
+        elif self.file_extension == '.h5':
             if hasattr(self.cfg, "hdf5"):
                 subsamp = self.cfg.hdf5['subsamp']
                 compression = self.cfg.hdf5['compression']
@@ -88,7 +230,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 flip_flags = (False, False, False)
             # create writer object if the view is first in the list
             if acq == acq_list[0]:
-                self.bdv_writer = npy2bdv.BdvWriter(self.path,
+                self.bdv_writer = npy2bdv.BdvWriter(self.first_path,
                                                     nilluminations=acq_list.get_n_shutter_configs(),
                                                     nchannels=acq_list.get_n_lasers(),
                                                     nangles=acq_list.get_n_angles(),
@@ -124,15 +266,15 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                                         )
         elif self.file_extension == '.raw':
             self.fsize = self.x_pixels*self.y_pixels
-            self.xy_stack = np.memmap(self.path, mode="write", dtype=np.uint16, shape=self.fsize * self.max_frame)
+            self.xy_stack = np.memmap(self.current_acquire_file_path, mode="write", dtype=np.uint16, shape=self.fsize * self.max_frame)
 
         elif self.file_extension in self.tiff_aliases:
-            self.tiff_writer = tifffile.TiffWriter(self.path, imagej=True)
+            self.tiff_writer = tifffile.TiffWriter(self.current_acquire_file_path, imagej=True)
 
         elif self.file_extension in self.bigtiff_aliases:
-            self.tiff_writer = tifffile.TiffWriter(self.path, bigtiff=True)
+            self.tiff_writer = tifffile.TiffWriter(self.current_acquire_file_path, bigtiff=True)
 
-        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw','.ome.zarr', '.h5') + self.tiff_aliases + self.bigtiff_aliases):
             self.tiff_mip_writer = tifffile.TiffWriter(self.MIP_path, imagej=True)
             self.mip_image = np.zeros((self.x_pixels, self.y_pixels), 'uint16')
 
@@ -141,6 +283,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.running_flag = True
         self.acq = acq
         self.acq_list = acq_list
+
+        logger.info(f'Save path: {self.current_acquire_file_path}')
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_images(self, acq, acq_list):
@@ -161,7 +305,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.cur_image_counter % 5 == 0:
             self.parent.sig_status_message.emit('Writing to disk...')
         xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
-        if self.file_extension == '.h5':
+
+        if self.file_extension == '.ome.zarr':
+            self.omezarr_writer.push_slice(image)
+        elif self.file_extension == '.h5':
             self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
                                             illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
                                             channel=acq_list.find_value_index(acq['laser'], 'laser'),
@@ -181,7 +328,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
                                     metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
-        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw','.ome.zarr', '.h5') + self.tiff_aliases + self.bigtiff_aliases):
             self.mip_image[:] = np.maximum(self.mip_image, image)
 
         self.cur_image_counter += 1
@@ -193,7 +340,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.abort_flag = True
         if self.running_flag:
             try:
-                if self.file_extension == '.h5':
+                if self.file_extension == '.ome.zarr':
+                    self.omezarr_writer.close()
+                elif self.file_extension == '.h5':
                     self.bdv_writer.close()
                 elif self.file_extension == '.raw':
                     del self.xy_stack
@@ -211,7 +360,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_acquisition(self, acq, acq_list):
         logger.info("end_acquisition() started")
-        if self.file_extension == '.h5':
+        if self.file_extension == '.ome.zarr':
+            self.omezarr_writer.close()
+            if acq == acq_list[-1]:
+                self.xml_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
+                self.xml_writer.set_attribute_labels('illumination', tuple(acq_list.get_unique_attr_list('shutterconfig')))
+                self.xml_writer.set_attribute_labels('angle', tuple(acq_list.get_unique_attr_list('rot')))
+                self.xml_writer.write()
+        elif self.file_extension == '.h5':
             if acq == acq_list[-1]:
                 try:
                     self.bdv_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
@@ -238,7 +394,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             except Exception as e:
                 logger.error(f'{e}')
 
-        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+        if acq['processing'] == 'MAX' and self.file_extension in (('.raw','.ome.zarr', '.h5') + self.tiff_aliases + self.bigtiff_aliases):
             try:
                 self.tiff_mip_writer.write(self.mip_image)
                 self.tiff_mip_writer.close()
@@ -303,8 +459,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def write_metadata(self, acq, acq_list):
         logger.debug("write_metadata() started")
         ''' Writes a metadata.txt file. Path contains the file to be written '''
-        path = acq['folder'] + '/' + acq['filename']
-        metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+        path = self.current_acquire_file_path
+        metadata_path = self.metadata_file_path
 
         if acq['filename'][-3:] == '.h5':
             if acq == acq_list[0]:

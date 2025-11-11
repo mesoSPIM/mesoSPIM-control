@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 class FilenameWizard(QtWidgets.QWizard):
     wizard_done = QtCore.pyqtSignal()
 
-    num_of_pages = 6
-    (welcome, raw, tiff, bigtiff, single_hdf5, finished) = range(num_of_pages)
+    num_of_pages = 7
+    (welcome, raw, tiff, bigtiff, single_hdf5, omezarr_string, finished) = range(num_of_pages)
 
     def __init__(self, parent=None):
         '''Parent is object of class mesoSPIM_AcquisitionManagerWindow()'''
@@ -25,14 +25,15 @@ class FilenameWizard(QtWidgets.QWizard):
         through '''
         self.parent = parent
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
-        self.file_format = None  # 'raw', 'h5', 'tiff', 'btf'
+        self.file_format = None  # 'raw', 'h5', 'tiff', 'btf', 'ome.zarr'
         self.setWindowTitle('Filename Wizard')
         self.setPage(0, FilenameWizardWelcomePage(self))
         self.setPage(1, FilenameWizardRawSelectionPage(self))
         self.setPage(2, FilenameWizardTiffSelectionPage(self))
         self.setPage(3, FilenameWizardBigTiffSelectionPage(self))
         self.setPage(4, FilenameWizardSingleHDF5SelectionPage(self))
-        self.setPage(5, FilenameWizardCheckResultsPage(self))
+        self.setPage(5, FilenameWizardSingleOmeZarrSelectionPage(self))
+        self.setPage(6, FilenameWizardCheckResultsPage(self))
         self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
 
@@ -116,14 +117,25 @@ class FilenameWizard(QtWidgets.QWizard):
 
                 file_suffix = '.' + self.file_format
 
-            elif self.file_format == 'h5':
+            elif self.file_format in ('h5', 'ome.zarr'):
                 if self.field('DescriptionHDF5'):
                     filename += replace_with_underscores(self.field('DescriptionHDF5')) + '_'
+                elif self.field('DescriptionOmeZarr'):
+                    filename += replace_with_underscores(self.field('DescriptionOmeZarr')) + '_'
+                file_suffix = '.' + self.file_format
                 filename += f'Mag{self.parent.model.getZoom(0)}'
                 laser_list = self.parent.model.getLaserList()
                 for laser in laser_list:
                     filename += '_ch' + laser[:-3]
-                file_suffix = '_bdv.' + self.file_format
+                
+            # elif self.file_format == 'ome.zarr':
+            #     if self.field('DescriptionOmeZarr'):
+            #         filename += replace_with_underscores(self.field('DescriptionOmeZarr')) + '_'
+            #     filename += f'Mag{self.parent.model.getZoom(0)}'
+            #     laser_list = self.parent.model.getLaserList()
+            #     for laser in laser_list:
+            #         filename += '_ch' + laser[:-3]
+            #     file_suffix = '.' + self.file_format
 
             else:
                 raise ValueError(f"file suffix invalid: {self.file_format}")
@@ -153,11 +165,13 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         self.tiff_string = 'ImageJ TIFF files: ~.tiff'
         self.bigtiff_string = 'BigTIFF files: ~.btf'
         self.single_hdf5_string = 'BigDataViewer HDF5 file: ~.h5'
+        self.omezarr_string = 'OME-ZARR: ~.ome.zarr'
 
         self.SaveAsComboBoxLabel = QtWidgets.QLabel('Save as:')
         self.SaveAsComboBox = QtWidgets.QComboBox()
-        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string, self.bigtiff_string, self.single_hdf5_string])
-        self.SaveAsComboBox.setCurrentIndex(3)
+        self.SaveAsComboBox.addItems([self.raw_string, self.tiff_string,
+                                      self.bigtiff_string, self.single_hdf5_string, self.omezarr_string])
+        self.SaveAsComboBox.setCurrentIndex(4)
 
         self.registerField('SaveAs', self.SaveAsComboBox, 'currentIndex')
         
@@ -179,6 +193,9 @@ class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
         elif self.SaveAsComboBox.currentText() == self.single_hdf5_string:
             self.parent.file_format = 'h5'
             return self.parent.single_hdf5
+        elif self.SaveAsComboBox.currentText() == self.omezarr_string:
+            self.parent.file_format = 'ome.zarr'
+            return self.parent.omezarr_string
 
 
 class AbstractSelectionPage(QtWidgets.QWizardPage):
@@ -285,6 +302,18 @@ class FilenameWizardSingleHDF5SelectionPage(AbstractSelectionPage):
         self.parent.generate_filename_list(increment_number=False)
         return super().validatePage()
 
+class FilenameWizardSingleOmeZarrSelectionPage(AbstractSelectionPage):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTitle("Autogenerate ome-zarr filename")
+        self.setSubTitle("All raw data saved into one ome-zarr file, accompanied by two metadata files."
+                         "\nFilename example: {Description}_Mag1x_ch488_ch561.ome.zarr")
+        self.registerField('DescriptionOmeZarr', self.DescriptionLineEdit)
+
+    # def validatePage(self):
+    #     self.parent.generate_filename_list(increment_number=False)
+    #     return super().validatePage()
+
 
 class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
@@ -305,12 +334,13 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
         self.setLayout(self.layout)
 
     def initializePage(self):
-        if self.parent.file_format in ('raw', 'tiff', 'btf'):
+        if self.parent.file_format in ('raw', 'tiff', 'btf', 'ome.zarr'):
             file_list = self.parent.filename_list
         elif self.parent.file_format == 'h5':
             file_list = [self.parent.filename_list[0]]
         else:
-            raise ValueError(f"file_format must be in ('raw', 'tiff', 'btf', 'h5'), received {self.parent.file_format}")
+            print(self.parent.filename_list)
+            raise ValueError(f"file_format must be in ('raw', 'tiff', 'btf', 'h5' 'ome.zarr'), received {self.parent.file_format}")
 
         for f in file_list:
             self.mystring += f
