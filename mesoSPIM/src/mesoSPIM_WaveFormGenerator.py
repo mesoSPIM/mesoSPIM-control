@@ -531,6 +531,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.camera_trigger_task.wait_until_done()
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
             self.stage_trigger_task.wait_until_done()
+            logger.debug("stage_trigger_task.wait_until_done() finished")
 
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""

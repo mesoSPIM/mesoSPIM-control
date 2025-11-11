@@ -553,8 +553,11 @@ class mesoSPIM_Core(QtCore.QObject):
         if laser_blanking:
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
+        logger.debug("start_tasks() finished")
         self.waveformer.run_tasks()
+        logger.debug("run_tasks() finished")
         self.waveformer.stop_tasks()
+        logger.debug("stop_tasks() finished")
         if laser_blanking:
             self.laserenabler.disable_all()
 
