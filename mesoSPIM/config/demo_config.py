@@ -9,6 +9,20 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
+Options to control behavior of plugins
+"paths_list": Optional: Enables arbirtary locations for mesoSPIM to find plugins 
+"first_image_writer": Optional: Enables a favorite plugin to be at the top of the filenaming wizard. Builtin plugins 
+are listed as options, by any ImageWriter plugin can be 
+'''
+plugins = {
+    'path_list': [
+        "C:/some/plugin/location",         # Ignored if it does not exits (use '/')
+        "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
+    ],
+    'first_image_writer': 'H5_BDV_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+}
+
+'''
 Dark mode: Renders the UI dark
 '''
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
@@ -21,7 +35,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_loading_buttons' : True,
               'flip_XYZFT_button_polarity': (True, False, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
               'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
-              'window_pos': (100, 100), # position of the main window on the screen, top left corner.
+              'window_pos': (0, 0), # position of the main window on the screen, top left corner.
               'usb_webcam_ID': 0, # open USB web-camera (if available): None,  0 (first cam), 1 (second cam), ...
               'flip_auto_LR_illumination': False, # flip the polarity of the "Auto L/R illumination" button in Acquisition Manager
                }
@@ -100,6 +114,7 @@ shutterdict = {'shutter_left' : 'PXI6259/port0/line0', # left (general) shutter
 Camera configuration
 
 For a DemoCamera, only the following options are necessary
+(x_pixels and y_pixels can be chosen arbitrarily):
 (x_pixels and y_pixels can be chosen arbitrarily):
 
 camera_parameters = {'x_pixels' : 1024,
@@ -328,11 +343,11 @@ pixelsize = {
             '5x Mitutoyo' : 1.0,}
 
 '''
- HDF5 parameters, if this format is used for data saving (optional).
+H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
 Downsampling and compression slows down writing by 5x - 10x, use with caution.
 Imaris can open these files if no subsampling and no compression is used.
 '''
-hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+H5_BDV_Writer = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
         'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
@@ -369,8 +384,8 @@ is finalized in the background. On systems with slow IO, data can accumulate in 
 Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
 to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
 '''
-ome_zarr = {
-    'ome_version': '0.5', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+OME_Zarr_Writer = {
+    'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
     'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd', # None, 'zstd', 'lz4'
     'compression_level': 5, # 1-9
@@ -378,6 +393,11 @@ ome_zarr = {
     'base_chunks': (64,256,256), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64,64,64), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
     'async_finalize': True, # True, False
+    
+    # BigStitcher Specific Options
+    'write_big_stitcher_xml': True, # True, False
+    'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
+    'transpose_xy': False, # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
     }
 
 '''
