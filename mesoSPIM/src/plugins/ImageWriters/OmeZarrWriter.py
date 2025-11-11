@@ -5,12 +5,12 @@ import logging
 logger = logging.getLogger(__name__)
 import numpy as np
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
-from mesoSPIM.src.plugins.utils import install_and_import
 from mesoSPIM.src.plugins.ImageWriterApi import (
     ImageWriter, WriterCapabilities, WriteRequest, API_VERSION, FileNaming, WriteImage, FinalizeImage
 )
 
 # Install zarr via pip if needed
+from mesoSPIM.src.plugins.utils import install_and_import
 install_and_import('zarr', version='3.1.3')
 import zarr
 
@@ -296,3 +296,7 @@ class OMEZarrWriter(ImageWriter):
 
         self.metadata_file = self.req.uri + f'_{self.omezarr_group_name}_meta.txt'
         self.metadata_file_describes_this_path = Path(self.current_acquire_file_path).as_posix()
+
+        # Placeholder prior to adding data processing plugins
+        path = Path(self.req.uri + f'_{self.omezarr_group_name}')
+        self.MIP_path = path.with_name('MAX_' + path.name + '.tif').as_posix()

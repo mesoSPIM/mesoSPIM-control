@@ -172,6 +172,10 @@ class ImageWriter(Protocol):
         # Used in mesoSpim_ImageWriter.write_metadata
         self.metadata_file_describes_this_path = self.req.uri
 
+        # Placeholder prior to adding data processing plugins
+        path = Path(self.req.uri)
+        self.MIP_path = path.with_name('MAX_' + path.name + '.tif').as_posix()
+
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)
         if name == "open" and callable(attr):
