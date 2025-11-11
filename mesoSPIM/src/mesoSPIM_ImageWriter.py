@@ -174,7 +174,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.acq = acq
         self.acq_list = acq_list
 
-        logger.info(f'Save path: {self.current_acquire_file_path}')
+        logger.info(f'Save path: {write_request.uri}')
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_images(self, acq, acq_list):

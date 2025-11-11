@@ -19,7 +19,7 @@ plugins = {
         "C:/some/plugin/location",         # Ignored if it does not exits (use '/')
         "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
     ],
-    'first_image_writer': 'H5_BDV_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
 }
 
 '''
@@ -390,8 +390,8 @@ OME_Zarr_Writer = {
     'compression': 'zstd', # None, 'zstd', 'lz4'
     'compression_level': 5, # 1-9
     'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (64,256,256), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-    'target_chunks': (64,64,64), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+    'base_chunks': (256,256,256), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (256,256,256), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
     'async_finalize': True, # True, False
     
     # BigStitcher Specific Options
