@@ -151,7 +151,11 @@ class OMEZarrWriter(ImageWriter):
         if req.writer_config_file_values:
             ome_version = req.writer_config_file_values.get('ome_version', ome_version)
             generate_multiscales = req.writer_config_file_values.get('generate_multiscales', generate_multiscales)
-            compression = req.writer_config_file_values.get('compression', compression)
+            if 'compression' in req.writer_config_file_values:
+                # Deals with case where compression is None in config so it is retained
+                compression = req.writer_config_file_values.get('compression')
+            else:
+                pass
             compression_level = req.writer_config_file_values.get('compression_level', compression_level)
             shards = req.writer_config_file_values.get('shards', shards)
             base_chunks = req.writer_config_file_values.get('base_chunks', base_chunks)
