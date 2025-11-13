@@ -5,6 +5,9 @@ import time
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.uic import loadUi
+
+from ..config.demo_config import plugins
+
 ''' Disabled taskbar button progress display due to problems with Anaconda default'''
 # if sys.platform == 'win32':
 #     from PyQt5.QtWinExtras import QWinTaskbarButton
