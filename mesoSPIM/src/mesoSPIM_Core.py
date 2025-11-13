@@ -153,8 +153,8 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.serial_worker.move_absolute(sdict, wait_until_done=True))
 
         ''' Start the threads '''
-        self.camera_thread.start(QtCore.QThread.HighestPriority)
-        self.image_writer_thread.start(QtCore.QThread.HighestPriority)
+        self.camera_thread.start(QtCore.QThread.HighPriority)
+        self.image_writer_thread.start(QtCore.QThread.HighPriority)
         # The serial_worker remains in the Core thread, not separate thread for serial_worker
         #self.serial_thread.start() # legacy
 
@@ -580,10 +580,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.snap_image(laser_blanking)
             self.sig_get_live_image.emit()
 
-            # let's see what happens when we remove this.
-            # while self.pauseflag is True:
-            #     time.sleep(0.1)
-            #     QtWidgets.QApplication.processEvents()
+            while self.pauseflag is True:
+                time.sleep(0.1)
+                QtWidgets.QApplication.processEvents()
 
             QtWidgets.QApplication.processEvents()
 
@@ -858,12 +857,11 @@ class mesoSPIM_Core(QtCore.QObject):
                 logger.debug(f'move_dict: {move_dict}')
                 self.move_relative(move_dict)
 
-                # lets see what happens when we remove this.
-                # while self.pauseflag is True:
-                #     time.sleep(0.02)
-                #     QtWidgets.QApplication.processEvents()
+                while self.pauseflag is True:
+                    time.sleep(0.02)
+                    QtWidgets.QApplication.processEvents()
                 
-                #QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50) # and this
+                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                 self.image_count += 1
 
                 ''' Keep track of passed time and predict remaining time '''
@@ -886,8 +884,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.laserenabler.disable_all()
         self.image_acq_end_time = time.time()
         self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+
         self.close_shutters()
-        QtWidgets.QApplication.processEvents()
 
     def close_acquisition(self, acq, acq_list):
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')

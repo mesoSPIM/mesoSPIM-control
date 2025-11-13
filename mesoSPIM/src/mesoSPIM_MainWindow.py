@@ -168,7 +168,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_launch_contrast_window.connect(self.launch_contrast_window)
 
         ''' Start the thread '''
-        self.core_thread.start(QtCore.QThread.HighestPriority)
+        self.core_thread.start(QtCore.QThread.HighPriority)
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
             logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
