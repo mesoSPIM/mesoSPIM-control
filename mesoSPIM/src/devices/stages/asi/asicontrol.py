@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class StageControlASITiger(QtCore.QObject):
-    sig_pause = QtCore.pyqtSignal(bool)
+    #sig_pause = QtCore.pyqtSignal(bool)
 
     '''
     Class to control a ASI Tiger mechanical stage controller
@@ -59,7 +59,7 @@ class StageControlASITiger(QtCore.QObject):
         '''
         try:
             ''' During acquisitions: send pause signal '''
-            self.sig_pause.emit(True)
+            #self.sig_pause.emit(True) # makes the stage freeze when using GUI
             start_time = time.time()
             self._reset_buffers()
             logger.debug(f"Serial sent: {command}")
@@ -67,7 +67,7 @@ class StageControlASITiger(QtCore.QObject):
             message = self.asi_connection.readline().decode("ascii")
             response_time = time.time() 
             ''' During acquistions: send unpause signal '''
-            self.sig_pause.emit(False)
+            #self.sig_pause.emit(False)
             logger.debug(f"Serial received: {message} ")
             ''' Logging of serial connections if response >30 ms (previously: 15 ms)'''
             delta_t = round(response_time - start_time, 6)

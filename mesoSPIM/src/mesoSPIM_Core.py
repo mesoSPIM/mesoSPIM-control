@@ -142,7 +142,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.serial_worker.sig_position.connect(self.sig_position.emit)
         self.serial_worker.sig_status_message.connect(self.send_status_message_to_gui)
-        self.serial_worker.sig_pause.connect(self.pause)
+        #self.serial_worker.sig_pause.connect(self.pause)
         self.sig_polling_stage_position_start.connect(self.serial_worker.stage.pos_timer.start)
         self.sig_polling_stage_position_stop.connect(self.serial_worker.stage.pos_timer.stop)
         self.sig_move_absolute.connect(self.serial_worker.move_absolute)
@@ -201,7 +201,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.start_time = 0
         self.stopflag = False
-        self.pauseflag = False
+        #self.pauseflag = False
 
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
             assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' must contain 'asi_parameters' dict."
@@ -332,15 +332,18 @@ class mesoSPIM_Core(QtCore.QObject):
     def stop(self):
         self.stopflag = True # This stopflag is a bit risky, needs to be updated to a more robust solution
         self.sig_stop_aquisition.emit() # send STOP signal to both Camera and ImageWriter threads
+        if self.TTL_mode_enabled_in_cfg is True:
+            self.sig_state_request.emit({'ttl_movement_enabled_during_acq': False})
         self.sig_polling_stage_position_start.emit()
         self.state['state'] = 'idle'
         self.sig_update_gui_from_state.emit()
         self.sig_finished.emit()
         self.frame_queue.clear() # clear the frame queue
 
-    @QtCore.pyqtSlot(bool)
-    def pause(self, boolean):
-        self.pauseflag = boolean
+
+#    @QtCore.pyqtSlot(bool)
+#    def pause(self, boolean):
+#        self.pauseflag = boolean
 
     def send_progress(self,
                       cur_acq,
@@ -580,9 +583,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.snap_image(laser_blanking)
             self.sig_get_live_image.emit()
 
-            while self.pauseflag is True:
-                time.sleep(0.1)
-                QtWidgets.QApplication.processEvents()
+#            while self.pauseflag is True:
+#                time.sleep(0.1)
+#                QtWidgets.QApplication.processEvents()
 
             QtWidgets.QApplication.processEvents()
 
@@ -850,16 +853,16 @@ class mesoSPIM_Core(QtCore.QObject):
                 else: # clear key if no F-step is required
                     move_dict.pop('f_rel', None)
 
+                logger.debug(f'move_dict: {move_dict}')
+                self.move_relative(move_dict)
+
                 ''' The pauseflag allows:
                     - pausing running acquisitions
                     - wait for slow hardware to catch up (e.g. slow stages)
                 '''
-                logger.debug(f'move_dict: {move_dict}')
-                self.move_relative(move_dict)
-
-                while self.pauseflag is True:
-                    time.sleep(0.02)
-                    QtWidgets.QApplication.processEvents()
+#                while self.pauseflag is True:
+#                    time.sleep(0.02)
+#                    QtWidgets.QApplication.processEvents()
                 
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                 self.image_count += 1

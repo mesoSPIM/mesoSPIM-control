@@ -28,7 +28,7 @@ class mesoSPIM_Stage(QtCore.QObject):
 
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
-    sig_pause = QtCore.pyqtSignal(bool)
+    #sig_pause = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -1828,7 +1828,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
     Also contains a QTimer that regularily sends position updates, e.g
     during the execution of movements.
     '''
-    sig_pause = QtCore.pyqtSignal(bool)
+    #sig_pause = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1843,7 +1843,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
 
         self.ttl_cards = self.asi_parameters['ttl_cards']
         self.asi_stages = StageControlASITiger(self.asi_parameters)
-        self.asi_stages.sig_pause.connect(self.pause)
+        #self.asi_stages.sig_pause.connect(self.pause)
 
         assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' must have 'asi_parameters' dict."
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
@@ -1871,11 +1871,11 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         else:
             print("INFO: 'speed' not found in config file, 'asi_parameters' dictionary, using default values.")
 
-    @QtCore.pyqtSlot(bool)
-    def pause(self, boolean):
-        state = self.state['state']
-        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
-            self.sig_pause.emit(boolean)
+#    @QtCore.pyqtSlot(bool)
+#    def pause(self, boolean):
+#        state = self.state['state']
+#        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+#            self.sig_pause.emit(boolean)
 
     @QtCore.pyqtSlot(dict)
     def log_slice(self, dictionary):
@@ -2051,7 +2051,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
     * ASI Z-Stage is equivalent to the mesoSPIM f-stage (focus)
 
     '''
-    sig_pause = QtCore.pyqtSignal(bool)
+    #sig_pause = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -2068,7 +2068,7 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
         self.asi_stages = StageControlASITiger(self.asi_parameters)
-        self.asi_stages.sig_pause.connect(self.pause)
+        #self.asi_stages.sig_pause.connect(self.pause)
         self.pos_timer.setInterval(100)
 
         logger.info('mesoSPIM_Stages: ASI stages initialized')
@@ -2080,11 +2080,11 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         except:
             pass
 
-    @QtCore.pyqtSlot(bool)
-    def pause(self,boolean):
-        state = self.state['state']
-        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
-            self.sig_pause.emit(boolean)
+#    @QtCore.pyqtSlot(bool)
+#    def pause(self,boolean):
+#        state = self.state['state']
+#        if state == 'run_selected_acquisition' or state == 'run_acquisition_list':
+#            self.sig_pause.emit(boolean)
 
     @QtCore.pyqtSlot(dict)
     def log_slice(self, dictionary):

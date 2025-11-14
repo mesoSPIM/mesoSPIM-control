@@ -31,7 +31,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_center_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
     sig_status_message = QtCore.pyqtSignal(str)
-    sig_pause = QtCore.pyqtSignal(bool)
+    #sig_pause = QtCore.pyqtSignal(bool)
     
     def __init__(self, parent):
         super().__init__()
@@ -85,11 +85,11 @@ class mesoSPIM_Serial(QtCore.QObject):
         #     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
         elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
             self.stage = mesoSPIM_ASI_Tiger_Stage(self)
-            self.stage.sig_pause.connect(self.pause)
+            #self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
             self.stage = mesoSPIM_ASI_MS2000_Stage(self)
-            self.stage.sig_pause.connect(self.pause)
+            #self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
@@ -132,10 +132,10 @@ class mesoSPIM_Serial(QtCore.QObject):
     def send_status_message(self, string):
         self.sig_status_message.emit(string)
 
-    @QtCore.pyqtSlot(bool)
-    def pause(self, boolean):
-        logger.debug(f'Pause signal received: {boolean}')
-        self.sig_pause.emit(boolean)
+#    @QtCore.pyqtSlot(bool)
+#    def pause(self, boolean):
+#        logger.debug(f'Pause signal received: {boolean}')
+#        self.sig_pause.emit(boolean)
 
     @QtCore.pyqtSlot(bool)
     def enable_ttl_motion(self, boolean):
