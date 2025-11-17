@@ -528,10 +528,12 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.laser_task.wait_until_done()
         else:
             self.galvo_etl_laser_task.wait_until_done()
-        self.camera_trigger_task.wait_until_done()
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
-            self.stage_trigger_task.wait_until_done()
-            logger.debug("stage_trigger_task.wait_until_done() finished")
+        logger.debug("AO tasks wait_until_done() finished")
+        # Reduce overhead of waiting for digital triggers:
+        # self.camera_trigger_task.wait_until_done()
+        # if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
+        #     self.stage_trigger_task.wait_until_done()
+        #     logger.debug("stage_trigger_task.wait_until_done() finished")
 
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""
