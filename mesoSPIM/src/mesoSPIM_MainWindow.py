@@ -860,6 +860,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def zero_galvo_amp(self):
         '''Set the amplitude of both galvos to zero, or back to where it was, depending on button state'''
+        time.sleep(0.1)  # small delay to avoid problems with rapid toggling
         if self.freezeGalvoButton.isChecked():
             self.galvo_amp_backup = self.LeftGalvoAmplitudeSpinBox.value()
             self.state['galvo_l_amplitude'] = 0
