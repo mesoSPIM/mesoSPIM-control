@@ -134,7 +134,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core = mesoSPIM_Core(self.cfg, self)
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        self.core.serial_worker.moveToThread(self.core_thread) # Made the move buttons freeze the SW on Benchtop systems, possibly flawed.
+        self.core.serial_worker.moveToThread(self.core_thread) # depending of signal source, some commands are still executed in main (GUI) thread, eg move_relative() from button press
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -557,7 +557,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def move_relative(self, pos_dict):
         assert len(pos_dict) == 1, f"Position dictionary expects only one entry, got {pos_dict}"
         key, value = list(pos_dict.keys())[0], list(pos_dict.values())[0]
-        self.sig_move_relative.emit(pos_dict)
+        #self.sig_move_relative.emit(pos_dict)
+        self.core.serial_worker.move_relative(pos_dict)  # direct call to ensure execution in main thread during live mode and avoid conflicts with core thread (stage freezing)
         if hasattr(self.cfg, 'ui_options') and ('button_sleep_ms_xyzft' in self.cfg.ui_options.keys()):
             axis = key[:-4]
             index = ['x', 'y', 'z', 'f', 'theta'].index(axis)
