@@ -105,7 +105,7 @@ class OMEZarrWriter(ImageWriter):
         )
     @classmethod
     def file_extensions(cls) -> Union[None, str, list[str]]:
-        return ['ome.zarr']
+        return ['ome.zarr', 'zarr']
 
     @classmethod
     def file_names(cls):

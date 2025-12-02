@@ -52,7 +52,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.folder = acq['folder']                                       # Current folder in the acquisition list
         self.filename = replace_with_underscores(acq['filename'])         # Current filename in the acquisition list
         self.path = os.path.realpath(self.folder + '/' + self.filename)   # Current full path folder/filename in the acquisition list
-        self.file_extension = ''.join(Path(self.path).suffixes)
+        self.file_extension = Path(self.path).suffix
         if acq == acq_list[0]:
             self.first_folder = self.folder                               # First folder in the acquisition list
             self.first_filename = self.filename                           # First filename in the acquisition list
@@ -67,7 +67,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.metadata_file_path = self.path + '_meta.txt'
 
         # Logic for ome.zarr naming of acquisition files and metadata files
-        if self.file_extension == '.ome.zarr':
+        if self.file_extension == '.zarr':
             isetup = acq_list.index(acq)
             self.omezarr_group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0)  # time = 0 for now
             self.current_acquire_file_path = self.first_path + '/' + self.omezarr_group_name
