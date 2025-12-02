@@ -64,8 +64,8 @@ def gb_size_of_array_shape(shape):
 
 
 def replace_with_underscores(string):
-    ''' Replaces spaces and slashes with underscores '''
-    s = string.replace(' ', '_').replace('/', '_')
+    ''' Replaces spaces, slashes etc with underscores or numerals '''
+    s = string.replace(' ', '_').replace('/', '_').replace('%', 'pct')
     return s
 
 def log_cpu_core(logger, msg=""):
