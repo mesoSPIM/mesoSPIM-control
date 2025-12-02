@@ -121,8 +121,9 @@ class ImageWriter(Protocol):
     def compatible_suffix(self, req: WriteRequest) -> str:
         '''Return True if the uri suffix is compatible with this writer'''
         path = self.ensure_path(req.uri)
-        suffix = self.remove_leading_dot(path.suffix)
-        return suffix in self.file_extensions()
+        suffixes = [self.remove_leading_dot(x) for x in path.suffixes]
+        joined = '.'.join(suffixes) # handle multi-part suffixes like .ome.zarr
+        return joined in self.file_extensions() or '.' + joined in self.file_extensions() #handle leading/no-leading '.'
 
     def open(self, req: WriteRequest) -> None:
         """
