@@ -119,7 +119,7 @@ class ImageWriter(Protocol):
     def remove_leading_dot(self,path:str) -> str:
         return path[1:] if path.startswith('.') else path
 
-    def compatible_suffix(self, req: WriteRequest) -> str:
+    def compatible_suffix(self, req: WriteRequest) -> bool:
         '''Return True if the uri suffix is compatible with this writer'''
         path = str(req.uri)
         compatible_extensions = ['.' + x if x[0] != '.' else x for x in self.file_extensions()] # Ensure leading '.' on extensions
