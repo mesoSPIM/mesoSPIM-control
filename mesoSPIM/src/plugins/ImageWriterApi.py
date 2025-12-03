@@ -107,6 +107,7 @@ class ImageWriter(Protocol):
         """
         Return None, a string or list of strings to specify the file extensions
         supported by the Writer. Example: ['ome.zarr', 'zarr']
+        The first entry in the list is used as the default extension in filename_wizard.
         """
 
     def ensure_path(self, path_like):
@@ -120,10 +121,9 @@ class ImageWriter(Protocol):
 
     def compatible_suffix(self, req: WriteRequest) -> str:
         '''Return True if the uri suffix is compatible with this writer'''
-        path = self.ensure_path(req.uri)
-        suffixes = [self.remove_leading_dot(x) for x in path.suffixes]
-        joined = '.'.join(suffixes) # handle multi-part suffixes like .ome.zarr
-        return joined in self.file_extensions() or '.' + joined in self.file_extensions() #handle leading/no-leading '.'
+        path = str(req.uri)
+        compatible_extensions = ['.' + x if x[0] != '.' else x for x in self.file_extensions()] # Ensure leading '.' on extensions
+        return any([path.endswith(ext) for ext in compatible_extensions])
 
     def open(self, req: WriteRequest) -> None:
         """

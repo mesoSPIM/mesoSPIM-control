@@ -42,47 +42,48 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.file_extension = ''
         self.check_versions()
 
-    def compute_filenames(self, acq, acq_list):
-        '''
-        Set the filenames to class for the current file
-        Called at the top of self.prepare_acquisition
-        '''
-
-        # unmodified from the current acq list
-        self.folder = acq['folder']                                       # Current folder in the acquisition list
-        self.filename = replace_with_underscores(acq['filename'])         # Current filename in the acquisition list
-        self.path = os.path.realpath(self.folder + '/' + self.filename)   # Current full path folder/filename in the acquisition list
-        self.file_extension = Path(self.path).suffix
-        if acq == acq_list[0]:
-            self.first_folder = self.folder                               # First folder in the acquisition list
-            self.first_filename = self.filename                           # First filename in the acquisition list
-            self.first_path = self.path                                   # First full path folder/filename in the acquisition list
-
-
-        # for general downstream usage and can be modified if needed for specific file types
-        # Defaults set here, modifications made as needed below
-        self.current_acquire_file_path = self.path                 # Points to the specific file/folder location \
-                                                                   # for the specific tile being acquired
-        self.MIP_path = os.path.realpath(self.folder + '/MAX_' + self.filename + '.tiff')
-        self.metadata_file_path = self.path + '_meta.txt'
-
-        # Logic for ome.zarr naming of acquisition files and metadata files
-        if self.file_extension == '.zarr':
-            isetup = acq_list.index(acq)
-            self.omezarr_group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0)  # time = 0 for now
-            self.current_acquire_file_path = self.first_path + '/' + self.omezarr_group_name
-
-            self.metadata_file_path = self.first_path + '_' + self.omezarr_group_name + '_meta.txt'
-            self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.omezarr_group_name + '.tiff'
-
-        # Logic for h5 naming of acquisition files and metadata files
-        elif self.file_extension == '.h5':
-            isetup = acq_list.index(acq)
-            self.h5_group_name = 's{:d}-t{:d}'.format(isetup, 0)  # time = 0 for now
-            self.current_acquire_file_path = self.first_path
-
-            self.metadata_file_path = self.first_path + '_' + self.h5_group_name + '_meta.txt'
-            self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.h5_group_name + '.tiff'
+    ### Deprecated method: no longer used for ImageWriters plugin system ###
+    # def compute_filenames(self, acq, acq_list):
+    #     '''
+    #     Set the filenames to class for the current file
+    #     Called at the top of self.prepare_acquisition
+    #     '''
+    #
+    #     # unmodified from the current acq list
+    #     self.folder = acq['folder']                                       # Current folder in the acquisition list
+    #     self.filename = replace_with_underscores(acq['filename'])         # Current filename in the acquisition list
+    #     self.path = os.path.realpath(self.folder + '/' + self.filename)   # Current full path folder/filename in the acquisition list
+    #     self.file_extension = Path(self.path).suffix
+    #     if acq == acq_list[0]:
+    #         self.first_folder = self.folder                               # First folder in the acquisition list
+    #         self.first_filename = self.filename                           # First filename in the acquisition list
+    #         self.first_path = self.path                                   # First full path folder/filename in the acquisition list
+    #
+    #
+    #     # for general downstream usage and can be modified if needed for specific file types
+    #     # Defaults set here, modifications made as needed below
+    #     self.current_acquire_file_path = self.path                 # Points to the specific file/folder location \
+    #                                                                # for the specific tile being acquired
+    #     self.MIP_path = os.path.realpath(self.folder + '/MAX_' + self.filename + '.tiff')
+    #     self.metadata_file_path = self.path + '_meta.txt'
+    #
+    #     # Logic for ome.zarr naming of acquisition files and metadata files
+    #     if self.file_extension == '.zarr':
+    #         isetup = acq_list.index(acq)
+    #         self.omezarr_group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0)  # time = 0 for now
+    #         self.current_acquire_file_path = self.first_path + '/' + self.omezarr_group_name
+    #
+    #         self.metadata_file_path = self.first_path + '_' + self.omezarr_group_name + '_meta.txt'
+    #         self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.omezarr_group_name + '.tiff'
+    #
+    #     # Logic for h5 naming of acquisition files and metadata files
+    #     elif self.file_extension == '.h5':
+    #         isetup = acq_list.index(acq)
+    #         self.h5_group_name = 's{:d}-t{:d}'.format(isetup, 0)  # time = 0 for now
+    #         self.current_acquire_file_path = self.first_path
+    #
+    #         self.metadata_file_path = self.first_path + '_' + self.h5_group_name + '_meta.txt'
+    #         self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.h5_group_name + '.tiff'
 
 
     def check_versions(self):
