@@ -33,7 +33,7 @@ jobs:
           sphinx-build -b html docs/source docs/build/html
 
       - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
