@@ -3,6 +3,7 @@ name: Build and Deploy Sphinx Documentation
 on:
   push:
     branches:
+      - master
       - main
   pull_request:
 
