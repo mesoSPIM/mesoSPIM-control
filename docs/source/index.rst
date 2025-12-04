@@ -24,16 +24,7 @@ Contents
    :maxdepth: 2
 
    getting_started
-   user_guide
-   configuration
-   api/index
 
-Entry points
-------------
-   
-.. autoclass:: mesoSPIM.mesoSPIM_Control
-   :members:
-   :noindex:
 
 Indices and tables
 ------------------
