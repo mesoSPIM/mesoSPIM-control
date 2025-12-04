@@ -117,7 +117,7 @@ def sawtooth(
     amplitude = 0,          # in V
     offset = 0,             # in V
     dutycycle = 50,          # dutycycle in percent
-    phase = np.pi/2,          # in rad
+    phase = np.pi/2.0,          # in rad
     ):
     '''
     Returns a numpy array with a sawtooth function

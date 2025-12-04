@@ -48,6 +48,7 @@ autodoc_mock_imports = [
     "psutil",
     "ctypes",
     "distutils",
+    "pyzwoefw",
 ]
 
 # Optional but useful
