@@ -29,6 +29,25 @@ extensions = [
     "myst_parser",
 ]
 
+autodoc_mock_imports = [
+    "numpy",
+    "scipy",
+    "PyQt5",
+    "PyQt5_sip",
+    "nidaqmx",
+    "indexed",
+    "pipython",
+    "serial",       # this is the package name for pyserial
+    "pyqtgraph",
+    "pywinusb",
+    "tifffile",
+    "qdarkstyle",
+    "npy2bdv",
+    "future",
+    "matplotlib",
+    "psutil",
+]
+
 # Optional but useful
 myst_enable_extensions = [
     "colon_fence",
