@@ -1,15 +1,13 @@
 mesoSPIM top-level package
 ==========================
-
-.. automodule:: mesoSPIM
+.. automodule:: mesoSPIM.mesoSPIM_Control
    :members:
    :undoc-members:
    :show-inheritance:
 
 Entry points
 ------------
-
-.. automodule:: mesoSPIM.mesoSPIM_Control
+.. automodule:: mesoSPIM.src
    :members:
    :undoc-members:
    :show-inheritance:

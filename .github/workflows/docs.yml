@@ -34,27 +34,6 @@ jobs:
           ls
           cp README.md docs/source/README.md
 
-      - name: Debug Python imports
-        run: |
-          python - << 'PY'
-          import os, sys
-
-          DOCS_DIR = os.path.abspath(os.path.join("docs", "source"))  # adjust if needed
-          PROJECT_ROOT = os.path.abspath(os.path.join(DOCS_DIR, "..", ".."))
-          sys.path.insert(0, PROJECT_ROOT)
-
-          print("DOCS_DIR:", DOCS_DIR)
-          print("PROJECT_ROOT:", PROJECT_ROOT)
-          print("sys.path[0]:", sys.path[0])
-
-          try:
-              import mesoSPIM
-              print("Imported mesoSPIM from:", mesoSPIM.__file__)
-          except Exception as e:
-              print("FAILED to import mesoSPIM:", e)
-              raise
-          PY
-
       - name: Build HTML documentation
         run: |
           sphinx-build -b html docs/source docs/build/html
