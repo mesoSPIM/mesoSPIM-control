@@ -26,10 +26,19 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
+    "myst_parser",
+]
+
+# Optional but useful
+myst_enable_extensions = [
+    "colon_fence",
 ]
 
 templates_path = ["_templates"]
-source_suffix = ".rst"
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 master_doc = "index"
 language = "en"
 exclude_patterns = []

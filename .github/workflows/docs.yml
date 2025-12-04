@@ -27,6 +27,7 @@ jobs:
           pip install -e .
           pip install sphinx sphinx-autodoc-typehints sphinx-rtd-theme sphinx-copybutton
           # Add extra Sphinx extensions here if you use them
+          pip install myst-parser
 
       - name: Build HTML documentation
         run: |
