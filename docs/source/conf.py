@@ -46,6 +46,8 @@ autodoc_mock_imports = [
     "future",
     "matplotlib",
     "psutil",
+    "ctypes",
+    "distutils",
 ]
 
 # Optional but useful
