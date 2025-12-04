@@ -1,6 +1,5 @@
 '''
 Core for the mesoSPIM project
-=============================
 '''
 import os
 import ctypes
