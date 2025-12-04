@@ -3,6 +3,8 @@ import os
 import sys
 import importlib
 import types
+import ctypes
+import platform
 
 # --- Path setup -------------------------------------------------------------
 
@@ -19,8 +21,15 @@ version = ""
 release = "1.11.1"
 
 # --- Docs-only hacks ---------------------------------------------------------
+# 1) Fake GetCurrentProcessorNumber on non-Windows platforms to avoid crashes in psutil
+if not hasattr(ctypes, "windll") or platform.system() != "Windows":
+    dummy_kernel32 = types.SimpleNamespace(
+        GetCurrentProcessorNumber=lambda: 0
+    )
+    ctypes.windll = types.SimpleNamespace(kernel32=dummy_kernel32)
 
-# 1) Fake ZWO EFW bindings module so mesoSPIM_Control import doesn't crash
+
+# 2) Fake ZWO EFW bindings module so mesoSPIM_Control import doesn't crash
 MODULE_NAME = "mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw"
 try:
     importlib.import_module(MODULE_NAME)
@@ -34,6 +43,27 @@ except Exception:
     dummy_efw.EFWInit = _dummy_init
     dummy_efw.EFWClose = lambda *args, **kwargs: None
     sys.modules[MODULE_NAME] = dummy_efw
+
+# 3) Patch Dynamixel dxl_x64_c.dll load so it doesn't crash on Linux in docs build
+try:
+    # Try importing the real module; on Linux this will usually fail with invalid ELF header
+    import mesoSPIM.src.devices.servos.dynamixel.dynamixel_functions as _dxl_funcs  # noqa: F401
+except Exception:
+    # Emulate what dynamixel_functions expects, but without loading the DLL
+    try:
+        dxl_mod_name = "mesoSPIM.src.devices.servos.dynamixel.dynamixel_functions"
+        dxl_mod = importlib.import_module(dxl_mod_name)
+    except Exception:
+        dxl_mod = types.ModuleType(dxl_mod_name)
+        sys.modules[dxl_mod_name] = dxl_mod
+    # Provide a fake dxl_lib object with dummy methods
+    class _DummyDxlLib:
+        def __getattr__(self, name):
+            # Any DLL function call becomes a no-op that returns 0
+            def _dummy(*args, **kwargs):
+                return 0
+            return _dummy
+    dxl_mod.dxl_lib = _DummyDxlLib()
 
 # --- General configuration ---------------------------------------------------
 
@@ -65,7 +95,6 @@ autodoc_mock_imports = [
     "matplotlib",
     "psutil",
     "distutils",
-    "ctypes",
 ]
 
 
