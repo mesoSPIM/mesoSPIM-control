@@ -3,7 +3,6 @@ import os
 import sys
 import importlib
 import types
-import ctypes
 
 # --- Path setup -------------------------------------------------------------
 
@@ -20,15 +19,8 @@ version = ""
 release = "1.11.1"
 
 # --- Docs-only hacks ---------------------------------------------------------
-# 1) Fake ctypes.windll on non-Windows so utility_functions.GetCurrentProcessorNumber doesn't crash
-if not hasattr(ctypes, "windll") or platform.system() != "Windows":
-    # Minimal dummy with a kernel32.GetCurrentProcessorNumber function
-    dummy_kernel32 = types.SimpleNamespace(
-        GetCurrentProcessorNumber=lambda: 0
-    )
-    ctypes.windll = types.SimpleNamespace(kernel32=dummy_kernel32)
 
-# 2) Fake ZWO EFW bindings module so mesoSPIM_Control import doesn't crash
+# 1) Fake ZWO EFW bindings module so mesoSPIM_Control import doesn't crash
 MODULE_NAME = "mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw"
 try:
     importlib.import_module(MODULE_NAME)
@@ -57,7 +49,6 @@ extensions = [
 ]
 
 autodoc_mock_imports = [
-    "numpy",
     "scipy",
     "PyQt5",
     "PyQt5_sip",
@@ -74,6 +65,7 @@ autodoc_mock_imports = [
     "matplotlib",
     "psutil",
     "distutils",
+    "ctypes",
 ]
 
 
