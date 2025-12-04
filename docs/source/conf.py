@@ -53,14 +53,6 @@ myst_enable_extensions = [
     "colon_fence",
 ]
 
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": True,
-    "show-inheritance": True,
-    "special-members": "__init__",
-    "inherited-members": True,
-}
-
 templates_path = ["_templates"]
 source_suffix = {
     ".rst": "restructuredtext",
