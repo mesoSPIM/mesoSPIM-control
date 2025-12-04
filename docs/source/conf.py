@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import importlib
+import types
+import ctypes
 
 # --- Path setup -------------------------------------------------------------
 
@@ -15,6 +18,30 @@ author = "mesoSPIM team"
 copyright = "mesoSPIM team"
 version = ""
 release = "1.11.1"
+
+# --- Docs-only hacks ---------------------------------------------------------
+# 1) Fake ctypes.windll on non-Windows so utility_functions.GetCurrentProcessorNumber doesn't crash
+if not hasattr(ctypes, "windll") or platform.system() != "Windows":
+    # Minimal dummy with a kernel32.GetCurrentProcessorNumber function
+    dummy_kernel32 = types.SimpleNamespace(
+        GetCurrentProcessorNumber=lambda: 0
+    )
+    ctypes.windll = types.SimpleNamespace(kernel32=dummy_kernel32)
+
+# 2) Fake ZWO EFW bindings module so mesoSPIM_Control import doesn't crash
+MODULE_NAME = "mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw"
+try:
+    importlib.import_module(MODULE_NAME)
+except Exception:
+    # Create a simple dummy module and insert it into sys.modules
+    dummy_efw = types.ModuleType(MODULE_NAME)
+    # Provide minimal attributes that your code might touch
+    # For now we just define a no-op function placeholder
+    def _dummy_init():
+        return 0
+    dummy_efw.EFWInit = _dummy_init
+    dummy_efw.EFWClose = lambda *args, **kwargs: None
+    sys.modules[MODULE_NAME] = dummy_efw
 
 # --- General configuration ---------------------------------------------------
 
@@ -46,10 +73,9 @@ autodoc_mock_imports = [
     "future",
     "matplotlib",
     "psutil",
-    "ctypes",
     "distutils",
-    "pyzwoefw",
 ]
+
 
 # Optional but useful
 myst_enable_extensions = [
