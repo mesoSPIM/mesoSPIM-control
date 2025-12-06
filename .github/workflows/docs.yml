@@ -28,15 +28,16 @@ jobs:
           pip install sphinx sphinx-autodoc-typehints sphinx-rtd-theme sphinx-copybutton
           # Add extra Sphinx extensions here if you use them
           pip install myst-parser
-      - name: Copy README into docs
+      - name: Copy README and CONTRIBUTING into docs
         run: |
           pwd
           ls
           cp README.md docs/source/README.md
-
+          cp CONTRIBUTING.md docs/source/CONTRIBUTING.md
+          
       - name: Generate API docs with sphinx-apidoc
         run: |
-          sphinx-apidoc -o docs/source/api mesoSPIM
+          sphinx-apidoc -o docs/source/api API
 
       - name: Build HTML documentation
         run: |

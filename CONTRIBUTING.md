@@ -2,35 +2,35 @@ Github contains multiple tools that allow you to switch seamlessly between code 
 Initially it can be confusing, but it's OK!
 
 ## Branches
-The `master` branch contains stable, always deployable code, but it is often outdated. 
-We follow the [Github worflow](https://guides.github.com/introduction/flow/) with the `development` branch as the main.
-It is recommended to use the `development` branch as a starting point, which contains the latest bugfixes and features. 
-However, some features are experimental and not yet thoroughly tested. 
+The `master` branch contains stable, always deployable code, well tested on actual hardware. 
+We follow the [Github worflow](https://guides.github.com/introduction/flow/) with the `release/candidate-py12` branch as the branch wehere we test newest features. We recommend using Github Desktop application for easy branch management.
+
+## Contributing new features
+We welcome contributions of new features, bugfixes, and improvements from the community!
+It is recommended to use the `release/candidate-py12` branch as a starting point for development, which contains the latest bugfixes and features, bring actively tested.
 
 Your workflow may look as follows:
 0. Fork the repository.
-1. Check out the `development` branch and see if it works on your mesoSPIM setup.
-2. Create a local branch from `development` (e.g. `dev-my-feature`), and start experimenting with the code.
-3. Once you are satisfied with your new feature, create a pull request back to the `development` branch, 
-   we will review and merge it.
-   Small bugfixes can be pull-requested directly from your forked `development` branch, without creating a new branch. This simplifies the workflow.
-4. After your commits were merged into `development`, the code is stable, and you are done with `my-feature` branch, don't forget to delete it. This will keep things tidy.
+1. Check out the `release/candidate-py12` branch and see if it works in demo mode and on your actual mesoSPIM setup.
+2. Create a local branch from `release/candidate-py12` (e.g. `dev-my-feature`), and start experimenting with the code.
+3. Once you are satisfied with your new feature, create a pull request back to the `release/candidate-py12` branch, we will review and merge it.
+4. After your commits were merged into `release/candidate-py12`, the code is stable, and you are done with `my-feature` branch, don't forget to delete it. This will keep things tidy.
 
-Stable releases from `development` will be merged into `master` once every few months.
+Stable releases from `release/candidate-py12` will be merged into `master` once every few months after testing on several physical setups with multiple users. Often users are the one who report bugs and issues, because they use the software in diverse real-world scenarios, so any contributions are very welcome!
 
 ## Reporting bugs and issues
 If you find a bug or unexpected behavior, please report an [issue](https://github.com/mesoSPIM/mesoSPIM-control/issues)! We will try to fix it or find another solution.
 
 ## Testing, testing
-Because mesoSPIM is a complex hardware-software system in active use and often individually customized, it is quite difficult to run good tests that cover your and other systems. So, be careful! 
-Test the code on your system, ideally in acquisition experiment that saves the "data" (with or without a sample), and then let us test it on our systems.
+Because mesoSPIM is a complex hardware-software-user system and often individually customized, it is quite difficult to run good tests that cover your and other systems. So, be careful! 
+Test the code fist in hardware-simulation mode (using `demo_config.py` file), then on real hardware, ideally with some sample.
 
-It is a good habit to write simple [unit tests](https://github.com/mesoSPIM/mesoSPIM-control/tree/development/mesoSPIM/test)
-**before** you implement a feature (so-called test-driven development, TDD), this helps immensely in debugging.
+It is a good habit to write simple [unit tests](https://github.com/mesoSPIM/mesoSPIM-control/tree/release/candidate-py12/mesoSPIM/test)
+**before** you implement a feature (so-called test-driven release/candidate-py12, TDD), this helps immensely in debugging. But we understand that this is not always possible, and can be very time-consuming.
 
 ## Share you ideas and feature requests
 If you have an idea or feature request that can significantly improve mesosPIM user experience - 
-share it in [Discussions](https://github.com/mesoSPIM/mesoSPIM-control/discussions). We can implement it!
+share it in [Forum](https://forum.image.sc/tag/mesospim). We can implement it!
 
 ## Enjoy!
-Any contribution is welcome, and tinkering with mesoSPIM is fun. So, enjoy it wth us!
+Any contribution is welcome, and tinkering with mesoSPIM is fun. So, enjoy it!
