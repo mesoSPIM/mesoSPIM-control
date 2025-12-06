@@ -34,10 +34,10 @@ jobs:
           ls
           cp README.md docs/source/README.md
           cp CONTRIBUTING.md docs/source/CONTRIBUTING.md
-          
+
       - name: Generate API docs with sphinx-apidoc
         run: |
-          sphinx-apidoc -o docs/source/api API
+          sphinx-apidoc -o docs/source/api mesoSPIM
 
       - name: Build HTML documentation
         run: |
