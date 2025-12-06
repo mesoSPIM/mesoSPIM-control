@@ -1,0 +1,758 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=c8897f99"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">mesoSPIM Acquisition Manager Window</span>
+<span class="sd">===================================</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtWidgets</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.uic</span><span class="w"> </span><span class="kn">import</span> <span class="n">loadUi</span>
+
+<span class="sd">&#39;&#39;&#39; mesoSPIM imports &#39;&#39;&#39;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.utility_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_data_size</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">AcquisitionModel</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.delegates</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">ComboDelegate</span><span class="p">,</span>
+                        <span class="n">SliderDelegate</span><span class="p">,</span>
+                        <span class="n">MarkXPositionDelegate</span><span class="p">,</span>
+                        <span class="n">MarkYPositionDelegate</span><span class="p">,</span>
+                        <span class="n">MarkZPositionDelegate</span><span class="p">,</span>
+                        <span class="n">MarkFocusPositionDelegate</span><span class="p">,</span>
+                        <span class="n">ProgressBarDelegate</span><span class="p">,</span>
+                        <span class="n">ZstepSpinBoxDelegate</span><span class="p">,</span>
+                        <span class="n">IntensitySpinBoxDelegate</span><span class="p">,</span>
+                        <span class="n">ChooseFolderDelegate</span><span class="p">,</span>
+                        <span class="n">ETLSpinBoxDelegate</span><span class="p">,</span>
+                        <span class="n">RotationSpinBoxDelegate</span><span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">MarkPositionWidget</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.multicolor_acquisition_wizard</span><span class="w"> </span><span class="kn">import</span> <span class="n">MulticolorTilingWizard</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.filename_wizard</span><span class="w"> </span><span class="kn">import</span> <span class="n">FilenameWizard</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.focus_tracking_wizard</span><span class="w"> </span><span class="kn">import</span> <span class="n">FocusTrackingWizard</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.image_processing_wizard</span><span class="w"> </span><span class="kn">import</span> <span class="n">ImageProcessingWizard</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.utility_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert_seconds_to_string</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.QtGui</span><span class="w"> </span><span class="kn">import</span> <span class="n">QFont</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QMessageBox</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="MyStyle">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.MyStyle">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyStyle</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QProxyStyle</span><span class="p">):</span>
+<div class="viewcode-block" id="MyStyle.drawPrimitive">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.MyStyle.drawPrimitive">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">drawPrimitive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">painter</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Draw a line across the entire row rather than just the column</span>
+<span class="sd">        we&#39;re hovering over.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">element</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">PE_IndicatorItemViewItemDrop</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">option</span><span class="o">.</span><span class="n">rect</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
+            <span class="n">option_new</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QStyleOption</span><span class="p">(</span><span class="n">option</span><span class="p">)</span>
+            <span class="n">option_new</span><span class="o">.</span><span class="n">rect</span><span class="o">.</span><span class="n">setLeft</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">widget</span><span class="p">:</span>
+                <span class="n">option_new</span><span class="o">.</span><span class="n">rect</span><span class="o">.</span><span class="n">setRight</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">width</span><span class="p">())</span>
+            <span class="n">option</span> <span class="o">=</span> <span class="n">option_new</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">drawPrimitive</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">painter</span><span class="p">,</span> <span class="n">widget</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_AcquisitionManagerWindow</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
+
+    <span class="n">model_changed</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="n">AcquisitionModel</span><span class="p">)</span>
+    <span class="n">sig_warning</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">sig_move_absolute</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span> <span class="c1"># mesoSPIM_MainWindow instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># mesoSPIM_StateSingleton instance</span>
+
+        <span class="n">loadUi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">package_directory</span> <span class="o">+</span> <span class="s1">&#39;/gui/mesoSPIM_AcquisitionManagerWindow.ui&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;mesoSPIM Acquisition Manager&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">MoveUpButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">move_selected_row_up</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MoveDownButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">move_selected_row_down</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Parent Enable / Disable GUI&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_enable_gui</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">boolean</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">statusBar</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QStatusBar</span><span class="p">()</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Setting the model up &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">AcquisitionModel</span><span class="p">(</span><span class="n">table</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setModel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span> <span class="c1"># self.table is a QTableView object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dataChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dataChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_acquisition_time_prediction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dataChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_acquisition_size_prediction</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Table selection behavior &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setSelectionBehavior</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">SelectRows</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setSelectionMode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">ExtendedSelection</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setDragDropMode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">InternalMove</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setDragDropOverwriteMode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setDragEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setAcceptDrops</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setDropIndicatorShown</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setSortingEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_item_delegates</span><span class="p">()</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Set our custom style - this draws the drop indicator across the whole row &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setStyle</span><span class="p">(</span><span class="n">MyStyle</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">selection_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">selectionModel</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selection_mapper</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QDataWidgetMapper</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_row</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DeleteButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delete_row</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CopyButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">copy_row</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_table</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoadButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_table</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">MarkCurrentXYButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mark_current_xy_position</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MarkCurrentFocusButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mark_current_focus</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MarkCurrentRotationButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mark_current_rotation</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MarkCurrentStateButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mark_current_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MarkCurrentETLParametersButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mark_current_etl_parameters</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MarkAllButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mark_all_current_parameters</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PreviewSelectionButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">preview_acquisition</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">TilingWizardButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_tiling_wizard</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FilenameWizardButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">generate_filenames</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FocusTrackingWizardButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_focus_tracking_wizard</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AutoIlliminationButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">auto_illumination</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ImageProcessingWizardButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_image_processing_wizard</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">DeleteAllButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delete_all_rows</span><span class="p">)</span>
+        <span class="c1"># self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetFoldersButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_folder_names</span><span class="p">)</span>
+
+        <span class="n">font</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QFont</span><span class="p">()</span>
+        <span class="n">font</span><span class="o">.</span><span class="n">setPointSize</span><span class="p">(</span><span class="mi">14</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">horizontalHeader</span><span class="p">()</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">font</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">verticalHeader</span><span class="p">()</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">font</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selection_model</span><span class="o">.</span><span class="n">selectionChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_row_changed</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.enable">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.enable">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">enable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.disable">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.disable">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">disable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.display_status_message">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_status_message">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">display_status_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Displays a message in the status bar for a time in ms</span>
+
+<span class="sd">        If time=0, the message will stay.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="n">time</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">statusBar</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">statusBar</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="n">time</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.get_first_selected_row">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.get_first_selected_row">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_first_selected_row</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Little helper method to provide the first row out of a selection range &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">selection_model</span><span class="o">.</span><span class="n">selectedIndexes</span><span class="p">()</span>
+            <span class="c1">#rows = self.selection_model.selectedRows()</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">row</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">row</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.get_selected_rows">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.get_selected_rows">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_selected_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Little helper method to provide the selected rows &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">selection_model</span><span class="o">.</span><span class="n">selectedIndexes</span><span class="p">()</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">index</span><span class="o">.</span><span class="n">row</span><span class="p">()</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">rows</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.set_selected_row">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_selected_row">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_selected_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Little helper method to allow setting the selected row &#39;&#39;&#39;</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">createIndex</span><span class="p">(</span><span class="n">row</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selection_model</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">index</span><span class="p">,</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QItemSelectionModel</span><span class="o">.</span><span class="n">ClearAndSelect</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.start_selected">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.start_selected">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">start_selected</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Get the selected row and run this (single) row only</span>
+
+<span class="sd">        Indices is a list of selected QModelIndex objects, we&#39;re only interested</span>
+<span class="sd">        in the first.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">disable_gui</span><span class="p">()</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_start_selected</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.selected_row_changed">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.selected_row_changed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">selected_row_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_selection</span><span class="p">,</span> <span class="n">old_selection</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">new_selection</span><span class="o">.</span><span class="n">indexes</span><span class="p">()</span> <span class="o">!=</span> <span class="p">[]:</span>
+            <span class="n">new_row</span> <span class="o">=</span> <span class="n">new_selection</span><span class="o">.</span><span class="n">indexes</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">row</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent_editor_column_indices</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">openPersistentEditor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">new_row</span><span class="p">,</span> <span class="n">column</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">old_selection</span><span class="o">.</span><span class="n">indexes</span><span class="p">()</span> <span class="o">!=</span> <span class="p">[]:</span>
+            <span class="n">old_row</span> <span class="o">=</span> <span class="n">old_selection</span><span class="o">.</span><span class="n">indexes</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">row</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent_editor_column_indices</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">closePersistentEditor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">old_row</span><span class="p">,</span> <span class="n">column</span><span class="p">))</span>   </div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.add_row">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.add_row">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_row</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">insertRows</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">(),</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.delete_row">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.delete_row">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_row</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Deletes the selected row &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">removeRows</span><span class="p">(</span><span class="n">row</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">display_warning</span><span class="p">(</span><span class="s2">&quot;Can&#39;t delete last row!&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.delete_all_rows">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.delete_all_rows">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_all_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        Displays a warning that this will delete the entire table</span>
+<span class="sd">        and then proceeds to delete if the user clicks &#39;Yes&#39;</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">reply</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s2">&quot;mesoSPIM Warning&quot;</span><span class="p">,</span>
+                <span class="s1">&#39;Do you want to delete the table?&#39;</span><span class="p">,</span>
+                <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Yes</span> <span class="o">|</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">No</span> <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">reply</span> <span class="o">==</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Yes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">deleteTable</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.copy_row">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.copy_row">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">copy_row</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">copyRow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.move_selected_row_up">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.move_selected_row_up">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_selected_row_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">row</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">moveRow</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QModelIndex</span><span class="p">(),</span><span class="n">row</span><span class="p">,</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QModelIndex</span><span class="p">(),</span><span class="n">row</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="n">row</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.move_selected_row_down">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.move_selected_row_down">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_selected_row_down</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">moveRow</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QModelIndex</span><span class="p">(),</span><span class="n">row</span><span class="p">,</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QModelIndex</span><span class="p">(),</span><span class="n">row</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="n">row</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.set_item_delegates">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_item_delegates">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_item_delegates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Several columns should have certain delegates</span>
+
+<span class="sd">        If I decide to move colums, the delegates should move with them</span>
+
+<span class="sd">        Here, I need the configuration to provide the options for the</span>
+<span class="sd">        delegates.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delegate_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;x_pos&#39;</span> <span class="p">:</span>  <span class="s1">&#39;MarkXPositionDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;y_pos&#39;</span> <span class="p">:</span> <span class="s1">&#39;MarkYPositionDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;z_start&#39;</span> <span class="p">:</span> <span class="s1">&#39;MarkZPositionDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;z_end&#39;</span> <span class="p">:</span> <span class="s1">&#39;MarkZPositionDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;z_step&#39;</span> <span class="p">:</span> <span class="s1">&#39;ZstepSpinBoxDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;rot&#39;</span> <span class="p">:</span> <span class="s1">&#39;RotationSpinBoxDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;f_start&#39;</span> <span class="p">:</span> <span class="s1">&#39;MarkFocusPositionDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;f_end&#39;</span> <span class="p">:</span> <span class="s1">&#39;MarkFocusPositionDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;filter&#39;</span> <span class="p">:</span> <span class="s1">&#39;ComboDelegate(self,[key for key in self.cfg.filterdict.keys()])&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;intensity&#39;</span> <span class="p">:</span> <span class="s1">&#39;IntensitySpinBoxDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;laser&#39;</span> <span class="p">:</span> <span class="s1">&#39;ComboDelegate(self,[key for key in self.cfg.laserdict.keys()])&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;zoom&#39;</span> <span class="p">:</span> <span class="s1">&#39;ComboDelegate(self,[key for key in self.cfg.zoomdict.keys()])&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;shutterconfig&#39;</span> <span class="p">:</span> <span class="s1">&#39;ComboDelegate(self,[key for key in self.cfg.shutteroptions])&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;folder&#39;</span> <span class="p">:</span> <span class="s1">&#39;ChooseFolderDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;etl_l_offset&#39;</span> <span class="p">:</span> <span class="s1">&#39;ETLSpinBoxDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;etl_l_amplitude&#39;</span> <span class="p">:</span> <span class="s1">&#39;ETLSpinBoxDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;etl_r_offset&#39;</span> <span class="p">:</span> <span class="s1">&#39;ETLSpinBoxDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;etl_r_amplitude&#39;</span> <span class="p">:</span> <span class="s1">&#39;ETLSpinBoxDelegate(self)&#39;</span><span class="p">,</span>
+                              <span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">persistent_editor_column_indices</span><span class="o">=</span><span class="p">[]</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Go through the dictionary keys of the</span>
+
+<span class="sd">        self.model._table[0].</span>
+
+<span class="sd">        find the index of a certain key and set the delegate accordingly</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">delegate_dict</span> <span class="p">:</span>
+            <span class="n">column_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">_table</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; As some of the delegates expect options, a hack using exec was used: &#39;&#39;&#39;</span>
+            <span class="n">string_to_execute</span> <span class="o">=</span> <span class="s1">&#39;self.table.setItemDelegateForColumn(column_index,&#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">delegate_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;)&#39;</span>
+            <span class="n">delegate_object</span> <span class="o">=</span> <span class="n">exec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delegate_dict</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">persistent_editor_column_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column_index</span><span class="p">)</span>
+            <span class="n">exec</span><span class="p">(</span><span class="n">string_to_execute</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.update_acquisition_time_prediction">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.update_acquisition_time_prediction">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_acquisition_time_prediction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">framerate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;current_framerate&#39;</span><span class="p">]</span>
+        <span class="n">total_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;acq_list&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get_acquisition_time</span><span class="p">(</span><span class="n">framerate</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;predicted_acq_list_time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_time</span>
+        <span class="n">time_string</span> <span class="o">=</span> <span class="n">convert_seconds_to_string</span><span class="p">(</span><span class="n">total_time</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AcquisitionTimeLabel</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">time_string</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.update_acquisition_size_prediction">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.update_acquisition_size_prediction">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_acquisition_size_prediction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">bytes_total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">get_required_disk_space</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get_acquisition_list</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PredictedSizeLabel</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">format_data_size</span><span class="p">(</span><span class="n">bytes_total</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.set_state">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;acq_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get_acquisition_list</span><span class="p">()</span></div>
+
+        
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.enable_gui">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.enable_gui">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">enable_gui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Enables all GUI controls, disables stop button &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tableControlButtons</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generalControlButtons</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.disable_gui">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.disable_gui">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">disable_gui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Disables all buttons and controls, enables stop button &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tableControlButtons</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generalControlButtons</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.save_table">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.save_table">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_table</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">path</span> <span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getSaveFileName</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Save Table&#39;</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s1">&#39;./acq_table.bin&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">saveModel</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.load_table">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.load_table">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_table</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">path</span> <span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getOpenFileName</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Load Table&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">loadModel</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_acquisition_time_prediction</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_acquisition_size_prediction</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">err_message</span> <span class="o">=</span> <span class="s1">&#39;Table cannot be loaded - incompatible file format (Probably created by a previous version of the mesoSPIM software)!&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">err_message</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_message</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.run_tiling_wizard">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.run_tiling_wizard">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_tiling_wizard</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">wizard</span> <span class="o">=</span> <span class="n">MulticolorTilingWizard</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.run_focus_tracking_wizard">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.run_focus_tracking_wizard">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_focus_tracking_wizard</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">wizard</span> <span class="o">=</span> <span class="n">FocusTrackingWizard</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.run_image_processing_wizard">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.run_image_processing_wizard">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_image_processing_wizard</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">wizard</span> <span class="o">=</span> <span class="n">ImageProcessingWizard</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.mark_current_xy_position">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_xy_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_current_xy_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;x_pos&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;y_pos&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_xy_position</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.mark_current_state">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_current_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;filter&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;zoom&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;laser&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;intensity&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;shutterconfig&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_state</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.mark_current_etl_parameters">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_etl_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_current_etl_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;etl_l_offset&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;etl_r_offset&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_etl_parameters</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.mark_current_focus">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_focus">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_current_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Marks both foci start focus &#39;&#39;&#39;</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">f_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;f_pos&#39;</span><span class="p">]</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; Set f_start and f_end to the same values &#39;&#39;&#39;</span>
+            <span class="n">column_index0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">_table</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;f_start&#39;</span><span class="p">)</span>
+            <span class="n">index0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">createIndex</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">column_index0</span><span class="p">)</span>
+            <span class="n">column_index1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">_table</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;f_end&#39;</span><span class="p">)</span>
+            <span class="n">index1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">createIndex</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">column_index1</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">index0</span><span class="p">,</span> <span class="n">f_pos</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">index1</span><span class="p">,</span> <span class="n">f_pos</span><span class="p">)</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_focus</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+            
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.mark_current_rotation">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_rotation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_current_rotation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setDataFromState</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;rot&#39;</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_rotation</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.mark_all_current_parameters">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_all_current_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_all_current_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_xy_position</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_rotation</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_focus</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_etl_parameters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_current_state</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.preview_acquisition">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.preview_acquisition">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">preview_acquisition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_selected_row</span><span class="p">()</span>
+        <span class="c1"># print(&#39;selected row:&#39;, row)</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;selected_row&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span>
+            <span class="c1"># Check if the z position should be updated</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">PreviewZCheckBox</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
+                <span class="c1"># print(&#39;Checkbox checked&#39;)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_state_request</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;state&#39;</span><span class="p">:</span><span class="s1">&#39;preview_acquisition_with_z_update&#39;</span><span class="p">})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># print(&#39;Checkbox not checked&#39;)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_state_request</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;state&#39;</span><span class="p">:</span><span class="s1">&#39;preview_acquisition_without_z_update&#39;</span><span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_row</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">preview_acquisition</span><span class="p">()</span> <span class="c1"># recursive call of the same function</span>
+            <span class="k">else</span><span class="p">:</span>    
+                <span class="bp">self</span><span class="o">.</span><span class="n">display_no_row_selected_warning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.set_folder_names">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_folder_names">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_folder_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getExistingDirectory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="s1">&#39;Select Folder&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+            <span class="n">column_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">_table</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;folder&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()):</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">createIndex</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">column_index</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.generate_filenames">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.generate_filenames">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_filenames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">wizard</span> <span class="o">=</span> <span class="n">FilenameWizard</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.append_time_index_to_filenames">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.append_time_index_to_filenames">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">append_time_index_to_filenames</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_index</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Appends the time index to each filename &#39;&#39;&#39;</span>
+        <span class="n">row_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span>
+        <span class="n">filename_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getFilenameColumn</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">row_count</span><span class="p">):</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">createIndex</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">filename_column</span><span class="p">)</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">data</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="n">base</span><span class="p">,</span> <span class="n">extention</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="n">base_no_time</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_Time&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">base_new</span> <span class="o">=</span> <span class="n">base_no_time</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;_Time</span><span class="si">{</span><span class="n">time_index</span><span class="si">:</span><span class="s1">03d</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">createIndex</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">filename_column</span><span class="p">)</span>
+            <span class="n">filename_new</span> <span class="o">=</span> <span class="n">base_new</span> <span class="o">+</span> <span class="n">extention</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">filename_new</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.display_no_row_selected_warning">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_no_row_selected_warning">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">display_no_row_selected_warning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">display_warning</span><span class="p">(</span><span class="s1">&#39;No row selected!&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.display_warning">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_warning">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">display_warning</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+        <span class="n">warning</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="s1">&#39;Warning&#39;</span><span class="p">,</span>
+                <span class="n">string</span><span class="p">,</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Ok</span><span class="p">)</span> </div>
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.display_information">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_information">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">display_information</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
+        <span class="n">msg_box</span> <span class="o">=</span> <span class="n">QMessageBox</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Information</span><span class="p">,</span> <span class="s1">&#39;Info&#39;</span><span class="p">,</span> <span class="n">string</span><span class="p">)</span>
+        <span class="n">msg_box</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Information</span><span class="p">,</span> <span class="s1">&#39;Info&#39;</span><span class="p">,</span> <span class="n">string</span><span class="p">)</span>
+        <span class="n">font</span> <span class="o">=</span> <span class="n">msg_box</span><span class="o">.</span><span class="n">font</span><span class="p">()</span>
+        <span class="n">font</span><span class="o">.</span><span class="n">setPointSize</span><span class="p">(</span><span class="n">fontsize</span><span class="p">)</span>  
+        <span class="n">msg_box</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">font</span><span class="p">)</span>
+        <span class="n">msg_box</span><span class="o">.</span><span class="n">setStandardButtons</span><span class="p">(</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Ok</span> <span class="o">|</span> <span class="n">QMessageBox</span><span class="o">.</span><span class="n">Cancel</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">msg_box</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_AcquisitionManagerWindow.auto_illumination">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.auto_illumination">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">auto_illumination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">margin_um</span><span class="o">=</span><span class="mi">500</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s1">&#39;Illumination (Left/Right) will be changed based on x-positions of tiles on the grid.</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+        <span class="n">message</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;Only tiles closest to the grid edges will be changed, within 500 µm from the &quot;x_min&quot; and &quot;x_max&quot; of the acquisition table.</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+        <span class="n">message</span> <span class="o">+=</span> <span class="s1">&#39;The best illumination for tiles that are closer to the grid center is sample-dependent and must be selected manually.&#39;</span>
+        <span class="n">message_box</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">display_information</span><span class="p">(</span><span class="n">message</span><span class="p">,</span><span class="mi">12</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">message_box</span> <span class="o">==</span> <span class="n">QMessageBox</span><span class="o">.</span><span class="n">Cancel</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">x_pos_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># collect all x positions</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()):</span>
+            <span class="n">x_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getXPosition</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="n">x_pos_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_pos</span><span class="p">)</span>
+        <span class="c1"># for edge positions, set the illumination based on them</span>
+        <span class="n">x_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">x_pos_list</span><span class="p">)</span>
+        <span class="n">x_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">x_pos_list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()):</span>
+            <span class="n">x_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getXPosition</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">x_pos</span> <span class="o">&lt;=</span> <span class="n">x_min</span> <span class="o">+</span> <span class="n">margin_um</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;flip_auto_LR_illumination&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">ui_options</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">ui_options</span><span class="p">[</span><span class="s1">&#39;flip_auto_LR_illumination&#39;</span><span class="p">]:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Config parameter &#39;flip_auto_LR_illumination&#39; = True. Illumination of tile </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> will be set to &#39;Right&#39;.&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setShutterconfig</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;Right&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setShutterconfig</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;Left&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">x_pos</span> <span class="o">&gt;=</span> <span class="n">x_max</span> <span class="o">-</span> <span class="n">margin_um</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;flip_auto_LR_illumination&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">ui_options</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">ui_options</span><span class="p">[</span><span class="s1">&#39;flip_auto_LR_illumination&#39;</span><span class="p">]:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Config parameter &#39;flip_auto_LR_illumination&#39; = True. Illumination of tile </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> will be set to &#39;Left&#39;.&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setShutterconfig</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;Left&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setShutterconfig</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s1">&#39;Right&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">pass</span></div>
+</div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

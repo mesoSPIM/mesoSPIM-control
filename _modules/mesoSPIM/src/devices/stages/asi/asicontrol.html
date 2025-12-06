@@ -1,0 +1,346 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.devices.stages.asi.asicontrol &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../../_static/documentation_options.js?v=c8897f99"></script>
+      <script src="../../../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.devices.stages.asi.asicontrol</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.devices.stages.asi.asicontrol</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">mesoSPIM Module for controlling ASI-Stages </span>
+
+<span class="sd">Authors: Fabian Voigt, Nikita Vladimirov</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">serial</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtWidgets</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="StageControlASITiger">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">StageControlASITiger</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+    <span class="n">sig_pause</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class to control a ASI Tiger mechanical stage controller</span>
+<span class="sd">    </span>
+<span class="sd">    Inherits from QtCore.QObject so it can be moved to a QThread.</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        This is a custom ASI stageset which contains the axis designations:</span>
+<span class="sd">        X Y Z T V W </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asi_parameters</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">asi_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">baudrate</span> <span class="o">=</span> <span class="n">asi_parameters</span><span class="p">[</span><span class="s1">&#39;baudrate&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage_assignment</span> <span class="o">=</span> <span class="n">asi_parameters</span><span class="p">[</span><span class="s1">&#39;stage_assignment&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axis_list</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">stage_assignment</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_assignment</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis_list</span><span class="p">)</span> <span class="c1"># String containing all axes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_axes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span> <span class="c1"># The number of axes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder_conversion</span> <span class="o">=</span> <span class="n">asi_parameters</span><span class="p">[</span><span class="s1">&#39;encoder_conversion&#39;</span><span class="p">]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">position_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">axis</span> <span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_list</span><span class="p">}</span> <span class="c1"># create an empty position dict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">asi_connection</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">Serial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">baudrate</span><span class="p">,</span> <span class="n">parity</span><span class="o">=</span><span class="n">serial</span><span class="o">.</span><span class="n">PARITY_NONE</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">xonxoff</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stopbits</span><span class="o">=</span><span class="n">serial</span><span class="o">.</span><span class="n">STOPBITS_ONE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">previous_command</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_position</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Could not connect to ASI stage&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_z_slice</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="StageControlASITiger.close">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.close">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Closes connection to the stage&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">asi_connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_send_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Sends a command to the controller</span>
+<span class="sd">        Try-except block included to catch errors - this is dangerous - no checking of success</span>
+<span class="sd">        Args:</span>
+<span class="sd">            command (bytes): Command string to be sent. Needs to be in the form &quot;b&#39;W V?\r&#39;&quot; - has to be binary, do not forget the carriage return</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            answer (str): Answer by the controller.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; During acquisitions: send pause signal &#39;&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_pause</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_reset_buffers</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Serial sent: </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">asi_connection</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">asi_connection</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;ascii&quot;</span><span class="p">)</span>
+            <span class="n">response_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> 
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; During acquistions: send unpause signal &#39;&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_pause</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Serial received: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">)</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; Logging of serial connections if response &gt;30 ms (previously: 15 ms)&#39;&#39;&#39;</span>
+            <span class="n">delta_t</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">response_time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">delta_t</span> <span class="o">&gt;</span> <span class="mf">0.04</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Z-Slice (only valid during acq): &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_z_slice</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; Response time, s (if &gt;0.04): &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">delta_t</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">message</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Serial exception of the ASI stage: command </span><span class="si">{</span><span class="n">command</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, error: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_reset_buffers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">asi_connection</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">asi_connection</span><span class="o">.</span><span class="n">reset_input_buffer</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">asi_connection</span><span class="o">.</span><span class="n">reset_output_buffer</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Serial port not initialized&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="StageControlASITiger.axis_in_config_check">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.axis_in_config_check">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">axis_in_config_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Checks if a axis string is in self.axes</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if axis in config</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Axis: &#39;</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="s1">&#39; not found in ASI stage config.&#39;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Axis: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; not found in ASI stage config.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+                  
+<div class="viewcode-block" id="StageControlASITiger.stop">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.stop">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Stops movement on all axes by sending &quot;halt&quot; to the controller</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">r&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ASI response to HALT command: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+        
+<div class="viewcode-block" id="StageControlASITiger.wait_until_done">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.wait_until_done">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wait_until_done</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Blocks if the stage is moving due to a serial command&#39;&#39;&#39;</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;If the stage returns &#39;B&#39;as the first letter, it is busy, if it returns &#39;N&#39;, it is done.</span>
+<span class="sd">        Only if the stage returns &#39;N&#39; twice, it is not busy.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage_busy</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_busy</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span> 
+                <span class="n">message1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;/</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
+                <span class="n">message2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;/</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">message1</span> <span class="o">==</span> <span class="s1">&#39;N&#39;</span> <span class="ow">and</span> <span class="n">message2</span> <span class="o">==</span> <span class="s1">&#39;N&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stage_busy</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;ASI stages: Wait until done failed&#39;</span><span class="p">)</span></div>
+
+        
+<div class="viewcode-block" id="StageControlASITiger.read_position">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.read_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">read_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Reports position from the stages</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            positions (dictionary): list of positions</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">command_string</span> <span class="o">=</span> <span class="s1">&#39;W &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span>
+        <span class="n">position_string</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="n">command_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">))</span>
+        <span class="c1"># Create a list of the form &quot;[&#39;7835&#39;, &#39;-38704&#39;, &#39;0&#39;, &#39;0&#39;, &#39;-367586&#39;]&quot;, first element is the ack &#39;:A&#39; and gets discarded</span>
+        <span class="k">if</span> <span class="n">position_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">position_list</span> <span class="o">=</span> <span class="n">position_string</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]</span>
+<span class="w">                </span><span class="sd">&#39;&#39;&#39; Only process position list if it contains all values&#39;&#39;&#39;</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">position_list</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_axes</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">position_list</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">position_list</span><span class="p">]</span>
+                        <span class="n">endcoder_conversion_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoder_conversion</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+                        <span class="n">position_dict</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="n">position_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">/</span><span class="n">endcoder_conversion_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_axes</span><span class="p">)}</span>
+                        <span class="k">if</span> <span class="n">position_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">position_dict</span> <span class="o">=</span> <span class="n">position_dict</span>
+                            <span class="k">return</span> <span class="n">position_dict</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Invalid position dict: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">position_list</span><span class="p">))</span>
+                        <span class="c1"># return last position dict</span>
+                        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">position_dict</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Position list count </span><span class="si">{</span><span class="n">position_list</span><span class="si">}</span><span class="s2"> does not match the number of axes </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">num_axes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span> 
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Invalid position string: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">position_string</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Position string is empty&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="StageControlASITiger.move_relative">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.move_relative">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_relative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">motion_dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Command for relative motion </span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            motion_dict (dict): Dictionary in the form {1: 4000, 2:-234}, in general {axis_id:requested_position} </span>
+<span class="sd">                                with axis_id (str) and requested_position (int) in um.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Carries out motion</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">command_string</span> <span class="o">=</span> <span class="s1">&#39;R&#39;</span>
+        <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">motion_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_in_config_check</span><span class="p">(</span><span class="n">axis</span><span class="p">):</span>
+                <span class="n">command_string</span> <span class="o">=</span> <span class="n">command_string</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">axis</span> <span class="o">+</span> <span class="s1">&#39;=&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">motion_dict</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">encoder_conversion</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">command_string</span> <span class="o">!=</span> <span class="s1">&#39;R&#39;</span><span class="p">:</span>
+            <span class="n">command_string</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="n">command_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">))</span></div>
+
+        
+<div class="viewcode-block" id="StageControlASITiger.move_absolute">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.move_absolute">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_absolute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">motion_dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Command for absolute motion </span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            motion_dict (dict): Dictionary in the form {1: 4000, 2:-234}, in general {axis_id:requested_position} </span>
+<span class="sd">                                with axis_id (str) and requested_position (int) in um.</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">command_string</span> <span class="o">=</span> <span class="s1">&#39;M&#39;</span>
+        <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">motion_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_in_config_check</span><span class="p">(</span><span class="n">axis</span><span class="p">):</span>
+                <span class="n">command_string</span> <span class="o">=</span> <span class="n">command_string</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">axis</span> <span class="o">+</span> <span class="s1">&#39;=&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">motion_dict</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">encoder_conversion</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
+                
+        <span class="k">if</span> <span class="n">command_string</span> <span class="o">!=</span> <span class="s1">&#39;M&#39;</span><span class="p">:</span>
+            <span class="n">command_string</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="n">command_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="StageControlASITiger.enable_ttl_mode">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.stages.asi.html#mesoSPIM.src.devices.stages.asi.asicontrol.StageControlASITiger.enable_ttl_mode">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">enable_ttl_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">card_ids</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Enables or disables TTL mode of ASI controllers</span>
+<span class="sd">        Args:</span>
+<span class="sd">            card_ids (list): List of card IDs inside the controller (i.e. (2,3) for cards in slots 2 and 3) for </span>
+<span class="sd">                            which TTL triggering should be enabled or disabled. If None, the controller is assumed</span>
+<span class="sd">                            not to have any card slots, i.e. an MS-2000 controller</span>
+<span class="sd">            </span>
+<span class="sd">            bool (boolean): True or False depending on whether TTL mode should be enabled or disabled.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">card_ids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># Tiger controller</span>
+            <span class="k">if</span> <span class="nb">bool</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span> <span class="c1"># Enable TTL mode for all cards</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">card_ids</span><span class="p">:</span>
+                    <span class="n">command_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; TTL X=2 Y=2</span><span class="se">\r</span><span class="s1">&#39;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="n">command_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">))</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;TTL enabled&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># Disable TTL mode for all cards</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">card_ids</span><span class="p">:</span>
+                    <span class="n">command_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; TTL X=0 Y=2</span><span class="se">\r</span><span class="s1">&#39;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="n">command_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">))</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;TTL disabled&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># MS-2000 controller</span>
+            <span class="k">if</span> <span class="nb">bool</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;TTL X=2 Y=2</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="c1"># MS-2000 TTL mode should be enabled</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;TTL enabled&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_send_command</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;TTL X=0 Y=2</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="c1"># MS-2000 TTL mode should be disabled</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;TTL disabled&#39;</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

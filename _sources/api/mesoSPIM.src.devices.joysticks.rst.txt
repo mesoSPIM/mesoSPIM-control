@@ -1,0 +1,37 @@
+mesoSPIM.src.devices.joysticks package
+======================================
+
+Submodules
+----------
+
+mesoSPIM.src.devices.joysticks.Demo\_SidePanel module
+-----------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.joysticks.Demo_SidePanel
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.devices.joysticks.logitech module
+----------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.joysticks.logitech
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.devices.joysticks.mesoSPIM\_JoystickHandlers module
+----------------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.joysticks
+   :members:
+   :show-inheritance:
+   :undoc-members:

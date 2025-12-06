@@ -1,0 +1,19 @@
+mesoSPIM.src.devices.stages package
+===================================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src.devices.stages.asi
+   mesoSPIM.src.devices.stages.galil
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.stages
+   :members:
+   :show-inheritance:
+   :undoc-members:

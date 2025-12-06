@@ -1,0 +1,365 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../../_static/documentation_options.js?v=c8897f99"></script>
+      <script src="../../../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Code modified from https://github.com/AndreEbel/PyZWOEFW</span>
+<span class="sd">Modifications by @nvladimus</span>
+<span class="sd">Note that methods here are CamelCase for legacy reasons, unlike the rest of mesoSPIM API.</span>
+<span class="sd">License: GPL-3</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ctypes</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">c</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ctypes.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_library</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">sleep</span>
+<span class="c1"># Returned error code</span>
+<span class="c1"># _EFW_ERROR_CODE = {EFW_SUCCESS = 0,</span>
+<span class="c1">#                     EFW_ERROR_INVALID_INDEX,</span>
+<span class="c1">#                     EFW_ERROR_INVALID_ID,</span>
+<span class="c1">#                     EFW_ERROR_INVALID_VALUE,</span>
+<span class="c1">#                     EFW_ERROR_CLOSED, #not opened</span>
+<span class="c1">#                     EFW_ERROR_REMOVED, #failed to find the filter wheel, maybe the filter wheel has been removed</span>
+<span class="c1">#                     EFW_ERROR_MOVING,#filter wheel is moving</span>
+<span class="c1">#                     EFW_ERROR_GENERAL_ERROR,#other error</span>
+<span class="c1">#                     EFW_ERROR_CLOSED,</span>
+<span class="c1">#                     EFW_ERROR_END = -1</span>
+<span class="c1">#                     }</span>
+
+<div class="viewcode-block" id="EFW_Error">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW_Error">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EFW_Error</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Exception class for errors returned from the :mod:`zwoasi` module.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="ne">Exception</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="EFW_IOError">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW_IOError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EFW_IOError</span><span class="p">(</span><span class="n">EFW_Error</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Exception class for all errors returned from the EFW SDK library.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">error_code</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">EFW_Error</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_code</span> <span class="o">=</span> <span class="n">error_code</span></div>
+
+
+<span class="c1"># Mapping of error numbers to exceptions. Zero is used for success</span>
+<span class="n">efw_errors</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;Invalid index&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;Invalid ID&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;Invalid value&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;EFW closed&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;EFW removed&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;Moving&#39;</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;General error&#39;</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;Closed&#39;</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span>
+              <span class="n">EFW_IOError</span><span class="p">(</span><span class="s1">&#39;End&#39;</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+              <span class="p">]</span>
+
+
+<span class="c1"># Filter wheel information</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_EFW_INFO</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_fields_</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;Name&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_char</span> <span class="o">*</span> <span class="mi">64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;slotNum&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span><span class="p">)</span>
+        <span class="p">]</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fields_</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            <span class="n">r</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+
+<div class="viewcode-block" id="init">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.init">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">init</span><span class="p">(</span><span class="n">library_file</span><span class="p">):</span> 
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">library_file</span><span class="p">:</span>
+        <span class="n">library_file</span> <span class="o">=</span> <span class="n">find_library</span><span class="p">(</span><span class="s1">&#39;EFW_filter&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">library_file</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EFW_Error</span><span class="p">(</span><span class="s1">&#39;EFW SDK library not found&#39;</span><span class="p">)</span>
+
+    <span class="n">efwlib</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">cdll</span><span class="o">.</span><span class="n">LoadLibrary</span><span class="p">(</span><span class="n">library_file</span><span class="p">)</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetNum</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetNum</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetID</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_int</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">)]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetID</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetProperty</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">_EFW_INFO</span><span class="p">)]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetProperty</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWOpen</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWOpen</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetPosition</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_int</span><span class="p">)]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetPosition</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWSetPosition</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span><span class="p">]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWSetPosition</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWSetDirection</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_bool</span><span class="p">]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWSetDirection</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetDirection</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_bool</span><span class="p">]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetDirection</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWClose</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWClose</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetProductIDs</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_int</span><span class="p">)]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWGetProductIDs</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWCalibrate</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">]</span>
+    <span class="n">efwlib</span><span class="o">.</span><span class="n">EFWCalibrate</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span>
+
+    <span class="k">return</span> <span class="n">efwlib</span></div>
+
+
+
+<div class="viewcode-block" id="EFW">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EFW</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span> 
+    <span class="n">IDs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">slotNums</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">FiltersNames</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">FiltersSlots</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">calibrated</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">library_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span> <span class="c1">#ok</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dll</span> <span class="o">=</span> <span class="n">init</span><span class="p">(</span><span class="n">library_file</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetNum</span><span class="p">()</span> <span class="c1">#get number of wheels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">IDs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">GetID</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Num</span><span class="p">)]</span> <span class="c1">#get ids of wheels</span>
+        <span class="c1">#open wheels and get slots number</span>
+        <span class="k">for</span> <span class="n">ID</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">IDs</span><span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slotNums</span><span class="p">[</span><span class="n">ID</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetProperty</span><span class="p">(</span><span class="n">ID</span><span class="p">)[</span><span class="s1">&#39;slotNum&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="c1">#self.SetDirection(ID, True)</span>
+
+<div class="viewcode-block" id="EFW.GetNum">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.GetNum">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">GetNum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1">#ok</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWGetNum</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="EFW.GetID">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.GetID">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">GetID</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span> <span class="c1">#ok</span>
+        <span class="n">ID</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_short</span><span class="p">()</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWGetID</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">ID</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">ID</span><span class="o">.</span><span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="EFW.Open">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.Open">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">Open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">):</span> <span class="c1">#ok</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWOpen</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span></div>
+
+    
+<div class="viewcode-block" id="EFW.GetProperty">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.GetProperty">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">GetProperty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">):</span> <span class="c1">#works once wheel is open</span>
+        <span class="n">props</span> <span class="o">=</span> <span class="n">_EFW_INFO</span><span class="p">()</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWGetProperty</span><span class="p">(</span><span class="n">ID</span><span class="p">,</span> <span class="n">props</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">props</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="EFW.GetPosition">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.GetPosition">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">GetPosition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">):</span> <span class="c1">#ok</span>
+        <span class="n">slot</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">c_int</span><span class="p">()</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWGetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">,</span> <span class="n">slot</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">slot</span><span class="o">.</span><span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="EFW.SetPosition">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.SetPosition">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">SetPosition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">,</span> <span class="n">slot</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWSetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">,</span> <span class="n">slot</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">wait_until_done</span><span class="p">:</span>
+            <span class="n">inPosition</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="n">inPosition</span><span class="p">:</span>
+                <span class="n">sleep</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span><span class="c1">#.value</span>
+                <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="n">slot</span><span class="p">:</span>
+                    <span class="n">inPosition</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+    
+<div class="viewcode-block" id="EFW.SetDirection">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.SetDirection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">SetDirection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span> <span class="c1">#ok</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWSetDirection</span><span class="p">(</span><span class="n">ID</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span></div>
+
+   
+<div class="viewcode-block" id="EFW.Calibrate">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.Calibrate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">Calibrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">):</span> <span class="c1">#ok</span>
+        <span class="c1">#return to slot 0 </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">pos_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWCalibrate</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+        <span class="c1"># wait until calibration is over</span>
+        <span class="n">sleep</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EFW.Close">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.Close">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">Close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">):</span> <span class="c1">#ok// not always ok </span>
+        <span class="c1">#return to slot 0 </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dll</span><span class="o">.</span><span class="n">EFWClose</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">efw_errors</span><span class="p">[</span><span class="n">r</span><span class="p">]</span></div>
+
+    
+<div class="viewcode-block" id="EFW.SetFiltersNames">
+<a class="viewcode-back" href="../../../../../../api/mesoSPIM.src.devices.filter_wheels.ZWO_EFW.html#mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw.EFW.SetFiltersNames">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">SetFiltersNames</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ID</span><span class="p">,</span> <span class="n">FiltersNames</span><span class="p">):</span> 
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">FiltersNames</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">slotNums</span><span class="p">[</span><span class="n">ID</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">FiltersNames</span><span class="p">[</span><span class="n">ID</span><span class="p">]</span> <span class="o">=</span> <span class="n">FiltersNames</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">FiltersSlots</span><span class="p">[</span><span class="n">ID</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">FiltersNames</span><span class="p">[</span><span class="n">ID</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+</div>
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

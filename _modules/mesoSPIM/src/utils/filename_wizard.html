@@ -1,0 +1,481 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.utils.filename_wizard &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=c8897f99"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.utils.filename_wizard</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.utils.filename_wizard</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Contains Nonlinear Filename Wizard Class: autogenerates Filenames</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtWidgets</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utility_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace_with_underscores</span>
+<span class="c1">#from ..mesoSPIM_State import mesoSPIM_StateSingleton</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="FilenameWizard">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizard">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilenameWizard</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizard</span><span class="p">):</span>
+    <span class="n">wizard_done</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+
+    <span class="n">num_of_pages</span> <span class="o">=</span> <span class="mi">6</span>
+    <span class="p">(</span><span class="n">welcome</span><span class="p">,</span> <span class="n">raw</span><span class="p">,</span> <span class="n">tiff</span><span class="p">,</span> <span class="n">bigtiff</span><span class="p">,</span> <span class="n">single_hdf5</span><span class="p">,</span> <span class="n">finished</span><span class="p">)</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_of_pages</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Parent is object of class mesoSPIM_AcquisitionManagerWindow()&#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; By an instance variable, callbacks to window signals can be handed</span>
+<span class="sd">        through &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># the mesoSPIM_StateSingleton() instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># &#39;raw&#39;, &#39;h5&#39;, &#39;tiff&#39;, &#39;btf&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;Filename Wizard&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">FilenameWizardWelcomePage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">FilenameWizardRawSelectionPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">FilenameWizardTiffSelectionPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">FilenameWizardBigTiffSelectionPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">FilenameWizardSingleHDF5SelectionPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">FilenameWizardCheckResultsPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;&#39;&#39; font-size: 16px; &#39;&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<div class="viewcode-block" id="FilenameWizard.done">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizard.done">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">done</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Reimplementation of the done function</span>
+
+<span class="sd">        if r == 0: canceled</span>
+<span class="sd">        if r == 1: finished properly</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">r</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Filename Wizard was canceled&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Filename Wizard was closed properly&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_filenames_in_model</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filename Wizard provided return code: </span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">done</span><span class="p">(</span><span class="n">r</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FilenameWizard.generate_filename_list">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizard.generate_filename_list">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_filename_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">increment_number</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Go through the model, entry for entry and populate the filenames</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">row_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span>
+        <span class="n">num_string</span> <span class="o">=</span> <span class="s1">&#39;000000&#39;</span>
+        <span class="n">start_number</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">start_number_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">start_number</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">row_count</span><span class="p">):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span> <span class="o">==</span> <span class="s1">&#39;raw&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionRaw&#39;</span><span class="p">):</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="n">replace_with_underscores</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionRaw&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;xyPosition&#39;</span><span class="p">):</span>
+<span class="w">                    </span><span class="sd">&#39;&#39;&#39;Round to nearest integer &#39;&#39;&#39;</span>
+                    <span class="n">x_position_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getXPosition</span><span class="p">(</span><span class="n">row</span><span class="p">))))</span>
+                    <span class="n">y_position_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getYPosition</span><span class="p">(</span><span class="n">row</span><span class="p">))))</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="s1">&#39;X&#39;</span> <span class="o">+</span> <span class="n">x_position_string</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="s1">&#39;Y&#39;</span> <span class="o">+</span> <span class="n">y_position_string</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;rotationPosition&#39;</span><span class="p">):</span>
+                    <span class="n">rot_position_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getRotationPosition</span><span class="p">(</span><span class="n">row</span><span class="p">))))</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="s1">&#39;rot_&#39;</span> <span class="o">+</span> <span class="n">rot_position_string</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;Laser&#39;</span><span class="p">):</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="n">replace_with_underscores</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getLaser</span><span class="p">(</span><span class="n">row</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;Filter&#39;</span><span class="p">):</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="n">replace_with_underscores</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getFilter</span><span class="p">(</span><span class="n">row</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="c1"># if self.field(&#39;Zoom&#39;):</span>
+                <span class="c1">#     filename += replace_with_underscores(self.parent.model.getZoom(row)) + &#39;_&#39;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;Shutterconfig&#39;</span><span class="p">):</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getShutterconfig</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="n">file_suffix</span> <span class="o">=</span> <span class="n">num_string</span><span class="p">[:</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">start_number_string</span><span class="p">)]</span> <span class="o">+</span> <span class="n">start_number_string</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span>
+
+                <span class="k">if</span> <span class="n">increment_number</span><span class="p">:</span>
+                    <span class="n">start_number</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">start_number_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">start_number</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;tiff&#39;</span><span class="p">,</span> <span class="s1">&#39;btf&#39;</span><span class="p">}:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionTIFF&#39;</span><span class="p">):</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="n">replace_with_underscores</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionTIFF&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionBigTIFF&#39;</span><span class="p">):</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="n">replace_with_underscores</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionBigTIFF&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getNShutterConfigs</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">shutter_id</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getShutterconfig</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;Left&#39;</span> <span class="k">else</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">shutter_id</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getNAngles</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">angle</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getRotationPosition</span><span class="p">(</span><span class="n">row</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">angle</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="n">filename</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;Mag</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getZoom</span><span class="p">(</span><span class="n">row</span><span class="p">)</span><span class="si">}</span><span class="s1">_Tile</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getTileIndex</span><span class="p">(</span><span class="n">row</span><span class="p">)</span><span class="si">}</span><span class="s1">_Ch</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getLaser</span><span class="p">(</span><span class="n">row</span><span class="p">)[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s1">_Sh</span><span class="si">{</span><span class="n">shutter_id</span><span class="si">}</span><span class="s1">_Rot</span><span class="si">{</span><span class="n">angle</span><span class="si">}</span><span class="s1">&#39;</span>
+
+                <span class="n">file_suffix</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span> <span class="o">==</span> <span class="s1">&#39;h5&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionHDF5&#39;</span><span class="p">):</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="n">replace_with_underscores</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;DescriptionHDF5&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+                <span class="n">filename</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;Mag</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getZoom</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">laser_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getLaserList</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">laser</span> <span class="ow">in</span> <span class="n">laser_list</span><span class="p">:</span>
+                    <span class="n">filename</span> <span class="o">+=</span> <span class="s1">&#39;_ch&#39;</span> <span class="o">+</span> <span class="n">laser</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">file_suffix</span> <span class="o">=</span> <span class="s1">&#39;_bdv.&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;file suffix invalid: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">file_format</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">filename</span> <span class="o">+=</span> <span class="n">file_suffix</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filename_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
+
+            
+<div class="viewcode-block" id="FilenameWizard.update_filenames_in_model">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizard.update_filenames_in_model">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_filenames_in_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">row_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rowCount</span><span class="p">()</span>
+        <span class="n">filename_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getFilenameColumn</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">row_count</span><span class="p">):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename_list</span><span class="p">[</span><span class="n">row</span><span class="p">]</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">createIndex</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">filename_column</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FilenameWizardWelcomePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardWelcomePage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilenameWizardWelcomePage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;&#39;&#39; font-size: 16px; &#39;&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Autogenerate filenames&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;How would you like to save your data?&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_string</span> <span class="o">=</span> <span class="s1">&#39;Individual Raw Files: ~.raw&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tiff_string</span> <span class="o">=</span> <span class="s1">&#39;ImageJ TIFF files: ~.tiff&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bigtiff_string</span> <span class="o">=</span> <span class="s1">&#39;BigTIFF files: ~.btf&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">single_hdf5_string</span> <span class="o">=</span> <span class="s1">&#39;BigDataViewer HDF5 file: ~.h5&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBoxLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Save as:&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">raw_string</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiff_string</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bigtiff_string</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_hdf5_string</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;SaveAs&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="p">,</span> <span class="s1">&#39;currentIndex&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBoxLabel</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="FilenameWizardWelcomePage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardWelcomePage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_string</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">file_format</span> <span class="o">=</span> <span class="s1">&#39;raw&#39;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">raw</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiff_string</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">file_format</span> <span class="o">=</span> <span class="s1">&#39;tiff&#39;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">tiff</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">bigtiff_string</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">file_format</span> <span class="o">=</span> <span class="s1">&#39;btf&#39;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">bigtiff</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">SaveAsComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_hdf5_string</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">file_format</span> <span class="o">=</span> <span class="s1">&#39;h5&#39;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">single_hdf5</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="AbstractSelectionPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.AbstractSelectionPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AbstractSelectionPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;&#39;&#39; font-size: 16px; &#39;&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Description: &#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span><span class="o">.</span><span class="n">toggled</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">boolean</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AbstractSelectionPage.validatePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.AbstractSelectionPage.validatePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validatePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">generate_filename_list</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">validatePage</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="AbstractSelectionPage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.AbstractSelectionPage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">finished</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FilenameWizardTiffSelectionPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardTiffSelectionPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilenameWizardTiffSelectionPage</span><span class="p">(</span><span class="n">AbstractSelectionPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Autogenerate TIFF filenames&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;Names will be in BigStitcher auto-loader format:</span><span class="se">\n</span><span class="s2"> </span><span class="si">{Description}</span><span class="s2">_Mag</span><span class="si">{}</span><span class="s2">_Tile</span><span class="si">{}</span><span class="s2">_Ch</span><span class="si">{}</span><span class="s2">_Sh</span><span class="si">{}</span><span class="s2">_Rot</span><span class="si">{}</span><span class="s2">.tiff&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;DescriptionTIFF&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="FilenameWizardBigTiffSelectionPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardBigTiffSelectionPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilenameWizardBigTiffSelectionPage</span><span class="p">(</span><span class="n">AbstractSelectionPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Autogenerate BigTIFF filenames&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;Names will be in BigStitcher auto-loader format:</span><span class="se">\n</span><span class="s2"> </span><span class="si">{Description}</span><span class="s2">_Mag</span><span class="si">{}</span><span class="s2">_Tile</span><span class="si">{}</span><span class="s2">_Ch</span><span class="si">{}</span><span class="s2">_Sh</span><span class="si">{}</span><span class="s2">_Rot</span><span class="si">{}</span><span class="s2">.btf&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;DescriptionBigTIFF&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="FilenameWizardRawSelectionPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardRawSelectionPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilenameWizardRawSelectionPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;&#39;&#39; font-size: 16px; &#39;&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Autogenerate RAW filenames&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;Which properties would you like to use?&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Description: &#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span><span class="o">.</span><span class="n">toggled</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">boolean</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xyPositionCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;XY Position&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">RotationPositionCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Rotation angle&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">LaserCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Laser&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LaserCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FilterCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Filter&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># self.FilterCheckBox.setChecked(True)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZoomCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Zoom&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZoomCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ShutterCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Shutterconfig&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ShutterCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;DescriptionRaw&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;xyPosition&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xyPositionCheckBox</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;rotationPosition&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">RotationPositionCheckBox</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;Laser&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">LaserCheckBox</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;Filter&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">FilterCheckBox</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;Zoom&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZoomCheckBox</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;Shutterconfig&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ShutterCheckBox</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DescriptionCheckBox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyPositionCheckBox</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">RotationPositionCheckBox</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LaserCheckBox</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">FilterCheckBox</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZoomCheckBox</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ShutterCheckBox</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FilenameWizardRawSelectionPage.validatePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardRawSelectionPage.validatePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validatePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">generate_filename_list</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">validatePage</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="FilenameWizardRawSelectionPage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardRawSelectionPage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">finished</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FilenameWizardSingleHDF5SelectionPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardSingleHDF5SelectionPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilenameWizardSingleHDF5SelectionPage</span><span class="p">(</span><span class="n">AbstractSelectionPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Autogenerate hdf5 filename&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;All raw data saved into one hdf5 file, accompanied by two metadata files.&quot;</span>
+                         <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Filename example: </span><span class="si">{Description}</span><span class="s2">_Mag1x_ch488_ch561_bdv.h5&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;DescriptionHDF5&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DescriptionLineEdit</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FilenameWizardSingleHDF5SelectionPage.validatePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardSingleHDF5SelectionPage.validatePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validatePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">generate_filename_list</span><span class="p">(</span><span class="n">increment_number</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">validatePage</span><span class="p">()</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FilenameWizardCheckResultsPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardCheckResultsPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilenameWizardCheckResultsPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s1">&#39;Check results&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s1">&#39;Please check if the following filenames are ok:&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPlainTextEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mystring</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>        
+        <span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span><span class="o">.</span><span class="n">setPlainText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mystring</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FilenameWizardCheckResultsPage.initializePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardCheckResultsPage.initializePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initializePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">file_format</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;raw&#39;</span><span class="p">,</span> <span class="s1">&#39;tiff&#39;</span><span class="p">,</span> <span class="s1">&#39;btf&#39;</span><span class="p">):</span>
+            <span class="n">file_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">filename_list</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">file_format</span> <span class="o">==</span> <span class="s1">&#39;h5&#39;</span><span class="p">:</span>
+            <span class="n">file_list</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">filename_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;file_format must be in (&#39;raw&#39;, &#39;tiff&#39;, &#39;btf&#39;, &#39;h5&#39;), received </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">file_format</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mystring</span> <span class="o">+=</span> <span class="n">f</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mystring</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span><span class="o">.</span><span class="n">setPlainText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mystring</span><span class="p">)</span>        </div>
+
+
+<div class="viewcode-block" id="FilenameWizardCheckResultsPage.cleanupPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.filename_wizard.FilenameWizardCheckResultsPage.cleanupPage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cleanupPage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mystring</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span></div>
+</div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

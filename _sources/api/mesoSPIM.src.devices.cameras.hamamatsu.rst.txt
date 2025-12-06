@@ -1,0 +1,21 @@
+mesoSPIM.src.devices.cameras.hamamatsu package
+==============================================
+
+Submodules
+----------
+
+mesoSPIM.src.devices.cameras.hamamatsu.hamamatsu\_camera module
+---------------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.cameras.hamamatsu.hamamatsu_camera
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.cameras.hamamatsu
+   :members:
+   :show-inheritance:
+   :undoc-members:

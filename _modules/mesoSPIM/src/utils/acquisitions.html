@@ -1,0 +1,629 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.utils.acquisitions &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=c8897f99"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.utils.acquisitions</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.utils.acquisitions</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">acquisitions.py</span>
+<span class="sd">========================================</span>
+
+<span class="sd">Helper classes for mesoSPIM acquisitions</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">indexed</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os.path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Acquisition">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Acquisition</span><span class="p">(</span><span class="n">indexed</span><span class="o">.</span><span class="n">IndexedOrderedDict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Custom acquisition dictionary. Contains all the information to run a single</span>
+<span class="sd">    acquisition.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x_pos (float): X start position in microns</span>
+<span class="sd">        y_pos (float): Y start position in microns</span>
+<span class="sd">        z_start (float): Z start position in microns</span>
+<span class="sd">        z_end (float): Z end position in microns</span>
+<span class="sd">        z_step (float): Z stepsize in microns ,</span>
+<span class="sd">        theta_pos (float): Rotation angle in microns</span>
+<span class="sd">        f_pos (float): Focus position in microns</span>
+<span class="sd">        laser (str): Laser designation</span>
+<span class="sd">        intensity (int): Laser intensity in 0-100</span>
+<span class="sd">        filter (str): Filter designation (has to be in the config)</span>
+<span class="sd">        zoom (str): Zoom designation</span>
+<span class="sd">        filename (str): Filename for the file to be saved</span>
+
+<span class="sd">    Attributes:</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        Getting keys: ``keys = [key for key in acq1.keys()]``</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        Getting keys: ``keys = [key for key in acq1.keys()]``</span>
+
+<span class="sd">    Todo:</span>
+<span class="sd">        Testtodo-Entry</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">x_pos</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">y_pos</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">z_start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">z_end</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                 <span class="n">z_step</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                 <span class="n">planes</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                 <span class="n">theta_pos</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">f_start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">f_end</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">laser</span><span class="o">=</span><span class="s1">&#39;488 nm&#39;</span><span class="p">,</span>
+                 <span class="n">intensity</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="nb">filter</span><span class="o">=</span><span class="s1">&#39;Empty&#39;</span><span class="p">,</span>
+                 <span class="n">zoom</span><span class="o">=</span><span class="s1">&#39;1x&#39;</span><span class="p">,</span>
+                 <span class="n">shutterconfig</span><span class="o">=</span><span class="s1">&#39;Left&#39;</span><span class="p">,</span>
+                 <span class="n">folder</span><span class="o">=</span><span class="s1">&#39;tmp&#39;</span><span class="p">,</span>
+                 <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;one.tif&#39;</span><span class="p">,</span>
+                 <span class="n">etl_l_offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">etl_l_amplitude</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">etl_r_offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">etl_r_amplitude</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">processing</span><span class="o">=</span><span class="s1">&#39;MAX&#39;</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">x_pos</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">y_pos</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">z_start</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_end&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">z_end</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_step&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">z_step</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;planes&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">planes</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;rot&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">theta_pos</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_start&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">f_start</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_end&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">f_end</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;laser&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">laser</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;intensity&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">intensity</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">]</span><span class="o">=</span><span class="nb">filter</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">zoom</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">shutterconfig</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;folder&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">folder</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">filename</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;etl_l_offset&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">etl_l_offset</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">etl_l_amplitude</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;etl_r_offset&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">etl_r_offset</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">etl_r_amplitude</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;processing&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">processing</span>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; This way the dictionary is callable with an index &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="n">index</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Acquisition.get_keylist">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_keylist">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_keylist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; A list keys is returned for usage as a table header &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_capitalized_keylist">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_capitalized_keylist">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_capitalized_keylist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Here, a list of capitalized keys is returned for usage as a table header &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_image_count">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_image_count">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_image_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Method to return the number of planes in the acquisition</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">round</span><span class="p">((</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_end&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">])</span><span class="o">/</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_step&#39;</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_acquisition_time">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_acquisition_time">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_acquisition_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">framerate</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Method to return the time the acquisition will take at a certain </span>
+<span class="sd">        framerate.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            float: framerate of the microscope </span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: Acquisition time in seconds</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_image_count</span><span class="p">()</span><span class="o">/</span><span class="n">framerate</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_delta_z_and_delta_f_dict">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_delta_z_and_delta_f_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_delta_z_and_delta_f_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inverted</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Returns relative movement dict for z- and f-steps &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_end&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">]:</span>
+            <span class="n">z_rel</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_step&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">z_rel</span> <span class="o">=</span> <span class="o">-</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_step&#39;</span><span class="p">])</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Calculate f-step &#39;&#39;&#39;</span>
+        <span class="n">image_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_image_count</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">image_count</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">f_rel</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">((</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_end&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_start&#39;</span><span class="p">])</span><span class="o">/</span><span class="n">image_count</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f_rel</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_end&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_start&#39;</span><span class="p">]:</span>
+            <span class="n">f_rel</span> <span class="o">=</span> <span class="o">-</span><span class="n">f_rel</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">inverted</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;x_rel&#39;</span> <span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;y_rel&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;z_rel&#39;</span> <span class="p">:</span> <span class="n">z_rel</span><span class="p">,</span> <span class="s1">&#39;f_rel&#39;</span> <span class="p">:</span> <span class="n">f_rel</span><span class="p">,</span> <span class="s1">&#39;theta_rel&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;x_rel&#39;</span> <span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;y_rel&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;z_rel&#39;</span> <span class="p">:</span> <span class="o">-</span><span class="n">z_rel</span><span class="p">,</span> <span class="s1">&#39;f_rel&#39;</span> <span class="p">:</span> <span class="o">-</span><span class="n">f_rel</span><span class="p">,</span> <span class="s1">&#39;theta_rel&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_delta_dict">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_delta_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_delta_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Returns relative movement dict for z-steps and f-steps&#39;&#39;&#39;</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Calculate z-step &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_end&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">]:</span>
+            <span class="n">z_rel</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_step&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">z_rel</span> <span class="o">=</span> <span class="o">-</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_step&#39;</span><span class="p">])</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Calculate f-step</span>
+<span class="sd">        image_count = self.get_image_count()</span>
+<span class="sd">        f_rel = abs((self[&#39;f_end&#39;] - self[&#39;f_start&#39;])/image_count)</span>
+<span class="sd">        if self[&#39;f_end&#39;] &lt; self[&#39;f_start&#39;]:</span>
+<span class="sd">            f_rel = -f_rel</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;z_rel&#39;</span> <span class="p">:</span> <span class="n">z_rel</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_startpoint">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_startpoint">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_startpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Provides a dictionary with the startpoint coordinates</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;x_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;x_pos&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;y_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;y_pos&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;z_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;theta_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;rot&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;f_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_start&#39;</span><span class="p">],</span>
+                <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_endpoint">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_endpoint">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;x_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;x_pos&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;y_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;y_pos&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;z_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;z_end&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;theta_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;rot&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;f_abs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_end&#39;</span><span class="p">],</span>
+                <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Acquisition.get_focus_stepsize_generator">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.Acquisition.get_focus_stepsize_generator">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_focus_stepsize_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f_stage_min_step_um</span><span class="o">=</span><span class="mf">0.25</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;&#39;</span>
+<span class="sd">        Provides a generator object to correct rounding errors for focus tracking acquisitions.</span>
+
+<span class="sd">        The focus stage has to travel a shorter distance than the sample z-stage, ideally only</span>
+<span class="sd">        a fraction of the z-step size. However, due to the limited minimum step size of the focus stage,</span>
+<span class="sd">        rounding errors can accumulate over thousands of steps.</span>
+
+<span class="sd">        Therefore, the generator tracks the rounding error and applies correcting steps here and there</span>
+<span class="sd">        to minimize the error.</span>
+
+<span class="sd">        This assumes a minimum step size of around 0.25 micron that the focus stage is capable of.</span>
+
+<span class="sd">        This method contains lots of round functions to keep residual rounding errors at bay.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_image_count</span><span class="p">()</span>
+        <span class="n">f_step</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">((</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_end&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_start&#39;</span><span class="p">])</span><span class="o">/</span><span class="n">steps</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Focus interpolation: f_start, f_end, f_step, steps: </span><span class="si">{</span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_start&#39;</span><span class="p">],</span><span class="w"> </span><span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_end&#39;</span><span class="p">],</span><span class="w"> </span><span class="n">f_step</span><span class="p">,</span><span class="w"> </span><span class="n">steps</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">feasible_f_step</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">f_stage_min_step_um</span> <span class="o">*</span> <span class="p">(</span><span class="n">f_step</span> <span class="o">//</span> <span class="n">f_stage_min_step_um</span><span class="p">),</span>
+                              <span class="n">f_stage_min_step_um</span><span class="p">)</span>  <span class="c1"># Round to nearest multiple of f_stage_min_step_um</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_end&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="p">[</span><span class="s1">&#39;f_start&#39;</span><span class="p">]:</span>
+            <span class="n">f_step</span> <span class="o">=</span> <span class="o">-</span><span class="n">f_step</span>
+            <span class="n">feasible_f_step</span> <span class="o">=</span> <span class="o">-</span><span class="n">feasible_f_step</span>
+
+        <span class="n">expected_focus</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">focus</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
+            <span class="n">focus_error</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">expected_focus</span> <span class="o">-</span> <span class="n">focus</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+            <span class="n">new_step</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">focus_error</span> <span class="o">/</span> <span class="n">f_stage_min_step_um</span><span class="p">)</span> <span class="o">*</span> <span class="n">f_stage_min_step_um</span> <span class="o">+</span> <span class="n">feasible_f_step</span> <span class="c1"># this can be zero, and it is correct</span>
+            <span class="k">yield</span> <span class="n">new_step</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Relative focus: new_step, actual, expected, error: </span><span class="si">{</span><span class="n">new_step</span><span class="p">,</span><span class="w"> </span><span class="n">focus</span><span class="p">,</span><span class="w"> </span><span class="n">expected_focus</span><span class="p">,</span><span class="w"> </span><span class="n">focus_error</span><span class="si">}</span><span class="s2">, um&quot;</span><span class="p">)</span>
+            <span class="n">focus</span> <span class="o">+=</span> <span class="n">new_step</span>
+            <span class="n">focus</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">focus</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+            <span class="n">expected_focus</span> <span class="o">+=</span> <span class="n">f_step</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="AcquisitionList">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AcquisitionList</span><span class="p">(</span><span class="nb">list</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class for a list of acquisition objects</span>
+
+<span class="sd">    Examples: &quot;([acq1,acq2,acq3])&quot; is due to the fact that list takes only a single argument</span>
+<span class="sd">    acq_list = AcquisitionList([acq1,acq2,acq3])</span>
+<span class="sd">    acq_list.time()</span>
+<span class="sd">    &gt; 3600</span>
+<span class="sd">    acq_list.planes()</span>
+<span class="sd">    &gt; 18000</span>
+
+<span class="sd">    acq_list[2](2)</span>
+<span class="sd">    &gt;10</span>
+<span class="sd">    acq_list[2][&#39;y_pos&#39;]</span>
+<span class="sd">    &gt;10</span>
+<span class="sd">    acq_list[2][&#39;y_pos&#39;] = 34</span>
+
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="nb">list</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; If no arguments are provided, create a</span>
+<span class="sd">        default acquistion in the list &#39;&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; Use a default acquistion &#39;&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Acquisition</span><span class="p">())</span>
+
+        <span class="c1"># &#39;&#39;&#39;</span>
+        <span class="c1"># In addition to the list of acquisition objects, the AcquisitionList also</span>
+        <span class="c1"># contains a rotation point that is save to rotate the sample to the target</span>
+        <span class="c1"># value.</span>
+        <span class="c1"># &#39;&#39;&#39;</span>
+        <span class="c1"># self.rotation_point = {&#39;x_abs&#39; : None, &#39;y_abs&#39; : None, &#39;z_abs&#39; : None}</span>
+
+<div class="viewcode-block" id="AcquisitionList.get_capitalized_keylist">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_capitalized_keylist">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_capitalized_keylist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_capitalized_keylist</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_keylist">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_keylist">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_keylist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Here, a list of capitalized keys is returned for usage as a table header</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_keylist</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_acquisition_time">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_acquisition_time">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_acquisition_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">framerate</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns total time in seconds of a list of acquisitions</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="n">time</span> <span class="o">+=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_acquisition_time</span><span class="p">(</span><span class="n">framerate</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">time</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_image_count">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_image_count">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_image_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the total number of planes for a list of acquistions</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">image_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="n">image_count</span> <span class="o">+=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_image_count</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">image_count</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_startpoint">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_startpoint">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_startpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_startpoint</span><span class="p">()</span></div>
+
+
+    <span class="c1"># def set_rotation_point(self, dict):</span>
+    <span class="c1">#     self.rotation_point = {&#39;x_abs&#39; : dict[&#39;x_abs&#39;], &#39;y_abs&#39; : dict[&#39;y_abs&#39;], &#39;z_abs&#39;:dict[&#39;z_abs&#39;]}</span>
+
+    <span class="c1"># def delete_rotation_point(self):</span>
+    <span class="c1">#     self.rotation_point = {&#39;x_abs&#39; : None, &#39;y_abs&#39; : None, &#39;z_abs&#39; : None}</span>
+
+    <span class="c1"># def get_rotation_point_status(self):</span>
+    <span class="c1">#     &#39;&#39;&#39; Returns True if an rotation point was set, otherwise False &#39;&#39;&#39;</span>
+    <span class="c1">#     if self.rotation_point[&#39;x_abs&#39;] == None :</span>
+    <span class="c1">#         return False</span>
+    <span class="c1">#     else:</span>
+    <span class="c1">#         return True</span>
+
+    <span class="c1"># def get_rotation_point(self):</span>
+    <span class="c1">#     return self.rotation_point</span>
+
+<div class="viewcode-block" id="AcquisitionList.get_all_filenames">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_all_filenames">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_filenames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Returns a list of all filenames &#39;&#39;&#39;</span>
+        <span class="n">filename_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;folder&#39;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span>
+            <span class="n">filename_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">filename_list</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.check_for_existing_filenames">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.check_for_existing_filenames">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_for_existing_filenames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Returns a list of existing filenames &#39;&#39;&#39;</span>
+        <span class="n">filename_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;folder&#39;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span>
+            <span class="n">file_exists</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">file_exists</span><span class="p">:</span>
+                <span class="n">filename_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">filename_list</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.check_filename_extensions">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.check_filename_extensions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_filename_extensions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Returns files that have no extension, so their format is undefined.&#39;&#39;&#39;</span>
+        <span class="n">filename_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">filename_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">filename_list</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.check_for_duplicated_filenames">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.check_for_duplicated_filenames">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_for_duplicated_filenames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Returns a list of duplicated filenames &#39;&#39;&#39;</span>
+        <span class="n">filenames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Create a list of full file paths</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;filename&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span> <span class="o">!=</span> <span class="s1">&#39;.h5&#39;</span><span class="p">:</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;folder&#39;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span>
+                <span class="n">filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">duplicates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_duplicates_in_list</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">duplicates</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.check_for_nonexisting_folders">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.check_for_nonexisting_folders">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_for_nonexisting_folders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Returns a list of nonexisting folders &#39;&#39;&#39;</span>
+        <span class="n">nonexisting_folders</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;folder&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">folder</span><span class="p">):</span>
+                <span class="n">nonexisting_folders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">nonexisting_folders</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_duplicates_in_list">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_duplicates_in_list">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_duplicates_in_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_list</span><span class="p">):</span>
+        <span class="n">duplicates</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">unique</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">in_list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">each</span> <span class="ow">in</span> <span class="n">unique</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="n">in_list</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">each</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">duplicates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">each</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">duplicates</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_n_shutter_configs">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_n_shutter_configs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_shutter_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of unique shutter configs (1 or 2)&quot;&quot;&quot;</span>
+        <span class="n">sconfig_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">]</span>
+        <span class="n">sconfig_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">sconfig_list</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">sconfig_set</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_n_angles">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_n_angles">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_angles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of unique angles&quot;&quot;&quot;</span>
+        <span class="n">angle_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;rot&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">]</span>
+        <span class="n">angle_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">angle_list</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">angle_set</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_n_lasers">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_n_lasers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_lasers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of unique laser lines&quot;&quot;&quot;</span>
+        <span class="n">laser_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;laser&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">]</span>
+        <span class="n">laser_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">laser_list</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">laser_set</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_n_tiles">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_n_tiles">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_tiles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of tiles as unique (x,y,z_start,rot) combinations&quot;&quot;&quot;</span>
+        <span class="n">tile_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">tile_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;rot&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">tile_str</span> <span class="ow">in</span> <span class="n">tile_list</span><span class="p">:</span>
+                <span class="n">tile_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile_str</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">tile_list</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_tile_index">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_tile_index">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_tile_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">acq</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the the tile index for given acquisition&quot;&quot;&quot;</span>
+        <span class="n">acq_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">acq</span><span class="p">[</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">acq</span><span class="p">[</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">acq</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">acq</span><span class="p">[</span><span class="s1">&#39;rot&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">tile_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">tile_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;z_start&#39;</span><span class="p">]</span><span class="si">}{</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;rot&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">tile_str</span> <span class="ow">in</span> <span class="n">tile_list</span><span class="p">:</span>
+                <span class="n">tile_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile_str</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tile_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">acq_str</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.get_unique_attr_list">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.get_unique_attr_list">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_unique_attr_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;laser&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ordered list of acquisition attributes.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">            key: str</span>
+<span class="sd">                One of (&#39;laser&#39;, &#39;shutterconfig&#39;, &#39;rot&#39;)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">        --------</span>
+<span class="sd">            List of strings, e.g. (&#39;488&#39;, &#39;561&#39;) for key=&#39;laser&#39;, in the order of acquisition.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attributes</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;laser&#39;</span><span class="p">,</span> <span class="s1">&#39;shutterconfig&#39;</span><span class="p">,</span> <span class="s1">&#39;rot&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Key </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1"> must be one of </span><span class="si">{</span><span class="n">attributes</span><span class="si">}</span><span class="s1">.&#39;</span>
+        <span class="n">unique_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">acq</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">acq</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unique_list</span><span class="p">:</span>
+                <span class="n">unique_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">acq</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">unique_list</span></div>
+
+
+<div class="viewcode-block" id="AcquisitionList.find_value_index">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.acquisitions.AcquisitionList.find_value_index">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">find_value_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;488 nm&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;laser&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find the attribute index in the acquisition list.</span>
+<span class="sd">        Example:</span>
+<span class="sd">        al = AcquisitionList([Acquisition(), Acquisition(), Acquisition(), Acquisition()])</span>
+<span class="sd">        al[0][&#39;laser&#39;] = &#39;488 nm&#39; #</span>
+<span class="sd">        al[1][&#39;laser&#39;] = &#39;488 nm&#39; # gets removed because non-unique</span>
+<span class="sd">        al[2][&#39;laser&#39;] = &#39;561 nm&#39; #</span>
+<span class="sd">        al[3][&#39;laser&#39;] = &#39;637 nm&#39; #</span>
+<span class="sd">        Output:</span>
+<span class="sd">        al.find_value_index(&#39;488 nm&#39;, &#39;laser&#39;) # -&gt; 0</span>
+<span class="sd">        al.find_value_index(&#39;561 nm&#39;, &#39;laser&#39;) # -&gt; 1</span>
+<span class="sd">        al.find_value_index(&#39;637 nm&#39;, &#39;laser&#39;) # -&gt; 2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unique_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_unique_attr_list</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">unique_list</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Value(</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">) not found in list </span><span class="si">{</span><span class="n">unique_list</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="n">unique_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
