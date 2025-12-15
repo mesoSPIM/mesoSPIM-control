@@ -645,7 +645,8 @@ class Live3DPyramidWriter:
 class XmlWriter:
     def __init__(self, filename, nsetups=1, nilluminations=1, nchannels=1, ntiles=1, nangles=1, ntimes=1):
         self.filename = filename
-        self.nsetups = nsetups  
+        self.nsetups = nsetups
+        self.group_names = []
         self.nilluminations = nilluminations
         self.nchannels = nchannels
         self.ntiles = ntiles
@@ -669,7 +670,7 @@ class XmlWriter:
         self.stack_shape_zyx = {}
 
 
-    def append_acquisition(self, iacq, time=0, illumination=0, channel=0, tile=0, angle=0,
+    def append_acquisition(self, iacq, group_name=None, time=0, illumination=0, channel=0, tile=0, angle=0,
                 m_affine=None, name_affine='manually defined',
                 voxel_size_xyz=(1, 1, 1), voxel_units='px', calibration=(1, 1, 1),
                 exposure_time=0, exposure_units='s', stack_shape_zyx=(1,1,1)):
@@ -679,6 +680,8 @@ class XmlWriter:
         -----------
             iacq: int
                 Index of the acquisition, >= 0.
+            group_name: str
+                Name of the folder group for this acquisition. str | None
             nsetups: int
                 Total number of setups.
             time: int
@@ -708,6 +711,7 @@ class XmlWriter:
         if m_affine is not None:
             self.affine_matrices[iacq] = m_affine.copy()
             self.affine_names[iacq] = name_affine
+        self.group_names.append(group_name)
         self.calibrations[iacq] = calibration
         self.voxel_size_xyz[iacq] = voxel_size_xyz
         self.voxel_units[iacq] = voxel_units
@@ -783,7 +787,9 @@ class XmlWriter:
             zgroup = ET.SubElement(zgroups, 'zgroup')
             zgroup.set('setup', str(isetup))
             zgroup.set('tp', '0')
-            zgroup.set('path', f's{isetup}-t0.zarr')
+            zgroup.set('path', self.group_names[isetup])
+            view = ET.SubElement(viewsets, 'view')
+            # zgroup.set('path', f's{isetup}-t0.zarr')
             zgroup.set('indicies', '0 0') # stupid typo instead of 'indices' in BigStitcher :)
             vs = ET.SubElement(viewsets, 'ViewSetup')
             ET.SubElement(vs, 'id').text = str(isetup)

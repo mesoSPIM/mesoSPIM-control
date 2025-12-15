@@ -400,6 +400,27 @@ OME_Zarr_Writer = {
     'transpose_xy': False, # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
     }
 
+MP_OME_Zarr_Writer = {
+    'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': 'zstd',  # None, 'zstd', 'lz4'
+    'compression_level': 5,  # 1-9
+    'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    'base_chunks': (256, 256, 256),
+    # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (256, 256, 256),
+    # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+    'async_finalize': True,  # True, False
+
+    # BigStitcher Specific Options
+    'write_big_stitcher_xml': True,  # True, False
+    'flip_xyz': (True, True, False),  # match BigStitcher coordinates to mesoSPIM axes.
+    'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
+
+    # Multiprocess options
+    'ring_buffer_size': 512,  # Max number of images in shared memory ring buffer
+}
+
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
