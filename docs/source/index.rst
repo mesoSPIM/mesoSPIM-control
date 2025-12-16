@@ -6,7 +6,7 @@ Welcome to the mesoSPIM-control documentation
 .. image:: _static/mesoSPIM-logo.png
    :alt: mesoSPIM logo
    :align: right
-   :width: 100px
+   :width: 200px
 
 `mesoSPIM-control <https://github.com/mesoSPIM/mesoSPIM-control>`_ is
 Python/PyQt-based acquisition software for mesoSPIM light-sheet microscopes.
@@ -26,6 +26,7 @@ Contents
    getting_started
    api/modules
    contributing
+
 
 Indices and tables
 ------------------
