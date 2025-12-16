@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.mesoSPIM_CameraWindow &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.mesoSPIM_CameraWindow</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.mesoSPIM_CameraWindow</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">mesoSPIM CameraWindow</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtWidgets</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.uic</span><span class="w"> </span><span class="kn">import</span> <span class="n">loadUi</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyqtgraph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.optimization</span><span class="w"> </span><span class="kn">import</span> <span class="n">shannon_dct</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.utility_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_cpu_core</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_CameraWindow</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
+    <span class="n">sig_update_roi</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>
+    <span class="n">sig_update_status</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span> <span class="c1"># the mesoSPIM_MainWindow() instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># the mesoSPIM_StateSingleton() instance</span>
+
+        <span class="n">pg</span><span class="o">.</span><span class="n">setConfigOptions</span><span class="p">(</span><span class="n">imageAxisOrder</span><span class="o">=</span><span class="s1">&#39;row-major&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;ui_options&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">ui_options</span><span class="p">[</span><span class="s1">&#39;dark_mode&#39;</span><span class="p">])</span> <span class="ow">or</span>\
+                <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;dark_mode&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">dark_mode</span><span class="p">):</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">setConfigOptions</span><span class="p">(</span><span class="n">background</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">mkColor</span><span class="p">(</span><span class="s1">&#39;#19232D&#39;</span><span class="p">))</span>  <span class="c1"># To avoid pitch black bg for the image view</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">setConfigOptions</span><span class="p">(</span><span class="n">background</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Set up the UI&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+            <span class="n">loadUi</span><span class="p">(</span><span class="s1">&#39;../gui/mesoSPIM_CameraWindow.ui&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loadUi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">package_directory</span> <span class="o">+</span> <span class="s1">&#39;/gui/mesoSPIM_CameraWindow.ui&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;mesoSPIM-Control: Camera Window&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">&quot;Status: OK&quot;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Set histogram Range &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">setLevels</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">3000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">imageItem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">getImageItem</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">histogram</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">getHistogramWidget</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">histogram</span><span class="o">.</span><span class="n">setMinimumWidth</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">histogram</span><span class="o">.</span><span class="n">item</span><span class="o">.</span><span class="n">vb</span><span class="o">.</span><span class="n">setMaximumWidth</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; This is flipped to account for image rotation &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">camera_parameters</span><span class="p">[</span><span class="s1">&#39;x_pixels&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">camera_parameters</span><span class="p">[</span><span class="s1">&#39;y_pixels&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">[</span><span class="s1">&#39;camera_display_live_subsampling&#39;</span><span class="p">]</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Initialize crosshairs &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">crosspen</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">mkPen</span><span class="p">({</span><span class="s1">&#39;color&#39;</span><span class="p">:</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s1">&#39;width&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vLine</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">InfiniteLine</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span> <span class="n">movable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">crosspen</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hLine</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">InfiniteLine</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">movable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">crosspen</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vLine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hLine</span><span class="p">)</span>
+
+        <span class="c1"># Create overlay ROIs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="o">=</span> <span class="s1">&#39;LS marker&#39;</span> <span class="c1"># &#39;box&#39;, None, &#39;LS marker&#39;</span>
+        <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">RectROI</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">sideScalers</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_drawn</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Create polygons that show light-sheet direction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points_R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="o">//</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">25</span><span class="p">],</span>
+                             <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="o">//</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">25</span><span class="p">],</span>
+                             <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="o">//</span><span class="mi">2</span><span class="p">]])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points_L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="o">//</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">25</span><span class="p">],</span>
+                             <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="o">//</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">25</span><span class="p">],</span>
+                             <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span> <span class="o">-</span> <span class="mi">100</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="o">//</span><span class="mi">2</span><span class="p">]])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PolyLineROI</span><span class="p">(</span><span class="n">positions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">points_R</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">movable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">rotatable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">removable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">aspectLocked</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PolyLineROI</span><span class="p">(</span><span class="n">positions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">points_L</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">movable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">rotatable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">removable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">aspectLocked</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hide_light_sheet_marker</span><span class="p">()</span>
+
+        <span class="c1"># Set up internal CameraWindow signals</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adjustLevelsButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust_levels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlayCombo</span><span class="o">.</span><span class="n">currentTextChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">change_overlay</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="o">.</span><span class="n">sigRegionChangeFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_status</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_update_status</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_status</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.adjust_levels">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.adjust_levels">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">adjust_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pct_low</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">pct_hi</span><span class="o">=</span><span class="mf">99.99</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;&#39;Adjust histogram levels&#39;&#39;&#39;</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">getImageItem</span><span class="p">()</span><span class="o">.</span><span class="n">image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">setLevels</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">pct_low</span><span class="p">),</span> <span class="nb">max</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">pct_hi</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.px2um">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.px2um">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">px2um</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">px</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Unit converter&#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">px</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">pixelsize</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">]]</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">change_overlay</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">overlay_name</span><span class="p">):</span>
+        <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_image_shape</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">overlay_name</span> <span class="o">==</span> <span class="s1">&#39;Box roi&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;box&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">w</span><span class="o">//</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">50</span><span class="p">,</span> <span class="n">h</span><span class="o">//</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">overlay_name</span> <span class="o">==</span> <span class="s1">&#39;Overlay: none&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">overlay_name</span> <span class="o">==</span> <span class="s1">&#39;LS marker&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;LS marker&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.get_roi">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.get_roi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_roi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">im_item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">getImageItem</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="o">==</span> <span class="s1">&#39;box&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_drawn</span><span class="p">:</span>
+            <span class="n">roi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="o">.</span><span class="n">getArrayRegion</span><span class="p">(</span><span class="n">im_item</span><span class="o">.</span><span class="n">image</span><span class="p">,</span> <span class="n">im_item</span><span class="p">)</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span>
+            <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_update_roi</span><span class="o">.</span><span class="n">emit</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">roi</span> <span class="o">=</span> <span class="n">im_item</span><span class="o">.</span><span class="n">image</span>
+            <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">im_item</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_update_roi</span><span class="o">.</span><span class="n">emit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">roi</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.set_roi">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.set_roi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_roi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;box&#39;</span><span class="p">,</span> <span class="n">x_y_w_h</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)):</span>
+        <span class="k">assert</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;box&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;LS marker&#39;</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Mode must be in (&#39;box&#39;, None, &#39;LS marker&#39;), received </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2"> instead&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">x_y_w_h</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="o">.</span><span class="n">setPos</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="o">.</span><span class="n">setSize</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;LS marker&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_drawn</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">removeItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">roi_drawn</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="o">==</span> <span class="s1">&#39;box&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_drawn</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">roi_drawn</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_update_status</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.get_image_shape">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.get_image_shape">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_image_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">getImageItem</span><span class="p">()</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subsampling</span><span class="o">=</span><span class="mf">2.0</span><span class="p">):</span>
+        <span class="n">roi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_roi</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="o">==</span> <span class="s1">&#39;box&#39;</span><span class="p">:</span>
+            <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_box</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Screen ROI size: W </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="si">}</span><span class="s2"> px, </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">px2um</span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">subsampling</span><span class="p">))</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> </span><span class="se">\u03BC</span><span class="s2">m. &quot;</span>
+                                      <span class="sa">f</span><span class="s2">&quot;H </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">h</span><span class="p">)</span><span class="si">}</span><span class="s2"> px, </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">px2um</span><span class="p">(</span><span class="n">h</span><span class="p">,</span><span class="w"> </span><span class="n">subsampling</span><span class="p">))</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> </span><span class="se">\u03BC</span><span class="s2">m. &quot;</span>
+                                      <span class="sa">f</span><span class="s2">&quot;Screen subsampling </span><span class="si">{</span><span class="n">subsampling</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                                      <span class="c1">#f&quot;sharpness {np.round(1e4 * shannon_dct(roi)):.0f}&quot;)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide_light_sheet_marker</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide_light_sheet_marker</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Image dimensions: </span><span class="si">{</span><span class="n">roi</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlay</span> <span class="o">==</span> <span class="s1">&#39;LS marker&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">draw_lightsheet_marker</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Image dimensions: </span><span class="si">{</span><span class="n">roi</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.draw_crosshairs">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.draw_crosshairs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw_crosshairs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vLine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hLine</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.draw_lightsheet_marker">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.draw_lightsheet_marker">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw_lightsheet_marker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Left&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Right&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Both&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.hide_light_sheet_marker">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.hide_light_sheet_marker">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hide_light_sheet_marker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span><span class="o">.</span><span class="n">setOpacity</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+    <span class="c1">#@QtCore.pyqtSlot(np.ndarray) # deprecated due to slow performance</span>
+<div class="viewcode-block" id="mesoSPIM_CameraWindow.set_image">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.set_image">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">):</span>
+        <span class="n">log_cpu_core</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;set_image()&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;setImage() with shape </span><span class="si">{</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> started&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;state&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;live&#39;</span><span class="p">,</span> <span class="s1">&#39;idle&#39;</span><span class="p">):</span>
+            <span class="n">subsampling_ratio</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;camera_display_live_subsampling&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;state&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;run_acquisition_list&#39;</span><span class="p">,</span> <span class="s1">&#39;run_selected_acquisition&#39;</span><span class="p">):</span>
+            <span class="n">subsampling_ratio</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;camera_display_acquisition_subsampling&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">subsampling_ratio</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_view</span><span class="o">.</span><span class="n">setImage</span><span class="p">(</span><span class="n">image</span><span class="p">[::</span><span class="n">subsampling_ratio</span><span class="p">,</span> <span class="p">::</span><span class="n">subsampling_ratio</span><span class="p">],</span> 
+                                 <span class="n">autoLevels</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">autoHistogramRange</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">autoRange</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;setImage() finished&quot;</span><span class="p">)</span>
+        <span class="c1"># update roi size if subsampling has changed interactively:</span>
+        <span class="c1"># if self.overlay == &#39;box&#39;:</span>
+        <span class="c1">#     x, y = self.roi_box.pos()</span>
+        <span class="c1">#     w, h = self.roi_box.size()</span>
+        <span class="c1">#     self.roi_box.setPos((x / subsampling_ratio, y / subsampling_ratio))</span>
+        <span class="c1">#     self.roi_box.setSize((w / subsampling_ratio, h / subsampling_ratio))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_status</span><span class="p">(</span><span class="n">subsampling_ratio</span><span class="p">)</span>
+
+        <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">//</span><span class="n">subsampling_ratio</span><span class="p">,</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">//</span><span class="n">subsampling_ratio</span>  <span class="c1"># works for both 2D and 3/4D loaded TIFF files.</span>
+        <span class="k">if</span> <span class="n">h</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span> <span class="ow">or</span> <span class="n">w</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span> <span class="o">=</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vLine</span><span class="o">.</span><span class="n">setPos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_image_width</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hLine</span><span class="o">.</span><span class="n">setPos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_image_width</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+            <span class="n">new_points_R</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">/</span><span class="p">(</span><span class="n">subsampling_ratio</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">points_R</span><span class="p">]</span>
+            <span class="n">new_points_L</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">/</span><span class="p">(</span><span class="n">subsampling_ratio</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_subsampling</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">points_L</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span><span class="o">.</span><span class="n">setPoints</span><span class="p">(</span><span class="n">new_points_R</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span><span class="o">.</span><span class="n">setPoints</span><span class="p">(</span><span class="n">new_points_L</span><span class="p">)</span>
+            <span class="c1"># hide the light sheet marker draggable handles:</span>
+            <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_R</span><span class="o">.</span><span class="n">getHandles</span><span class="p">():</span>
+                <span class="n">h</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lightsheet_marker_L</span><span class="o">.</span><span class="n">getHandles</span><span class="p">():</span>
+                <span class="n">h</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw_crosshairs</span><span class="p">()</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_image_from_deque</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame_queue_display</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame_queue_display</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_image</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.mesoSPIM_Optimizer &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.mesoSPIM_Optimizer</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.mesoSPIM_Optimizer</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Frontend of the optimizer which allows to use auto-focus or optimization of other microscope parameters</span>
+<span class="sd">Auto-focus is based on Autopilot paper (Royer at al, Nat Biotechnol. 2016 Dec;34(12):1267-1278. doi: 10.1038/nbt.3708.)</span>
+<span class="sd">author: Nikita Vladimirov, @nvladimus, 2021</span>
+<span class="sd">License: GPL-3</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.optimization</span><span class="w"> </span><span class="kn">import</span> <span class="n">shannon_dct</span><span class="p">,</span> <span class="n">fit_gaussian_1d</span><span class="p">,</span> <span class="n">gaussian_1d</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyqtgraph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtWidgets</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.uic</span><span class="w"> </span><span class="kn">import</span> <span class="n">loadUi</span>
+
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_Optimizer</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
+    <span class="n">sig_state_request</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">sig_move_absolute</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Parent must be an mesoSPIM_MainWindow() object&#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span> <span class="c1"># the mesoSPIM_MainWindow() object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">core</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">core</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span> <span class="c1"># initial config file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># the mesoSPIM_StateSingleton() object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graphics_widget</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modes_list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;etl_offset&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_amp&#39;</span><span class="p">,</span> <span class="s1">&#39;focus&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modes_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_points</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">search_amplitude</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_key</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ini_metric</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gaussian_values</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delay_s</span> <span class="o">=</span> <span class="mf">0.4</span>  <span class="c1"># time delay between snaps to avoid state update hickups, esp for heavy lens-camera assembly during AF</span>
+
+        <span class="n">loadUi</span><span class="p">(</span><span class="s1">&#39;gui/mesoSPIM_Optimizer.ui&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;mesoSPIM-Optimizer&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+        <span class="c1"># initialize</span>
+        <span class="c1">#self.set_parameters({&#39;mode&#39;: &#39;etl_offset&#39;, &#39;amplitude&#39;: 0.5, &#39;n_points&#39;: 7})</span>
+
+        <span class="c1"># signal switchboard</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">camera_worker</span><span class="o">.</span><span class="n">sig_camera_frame</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_image</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_optimization</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">closeButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">close_window</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">camera_window</span><span class="o">.</span><span class="n">sig_update_roi</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_roi_dims</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_move_absolute</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">move_absolute</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comboBoxMode</span><span class="o">.</span><span class="n">currentTextChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_mode_from_gui</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_image</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Optimizer: updating image, len(self.parent.core.frame_queue_display) = </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame_queue_display</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame_queue_display</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span><span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_roi_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi_dims</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_dims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">roi_dims</span><span class="p">)</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.set_roi">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_roi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_roi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="n">roi_perc</span><span class="o">=</span><span class="mf">0.25</span><span class="p">):</span>
+        <span class="n">img_w</span><span class="p">,</span> <span class="n">img_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">camera_window</span><span class="o">.</span><span class="n">get_image_shape</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;h&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">camera_window</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;box&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">img_h</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">roi_perc</span><span class="p">)</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">img_w</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">img_h</span><span class="o">*</span><span class="n">roi_perc</span><span class="p">)))</span>
+        <span class="k">elif</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;v&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">camera_window</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;box&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">img_w</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">roi_perc</span><span class="p">)</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">img_w</span><span class="o">*</span><span class="n">roi_perc</span><span class="p">),</span> <span class="n">img_h</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">camera_window</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;box&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">img_h</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">roi_perc</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">img_w</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">roi_perc</span><span class="p">))</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+                                                    <span class="nb">int</span><span class="p">(</span><span class="n">img_h</span> <span class="o">*</span> <span class="n">roi_perc</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">img_w</span> <span class="o">*</span> <span class="n">roi_perc</span><span class="p">)))</span>
+        <span class="k">elif</span> <span class="n">orientation</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">camera_window</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">img_w</span><span class="p">,</span> <span class="n">img_h</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Orientation must be one of (&#39;h&#39;, &#39;v&#39;, None).&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.set_parameters">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">update_gui</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">param_dict</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;mode&#39;</span> <span class="ow">in</span> <span class="n">param_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">param_dict</span><span class="p">[</span><span class="s1">&#39;mode&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s1">&#39;amplitude&#39;</span> <span class="ow">in</span> <span class="n">param_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">search_amplitude</span> <span class="o">=</span> <span class="n">param_dict</span><span class="p">[</span><span class="s1">&#39;amplitude&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s1">&#39;n_points&#39;</span> <span class="ow">in</span> <span class="n">param_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">n_points</span> <span class="o">=</span> <span class="n">param_dict</span><span class="p">[</span><span class="s1">&#39;n_points&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_key</span> <span class="o">=</span> <span class="s1">&#39;position&#39;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;etl_offset&#39;</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;Left&#39;</span><span class="p">,</span> <span class="s1">&#39;Right&#39;</span><span class="p">),</span>  <span class="sa">f</span><span class="s2">&quot;Shutter config must be in (&#39;Left&#39;, &#39;Right&#39;), got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_key</span> <span class="o">=</span> <span class="s1">&#39;etl_l_offset&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Left&#39;</span> <span class="k">else</span> <span class="s1">&#39;etl_r_offset&#39;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;etl_amp&#39;</span><span class="p">:</span>
+            <span class="n">ini_etl_amp</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="c1"># so that we never start from zero</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_key</span> <span class="o">=</span> <span class="s1">&#39;etl_l_amplitude&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Left&#39;</span> <span class="k">else</span> <span class="s1">&#39;etl_r_amplitude&#39;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">sig_state_request</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">:</span> <span class="n">ini_etl_amp</span><span class="p">})</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initial ETL amp set to </span><span class="si">{</span><span class="n">ini_etl_amp</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">update_gui</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_gui</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.update_gui">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.update_gui">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_gui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">searchAmpDoubleSpinBox</span><span class="o">.</span><span class="n">setSuffix</span><span class="p">(</span><span class="s2">&quot; </span><span class="se">\u03BC</span><span class="s2">m&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">searchAmpDoubleSpinBox</span><span class="o">.</span><span class="n">setDecimals</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">searchAmpDoubleSpinBox</span><span class="o">.</span><span class="n">setSuffix</span><span class="p">(</span><span class="s2">&quot; V&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">searchAmpDoubleSpinBox</span><span class="o">.</span><span class="n">setDecimals</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;v&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;etl_offset&#39;</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="s1">&#39;h&#39;</span><span class="p">)</span>
+
+        <span class="n">mode_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modes_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mode_index</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comboBoxMode</span><span class="o">.</span><span class="n">currentIndex</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">comboBoxMode</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="n">mode_index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_amplitude</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">searchAmpDoubleSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">searchAmpDoubleSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search_amplitude</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_points</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nPointsSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nPointsSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_points</span><span class="p">)</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_mode_from_gui</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">choice</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="s2">&quot;ETL offset&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">({</span><span class="s1">&#39;mode&#39;</span><span class="p">:</span> <span class="s1">&#39;etl_offset&#39;</span><span class="p">,</span> <span class="s1">&#39;amplitude&#39;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s1">&#39;n_points&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">choice</span> <span class="o">==</span> <span class="s2">&quot;ETL amplitude&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">({</span><span class="s1">&#39;mode&#39;</span><span class="p">:</span> <span class="s1">&#39;etl_amp&#39;</span><span class="p">,</span> <span class="s1">&#39;amplitude&#39;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s1">&#39;n_points&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">choice</span> <span class="o">==</span> <span class="s2">&quot;Focus&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">({</span><span class="s1">&#39;mode&#39;</span><span class="p">:</span> <span class="s1">&#39;focus&#39;</span><span class="p">,</span> <span class="s1">&#39;amplitude&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span> <span class="s1">&#39;n_points&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">choice</span><span class="si">}</span><span class="s2"> value is not allowed.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.get_params_from_gui">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.get_params_from_gui">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_params_from_gui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modes_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">comboBoxMode</span><span class="o">.</span><span class="n">currentIndex</span><span class="p">()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">search_amplitude</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">searchAmpDoubleSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nPointsSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.set_state">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_val</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_move_absolute</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;f_abs&#39;</span><span class="p">:</span> <span class="n">new_val</span><span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">sig_state_request</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">:</span> <span class="n">new_val</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.set_etl_amp_to_zero">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_etl_amp_to_zero">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_etl_amp_to_zero</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_key</span> <span class="o">==</span> <span class="s1">&#39;etl_l_offset&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">sig_state_request</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ETL offset optimization: ETL amplitude (L) set to 0&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_key</span> <span class="o">==</span> <span class="s1">&#39;etl_r_offset&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">sig_state_request</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ETL offset optimization: ETL amplitude (R) set to 0&quot;</span><span class="p">)</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_optimization</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_state_request</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;idle&#39;</span><span class="p">})</span> <span class="c1"># stop Live if it is running</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_params_from_gui</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_etl_amp_to_zero</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">][</span><span class="s1">&#39;f_pos&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_amplitude</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;etl_offset&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_amp&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># clip negative values for ETL</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_amplitude</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_points</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Number of points must be odd, got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_points</span><span class="si">}</span><span class="s2"> instead.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_points</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initial value: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, searching in (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">), n_points </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_points</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delay_s</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">snap</span><span class="p">(</span><span class="n">write_flag</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">laser_blanking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># clears the first image from buffer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">snap</span><span class="p">(</span><span class="n">write_flag</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">laser_blanking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># this shares downsampled image via slot self.set_image()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metric_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">shannon_dct</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span><span class="p">)</span> <span class="c1"># Reset to initial state</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delay_s</span><span class="p">)</span> <span class="c1"># give it some time to settle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">snap</span><span class="p">(</span><span class="n">write_flag</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># this shares downsampled image via slot self.set_image()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ini_metric</span> <span class="o">=</span> <span class="n">shannon_dct</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">)</span>
+
+        <span class="c1">#fit with Gaussian</span>
+        <span class="n">fit_center</span><span class="p">,</span> <span class="n">fit_sigma</span><span class="p">,</span> <span class="n">fit_amp</span><span class="p">,</span> <span class="n">fit_offset</span> <span class="o">=</span> <span class="n">fit_gaussian_1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metric_array</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span><span class="p">),</span> <span class="mi">51</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gaussian_values</span> <span class="o">=</span> <span class="n">gaussian_1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_grid</span><span class="p">,</span> <span class="n">fit_center</span><span class="p">,</span> <span class="n">fit_sigma</span><span class="p">,</span> <span class="n">fit_amp</span><span class="p">,</span> <span class="n">fit_offset</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">new_state</span> <span class="o">=</span> <span class="n">fit_center</span>
+
+        <span class="c1"># Plot the results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_results_window</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_results</span><span class="p">()</span>
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.create_results_window">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.create_results_window">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_results_window</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span> <span class="o">=</span> <span class="n">loadUi</span><span class="p">(</span><span class="s1">&#39;gui/mesoSPIM_Optimizer_Results.ui&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WA_DeleteOnClose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;Optimization results&#39;</span><span class="p">)</span>
+        <span class="c1"># signal switchboard for results window</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">acceptButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accept_new_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">discardButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discard_new_state</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.plot_results">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.plot_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">graphics_widget</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">GraphicsLayoutWidget</span><span class="p">(</span><span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">plot0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graphics_widget</span><span class="o">.</span><span class="n">addPlot</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;Image metric&#39;</span><span class="p">)</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">addLegend</span><span class="p">(</span><span class="n">offset</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_array</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symbolBrush</span><span class="o">=</span><span class="p">(</span><span class="mi">150</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">150</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;measured&#39;</span><span class="p">)</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_metric</span><span class="p">],</span>  <span class="n">symbolBrush</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">250</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;old state&#39;</span><span class="p">)</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">new_state</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gaussian_values</span><span class="p">)],</span> <span class="n">symbolBrush</span><span class="o">=</span><span class="p">(</span><span class="mi">250</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;new state&#39;</span><span class="p">)</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_grid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gaussian_values</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">symbol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fitted&#39;</span><span class="p">)</span>
+
+        <span class="n">labelStyle</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;color&#39;</span><span class="p">:</span> <span class="s1">&#39;#FFF&#39;</span><span class="p">,</span> <span class="s1">&#39;font-size&#39;</span><span class="p">:</span> <span class="s1">&#39;14pt&#39;</span><span class="p">}</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">setLabel</span><span class="p">(</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">,</span> <span class="o">**</span><span class="n">labelStyle</span><span class="p">)</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">setLabel</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;Shannon(DCT), AU&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">labelStyle</span><span class="p">)</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">showGrid</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">plot0</span><span class="o">.</span><span class="n">setYRange</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gaussian_values</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_array</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">*</span><span class="mf">0.7</span><span class="p">,</span>
+                        <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gaussian_values</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_array</span><span class="o">.</span><span class="n">max</span><span class="p">())</span><span class="o">*</span><span class="mf">1.2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">label_results</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results_string</span><span class="p">())</span>
+
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graphics_widget</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">AlignHCenter</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">label_results</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">AlignHCenter</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">acceptButton</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">AlignHCenter</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">discardButton</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">AlignHCenter</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_Optimizer.results_string">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.results_string">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">results_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pretty formatting&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Old: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="se">\t</span><span class="s2"> New: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_state</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="se">\t</span><span class="s2"> Diff: </span><span class="si">{</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_state</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span><span class="p">)</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Old: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="se">\t</span><span class="s2"> New: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_state</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="se">\t</span><span class="s2"> Diff: </span><span class="si">{</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_state</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">ini_state</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">accept_new_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_state</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fitted value: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_state</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delay_s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">snap</span><span class="p">(</span><span class="n">write_flag</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">laser_blanking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">state_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;New </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_key</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">state_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">discard_new_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">new_state</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_window</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">camera_window</span><span class="o">.</span><span class="n">set_roi</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results_window</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

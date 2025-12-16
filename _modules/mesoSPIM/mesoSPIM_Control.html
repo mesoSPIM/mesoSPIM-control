@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.mesoSPIM_Control &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.mesoSPIM_Control</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.mesoSPIM_Control</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">mesoSPIM_control.py</span>
+<span class="sd">========================================</span>
+<span class="sd">The core module of the mesoSPIM software</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="n">__authors__</span> <span class="o">=</span> <span class="s2">&quot;mesoSPIM team&quot;</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;GPL v3&quot;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;1.11.1&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtWidgets</span><span class="p">,</span> <span class="n">QtCore</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">qdarkstyle</span>
+<span class="n">package_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">package_directory</span><span class="p">))</span> <span class="c1"># this is critical for &#39;from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow&#39; to work in both script and package form.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mesoSPIM.src.mesoSPIM_MainWindow</span><span class="w"> </span><span class="kn">import</span> <span class="n">mesoSPIM_MainWindow</span>
+
+
+<div class="viewcode-block" id="load_config_UI">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.load_config_UI">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_config_UI</span><span class="p">(</span><span class="n">current_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Bring up a GUI that allows the user to select a microscope configuration to import</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">cfg_app</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
+    <span class="n">current_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s1">&#39;./config&#39;</span><span class="p">)</span>
+    <span class="n">global_config_path</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">global_config_path</span> <span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getOpenFileName</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span>
+                                                                   <span class="s1">&#39;Open microscope configuration file&#39;</span><span class="p">,</span><span class="n">current_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">global_config_path</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">load_config_from_file</span><span class="p">(</span><span class="n">global_config_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span><span class="p">,</span> <span class="n">global_config_path</span>
+    <span class="k">else</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Application shutdown &#39;&#39;&#39;</span>
+        <span class="n">warning</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Shutdown warning&#39;</span><span class="p">,</span>
+                                                <span class="s1">&#39;No configuration file selected - shutting down!&#39;</span><span class="p">,</span>
+                                                <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Ok</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="load_config_from_file">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.load_config_from_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_config_from_file</span><span class="p">(</span><span class="n">path_to_config</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Load a microscope configuration from a file using importlib</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">spec_from_file_location</span><span class="p">(</span><span class="s1">&#39;module.name&#39;</span><span class="p">,</span> <span class="n">path_to_config</span><span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">module_from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+    <span class="n">spec</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">exec_module</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Configuration file loaded: </span><span class="si">{</span><span class="n">path_to_config</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+
+
+<div class="viewcode-block" id="stage_referencing_check">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.stage_referencing_check">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">stage_referencing_check</span><span class="p">(</span><span class="n">cfg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Due to problems with some PI stages loosing reference information</span>
+<span class="sd">    after restarting the mesoSPIM software, some stage configurations require</span>
+<span class="sd">    a reference movement to be carried out before starting the rest of the software.</span>
+
+<span class="sd">    As reference movements can damage the instrument, this function warns users</span>
+<span class="sd">    about this problem by message boxes and asks them to reach a safe state.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PI_rotzf_and_Galil_xy&#39;</span> <span class="ow">or</span> <span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PI_rotz_and_Galil_xyf&#39;</span><span class="p">:</span>
+        <span class="n">warning</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="s1">&#39;Sample z reference movement necessary!&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;Please move the XYZ stage to position where a reference z movement (to the midpoint of the movement range) is safe!&#39;</span><span class="p">,</span>
+                <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Cancel</span> <span class="o">|</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Ok</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">warning</span> <span class="o">==</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Cancel</span><span class="p">:</span>
+            <span class="n">shutdown_message</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="s1">&#39;Shutdown warning&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;No reference movement - shutting down!&#39;</span><span class="p">,</span>
+                    <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Ok</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="get_parser">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.get_parser">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_parser</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse command-line input arguments</span>
+<span class="sd">    :return: The argparse parser object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-C&#39;</span><span class="p">,</span> <span class="s1">&#39;--console&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>  <span class="c1"># store_true makes it False by default</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Start a ipython console&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-D&#39;</span><span class="p">,</span> <span class="s1">&#39;--demo&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Start in demo mode&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">parser</span></div>
+
+
+
+<div class="viewcode-block" id="dark_mode_check">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.dark_mode_check">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">dark_mode_check</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;dark_mode&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cfg</span><span class="o">.</span><span class="n">dark_mode</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;ui_options&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cfg</span><span class="o">.</span><span class="n">ui_options</span><span class="p">[</span><span class="s1">&#39;dark_mode&#39;</span><span class="p">]):</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">qdarkstyle</span><span class="o">.</span><span class="n">load_stylesheet</span><span class="p">(</span><span class="n">qt_api</span><span class="o">=</span><span class="s1">&#39;pyqt5&#39;</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="get_logger">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.get_logger">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_logger</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">package_directory</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;logging_level&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cfg</span><span class="o">.</span><span class="n">logging_level</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;DEBUG&#39;</span><span class="p">,</span> <span class="s1">&#39;INFO&#39;</span><span class="p">):</span>
+        <span class="n">LOGGING_LEVEL</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">logging_level</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">LOGGING_LEVEL</span> <span class="o">=</span> <span class="s1">&#39;INFO&#39;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Config file has missing parameter &#39;logging_level&#39; (&#39;INFO&#39;, &#39;DEBUG&#39;). Setting to &#39;INFO&#39; value.&quot;</span><span class="p">)</span>
+    <span class="n">timestr</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">)</span>
+    <span class="n">logging_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">package_directory</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">,</span> <span class="n">timestr</span> <span class="o">+</span> <span class="s1">&#39;.log&#39;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">logging_filename</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">LOGGING_LEVEL</span><span class="p">,</span>
+                        <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(asctime)-8s</span><span class="s1">:</span><span class="si">%(levelname)s</span><span class="s1">:</span><span class="si">%(threadName)s</span><span class="s1">:</span><span class="si">%(thread)d</span><span class="s1">:</span><span class="si">%(module)s</span><span class="s1">:</span><span class="si">%(funcName)s</span><span class="s1">:</span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">logger</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">embed_console</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">demo_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load a configuration file according to the following rules:</span>
+<span class="sd">    1. If the user asked for demo mode, load the `demo_config.py` file</span>
+<span class="sd">    2. Else, ff the user did not ask for demo mode:</span>
+<span class="sd">     - if there is only one non-demo config file, load that.</span>
+<span class="sd">     - if there are multiple config files, bring up the UI loader.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Starting control software&#39;</span><span class="p">)</span>
+    <span class="n">QtCore</span><span class="o">.</span><span class="n">QThread</span><span class="o">.</span><span class="n">currentThread</span><span class="p">()</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;MainThread&#39;</span><span class="p">)</span>
+    <span class="n">demo_fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">package_directory</span><span class="p">,</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="s1">&#39;demo_config.py&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">demo_fname</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Demo file not found: </span><span class="si">{</span><span class="n">demo_fname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">demo_mode</span><span class="p">:</span>
+        <span class="n">config_fname</span> <span class="o">=</span> <span class="n">demo_fname</span>
+        <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config_from_file</span><span class="p">(</span><span class="n">config_fname</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">all_configs</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">package_directory</span><span class="p">,</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="s1">&#39;*.py&#39;</span><span class="p">))</span> <span class="c1"># All possible config files</span>
+        <span class="n">all_configs_no_demo</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="nb">str</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s1">&#39;demo_&#39;</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">all_configs</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_configs_no_demo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">config_fname</span> <span class="o">=</span> <span class="n">demo_fname</span>
+            <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config_from_file</span><span class="p">(</span><span class="n">config_fname</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_configs_no_demo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">config_fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">package_directory</span><span class="p">,</span> <span class="n">all_configs_no_demo</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config_from_file</span><span class="p">(</span><span class="n">config_fname</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cfg</span><span class="p">,</span> <span class="n">config_fname</span> <span class="o">=</span> <span class="n">load_config_UI</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">package_directory</span><span class="p">,</span> <span class="s1">&#39;config&#39;</span><span class="p">))</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">package_directory</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Config file loaded: </span><span class="si">{</span><span class="n">config_fname</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM-control version: </span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
+    <span class="n">dark_mode_check</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">stage_referencing_check</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span>
+    <span class="n">ex</span> <span class="o">=</span> <span class="n">mesoSPIM_MainWindow</span><span class="p">(</span><span class="n">package_directory</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="s2">&quot;mesoSPIM Main Window, v. &quot;</span> <span class="o">+</span> <span class="n">__version__</span><span class="p">)</span>
+    <span class="n">ex</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="c1"># hook up the log display widget: discontinued</span>
+    <span class="c1">#logging.getLogger().addHandler(ex.log_display_handler)</span>
+
+    <span class="k">if</span> <span class="n">embed_console</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">traitlets.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Config</span>
+        <span class="n">cfg</span> <span class="o">=</span> <span class="n">Config</span><span class="p">()</span>
+        <span class="n">cfg</span><span class="o">.</span><span class="n">InteractiveShellApp</span><span class="o">.</span><span class="n">gui</span> <span class="o">=</span> <span class="s1">&#39;qt5&#39;</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">IPython</span>
+        <span class="n">IPython</span><span class="o">.</span><span class="n">start_ipython</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">cfg</span><span class="p">,</span> <span class="n">argv</span><span class="o">=</span><span class="p">[],</span> <span class="n">user_ns</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">mSpim</span><span class="o">=</span><span class="n">ex</span><span class="p">,</span> <span class="n">app</span><span class="o">=</span><span class="n">app</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">exec_</span><span class="p">())</span></div>
+
+
+
+<div class="viewcode-block" id="run">
+<a class="viewcode-back" href="../../api/mesoSPIM.html#mesoSPIM.mesoSPIM_Control.run">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">():</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">get_parser</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">embed_console</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">console</span><span class="p">,</span> <span class="n">demo_mode</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">demo</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">run</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
