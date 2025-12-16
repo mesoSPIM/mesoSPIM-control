@@ -114,7 +114,7 @@ exclude_patterns = []
 pygments_style = "sphinx"
 
 # --- HTML output -------------------------------------------------------------
-html_theme = "furo"
+html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 htmlhelp_basename = "mesoSPIMControldoc"
 
