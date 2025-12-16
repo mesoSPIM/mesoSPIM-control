@@ -115,7 +115,6 @@ pygments_style = "sphinx"
 
 # --- HTML output -------------------------------------------------------------
 
-html_theme = "sphinx_rtd_theme"   # optional but recommended
 html_static_path = ["_static"]
 htmlhelp_basename = "mesoSPIMControldoc"
 
