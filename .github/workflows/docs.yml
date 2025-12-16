@@ -34,7 +34,6 @@ jobs:
           ls
           cp README.md docs/source/README.md
           cp CONTRIBUTING.md docs/source/CONTRIBUTING.md
-          cp CHANGELOG.md docs/source/CHANGELOG.md
 
       - name: Generate API docs with sphinx-apidoc
         run: |
