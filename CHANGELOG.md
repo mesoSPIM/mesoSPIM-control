@@ -295,9 +295,3 @@ to f_start and at z_end, the detection path focus is at z_end. This allows imagi
 * **Fix:** Fixed a variety of multithreading bugs.
 * **Fix:** Galvo amplitude and frequency in the startup part of the configuration file are now used to set startup parameters properly
 
-## Contributors 
-* Fabian Voigt (@ffvoigt)
-* Nikita Vladimirov (@nvladimus)
-* Kevin Dean (@AdvancedImagingUTSW)
-* Christian Schulze (@drchrisch)
-* Rob Campbell (@raacampbell)
