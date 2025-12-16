@@ -1,7 +1,5 @@
-Changes Log
-===============
+Changelog
+=========
 
-.. toctree::
-   :maxdepth: 2
-
-   CHANGELOG
+.. literalinclude:: CHANGELOG.md
+   :language: markdown
