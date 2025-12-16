@@ -25,9 +25,8 @@ Contents
 
    getting_started
    api/modules
-   contributing
    changelog
-
+   contributing
 
 Indices and tables
 ------------------
