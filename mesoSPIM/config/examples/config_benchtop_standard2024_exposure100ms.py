@@ -189,7 +189,7 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' o
                     'y_load_position': 35000,
                     'y_unload_position': -20000,
                     'x_center_position': 500,
-                    'z_center_position': 500,
+                    'z_center_position': 28000,
                     'x_max' : 25000,
                     'x_min' : -25000,
                     'y_max' : 550000,
@@ -287,11 +287,7 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 There should be always '1x' zoom present, for correct initialization of the software.
 '''
 
-zoomdict = {'0.9x' : 1,
-            '1x' : 2,
-            '1.2x' : 3,
-            '2x' : 4,
-            '4x' : 5,
+zoomdict = {'2x' : 4,
             '5x' : 6,
             '7.5x' : 7,
             '10x' : 8,
@@ -300,11 +296,7 @@ zoomdict = {'0.9x' : 1,
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.9x' : 4.25/0.9,
-            '1x': 4.25,
-            '1.2x' : 4.25/1.2,
-            '2x' : 4.25/2,
-            '4x' : 4.25/4,
+pixelsize = {'2x' : 4.25/2,
             '5x' : 4.25/5,
             '7.5x' : 4.25/7.5,
             '10x' : 4.25/10,
