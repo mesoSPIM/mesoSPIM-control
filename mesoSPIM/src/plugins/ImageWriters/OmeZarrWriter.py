@@ -131,19 +131,19 @@ class OMEZarrWriter(ImageWriter):
         #######################
         ####  GET Defaults  ###
         #######################
-        ome_version = '0.5',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-        generate_multiscales = True,  # True, False. False: only the primary data is saved. True: multiscale data is generated
-        compression = 'zstd',  # None, 'zstd', 'lz4'
-        compression_level = 5,  # 1-9
-        shards = (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-        base_chunks = (64, 256, 256),  # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-        target_chunks = (64, 64, 64),  # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-        async_finalize = True,  # True, False
+        ome_version = '0.5'  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+        generate_multiscales = True  # True, False. False: only the primary data is saved. True: multiscale data is generated
+        compression = 'zstd'  # None, 'zstd', 'lz4'
+        compression_level = 5  # 1-9
+        shards = (64, 6000, 6000)  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+        base_chunks = (64, 256, 256)  # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+        target_chunks = (64, 64, 64)  # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+        async_finalize = True  # True, False
 
         # BigStitcher XML Options Defaults - for easy drag/drop import into BigStitcher
-        write_big_stitcher_xml = True,  # True, False
-        flip_xyz = (False, False, False),  # match BigStitcher coordinates to mesoSPIM axes.
-        transpose_xy = False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
+        write_big_stitcher_xml = True  # True, False
+        flip_xyz = (False, False, False)  # match BigStitcher coordinates to mesoSPIM axes.
+        transpose_xy = False  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
 
         #####################################
         ####  Load from Config if defined ###
@@ -169,8 +169,16 @@ class OMEZarrWriter(ImageWriter):
         acq_list = req.acq_list
 
         # Logic for naming files and metadata
-        isetup = acq_list.index(acq)
-        self.omezarr_group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0)  # time = 0 for now
+        # Define descriptive group name for this tile
+        mag = acq['zoom'][:-1]  # remove x at end
+        laser = acq['laser'][:-3]  # remove nm at end
+        rot = acq['rot']
+        shutter_id = acq['shutterconfig']
+        shutter_id = 0 if shutter_id == 'Left' else 1
+        tile = acq_list.get_tile_index(acq)
+        group_name = f'Mag{mag}_Tile{tile}_Ch{laser}_Sh{shutter_id}_Rot{rot}.ome.zarr'
+        self.omezarr_group_name = group_name
+
         self.current_acquire_file_path = req.uri + '/' + self.omezarr_group_name
 
         self.metadata_file_path = req.uri + '_' + self.omezarr_group_name + '_meta.txt'
@@ -215,6 +223,7 @@ class OMEZarrWriter(ImageWriter):
 
 
             self.xml_writer.append_acquisition(iacq=acq_list.index(acq),
+                                               group_name=self.omezarr_group_name,
                                                illumination=acq_list.find_value_index(acq['shutterconfig'],
                                                                                       'shutterconfig'),
                                                channel=acq_list.find_value_index(acq['laser'], 'laser'),

@@ -218,6 +218,7 @@ class OMEZarrWriterMP(ImageWriter):
             write_big_stitcher_xml = req.writer_config_file_values.get('write_big_stitcher_xml', write_big_stitcher_xml)
             flip_xyz = req.writer_config_file_values.get('flip_xyz', flip_xyz)
             transpose_xy = req.writer_config_file_values.get('transpose_xy', transpose_xy)
+            ring_buffer_size = req.writer_config_file_values.get('ring_buffer_size', ring_buffer_size)
 
         # Save req so metadata_file_info can see it
         self.req = req
@@ -225,8 +226,16 @@ class OMEZarrWriterMP(ImageWriter):
         acq_list = req.acq_list
 
         # Logic for naming files and metadata
-        isetup = acq_list.index(acq)
-        self.omezarr_group_name = 's{:d}-t{:d}.zarr'.format(isetup, 0)  # time = 0 for now
+        # Define descriptive group name for this tile
+        mag = acq['zoom'][:-1]  # remove x at end
+        laser = acq['laser'][:-3]  # remove nm at end
+        rot = acq['rot']
+        shutter_id = acq['shutterconfig']
+        shutter_id = 0 if shutter_id == 'Left' else 1
+        tile = acq_list.get_tile_index(acq)
+        group_name = f'Mag{mag}_Tile{tile}_Ch{laser}_Sh{shutter_id}_Rot{rot}.ome.zarr'
+        self.omezarr_group_name = group_name
+
         self.current_acquire_file_path = req.uri + '/' + self.omezarr_group_name
 
         self.metadata_file_path = req.uri + '_' + self.omezarr_group_name + '_meta.txt'
@@ -272,6 +281,7 @@ class OMEZarrWriterMP(ImageWriter):
 
 
             self.xml_writer.append_acquisition(iacq=acq_list.index(acq),
+                                               group_name=self.omezarr_group_name,
                                                illumination=acq_list.find_value_index(acq['shutterconfig'],
                                                                                       'shutterconfig'),
                                                channel=acq_list.find_value_index(acq['laser'], 'laser'),
