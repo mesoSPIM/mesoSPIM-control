@@ -365,6 +365,7 @@ class OMEZarrWriterMP(ImageWriter):
 
         # remember this writer as “in the background”
         self._background_writers.append((self._writer_proc, shm_name))
+        logger.debug("Added a new writer process to the list, total writer processes running: %d", len(self._background_writers))
 
         # You no longer instantiate Live3DPyramidWriter here in the parent.
         self.omezarr_writer = None  # keep attribute for compatibility
