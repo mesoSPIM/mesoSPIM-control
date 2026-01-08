@@ -2094,12 +2094,13 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
     def report_position(self):
         position_dict = self.asi_stages.read_position()
         if position_dict is not None:
+            self.x_pos = position_dict[self.mesoSPIM2ASIdict['x']]
             self.y_pos = position_dict[self.mesoSPIM2ASIdict['y']]
             self.z_pos = position_dict[self.mesoSPIM2ASIdict['z']]
             self.f_pos = position_dict[self.mesoSPIM2ASIdict['f']]
             
             self.create_position_dict()
-
+            self.int_x_pos = self.x_pos + self.int_x_pos_offset
             self.int_y_pos = self.y_pos + self.int_y_pos_offset
             self.int_z_pos = self.z_pos + self.int_z_pos_offset
             self.int_f_pos = self.f_pos + self.int_f_pos_offset
@@ -2122,6 +2123,12 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
         #self.adapt_position_polling_interval_to_state()
 
         motion_dict = {}
+        if 'x_rel' in sdict:
+            x_rel = sdict['x_rel']
+            if self.x_min < self.x_pos + x_rel and self.x_max > self.x_pos + x_rel:
+                motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_rel, 1)})
+            else:
+                self.sig_status_message.emit('Relative movement stopped: x Motion limit would be reached!')
 
         if 'y_rel' in sdict:
             y_rel = sdict['y_rel']
@@ -2169,8 +2176,12 @@ class mesoSPIM_ASI_MS2000_Stage(mesoSPIM_Stage):
             f_offset = 0
             theta_offset = 0
 
-        motion_dict = {}
-
+        motion_dict = {}    
+        if 'x_abs' in dict:
+            x_abs = dict['x_abs'] - x_offset
+            if self.x_min < x_abs and self.x_max > x_abs:
+                motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_abs, 1)})
+                    
         if 'y_abs' in dict:
             y_abs = dict['y_abs'] - y_offset
             if self.y_min < y_abs and self.y_max > y_abs:
