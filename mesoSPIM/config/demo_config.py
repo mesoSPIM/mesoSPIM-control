@@ -278,7 +278,7 @@ filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter
                           'COMport' : 'COM3', # irrelevant for 'ZWO'
                           'baudrate' : 115200, # relevant only for 'Dynamixel', 'Sutter'
                           'servo_id' :  1, # relevant only for 'Dynamixel'
-                          'wheel_speed': 3 # relevant only for 'Sutter'
+                          'wheel_speed': 3  # relevant only for 'Sutter'; valid range 0 (slowest) .. 7 (fastest)
                           }
 '''
 filterdict contains filter labels and their positions. The valid positions are:
