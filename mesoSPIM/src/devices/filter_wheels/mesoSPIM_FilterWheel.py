@@ -214,6 +214,14 @@ class SutterLambda10BFilterWheel:
     def __init__(self, filterwheel_parameters, filterdict, read_on_init=True):
         super().__init__()
         self.filterwheel_parameters = filterwheel_parameters
+
+        # Validate that all required configuration parameters are present
+        required_keys = ('COMport', 'baudrate', 'wheel_speed')
+        missing_keys = [key for key in required_keys if key not in filterwheel_parameters]
+        if missing_keys:
+            raise ValueError(
+                "Missing required filter wheel parameters: " + ", ".join(missing_keys)
+            )
         self.COMport = filterwheel_parameters['COMport']
         self.baudrate = filterwheel_parameters['baudrate']
         self.wheel_speed = filterwheel_parameters['wheel_speed']
