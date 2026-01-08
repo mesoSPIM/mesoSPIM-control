@@ -213,7 +213,6 @@ class LudlFilterWheel(QtCore.QObject):
 class SutterLambda10BFilterWheel:
     def __init__(self, filterwheel_parameters, filterdict, read_on_init=True):
         super().__init__()
-        self.filterwheel_parameters = filterwheel_parameters
 
         # Validate that all required configuration parameters are present
         required_keys = ('COMport', 'baudrate', 'wheel_speed')
