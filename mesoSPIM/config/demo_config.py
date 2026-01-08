@@ -276,7 +276,7 @@ For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary.
 '''
 filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel', 'ZWO'
                           'COMport' : 'COM3', # irrelevant for 'ZWO'
-                          'baudrate' : 115200, # relevant only for 'Dynamixel','Sutter'
+                          'baudrate' : 115200, # relevant only for 'Dynamixel', 'Sutter'
                           'servo_id' :  1, # relevant only for 'Dynamixel'
                           'wheel_speed': 3 # relevant only for 'Sutter'
                           }
