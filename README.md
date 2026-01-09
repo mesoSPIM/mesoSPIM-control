@@ -36,8 +36,8 @@ When installing the MS Visual C++ tools, make sure to check [C++ build tools](ht
 #### Stages
 * PI stages: [Software for Physik Instrumente stages](https://www.physikinstrumente.com/en/products/motion-control-software/). To test the stages, PI MicroMove can be used. 
 * Steinmeyer Mechatronics / Feinmess stages: [Software for using Galil drivers](http://www.galilmc.com/downloads/api) if such a stage is used. To test the stages, GalilTools can be used.
-* ASI stages: [ASI Tiger drivers](http://www.asiimaging.com/support/downloads/tiger-controller-console/). 
-If using USB connection, check ASI instructions on [USB support](http://www.asiimaging.com/support/downloads/usb-support-on-ms-2000-wk-controllers/)
+* ASI stages: [ASI Tiger drivers](https://www.asiimaging.com/support/download/tiger-controller-console/). 
+If using USB connection, check ASI instructions on [USB support](https://www.asiimaging.com/support/download/usb-support-on-ms-2000-wk-controllers/)
 
 ### Installation steps 
 1. Clone this repository either by via GitHub Desktop (recommended) or by downloading and unpacking the ZIP file into folder `C:/Users/Public/mesoSPIM-control`
