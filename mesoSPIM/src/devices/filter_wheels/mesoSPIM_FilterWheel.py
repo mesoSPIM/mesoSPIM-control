@@ -211,10 +211,19 @@ class LudlFilterWheel(QtCore.QObject):
 
 
 class SutterLambda10BFilterWheel:
-    def __init__(self, comport, filterdict, baudrate=9600, read_on_init=True):
+    def __init__(self, filterwheel_parameters, filterdict, read_on_init=True):
         super().__init__()
-        self.COMport = comport
-        self.baudrate = baudrate
+
+        # Validate that all required configuration parameters are present
+        required_keys = ('COMport', 'baudrate', 'wheel_speed')
+        missing_keys = [key for key in required_keys if key not in filterwheel_parameters]
+        if missing_keys:
+            raise ValueError(
+                "Missing required filter wheel parameters: " + ", ".join(missing_keys)
+            )
+        self.COMport = filterwheel_parameters['COMport']
+        self.baudrate = filterwheel_parameters['baudrate']
+        self.wheel_speed = filterwheel_parameters['wheel_speed']
         self.filterdict = filterdict
         self.double_wheel = False
 
@@ -256,7 +265,7 @@ class SutterLambda10BFilterWheel:
         else:
             raise ValueError('Filter designation not in the configuration')
 
-    def set_filter(self, filterposition=0, speed=0, wait_until_done=False):
+    def set_filter(self, filterposition=0, wait_until_done=False):
         # Confirm that the filter is present in the filter dictionary
         if self._check_if_filter_in_filterdict(filterposition) is True:
 
@@ -268,7 +277,7 @@ class SutterLambda10BFilterWheel:
 
                 # Make sure you are moving it to a reasonable filter position, at a reasonable speed.
                 assert self.wheel_position in range(10)
-                assert speed in range(8)
+                assert self.wheel_speed in range(8)
 
                 # If previously we did not confirm that the initialization was complete, check now.
                 if not self.init_finished:
@@ -277,7 +286,7 @@ class SutterLambda10BFilterWheel:
                     logger.info('Done initializing filter wheel.')
 
                 # Filter Wheel Command Byte Encoding = wheel + (speed*16) + position = command byte
-                outputcommand = self.wheel_position + 16 * speed
+                outputcommand = self.wheel_position + 16 * self.wheel_speed
                 outputcommand = outputcommand.to_bytes(1, 'little')
 
                 # Send out Command
