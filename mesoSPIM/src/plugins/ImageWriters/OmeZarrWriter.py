@@ -118,6 +118,7 @@ class OMEZarrWriter(ImageWriter):
             IncludeMag = True,
             IncludeTile = False,
             IncludeChannel = True,
+            IncludeFilter = True,
             IncludeShutter = False,
             IncludeRotation = False,
             IncludeSuffix = None,      # Str suffix to be appended to the end of filenames

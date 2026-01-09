@@ -47,6 +47,7 @@ class TiffWriter(ImageWriter):
             IncludeMag = True,
             IncludeTile = True,
             IncludeChannel = True,
+            IncludeFilter = True,
             IncludeShutter = True,
             IncludeRotation = True,
             IncludeSuffix = None,
