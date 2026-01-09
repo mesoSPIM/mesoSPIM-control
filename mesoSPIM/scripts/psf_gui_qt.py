@@ -490,9 +490,6 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             with open(fname, "w") as f:
                 print(s)   # optional: also print to console, like in notebook
                 f.write(s)
-            QtWidgets.QMessageBox.information(
-                self, "Saved", f"Summary TXT stats saved to:\n{fname}"
-            )
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save TXT:\n{e}")
 
@@ -513,9 +510,6 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         try:
             self.stats_df.to_csv(fname, index=True)
-            QtWidgets.QMessageBox.information(
-                self, "Saved", f"CSV stats saved to:\n{fname}"
-            )
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save CSV:\n{e}")
 
@@ -545,9 +539,6 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             # Ensure layout is up to date before saving
             fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2)
             fig.savefig(fname, dpi=300, format="png")
-            QtWidgets.QMessageBox.information(
-                self, "Saved", f"Figure saved as 300 DPI PNG:\n{fname}"
-            )
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PNG:\n{e}")
 
