@@ -122,6 +122,10 @@ class FilenameWizard(QtWidgets.QWizard):
                 else:
                     filename += f'Ch{self.parent.model.getLaser(row)[:-3]}_'
 
+            # Add Filter
+            if self.selected_writer.get('file_names').IncludeFilter:
+                filename += f'Flt{replace_with_underscores(self.parent.model.getFilter(row))}_'
+
             # Add Shutter
             if self.selected_writer.get('file_names').IncludeShutter:
                 if self.parent.model.getNShutterConfigs() > 1:

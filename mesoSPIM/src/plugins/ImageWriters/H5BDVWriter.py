@@ -68,6 +68,7 @@ class H5BDVWriter(ImageWriter):
             IncludeMag = True,
             IncludeTile = False,
             IncludeChannel = True,
+            IncludeFilter = False,
             IncludeShutter = False,
             IncludeRotation = False,
             IncludeSuffix = 'bdv',      # Str suffix to be appended to the end of filenames

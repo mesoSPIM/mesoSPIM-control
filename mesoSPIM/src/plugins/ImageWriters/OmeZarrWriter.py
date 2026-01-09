@@ -118,6 +118,7 @@ class OMEZarrWriter(ImageWriter):
             IncludeMag = True,
             IncludeTile = False,
             IncludeChannel = True,
+            IncludeFilter = False,
             IncludeShutter = False,
             IncludeRotation = False,
             IncludeSuffix = None,      # Str suffix to be appended to the end of filenames
@@ -176,7 +177,9 @@ class OMEZarrWriter(ImageWriter):
         shutter_id = acq['shutterconfig']
         shutter_id = 0 if shutter_id == 'Left' else 1
         tile = acq_list.get_tile_index(acq)
-        group_name = f'Mag{mag}_Tile{tile}_Ch{laser}_Sh{shutter_id}_Rot{rot}.ome.zarr'
+        filter = acq['filter']
+        filter = filter.replace(' ', '_').replace('/', '_')  # clean up filter name for filename
+        group_name = f'Mag{mag}_Tile{tile}_Ch{laser}_Flt{filter}_Sh{shutter_id}_Rot{rot}.ome.zarr'
         self.omezarr_group_name = group_name
 
         self.current_acquire_file_path = req.uri + '/' + self.omezarr_group_name
