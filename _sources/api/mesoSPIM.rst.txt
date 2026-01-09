@@ -1,0 +1,30 @@
+mesoSPIM package
+================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src
+   mesoSPIM.test
+
+Submodules
+----------
+
+mesoSPIM.mesoSPIM\_Control module
+---------------------------------
+
+.. automodule:: mesoSPIM.mesoSPIM_Control
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM
+   :members:
+   :undoc-members:
+   :show-inheritance:

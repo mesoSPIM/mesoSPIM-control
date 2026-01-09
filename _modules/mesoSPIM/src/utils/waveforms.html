@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.utils.waveforms &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.utils.waveforms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.utils.waveforms</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">mesoSPIM Module for creating waveforms and analog output signals</span>
+
+<span class="sd">Author: Fabian Voigt</span>
+
+<span class="sd">#TODO</span>
+<span class="sd">* Usage of amplitude is not consistent (peak-to-peak in single_pulse)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1">#import nidaqmx</span>
+<span class="c1"># from nidaqmx.constants import AcquisitionType, TaskMode</span>
+<span class="c1"># from nidaqmx.constants import LineGrouping</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">signal</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<div class="viewcode-block" id="single_pulse">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.waveforms.single_pulse">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">single_pulse</span><span class="p">(</span>
+    <span class="n">samplerate</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span>  <span class="c1"># in samples/second</span>
+    <span class="n">sweeptime</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>      <span class="c1"># in seconds</span>
+    <span class="n">delay</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>           <span class="c1"># in percent</span>
+    <span class="n">pulsewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>       <span class="c1"># in percent</span>
+    <span class="n">amplitude</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>        <span class="c1"># in volts</span>
+    <span class="n">offset</span><span class="o">=</span><span class="mi">0</span>            <span class="c1"># in volts</span>
+    <span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns a numpy array with a single pulse</span>
+
+<span class="sd">    Used for creating TTL pulses out of analog outputs and laser intensity</span>
+<span class="sd">    pulses.</span>
+
+<span class="sd">    Units:</span>
+<span class="sd">    samplerate: Integer</span>
+<span class="sd">    sweeptime:  Seconds</span>
+<span class="sd">    delay:      Percent</span>
+<span class="sd">    pulsewidth: Percent</span>
+<span class="sd">    amplitude:  Volts</span>
+<span class="sd">    offset:     Volts</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    typical_TTL_pulse = single_pulse(samplerate, sweeptime, 10, 1, 5, 0)</span>
+<span class="sd">    typical_laser_pulse = single_pulse(samplerate, sweeptime, 10, 80, 1.25, 0)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="c1"># get an integer number of samples</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span><span class="p">)))</span>
+    <span class="c1"># create an array just containing the offset voltage:</span>
+    <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">samples</span><span class="p">))</span><span class="o">+</span><span class="n">offset</span>
+
+    <span class="c1"># convert pulsewidth and delay in % into number of samples</span>
+    <span class="n">pulsedelaysamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">samples</span> <span class="o">*</span> <span class="n">delay</span> <span class="o">/</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="n">pulsesamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">samples</span> <span class="o">*</span> <span class="n">pulsewidth</span> <span class="o">/</span> <span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1"># modify the array</span>
+    <span class="n">array</span><span class="p">[</span><span class="n">pulsedelaysamples</span><span class="p">:</span><span class="n">pulsesamples</span><span class="o">+</span><span class="n">pulsedelaysamples</span><span class="p">]</span> <span class="o">=</span> <span class="n">amplitude</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">array</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="tunable_lens_ramp">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.waveforms.tunable_lens_ramp">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">tunable_lens_ramp</span><span class="p">(</span>
+    <span class="n">samplerate</span> <span class="o">=</span> <span class="mi">100000</span><span class="p">,</span>    <span class="c1"># in samples/second</span>
+    <span class="n">sweeptime</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span>        <span class="c1"># in seconds</span>
+    <span class="n">delay</span> <span class="o">=</span> <span class="mf">7.5</span><span class="p">,</span>            <span class="c1"># in percent</span>
+    <span class="n">rise</span> <span class="o">=</span> <span class="mi">85</span><span class="p">,</span>              <span class="c1"># in percent</span>
+    <span class="n">fall</span> <span class="o">=</span> <span class="mf">2.5</span><span class="p">,</span>             <span class="c1"># in percent</span>
+    <span class="n">amplitude</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>          <span class="c1"># in volts</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>              <span class="c1"># in volts</span>
+    <span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns a numpy array with a ETL ramp</span>
+
+<span class="sd">    The waveform starts at offset and stays there for the delay period, then</span>
+<span class="sd">    rises linearly to 2x amplitude (amplitude here refers to 1/2 peak-to-peak)</span>
+<span class="sd">    and drops back down to the offset voltage during the fall period.</span>
+
+<span class="sd">    Switching from a left to right ETL ramp is possible by exchanging the</span>
+<span class="sd">    rise and fall periods.</span>
+
+<span class="sd">    Units of parameters</span>
+<span class="sd">    samplerate: Integer</span>
+<span class="sd">    sweeptime:  Seconds</span>
+<span class="sd">    delay:      Percent</span>
+<span class="sd">    rise:       Percent</span>
+<span class="sd">    fall:       Percent</span>
+<span class="sd">    amplitude:  Volts</span>
+<span class="sd">    offset:     Volts</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">sum_perc</span> <span class="o">=</span> <span class="n">delay</span> <span class="o">+</span> <span class="n">rise</span> <span class="o">+</span> <span class="n">fall</span>
+    <span class="k">assert</span> <span class="n">sum_perc</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ETL Delay, Ramp rising and Ramp falling % amount to </span><span class="si">{</span><span class="n">sum_perc</span><span class="si">}</span><span class="s2"> %&quot;</span><span class="p">)</span>
+    <span class="c1"># get an integer number of samples</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span><span class="p">)))</span>
+    <span class="c1"># create an array just containing the negative amplitude voltage:</span>
+    <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span><span class="o">-</span><span class="n">amplitude</span> <span class="o">+</span> <span class="n">offset</span>
+
+    <span class="c1"># convert rise, fall, and delay in % into number of samples</span>
+    <span class="n">delaysamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">samples</span> <span class="o">*</span> <span class="n">delay</span> <span class="o">/</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="n">risesamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">samples</span> <span class="o">*</span> <span class="n">rise</span> <span class="o">/</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="n">fallsamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">samples</span> <span class="o">*</span> <span class="n">fall</span> <span class="o">/</span> <span class="mi">100</span><span class="p">)</span>
+
+    <span class="n">risearray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">risesamples</span><span class="p">)</span>
+    <span class="n">risearray</span> <span class="o">=</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">risearray</span><span class="p">,</span> <span class="n">risesamples</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">offset</span>
+
+    <span class="n">fallarray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">fallsamples</span><span class="p">)</span>
+    <span class="n">fallarray</span> <span class="o">=</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">fallarray</span><span class="p">,</span> <span class="n">fallsamples</span><span class="p">))</span> <span class="o">+</span> <span class="n">offset</span>
+
+    <span class="c1"># rise phase</span>
+    <span class="n">array</span><span class="p">[</span><span class="n">delaysamples</span><span class="p">:</span><span class="n">delaysamples</span><span class="o">+</span><span class="n">risesamples</span><span class="p">]</span> <span class="o">=</span> <span class="n">risearray</span>
+    <span class="c1"># fall phase</span>
+    <span class="n">array</span><span class="p">[</span><span class="n">delaysamples</span> <span class="o">+</span> <span class="n">risesamples</span> <span class="p">:</span> <span class="n">delaysamples</span> <span class="o">+</span> <span class="n">risesamples</span> <span class="o">+</span> <span class="n">fallsamples</span><span class="p">]</span> <span class="o">=</span> <span class="n">fallarray</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">array</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="sawtooth">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.waveforms.sawtooth">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sawtooth</span><span class="p">(</span>
+    <span class="n">samplerate</span> <span class="o">=</span> <span class="mi">100000</span><span class="p">,</span>    <span class="c1"># in samples/second</span>
+    <span class="n">sweeptime</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span>        <span class="c1"># in seconds</span>
+    <span class="n">frequency</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>         <span class="c1"># in Hz</span>
+    <span class="n">amplitude</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>          <span class="c1"># in V</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>             <span class="c1"># in V</span>
+    <span class="n">dutycycle</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>          <span class="c1"># dutycycle in percent</span>
+    <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span>          <span class="c1"># in rad</span>
+    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns a numpy array with a sawtooth function</span>
+
+<span class="sd">    Used for creating the galvo signal.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">    galvosignal =  sawtooth(100000, 0.4, 199, 3.67, 0, 50, np.pi)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">samples</span> <span class="o">=</span>  <span class="nb">int</span><span class="p">(</span><span class="n">samplerate</span><span class="o">*</span><span class="n">sweeptime</span><span class="p">)</span>
+    <span class="n">dutycycle</span> <span class="o">=</span> <span class="n">dutycycle</span><span class="o">/</span><span class="mi">100</span>       <span class="c1"># the signal.sawtooth width parameter has to be between 0 and 1</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sweeptime</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
+    <span class="c1"># Using the signal toolbox from scipy for the sawtooth:</span>
+    <span class="n">waveform</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">sawtooth</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">frequency</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">phase</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">dutycycle</span><span class="p">)</span>
+    <span class="c1"># Scale the waveform to a certain amplitude and apply an offset:</span>
+    <span class="n">waveform</span> <span class="o">=</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="n">waveform</span> <span class="o">+</span> <span class="n">offset</span>
+
+    <span class="k">return</span> <span class="n">waveform</span></div>
+
+
+<div class="viewcode-block" id="square">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.waveforms.square">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">square</span><span class="p">(</span>
+    <span class="n">samplerate</span> <span class="o">=</span> <span class="mi">100000</span><span class="p">,</span>    <span class="c1"># in samples/second</span>
+    <span class="n">sweeptime</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span>        <span class="c1"># in seconds</span>
+    <span class="n">frequency</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>         <span class="c1"># in Hz</span>
+    <span class="n">amplitude</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>          <span class="c1"># in V</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>             <span class="c1"># in V</span>
+    <span class="n">dutycycle</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>         <span class="c1"># dutycycle in percent</span>
+    <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>          <span class="c1"># in rad</span>
+    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a numpy array with a rectangular waveform</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">samples</span> <span class="o">=</span>  <span class="nb">int</span><span class="p">(</span><span class="n">samplerate</span><span class="o">*</span><span class="n">sweeptime</span><span class="p">)</span>
+    <span class="n">dutycycle</span> <span class="o">=</span> <span class="n">dutycycle</span><span class="o">/</span><span class="mi">100</span>       <span class="c1"># the signal.square duty parameter has to be between 0 and 1</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sweeptime</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
+
+    <span class="c1"># Using the signal toolbox from scipy for the sawtooth:</span>
+    <span class="n">waveform</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">frequency</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">phase</span><span class="p">,</span> <span class="n">duty</span><span class="o">=</span><span class="n">dutycycle</span><span class="p">)</span>
+    <span class="c1"># Scale the waveform to a certain amplitude and apply an offset:</span>
+    <span class="n">waveform</span> <span class="o">=</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="n">waveform</span> <span class="o">+</span> <span class="n">offset</span>
+
+    <span class="k">return</span> <span class="n">waveform</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

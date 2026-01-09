@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM-control &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=c8897f99"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mesoSPIM" href="api/modules.html" />
+    <link rel="prev" title="Getting started" href="getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="getting_started.html">Getting started</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">mesoSPIM-control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#device-drivers">Device drivers</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#installation-steps">Installation steps</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#launching">Launching</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#miniforge-prompt">Miniforge prompt</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#desktop-shortcut-fast-launch">Desktop shortcut (fast launch)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#prepare-a-configuration-file-and-wire-the-hardware">Prepare a configuration file and wire the hardware</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#updating-existing-installation">Updating existing installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#further-resources">Further resources</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-to-cite-this-software">How to cite this software</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="getting_started.html">Getting started</a></li>
+      <li class="breadcrumb-item active">mesoSPIM-control</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/README.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p><a class="reference external" href="https://doi.org/10.5281/zenodo.6109315"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.6109315.svg" /></a>
+<a class="reference external" href="https://www.python.org/downloads/release/python-312/"><img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-blue.svg" /></a>
+<a class="reference external" href="https://www.gnu.org/licenses/gpl-3.0"><img alt="License: GPL v3" src="https://img.shields.io/badge/License-GPLv3-blue.svg" /></a>
+<a class="reference external" href="https://forum.image.sc/tag/mesospim"><img alt="Static Badge" src="https://img.shields.io/badge/user_forum-image.sc-blue" /></a></p>
+<section id="mesospim-control">
+<h1>mesoSPIM-control<a class="headerlink" href="#mesospim-control" title="Link to this heading"></a></h1>
+<p>Image acquisition software for <a class="reference external" href="http://mesospim.org/">mesoSPIM</a> light-sheet microscopes. Compatible with all official versions of mesoSPIM hardware (Benchtop, v4, v5), and multple alternative configurations.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The mesoSPIM (mesoscale selective plane illumination microscope) is a family of versatile open-source microscopes optimized for fast imaging of large (many cm³) cleared tissue samples at near-isotropic resolution.
+Currently, more than 30 mesoSPIM setups are operational <a class="reference external" href="http://mesospim.org/setups/">around the world</a>.
+Parts lists, drawings, and instructions for building a mesoSPIM can be found in the wiki pages:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/mesoSPIM/benchtop-hardware">Benchtop mesoSPIM</a></p></li>
+<li><p><a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-hardware-documentation">mesoSPIM v4-5</a></p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">mesoSPIM-control</span></code> is python-based acquisition software with user-friendly GUI, based on PyQt5 framework.</p>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Windows &gt;=7, 64-bit</p></li>
+<li><p>Python &gt;=3.12, we recommend <a class="reference external" href="https://github.com/conda-forge/miniforge">Miniforge</a> and <code class="docutils literal notranslate"><span class="pre">mamba</span></code> package manager that comes with it. The Anaconda distribution is not recommended since the change of its terms of service in 2020. If you have existing Anaconda installation, you can still use <code class="docutils literal notranslate"><span class="pre">conda</span></code> instead of <code class="docutils literal notranslate"><span class="pre">mamba</span></code> in the instructsions below.</p></li>
+</ul>
+</section>
+<section id="device-drivers">
+<h3>Device drivers<a class="headerlink" href="#device-drivers" title="Link to this heading"></a></h3>
+<section id="national-instruments-daq-devices">
+<h4>National Instruments DAQ devices<a class="headerlink" href="#national-instruments-daq-devices" title="Link to this heading"></a></h4>
+<p>Download and install the latest <a class="reference external" href="https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html">NI DAQmx drivers</a> with default parameters.</p>
+</section>
+<section id="cameras">
+<h4>Cameras<a class="headerlink" href="#cameras" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Hamamatsu Orca Flash 4.0 V2/V3 camera: <a class="reference external" href="https://dcam-api.com/">Hamamatsu DCAM API</a>. To test camera functionality, <a class="reference external" href="https://dcam-api.com/hamamatsu-software/">HCImage</a> can be used.</p></li>
+<li><p>Photometrics camera: <a class="reference external" href="https://www.photometrics.com/support/software/">PVCAM and PVCAM-SDK</a>.
+In addition, the <code class="docutils literal notranslate"><span class="pre">PyVCAM</span></code> Python package is required (<a class="reference external" href="https://github.com/Photometrics/PyVCAM">github</a>),
+which depends on ¨<a class="reference external" href="https://visualstudio.microsoft.com/visual-cpp-build-tools/">MS Visual C++ 14.0 or higher</a>.
+When installing the MS Visual C++ tools, make sure to check <a class="reference external" href="https://docs.microsoft.com/en-us/answers/questions/136595/error-microsoft-visual-c-140-or-greater-is-require.html">C++ build tools</a></p></li>
+<li><p>PCO camera: <code class="docutils literal notranslate"><span class="pre">pco</span></code> python library (<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pco</span></code>). A Version ≥0.1.3 is recommended.</p></li>
+</ul>
+</section>
+<section id="stages">
+<h4>Stages<a class="headerlink" href="#stages" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>PI stages: <a class="reference external" href="https://www.physikinstrumente.com/en/products/motion-control-software/">Software for Physik Instrumente stages</a>. To test the stages, PI MicroMove can be used.</p></li>
+<li><p>Steinmeyer Mechatronics / Feinmess stages: <a class="reference external" href="http://www.galilmc.com/downloads/api">Software for using Galil drivers</a> if such a stage is used. To test the stages, GalilTools can be used.</p></li>
+<li><p>ASI stages: <a class="reference external" href="https://www.asiimaging.com/support/download/tiger-controller-console/">ASI Tiger drivers</a>.
+If using USB connection, check ASI instructions on <a class="reference external" href="https://www.asiimaging.com/support/download/usb-support-on-ms-2000-wk-controllers/">USB support</a></p></li>
+</ul>
+</section>
+</section>
+<section id="installation-steps">
+<h3>Installation steps<a class="headerlink" href="#installation-steps" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Clone this repository either by via GitHub Desktop (recommended) or by downloading and unpacking the ZIP file into folder <code class="docutils literal notranslate"><span class="pre">C:/Users/Public/mesoSPIM-control</span></code></p></li>
+</ol>
+<p><img alt="image" src="https://user-images.githubusercontent.com/10835134/198991579-df1e5acc-d246-425b-a345-03ba93a1f0bb.png" /></p>
+<ol class="arabic simple" start="2">
+<li><p>Open Miniforge prompt, create and activate a new environment <code class="docutils literal notranslate"><span class="pre">mesoSPIM-py312</span></code>:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mamba</span> <span class="n">create</span> <span class="o">-</span><span class="n">p</span> <span class="n">C</span><span class="p">:</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">Public</span><span class="o">/</span><span class="n">mamba</span><span class="o">/</span><span class="n">envs</span><span class="o">/</span><span class="n">mesoSPIM</span><span class="o">-</span><span class="n">py312</span> <span class="n">python</span><span class="o">=</span><span class="mf">3.12</span>
+<span class="n">mamba</span> <span class="n">activate</span> <span class="n">C</span><span class="p">:</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">Public</span><span class="o">/</span><span class="n">mamba</span><span class="o">/</span><span class="n">envs</span><span class="o">/</span><span class="n">mesoSPIM</span><span class="o">-</span><span class="n">py312</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Install mesoSPIM-specific libraries:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">C</span><span class="p">:</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">Public</span><span class="o">/</span><span class="n">mesoSPIM</span><span class="o">-</span><span class="n">control</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">-</span><span class="n">conda</span><span class="o">-</span><span class="n">mamba</span><span class="o">.</span><span class="n">txt</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="launching">
+<h2>Launching<a class="headerlink" href="#launching" title="Link to this heading"></a></h2>
+<section id="miniforge-prompt">
+<h3>Miniforge prompt<a class="headerlink" href="#miniforge-prompt" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">C:/Users/Public/mesoSPIM-control/mesoSPIM</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">mesoSPIM_Control.py</span></code> (with argument <code class="docutils literal notranslate"><span class="pre">-D</span></code> for demo mode)</p></li>
+</ol>
+</section>
+<section id="desktop-shortcut-fast-launch">
+<h3>Desktop shortcut (fast launch)<a class="headerlink" href="#desktop-shortcut-fast-launch" title="Link to this heading"></a></h3>
+<p>From Miniforge prompt, type <code class="docutils literal notranslate"><span class="pre">where</span> <span class="pre">mamba</span></code>, and enter the result (e.g. <code class="docutils literal notranslate"><span class="pre">C:\Users\Nikita\miniforge3\Scripts\activate.bat</span></code>) into line 10 of <code class="docutils literal notranslate"><span class="pre">mesoSPIM.bat</span></code> file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;%windir%\System32\cmd.exe&quot;</span> <span class="o">/</span><span class="n">k</span> <span class="s2">&quot;&quot;</span><span class="n">C</span><span class="p">:</span>\<span class="n">Users</span>\<span class="n">Nikita</span>\<span class="n">miniforge3</span>\<span class="n">Scripts</span>\<span class="n">activate</span><span class="o">.</span><span class="n">bat</span><span class="s2">&quot; &quot;</span><span class="n">C</span><span class="p">:</span>\<span class="n">Users</span>\<span class="n">Public</span>\<span class="n">conda</span>\<span class="n">envs</span>\<span class="n">mesoSPIM</span><span class="o">-</span><span class="n">py312</span><span class="s2">&quot; &amp;&amp; python &quot;</span><span class="n">mesoSPIM_Control</span><span class="o">.</span><span class="n">py</span><span class="s2">&quot;&quot;</span>
+</pre></div>
+</div>
+<p>Save changes and double-click the <code class="docutils literal notranslate"><span class="pre">mesoSPIM.bat</span></code> file - this should launch the control software. If this does ot happen, check the Anaconda path. Once this works, create a shortcut and place it on your desktop for quick launching.</p>
+</section>
+</section>
+<section id="prepare-a-configuration-file-and-wire-the-hardware">
+<h2>Prepare a configuration file and wire the hardware<a class="headerlink" href="#prepare-a-configuration-file-and-wire-the-hardware" title="Link to this heading"></a></h2>
+<p>The config files are stored in the <code class="docutils literal notranslate"><span class="pre">mesoSPIM/config</span></code> directory.
+The newly installed software will launch with the <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code>,
+which has all external hardware replaced with <code class="docutils literal notranslate"><span class="pre">Demo</span></code> simulated devices, to make sure installation is successful in “dry run”.</p>
+<p>If you have multiple config files you will be prompted to choose one that corresponds to your hardware.</p>
+<p>Once your hardware is connected and turned on, change the <code class="docutils literal notranslate"><span class="pre">Demo</span></code> devices to hardware-specific names, set their parameters, and test each device.
+See <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file">Wiki</a> for details.</p>
+</section>
+<section id="updating-existing-installation">
+<h2>Updating existing installation<a class="headerlink" href="#updating-existing-installation" title="Link to this heading"></a></h2>
+<p>To ensure safe transition to a new version, we recommend fresh installation of each new version into a separate folder (e.g. <code class="docutils literal notranslate"><span class="pre">mesoSPIM-control-Jan2025</span></code>) using the steps above. In order to unlock all new features, please review and add new sections from the <a class="reference internal" href="#/mesoSPIM/config/demo_config.py"><span class="xref myst">demo config file</span></a> to your old configuration file.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<p>Some errors during software startup and acquisition can be displayed in the mamba/conda terminal, while a highly detailed log will be recorded in the time-stamped file in <code class="docutils literal notranslate"><span class="pre">mesoSPIM/log</span></code> folder. This log file is individual for each session, named by date and time of software start-up, eg <code class="docutils literal notranslate"><span class="pre">mesoSPIM/log/20241210-154845.log</span></code>.</p>
+</section>
+<section id="further-resources">
+<h2>Further resources<a class="headerlink" href="#further-resources" title="Link to this heading"></a></h2>
+<p>For instructions on how to use mesoSPIM-control, please check out the documentation:</p>
+<ul class="simple">
+<li><p>ZMB (Univerity of Zurich) guides on <a class="reference external" href="https://zmb.dozuki.com/c/Lightsheet_microscopy#Section_MesoSPIM">mesoSPIM start-up, setting up, and acquisition</a></p></li>
+<li><p><a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-powerpoint-documentation">PPT</a> (outdated version),</p></li>
+<li><p>youtube <a class="reference external" href="https://www.youtube.com/c/mesoSPIM">channel</a>,</p></li>
+<li><p>subscribe to our <a class="reference external" href="http://eepurl.com/hPBRhj">mailing list</a>.</p></li>
+<li><p>join the discussion at the <a class="reference external" href="https://forum.image.sc/tag/mesospim">image.cs user forum</a> (since August 2025)</p></li>
+</ul>
+</section>
+<section id="how-to-cite-this-software">
+<h2>How to cite this software<a class="headerlink" href="#how-to-cite-this-software" title="Link to this heading"></a></h2>
+<p>Fabian F. Voigt, Nikita Vladimirov, Christian Schulze, Rob Campbell, &amp; Fritjof Helmchen. (2022). MesoSPIM control: An open-source acquisition software for light-sheet microscopy written in Python and Qt. Zenodo. https://doi.org/10.5281/zenodo.6109315</p>
+<p><a class="reference external" href="https://doi.org/10.5281/zenodo.6109315"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.6109315.svg" /></a></p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api/modules.html" class="btn btn-neutral float-right" title="mesoSPIM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

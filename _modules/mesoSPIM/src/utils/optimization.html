@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.utils.optimization &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.utils.optimization</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.utils.optimization</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Utilities for fast image-based optimization (auto-focus, etc)</span>
+<span class="sd">Auto-focus is based on Autopilot paper (Royer at al, Nat Biotechnol. 2016 Dec;34(12):1267-1278. doi: 10.1038/nbt.3708.)</span>
+<span class="sd">author: Nikita Vladimirov, @nvladimus, 2021</span>
+<span class="sd">License: GPL-3</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.fftpack</span><span class="w"> </span><span class="kn">import</span> <span class="n">dct</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy.optimize</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_otf_radius</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">psf_radius_px</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Maximum number of spatial frequencies in the image&quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Image must be 2D array&quot;</span>
+    <span class="k">assert</span> <span class="n">psf_radius_px</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;PSF radius must be positive&quot;</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">psf_radius_px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">psf_radius_px</span><span class="p">)</span>  <span class="c1"># clip all PSF radii below 1 px to 1.</span>
+    <span class="k">return</span> <span class="n">w</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">psf_radius_px</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normL2</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;L2 norm of n-dimensional array&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_abslog2</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="n">x_abs</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x_abs</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">res</span><span class="p">[</span><span class="n">x_abs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">x_abs</span><span class="p">[</span><span class="n">x_abs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_shannon</span><span class="p">(</span><span class="n">spectrum_2d</span><span class="p">,</span> <span class="n">otf_radius</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalized shannon entropy of an image spectrum, bound by OTF support radius.&quot;&quot;&quot;</span>
+    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">spectrum_2d</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ogrid</span><span class="p">[:</span><span class="n">h</span><span class="p">,</span> <span class="p">:</span><span class="n">w</span><span class="p">]</span>
+    <span class="n">support</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="n">otf_radius</span><span class="p">)</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">_normL2</span><span class="p">(</span><span class="n">spectrum_2d</span><span class="p">[</span><span class="n">support</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">terms</span> <span class="o">=</span> <span class="n">spectrum_2d</span><span class="p">[</span><span class="n">support</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">/</span> <span class="n">norm</span>
+        <span class="n">entropy</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">/</span> <span class="n">otf_radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">terms</span><span class="p">)</span> <span class="o">*</span> <span class="n">_abslog2</span><span class="p">(</span><span class="n">terms</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">entropy</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">entropy</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dct_2d</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">cutoff</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cutoff</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;dct_2d(img): image must be 2D&#39;</span>
+    <span class="k">return</span> <span class="n">dct</span><span class="p">(</span><span class="n">dct</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;ortho&#39;</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;ortho&#39;</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+
+<div class="viewcode-block" id="shannon_dct">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.optimization.shannon_dct">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">shannon_dct</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">psf_radius_px</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Shannon entropy of discreet cosine transform, for 2D images.&quot;&quot;&quot;</span>
+    <span class="n">cutoff</span> <span class="o">=</span> <span class="n">_otf_radius</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">psf_radius_px</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_shannon</span><span class="p">(</span><span class="n">_dct_2d</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">),</span> <span class="n">cutoff</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="gaussian_1d">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.optimization.gaussian_1d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">gaussian_1d</span><span class="p">(</span><span class="n">x_arr</span><span class="p">,</span> <span class="n">xo</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;&quot;Return 1D gaussian function as array&quot;&quot;&quot;</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span> <span class="p">((</span><span class="n">x_arr</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">xo</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">g</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parabola_1d</span><span class="p">(</span><span class="n">x_arr</span><span class="p">,</span> <span class="n">xcenter</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;&quot;Return 1D parabola function as array, with minus sign (e.g. reaching max at `xcenter`)&quot;&quot;&quot;</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">-</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="p">(</span><span class="n">x_arr</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">xcenter</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="k">return</span> <span class="n">g</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+<div class="viewcode-block" id="sigma2fwhm">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.optimization.sigma2fwhm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sigma2fwhm</span><span class="p">(</span><span class="n">sigma</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert gaussian std (sigma) to full-width half-maximum (FWHM)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_1d</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">low_percentile</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rescale the 1d array amplitude to [0,1] using percentile as a background value&quot;&quot;&quot;</span>
+    <span class="n">bg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">low_percentile</span><span class="p">)</span>
+    <span class="n">arr_normalized</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">((</span><span class="n">arr</span> <span class="o">-</span> <span class="n">bg</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">bg</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">arr_normalized</span>
+
+<div class="viewcode-block" id="fit_gaussian_1d">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.optimization.fit_gaussian_1d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fit_gaussian_1d</span><span class="p">(</span><span class="n">f_arr</span><span class="p">,</span> <span class="n">x_arr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit measured values f_arr(x_arr) with a gaussian function.</span>
+<span class="sd">    The true gaussian peak must lie withing the `x_arr` limits,</span>
+<span class="sd">    so the measurements must &#39;clamp&#39; the gaussian from left and right.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    f_arr: 1d-array</span>
+<span class="sd">        Measured function values.</span>
+<span class="sd">    x_arr: 1d-array</span>
+<span class="sd">        Positions where the function was measured.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    (xcenter, sigma, f_amp, f_offset): tuple</span>
+<span class="sd">        Parameters of gaussian fit: `f = f_offset + f_amp * np.exp(-((x_arr - xcenter)**2) / (2 * sigma ** 2))`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">f_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Arrays must be 1d, got </span><span class="si">{</span><span class="n">f_arr</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">x_arr</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> instead&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">f_arr</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;At least 3 points are needed for gaussian fit, received </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">f_arr</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+    <span class="n">x_peak</span> <span class="o">=</span> <span class="n">x_arr</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">f_arr</span><span class="p">)]</span>  <span class="c1"># initial guess for gaussian peak position</span>
+    <span class="n">sigma_guess</span><span class="p">,</span> <span class="n">amp_guess</span> <span class="o">=</span> <span class="n">x_arr</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span> <span class="n">f_arr</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">initial_guess</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_peak</span><span class="p">,</span> <span class="n">sigma_guess</span><span class="p">,</span> <span class="n">amp_guess</span><span class="p">,</span> <span class="n">amp_guess</span> <span class="o">/</span> <span class="mi">10</span><span class="p">)</span>  <span class="c1"># Parameters: xpos, sigma, amp, offset</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">curve_fit</span><span class="p">(</span><span class="n">gaussian_1d</span><span class="p">,</span> <span class="p">(</span><span class="n">x_arr</span><span class="p">),</span> <span class="n">f_arr</span><span class="p">,</span>
+                                              <span class="n">p0</span><span class="o">=</span><span class="n">initial_guess</span><span class="p">,</span>
+                                              <span class="n">bounds</span><span class="o">=</span><span class="p">((</span><span class="n">x_arr</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="c1"># min position of the peak</span>
+                                                       <span class="mf">0.2</span> <span class="o">*</span> <span class="n">sigma_guess</span><span class="p">,</span>  <span class="c1"># min sigma</span>
+                                                       <span class="mf">0.5</span> <span class="o">*</span> <span class="n">amp_guess</span><span class="p">,</span> <span class="mf">0.001</span> <span class="o">*</span> <span class="n">amp_guess</span><span class="p">),</span>  <span class="c1"># min amp, min offset</span>
+                                                      <span class="p">(</span><span class="n">x_arr</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="c1"># max position of the peak</span>
+                                                       <span class="mi">20</span> <span class="o">*</span> <span class="n">sigma_guess</span><span class="p">,</span>  <span class="c1"># max sigma</span>
+                                                       <span class="mi">3</span> <span class="o">*</span> <span class="n">amp_guess</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">amp_guess</span><span class="p">)))</span>  <span class="c1"># max amp, offset</span>
+    <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">popt</span> <span class="o">=</span> <span class="n">initial_guess</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">xcenter</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">f_amp</span><span class="p">,</span> <span class="n">f_offset</span> <span class="o">=</span> <span class="n">popt</span>
+    <span class="k">return</span> <span class="n">xcenter</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">f_amp</span><span class="p">,</span> <span class="n">f_offset</span></div>
+
+
+<div class="viewcode-block" id="fit_parabola_1d">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.optimization.fit_parabola_1d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fit_parabola_1d</span><span class="p">(</span><span class="n">f_arr</span><span class="p">,</span> <span class="n">x_arr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit measured values f_arr(x_arr) with a parabola function f=a(x-x0)**2 + b.</span>
+<span class="sd">    The true peak must lie withing the `x_arr` limits,</span>
+<span class="sd">    so the measurements must &#39;clamp&#39; the function from left and right.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    f_arr: 1d-array</span>
+<span class="sd">        Measured function values.</span>
+<span class="sd">    x_arr: 1d-array</span>
+<span class="sd">        Positions where the function was measured.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    (xcenter, f_amp, f_offset): tuple</span>
+<span class="sd">        Parameters of parabola fit: `f = f_offset + f_amp(x-xcenter)**2`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">f_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Arrays must be 1d, got </span><span class="si">{</span><span class="n">f_arr</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">x_arr</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> instead&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">f_arr</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;At least 3 points are needed for fit, received </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">f_arr</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+    <span class="n">x_peak</span> <span class="o">=</span> <span class="n">x_arr</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">f_arr</span><span class="p">)]</span>  <span class="c1"># initial guess for peak position</span>
+    <span class="n">amp_guess</span><span class="p">,</span> <span class="n">offset_guess</span> <span class="o">=</span> <span class="n">f_arr</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">/</span><span class="p">((</span><span class="n">x_arr</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">x_arr</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">f_arr</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">initial_guess</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_peak</span><span class="p">,</span> <span class="n">amp_guess</span><span class="p">,</span> <span class="n">offset_guess</span><span class="p">)</span>  <span class="c1"># Parameters: xpos, amp, offset</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">curve_fit</span><span class="p">(</span><span class="n">_parabola_1d</span><span class="p">,</span> <span class="p">(</span><span class="n">x_arr</span><span class="p">),</span> <span class="n">f_arr</span><span class="p">,</span>
+                                              <span class="n">p0</span><span class="o">=</span><span class="n">initial_guess</span><span class="p">,</span>
+                                              <span class="n">bounds</span><span class="o">=</span><span class="p">((</span><span class="n">x_arr</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="c1"># min position of the peak</span>
+                                                       <span class="mf">0.001</span> <span class="o">*</span> <span class="n">amp_guess</span><span class="p">,</span> <span class="mf">0.001</span> <span class="o">*</span> <span class="n">offset_guess</span><span class="p">),</span>  <span class="c1"># min amp, min offset</span>
+                                                      <span class="p">(</span><span class="n">x_arr</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="c1"># max position of the peak</span>
+                                                       <span class="mi">1000</span> <span class="o">*</span> <span class="n">amp_guess</span><span class="p">,</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">offset_guess</span><span class="p">)))</span>  <span class="c1"># max amp, offset</span>
+    <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">popt</span> <span class="o">=</span> <span class="n">initial_guess</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">xcenter</span><span class="p">,</span>  <span class="n">f_amp</span><span class="p">,</span> <span class="n">f_offset</span> <span class="o">=</span> <span class="n">popt</span>
+    <span class="k">return</span> <span class="n">xcenter</span><span class="p">,</span> <span class="n">f_amp</span><span class="p">,</span> <span class="n">f_offset</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

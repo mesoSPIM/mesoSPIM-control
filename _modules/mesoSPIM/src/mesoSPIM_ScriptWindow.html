@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.mesoSPIM_ScriptWindow &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.mesoSPIM_ScriptWindow</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.mesoSPIM_ScriptWindow</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">mesoSPIM_ScriptWindow.py</span>
+<span class="sd">========================</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtWidgets</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span>
+
+<div class="viewcode-block" id="mesoSPIM_ScriptWindow">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_ScriptWindow</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39; At some point: Change this into a Factory class for creating script windows &#39;&#39;&#39;</span>
+
+    <span class="n">sig_execute_script</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoom_factor</span> <span class="o">=</span> <span class="mi">3</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;mesoSPIM Script Editor&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGeometry</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">600</span><span class="p">,</span> <span class="mi">800</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoadScriptButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s1">&#39;Load Script&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoadScriptButton</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QPushButton{font-size: 21px}&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoadScriptButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_script</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveScriptButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s1">&#39;Save Script&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveScriptButton</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QPushButton{font-size: 21px}&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SaveScriptButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_script</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ExecuteScriptButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s1">&#39;Execute Script&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ExecuteScriptButton</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QPushButton{font-size: 21px}&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ExecuteScriptButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">execute_script</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Editor</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPlainTextEdit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Editor</span><span class="o">.</span><span class="n">zoomIn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zoom_factor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Editor</span><span class="o">.</span><span class="n">setTabStopWidth</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+        <span class="c1"># self.Editor.wheelEvent.connect(lambda: print(&#39;Wheel wheeled&#39;))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Editor</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LoadScriptButton</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SaveScriptButton</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ExecuteScriptButton</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">highlight</span> <span class="o">=</span> <span class="n">PythonHighlighter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Editor</span><span class="o">.</span><span class="n">document</span><span class="p">())</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Connect parent signals &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_enable_gui</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">boolean</span><span class="p">))</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<div class="viewcode-block" id="mesoSPIM_ScriptWindow.load_script">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.load_script">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_script</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Load a script</span>
+
+<span class="sd">        The empty string in the method arguments ensures that it remembers the</span>
+<span class="sd">        last location from where a file was opened.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">current_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s1">&#39;./scripts&#39;</span><span class="p">)</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getOpenFileName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Load script&#39;</span><span class="p">,</span><span class="n">current_path</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; To avoid crashes, continue only when a file has been selected:&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">myscript</span><span class="p">:</span>
+                <span class="n">script</span> <span class="o">=</span> <span class="n">myscript</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Editor</span><span class="o">.</span><span class="n">setPlainText</span><span class="p">(</span><span class="n">script</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_ScriptWindow.save_script">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.save_script">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_script</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Save a script as .py file &#39;&#39;&#39;</span>
+        <span class="n">current_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s1">&#39;./scripts&#39;</span><span class="p">)</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getSaveFileName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Save File&#39;</span><span class="p">,</span> <span class="n">current_path</span><span class="p">,</span>
+                                                        <span class="nb">filter</span><span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="p">,</span> <span class="n">initialFilter</span><span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">myscript</span><span class="p">:</span>
+                <span class="n">script</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Editor</span><span class="o">.</span><span class="n">toPlainText</span><span class="p">()</span>
+                <span class="n">myscript</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">script</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_ScriptWindow.execute_script">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.execute_script">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_script</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">script</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Editor</span><span class="o">.</span><span class="n">toPlainText</span><span class="p">()</span>
+        <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; Allow this editor to be used as an stand-alone editor for testing &#39;&#39;&#39;</span>
+            <span class="n">exec</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_execute_script</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">script</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="format">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.format">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Return a QTextCharFormat with the given attributes.&#39;&#39;&#39;</span>
+    <span class="n">_color</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">()</span>
+    <span class="n">_color</span><span class="o">.</span><span class="n">setNamedColor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+
+    <span class="n">_format</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTextCharFormat</span><span class="p">()</span>
+    <span class="n">_format</span><span class="o">.</span><span class="n">setForeground</span><span class="p">(</span><span class="n">_color</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;bold&#39;</span> <span class="ow">in</span> <span class="n">style</span><span class="p">:</span>
+        <span class="n">_format</span><span class="o">.</span><span class="n">setFontWeight</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QFont</span><span class="o">.</span><span class="n">Bold</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;italic&#39;</span> <span class="ow">in</span> <span class="n">style</span><span class="p">:</span>
+        <span class="n">_format</span><span class="o">.</span><span class="n">setFontItalic</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_format</span></div>
+
+
+
+<span class="c1"># Syntax styles that can be shared by all languages</span>
+<span class="n">STYLES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;keyword&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;purple&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;operator&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;red&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;brace&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;darkGray&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;defclass&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="s1">&#39;bold&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;string&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;green&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;string2&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;green&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;comment&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;italic&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;self&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;red&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;numbers&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;brown&#39;</span><span class="p">),</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="PythonHighlighter">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PythonHighlighter</span> <span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QSyntaxHighlighter</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Syntax highlighter for the Python language.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Python keywords</span>
+    <span class="n">keywords</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;assert&#39;</span><span class="p">,</span> <span class="s1">&#39;break&#39;</span><span class="p">,</span> <span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="s1">&#39;continue&#39;</span><span class="p">,</span> <span class="s1">&#39;def&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;del&#39;</span><span class="p">,</span> <span class="s1">&#39;elif&#39;</span><span class="p">,</span> <span class="s1">&#39;else&#39;</span><span class="p">,</span> <span class="s1">&#39;except&#39;</span><span class="p">,</span> <span class="s1">&#39;exec&#39;</span><span class="p">,</span> <span class="s1">&#39;finally&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;for&#39;</span><span class="p">,</span> <span class="s1">&#39;from&#39;</span><span class="p">,</span> <span class="s1">&#39;global&#39;</span><span class="p">,</span> <span class="s1">&#39;if&#39;</span><span class="p">,</span> <span class="s1">&#39;import&#39;</span><span class="p">,</span> <span class="s1">&#39;in&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;is&#39;</span><span class="p">,</span> <span class="s1">&#39;lambda&#39;</span><span class="p">,</span> <span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;pass&#39;</span><span class="p">,</span> <span class="s1">&#39;print&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;raise&#39;</span><span class="p">,</span> <span class="s1">&#39;return&#39;</span><span class="p">,</span> <span class="s1">&#39;try&#39;</span><span class="p">,</span> <span class="s1">&#39;while&#39;</span><span class="p">,</span> <span class="s1">&#39;yield&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="s1">&#39;True&#39;</span><span class="p">,</span> <span class="s1">&#39;False&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Python operators</span>
+    <span class="n">operators</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;=&#39;</span><span class="p">,</span>
+        <span class="c1"># Comparison</span>
+        <span class="s1">&#39;==&#39;</span><span class="p">,</span> <span class="s1">&#39;!=&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;=&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;=&#39;</span><span class="p">,</span>
+        <span class="c1"># Arithmetic</span>
+        <span class="s1">&#39;\+&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;\*&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="s1">&#39;//&#39;</span><span class="p">,</span> <span class="s1">&#39;\%&#39;</span><span class="p">,</span> <span class="s1">&#39;\*\*&#39;</span><span class="p">,</span>
+        <span class="c1"># In-place</span>
+        <span class="s1">&#39;\+=&#39;</span><span class="p">,</span> <span class="s1">&#39;-=&#39;</span><span class="p">,</span> <span class="s1">&#39;\*=&#39;</span><span class="p">,</span> <span class="s1">&#39;/=&#39;</span><span class="p">,</span> <span class="s1">&#39;\%=&#39;</span><span class="p">,</span>
+        <span class="c1"># Bitwise</span>
+        <span class="s1">&#39;\^&#39;</span><span class="p">,</span> <span class="s1">&#39;\|&#39;</span><span class="p">,</span> <span class="s1">&#39;\&amp;&#39;</span><span class="p">,</span> <span class="s1">&#39;\~&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;&lt;&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Python braces</span>
+    <span class="n">braces</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;\{&#39;</span><span class="p">,</span> <span class="s1">&#39;\}&#39;</span><span class="p">,</span> <span class="s1">&#39;\(&#39;</span><span class="p">,</span> <span class="s1">&#39;\)&#39;</span><span class="p">,</span> <span class="s1">&#39;\[&#39;</span><span class="p">,</span> <span class="s1">&#39;\]&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">document</span><span class="p">):</span>
+        <span class="n">QtGui</span><span class="o">.</span><span class="n">QSyntaxHighlighter</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">document</span><span class="p">)</span>
+
+        <span class="c1"># Multi-line strings (expression, flag, style)</span>
+        <span class="c1"># FIXME: The triple-quotes in these two lines will mess up the</span>
+        <span class="c1"># syntax highlighting from this point onward</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tri_single</span> <span class="o">=</span> <span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QRegExp</span><span class="p">(</span><span class="s2">&quot;&#39;&#39;&#39;&quot;</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;string2&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tri_double</span> <span class="o">=</span> <span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QRegExp</span><span class="p">(</span><span class="s1">&#39;&quot;&quot;&quot;&#39;</span><span class="p">),</span> <span class="mi">2</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;string2&#39;</span><span class="p">])</span>
+
+        <span class="n">rules</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Keyword, operator, and brace rules</span>
+        <span class="n">rules</span> <span class="o">+=</span> <span class="p">[(</span><span class="sa">r</span><span class="s1">&#39;\b</span><span class="si">%s</span><span class="s1">\b&#39;</span> <span class="o">%</span> <span class="n">w</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;keyword&#39;</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">PythonHighlighter</span><span class="o">.</span><span class="n">keywords</span><span class="p">]</span>
+        <span class="n">rules</span> <span class="o">+=</span> <span class="p">[(</span><span class="sa">r</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">o</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;operator&#39;</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">PythonHighlighter</span><span class="o">.</span><span class="n">operators</span><span class="p">]</span>
+        <span class="n">rules</span> <span class="o">+=</span> <span class="p">[(</span><span class="sa">r</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">b</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;brace&#39;</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">PythonHighlighter</span><span class="o">.</span><span class="n">braces</span><span class="p">]</span>
+
+        <span class="c1"># All other rules</span>
+        <span class="n">rules</span> <span class="o">+=</span> <span class="p">[</span>
+            <span class="c1"># &#39;self&#39;</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\bself\b&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;self&#39;</span><span class="p">]),</span>
+
+            <span class="c1"># Double-quoted string, possibly containing escape sequences</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&quot;[^&quot;</span><span class="se">\\</span><span class="s1">]*(</span><span class="se">\\</span><span class="s1">.[^&quot;</span><span class="se">\\</span><span class="s1">]*)*&quot;&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;string&#39;</span><span class="p">]),</span>
+            <span class="c1"># Single-quoted string, possibly containing escape sequences</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s2">&quot;&#39;[^&#39;</span><span class="se">\\</span><span class="s2">]*(</span><span class="se">\\</span><span class="s2">.[^&#39;</span><span class="se">\\</span><span class="s2">]*)*&#39;&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;string&#39;</span><span class="p">]),</span>
+
+            <span class="c1"># &#39;def&#39; followed by an identifier</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\bdef\b\s*(\w+)&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;defclass&#39;</span><span class="p">]),</span>
+            <span class="c1"># &#39;class&#39; followed by an identifier</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\bclass\b\s*(\w+)&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;defclass&#39;</span><span class="p">]),</span>
+
+            <span class="c1"># From &#39;#&#39; until a newline</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;#[^\n]*&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;comment&#39;</span><span class="p">]),</span>
+
+            <span class="c1"># Numeric literals</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\b[+-]?[0-9]+[lL]?\b&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;numbers&#39;</span><span class="p">]),</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;numbers&#39;</span><span class="p">]),</span>
+            <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">STYLES</span><span class="p">[</span><span class="s1">&#39;numbers&#39;</span><span class="p">]),</span>
+        <span class="p">]</span>
+
+        <span class="c1"># Build a QRegExp for each pattern</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rules</span> <span class="o">=</span> <span class="p">[(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QRegExp</span><span class="p">(</span><span class="n">pat</span><span class="p">),</span> <span class="n">index</span><span class="p">,</span> <span class="n">fmt</span><span class="p">)</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">pat</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">fmt</span><span class="p">)</span> <span class="ow">in</span> <span class="n">rules</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="PythonHighlighter.highlightBlock">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter.highlightBlock">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">highlightBlock</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply syntax highlighting to the given block of text.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Do other syntax formatting</span>
+        <span class="k">for</span> <span class="n">expression</span><span class="p">,</span> <span class="n">nth</span><span class="p">,</span> <span class="nb">format</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="n">indexIn</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">while</span> <span class="n">index</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># We actually want the index of the nth match</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="n">pos</span><span class="p">(</span><span class="n">nth</span><span class="p">)</span>
+                <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">expression</span><span class="o">.</span><span class="n">cap</span><span class="p">(</span><span class="n">nth</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">setFormat</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="nb">format</span><span class="p">)</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="n">indexIn</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">index</span> <span class="o">+</span> <span class="n">length</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setCurrentBlockState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Do multi-line strings</span>
+        <span class="n">in_multiline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">match_multiline</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">tri_single</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">in_multiline</span><span class="p">:</span>
+            <span class="n">in_multiline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">match_multiline</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">tri_double</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="PythonHighlighter.match_multiline">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter.match_multiline">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">match_multiline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">in_state</span><span class="p">,</span> <span class="n">style</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Do highlighting of multi-line strings. ``delimiter`` should be a</span>
+<span class="sd">        ``QRegExp`` for triple-single-quotes or triple-double-quotes, and</span>
+<span class="sd">        ``in_state`` should be a unique integer to represent the corresponding</span>
+<span class="sd">        state changes when inside those strings. Returns True if we&#39;re still</span>
+<span class="sd">        inside a multi-line string when this function is finished.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># If inside triple-single quotes, start at 0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">previousBlockState</span><span class="p">()</span> <span class="o">==</span> <span class="n">in_state</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Otherwise, look for the delimiter on this line</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">delimiter</span><span class="o">.</span><span class="n">indexIn</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="c1"># Move past this match</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="n">delimiter</span><span class="o">.</span><span class="n">matchedLength</span><span class="p">()</span>
+
+        <span class="c1"># As long as there&#39;s a delimiter match on this line...</span>
+        <span class="k">while</span> <span class="n">start</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Look for the ending delimiter</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">delimiter</span><span class="o">.</span><span class="n">indexIn</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">start</span> <span class="o">+</span> <span class="n">add</span><span class="p">)</span>
+            <span class="c1"># Ending delimiter on this line?</span>
+            <span class="k">if</span> <span class="n">end</span> <span class="o">&gt;=</span> <span class="n">add</span><span class="p">:</span>
+                <span class="n">length</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="o">+</span> <span class="n">add</span> <span class="o">+</span> <span class="n">delimiter</span><span class="o">.</span><span class="n">matchedLength</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">setCurrentBlockState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="c1"># No; multi-line string</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">setCurrentBlockState</span><span class="p">(</span><span class="n">in_state</span><span class="p">)</span>
+                <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="n">start</span> <span class="o">+</span> <span class="n">add</span>
+            <span class="c1"># Apply formatting</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setFormat</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">style</span><span class="p">)</span>
+            <span class="c1"># Look for the next match</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">delimiter</span><span class="o">.</span><span class="n">indexIn</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">start</span> <span class="o">+</span> <span class="n">length</span><span class="p">)</span>
+
+        <span class="c1"># Return True if still inside a multi-line string, False otherwise</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentBlockState</span><span class="p">()</span> <span class="o">==</span> <span class="n">in_state</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+</div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="p">([])</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">mesoSPIM_ScriptWindow</span><span class="p">()</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">exec_</span><span class="p">())</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

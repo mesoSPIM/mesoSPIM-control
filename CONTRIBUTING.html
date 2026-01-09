@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Branches &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=c8897f99"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Contributing" href="contributing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="contributing.html">Contributing</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Branches</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contributing-new-features">Contributing new features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reporting-bugs-and-issues">Reporting bugs and issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-testing">Testing, testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#share-you-ideas-and-feature-requests">Share you ideas and feature requests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#enjoy">Enjoy!</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="contributing.html">Contributing</a></li>
+      <li class="breadcrumb-item active">Branches</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/CONTRIBUTING.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p>Github contains multiple tools that allow you to switch seamlessly between code versions, track changes, and collaborate efficiently.
+Initially it can be confusing, but it’s OK!</p>
+<section id="branches">
+<h1>Branches<a class="headerlink" href="#branches" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">master</span></code> branch contains stable, always deployable code, well tested on actual hardware.
+We follow the <a class="reference external" href="https://guides.github.com/introduction/flow/">Github worflow</a> with the <code class="docutils literal notranslate"><span class="pre">release/candidate-py12</span></code> being the branch where we test new features. We recommend using Github Desktop application for easy branch management.</p>
+</section>
+<section id="contributing-new-features">
+<h1>Contributing new features<a class="headerlink" href="#contributing-new-features" title="Link to this heading"></a></h1>
+<p>We welcome contributions of new features, bugfixes, and improvements from the community!
+It is recommended to use the <code class="docutils literal notranslate"><span class="pre">release/candidate-py12</span></code> branch as a starting point for development.</p>
+<p>Your workflow may look as follows:</p>
+<ol class="arabic simple" start="0">
+<li><p>Fork the repository.</p></li>
+<li><p>Check out the <code class="docutils literal notranslate"><span class="pre">release/candidate-py12</span></code> branch and see if it works in demo mode and on your actual mesoSPIM setup.</p></li>
+<li><p>Create a local branch from <code class="docutils literal notranslate"><span class="pre">release/candidate-py12</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">dev-my-feature</span></code>), and start experimenting with the code.</p></li>
+<li><p>Once you are satisfied with your new feature, create a pull request back to the <code class="docutils literal notranslate"><span class="pre">release/candidate-py12</span></code> branch, we will review and merge it.</p></li>
+<li><p>After your commits were merged into <code class="docutils literal notranslate"><span class="pre">release/candidate-py12</span></code>, the code is stable, and you are done with <code class="docutils literal notranslate"><span class="pre">my-feature</span></code> branch, you can delete it. This will keep things tidy.</p></li>
+</ol>
+<p>Stable releases from <code class="docutils literal notranslate"><span class="pre">release/candidate-py12</span></code> will be merged into <code class="docutils literal notranslate"><span class="pre">master</span></code> once every few months after testing on several physical setups with multiple users. Often users are the ones who report bugs and issues, because they use the software in diverse real-world scenarios.</p>
+</section>
+<section id="reporting-bugs-and-issues">
+<h1>Reporting bugs and issues<a class="headerlink" href="#reporting-bugs-and-issues" title="Link to this heading"></a></h1>
+<p>If you find a bug or unexpected behavior, please report an <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control/issues">issue</a>! We will try to fix it or find another solution.</p>
+</section>
+<section id="testing-testing">
+<h1>Testing, testing<a class="headerlink" href="#testing-testing" title="Link to this heading"></a></h1>
+<p>Because mesoSPIM is a complex hardware-software-user system and often individually customized, it is quite difficult to run good tests that cover such diverse systems. So, be careful!
+Test the code fist in hardware-simulation mode (using <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code> file), then on real hardware, ideally with some sample.</p>
+<p>It is a good habit to write simple <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control/tree/release/candidate-py12/mesoSPIM/test">unit tests</a>
+<strong>before</strong> you implement a feature (so-called test-driven release/candidate-py12, TDD), this helps immensely in debugging. But we understand that this is not always possible, and can be very time-consuming.</p>
+</section>
+<section id="share-you-ideas-and-feature-requests">
+<h1>Share you ideas and feature requests<a class="headerlink" href="#share-you-ideas-and-feature-requests" title="Link to this heading"></a></h1>
+<p>If you have an idea or feature request that can significantly improve mesosPIM user experience -
+share it in <a class="reference external" href="https://forum.image.sc/tag/mesospim">Forum</a>. We can implement it!</p>
+</section>
+<section id="enjoy">
+<h1>Enjoy!<a class="headerlink" href="#enjoy" title="Link to this heading"></a></h1>
+<p>Any contribution is welcome, and tinkering with mesoSPIM is fun. So, enjoy it!</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="contributing.html" class="btn btn-neutral float-left" title="Contributing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

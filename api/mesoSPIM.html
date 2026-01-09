@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM package &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="mesoSPIM.src package" href="mesoSPIM.src.html" />
+    <link rel="prev" title="mesoSPIM" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">mesoSPIM</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">mesoSPIM package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html">mesoSPIM.src package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.test.html">mesoSPIM.test package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-mesoSPIM.mesoSPIM_Control">mesoSPIM.mesoSPIM_Control module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#mesospim-control-py">mesoSPIM_control.py</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.dark_mode_check"><code class="docutils literal notranslate"><span class="pre">dark_mode_check()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.get_logger"><code class="docutils literal notranslate"><span class="pre">get_logger()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.get_parser"><code class="docutils literal notranslate"><span class="pre">get_parser()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.load_config_UI"><code class="docutils literal notranslate"><span class="pre">load_config_UI()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.load_config_from_file"><code class="docutils literal notranslate"><span class="pre">load_config_from_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.run"><code class="docutils literal notranslate"><span class="pre">run()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mesoSPIM.mesoSPIM_Control.stage_referencing_check"><code class="docutils literal notranslate"><span class="pre">stage_referencing_check()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-mesoSPIM">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">mesoSPIM</a></li>
+      <li class="breadcrumb-item active">mesoSPIM package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/mesoSPIM.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="mesospim-package">
+<h1>mesoSPIM package<a class="headerlink" href="#mesospim-package" title="Link to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mesoSPIM.src.html">mesoSPIM.src package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.devices.html">mesoSPIM.src.devices package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.devices.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.devices.html#module-mesoSPIM.src.devices">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.utils.html">mesoSPIM.src.utils package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.acquisitions">mesoSPIM.src.utils.acquisitions module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.delegates">mesoSPIM.src.utils.delegates module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.filename_wizard">mesoSPIM.src.utils.filename_wizard module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.focus_tracking_wizard">mesoSPIM.src.utils.focus_tracking_wizard module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.image_processing_wizard">mesoSPIM.src.utils.image_processing_wizard module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.models">mesoSPIM.src.utils.models module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.multicolor_acquisition_builder">mesoSPIM.src.utils.multicolor_acquisition_builder module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.multicolor_acquisition_wizard">mesoSPIM.src.utils.multicolor_acquisition_wizard module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.optimization">mesoSPIM.src.utils.optimization module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.utility_functions">mesoSPIM.src.utils.utility_functions module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.waveforms">mesoSPIM.src.utils.waveforms module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils.widgets">mesoSPIM.src.utils.widgets module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.utils.html#module-mesoSPIM.src.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.WebcamWindow">mesoSPIM.src.WebcamWindow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.WebcamWindow.WebcamWindow"><code class="docutils literal notranslate"><span class="pre">WebcamWindow</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.WebcamWindow.WebcamWindow.sig_move_absolute"><code class="docutils literal notranslate"><span class="pre">WebcamWindow.sig_move_absolute</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.WebcamWindow.WebcamWindow.sig_state_request"><code class="docutils literal notranslate"><span class="pre">WebcamWindow.sig_state_request</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.WebcamWindow.WebcamWindow.start_capture"><code class="docutils literal notranslate"><span class="pre">WebcamWindow.start_capture()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow">mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesospim-acquisition-manager-window">mesoSPIM Acquisition Manager Window</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.MyStyle"><code class="docutils literal notranslate"><span class="pre">MyStyle</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.MyStyle.drawPrimitive"><code class="docutils literal notranslate"><span class="pre">MyStyle.drawPrimitive()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.add_row"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.add_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.append_time_index_to_filenames"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.append_time_index_to_filenames()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.auto_illumination"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.auto_illumination()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.copy_row"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.copy_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.delete_all_rows"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.delete_all_rows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.delete_row"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.delete_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.disable"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.disable()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.disable_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.disable_gui()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_information"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.display_information()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_no_row_selected_warning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.display_no_row_selected_warning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_status_message"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.display_status_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.display_warning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.display_warning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.enable"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.enable()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.enable_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.enable_gui()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.generate_filenames"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.generate_filenames()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.get_first_selected_row"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.get_first_selected_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.get_selected_rows"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.get_selected_rows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.load_table"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.load_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_all_current_parameters"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.mark_all_current_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_etl_parameters"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.mark_current_etl_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_focus"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.mark_current_focus()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_rotation"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.mark_current_rotation()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.mark_current_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.mark_current_xy_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.mark_current_xy_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.model_changed"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.model_changed</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.move_selected_row_down"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.move_selected_row_down()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.move_selected_row_up"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.move_selected_row_up()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.preview_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.preview_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.run_focus_tracking_wizard"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.run_focus_tracking_wizard()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.run_image_processing_wizard"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.run_image_processing_wizard()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.run_tiling_wizard"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.run_tiling_wizard()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.save_table"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.save_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.selected_row_changed"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.selected_row_changed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_folder_names"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.set_folder_names()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_item_delegates"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.set_item_delegates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_selected_row"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.set_selected_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.set_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.set_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.sig_move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.sig_move_absolute</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.sig_warning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.sig_warning</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.start_selected"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.start_selected()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.statusBar"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.statusBar</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.update_acquisition_size_prediction"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.update_acquisition_size_prediction()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow.mesoSPIM_AcquisitionManagerWindow.update_acquisition_time_prediction"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_AcquisitionManagerWindow.update_acquisition_time_prediction()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_Camera">mesoSPIM.src.mesoSPIM_Camera module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.add_images_to_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.add_images_to_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.end_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.end_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.end_live"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.end_live()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.get_live_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.get_live_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.prepare_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.prepare_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.prepare_live"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.prepare_live()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.set_camera_binning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.set_camera_binning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.set_camera_display_acquisition_subsampling"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.set_camera_display_acquisition_subsampling()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.set_camera_display_live_subsampling"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.set_camera_display_live_subsampling()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.set_camera_exposure_time"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.set_camera_exposure_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.set_camera_line_interval"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.set_camera_line_interval()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.set_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.set_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.sig_status_message"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.sig_status_message</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.sig_write_images"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.sig_write_images</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.snap_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.snap_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.state_request_handler"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.state_request_handler()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_Camera.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Camera.stop()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_DemoCamera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoCamera</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_DemoCamera.close_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoCamera.close_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_DemoCamera.get_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoCamera.get_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_DemoCamera.get_images_in_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoCamera.get_images_in_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_DemoCamera.get_live_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoCamera.get_live_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_DemoCamera.open_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoCamera.open_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_DemoCamera.set_binning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoCamera.set_binning()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.close_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.close_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.close_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.close_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.close_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.close_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.get_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.get_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.get_images_in_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.get_images_in_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.get_live_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.get_live_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.initialize_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.initialize_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.initialize_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.initialize_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.open_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.open_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.set_binning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.set_binning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.set_exposure_time"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.set_exposure_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_GenericCamera.set_line_interval"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_GenericCamera.set_line_interval()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.close_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.close_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.close_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.close_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.close_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.close_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.get_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.get_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.get_images_in_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.get_images_in_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.get_live_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.get_live_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.initialize_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.initialize_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.initialize_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.initialize_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.open_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.open_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.print_camera_properties"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.print_camera_properties()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.set_binning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.set_binning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.set_camera_sensor_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.set_camera_sensor_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.set_exposure_time"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.set_exposure_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_HamamatsuCamera.set_line_interval"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_HamamatsuCamera.set_line_interval()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.close_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.close_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.close_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.close_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.close_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.close_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.get_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.get_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.get_images_in_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.get_images_in_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.get_live_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.get_live_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.initialize_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.initialize_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.initialize_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.initialize_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.open_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.open_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.set_binning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.set_binning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.set_exposure_time"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.set_exposure_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PCOCamera.set_line_interval"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PCOCamera.set_line_interval()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.close_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.close_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.close_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.close_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.close_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.close_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.get_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.get_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.get_images_in_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.get_images_in_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.get_live_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.get_live_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.initialize_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.initialize_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.initialize_live_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.initialize_live_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.open_camera"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.open_camera()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.report_pvcam_parameter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.report_pvcam_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.set_binning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.set_binning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.set_exposure_time"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.set_exposure_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Camera.mesoSPIM_PhotometricsCamera.set_line_interval"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PhotometricsCamera.set_line_interval()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_CameraWindow">mesoSPIM.src.mesoSPIM_CameraWindow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.adjust_levels"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.adjust_levels()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.change_overlay"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.change_overlay()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.draw_crosshairs"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.draw_crosshairs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.draw_lightsheet_marker"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.draw_lightsheet_marker()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.get_image_shape"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.get_image_shape()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.get_roi"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.get_roi()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.hide_light_sheet_marker"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.hide_light_sheet_marker()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.ini_subsampling"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.ini_subsampling</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.px2um"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.px2um()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.set_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.set_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.set_roi"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.set_roi()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.sig_update_roi"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.sig_update_roi</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.update_image_from_deque"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.update_image_from_deque()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_CameraWindow.mesoSPIM_CameraWindow.update_status"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_CameraWindow.update_status()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_ContrastWindow">mesoSPIM.src.mesoSPIM_ContrastWindow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ContrastWindow.mesoSPIM_ContrastWindow"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ContrastWindow</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ContrastWindow.mesoSPIM_ContrastWindow.closeEvent"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ContrastWindow.closeEvent()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ContrastWindow.mesoSPIM_ContrastWindow.set_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ContrastWindow.set_image()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_Core">mesoSPIM.src.mesoSPIM_Core module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.logger"><code class="docutils literal notranslate"><span class="pre">logger</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.append_timing_info_to_metadata"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.append_timing_info_to_metadata()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.check_motion_limits"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.check_motion_limits()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.close_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.close_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.close_acquisition_list"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.close_acquisition_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.close_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.close_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.close_shutters"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.close_shutters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.execute_galil_program"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.execute_galil_program()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.execute_script"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.execute_script()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.frame_queue_display"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.frame_queue_display</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.get_free_disk_space"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.get_free_disk_space()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.get_required_disk_space"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.get_required_disk_space()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.lightsheet_alignment_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.lightsheet_alignment_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.list_to_string_with_carriage_return"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.list_to_string_with_carriage_return()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.live"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.live()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.open_shutters"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.open_shutters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.pause()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.prepare_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.prepare_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.prepare_acquisition_list"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.prepare_acquisition_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.prepare_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.prepare_image_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.preview_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.preview_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.read_config_parameter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.read_config_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.run_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.run_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.run_acquisition_list"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.run_acquisition_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.run_time_lapse"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.run_time_lapse()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.send_progress"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.send_progress()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.send_status_message_to_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.send_status_message_to_gui()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_camera_exposure_time"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_camera_exposure_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_camera_line_interval"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_camera_line_interval()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_filter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_intensity"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_intensity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_laser"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_laser()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_shutterconfig"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_shutterconfig()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.set_zoom"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.set_zoom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_add_images_to_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_add_images_to_image_series</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_end_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_end_image_series</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_end_live"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_end_live</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_get_snap_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_get_snap_image</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_move_absolute</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_move_relative</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_move_relative_and_wait_until_done"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_move_relative_and_wait_until_done</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_polling_stage_position_start"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_polling_stage_position_start</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_polling_stage_position_stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_polling_stage_position_stop</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_position</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_prepare_image_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_prepare_image_series</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_progress"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_progress</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_run_timepoint"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_run_timepoint</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_state_request"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_state_request</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_state_request_and_wait_until_done"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_state_request_and_wait_until_done</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_status_message"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_status_message</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_unzero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_unzero_axes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_warning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_warning</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_write_metadata"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_write_metadata</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.sig_zero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.sig_zero_axes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.snap"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.snap()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.snap_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.snap_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.snap_image_in_series"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.snap_image_in_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.start"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.start()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.state_request_handler"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.state_request_handler()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.stop_movement"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.stop_movement()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.unzero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.unzero_axes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.visual_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.visual_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Core.mesoSPIM_Core.zero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Core.zero_axes()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_ImageWriter">mesoSPIM.src.mesoSPIM_ImageWriter module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.abort_writing"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.abort_writing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.check_versions"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.check_versions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.end_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.end_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.image_to_disk"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.image_to_disk()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.prepare_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.prepare_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.write_images"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.write_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.write_metadata"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.write_metadata()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.write_snap_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.write_snap_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ImageWriter.mesoSPIM_ImageWriter.write_snap_metadata"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter.write_snap_metadata()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_MainWindow">mesoSPIM.src.mesoSPIM_MainWindow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.cascade_all_windows"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.cascade_all_windows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.check_config_file"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.check_config_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.check_instances"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.check_instances()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.choose_etl_config"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.choose_etl_config()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.choose_snap_folder"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.choose_snap_folder()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.close_app"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.close_app()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.connect_combobox_to_state_parameter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.connect_combobox_to_state_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.connect_spinbox_to_state_parameter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.connect_spinbox_to_state_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.connect_widget_to_state_parameter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.connect_widget_to_state_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.create_script_window"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.create_script_window()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.create_widget_list"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.create_widget_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.display_status_message"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.display_status_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.display_warning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.display_warning()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.enable_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.enable_gui()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.enable_mode_control_buttons"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.enable_mode_control_buttons()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.enable_move_buttons"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.enable_move_buttons()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.enable_stop_button"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.enable_stop_button()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.execute_script"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.execute_script()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.finished"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.finished()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.get_state_parameter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.get_state_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.initialize_and_connect_menubar"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.initialize_and_connect_menubar()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.initialize_and_connect_widgets"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.initialize_and_connect_widgets()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.launch_contrast_window"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.launch_contrast_window()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.launch_optimizer"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.launch_optimizer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.open_tiff"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.open_tiff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.open_tile_view_window"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.open_tile_view_window()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.open_webcam_window"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.open_webcam_window()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.pos2str"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.pos2str()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.run_acquisition_list"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.run_acquisition_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.run_lightsheet_alignment_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.run_lightsheet_alignment_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.run_live"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.run_live()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.run_selected_acquisition"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.run_selected_acquisition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.run_snap"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.run_snap()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.run_timepoint"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.run_timepoint()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.run_visual_mode"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.run_visual_mode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.save_etl_config"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.save_etl_config()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.scale_galvo_amp_w_zoom"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.scale_galvo_amp_w_zoom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.set_laser_intensity"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.set_laser_intensity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.set_progressbars_to_busy"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.set_progressbars_to_busy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.set_progressbars_to_standard"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.set_progressbars_to_standard()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_enable_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_enable_gui</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_execute_script"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_execute_script</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_launch_optimizer"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_launch_optimizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_move_absolute</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_move_relative</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_state_request"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_state_request</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_unzero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_unzero_axes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.sig_zero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.sig_zero_axes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.slow_down_spinbox"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.slow_down_spinbox()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.spinbox_to_state_parameter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.spinbox_to_state_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.update_GUI_by_shutter_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.update_GUI_by_shutter_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.update_etl_increments"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.update_etl_increments()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.update_gui_from_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.update_gui_from_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.update_position_indicators"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.update_position_indicators()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.update_progressbars"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.update_progressbars()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.update_widget_from_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.update_widget_from_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.zero_galvo_amp"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.zero_galvo_amp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.zero_left_etl"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.zero_left_etl()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_MainWindow.mesoSPIM_MainWindow.zero_right_etl"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_MainWindow.zero_right_etl()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_Optimizer">mesoSPIM.src.mesoSPIM_Optimizer module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.accept_new_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.accept_new_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.close_window"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.close_window()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.create_results_window"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.create_results_window()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.discard_new_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.discard_new_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.get_params_from_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.get_params_from_gui()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.get_roi_dims"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.get_roi_dims()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.plot_results"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.plot_results()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.results_string"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.results_string()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.run_optimization"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.run_optimization()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_etl_amp_to_zero"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.set_etl_amp_to_zero()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_mode_from_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.set_mode_from_gui()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_parameters"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.set_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_roi"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.set_roi()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.set_state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.set_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.sig_move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.sig_move_absolute</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.sig_state_request"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.sig_state_request</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.update_gui"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.update_gui()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Optimizer.mesoSPIM_Optimizer.update_image"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Optimizer.update_image()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_ScriptWindow">mesoSPIM.src.mesoSPIM_ScriptWindow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesospim-scriptwindow-py">mesoSPIM_ScriptWindow.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter"><code class="docutils literal notranslate"><span class="pre">PythonHighlighter</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter.braces"><code class="docutils literal notranslate"><span class="pre">PythonHighlighter.braces</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter.highlightBlock"><code class="docutils literal notranslate"><span class="pre">PythonHighlighter.highlightBlock()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter.keywords"><code class="docutils literal notranslate"><span class="pre">PythonHighlighter.keywords</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter.match_multiline"><code class="docutils literal notranslate"><span class="pre">PythonHighlighter.match_multiline()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.PythonHighlighter.operators"><code class="docutils literal notranslate"><span class="pre">PythonHighlighter.operators</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.format"><code class="docutils literal notranslate"><span class="pre">format()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ScriptWindow</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.execute_script"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ScriptWindow.execute_script()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.highlight"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ScriptWindow.highlight</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.load_script"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ScriptWindow.load_script()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.save_script"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ScriptWindow.save_script()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_ScriptWindow.mesoSPIM_ScriptWindow.sig_execute_script"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ScriptWindow.sig_execute_script</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_Serial">mesoSPIM.src.mesoSPIM_Serial module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#serial-thread-for-the-mesospim-project">Serial thread for the mesoSPIM project</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.enable_ttl_motion"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.enable_ttl_motion()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.execute_stage_program"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.execute_stage_program()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.go_to_rotation_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.go_to_rotation_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.pause()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.report_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.report_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.send_status_message"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.send_status_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.set_filter"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.set_filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.set_zoom"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.set_zoom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.sig_pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.sig_pause</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.sig_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.sig_position</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.sig_state_request"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.sig_state_request</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.sig_status_message"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.sig_status_message</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.sig_unzero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.sig_unzero_axes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.sig_zero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.sig_zero_axes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.stage_limits_OK"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.stage_limits_OK()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.stage_limits_warning"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.stage_limits_warning</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.state_request_handler"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Serial.state_request_handler()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_Stages">mesoSPIM.src.mesoSPIM_Stages module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesospim-stage-classes">mesoSPIM Stage classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.load_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.load_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.log_slice"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.log_slice()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.pause()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.report_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.report_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.sig_pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.sig_pause</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.state</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_MS2000_Stage.unload_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_MS2000_Stage.unload_sample()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.enable_ttl_motion"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.enable_ttl_motion()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.load_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.load_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.log_slice"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.log_slice()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.pause()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.report_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.report_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.set_speed_from_config"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.set_speed_from_config()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.sig_pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.sig_pause</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_ASI_Tiger_Stage.unload_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_ASI_Tiger_Stage.unload_sample()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_DemoStage"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoStage</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.block_till_controller_is_ready"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.block_till_controller_is_ready()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.load_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.load_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.pitools"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.pitools</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.report_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.report_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_1toN.unload_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_1toN.unload_sample()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN.load_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN.load_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN.report_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN.report_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN.unload_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN.unload_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_NtoN.wait_for_controller"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_NtoN.wait_for_controller()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.block_till_controller_is_ready"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.block_till_controller_is_ready()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.execute_program"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.execute_program()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.f_encodercounts_per_um"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.f_encodercounts_per_um</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.load_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.load_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.pitools"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.pitools</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.report_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.report_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.unload_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.unload_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_PI_rotz_and_Galil_xyf_Stages.xyf_stage"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_PI_rotz_and_Galil_xyf_Stages.xyf_stage</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.center_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.center_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.create_internal_position_dict"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.create_internal_position_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.create_position_dict"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.create_position_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.int_theta_pos"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.int_theta_pos</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.int_theta_pos_offset"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.int_theta_pos_offset</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.load_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.load_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.move_absolute"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.move_absolute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.move_relative"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.move_relative()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.report_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.report_position()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.sig_pause"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.sig_pause</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.sig_position"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.sig_position</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.sig_status_message"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.sig_status_message</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.state</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.stop"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.theta_pos"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.theta_pos</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.unload_sample"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.unload_sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.unzero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.unzero_axes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Stages.mesoSPIM_Stage.zero_axes"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_Stage.zero_axes()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_State">mesoSPIM.src.mesoSPIM_State module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_State.mesoSPIM_StateSingleton"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_StateSingleton</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_State.mesoSPIM_StateSingleton.block_signals"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_StateSingleton.block_signals()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_State.mesoSPIM_StateSingleton.get_parameter_dict"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_StateSingleton.get_parameter_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_State.mesoSPIM_StateSingleton.get_parameter_list"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_StateSingleton.get_parameter_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_State.mesoSPIM_StateSingleton.instance"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_StateSingleton.instance</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_State.mesoSPIM_StateSingleton.set_parameters"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_StateSingleton.set_parameters()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_TileViewWindow">mesoSPIM.src.mesoSPIM_TileViewWindow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_TileViewWindow.mesoSPIM_TileViewWindow"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_TileViewWindow</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_TileViewWindow.mesoSPIM_TileViewWindow.on_scale_changed"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_TileViewWindow.on_scale_changed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_TileViewWindow.mesoSPIM_TileViewWindow.show_current_FOV"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_TileViewWindow.show_current_FOV()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_TileViewWindow.mesoSPIM_TileViewWindow.show_tiles"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_TileViewWindow.show_tiles()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_TileViewWindow.mesoSPIM_TileViewWindow.sig_scale_changed"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_TileViewWindow.sig_scale_changed</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_TileViewWindow.mesoSPIM_TileViewWindow.state"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_TileViewWindow.state</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_WaveFormGenerator">mesoSPIM.src.mesoSPIM_WaveFormGenerator module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.logger"><code class="docutils literal notranslate"><span class="pre">logger</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoWaveFormGenerator</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.close_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoWaveFormGenerator.close_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.create_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoWaveFormGenerator.create_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.run_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoWaveFormGenerator.run_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.start_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoWaveFormGenerator.start_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.stop_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoWaveFormGenerator.stop_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.write_waveforms_to_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_DemoWaveFormGenerator.write_waveforms_to_tasks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.bundle_galvo_and_etl_waveforms"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.bundle_galvo_and_etl_waveforms()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.calculate_samples"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.calculate_samples()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.close_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.close_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.config_check"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.config_check()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_etl_waveforms"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.create_etl_waveforms()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_galvo_waveforms"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.create_galvo_waveforms()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_laser_waveforms"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.create_laser_waveforms()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.create_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_waveforms"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.create_waveforms()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.rescale_galvo_amplitude_by_zoom"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.rescale_galvo_amplitude_by_zoom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.run_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.run_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.save_etl_parameters_to_csv"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.save_etl_parameters_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.start_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.start_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.state_request_handler"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.state_request_handler()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.stop_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.stop_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.update_etl_parameters_from_csv"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.update_etl_parameters_from_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.update_etl_parameters_from_laser"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.update_etl_parameters_from_laser()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.update_etl_parameters_from_zoom"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.update_etl_parameters_from_zoom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.write_waveforms_to_tasks"><code class="docutils literal notranslate"><span class="pre">mesoSPIM_WaveFormGenerator.write_waveforms_to_tasks()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src.mesoSPIM_Zoom">mesoSPIM.src.mesoSPIM_Zoom module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Zoom.DemoZoom"><code class="docutils literal notranslate"><span class="pre">DemoZoom</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Zoom.DemoZoom.set_zoom"><code class="docutils literal notranslate"><span class="pre">DemoZoom.set_zoom()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Zoom.DynamixelZoom"><code class="docutils literal notranslate"><span class="pre">DynamixelZoom</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Zoom.DynamixelZoom.set_zoom"><code class="docutils literal notranslate"><span class="pre">DynamixelZoom.set_zoom()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Zoom.MitutoyoZoom"><code class="docutils literal notranslate"><span class="pre">MitutoyoZoom</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Zoom.MitutoyoZoom.set_zoom"><code class="docutils literal notranslate"><span class="pre">MitutoyoZoom.set_zoom()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.src.html#module-mesoSPIM.src">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mesoSPIM.test.html">mesoSPIM.test package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.test.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.test.html#mesospim-test-test-serial-module">mesoSPIM.test.test_serial module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.test.html#mesospim-test-test-tiling-module">mesoSPIM.test.test_tiling module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.test.html#mesospim-test-test-writing-speed-module">mesoSPIM.test.test_writing_speed module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesoSPIM.test.html#module-mesoSPIM.test">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-mesoSPIM.mesoSPIM_Control">
+<span id="mesospim-mesospim-control-module"></span><h2>mesoSPIM.mesoSPIM_Control module<a class="headerlink" href="#module-mesoSPIM.mesoSPIM_Control" title="Link to this heading"></a></h2>
+<section id="mesospim-control-py">
+<h3>mesoSPIM_control.py<a class="headerlink" href="#mesospim-control-py" title="Link to this heading"></a></h3>
+<p>The core module of the mesoSPIM software</p>
+</section>
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.dark_mode_check">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">dark_mode_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">app</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#dark_mode_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.dark_mode_check" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.get_logger">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">get_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">package_directory</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#get_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.get_logger" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.get_parser">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">get_parser</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#get_parser"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.get_parser" title="Link to this definition"></a></dt>
+<dd><p>Parse command-line input arguments
+:return: The argparse parser object</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.load_config_UI">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">load_config_UI</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">current_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#load_config_UI"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.load_config_UI" title="Link to this definition"></a></dt>
+<dd><p>Bring up a GUI that allows the user to select a microscope configuration to import</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.load_config_from_file">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">load_config_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#load_config_from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.load_config_from_file" title="Link to this definition"></a></dt>
+<dd><p>Load a microscope configuration from a file using importlib</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.main">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embed_console</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demo_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.main" title="Link to this definition"></a></dt>
+<dd><p>Load a configuration file according to the following rules:
+1. If the user asked for demo mode, load the <cite>demo_config.py</cite> file
+2. Else, ff the user did not ask for demo mode:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>if there is only one non-demo config file, load that.</p></li>
+<li><p>if there are multiple config files, bring up the UI loader.</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.run">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.run" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mesoSPIM.mesoSPIM_Control.stage_referencing_check">
+<span class="sig-prename descclassname"><span class="pre">mesoSPIM.mesoSPIM_Control.</span></span><span class="sig-name descname"><span class="pre">stage_referencing_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mesoSPIM/mesoSPIM_Control.html#stage_referencing_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mesoSPIM.mesoSPIM_Control.stage_referencing_check" title="Link to this definition"></a></dt>
+<dd><p>Due to problems with some PI stages loosing reference information
+after restarting the mesoSPIM software, some stage configurations require
+a reference movement to be carried out before starting the rest of the software.</p>
+<p>As reference movements can damage the instrument, this function warns users
+about this problem by message boxes and asks them to reach a safe state.</p>
+</dd></dl>
+
+</section>
+<section id="module-mesoSPIM">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-mesoSPIM" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="mesoSPIM" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mesoSPIM.src.html" class="btn btn-neutral float-right" title="mesoSPIM.src package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+mesoSPIM.src.devices.stages.galil package
+=========================================
+
+Submodules
+----------
+
+mesoSPIM.src.devices.stages.galil.galilcontrol module
+-----------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.stages.galil.galilcontrol
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+mesoSPIM.src.devices.stages.galil.gclib module
+----------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.stages.galil.gclib
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.stages.galil
+   :members:
+   :undoc-members:
+   :show-inheritance:

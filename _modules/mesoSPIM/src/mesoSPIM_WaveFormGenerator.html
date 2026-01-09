@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.mesoSPIM_WaveFormGenerator &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.mesoSPIM_WaveFormGenerator</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.mesoSPIM_WaveFormGenerator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">mesoSPIM Waveform Generator - Creates and allows control of waveform generation.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="sd">&#39;&#39;&#39;National Instruments Imports&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">nidaqmx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nidaqmx.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">AcquisitionType</span><span class="p">,</span> <span class="n">TaskMode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nidaqmx.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">LineGrouping</span><span class="p">,</span> <span class="n">DigitalWidthUnits</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nidaqmx.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">CtrTime</span>
+
+<span class="sd">&#39;&#39;&#39;mesoSPIM imports&#39;&#39;&#39;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.waveforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">single_pulse</span><span class="p">,</span> <span class="n">tunable_lens_ramp</span><span class="p">,</span> <span class="n">sawtooth</span><span class="p">,</span> <span class="n">square</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.utility_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_cpu_core</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtCore</span>
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_WaveFormGenerator</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;This class contains the microscope state</span>
+
+<span class="sd">    Any access to this global state should only be done via signals sent by</span>
+<span class="sd">    the responsible class for actually causing that state change in hardware.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">sig_update_gui_from_state</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span> <span class="c1"># -&gt; mesoSPIM_Core.sig_update_gui_from_state -&gt; MainWindow.update_gui_from_state</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span> <span class="c1"># mesoSPIM_Core object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># mesoSPIM_StateSingleton object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_save_etl_config</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_etl_parameters_to_csv</span><span class="p">)</span>
+        <span class="n">cfg_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;ETL_cfg_file&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;ETL_cfg_file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cfg_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_etl_parameters_from_csv</span><span class="p">(</span><span class="n">cfg_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;laser&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;galvo_l_amplitude&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;galvo_l_amplitude&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+        <span class="c1">#self.state[&#39;galvo_r_amplitude&#39;] = self.parent.read_config_parameter(&#39;galvo_r_amplitude&#39;, self.cfg.startup)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;galvo_l_frequency&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;galvo_l_frequency&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;galvo_r_frequency&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;galvo_r_frequency&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;galvo_l_offset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;galvo_l_offset&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;galvo_r_offset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;galvo_r_offset&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MAX_GALVO_ETL_VOLT</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_check</span><span class="p">()</span>
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.config_check">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.config_check">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">config_check</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Check config file for old/wrong/deprecated pieces&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;laser_designation&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;INFO: Config file: The &#39;laser_designation&#39; dictionary is obsolete, you can remove it.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;galvo_etl_designation&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;INFO: Config file: The &#39;galvo_etl_designation&#39; dictionary is obsolete, you can remove it.&quot;</span><span class="p">)</span>
+        <span class="n">laser_task_line_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">acquisition_hardware</span><span class="p">[</span><span class="s1">&#39;laser_task_line&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;ao&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">laser_task_line_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">acquisition_hardware</span><span class="p">[</span><span class="s1">&#39;laser_task_line&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">laser_task_line_end</span> <span class="o">-</span> <span class="n">laser_task_line_start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Config file: number of AO lines in &#39;laser_task_line&#39; &quot;</span>
+                             <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">acquisition_hardware</span><span class="p">[</span><span class="s1">&#39;laser_task_line&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">) &quot;</span>
+                             <span class="sa">f</span><span class="s2">&quot;must be equal to num(lasers) in &#39;laserdict&#39; (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="p">)</span><span class="si">}</span><span class="s2">). &quot;</span>
+                             <span class="sa">f</span><span class="s2">&quot;Check assignment of AO channels in &#39;laser_task_line&#39;.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Config parameter &#39;max_laser_voltage&#39; (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">) is &gt; 10V, which can damage the hardware. Setting to 10V.&quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">);</span> <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Config parameter &#39;max_laser_voltage&#39; (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">) is &gt; 5V, which may damage the laser controller.&quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">);</span> <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Laser AO task voltage range is +/- </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">V. Check if this is safe for your hardware.&quot;</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Galvo and ETL AO task voltage range is set to -5V to 5V. Check if this is safe for your hardware.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MAX_GALVO_ETL_VOLT</span> <span class="o">=</span> <span class="mi">5</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.rescale_galvo_amplitude_by_zoom">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.rescale_galvo_amplitude_by_zoom">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rescale_galvo_amplitude_by_zoom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zoom</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;galvo_amp_scale_w_zoom&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">galvo_l_amplitude_ini</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;galvo_l_amplitude&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)</span>
+            <span class="c1">#galvo_r_amplitude_ini = self.parent.read_config_parameter(&#39;galvo_r_amplitude&#39;, self.cfg.startup)</span>
+            <span class="n">zoom_ini</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;zoom&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">startup</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;galvo_l_amplitude&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">galvo_l_amplitude_ini</span> <span class="o">*</span> <span class="n">zoom_ini</span> <span class="o">/</span> <span class="n">zoom</span>
+            <span class="c1">#self.state[&#39;galvo_r_amplitude&#39;] = galvo_r_amplitude_ini * zoom_ini / zoom</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Galvo amplitudes rescaled by </span><span class="si">{</span><span class="n">zoom_ini</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">zoom</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;No rescaling of galvo amplitude&#39;</span><span class="p">)</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">state_request_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="nb">dict</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;state change: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;samplerate&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;sweeptime&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;intensity&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_l_delay_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_l_ramp_rising_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_l_ramp_falling_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_l_offset&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_r_delay_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_r_ramp_rising_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_r_ramp_falling_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;etl_r_offset&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_l_frequency&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_l_amplitude&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_l_offset&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_l_duty_cycle&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_l_phase&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_r_frequency&#39;</span><span class="p">,</span>
+                       <span class="c1">#&#39;galvo_r_amplitude&#39;,</span>
+                       <span class="s1">&#39;galvo_r_offset&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_r_duty_cycle&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;galvo_r_phase&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;laser_l_delay_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;laser_l_pulse_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;laser_l_max_amplitude&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;laser_r_delay_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;laser_r_pulse_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;laser_r_max_amplitude&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;laser&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;camera_delay_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;camera_pulse_%&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;shutterconfig&#39;</span><span class="p">,</span>
+                       <span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">create_waveforms</span><span class="p">()</span> <span class="c1"># no GUI update feeding back, one-way signal from the GUI to the hardware</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;zoom&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rescale_galvo_amplitude_by_zoom</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span> <span class="c1"># truncate and convert string eg &#39;1.2x BlahBlah&#39; -&gt; 1.2</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">create_waveforms</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;ETL_cfg_file&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_etl_parameters_from_csv</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;laser&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">])</span> <span class="c1"># feeding back state change to the GUI</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;set_etls_according_to_zoom&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_etl_parameters_from_zoom</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="c1"># feeding back state change to the GUI</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;set_etls_according_to_laser&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_etl_parameters_from_laser</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="c1"># feeding back state change to the GUI</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.create_waveforms">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_waveforms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_waveforms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;waveforms updated&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">calculate_samples</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_etl_waveforms</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_galvo_waveforms</span><span class="p">()</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Bundle everything&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bundle_galvo_and_etl_waveforms</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_laser_waveforms</span><span class="p">()</span></div>
+
+        <span class="c1">#self.sig_update_gui_from_state.emit() # not necessary, and to minimize looping between state changes and GUI</span>
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.calculate_samples">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.calculate_samples">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;samplerate&#39;</span><span class="p">,</span> <span class="s1">&#39;sweeptime&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">samplerate</span><span class="o">*</span><span class="n">sweeptime</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.create_etl_waveforms">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_etl_waveforms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_etl_waveforms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;samplerate&#39;</span><span class="p">,</span> <span class="s1">&#39;sweeptime&#39;</span><span class="p">])</span>
+        <span class="n">etl_l_delay</span><span class="p">,</span> <span class="n">etl_l_ramp_rising</span><span class="p">,</span> <span class="n">etl_l_ramp_falling</span><span class="p">,</span> <span class="n">etl_l_amplitude</span><span class="p">,</span> <span class="n">etl_l_offset</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;etl_l_delay_%&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_l_ramp_rising_%&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_l_ramp_falling_%&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">,</span><span class="s1">&#39;etl_l_offset&#39;</span><span class="p">])</span>
+        <span class="n">etl_r_delay</span><span class="p">,</span> <span class="n">etl_r_ramp_rising</span><span class="p">,</span> <span class="n">etl_r_ramp_falling</span><span class="p">,</span> <span class="n">etl_r_amplitude</span><span class="p">,</span> <span class="n">etl_r_offset</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;etl_r_delay_%&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_r_ramp_rising_%&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_r_ramp_falling_%&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_r_offset&#39;</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">etl_l_waveform</span> <span class="o">=</span> <span class="n">tunable_lens_ramp</span><span class="p">(</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span>
+                                                <span class="n">sweeptime</span> <span class="o">=</span> <span class="n">sweeptime</span><span class="p">,</span>
+                                                <span class="n">delay</span> <span class="o">=</span> <span class="n">etl_l_delay</span><span class="p">,</span>
+                                                <span class="n">rise</span> <span class="o">=</span> <span class="n">etl_l_ramp_rising</span><span class="p">,</span>
+                                                <span class="n">fall</span> <span class="o">=</span> <span class="n">etl_l_ramp_falling</span><span class="p">,</span>
+                                                <span class="n">amplitude</span> <span class="o">=</span> <span class="n">etl_l_amplitude</span><span class="p">,</span>
+                                                <span class="n">offset</span> <span class="o">=</span> <span class="n">etl_l_offset</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">etl_r_waveform</span> <span class="o">=</span> <span class="n">tunable_lens_ramp</span><span class="p">(</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span>
+                                                <span class="n">sweeptime</span> <span class="o">=</span> <span class="n">sweeptime</span><span class="p">,</span>
+                                                <span class="n">delay</span> <span class="o">=</span> <span class="n">etl_r_delay</span><span class="p">,</span>
+                                                <span class="n">rise</span> <span class="o">=</span> <span class="n">etl_r_ramp_rising</span><span class="p">,</span>
+                                                <span class="n">fall</span> <span class="o">=</span> <span class="n">etl_r_ramp_falling</span><span class="p">,</span>
+                                                <span class="n">amplitude</span> <span class="o">=</span> <span class="n">etl_r_amplitude</span><span class="p">,</span>
+                                                <span class="n">offset</span> <span class="o">=</span> <span class="n">etl_r_offset</span><span class="p">)</span>
+        <span class="c1"># freeze AO channel which is not in use, to reduce heating and increase ETL lifetime</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Left&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">etl_r_waveform</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">etl_r_offset</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Right arm frozen&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Right&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">etl_l_waveform</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">etl_l_offset</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Left arm frozen&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.create_galvo_waveforms">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_galvo_waveforms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_galvo_waveforms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;samplerate&#39;</span><span class="p">,</span><span class="s1">&#39;sweeptime&#39;</span><span class="p">])</span>
+
+        <span class="n">galvo_l_frequency</span><span class="p">,</span> <span class="n">galvo_l_amplitude</span><span class="p">,</span> <span class="n">galvo_l_offset</span><span class="p">,</span> <span class="n">galvo_l_duty_cycle</span><span class="p">,</span> <span class="n">galvo_l_phase</span> <span class="o">=</span>\
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;galvo_l_frequency&#39;</span><span class="p">,</span> <span class="s1">&#39;galvo_l_amplitude&#39;</span><span class="p">,</span> <span class="s1">&#39;galvo_l_offset&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;galvo_l_duty_cycle&#39;</span><span class="p">,</span> <span class="s1">&#39;galvo_l_phase&#39;</span><span class="p">])</span>
+
+        <span class="n">galvo_r_frequency</span><span class="p">,</span> <span class="n">galvo_r_offset</span><span class="p">,</span> <span class="n">galvo_r_duty_cycle</span><span class="p">,</span> <span class="n">galvo_r_phase</span> <span class="o">=</span>\
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;galvo_r_frequency&#39;</span><span class="p">,</span> <span class="s1">&#39;galvo_r_offset&#39;</span><span class="p">,</span>  <span class="s1">&#39;galvo_r_duty_cycle&#39;</span><span class="p">,</span> <span class="s1">&#39;galvo_r_phase&#39;</span><span class="p">])</span>
+
+        <span class="n">galvo_r_amplitude</span> <span class="o">=</span> <span class="n">galvo_l_amplitude</span> <span class="c1"># always use same amplitude for both galvos</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Create Galvo waveforms:&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">galvo_l_waveform</span> <span class="o">=</span> <span class="n">sawtooth</span><span class="p">(</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span>
+                                         <span class="n">sweeptime</span> <span class="o">=</span> <span class="n">sweeptime</span><span class="p">,</span>
+                                         <span class="n">frequency</span> <span class="o">=</span> <span class="n">galvo_l_frequency</span><span class="p">,</span>
+                                         <span class="n">amplitude</span> <span class="o">=</span> <span class="n">galvo_l_amplitude</span><span class="p">,</span>
+                                         <span class="n">offset</span> <span class="o">=</span> <span class="n">galvo_l_offset</span><span class="p">,</span>
+                                         <span class="n">dutycycle</span> <span class="o">=</span> <span class="n">galvo_l_duty_cycle</span><span class="p">,</span>
+                                         <span class="n">phase</span> <span class="o">=</span> <span class="n">galvo_l_phase</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">galvo_r_waveform</span> <span class="o">=</span> <span class="n">sawtooth</span><span class="p">(</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span>
+                                         <span class="n">sweeptime</span> <span class="o">=</span> <span class="n">sweeptime</span><span class="p">,</span>
+                                         <span class="n">frequency</span> <span class="o">=</span> <span class="n">galvo_r_frequency</span><span class="p">,</span>
+                                         <span class="n">amplitude</span> <span class="o">=</span> <span class="n">galvo_r_amplitude</span><span class="p">,</span>
+                                         <span class="n">offset</span> <span class="o">=</span> <span class="n">galvo_r_offset</span><span class="p">,</span>
+                                         <span class="n">dutycycle</span> <span class="o">=</span> <span class="n">galvo_r_duty_cycle</span><span class="p">,</span>
+                                         <span class="n">phase</span> <span class="o">=</span> <span class="n">galvo_r_phase</span><span class="p">)</span>
+
+        <span class="c1"># freeze AO channel which is not in use, to reduce heating and increase galvo lifetime</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Left&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_r_waveform</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">galvo_r_offset</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Right&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_l_waveform</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">galvo_l_offset</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.create_laser_waveforms">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_laser_waveforms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_laser_waveforms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;samplerate&#39;</span><span class="p">,</span><span class="s1">&#39;sweeptime&#39;</span><span class="p">])</span>
+
+        <span class="n">laser_l_delay</span><span class="p">,</span> <span class="n">laser_l_pulse</span><span class="p">,</span> <span class="n">max_laser_voltage</span><span class="p">,</span> <span class="n">intensity</span> <span class="o">=</span> \
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;laser_l_delay_%&#39;</span><span class="p">,</span><span class="s1">&#39;laser_l_pulse_%&#39;</span><span class="p">,</span> <span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">,</span> <span class="s1">&#39;intensity&#39;</span><span class="p">])</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Create zero waveforms for the lasers&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zero_waveform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">))</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Update the laser intensity waveform&#39;&#39;&#39;</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;This could be improved: create a list with as many zero arrays as analog out lines for ETL and Lasers&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">laser_waveform_list</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">zero_waveform</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="p">]</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Conversion from % to V of the intensity:&#39;&#39;&#39;</span>
+        <span class="n">laser_voltage</span> <span class="o">=</span> <span class="n">max_laser_voltage</span> <span class="o">*</span> <span class="n">intensity</span> <span class="o">/</span> <span class="mi">100</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">laser_template_waveform</span> <span class="o">=</span> <span class="n">single_pulse</span><span class="p">(</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span>
+                                                    <span class="n">sweeptime</span> <span class="o">=</span> <span class="n">sweeptime</span><span class="p">,</span>
+                                                    <span class="n">delay</span> <span class="o">=</span> <span class="n">laser_l_delay</span><span class="p">,</span>
+                                                    <span class="n">pulsewidth</span> <span class="o">=</span> <span class="n">laser_l_pulse</span><span class="p">,</span>
+                                                    <span class="n">amplitude</span> <span class="o">=</span> <span class="n">laser_voltage</span><span class="p">,</span>
+                                                    <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;The key: replace the waveform in the waveform list with this new template&#39;&#39;&#39;</span>
+        <span class="k">assert</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span> <span class="o">==</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="sa">f</span><span class="s2">&quot;Error: laserdict keys in config file must be alphanumerically sorted: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">current_laser_index</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;laser&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">laser_waveform_list</span><span class="p">[</span><span class="n">current_laser_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">laser_template_waveform</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">laser_waveforms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">laser_waveform_list</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.bundle_galvo_and_etl_waveforms">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.bundle_galvo_and_etl_waveforms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">bundle_galvo_and_etl_waveforms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Stacks the Galvo and ETL waveforms into a numpy array adequate for</span>
+<span class="sd">        the NI cards.</span>
+
+<span class="sd">        In here, the assignment of output channels of the Galvo / ETL card to the</span>
+<span class="sd">        corresponding output channel is hardcoded: This could be improved.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">galvo_and_etl_waveforms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">galvo_l_waveform</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">galvo_r_waveform</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">etl_l_waveform</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">etl_r_waveform</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.update_etl_parameters_from_zoom">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.update_etl_parameters_from_zoom">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_etl_parameters_from_zoom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zoom</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Little helper method: Because the mesoSPIM core is not handling</span>
+<span class="sd">        the serial Zoom connection. &quot;&quot;&quot;</span>
+        <span class="n">laser</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;laser&#39;</span><span class="p">]</span>
+        <span class="n">etl_cfg_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;ETL_cfg_file&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_etl_parameters_from_csv</span><span class="p">(</span><span class="n">etl_cfg_file</span><span class="p">,</span> <span class="n">laser</span><span class="p">,</span> <span class="n">zoom</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.update_etl_parameters_from_laser">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.update_etl_parameters_from_laser">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_etl_parameters_from_laser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">laser</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Little helper method: Because laser changes need an ETL parameter update &quot;&quot;&quot;</span>
+        <span class="n">zoom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">]</span>
+        <span class="n">etl_cfg_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">package_directory</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;ETL_cfg_file&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_etl_parameters_from_csv</span><span class="p">(</span><span class="n">etl_cfg_file</span><span class="p">,</span> <span class="n">laser</span><span class="p">,</span> <span class="n">zoom</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.update_etl_parameters_from_csv">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.update_etl_parameters_from_csv">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_etl_parameters_from_csv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">,</span> <span class="n">laser</span><span class="p">,</span> <span class="n">zoom</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Updates the internal ETL left/right offsets and amplitudes from the</span>
+<span class="sd">        values in the ETL csv files</span>
+
+<span class="sd">        The .csv file needs to contain the follwing columns:</span>
+
+<span class="sd">        Wavelength</span>
+<span class="sd">        Zoom</span>
+<span class="sd">        ETL-Left-Offset</span>
+<span class="sd">        ETL-Left-Amp</span>
+<span class="sd">        ETL-Right-Offset</span>
+<span class="sd">        ETL-Right-Amp</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">zoom_clean</span> <span class="o">=</span> <span class="n">zoom</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;x&#39;</span> <span class="c1"># cleanup the zoom string for backwards compatibility with existing ETL files</span>
+        <span class="n">full_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">package_directory</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">full_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+            <span class="n">match_found</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;Wavelength&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">laser</span> <span class="ow">and</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;Zoom&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">zoom_clean</span> <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;Zoom&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">zoom</span><span class="p">):</span>
+                    <span class="n">match_found</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="c1"># Some diagnostic tracing statements</span>
+                    <span class="c1"># print(row)</span>
+<span class="w">                    </span><span class="sd">&#39;&#39;&#39; updating internal state &#39;&#39;&#39;</span>
+                    <span class="n">etl_l_offset</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;ETL-Left-Offset&#39;</span><span class="p">])</span>
+                    <span class="n">etl_l_amplitude</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;ETL-Left-Amp&#39;</span><span class="p">])</span>
+                    <span class="n">etl_r_offset</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;ETL-Right-Offset&#39;</span><span class="p">])</span>
+                    <span class="n">etl_r_amplitude</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;ETL-Right-Amp&#39;</span><span class="p">])</span>
+
+                    <span class="n">parameter_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;etl_l_offset&#39;</span><span class="p">:</span> <span class="n">etl_l_offset</span><span class="p">,</span>
+                                      <span class="s1">&#39;etl_l_amplitude&#39;</span> <span class="p">:</span> <span class="n">etl_l_amplitude</span><span class="p">,</span>
+                                      <span class="s1">&#39;etl_r_offset&#39;</span> <span class="p">:</span> <span class="n">etl_r_offset</span><span class="p">,</span>
+                                      <span class="s1">&#39;etl_r_amplitude&#39;</span> <span class="p">:</span> <span class="n">etl_r_amplitude</span><span class="p">}</span>
+
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Parameters set from csv: </span><span class="si">{</span><span class="n">parameter_dict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="n">parameter_dict</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">match_found</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39;Update waveforms with the new parameters&#39;&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">create_waveforms</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Combination </span><span class="si">{</span><span class="n">laser</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">zoom</span><span class="si">}</span><span class="s2"> not found in ETL file. The file will be updated:</span><span class="se">\n</span><span class="si">{</span><span class="n">cfg_path</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_warning</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">err_message</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_etl_parameters_to_csv</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_update_gui_from_state</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_etl_parameters_to_csv</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Saves the current ETL left/right offsets and amplitudes from the</span>
+<span class="sd">        values to the ETL csv files</span>
+
+<span class="sd">        The .csv file needs to contain the following columns:</span>
+
+<span class="sd">        Wavelength</span>
+<span class="sd">        Zoom</span>
+<span class="sd">        ETL-Left-Offset</span>
+<span class="sd">        ETL-Left-Amp</span>
+<span class="sd">        ETL-Right-Offset</span>
+<span class="sd">        ETL-Right-Amp</span>
+
+<span class="sd">        Creates a temporary cfg file with the ending _tmp</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">etl_cfg_file</span><span class="p">,</span> <span class="n">laser</span><span class="p">,</span> <span class="n">zoom</span><span class="p">,</span> <span class="n">etl_l_offset</span><span class="p">,</span> <span class="n">etl_l_amplitude</span><span class="p">,</span> <span class="n">etl_r_offset</span><span class="p">,</span> <span class="n">etl_r_amplitude</span> <span class="o">=</span> \
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;ETL_cfg_file&#39;</span><span class="p">,</span> <span class="s1">&#39;laser&#39;</span><span class="p">,</span> <span class="s1">&#39;zoom&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_l_offset&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">,</span> <span class="s1">&#39;etl_r_offset&#39;</span><span class="p">,</span><span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">])</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Temporary filepath&#39;&#39;&#39;</span>
+        <span class="n">etl_cfg_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">package_directory</span><span class="p">,</span> <span class="n">etl_cfg_file</span><span class="p">)</span>
+        <span class="n">tmp_etl_cfg_file</span> <span class="o">=</span> <span class="n">etl_cfg_file</span><span class="o">+</span><span class="s1">&#39;_tmp&#39;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">etl_cfg_file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">input_file</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp_etl_cfg_file</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outputfile</span><span class="p">:</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+            <span class="n">fieldnames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Objective&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;Wavelength&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;Zoom&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;ETL-Left-Offset&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;ETL-Left-Amp&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;ETL-Right-Offset&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;ETL-Right-Amp&#39;</span><span class="p">]</span>
+
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">outputfile</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">,</span> <span class="n">dialect</span><span class="o">=</span><span class="s1">&#39;excel&#39;</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span>
+            <span class="n">match_found</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+                <span class="c1"># update values if the laser and zoom are already in the file</span>
+                <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;Wavelength&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">laser</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;Zoom&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">zoom</span><span class="p">:</span>
+                        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">({</span><span class="s1">&#39;Objective&#39;</span> <span class="p">:</span> <span class="s1">&#39;1x&#39;</span><span class="p">,</span>
+                                         <span class="s1">&#39;Wavelength&#39;</span> <span class="p">:</span> <span class="n">laser</span><span class="p">,</span>
+                                         <span class="s1">&#39;Zoom&#39;</span> <span class="p">:</span> <span class="n">zoom</span><span class="p">,</span>
+                                         <span class="s1">&#39;ETL-Left-Offset&#39;</span> <span class="p">:</span> <span class="n">etl_l_offset</span><span class="p">,</span>
+                                         <span class="s1">&#39;ETL-Left-Amp&#39;</span> <span class="p">:</span> <span class="n">etl_l_amplitude</span><span class="p">,</span>
+                                         <span class="s1">&#39;ETL-Right-Offset&#39;</span> <span class="p">:</span> <span class="n">etl_r_offset</span><span class="p">,</span>
+                                         <span class="s1">&#39;ETL-Right-Amp&#39;</span> <span class="p">:</span> <span class="n">etl_r_amplitude</span><span class="p">,</span>
+                                         <span class="p">})</span>
+                        <span class="n">match_found</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># copy all other rows</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">match_found</span><span class="p">:</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">({</span><span class="s1">&#39;Objective&#39;</span> <span class="p">:</span> <span class="s1">&#39;1x&#39;</span><span class="p">,</span>
+                                 <span class="s1">&#39;Wavelength&#39;</span> <span class="p">:</span> <span class="n">laser</span><span class="p">,</span>
+                                 <span class="s1">&#39;Zoom&#39;</span> <span class="p">:</span> <span class="n">zoom</span><span class="p">,</span>
+                                 <span class="s1">&#39;ETL-Left-Offset&#39;</span> <span class="p">:</span> <span class="n">etl_l_offset</span><span class="p">,</span>
+                                 <span class="s1">&#39;ETL-Left-Amp&#39;</span> <span class="p">:</span> <span class="n">etl_l_amplitude</span><span class="p">,</span>
+                                 <span class="s1">&#39;ETL-Right-Offset&#39;</span> <span class="p">:</span> <span class="n">etl_r_offset</span><span class="p">,</span>
+                                 <span class="s1">&#39;ETL-Right-Amp&#39;</span> <span class="p">:</span> <span class="n">etl_r_amplitude</span><span class="p">,</span>
+                                 <span class="p">})</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">etl_cfg_file</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">tmp_etl_cfg_file</span><span class="p">,</span> <span class="n">etl_cfg_file</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.create_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.create_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a tasks for the mesoSPIM:</span>
+
+<span class="sd">        These are:</span>
+<span class="sd">        - the master trigger task, a digital out task that only provides a trigger pulse for the others</span>
+<span class="sd">        - the camera trigger task, a counter task that triggers the camera in lightsheet mode</span>
+<span class="sd">        - the stage trigger task, a counter task that provides a TTL trigger for stages that allow triggered movement (e.g. ASI stages)</span>
+<span class="sd">        - the galvo and ETL task (analog out) that controls the left &amp; right galvos for creation of</span>
+<span class="sd">          the light-sheet and shadow avoidance</span>
+<span class="sd">        - the aser task (analog out) that controls all the laser intensities (Laser should only</span>
+<span class="sd">          be on when the camera is acquiring) and the left/right ETL waveforms.</span>
+<span class="sd">          This task is bundled with galvo-ETL task if a single DAQmx card is used, because multifunction DAQmx devices</span>
+<span class="sd">          can only run only 1 AO hardware-timed task at a time (https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019KWYSA2&amp;l=en-CH)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ah</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">acquisition_hardware</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">calculate_samples</span><span class="p">()</span>
+        <span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;samplerate&#39;</span><span class="p">,</span><span class="s1">&#39;sweeptime&#39;</span><span class="p">])</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span>
+        <span class="n">camera_pulse_percent</span><span class="p">,</span> <span class="n">camera_delay_percent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;camera_pulse_%&#39;</span><span class="p">,</span><span class="s1">&#39;camera_delay_%&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_trigger_task</span> <span class="o">=</span> <span class="n">nidaqmx</span><span class="o">.</span><span class="n">Task</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_trigger_task</span> <span class="o">=</span> <span class="n">nidaqmx</span><span class="o">.</span><span class="n">Task</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;TigerASI&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_trigger_task</span> <span class="o">=</span> <span class="n">nidaqmx</span><span class="o">.</span><span class="n">Task</span><span class="p">()</span>
+
+        <span class="c1"># Check if 1 or 2 DAQ cards are used for AO waveform generation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">ah</span><span class="p">[</span><span class="s1">&#39;galvo_etl_task_line&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">ah</span><span class="p">[</span><span class="s1">&#39;laser_task_line&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="k">else</span> <span class="mi">2</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span><span class="si">}</span><span class="s2"> DAQmx card(s) for AO waveform generation.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># These AO tasks than must be bundled into one task if a single DAQmx card is used (e.g. PXI-6733)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span> <span class="o">=</span> <span class="n">nidaqmx</span><span class="o">.</span><span class="n">Task</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span> <span class="o">=</span> <span class="n">nidaqmx</span><span class="o">.</span><span class="n">Task</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span> <span class="o">=</span> <span class="n">nidaqmx</span><span class="o">.</span><span class="n">Task</span><span class="p">()</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Housekeeping: Setting up the DO master trigger task&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_trigger_task</span><span class="o">.</span><span class="n">do_channels</span><span class="o">.</span><span class="n">add_do_chan</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;master_trigger_out_line&#39;</span><span class="p">],</span>
+                                                         <span class="n">line_grouping</span><span class="o">=</span><span class="n">LineGrouping</span><span class="o">.</span><span class="n">CHAN_FOR_ALL_LINES</span><span class="p">)</span>
+        <span class="c1">#self.master_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Calculate camera high time and initial delay:</span>
+<span class="sd">        Disadvantage: high time and delay can only be set after a task has been created</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_high_time</span> <span class="o">=</span> <span class="n">camera_pulse_percent</span><span class="o">*</span><span class="mf">0.01</span><span class="o">*</span><span class="n">sweeptime</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_delay</span> <span class="o">=</span> <span class="n">camera_delay_percent</span><span class="o">*</span><span class="mf">0.01</span><span class="o">*</span><span class="n">sweeptime</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Housekeeping: Setting up the counter task for the camera trigger&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_trigger_task</span><span class="o">.</span><span class="n">co_channels</span><span class="o">.</span><span class="n">add_co_pulse_chan_time</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;camera_trigger_out_line&#39;</span><span class="p">],</span>
+                                                                    <span class="n">high_time</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">camera_high_time</span><span class="p">,</span>
+                                                                    <span class="n">initial_delay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">camera_delay</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_trigger_task</span><span class="o">.</span><span class="n">triggers</span><span class="o">.</span><span class="n">start_trigger</span><span class="o">.</span><span class="n">cfg_dig_edge_start_trig</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;camera_trigger_source&#39;</span><span class="p">])</span>
+        <span class="c1">#self.camera_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Housekeeping: Setting up the counter task for the stage TTL trigger for certain stages&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;TigerASI&#39;</span><span class="p">}:</span>
+            <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">,</span> <span class="s1">&#39;asi_parameters&#39;</span><span class="p">),</span> <span class="s2">&quot;Config file with stage &#39;TigerASI&#39; must contain &#39;asi_parameters&#39; dictionary&quot;</span>
+            <span class="n">trig_line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;stage_trigger_out_line&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">asi_parameters</span><span class="p">)</span>
+            <span class="n">trig_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;stage_trigger_source&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">asi_parameters</span><span class="p">)</span>
+            <span class="n">stage_trigger_pulse_percent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;stage_trigger_pulse_%&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">asi_parameters</span><span class="p">)</span>
+            <span class="n">stage_delay_percent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">read_config_parameter</span><span class="p">(</span><span class="s1">&#39;stage_trigger_delay_%&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">asi_parameters</span><span class="p">)</span>
+            <span class="n">stage_high_time</span> <span class="o">=</span> <span class="n">stage_trigger_pulse_percent</span> <span class="o">*</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">sweeptime</span>
+            <span class="n">stage_delay</span> <span class="o">=</span> <span class="n">stage_delay_percent</span> <span class="o">*</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">sweeptime</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_trigger_task</span><span class="o">.</span><span class="n">co_channels</span><span class="o">.</span><span class="n">add_co_pulse_chan_time</span><span class="p">(</span><span class="n">trig_line</span><span class="p">,</span> <span class="n">high_time</span><span class="o">=</span><span class="n">stage_high_time</span><span class="p">,</span> <span class="n">initial_delay</span><span class="o">=</span><span class="n">stage_delay</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_trigger_task</span><span class="o">.</span><span class="n">triggers</span><span class="o">.</span><span class="n">start_trigger</span><span class="o">.</span><span class="n">cfg_dig_edge_start_trig</span><span class="p">(</span><span class="n">trig_source</span><span class="p">)</span>
+            <span class="c1">#self.stage_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Housekeeping: Setting up the AO task for the Galvo and setting the trigger input&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1"># default mesoSPIM v5 configuration</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">ao_channels</span><span class="o">.</span><span class="n">add_ao_voltage_chan</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;galvo_etl_task_line&#39;</span><span class="p">],</span> <span class="n">min_val</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">MAX_GALVO_ETL_VOLT</span><span class="p">,</span> <span class="n">max_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_GALVO_ETL_VOLT</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">timing</span><span class="o">.</span><span class="n">cfg_samp_clk_timing</span><span class="p">(</span><span class="n">rate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">,</span>
+                                                       <span class="n">sample_mode</span><span class="o">=</span><span class="n">AcquisitionType</span><span class="o">.</span><span class="n">FINITE</span><span class="p">,</span>
+                                                       <span class="n">samps_per_chan</span><span class="o">=</span><span class="n">samples</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">triggers</span><span class="o">.</span><span class="n">start_trigger</span><span class="o">.</span><span class="n">cfg_dig_edge_start_trig</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;galvo_etl_task_trigger_source&#39;</span><span class="p">])</span>
+            <span class="c1">#self.galvo_etl_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement</span>
+
+<span class="w">            </span><span class="sd">&#39;&#39;&#39;Housekeeping: Setting up the AO task for the ETL and lasers and setting the trigger input&#39;&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">ao_channels</span><span class="o">.</span><span class="n">add_ao_voltage_chan</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;laser_task_line&#39;</span><span class="p">],</span>
+                                                            <span class="n">min_val</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">],</span>
+                                                            <span class="n">max_val</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;max_laser_voltage&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">timing</span><span class="o">.</span><span class="n">cfg_samp_clk_timing</span><span class="p">(</span><span class="n">rate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">,</span>
+                                                        <span class="n">sample_mode</span><span class="o">=</span><span class="n">AcquisitionType</span><span class="o">.</span><span class="n">FINITE</span><span class="p">,</span>
+                                                        <span class="n">samps_per_chan</span><span class="o">=</span><span class="n">samples</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">triggers</span><span class="o">.</span><span class="n">start_trigger</span><span class="o">.</span><span class="n">cfg_dig_edge_start_trig</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;laser_task_trigger_source&#39;</span><span class="p">])</span>
+            <span class="c1">#self.laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement</span>
+
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># Benchtop single-card PXI NI-6733 or cDAQ NI-9264 configuration</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">ao_channels</span><span class="o">.</span><span class="n">add_ao_voltage_chan</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;galvo_etl_task_line&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;,&#39;</span> <span class="o">+</span> <span class="n">ah</span><span class="p">[</span><span class="s1">&#39;laser_task_line&#39;</span><span class="p">],</span>
+                                                                      <span class="n">min_val</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">MAX_GALVO_ETL_VOLT</span><span class="p">,</span> <span class="n">max_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_GALVO_ETL_VOLT</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">timing</span><span class="o">.</span><span class="n">cfg_samp_clk_timing</span><span class="p">(</span><span class="n">rate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">,</span>
+                                                       <span class="n">sample_mode</span><span class="o">=</span><span class="n">AcquisitionType</span><span class="o">.</span><span class="n">FINITE</span><span class="p">,</span>
+                                                       <span class="n">samps_per_chan</span><span class="o">=</span><span class="n">samples</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">triggers</span><span class="o">.</span><span class="n">start_trigger</span><span class="o">.</span><span class="n">cfg_dig_edge_start_trig</span><span class="p">(</span><span class="n">ah</span><span class="p">[</span><span class="s1">&#39;galvo_etl_task_trigger_source&#39;</span><span class="p">])</span></div>
+
+            <span class="c1">#self.galvo_etl_laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement</span>
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.write_waveforms_to_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.write_waveforms_to_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_waveforms_to_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the waveforms to the slave tasks&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">galvo_and_etl_waveforms</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">laser_waveforms</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing analog waveforms: self.galvo_and_etl_waveforms, min </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">galvo_and_etl_waveforms</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">}</span><span class="s2">, max </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">galvo_and_etl_waveforms</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing analog waveforms: self.laser_waveforms, min </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">laser_waveforms</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">}</span><span class="s2">, max </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">laser_waveforms</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">galvo_and_etl_waveforms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">laser_waveforms</span><span class="p">)))</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.start_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.start_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">start_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Starts the tasks for camera triggering and analog outputs</span>
+
+<span class="sd">        If the tasks are configured to be triggered, they won&#39;t output any</span>
+<span class="sd">        signals until run_tasks() is called.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_trigger_task</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;TigerASI&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_trigger_task</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.run_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.run_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs the tasks for triggering, analog and counter outputs</span>
+
+<span class="sd">        Firstly, the master trigger triggers all other task via a shared trigger</span>
+<span class="sd">        line (PFI line as given in the config file).</span>
+
+<span class="sd">        For this to work, all analog output and counter tasks have to be started so</span>
+<span class="sd">        that they are waiting for the trigger signal.</span>
+
+<span class="sd">        Warning: `master_trigger_task` does not have explicit sample rate, because some cards like NI-6733 do not support this for DO lines.</span>
+<span class="sd">        So the master pulse duration varies depening on the device. Can be as short as small as 1 micro-second!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Starting master trigger&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_trigger_task</span><span class="o">.</span><span class="n">write</span><span class="p">([</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="n">auto_start</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Wait until everything is done - this is effectively a sleep function.&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">wait_until_done</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">wait_until_done</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">wait_until_done</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_trigger_task</span><span class="o">.</span><span class="n">wait_until_done</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;TigerASI&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_trigger_task</span><span class="o">.</span><span class="n">wait_until_done</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.stop_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.stop_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stop_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Stops the tasks for triggering, analog and counter outputs&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Stopping tasks&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_trigger_task</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;TigerASI&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_trigger_task</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_trigger_task</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_WaveFormGenerator.close_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_WaveFormGenerator.close_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Closes the tasks for triggering, analog and counter outputs.</span>
+<span class="sd">        Tasks should only be closed are they are stopped.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Closing tasks&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ao_cards</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_task</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laser_task</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">galvo_etl_laser_task</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_trigger_task</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;TigerASI&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_trigger_task</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_trigger_task</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="mesoSPIM_DemoWaveFormGenerator">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_DemoWaveFormGenerator</span><span class="p">(</span><span class="n">mesoSPIM_WaveFormGenerator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Demo subclass of mesoSPIM_WaveFormGenerator class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_DemoWaveFormGenerator.create_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.create_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;&quot;Demo version of the actual DAQmx-based function.&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Demo: create tasks&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">calculate_samples</span><span class="p">()</span>
+        <span class="n">samplerate</span><span class="p">,</span> <span class="n">sweeptime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;samplerate&#39;</span><span class="p">,</span><span class="s1">&#39;sweeptime&#39;</span><span class="p">])</span>
+        <span class="n">camera_pulse_percent</span><span class="p">,</span> <span class="n">camera_delay_percent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_parameter_list</span><span class="p">([</span><span class="s1">&#39;camera_pulse_%&#39;</span><span class="p">,</span><span class="s1">&#39;camera_delay_%&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_high_time</span> <span class="o">=</span> <span class="n">camera_pulse_percent</span><span class="o">*</span><span class="mf">0.01</span><span class="o">*</span><span class="n">sweeptime</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_delay</span> <span class="o">=</span> <span class="n">camera_delay_percent</span><span class="o">*</span><span class="mf">0.01</span><span class="o">*</span><span class="n">sweeptime</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_DemoWaveFormGenerator.write_waveforms_to_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.write_waveforms_to_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_waveforms_to_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Demo: write the waveforms to the slave tasks &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Demo: write waveforms to tasks&quot;</span><span class="p">)</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_DemoWaveFormGenerator.start_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.start_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">start_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Demo: starts the tasks for camera triggering and analog outputs. &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Demo: start tasks&quot;</span><span class="p">)</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_DemoWaveFormGenerator.run_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.run_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Demo: runs the tasks for triggering, analog and counter outputs. &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Demo: run tasks&quot;</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;sweeptime&#39;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_DemoWaveFormGenerator.stop_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.stop_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stop_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;&quot;Demo: stop tasks&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Demo: stop tasks&quot;</span><span class="p">)</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="mesoSPIM_DemoWaveFormGenerator.close_tasks">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_WaveFormGenerator.mesoSPIM_DemoWaveFormGenerator.close_tasks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Demo: closes the tasks for triggering, analog and counter outputs. &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Demo: close tasks&quot;</span><span class="p">)</span>
+        <span class="k">pass</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

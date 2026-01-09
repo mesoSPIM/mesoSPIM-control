@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">mesoSPIM Filterwheel classes</span>
+<span class="sd">Authors: Fabian Voigt, Nikita Vladimirov</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">serial</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtWidgets</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mesoSPIM.src.devices.servos.dynamixel.dynamixel</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dynamixel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mesoSPIM.src.devices.filter_wheels.ZWO_EFW</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyzwoefw</span>
+
+<div class="viewcode-block" id="mesoSPIM_DemoFilterWheel">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.mesoSPIM_DemoFilterWheel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_DemoFilterWheel</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filterdict</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span> <span class="o">=</span> <span class="n">filterdict</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_if_filter_in_filterdict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">filter</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Checks if the filter designation (string) given as argument</span>
+<span class="sd">        exists in the filterdict</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">filter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Filter designation not in the configuration&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_DemoFilterWheel.set_filter">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.mesoSPIM_DemoFilterWheel.set_filter">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_if_filter_in_filterdict</span><span class="p">(</span><span class="nb">filter</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">wait_until_done</span><span class="p">:</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ZwoFilterWheel">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.ZwoFilterWheel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ZwoFilterWheel</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Astronomy filter wheels from https://astronomy-imaging-camera.com&#39;&#39;&#39;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filterdict</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">state</span>
+        <span class="n">dll_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;package_directory&#39;</span><span class="p">],</span> <span class="s1">&#39;src&#39;</span><span class="p">,</span> <span class="s1">&#39;devices&#39;</span><span class="p">,</span> <span class="s1">&#39;filter_wheels&#39;</span><span class="p">,</span> <span class="s1">&#39;ZWO_EFW&#39;</span><span class="p">,</span> <span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="s1">&#39;Win64&#39;</span><span class="p">,</span> <span class="s1">&#39;EFW_filter.dll&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">pyzwoefw</span><span class="o">.</span><span class="n">EFW</span><span class="p">(</span><span class="n">dll_path</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of ZWO EFW filter wheels connected: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">GetNum</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_slots</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">GetProperty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">IDs</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="s1">&#39;slotNum&#39;</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">filterdict</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_slots</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;The length of filter dictionary </span><span class="si">{</span><span class="n">filterdict</span><span class="si">}</span><span class="s2"> exceeds &quot;</span> \
+                                                <span class="sa">f</span><span class="s2">&quot;the number of physical filter wheel slots (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_slots</span><span class="si">}</span><span class="s2">). &quot;</span> \
+                                                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Change the filter dictionary in config file.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span> <span class="o">=</span> <span class="n">filterdict</span>
+
+<div class="viewcode-block" id="ZwoFilterWheel.set_filter">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.ZwoFilterWheel.set_filter">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">filter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">IDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">[</span><span class="nb">filter</span><span class="p">],</span> <span class="n">wait_until_done</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="o">=</span> <span class="nb">filter</span>
+            <span class="k">if</span> <span class="n">wait_until_done</span><span class="p">:</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter </span><span class="si">{</span><span class="nb">filter</span><span class="si">}</span><span class="s1"> not found in the configuration file, please update config file&#39;</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">Close</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">IDs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="DynamixelFilterWheel">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.DynamixelFilterWheel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DynamixelFilterWheel</span><span class="p">(</span><span class="n">Dynamixel</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filterdict</span><span class="p">,</span> <span class="n">COMport</span><span class="p">,</span> <span class="n">identifier</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">baudrate</span><span class="o">=</span><span class="mi">115200</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">COMport</span><span class="p">,</span> <span class="n">identifier</span><span class="p">,</span> <span class="n">baudrate</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span> <span class="o">=</span> <span class="n">filterdict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="DynamixelFilterWheel.set_filter">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.DynamixelFilterWheel.set_filter">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes filter after checking that the commanded value exists&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">filter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_move</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">[</span><span class="nb">filter</span><span class="p">],</span> <span class="n">wait_until_done</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="o">=</span> <span class="nb">filter</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter </span><span class="si">{</span><span class="nb">filter</span><span class="si">}</span><span class="s1"> not found in the configuration file, please update config file&#39;</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="LudlFilterWheel">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.LudlFilterWheel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LudlFilterWheel</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Class to control a 10-position Ludl filterwheel</span>
+
+<span class="sd">    Needs a dictionary which combines filter designations and position IDs</span>
+<span class="sd">    in the form:</span>
+
+<span class="sd">    filters = {&#39;405-488-647-Tripleblock&#39; : 0,</span>
+<span class="sd">           &#39;405-488-561-640-Quadrupleblock&#39;: 1,</span>
+<span class="sd">           &#39;464 482-35&#39;: 2,</span>
+<span class="sd">           &#39;508 520-35&#39;: 3,</span>
+<span class="sd">           &#39;515LP&#39;:4,</span>
+<span class="sd">           &#39;529 542-27&#39;:5,</span>
+<span class="sd">           &#39;561LP&#39;:6,</span>
+<span class="sd">           &#39;594LP&#39;:7,</span>
+<span class="sd">           &#39;Empty&#39;:8,}</span>
+
+<span class="sd">    If there are tuples instead of integers as values, the</span>
+<span class="sd">    filterwheel is assumed to be a double wheel.</span>
+
+<span class="sd">    I.e.: &#39;508 520-35&#39;: (2,3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">COMport</span><span class="p">,</span> <span class="n">filterdict</span><span class="p">,</span> <span class="n">baudrate</span><span class="o">=</span><span class="mi">9600</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">COMport</span> <span class="o">=</span> <span class="n">COMport</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">baudrate</span> <span class="o">=</span> <span class="n">baudrate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span> <span class="o">=</span> <span class="n">filterdict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">double_wheel</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sio</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Delay in s for the wait until done function &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wait_until_done_delay</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If the first entry of the filterdict has a tuple</span>
+<span class="sd">        as value, it is assumed that it is a double-filterwheel</span>
+<span class="sd">        to change the serial commands accordingly.</span>
+
+<span class="sd">        TODO: This doesn&#39;t check that the tuple has length 2.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">first_item_in_filterdict</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">first_item_in_filterdict</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">double_wheel</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;&quot;Note: Only one connection should be done per session. Connecting frequently is error-prone,</span>
+<span class="sd">         because COM port can be scanned by another program (e.g. laser control) and thus be permission-denied at random</span>
+<span class="sd">          times.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">Serial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">COMport</span><span class="p">,</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">baudrate</span><span class="p">,</span>
+                                     <span class="n">parity</span><span class="o">=</span><span class="n">serial</span><span class="o">.</span><span class="n">PARITY_NONE</span><span class="p">,</span>
+                                     <span class="n">timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">write_timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                     <span class="n">xonxoff</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                     <span class="n">stopbits</span><span class="o">=</span><span class="n">serial</span><span class="o">.</span><span class="n">STOPBITS_TWO</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sio</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">TextIOWrapper</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BufferedRWPair</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">serial</span><span class="o">.</span><span class="n">SerialException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Serial connection to Ludl filter wheel failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_if_filter_in_filterdict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">filter</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Checks if the filter designation (string) given as argument</span>
+<span class="sd">        exists in the filterdict</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">filter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Filter designation not in the configuration&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LudlFilterWheel.set_filter">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.LudlFilterWheel.set_filter">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Moves filter using the pyserial command set.</span>
+<span class="sd">        No checks are done whether the movement is completed or</span>
+<span class="sd">        finished in time.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_if_filter_in_filterdict</span><span class="p">(</span><span class="nb">filter</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Check for double or single wheel</span>
+<span class="sd">            TODO: A bit of repeating code in here. Might be better to</span>
+<span class="sd">            spin the create and send commands off.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">double_wheel</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot; Single wheel code &quot;&quot;&quot;</span>
+                <span class="c1"># Get the filter position from the filterdict:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">filternumber</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">[</span><span class="nb">filter</span><span class="p">]</span>
+                <span class="c1"># Rotat is the Ludl high-level command for moving a filter wheel</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ludlstring</span> <span class="o">=</span> <span class="s1">&#39;Rotat S M &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filternumber</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sio</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ludlstring</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sio</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="n">wait_until_done</span><span class="p">:</span>
+<span class="w">                    </span><span class="sd">&#39;&#39;&#39; Wait a certain number of seconds. This is a hack</span>
+
+<span class="sd">                    Testing with :</span>
+<span class="sd">                    self.sio.write(str(&#39;Rdstat S&#39;))</span>
+<span class="sd">                    self.sio.flush()</span>
+<span class="sd">                    print(&#39;First:&#39;, self.sio.readline(10))</span>
+<span class="sd">                    time.sleep(0.1)</span>
+<span class="sd">                    self.sio.write(str(&#39;Rdstat S&#39;))</span>
+<span class="sd">                    self.sio.flush()</span>
+<span class="sd">                    print(&#39;Second: &#39;, self.sio.readline(10))</span>
+
+<span class="sd">                    yielded very unstable results, sometimes &quot;:N -3&quot;, sometimes</span>
+<span class="sd">                    &quot;:A&quot; - and blocking &amp; crashing the connection</span>
+<span class="sd">                    &#39;&#39;&#39;</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wait_until_done_delay</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot; Double wheel code &quot;&quot;&quot;</span>
+                <span class="c1"># Get the filter position tuple from the filterdict:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">filternumber</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">[</span><span class="nb">filter</span><span class="p">]</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot; Write command for the primary wheel &quot;&quot;&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ludlstring0</span> <span class="o">=</span> <span class="s1">&#39;Rotat S M &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filternumber</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sio</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ludlstring0</span><span class="p">))</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot; Write command for the auxillary wheel &quot;&quot;&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ludlstring1</span> <span class="o">=</span> <span class="s1">&#39;Rotat S A &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filternumber</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sio</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ludlstring1</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sio</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="n">wait_until_done</span><span class="p">:</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wait_until_done_delay</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter </span><span class="si">{</span><span class="nb">filter</span><span class="si">}</span><span class="s1"> not found in configuration.&#39;</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sio</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="SutterLambda10BFilterWheel">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.SutterLambda10BFilterWheel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SutterLambda10BFilterWheel</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comport</span><span class="p">,</span> <span class="n">filterdict</span><span class="p">,</span> <span class="n">baudrate</span><span class="o">=</span><span class="mi">9600</span><span class="p">,</span> <span class="n">read_on_init</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">COMport</span> <span class="o">=</span> <span class="n">comport</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">baudrate</span> <span class="o">=</span> <span class="n">baudrate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span> <span class="o">=</span> <span class="n">filterdict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">double_wheel</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Delay in s for the wait until done function &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wait_until_done_delay</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">first_item_in_filterdict</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">first_item_in_filterdict</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">double_wheel</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Open Serial Port</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">serial</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">Serial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">COMport</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">baudrate</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">.25</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">serial</span><span class="o">.</span><span class="n">SerialException</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">UserWarning</span><span class="p">(</span><span class="s1">&#39;Could not open the serial port to the Sutter Lambda 10-B.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Place Controller Into Online Mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s1">&#39;ee&#39;</span><span class="p">))</span>
+
+        <span class="c1"># Check to see if the initialization sequence has finished.</span>
+        <span class="k">if</span> <span class="n">read_on_init</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># class &#39;bytes&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_finished</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Done initializing filter wheel&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_finished</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filternumber</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_if_filter_in_filterdict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filterposition</span><span class="p">):</span>
+        <span class="c1"># Checks if the filter designation (string) given as argument exists in the filterdict</span>
+        <span class="k">if</span> <span class="n">filterposition</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Filter designation not in the configuration&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SutterLambda10BFilterWheel.set_filter">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.SutterLambda10BFilterWheel.set_filter">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filterposition</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">speed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="c1"># Confirm that the filter is present in the filter dictionary</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_if_filter_in_filterdict</span><span class="p">(</span><span class="n">filterposition</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+
+            <span class="c1"># Confirm that you are only operating in a single filter wheel configuration.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">double_wheel</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+
+                <span class="c1"># Identify the Filter Number from the Filter Dictionary</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">wheel_position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterdict</span><span class="p">[</span><span class="n">filterposition</span><span class="p">]</span>
+
+                <span class="c1"># Make sure you are moving it to a reasonable filter position, at a reasonable speed.</span>
+                <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">wheel_position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+                <span class="k">assert</span> <span class="n">speed</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+                <span class="c1"># If previously we did not confirm that the initialization was complete, check now.</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_finished</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">init_finished</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Done initializing filter wheel.&#39;</span><span class="p">)</span>
+
+                <span class="c1"># Filter Wheel Command Byte Encoding = wheel + (speed*16) + position = command byte</span>
+                <span class="n">outputcommand</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wheel_position</span> <span class="o">+</span> <span class="mi">16</span> <span class="o">*</span> <span class="n">speed</span>
+                <span class="n">outputcommand</span> <span class="o">=</span> <span class="n">outputcommand</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;little&#39;</span><span class="p">)</span>
+
+                <span class="c1"># Send out Command</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">serial</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">outputcommand</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">wait_until_done</span><span class="p">:</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wait_until_done_delay</span><span class="p">)</span>
+
+                <span class="c1"># Read up to 2 bytes</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">UserWarning</span><span class="p">(</span><span class="s2">&quot;Sutter Operates only in a Single Filter Wheel Configuration.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SutterLambda10BFilterWheel.read">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.SutterLambda10BFilterWheel.read">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_bytes</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+            <span class="n">num_waiting</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serial</span><span class="o">.</span><span class="n">inWaiting</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">num_waiting</span> <span class="o">==</span> <span class="n">num_bytes</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">UserWarning</span><span class="p">(</span><span class="s2">&quot;The serial port to the Sutter Lambda 10-B is on, but it isn&#39;t responding as expected.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">serial</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">num_bytes</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SutterLambda10BFilterWheel.close">
+<a class="viewcode-back" href="../../../../../api/mesoSPIM.src.devices.filter_wheels.html#mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel.SutterLambda10BFilterWheel.close">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_filter</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

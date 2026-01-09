@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.mesoSPIM_Serial &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.mesoSPIM_Serial</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.mesoSPIM_Serial</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Serial thread for the mesoSPIM project</span>
+<span class="sd">======================================</span>
+
+<span class="sd">This thread handles all connections with serial devices such as stages,</span>
+<span class="sd">filter wheels, zoom systems etc.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtCore</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">Qt</span>
+<span class="sd">&#39;&#39;&#39; Import mesoSPIM modules &#39;&#39;&#39;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.devices.filter_wheels.mesoSPIM_FilterWheel</span><span class="w"> </span><span class="kn">import</span> <span class="n">mesoSPIM_DemoFilterWheel</span><span class="p">,</span> <span class="n">DynamixelFilterWheel</span><span class="p">,</span> <span class="n">LudlFilterWheel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.devices.filter_wheels.mesoSPIM_FilterWheel</span><span class="w"> </span><span class="kn">import</span> <span class="n">ZwoFilterWheel</span><span class="p">,</span> <span class="n">SutterLambda10BFilterWheel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.mesoSPIM_Zoom</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamixelZoom</span><span class="p">,</span> <span class="n">DemoZoom</span><span class="p">,</span> <span class="n">MitutoyoZoom</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.mesoSPIM_Stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">mesoSPIM_PI_1toN</span><span class="p">,</span> <span class="n">mesoSPIM_PI_NtoN</span><span class="p">,</span> <span class="n">mesoSPIM_ASI_Tiger_Stage</span><span class="p">,</span> <span class="n">mesoSPIM_ASI_MS2000_Stage</span><span class="p">,</span> <span class="n">mesoSPIM_DemoStage</span><span class="p">,</span> <span class="n">mesoSPIM_PI_rotz_and_Galil_xyf_Stages</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.utility_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_cpu_core</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Serial">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_Serial</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;This class handles mesoSPIM serial connections&#39;&#39;&#39;</span>
+    <span class="n">sig_finished</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_state_request</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">sig_position</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">sig_zero_axes</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">sig_unzero_axes</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">sig_stop_movement</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_load_sample</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_unload_sample</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_center_sample</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_mark_rotation_position</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_status_message</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">sig_pause</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Assign the parent class to a instance variable for callbacks &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># the mesoSPIM_StateSingleton() instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Attaching the filterwheel &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Ludl&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">LudlFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Dynamixel&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">DynamixelFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;servo_id&#39;</span><span class="p">],</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;baudrate&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Demo&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">mesoSPIM_DemoFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Sutter&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">SutterLambda10BFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;ZWO&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">ZwoFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Filter wheel type unknown: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Attaching the zoom &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Dynamixel&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="n">DynamixelZoom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoomdict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;servo_id&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;baudrate&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;Mitu&#39;</span><span class="p">,</span> <span class="s1">&#39;Mitutoyo&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="n">MitutoyoZoom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoomdict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;baudrate&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;Demo&#39;</span><span class="p">,</span> <span class="s1">&#39;DemoZoom&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="n">DemoZoom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoomdict</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Zoom type unknown: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Attaching the stage &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;PI&#39;</span><span class="p">,</span> <span class="s1">&#39;PI_1controllerNstages&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_PI_1toN</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PI_NcontrollersNstages&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_PI_NtoN</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;GalilStage&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_GalilStages(self)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;PI_rot_and_Galil_xyzf&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;PI_f_rot_and_Galil_xyz&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PI_rotz_and_Galil_xyf&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_PI_rotz_and_Galil_xyf_Stages</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;PI_rotzf_and_Galil_xy&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;TigerASI&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_ASI_Tiger_Stage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">sig_pause</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pause</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_progress</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">log_slice</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;MS2000ASI&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_ASI_MS2000_Stage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">sig_pause</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pause</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_progress</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">log_slice</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;DemoStage&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_DemoStage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Stage type unknown: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">sig_status_message</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">send_status_message</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">sig_position</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">report_position</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Stage not initalized! Please check the config file&#39;</span><span class="p">)</span>
+
+        <span class="c1"># self.parent.sig_move_absolute.connect(self.move_absolute)</span>
+        <span class="c1"># self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True))</span>
+        <span class="c1"># WARNING: do not use type=Qt.BlockingQueuedConnection for _wait_until_done signals, as this will cause a deadlock!</span>
+        <span class="c1"># The mesoSPIM_Serial object is executed in the parent (Core) thread, and type=Qt.BlockingQueuedConnection can be used only between threads.</span>
+        <span class="c1"># Using type=Qt.BlockingQueuedConnection withing the same thread will cause a deadlock.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_zero_axes</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_zero_axes</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_unzero_axes</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_unzero_axes</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_stop_movement</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_stop_movement</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_load_sample</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_load_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_unload_sample</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_unload_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_center_sample</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_center_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">state_request_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial state request: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sdict</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">sdict</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;filter&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;zoom&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_zoom</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;stage_program&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">execute_stage_program</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;ttl_movement_enabled_during_acq&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">enable_ttl_motion</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;state change: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_status_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_status_message</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">pause</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boolean</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Pause signal received: </span><span class="si">{</span><span class="n">boolean</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_pause</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">boolean</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">enable_ttl_motion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boolean</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">enable_ttl_motion</span><span class="p">(</span><span class="n">boolean</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Serial.stage_limits_OK">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.stage_limits_OK">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage_limits_OK</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">safety_margin_n_moves</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Safety margin is added to deal with delays in position reporting.&#39;&#39;&#39;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Checking stage limits: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;x_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;y_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;z_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;theta_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;f_rel&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">sdict</span><span class="p">:</span>
+                <span class="n">axis</span> <span class="o">=</span> <span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
+                <span class="n">condition</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;(self.stage.</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">_min &lt; self.stage.</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">_pos + </span><span class="si">{</span><span class="n">safety_margin_n_moves</span><span class="si">}</span><span class="s2"> * sdict[&#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39;] &lt; self.stage.</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">_max)&quot;</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">eval</span><span class="p">(</span><span class="n">condition</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">send_status_message</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Relative movement stopped: </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1"> motion limit would be reached!&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span><span class="p">:</span> <span class="c1"># clear previous warning message</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_status_message</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_relative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">log_cpu_core</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;move_relative()&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial moving relative: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_OK</span><span class="p">(</span><span class="n">sdict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">move_relative</span><span class="p">(</span><span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Stage limits reached: motion stopped&#39;</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_absolute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_internal_position</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial moving absolute: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">move_absolute</span><span class="p">(</span><span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">,</span> <span class="n">use_internal_position</span><span class="o">=</span><span class="n">use_internal_position</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">report_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">):</span>
+        <span class="n">log_cpu_core</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;report_position()&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial reporting position: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_position</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;position&#39;</span><span class="p">:</span> <span class="n">sdict</span><span class="p">})</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">go_to_rotation_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Going to rotation position&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">go_to_rotation_position</span><span class="p">(</span><span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sfilter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Setting filter to </span><span class="si">{</span><span class="n">sfilter</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="n">sfilter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sfilter</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_zoom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zoom</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Here, the state parameters are set before sending the value to the zoom --</span>
+<span class="sd">        this is to avoid laggy update loops with the GUI.&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zoom</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;pixelsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">pixelsize</span><span class="p">[</span><span class="n">zoom</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span><span class="o">.</span><span class="n">set_zoom</span><span class="p">(</span><span class="n">zoom</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Serial.execute_stage_program">
+<a class="viewcode-back" href="../../../api/mesoSPIM.src.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.execute_stage_program">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_stage_program</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">execute_program</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

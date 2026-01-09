@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mesoSPIM.src.utils.multicolor_acquisition_wizard &mdash; mesoSPIM Control 1.11.1 documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../../_static/documentation_options.js?v=c8897f99"></script>
+        <script src="../../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            mesoSPIM Control
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">mesoSPIM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">mesoSPIM Control</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mesoSPIM.src.utils.multicolor_acquisition_wizard</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mesoSPIM.src.utils.multicolor_acquisition_wizard</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Contains Multicolor Acquisition Wizard Classes:</span>
+
+<span class="sd">Widgets that take user input and create acquisition lists</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pprint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span><span class="p">,</span> <span class="n">QtWidgets</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyqtProperty</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.multicolor_acquisition_builder</span><span class="w"> </span><span class="kn">import</span> <span class="n">MulticolorTilingAcquisitionListBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.filename_wizard</span><span class="w"> </span><span class="kn">import</span> <span class="n">FilenameWizard</span>
+<span class="c1">#from ..mesoSPIM_State import mesoSPIM_StateSingleton</span>
+
+
+<div class="viewcode-block" id="MulticolorTilingWizard">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MulticolorTilingWizard</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizard</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Wizard to run</span>
+
+<span class="sd">    The parent is the Window class of the microscope</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">wizard_done</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Parent is object of class mesoSPIM_AcquisitionManagerWindow()&#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; By an instance variable, callbacks to window signals can be handed through &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span> <span class="k">if</span> <span class="n">parent</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># the mesoSPIM_StateSingleton() instance</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Instance variables &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_end</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_step</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="s1">&#39;1x&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_pixels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">camera_parameters</span><span class="p">[</span><span class="s1">&#39;x_pixels&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="k">else</span> <span class="mi">2048</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_pixels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">camera_parameters</span><span class="p">[</span><span class="s1">&#39;y_pixels&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="k">else</span> <span class="mi">2048</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_fov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_fov</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelcount</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterconfig</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta_pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_image_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_count</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">folder</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta_y</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutter_seq</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;Tiling Wizard&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel4</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">folderpage</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">TilingWelcomePage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">DefineBoundingBoxPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">DefineGeneralParametersPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">CheckTilingPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel1</span><span class="p">,</span> <span class="n">FirstChannelPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel2</span><span class="p">,</span> <span class="n">SecondChannelPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel3</span><span class="p">,</span> <span class="n">ThirdChannelPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel4</span><span class="p">,</span> <span class="n">FourthChannelPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel5</span><span class="p">,</span> <span class="n">FifthChannelPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">folderpage</span><span class="p">,</span> <span class="n">DefineFolderPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPage</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">FinishedTilingPage</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWizardStyle</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizard</span><span class="o">.</span><span class="n">ModernStyle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;&#39;&#39; font-size: 20px; &#39;&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizard</span><span class="o">.</span><span class="n">BackButton</span><span class="p">)</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">go_back</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MulticolorTilingWizard.go_back">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard.go_back">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">go_back</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Amend previously created channel settings&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentId</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel3</span><span class="p">):</span>
+            <span class="n">ch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span></div>
+
+            <span class="c1"># print(f&quot;DEBUG: removed channel {ch}&quot;)</span>
+
+<div class="viewcode-block" id="MulticolorTilingWizard.done">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard.done">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">done</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Reimplementation of the done function</span>
+
+<span class="sd">        if r == 0: canceled</span>
+<span class="sd">        if r == 1: finished properly</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">r</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Wizard was canceled&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wizard was closed properly&#39;</span><span class="p">)</span>
+            <span class="c1"># self.print_dict()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_acquisition_list</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">acq_list</span><span class="p">)</span>
+<span class="w">            </span><span class="sd">&#39;&#39;&#39; Update state with this new list &#39;&#39;&#39;</span>
+            <span class="c1"># self.parent.update_persistent_editors()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wizard_done</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+            <span class="n">FilenameWizard</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wizard provided return code: &#39;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">done</span><span class="p">(</span><span class="n">r</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MulticolorTilingWizard.update_model">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard.update_model">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">acq_list</span><span class="p">):</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">setTable</span><span class="p">(</span><span class="n">acq_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;acq_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">acq_list</span></div>
+
+
+<div class="viewcode-block" id="MulticolorTilingWizard.update_image_counts">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard.update_image_counts">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_image_counts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta_x</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_end</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_start</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta_y</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_end</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_start</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Using the ceiling function to always create at least 1 image &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_image_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delta_x</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_offset</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_image_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delta_y</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_offset</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="MulticolorTilingWizard.get_dict">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard.get_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;x_start&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_start</span><span class="p">,</span>
+                <span class="s1">&#39;x_end&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_end</span><span class="p">,</span>
+                <span class="s1">&#39;y_start&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_start</span><span class="p">,</span>
+                <span class="s1">&#39;y_end&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_end</span><span class="p">,</span>
+                <span class="s1">&#39;z_start&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_start</span><span class="p">,</span>
+                <span class="s1">&#39;z_end&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_end</span><span class="p">,</span>
+                <span class="s1">&#39;z_step&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_step</span><span class="p">,</span>
+                <span class="s1">&#39;theta_pos&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">theta_pos</span><span class="p">,</span>
+                <span class="s1">&#39;x_offset&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_offset</span><span class="p">,</span>
+                <span class="s1">&#39;y_offset&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_offset</span><span class="p">,</span>
+                <span class="s1">&#39;x_fov&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_fov</span><span class="p">,</span>
+                <span class="s1">&#39;y_fov&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_fov</span><span class="p">,</span>
+                <span class="s1">&#39;x_image_count&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_image_count</span><span class="p">,</span>
+                <span class="s1">&#39;y_image_count&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_image_count</span><span class="p">,</span>
+                <span class="s1">&#39;zoom&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span><span class="p">,</span>
+                <span class="s1">&#39;shutterconfig&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutterconfig</span><span class="p">,</span>
+                <span class="s1">&#39;shutter_seq&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter_seq</span><span class="p">,</span>
+                <span class="s1">&#39;folder&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">folder</span><span class="p">,</span>
+                <span class="s1">&#39;channels&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+                <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="MulticolorTilingWizard.update_acquisition_list">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard.update_acquisition_list">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_acquisition_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_image_counts</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;theta_pos&#39;</span><span class="p">]</span>
+
+        <span class="nb">dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acq_list</span> <span class="o">=</span> <span class="n">MulticolorTilingAcquisitionListBuilder</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span><span class="o">.</span><span class="n">get_acquisition_list</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="MulticolorTilingWizard.print_dict">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.MulticolorTilingWizard.print_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">print_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_dict</span><span class="p">())</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="TilingWelcomePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.TilingWelcomePage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TilingWelcomePage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Welcome to the tiling wizard&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;This wizard will guide you through the steps of creating a tiling acquisition.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DefineBoundingBoxPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineBoundingBoxPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DefineBoundingBoxPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Define the bounding box of the tiling acquisition&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;Move the sample in XYZ and define bounding box by corners OR walls by pressing the buttons below. &quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set XY Start Corner&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;xy-start&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_start</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_start</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set X start&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_start</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_start</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;x-start&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_end</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_end</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set X end&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_end</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_x_end</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;x-end&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_start</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_start</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set Y start&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_start</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_start</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;y-start&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_end</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_end</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set Y end&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_end</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_y_end</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;y-end&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set XY End Corner&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;xy-end&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStartButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStartButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set Z start&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStartButton</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStartButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;z-start&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZEndButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZEndButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set Z end&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZEndButton</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZEndButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge_position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;z-end&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZSpinBoxLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Z stepsize&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QDoubleSpinBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span><span class="o">.</span><span class="n">setDecimals</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_z_step</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;xy_start_position*&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;xy_end_position*&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;z_end_position*&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZEndButton</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_z_step</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_y_start</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_x_start</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_x_end</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_y_end</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZStartButton</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZEndButton</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZSpinBoxLabel</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DefineBoundingBoxPage.get_edge_position">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineBoundingBoxPage.get_edge_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_edge_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">valid_keys</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;x-start&#39;</span><span class="p">,</span> <span class="s1">&#39;x-end&#39;</span><span class="p">,</span> <span class="s1">&#39;y-start&#39;</span><span class="p">,</span> <span class="s1">&#39;y-end&#39;</span><span class="p">,</span> <span class="s1">&#39;z-start&#39;</span><span class="p">,</span> <span class="s1">&#39;z-end&#39;</span><span class="p">,</span> <span class="s1">&#39;xy-start&#39;</span><span class="p">,</span> <span class="s1">&#39;xy-end&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">valid_keys</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Position key </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> is invalid&quot;</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;x-start&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_y_start</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;x-end&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_y_end</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;y-start&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_x_start</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_start</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;y-end&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_x_end</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">button_xy_end</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;z-start&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">z_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;z_pos&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;z-end&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">z_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;z_pos&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;xy-start&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">button_x_start</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">button_y_start</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;xy-end&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;x_pos&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;y_pos&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">button_x_end</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">button_y_end</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DefineBoundingBoxPage.update_z_step">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineBoundingBoxPage.update_z_step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_z_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">z_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZStepSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DefineGeneralParametersPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineGeneralParametersPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DefineGeneralParametersPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="n">N_CHANNELS</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Define other parameters&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;# Channels&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelSpinBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSpinBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelSpinBox</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelSpinBox</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="n">N_CHANNELS</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoomLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Zoom&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoomComboBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zoomComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoomdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoomComboBox</span><span class="o">.</span><span class="n">currentIndexChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_fov_size</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Shutter&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterComboBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shutterComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">shutteroptions</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterSequenceLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Left, then Right?&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterSeqCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterSeqCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterSeqCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_shutt_seq</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fovSizeLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;FOV Size X ⨉ Y:&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fovSizeLineEdit</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fovSizeLineEdit</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Overlap %&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Overlap in %&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSpinBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">setSuffix</span><span class="p">(</span><span class="s1">&#39; %&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_x_and_y_offset</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">manualOverlapCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Set Offset Manually&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBoxLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;X Offset&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSpinBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setSuffix</span><span class="p">(</span><span class="s1">&#39; μm&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">30000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBoxLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Y Offset&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSpinBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setSuffix</span><span class="p">(</span><span class="s1">&#39; μm&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">30000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">boolean</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_x_and_y_offset</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="ow">not</span> <span class="n">boolean</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="ow">not</span> <span class="n">boolean</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">manualOverlapCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="ow">not</span> <span class="n">boolean</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">manualOverlapCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="ow">not</span> <span class="n">boolean</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manualOverlapCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">boolean</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manualOverlapCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">boolean</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manualOverlapCheckBox</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">boolean</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="ow">not</span> <span class="n">boolean</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelLabel</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelSpinBox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zoomLabel</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zoomComboBox</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shutterLabel</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shutterComboBox</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shutterSequenceLabel</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shutterSeqCheckBox</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fovSizeLabel</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fovSizeLineEdit</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">overlapLabel</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">manualOverlapCheckBox</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBoxLabel</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBoxLabel</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DefineGeneralParametersPage.validatePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineGeneralParametersPage.validatePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validatePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; The done function should update all the parent parameters &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_other_acquisition_parameters</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_fov_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Should be invoked whenever the zoom selection is changed &#39;&#39;&#39;</span>
+        <span class="n">new_zoom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zoomComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span>
+        <span class="n">pixelsize_in_um</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">pixelsize</span><span class="p">[</span><span class="n">new_zoom</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span> <span class="k">else</span> <span class="mf">6.5</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; X and Y are interchanged here to account for the camera rotation by 90°&#39;&#39;&#39;</span>
+        <span class="n">new_x_fov_in_um</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_pixels</span> <span class="o">*</span> <span class="n">pixelsize_in_um</span><span class="p">)</span>
+        <span class="n">new_y_fov_in_um</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_pixels</span> <span class="o">*</span> <span class="n">pixelsize_in_um</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_fov</span> <span class="o">=</span> <span class="n">new_x_fov_in_um</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_fov</span> <span class="o">=</span> <span class="n">new_y_fov_in_um</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fovSizeLineEdit</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">new_x_fov_in_um</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39; ⨉ &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">new_y_fov_in_um</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; μm²&#39;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; If the zoom changes, the offset calculation should be redone&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_x_and_y_offset</span><span class="p">()</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_x_and_y_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">new_offset_percentage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">x_offset</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_fov</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">new_offset_percentage</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="n">y_offset</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_fov</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">new_offset_percentage</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">x_offset</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">y_offset</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_shutt_seq</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">shutter_seq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutterSeqCheckBox</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutterSeqCheckBox</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shutterComboBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shutterComboBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DefineGeneralParametersPage.update_other_acquisition_parameters">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineGeneralParametersPage.update_other_acquisition_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_other_acquisition_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Here, all the Tiling parameters are filled in the parent (TilingWizard)</span>
+<span class="sd">        This method should be called when the &quot;Next&quot; Button is pressed</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zoomComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">shutterconfig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutterComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channelcount</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channelSpinBox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DefineGeneralParametersPage.initializePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineGeneralParametersPage.initializePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initializePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_page_from_state</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_fov_size</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_x_and_y_offset</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overlapPercentageCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xOffsetSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yOffsetSpinBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+
+        
+<div class="viewcode-block" id="DefineGeneralParametersPage.update_page_from_state">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineGeneralParametersPage.update_page_from_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_page_from_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoomComboBox</span><span class="o">.</span><span class="n">setCurrentText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutterComboBox</span><span class="o">.</span><span class="n">setCurrentText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shutterconfig&#39;</span><span class="p">])</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="CheckTilingPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.CheckTilingPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CheckTilingPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Check Tiling Page&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;Here are your parameters&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xFOVLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;X FOVs:&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xFOVs</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xFOVs</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">yFOVLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Y FOVs:&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yFOVs</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yFOVs</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_start_end_label</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;X start, end:&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_start</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_start</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_end</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_end</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_start_end_label</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Y start, end:&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_start</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_start</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_end</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_end</span><span class="o">.</span><span class="n">setReadOnly</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xFOVLabel</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xFOVs</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_start_end_label</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_start</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_end</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yFOVLabel</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yFOVs</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_start_end_label</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_start</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_end</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CheckTilingPage.initializePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.CheckTilingPage.initializePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initializePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Here, the acquisition list is created for further checking&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_image_counts</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xFOVs</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_image_count</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yFOVs</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_image_count</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_start</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_start</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_start</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_start</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_end</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">x_end</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_end</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">y_end</span><span class="p">)))</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GenericChannelPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.GenericChannelPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GenericChannelPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">channel_id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_id</span> <span class="o">=</span> <span class="n">channel_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_id</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Configure channel #&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">id_string</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">f_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_end</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">copyCurrentStateLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Copy state:&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">copyCurrentStateButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copyCurrentStateButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Copy current laser, intensity and filter&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copyCurrentStateButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_page_from_state</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">laserLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Laser&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">laserComboBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">laserComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">laserdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensityLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Intensity&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensitySlider</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSlider</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">Horizontal</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensitySlider</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensitySlider</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Filter&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterComboBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ETLCheckBoxLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;ETL&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ETLCheckBox</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">(</span><span class="s1">&#39;Copy current ETL parameters&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ETLCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">StartFocusLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;Start focus&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StartFocusButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StartFocusButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set start focus&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StartFocusButton</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StartFocusButton</span><span class="o">.</span><span class="n">toggled</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_start_focus_position</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">EndFocusLabel</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;End focus&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EndFocusButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EndFocusButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Set end focus&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EndFocusButton</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EndFocusButton</span><span class="o">.</span><span class="n">toggled</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_end_focus_position</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">GoToZStartButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GoToZStartButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Go to Z start&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GoToZStartButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_z_position</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">z_start</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">GoToZEndButton</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GoToZEndButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;Go to Z end&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GoToZEndButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_z_position</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">z_end</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;start_focus_position&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_id</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">StartFocusButton</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerField</span><span class="p">(</span><span class="s1">&#39;end_focus_position&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_id</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">EndFocusButton</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">copyCurrentStateLabel</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">copyCurrentStateButton</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">laserLabel</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">laserComboBox</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intensityLabel</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intensitySlider</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filterLabel</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filterComboBox</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ETLCheckBoxLabel</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ETLCheckBox</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">StartFocusLabel</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">StartFocusButton</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GoToZStartButton</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">EndFocusLabel</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">EndFocusButton</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GoToZEndButton</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GenericChannelPage.initializePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.GenericChannelPage.initializePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initializePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_page_from_state</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GenericChannelPage.update_page_from_state">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.GenericChannelPage.update_page_from_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_page_from_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">laserComboBox</span><span class="o">.</span><span class="n">setCurrentText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;laser&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensitySlider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;intensity&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterComboBox</span><span class="o">.</span><span class="n">setCurrentText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="GenericChannelPage.update_start_focus_position">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.GenericChannelPage.update_start_focus_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_start_focus_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;f_pos&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="GenericChannelPage.update_end_focus_position">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.GenericChannelPage.update_end_focus_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_end_focus_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="s1">&#39;f_pos&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="GenericChannelPage.go_to_z_position">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.GenericChannelPage.go_to_z_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">go_to_z_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_move_absolute</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;z_abs&#39;</span><span class="p">:</span><span class="n">z</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="GenericChannelPage.validatePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.GenericChannelPage.validatePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validatePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">selectedIntensity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensitySlider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">selectedLaser</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">laserComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span>
+        <span class="n">selectedFilter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span>
+        <span class="n">f_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_start</span>
+        <span class="n">f_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_end</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ETLCheckBox</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+            <span class="n">etl_l_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;etl_l_offset&#39;</span><span class="p">]</span> 
+            <span class="n">etl_l_amplitude</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">]</span>
+            <span class="n">etl_r_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;etl_r_offset&#39;</span><span class="p">]</span> 
+            <span class="n">etl_r_amplitude</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">etl_l_offset</span> <span class="o">=</span> <span class="n">etl_l_amplitude</span> <span class="o">=</span> <span class="n">etl_r_offset</span> <span class="o">=</span> <span class="n">etl_r_amplitude</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;laser&#39;</span><span class="p">:</span><span class="n">selectedLaser</span><span class="p">,</span> 
+                                    <span class="s1">&#39;intensity&#39;</span><span class="p">:</span><span class="n">selectedIntensity</span><span class="p">,</span>
+                                    <span class="s1">&#39;filter&#39;</span><span class="p">:</span><span class="n">selectedFilter</span><span class="p">,</span>
+                                    <span class="s1">&#39;f_start&#39;</span><span class="p">:</span><span class="n">f_start</span><span class="p">,</span>
+                                    <span class="s1">&#39;f_end&#39;</span><span class="p">:</span><span class="n">f_end</span><span class="p">,</span>
+                                    <span class="s1">&#39;etl_l_offset&#39;</span><span class="p">:</span><span class="n">etl_l_offset</span><span class="p">,</span>
+                                    <span class="s1">&#39;etl_l_amplitude&#39;</span><span class="p">:</span><span class="n">etl_l_amplitude</span><span class="p">,</span>
+                                    <span class="s1">&#39;etl_r_offset&#39;</span><span class="p">:</span><span class="n">etl_r_offset</span><span class="p">,</span>
+                                    <span class="s1">&#39;etl_r_amplitude&#39;</span><span class="p">:</span><span class="n">etl_r_amplitude</span><span class="p">})</span>
+
+        <span class="k">return</span> <span class="kc">True</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FirstChannelPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FirstChannelPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FirstChannelPage</span><span class="p">(</span><span class="n">GenericChannelPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FirstChannelPage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FirstChannelPage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channelcount</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">folderpage</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channel2</span> </div>
+</div>
+
+
+
+<div class="viewcode-block" id="SecondChannelPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.SecondChannelPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SecondChannelPage</span><span class="p">(</span><span class="n">GenericChannelPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SecondChannelPage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.SecondChannelPage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channelcount</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">folderpage</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channel3</span> </div>
+</div>
+
+
+
+<div class="viewcode-block" id="ThirdChannelPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.ThirdChannelPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ThirdChannelPage</span><span class="p">(</span><span class="n">GenericChannelPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ThirdChannelPage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.ThirdChannelPage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channelcount</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">folderpage</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channel4</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FourthChannelPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FourthChannelPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FourthChannelPage</span><span class="p">(</span><span class="n">GenericChannelPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FourthChannelPage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FourthChannelPage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channelcount</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">folderpage</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">channel5</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FifthChannelPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FifthChannelPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FifthChannelPage</span><span class="p">(</span><span class="n">GenericChannelPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FifthChannelPage.nextId">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FifthChannelPage.nextId">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nextId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">folderpage</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DefineFolderPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineFolderPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DefineFolderPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Select folder&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;Please select the folder in which the data should be saved.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Button</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s1">&#39;Select Folder&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Button</span><span class="o">.</span><span class="n">setCheckable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Button</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Button</span><span class="o">.</span><span class="n">toggled</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">choose_folder</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Button</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DefineFolderPage.choose_folder">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.DefineFolderPage.choose_folder">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">choose_folder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; File dialog for choosing the save folder &#39;&#39;&#39;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getExistingDirectory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="s1">&#39;Select Folder&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">folder</span> <span class="o">=</span> <span class="n">path</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">TextEdit</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FinishedTilingPage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FinishedTilingPage">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FinishedTilingPage</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWizardPage</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Finished!&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSubTitle</span><span class="p">(</span><span class="s2">&quot;Attention: This will overwrite the Acquisition Table. &quot;</span>
+                         <span class="s2">&quot;File name wizard will start next.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FinishedTilingPage.validatePage">
+<a class="viewcode-back" href="../../../../api/mesoSPIM.src.utils.html#mesoSPIM.src.utils.multicolor_acquisition_wizard.FinishedTilingPage.validatePage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validatePage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright mesoSPIM team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
