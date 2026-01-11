@@ -419,7 +419,10 @@ MP_OME_Zarr_Writer = {
     'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
 
     # Multiprocess options
-    'ring_buffer_size': 512,  # Max number of images in shared memory ring buffer
+    'ring_buffer_size': 16,  # Max number of images in shared memory ring buffer
+    
+    # Write cache options
+    'write_cache': 'c:/code/write_cache'
 }
 
 '''

@@ -884,6 +884,7 @@ def omezarr_writer_worker(
     writer_kwargs: dict,
     work_q: mp.Queue,
     free_q: mp.Queue,
+    write_cache: Path | None,
 ):
     """
     Child process:
@@ -895,11 +896,20 @@ def omezarr_writer_worker(
     """
 
     import numpy as np
+    import shutil
+    import uuid
 
     # Attach to shared memory
     shm = shared_memory.SharedMemory(name=shm_name)
     Y, X = frame_shape
     ring = np.ndarray((ring_size, Y, X), dtype=np.uint16, buffer=shm.buf)
+
+    if write_cache:
+        acq_path = Path(writer_kwargs['path'])
+        tmp_location = Path(write_cache) / (acq_path.name + '.' + str(uuid.uuid4()).split('-')[-1])
+        writer_kwargs['path'] = tmp_location
+        print(f'Acquiring to temp location: {tmp_location}')
+
 
     writer = Live3DPyramidWriter(**writer_kwargs)
 
@@ -920,4 +930,41 @@ def omezarr_writer_worker(
         except Exception:
             import logging
             logging.getLogger(__name__).exception("Error closing Live3DPyramidWriter in worker")
+
+    if write_cache:
+        print(f'Moving {tmp_location} --> {acq_path}')
+
+        acq_path.mkdir(parents=True, exist_ok=True)
+
+        max_retries = 3
+        total_loops = 0
+
+        while total_loops < max_retries:
+            retry = 0
+
+            for item in tmp_location.iterdir():
+                destination_item_path = acq_path / item.name
+                try:
+                    shutil.move(str(item), str(destination_item_path))
+                    print(f"Moved: {item.name}")
+                except Exception as e:
+                    retry += 1
+                    print(f"Failed to move {item.name}: {e}")
+
+            if retry == 0:
+                print(f'All files moved successfully from {tmp_location} to {acq_path}')
+                remaining = list(tmp_location.iterdir())
+                if remaining:
+                    print(f"Not removing {tmp_location}, still contains {len(remaining)} items")
+                else:
+                    tmp_location.rmdir()
+                break
+
+            total_loops += 1
+            print(f'Retry {total_loops}/{max_retries}: {retry} files failed')
+
+        else:
+            print(f'Some files were not copied from {tmp_location} to {acq_path}')
+
+        print(f'Closing writer for {acq_path.name}')
         shm.close()

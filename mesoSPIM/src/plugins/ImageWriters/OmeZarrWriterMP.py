@@ -74,15 +74,10 @@ class OMEZarrWriterMP(ImageWriter):
     degradation. We suggest that shards are shallow in Z and as large as you camera sensor in XY.
     For best performance set the base and target chunks to the same z-depth as your shards.
 
-    async_finalize: default: True. Enables acquisition of the next tile to proceed immediately while the multiscale
-    is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
-    Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False
-    to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating.
-
 
     OPTIONAL: Place the following entry into the mesoSPIM configuration file and change as needed
 
-    OME_Zarr_Writer = {
+    MP_OME_Zarr_Writer = {
         'ome_version': '0.5', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
         'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
         'compression': 'zstd', # None, 'zstd', 'lz4'
@@ -90,14 +85,22 @@ class OMEZarrWriterMP(ImageWriter):
         'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
         'base_chunks': (64,256,256), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
         'target_chunks': (64,64,64), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-        'async_finalize': True, # True, False
 
         # BigStitcher Specific Options
         'write_big_stitcher_xml': True, # True, False
         'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
-        }
 
+        # Multiprocess options
+        'ring_buffer_size': 512, # The number of frames buffered into shared memory for the MP writer.
+
+        # Cache location
+        # Location where tile data is written and then moved to defined acquisition directory
+        # Each tile is acquired and then data are moved to the acquisition directory before the process is closed.
+        # Suggest a fast NVME before moving to HDD or network-attached storage.
+        # This can add stability to the acquisition for network acquisitions
+        'write_cache': None,
+        }
         '''
 
     def __init__(self):
@@ -199,6 +202,9 @@ class OMEZarrWriterMP(ImageWriter):
         # Multiprocess options
         ring_buffer_size = 512          # number of frames that can be queued at once
 
+        # Cache
+        write_cache = None
+
         #####################################
         ####  Load from Config if defined ###
         #####################################
@@ -208,8 +214,6 @@ class OMEZarrWriterMP(ImageWriter):
             if 'compression' in req.writer_config_file_values:
                 # Deals with case where compression is None in config so it is retained
                 compression = req.writer_config_file_values.get('compression')
-            else:
-                pass
             compression_level = req.writer_config_file_values.get('compression_level', compression_level)
             shards = req.writer_config_file_values.get('shards', shards)
             base_chunks = req.writer_config_file_values.get('base_chunks', base_chunks)
@@ -219,6 +223,9 @@ class OMEZarrWriterMP(ImageWriter):
             flip_xyz = req.writer_config_file_values.get('flip_xyz', flip_xyz)
             transpose_xy = req.writer_config_file_values.get('transpose_xy', transpose_xy)
             ring_buffer_size = req.writer_config_file_values.get('ring_buffer_size', ring_buffer_size)
+            if 'write_cache' in req.writer_config_file_values:
+                # Deals with case where write_cache is None in config
+                write_cache = req.writer_config_file_values.get('write_cache')
 
         # Save req so metadata_file_info can see it
         self.req = req
@@ -357,6 +364,7 @@ class OMEZarrWriterMP(ImageWriter):
                 writer_kwargs,
                 self._work_q,
                 self._free_q,
+                write_cache,
             ),
             daemon=True,
         )
