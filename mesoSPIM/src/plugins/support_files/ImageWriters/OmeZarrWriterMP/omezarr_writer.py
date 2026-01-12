@@ -898,6 +898,12 @@ def omezarr_writer_worker(
     import numpy as np
     import shutil
     import uuid
+    from datetime import datetime
+
+    def get_name_write_cache_dir(acq_path) -> Path | None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        random_char = str(uuid.uuid4()).split('-')[-1]
+        return f'{timestamp}_{acq_path.name}.{random_char}'
 
     # Attach to shared memory
     shm = shared_memory.SharedMemory(name=shm_name)
@@ -906,7 +912,7 @@ def omezarr_writer_worker(
 
     if write_cache:
         acq_path = Path(writer_kwargs['path'])
-        tmp_location = Path(write_cache) / (acq_path.name + '.' + str(uuid.uuid4()).split('-')[-1])
+        tmp_location = Path(write_cache) / get_name_write_cache_dir(acq_path)
         writer_kwargs['path'] = tmp_location
         print(f'Acquiring to temp location: {tmp_location}')
 
