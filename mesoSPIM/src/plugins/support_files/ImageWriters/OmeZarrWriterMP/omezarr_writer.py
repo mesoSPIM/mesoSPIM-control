@@ -959,6 +959,17 @@ def omezarr_writer_worker(
             logging.getLogger(__name__).exception("Error closing Live3DPyramidWriter in worker")
 
     if write_cache:
+        p = psutil.Process(os.getpid())
+        if os.name == "nt":
+            # Windows: pick a lower priority class
+            # Lower process to idle while copying data so as not to interfere with MesoSPIM acquisition
+            p.nice(psutil.IDLE_PRIORITY_CLASS)
+            # psutil.BELOW_NORMAL_PRIORITY_CLASS
+            # psutil.IDLE_PRIORITY_CLASS
+        else:
+            # Linux/Unix: higher nice => lower priority (0 is default)
+            p.nice(19)  # 10-19 are common "background" values
+
         print(f'Moving {tmp_location} --> {acq_path}')
 
         acq_path.mkdir(parents=True, exist_ok=True)
@@ -993,5 +1004,5 @@ def omezarr_writer_worker(
         else:
             print(f'Some files were not copied from {tmp_location} to {acq_path}')
 
-        print(f'Closing writer for {acq_path.name}')
         shm.close()
+        print(f'Writer closed for {acq_path.name}')
