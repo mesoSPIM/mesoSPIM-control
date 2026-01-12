@@ -420,9 +420,9 @@ MP_OME_Zarr_Writer = {
 
     # Multiprocess options
     'ring_buffer_size': 16,  # Max number of images in shared memory ring buffer
-    
-    # Write cache options
-    'write_cache': 'c:/code/write_cache'
+         
+    # Write cache options. Write tile data to cache then copy to acquisition folder
+    'write_cache': None # 'e:/path/to/fast/ssd/write/cache'
 }
 
 '''

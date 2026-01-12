@@ -877,6 +877,19 @@ class XmlWriter:
 import multiprocessing as mp
 from multiprocessing import shared_memory
 
+    p = psutil.Process(os.getpid())
+
+    if os.name == "nt":
+        # Windows: pick a lower priority class
+        # Make ome-zarr processing the very lowest priority yielding to acquisition loop
+        p.nice(psutil.IDLE_PRIORITY_CLASS)
+        # psutil.BELOW_NORMAL_PRIORITY_CLASS
+        # psutil.IDLE_PRIORITY_CLASS
+    else:
+        # Linux/Unix: higher nice => lower priority (0 is default)
+        p.nice(10)  # 10-19 are common "background" values
+
+
 def omezarr_writer_worker(
     shm_name: str,
     frame_shape: tuple[int, int],
