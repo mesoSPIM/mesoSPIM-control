@@ -80,6 +80,7 @@ class FileNaming:
     IncludeMag: bool = True
     IncludeTile: bool = True
     IncludeChannel: bool = True
+    IncludeFilter: bool = True
     IncludeShutter: bool = True
     IncludeRotation: bool = True
     IncludeSuffix: Optional[str] = None
