@@ -1,4 +1,6 @@
-import os, concurrent.futures
+import os
+import concurrent.futures
+import psutil
 from pathlib import Path
 import math
 import tifffile
@@ -877,6 +879,21 @@ class XmlWriter:
 import multiprocessing as mp
 from multiprocessing import shared_memory
 
+def lower_priority() -> None:
+    p = psutil.Process(os.getpid())
+
+    if os.name == "nt":
+        # Windows: pick a lower priority class
+        # Make ome-zarr processing a lower priority yielding cpu cycles to the acquisition loop
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+        # psutil.BELOW_NORMAL_PRIORITY_CLASS
+        # psutil.IDLE_PRIORITY_CLASS
+    else:
+        # Linux/Unix: higher nice => lower priority (0 is default)
+        p.nice(10)  # 10-19 are common "background" values
+    return
+
+
 def omezarr_writer_worker(
     shm_name: str,
     frame_shape: tuple[int, int],
@@ -884,10 +901,13 @@ def omezarr_writer_worker(
     writer_kwargs: dict,
     work_q: mp.Queue,
     free_q: mp.Queue,
+    write_cache: Path | None,
 ):
     """
     Child process:
     - Attaches to shared memory
+    - Lowers its own cpu priority to yield to acquisition loop
+    - Handles saving to write_cache directory and copying data to acquisition destination
     - Creates Live3DPyramidWriter
     - Loops reading slot indices from work_q
     - For each slot, takes the frame from shared memory and pushes it
@@ -895,11 +915,28 @@ def omezarr_writer_worker(
     """
 
     import numpy as np
+    import shutil
+    import uuid
+    from datetime import datetime
+
+    lower_priority()
+
+    def get_name_write_cache_dir(acq_path) -> Path | None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        random_char = str(uuid.uuid4()).split('-')[-1]
+        return f'{timestamp}_{acq_path.name}.{random_char}'
 
     # Attach to shared memory
     shm = shared_memory.SharedMemory(name=shm_name)
     Y, X = frame_shape
     ring = np.ndarray((ring_size, Y, X), dtype=np.uint16, buffer=shm.buf)
+
+    if write_cache:
+        acq_path = Path(writer_kwargs['path'])
+        tmp_location = Path(write_cache) / get_name_write_cache_dir(acq_path)
+        writer_kwargs['path'] = tmp_location
+        print(f'Acquiring to temp location: {tmp_location}')
+
 
     writer = Live3DPyramidWriter(**writer_kwargs)
 
@@ -920,4 +957,52 @@ def omezarr_writer_worker(
         except Exception:
             import logging
             logging.getLogger(__name__).exception("Error closing Live3DPyramidWriter in worker")
+
+    if write_cache:
+        p = psutil.Process(os.getpid())
+        if os.name == "nt":
+            # Windows: pick a lower priority class
+            # Lower process to idle while copying data so as not to interfere with MesoSPIM acquisition
+            p.nice(psutil.IDLE_PRIORITY_CLASS)
+            # psutil.BELOW_NORMAL_PRIORITY_CLASS
+            # psutil.IDLE_PRIORITY_CLASS
+        else:
+            # Linux/Unix: higher nice => lower priority (0 is default)
+            p.nice(19)  # 10-19 are common "background" values
+
+        print(f'Moving {tmp_location} --> {acq_path}')
+
+        acq_path.mkdir(parents=True, exist_ok=True)
+
+        max_retries = 3
+        total_loops = 0
+
+        while total_loops < max_retries:
+            retry = 0
+
+            for item in tmp_location.iterdir():
+                destination_item_path = acq_path / item.name
+                try:
+                    shutil.move(str(item), str(destination_item_path))
+                    print(f"Moved: {item.name}")
+                except Exception as e:
+                    retry += 1
+                    print(f"Failed to move {item.name}: {e}")
+
+            if retry == 0:
+                print(f'All files moved successfully from {tmp_location} to {acq_path}')
+                remaining = list(tmp_location.iterdir())
+                if remaining:
+                    print(f"Not removing {tmp_location}, still contains {len(remaining)} items")
+                else:
+                    tmp_location.rmdir()
+                break
+
+            total_loops += 1
+            print(f'Retry {total_loops}/{max_retries}: {retry} files failed')
+
+        else:
+            print(f'Some files were not copied from {tmp_location} to {acq_path}')
+
         shm.close()
+        print(f'Writer closed for {acq_path.name}')
