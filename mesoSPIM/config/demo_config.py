@@ -19,7 +19,7 @@ plugins = {
         "../src/plugins",         # Ignored if it does not exits (use '/')
         "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
     ],
-    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
 }
 
 '''
@@ -419,7 +419,7 @@ MP_OME_Zarr_Writer = {
     'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
 
     # Multiprocess options
-    'ring_buffer_size': 16,  # Max number of images in shared memory ring buffer
+    'ring_buffer_size': 16,  # Max number of images in shared memory ring buffer, 16 for simulation mode (eg laptop), 512 for production mode (fast workstation)
          
     # Write cache options. Write tile data to cache then move to acquisition folder
     # None acquires data direct to acquisition folder.
