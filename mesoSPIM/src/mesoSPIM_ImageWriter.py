@@ -117,7 +117,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             writer_config_file_values = writer_config_file_values
         )
 
-        logger.info(f'Opening ImageWriter: {wself.writer.name}')
+        logger.info(f'Opening ImageWriter: {self.writer.name}')
         self.writer.open(write_request)
         self.MIP_path = self.writer.MIP_path
 
