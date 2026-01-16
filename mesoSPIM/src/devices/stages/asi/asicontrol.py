@@ -58,7 +58,8 @@ class StageControlASITiger(QtCore.QObject):
             answer (str): Answer by the controller.
         '''
         logger.info(
-            'ASI Command: ' + str(command))
+            f'Z-Slice (only valid during acq): {self.current_z_slice}, ASI Command: {command}'
+        )
         try:
             ''' During acquisitions: send pause signal '''
             #self.sig_pause.emit(True) # makes the stage freeze when using GUI
