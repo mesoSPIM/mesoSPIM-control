@@ -525,7 +525,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''Wait until everything is done - this is effectively a sleep function.'''
         if self.ao_cards == 2:
             self.galvo_etl_task.wait_until_done()
-            self.laser_task.wait_until_done()
+            # self.laser_task.wait_until_done() # reduce overhead between frames, experimental
         else:
             self.galvo_etl_laser_task.wait_until_done()
         logger.debug("AO tasks wait_until_done() finished")
