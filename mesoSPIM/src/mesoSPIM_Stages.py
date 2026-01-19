@@ -1916,28 +1916,28 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         '''
         motion_dict = {}
         if not self.ttl_motion_currently_enabled:
-            if 'x_rel' in sdict:
+            if 'x' in self.asi_stages.axis_keys and 'x_rel' in sdict:
                 x_rel = sdict['x_rel']
                 if self.x_min < self.x_pos + x_rel < self.x_max:
                     motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_rel, 1)})
                 else:
                     self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
 
-            if 'y_rel' in sdict:
+            if 'y' in self.asi_stages.axis_keys and 'y_rel' in sdict:
                 y_rel = sdict['y_rel']
                 if self.y_min < self.y_pos + y_rel < self.y_max:
                     motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_rel, 1)})
                 else:
                     self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
 
-            if 'z_rel' in sdict:
+            if 'z' in self.asi_stages.axis_keys and 'z_rel' in sdict:
                 z_rel = sdict['z_rel']
                 if self.z_min < self.z_pos + z_rel < self.z_max:
                     motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_rel, 1)})
                 else:
                     self.sig_status_message.emit('Relative movement stopped: z Motion limit would be reached!')
             
-            if 'theta_rel' in sdict:
+            if 'theta' in self.asi_stages.axis_keys and 'theta_rel' in sdict:
                 theta_rel = sdict['theta_rel']
                 if self.theta_min < self.theta_pos + theta_rel < self.theta_max:
                     ''' 1° equals 1000 cts'''
@@ -1945,7 +1945,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
                 else:
                     self.sig_status_message.emit('Relative movement stopped: theta Motion limit would be reached!')
 
-            if 'f_rel' in sdict:
+            if 'f' in self.asi_stages.axis_keys and 'f_rel' in sdict:
                 f_rel = sdict['f_rel']
                 if self.f_min < self.f_pos + f_rel < self.f_max:
                     motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_rel, 1)})
@@ -1977,35 +1977,35 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
             f_offset = 0
             theta_offset = 0
         motion_dict = {}
-        if 'x_abs' in dict:
+        if 'x' in self.asi_stages.axis_keys and 'x_abs' in dict:
             x_abs = dict['x_abs'] - x_offset
             if self.x_min < x_abs < self.x_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['x'] : round(x_abs, 1)})
             else:
                 logger.error(f"The x-move is outside of min-max range, check your config file, 'x_min' and 'x_max'.")
 
-        if 'y_abs' in dict:
+        if 'y' in self.asi_stages.axis_keys and 'y_abs' in dict:
             y_abs = dict['y_abs'] - y_offset
             if self.y_min < y_abs < self.y_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['y'] : round(y_abs, 1)})
             else:
                 logger.error(f"The y-move is outside of min-max range, check your config file, 'y_min' and 'y_max'.")
                     
-        if 'z_abs' in dict:
+        if 'z' in self.asi_stages.axis_keys and 'z_abs' in dict:
             z_abs = dict['z_abs'] - z_offset
             if self.z_min < z_abs < self.z_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['z'] : round(z_abs, 1)})
             else:
                 logger.error(f"The z-move is outside of min-max range, check your config file, 'z_min' and 'z_max'.")
 
-        if 'f_abs' in dict:
+        if 'f' in self.asi_stages.axis_keys and 'f_abs' in dict:
             f_abs = dict['f_abs'] - f_offset
             if self.f_min < f_abs < self.f_max:
                 motion_dict.update({self.mesoSPIM2ASIdict['f'] : round(f_abs, 1)})
             else:
                 logger.error(f"The f-move is outside of min-max range, check your config file, 'f_min' and 'f_max'.")
 
-        if 'theta_abs' in dict:
+        if 'theta' in self.asi_stages.axis_keys and 'theta_abs' in dict:
             theta_abs = dict['theta_abs'] - theta_offset
             if self.theta_min < theta_abs < self.theta_max:
                 ''' 1° equals 1000 cts'''
