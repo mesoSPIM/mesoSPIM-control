@@ -408,7 +408,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%','camera_delay_%'])
         self.master_trigger_task = nidaqmx.Task()
         self.camera_trigger_task = nidaqmx.Task()
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI', 'MS2000ASI'}:
             self.stage_trigger_task = nidaqmx.Task()
 
         # Check if 1 or 2 DAQ cards are used for AO waveform generation
@@ -442,8 +442,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         #self.camera_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
         '''Housekeeping: Setting up the counter task for the stage TTL trigger for certain stages'''
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
-            assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' must contain 'asi_parameters' dictionary"
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
+            assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' 'MS200ASI' must contain 'asi_parameters' dictionary"
             trig_line = self.parent.read_config_parameter('stage_trigger_out_line', self.cfg.asi_parameters)
             trig_source = self.parent.read_config_parameter('stage_trigger_source', self.cfg.asi_parameters)
             stage_trigger_pulse_percent = self.parent.read_config_parameter('stage_trigger_pulse_%', self.cfg.asi_parameters)
@@ -499,7 +499,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         signals until run_tasks() is called.
         """
         self.camera_trigger_task.start()
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
             self.stage_trigger_task.start()
         if self.ao_cards == 2:
             self.galvo_etl_task.start()
@@ -531,7 +531,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         logger.debug("AO tasks wait_until_done() finished")
         # Reduce overhead of waiting for digital triggers:
         # self.camera_trigger_task.wait_until_done()
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
             self.stage_trigger_task.wait_until_done()
             logger.debug("stage_trigger_task.wait_until_done() finished")
 
@@ -544,7 +544,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.stop()
         self.camera_trigger_task.stop()
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
             self.stage_trigger_task.stop()
         self.master_trigger_task.stop()
 
@@ -559,7 +559,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.close()
         self.camera_trigger_task.close()
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
             self.stage_trigger_task.close()
         self.master_trigger_task.close()
 

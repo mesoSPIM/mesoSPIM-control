@@ -83,14 +83,14 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
         # elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
         #     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
+        elif self.cfg.stage_parameters['stage_type'] in ('TigerASI','MS2000ASI'):
             self.stage = mesoSPIM_ASI_Tiger_Stage(self)
             #self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
-        elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
-            self.stage = mesoSPIM_ASI_MS2000_Stage(self)
-            #self.stage.sig_pause.connect(self.pause)
-            self.parent.sig_progress.connect(self.stage.log_slice)
+        # elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
+        #     self.stage = mesoSPIM_ASI_MS2000_Stage(self)
+        #     #self.stage.sig_pause.connect(self.pause)
+        #     self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
         else:

@@ -133,12 +133,12 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.camera_worker.sig_write_images.connect(self.image_writer.write_images, type=QtCore.Qt.QueuedConnection)
 
-        #self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
+        self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
         self.serial_worker = mesoSPIM_Serial(self)
-        # self.serial_worker.moveToThread(self.serial_thread) #legacy
+        self.serial_worker.moveToThread(self.serial_thread) #legacy
         # If the stage (including the timer) is not manually moved to the serial thread, it will execute within the mesoSPIM_Core event loop - Fabian
-        #self.serial_worker.stage.moveToThread(self.serial_thread)
-        #self.serial_worker.stage.pos_timer.moveToThread(self.serial_thread)
+        self.serial_worker.stage.moveToThread(self.serial_thread)
+        self.serial_worker.stage.pos_timer.moveToThread(self.serial_thread)
 
         self.serial_worker.sig_position.connect(self.sig_position.emit)
         self.serial_worker.sig_status_message.connect(self.send_status_message_to_gui)
@@ -156,7 +156,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.camera_thread.start(QtCore.QThread.HighPriority)
         self.image_writer_thread.start(QtCore.QThread.HighPriority)
         # The serial_worker remains in the Core thread, not separate thread for serial_worker
-        #self.serial_thread.start() # legacy
+        self.serial_thread.start() # legacy
 
         ''' Setting waveform generation up '''
         if self.cfg.waveformgeneration == 'NI':
@@ -203,10 +203,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.stopflag = False
         #self.pauseflag = False
 
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
-            assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' must contain 'asi_parameters' dict."
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI', 'MS2000ASI'}: # TTL option for ASI stages
+            assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' or 'MS2000ASI' must contain 'asi_parameters' dict."
             self.TTL_mode_enabled_in_cfg = self.read_config_parameter('ttl_motion_enabled', self.cfg.asi_parameters)
-        else:
+        else: # Default all other stages to TTL False
             self.TTL_mode_enabled_in_cfg = False
 
         self.metadata_file = None
