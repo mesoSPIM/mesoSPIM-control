@@ -32,7 +32,8 @@ class StageControlASITiger(QtCore.QObject):
         self.port = asi_parameters['COMport']
         self.baudrate = asi_parameters['baudrate']
         self.stage_assignment = asi_parameters['stage_assignment']
-        self.axis_list = [self.stage_assignment[i] for i in self.stage_assignment.keys()]
+        self.axis_keys = tuple(self.stage_assignment.keys())
+        self.axis_list = [self.stage_assignment[i] for i in self.axis_keys]
         self.axes = ''.join(self.axis_list) # String containing all axes
         self.num_axes = len(self.axes) # The number of axes
         self.encoder_conversion = asi_parameters['encoder_conversion']
