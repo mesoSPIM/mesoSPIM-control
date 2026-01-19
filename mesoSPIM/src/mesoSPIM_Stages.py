@@ -1845,6 +1845,10 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         self.asi_stages = StageControlASITiger(self.asi_parameters)
         #self.asi_stages.sig_pause.connect(self.pause)
 
+        # self.axes = [self.asi_stages.axis_in_config_check(x) for x in ["x", "y", "z", "f", "theta"]]
+        self.axes = [axis_name for axis_name in ["x", "y", "z", "f", "theta"] if self.asi_stages.axis_in_config_check(axis_name)]
+        logger.info(f'ASI axes configured: {self.axes}')
+
         assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' must have 'asi_parameters' dict."
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
@@ -1885,11 +1889,17 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
     def report_position(self):
         position_dict = self.asi_stages.read_position()
         if position_dict is not None:
-            self.x_pos = position_dict[self.mesoSPIM2ASIdict['x']]
-            self.y_pos = position_dict[self.mesoSPIM2ASIdict['y']]
-            self.z_pos = position_dict[self.mesoSPIM2ASIdict['z']]
-            self.f_pos = position_dict[self.mesoSPIM2ASIdict['f']]
-            self.theta_pos = position_dict[self.mesoSPIM2ASIdict['theta']]
+            # positions = [position_dict[x] for x in self.axes]
+            if 'x' in self.axes:
+                self.x_pos = position_dict[self.mesoSPIM2ASIdict['x']]
+            if 'y' in self.axes:
+                self.y_pos = position_dict[self.mesoSPIM2ASIdict['y']]
+            if 'z' in self.axes:
+                self.z_pos = position_dict[self.mesoSPIM2ASIdict['z']]
+            if 'f' in self.axes:
+                self.f_pos = position_dict[self.mesoSPIM2ASIdict['f']]
+            if 'theta' in self.axes:
+                self.theta_pos = position_dict[self.mesoSPIM2ASIdict['theta']]
 
             self.create_position_dict()
 
