@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
-from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
 from .utils.utility_functions import log_cpu_core
 
 logger = logging.getLogger(__name__)
