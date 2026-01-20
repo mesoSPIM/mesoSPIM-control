@@ -1834,7 +1834,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         super().__init__(parent)
         self.parent = parent
         self.state = self.parent.state  # mesoSPIM_StateSingleton()
-        from .devices.stages.asi.asicontrol import StageControlASITiger
+        from .devices.stages.asi.asicontrol import StageControlASI
         
         ''' Setting up the ASI stages '''
         self.asi_parameters = self.cfg.asi_parameters
@@ -1842,7 +1842,7 @@ class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
         # self.ASI2mesoSPIMdict = {self.mesoSPIM2ASIdict[item] : item for item in self.mesoSPIM2ASIdict} # converts ASI stage designation to mesoSPIM
 
         self.ttl_cards = self.asi_parameters['ttl_cards']
-        self.asi_stages = StageControlASITiger(self.asi_parameters)
+        self.asi_stages = StageControlASI(self.asi_parameters)
         #self.asi_stages.sig_pause.connect(self.pause)
 
         logger.info(f'ASI axes configured: {self.asi_stages.axis_keys}')

@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class StageControlASITiger(QtCore.QObject):
+class StageControlASI(QtCore.QObject):
     #sig_pause = QtCore.pyqtSignal(bool)
 
     '''

@@ -159,7 +159,7 @@ classDiagram
   }
   class SliderWithValueDelegate {
   }
-  class StageControlASITiger {
+  class StageControlASI {
   }
   class StageControlGalil {
   }
@@ -290,7 +290,7 @@ classDiagram
   Demo_Shutter --* mesoSPIM_Core : shutter_right
   NI_Shutter --* mesoSPIM_Core : shutter_left
   NI_Shutter --* mesoSPIM_Core : shutter_right
-  StageControlASITiger --* mesoSPIM_ASI_Tiger_Stage : asi_stages
+  StageControlASI --* mesoSPIM_ASI_Tiger_Stage : asi_stages
   StageControlGalil --* mesoSPIM_PI_rotz_and_Galil_xyf_Stages : xyf_stage
   py --* StageControlGalil : g
   mesoSPIM_AcquisitionManagerWindow --* mesoSPIM_MainWindow : acquisition_manager_window
