@@ -203,10 +203,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.stopflag = False
         #self.pauseflag = False
 
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
-            assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' must contain 'asi_parameters' dict."
+        if self.cfg.stage_parameters['stage_type'] in {'TigerASI', 'MS2000ASI'}: # TTL option for ASI stages
+            assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' or 'MS2000ASI' must contain 'asi_parameters' dict."
             self.TTL_mode_enabled_in_cfg = self.read_config_parameter('ttl_motion_enabled', self.cfg.asi_parameters)
-        else:
+        else: # Default all other stages to TTL False
             self.TTL_mode_enabled_in_cfg = False
 
         self.metadata_file = None

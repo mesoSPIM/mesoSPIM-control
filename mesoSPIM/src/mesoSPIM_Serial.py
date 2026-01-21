@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
-from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
 from .utils.utility_functions import log_cpu_core
 
 logger = logging.getLogger(__name__)
@@ -83,14 +83,14 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
         # elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
         #     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
+        elif self.cfg.stage_parameters['stage_type'] in ('TigerASI','MS2000ASI'):
             self.stage = mesoSPIM_ASI_Tiger_Stage(self)
             #self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
-        elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
-            self.stage = mesoSPIM_ASI_MS2000_Stage(self)
-            #self.stage.sig_pause.connect(self.pause)
-            self.parent.sig_progress.connect(self.stage.log_slice)
+        # elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
+        #     self.stage = mesoSPIM_ASI_MS2000_Stage(self)
+        #     #self.stage.sig_pause.connect(self.pause)
+        #     self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
         else:
