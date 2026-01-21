@@ -2232,7 +2232,7 @@
             <span class="c1">#</span>
             <span class="c1"># image = aframe.getData()</span>
             <span class="c1"># image = np.reshape(image, (-1, 2048))</span>
-            <span class="c1"># image = np.rot90(image)</span>
+            <span class="c1"># image = image.T[::-1]</span>
             <span class="c1">#</span>
             <span class="c1"># self.frame.emit(image)</span>
             <span class="c1">#</span>
@@ -2804,7 +2804,7 @@
                 <span class="c1">#</span>
                 <span class="c1"># &#39;&#39;&#39; Temporary mod: turn data into a matrix and rotate it &#39;&#39;&#39;</span>
                 <span class="c1"># data = np.reshape(image, (-1, 2048))</span>
-                <span class="c1"># data = np.rot90(data)</span>
+                <span class="c1"># data = data.T[::-1]</span>
                 <span class="c1"># data = data.flatten()</span>
                 <span class="c1">#</span>
                 <span class="c1"># &#39;&#39;&#39; Write YZ (coronal) image &#39;&#39;&#39;</span>
