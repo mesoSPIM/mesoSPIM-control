@@ -61,6 +61,8 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
 
     def show_tiles(self):
         self.scene.clear()
+        if self.state['state'] in ('run_acquisition_list','run_selected_acquisition'):
+            return # Skip update during acquisition
         self.pixel_size = self.cfg.pixelsize[self.state['zoom']]
         self.tile_size_x, self.tile_size_y = self.x_image_width * self.pixel_size, self.y_image_width * self.pixel_size
         self.fov_scene_offset_x = self.tile_size_x / 2 * self.scale_factor # offset of the FOV in the scene coordinates
