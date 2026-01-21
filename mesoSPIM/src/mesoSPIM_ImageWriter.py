@@ -174,7 +174,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         # Place holder prior to image processing plugins
         if acq['processing'] == 'MAX':
-            self.mip_image[:] = np.maximum(self.mip_image, image)
+            np.maximum(self.mip_image, image, out=self.mip_image)
+
 
         self.cur_image_counter += 1
         logger.debug('image_to_disk() ended')
