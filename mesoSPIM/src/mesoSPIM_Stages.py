@@ -1814,8 +1814,9 @@ class mesoSPIM_PI_rotz_and_Galil_xyf_Stages(mesoSPIM_Stage):
 #         self.xy_stage.execute_program()
 
 
-class mesoSPIM_ASI_Tiger_Stage(mesoSPIM_Stage):
+class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
     '''
+    Covers stages connected to ASI Tiger or MS2000 controllers.
     It is expected that the parent class has the following signals:
         sig_move_relative = pyqtSignal(dict)
         sig_move_relative_and_wait_until_done = pyqtSignal(dict)

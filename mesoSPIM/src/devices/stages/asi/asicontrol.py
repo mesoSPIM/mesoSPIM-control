@@ -73,7 +73,8 @@ class StageControlASI(QtCore.QObject):
             ''' Logging of serial connections if response >30 ms (previously: 15 ms)'''
             delta_t = round(response_time - start_time, 6)
             if delta_t > 0.04:
-                logger.info('Z-Slice (only valid during acq): ' + str(self.current_z_slice) + ' Response time, s (if >0.04): ' + str(delta_t))
+                logger.info('Slow response time, s (if >0.04): ' + str(delta_t))
+                logger.debug('Z-Slice (only valid during acq): ' + str(self.current_z_slice))
             return message
         except Exception as error:
             logger.error(f"Serial exception of the ASI stage: command {command.decode('ascii')}, error: {error}")
@@ -199,6 +200,7 @@ class StageControlASI(QtCore.QObject):
             bool (boolean): True or False depending on whether TTL mode should be enabled or disabled.
         '''
         if card_ids is not None: # Tiger controller
+            logger.debug('assuming ASI Tiger controller')
             if bool is True: # Enable TTL mode for all cards
                 for i in card_ids:
                     # Y=? Is different for each card based on available axes and order. Y={axis order}: 1, 2, 4, 8
@@ -215,6 +217,7 @@ class StageControlASI(QtCore.QObject):
                     self._send_command(command_string.encode('ascii'))
                     logger.info('TTL disabled')
         else: # MS-2000 controller
+            logger.debug('assuming ASI MS-2000 controller')
             if bool is True:
                 self._send_command(b'RM Y=4\r') # Set TTL for Z-axis movement Y=4 Z-axis for MS2000 - override stored value
                 # MS2000 Y={axis order}: X:1, Y:2, Z:4, F:8
