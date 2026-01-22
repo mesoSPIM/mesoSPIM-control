@@ -521,23 +521,24 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         """
         logger.debug("Starting master trigger")
         self.master_trigger_task.write([False, True, True, True, True, True, False], auto_start=True)
+        logger.debug("Master trigger started")
 
         '''Wait until everything is done - this is effectively a sleep function.'''
         if self.ao_cards == 2:
             self.galvo_etl_task.wait_until_done()
-            # self.laser_task.wait_until_done() # reduce overhead between frames, experimental
+            self.laser_task.wait_until_done() 
         else:
             self.galvo_etl_laser_task.wait_until_done()
         logger.debug("AO tasks wait_until_done() finished")
-        # Reduce overhead of waiting for digital triggers:
-        # self.camera_trigger_task.wait_until_done()
+        self.camera_trigger_task.wait_until_done() 
+        logger.debug("camera_trigger_task.wait_until_done() finished")
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
             self.stage_trigger_task.wait_until_done()
             logger.debug("stage_trigger_task.wait_until_done() finished")
 
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""
-        logger.debug("Stopping tasks")
+        logger.debug("Stopping task initiated")
         if self.ao_cards == 2:
             self.galvo_etl_task.stop()
             self.laser_task.stop()
@@ -547,12 +548,13 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
             self.stage_trigger_task.stop()
         self.master_trigger_task.stop()
+        logger.debug("All tasks stopped")
 
     def close_tasks(self):
         """Closes the tasks for triggering, analog and counter outputs.
-        Tasks should only be closed are they are stopped.
+        Tasks should only be closed after they are stopped.
         """
-        logger.debug("Closing tasks")
+        logger.debug("Closing tasks started")
         if self.ao_cards == 2:
             self.galvo_etl_task.close()
             self.laser_task.close()
@@ -562,6 +564,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         if self.cfg.stage_parameters['stage_type'] in {'TigerASI','MS200ASI'}:
             self.stage_trigger_task.close()
         self.master_trigger_task.close()
+        logger.debug("All tasks closed")
 
 
 class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
