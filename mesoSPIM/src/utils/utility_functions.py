@@ -4,6 +4,8 @@ Contains a variety of mesoSPIM utility functions
 import os
 import psutil
 import ctypes
+import logging
+logger = logging.getLogger(__name__)
 
 # Windows API binding
 GetCurrentProcessorNumber = ctypes.windll.kernel32.GetCurrentProcessorNumber
@@ -74,3 +76,14 @@ def log_cpu_core(logger, msg=""):
     #core = proc.cpu_num()  # returns the current logical CPU number. Linux only.
     core = GetCurrentProcessorNumber()  # Windows only.
     logger.debug(f"{msg} running on logical CPU core: {core}")
+
+def timed(func):
+    '''Decorator to time functions and log the elapsed time'''
+    import time
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info(f"{func.__name__} took {elapsed_ms:.1f} ms")
+        return result
+    return wrapper

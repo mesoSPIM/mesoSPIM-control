@@ -16,7 +16,7 @@ except:
 '''
 
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import log_cpu_core
+from .utils.utility_functions import log_cpu_core, timed
 
 
 class mesoSPIM_Camera(QtCore.QObject):
@@ -169,6 +169,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.start_time = time.time()
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
+    @timed
     def add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
             logger.debug('Thread name during add images: '+ QtCore.QThread.currentThread().objectName())

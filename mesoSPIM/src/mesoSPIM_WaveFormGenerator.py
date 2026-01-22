@@ -17,7 +17,7 @@ from nidaqmx.types import CtrTime
 
 '''mesoSPIM imports'''
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
-from .utils.utility_functions import log_cpu_core
+from .utils.utility_functions import log_cpu_core, timed
 
 from PyQt5 import QtCore
 
@@ -386,6 +386,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         os.remove(etl_cfg_file)
         os.rename(tmp_etl_cfg_file, etl_cfg_file)
 
+    @timed
     def create_tasks(self):
         """Creates a tasks for the mesoSPIM:
 
@@ -482,6 +483,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.galvo_etl_laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
             #self.galvo_etl_laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
 
+    @timed
     def write_waveforms_to_tasks(self):
         """Write the waveforms to the slave tasks"""
         if self.ao_cards == 2:
@@ -492,6 +494,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             logger.debug(f"Writing analog waveforms: self.laser_waveforms, min {self.laser_waveforms.min()}, max {self.laser_waveforms.max()}")
             self.galvo_etl_laser_task.write(np.vstack((self.galvo_and_etl_waveforms, self.laser_waveforms)))
 
+    @timed
     def start_tasks(self):
         """Starts the tasks for camera triggering and analog outputs
 
@@ -507,6 +510,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.start()
 
+    @timed
     def run_tasks(self):
         """Runs the tasks for triggering, analog and counter outputs
 
@@ -536,6 +540,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.stage_trigger_task.wait_until_done()
             logger.debug("stage_trigger_task.wait_until_done() finished")
 
+    @timed
     def stop_tasks(self):
         """Stops the tasks for triggering, analog and counter outputs"""
         logger.debug("Stopping task initiated")
@@ -550,6 +555,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.master_trigger_task.stop()
         logger.debug("All tasks stopped")
 
+    @timed
     def close_tasks(self):
         """Closes the tasks for triggering, analog and counter outputs.
         Tasks should only be closed after they are stopped.

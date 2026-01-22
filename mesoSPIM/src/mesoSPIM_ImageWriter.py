@@ -13,7 +13,7 @@ import sys
 from PyQt5 import QtCore
 from distutils.version import StrictVersion
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
+from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core, timed
 from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
 from .plugins.utils import get_image_writer_from_name, get_image_writer_class_from_name
 
@@ -146,7 +146,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 self.image_to_disk(acq, acq_list, image)
         else:
             logger.debug('self.running_flag = False, no images written')
-
+    
+    @timed
     def image_to_disk(self, acq, acq_list, image):
         logger.debug('image_to_disk() started')
         log_cpu_core(logger, msg='image_to_disk()')
