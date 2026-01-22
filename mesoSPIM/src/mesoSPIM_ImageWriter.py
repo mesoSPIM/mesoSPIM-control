@@ -82,7 +82,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.path = os.path.realpath(self.folder + '/' + self.filename)
         # self.MIP_path = os.path.realpath(self.folder + '/MAX_' + self.filename + '.tiff')
         self.file_root, self.file_extension = os.path.splitext(self.path)
-        logger.info(f'Save path: {self.path}')
+        # logger.info(f'Save path: {self.path}')
 
         self.binning_string = self.state['camera_binning']  # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
@@ -117,6 +117,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             writer_config_file_values = writer_config_file_values
         )
 
+        logger.info(f'Opening ImageWriter: {self.writer.name}')
         self.writer.open(write_request)
         self.MIP_path = self.writer.MIP_path
 
