@@ -207,9 +207,12 @@ class StageControlASI(QtCore.QObject):
                     # Y=? Is different for each card based on available axes and order. Y={axes_to_move}: 1, 2, 4, 8
                     # Need a function to automatically determine card # and position of Z- and F-axes or encode it in the config file
                     # Need to do both Z- and F- axis movement on TTL. See notes MS2000 below.
-                    # command_string = str(i) + ' RM Y=1\r' # Set TTL for Z-axis movement - override stored value
-                    # '{card#} RM Y={axes_to_move}\r'
-                    # self._send_command(command_string.encode('ascii'))
+                    # For now, assume 2 axes per card. Set both axes on each card to move with TTL (RM Y=3)
+                    # Relative movements prior to turning on TTL determines which axes move in response to pulse
+                    # Set TTL for 1st and 2nd axis movement - override stored value (will reset with power cycle)
+                    command_string = str(i) + ' RM Y=3\r'
+                    self._send_command(command_string.encode('ascii'))
+                    # Enable TTL for relative movement
                     command_string = str(i) + ' TTL X=2 Y=2\r'
                     self._send_command(command_string.encode('ascii'))
                     logger.info('TTL enabled')
@@ -224,6 +227,7 @@ class StageControlASI(QtCore.QObject):
                 # MS2000 Y={axes_to_move}: X:1, Y:2, Z:4, F:8
                 # Add bits for axes combo movement with ttl.  Z and F == 8+4 == 12 (RM Y=12)
                 self._send_command(b'RM Y=12\r')  # Set TTL for Z- and F-axis movement Y=12 - override stored value
+                # Enable TTL for relative movement
                 self._send_command(b'TTL X=2 Y=2\r') # MS-2000 TTL mode should be enabled
                 logger.info('TTL enabled')
             else:
