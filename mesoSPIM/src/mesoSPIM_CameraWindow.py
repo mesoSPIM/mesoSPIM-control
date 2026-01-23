@@ -46,6 +46,11 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.histogram.setMinimumWidth(100)
         self.histogram.item.vb.setMaximumWidth(100)
 
+        ''' Hard disable ViewBox auto-range which was causing high CPU loads '''
+        vb = self.image_view.getView()  # ImageView's ViewBox
+        vb.disableAutoRange()
+        vb.enableAutoRange(x=False, y=False)  # belt + suspenders
+
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
         self.x_image_width = self.cfg.camera_parameters['y_pixels']
