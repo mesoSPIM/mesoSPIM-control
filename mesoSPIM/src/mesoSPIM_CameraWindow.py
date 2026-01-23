@@ -22,6 +22,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.parent = parent # the mesoSPIM_MainWindow() instance
         self.cfg = parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
+        self._first_image_drawn = False
 
         pg.setConfigOptions(imageAxisOrder='row-major')
         if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\
@@ -45,11 +46,6 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.histogram = self.image_view.getHistogramWidget()
         self.histogram.setMinimumWidth(100)
         self.histogram.item.vb.setMaximumWidth(100)
-
-        ''' Hard disable ViewBox auto-range which was causing high CPU loads '''
-        vb = self.image_view.getView()  # ImageView's ViewBox
-        vb.disableAutoRange()
-        vb.enableAutoRange(x=False, y=False)  # belt + suspenders
 
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']
@@ -87,6 +83,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
         self.sig_update_status.connect(self.update_status)
+
+    def disable_auto_range(self):
+        ''' Hard disable ViewBox auto-range which was causing high CPU loads '''
+        vb = self.image_view.getView()  # ImageView's ViewBox
+        vb.disableAutoRange()
+        vb.enableAutoRange(x=False, y=False)  # belt + suspenders
 
     def adjust_levels(self, pct_low=25, pct_hi=99.99):
         ''''Adjust histogram levels'''
@@ -210,6 +212,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             for h in self.lightsheet_marker_L.getHandles():
                 h.setVisible(False)
         self.draw_crosshairs()
+
+        # Disable auto range after the first image is displayed
+        # avoids use after each subsequent image which leads to high CPU loads and microscope instability.
+        if not self._first_image_drawn:
+            self.disable_auto_range()
+            self._first_image_drawn = True
 
     @QtCore.pyqtSlot()
     def update_image_from_deque(self):
