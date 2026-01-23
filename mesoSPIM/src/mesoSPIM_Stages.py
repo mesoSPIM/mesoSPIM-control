@@ -1848,7 +1848,7 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
 
         logger.info(f'ASI axes configured: {self.asi_stages.axis_keys}')
 
-        assert hasattr(self.cfg, 'asi_parameters'), "Config file with stage 'TigerASI' must have 'asi_parameters' dict."
+        assert hasattr(self.cfg, 'asi_parameters'), "Config file with ASI stage must have 'asi_parameters' dict."
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
         self.set_speed_from_config()

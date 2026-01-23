@@ -18,7 +18,8 @@ class StageControlASI(QtCore.QObject):
     #sig_pause = QtCore.pyqtSignal(bool)
 
     '''
-    Class to control a ASI Tiger mechanical stage controller
+    Class to control a ASI mechanical stage controller
+    Works for both Tiger and MS-2000
     
     Inherits from QtCore.QObject so it can be moved to a QThread.
 
@@ -203,11 +204,15 @@ class StageControlASI(QtCore.QObject):
             logger.debug('assuming ASI Tiger controller')
             if bool is True: # Enable TTL mode for all cards
                 for i in card_ids:
-                    # Y=? Is different for each card based on available axes and order. Y={axis order}: 1, 2, 4, 8
-                    # Need a function to automatically determine this or encode it in the config file
-                    # command_string = str(i) + ' RM Y=1\r' # Set TTL for Z-axis movement - override stored value
-                    # 'RM Y=1\r' Works only if the Z-axis is the first position on one of the cards
-                    # self._send_command(command_string.encode('ascii'))
+                    # Y=? Is different for each card based on available axes and order. Y={axes_to_move}: 1, 2, 4, 8
+                    # Need a function to automatically determine card # and position of Z- and F-axes or encode it in the config file
+                    # Need to do both Z- and F- axis movement on TTL. See notes MS2000 below.
+                    # For now, assume 2 axes per card. Set both axes on each card to move with TTL (RM Y=3)
+                    # Relative movements prior to turning on TTL determines which axes move in response to pulse
+                    # Set TTL for 1st and 2nd axis movement - override stored value (will reset with power cycle)
+                    command_string = str(i) + ' RM Y=3\r'
+                    self._send_command(command_string.encode('ascii'))
+                    # Enable TTL for relative movement
                     command_string = str(i) + ' TTL X=2 Y=2\r'
                     self._send_command(command_string.encode('ascii'))
                     logger.info('TTL enabled')
@@ -219,8 +224,10 @@ class StageControlASI(QtCore.QObject):
         else: # MS-2000 controller
             logger.debug('assuming ASI MS-2000 controller')
             if bool is True:
-                self._send_command(b'RM Y=4\r') # Set TTL for Z-axis movement Y=4 Z-axis for MS2000 - override stored value
-                # MS2000 Y={axis order}: X:1, Y:2, Z:4, F:8
+                # MS2000 Y={axes_to_move}: X:1, Y:2, Z:4, F:8
+                # Add bits for axes combo movement with ttl.  Z and F == 8+4 == 12 (RM Y=12)
+                self._send_command(b'RM Y=12\r')  # Set TTL for Z- and F-axis movement Y=12 - override stored value
+                # Enable TTL for relative movement
                 self._send_command(b'TTL X=2 Y=2\r') # MS-2000 TTL mode should be enabled
                 logger.info('TTL enabled')
             else:

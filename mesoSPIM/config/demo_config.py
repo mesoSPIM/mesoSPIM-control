@@ -264,7 +264,7 @@ asi_parameters = {'COMport' : 'COM32',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
-                  'ttl_cards':(2,3),
+                  'ttl_cards':(2,3), # None if MS2000ASI; tuple of card numbers if TigerASI
                   }
 '''
 
