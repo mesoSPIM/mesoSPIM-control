@@ -142,7 +142,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             while len(self.frame_queue) > 0:
                 logger.debug('image queue length: ' + str(len(self.frame_queue)))
-                image = np.rot90(self.frame_queue.popleft())
+                image = self.frame_queue.popleft().T[:,::-1]
                 self.image_to_disk(acq, acq_list, image)
         else:
             logger.debug('self.running_flag = False, no images written')
@@ -175,7 +175,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         # Place holder prior to image processing plugins
         if acq['processing'] == 'MAX':
-            self.mip_image[:] = np.maximum(self.mip_image, image)
+            np.maximum(self.mip_image, image, out=self.mip_image)
+
 
         self.cur_image_counter += 1
         logger.debug('image_to_disk() ended')

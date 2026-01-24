@@ -24,6 +24,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.acquisition_manager_window = parent.acquisition_manager_window
         self.cfg = parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
+        self.test_state = None
 
         '''Set up the UI'''
         if __name__ == '__main__':
@@ -60,6 +61,12 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.show_tiles()
 
     def show_tiles(self):
+        if self.state['state'] in ('run_acquisition_list','run_selected_acquisition'):
+            if self.test_state == self.state['state']:
+                return # Skip update during acquisition
+            else:
+                # Update test_state and allow 1 update after acquisition started
+                self.test_state = self.state['state']
         self.scene.clear()
         self.pixel_size = self.cfg.pixelsize[self.state['zoom']]
         self.tile_size_x, self.tile_size_y = self.x_image_width * self.pixel_size, self.y_image_width * self.pixel_size
