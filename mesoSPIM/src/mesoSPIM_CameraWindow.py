@@ -24,6 +24,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
         self._first_image_drawn = False
 
+        # Timer to display images at ~30fps
+        self._latest_frame = None
+        self._display_timer = QtCore.QTimer(self)
+        self._display_timer.timeout.connect(self._display_latest)
+        self._display_timer.start(33)  # ~30 fps
+
         pg.setConfigOptions(imageAxisOrder='row-major')
         if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\
                 (hasattr(self.cfg, 'dark_mode') and self.cfg.dark_mode):
@@ -219,10 +225,18 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.disable_auto_range()
             self._first_image_drawn = True
 
-    @QtCore.pyqtSlot()
+    # @QtCore.pyqtSlot()
+    # def update_image_from_deque(self):
+    #     if len(self.parent.core.frame_queue_display) > 0:
+    #         image = self.parent.core.frame_queue_display[0]
+    #         self.set_image(image)
+    #     else:
+    #         return
+
     def update_image_from_deque(self):
-        if len(self.parent.core.frame_queue_display) > 0:
-            image = self.parent.core.frame_queue_display[0]
-            self.set_image(image)
-        else:
-            return
+        if self.parent.core.frame_queue_display:
+            self._latest_frame = self.parent.core.frame_queue_display[0]
+
+    def _display_latest(self):
+        if self._latest_frame is not None:
+            self.set_image(self._latest_frame)
