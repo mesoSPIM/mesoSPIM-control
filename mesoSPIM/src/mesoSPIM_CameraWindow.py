@@ -238,6 +238,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     #     else:
     #         return
 
+    @QtCore.pyqtSlot()
     def update_image_from_deque(self):
         if self.parent.core.frame_queue_display:
             self._latest_frame = self.parent.core.frame_queue_display[0]
