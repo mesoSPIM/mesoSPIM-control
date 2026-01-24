@@ -142,7 +142,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             while len(self.frame_queue) > 0:
                 logger.debug('image queue length: ' + str(len(self.frame_queue)))
-                image = self.frame_queue.popleft().T[:,::-1]
+                image = self.frame_queue.popleft().T[::-1]
                 self.image_to_disk(acq, acq_list, image)
         else:
             logger.debug('self.running_flag = False, no images written')
