@@ -211,7 +211,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
                 h.setVisible(False)
             for h in self.lightsheet_marker_L.getHandles():
                 h.setVisible(False)
-        self.draw_crosshairs()
+        # self.draw_crosshairs()
 
         # Disable auto range after the first image is displayed
         # avoids use after each subsequent image which leads to high CPU loads and microscope instability.
