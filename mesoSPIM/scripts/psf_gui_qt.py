@@ -536,8 +536,11 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         try:
             fig = self.canvas.fig
+            # Add title from filename
+            if self.filename:
+                fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
             # Ensure layout is up to date before saving
-            fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2)
+            fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
             fig.savefig(fname, dpi=300, format="png")
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PNG:\n{e}")
