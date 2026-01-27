@@ -48,15 +48,16 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.scene = QGraphicsScene()
         self.scene.setSceneRect(-300, -400, 600, 800)
         self.tile_overview.setScene(self.scene)
-        self.show_tiles()
-        # update the tiles every second
+
+        # update the tiles every 0.5 seconds while 'idle' and every 5 seconds while acquiring
+        self._last_running = None
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.show_tiles)
         self._idle_interval_ms = 500  # Tile update interval while NOT in state 'run_acquisition_list', 'run_selected_acquisition'
         self._run_interval_ms = 5000  # Tile update interval while IN state 'run_acquisition_list', 'run_selected_acquisition'
-
-        self._last_running = None
         self.timer.start(self._idle_interval_ms)  # milliseconds
+
+        # self.show_tiles() # self.timer handles first call to self.show_tiles()
 
         self.doubleSpinBox_scale.valueChanged.connect(lambda: self.on_scale_changed(self.doubleSpinBox_scale.value()))
 
