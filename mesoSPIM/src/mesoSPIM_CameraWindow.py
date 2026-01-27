@@ -24,14 +24,14 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
         self._first_image_drawn = False
 
-        # Timer to display images at ~30fps max
-        self._latest_frame = None
-        self._latest_seq = 0
-        self._displayed_seq = -1
-
-        self._display_timer = QtCore.QTimer(self)
-        self._display_timer.timeout.connect(self._display_latest)
-        self._display_timer.start(33)  # cap at 30fps
+        # # Timer to display images at ~30fps max
+        # self._latest_frame = None
+        # self._latest_seq = 0
+        # self._displayed_seq = -1
+        #
+        # self._display_timer = QtCore.QTimer(self)
+        # self._display_timer.timeout.connect(self._display_latest)
+        # self._display_timer.start(33)  # cap at 30fps
 
         pg.setConfigOptions(imageAxisOrder='row-major')
         if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\
@@ -230,22 +230,22 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.disable_auto_range()
             self._first_image_drawn = True
 
-    # @QtCore.pyqtSlot()
-    # def update_image_from_deque(self):
-    #     if len(self.parent.core.frame_queue_display) > 0:
-    #         image = self.parent.core.frame_queue_display[0]
-    #         self.set_image(image)
-    #     else:
-    #         return
-
     @QtCore.pyqtSlot()
     def update_image_from_deque(self):
-        if self.parent.core.frame_queue_display:
-            self._latest_frame = self.parent.core.frame_queue_display[0]
-            self._latest_seq += 1
+        if len(self.parent.core.frame_queue_display) > 0:
+            image = self.parent.core.frame_queue_display[0]
+            self.set_image(image)
+        else:
+            return
 
-    def _display_latest(self):
-        if self._latest_seq == self._displayed_seq:
-            return  # nothing new; minimal GIL time
-        self._displayed_seq = self._latest_seq
-        self.set_image(self._latest_frame)
+    # @QtCore.pyqtSlot()
+    # def update_image_from_deque(self):
+    #     if self.parent.core.frame_queue_display:
+    #         self._latest_frame = self.parent.core.frame_queue_display[0]
+    #         self._latest_seq += 1
+    #
+    # def _display_latest(self):
+    #     if self._latest_seq == self._displayed_seq:
+    #         return  # nothing new; minimal GIL time
+    #     self._displayed_seq = self._latest_seq
+    #     self.set_image(self._latest_frame)
