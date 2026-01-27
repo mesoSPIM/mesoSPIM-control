@@ -794,6 +794,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
+        self.serial_worker.stage.report_position() # Last Position update before acquisition starts for proper tile view display
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)

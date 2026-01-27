@@ -397,6 +397,7 @@ class OMEZarrWriterMP(ImageWriter):
 
         # Copy the frame into shared memory
         np.copyto(self._ring[slot], frame)
+        # self._ring[slot] = frame
 
         # Tell writer process which slot to read
         self._work_q.put(slot)
