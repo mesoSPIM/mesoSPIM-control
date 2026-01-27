@@ -52,7 +52,11 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         # update the tiles every second
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.show_tiles)
-        self.timer.start(500)  # milliseconds
+        self._idle_interval_ms = 500  # Tile update interval while NOT in state 'run_acquisition_list', 'run_selected_acquisition'
+        self._run_interval_ms = 5000  # Tile update interval while IN state 'run_acquisition_list', 'run_selected_acquisition'
+
+        self._last_running = None
+        self.timer.start(self._idle_interval_ms)  # milliseconds
 
         self.doubleSpinBox_scale.valueChanged.connect(lambda: self.on_scale_changed(self.doubleSpinBox_scale.value()))
 
@@ -61,12 +65,13 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.show_tiles()
 
     def show_tiles(self):
-        if self.state['state'] in ('run_acquisition_list','run_selected_acquisition'):
-            if self.test_state == self.state['state']:
-                return # Skip update during acquisition
-            else:
-                # Update test_state and allow 1 update after acquisition started
-                self.test_state = self.state['state']
+        running = self.state['state'] in ('run_acquisition_list', 'run_selected_acquisition')
+
+        # Switch timer interval only when the mode changes (avoid spamming setInterval)
+        if running != self._last_running:
+            self.timer.setInterval(self._run_interval_ms if running else self._idle_interval_ms)
+            self._last_running = running
+
         self.scene.clear()
         self.pixel_size = self.cfg.pixelsize[self.state['zoom']]
         self.tile_size_x, self.tile_size_y = self.x_image_width * self.pixel_size, self.y_image_width * self.pixel_size
