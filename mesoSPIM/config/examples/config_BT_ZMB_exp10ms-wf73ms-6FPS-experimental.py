@@ -13,7 +13,7 @@ plugins = {
         "../src/plugins/ImageWriters",         # Ignored if it does not exits (use '/')
         "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
     ],
-    'first_image_writer': 'MP_OME_Zarr_Writer', # 'H5_BDV_Writer', 'MP_OME_Zarr_Writer', 'OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
 }
 
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
@@ -108,8 +108,9 @@ camera_parameters = {'x_pixels' : 1024,
                      'x_pixel_size_in_microns' : 6.5,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4]}
-'''
 
+
+'''
 camera = 'Photometrics' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
 camera_parameters = {'x_pixels' : 5056,
@@ -125,7 +126,7 @@ camera_parameters = {'x_pixels' : 5056,
                      'binning' : '1x1',
                      'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
                      'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
-                     'scan_line_delay' : 3, # 10.26 us x factor, a factor = 6 equals 71.82 us
+                     'scan_line_delay' : 1, # 10.26 us x factor, a factor = 6 equals 71.82 us
                     }
 
 binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
@@ -310,45 +311,20 @@ is finalized in the background. On systems with slow IO, data can accumulate in 
 Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
 to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
 '''
-
 OME_Zarr_Writer = {
     'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': False, #True, False. False: only the primary data is saved. True: multiscale data is generated
-    'compression': 'zstd', # None, 'zstd', 'lz4'
+    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': None, # None, 'zstd', 'lz4'
     'compression_level': 5, # 1-9
     'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (128,5056//4,2960//2), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x). Here, optimized for fewer files.
-    'target_chunks': (128,5056//4,2960//2), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x). Here, optimized for fewer files.
+    'base_chunks': (256,256,256), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (256,256,256), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
     'async_finalize': False, # True, False
     'write_big_stitcher_xml': True, # BigStitcher XML file for compatibiliyt ('ome_version': '0.4')
     'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
     'transpose_xy' : False, # True for Hamamatsu, False for Photometrix, possibly due to different coordinate systems.
     }
 
-MP_OME_Zarr_Writer = {
-    'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': False, # True, False. False: only the primary data is saved. True: multiscale data is generated
-    'compression': 'zstd',  # None, 'zstd', 'lz4'
-    'compression_level': 5,  # 1-9
-    'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (128, 5056//4, 2960//2),
-    # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-    'target_chunks': (128, 5056//4, 2960//2),
-    # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-    'async_finalize': False,  # True, False
-
-    # BigStitcher Specific Options
-    'write_big_stitcher_xml': True,  # True, False
-    'flip_xyz': (True, True, False),  # match BigStitcher coordinates to mesoSPIM axes.
-    'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
-
-    # Multiprocess options
-    'ring_buffer_size': 512,  # Max number of images in shared memory ring buffer
-         
-    # Write cache options. Write tile data to cache then move to acquisition folder
-    # None acquires data direct to acquisition folder.
-    'write_cache': 'F:/mesoSPIM_CACHE', # None, 'e:/path/to/fast/ssd/write/cache'
-}
 
 '''
 Initial acquisition parameters
@@ -365,7 +341,7 @@ When setting up a new mesoSPIM, make sure that:
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
-'sweeptime' : 0.130,
+'sweeptime' : 0.073,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-benchtop.csv',
 'filepath' : 'F:/Test/file.tif',
@@ -394,12 +370,12 @@ startup = {
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 100,
 'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : -0.38,
+'galvo_l_offset' : -0.75,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : 1.0,
 'galvo_r_frequency' : 100,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.23,
+'galvo_r_offset' : 1.3,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 5,
