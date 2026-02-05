@@ -441,6 +441,14 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         # Update options
         self.options["pxPerUmAx"] = 1.0 / self.px_axial_micron
         self.options["pxPerUmLat"] = 1.0 / self.px_lateral_micron
+        
+        # Recalculate FOV if image is loaded
+        if self.im is not None:
+            self.FOV_Y_um = self.im.shape[1] * self.px_lateral_micron
+            self.FOV_X_um = self.im.shape[2] * self.px_lateral_micron
+            # Update plots if they exist
+            if self.stats_df is not None and not self.stats_df.empty:
+                self.update_plots()
 
     def update_min_bead_distance(self):
         """Update minimum bead distance parameter."""
