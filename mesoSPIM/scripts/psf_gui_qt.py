@@ -11,6 +11,7 @@ Single-file PyQt5 GUI application for bead PSF analysis.
 - Save per-bead PSF plots as PDF
 - Save bead statistics as TXT and CSV
 """
+# Default system parameters
 MAG = 5.0 # effective magnification of the system
 PIXEL_PITCH_MICRON = 4.25
 PX_LATERAL_MICRON = PIXEL_PITCH_MICRON/MAG
@@ -275,10 +276,16 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.smoothed = None  # 3D smoothed image (for max-projection)
         self.stats_df = None  # PSF DataFrame (FWHMlat, FWHMax, X, Y, Z, Max)
 
+        # System parameters (editable via GUI)
+        self.mag = MAG
+        self.pixel_pitch_micron = PIXEL_PITCH_MICRON
+        self.px_axial_micron = PX_AXIAL_MICRON
+        self.px_lateral_micron = PIXEL_PITCH_MICRON / MAG
+
         # Default options
         self.options = {
-            "pxPerUmAx": 1.0/PX_AXIAL_MICRON,
-            "pxPerUmLat": 1.0/PX_LATERAL_MICRON,
+            "pxPerUmAx": 1.0/self.px_axial_micron,
+            "pxPerUmLat": 1.0/self.px_lateral_micron,
             "windowUm": [15.0, 15.0, 15.0],
             "thresh": THRESHOLD,
         }
@@ -292,7 +299,44 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(central)
         vbox = QtWidgets.QVBoxLayout(central)
 
-        # Controls
+        # System parameters
+        params_group = QtWidgets.QGroupBox("System Parameters")
+        params_layout = QtWidgets.QHBoxLayout()
+        params_group.setLayout(params_layout)
+        vbox.addWidget(params_group)
+
+        params_layout.addWidget(QtWidgets.QLabel("System magnification:"))
+        self.mag_edit = QtWidgets.QDoubleSpinBox()
+        self.mag_edit.setRange(0.1, 100.0)
+        self.mag_edit.setValue(self.mag)
+        self.mag_edit.setDecimals(2)
+        self.mag_edit.setSingleStep(1.0)
+        self.mag_edit.valueChanged.connect(self.update_system_parameters)
+        params_layout.addWidget(self.mag_edit)
+
+        params_layout.addSpacing(10)
+        params_layout.addWidget(QtWidgets.QLabel("Camera pixel pitch (µm):"))
+        self.pixel_pitch_edit = QtWidgets.QDoubleSpinBox()
+        self.pixel_pitch_edit.setRange(0.1, 10.0)
+        self.pixel_pitch_edit.setValue(self.pixel_pitch_micron)
+        self.pixel_pitch_edit.setDecimals(2)
+        self.pixel_pitch_edit.setSingleStep(0.1)
+        self.pixel_pitch_edit.valueChanged.connect(self.update_system_parameters)
+        params_layout.addWidget(self.pixel_pitch_edit)
+
+        params_layout.addSpacing(10)
+        params_layout.addWidget(QtWidgets.QLabel("Z-step (µm):"))
+        self.px_axial_edit = QtWidgets.QDoubleSpinBox()
+        self.px_axial_edit.setRange(0.01, 10.0)
+        self.px_axial_edit.setValue(self.px_axial_micron)
+        self.px_axial_edit.setDecimals(2)
+        self.px_axial_edit.setSingleStep(0.1)
+        self.px_axial_edit.valueChanged.connect(self.update_system_parameters)
+        params_layout.addWidget(self.px_axial_edit)
+
+        params_layout.addStretch(1)
+
+        # Analysis controls
         controls = QtWidgets.QHBoxLayout()
         vbox.addLayout(controls)
 
@@ -366,6 +410,21 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
+    # ---------- Parameter updates ----------
+
+    def update_system_parameters(self):
+        """Update system parameters and recalculate derived values."""
+        self.mag = float(self.mag_edit.value())
+        self.pixel_pitch_micron = float(self.pixel_pitch_edit.value())
+        self.px_axial_micron = float(self.px_axial_edit.value())
+        
+        # Recalculate lateral pixel size
+        self.px_lateral_micron = self.pixel_pitch_micron / self.mag
+        
+        # Update options
+        self.options["pxPerUmAx"] = 1.0 / self.px_axial_micron
+        self.options["pxPerUmLat"] = 1.0 / self.px_lateral_micron
+
     # ---------- File operations ----------
 
     def open_tif(self):
@@ -378,7 +437,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         try:
             im = imread(fname)
-            self.FOV_Y_um, self.FOV_X_um = im.shape[1] * PX_LATERAL_MICRON, im.shape[2] * PX_LATERAL_MICRON
+            self.FOV_Y_um, self.FOV_X_um = im.shape[1] * self.px_lateral_micron, im.shape[2] * self.px_lateral_micron
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
             return
@@ -668,8 +727,8 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         # Axial FWHM map
         ax_im_axial.imshow(smoothed_img, cmap="gray", aspect="equal", extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay0 = ax_im_axial.scatter(
-            (self.stats_df["X"]*PX_LATERAL_MICRON).tolist(),
-            (self.stats_df["Y"]*PX_LATERAL_MICRON).tolist(),
+            (self.stats_df["X"]*self.px_lateral_micron).tolist(),
+            (self.stats_df["Y"]*self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMax"].tolist(),
             cmap=cmap,
             vmin=0,
@@ -686,8 +745,8 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         # Lateral FWHM map
         ax_im_lat.imshow(smoothed_img, cmap="gray", aspect="equal", extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay1 = ax_im_lat.scatter(
-            (self.stats_df["X"]*PX_LATERAL_MICRON).tolist(),
-            (self.stats_df["Y"]*PX_LATERAL_MICRON).tolist(),
+            (self.stats_df["X"]*self.px_lateral_micron).tolist(),
+            (self.stats_df["Y"]*self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMlat"].tolist(),
             cmap=cmap,
             vmin=0,
