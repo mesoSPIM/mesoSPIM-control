@@ -28,12 +28,21 @@ jobs:
           pip install sphinx==7.2.6 sphinx-autodoc-typehints sphinx-rtd-theme==1.3.0 sphinx-copybutton
           # Add extra Sphinx extensions here if you use them
           pip install myst-parser
+          pip install pylint>=3.2
       - name: Copy README and CONTRIBUTING into docs
         run: |
           pwd
           ls
           cp README.md docs/source/README.md
           cp CONTRIBUTING.md docs/source/CONTRIBUTING.md
+
+      - name: Generate class diagrams with pyreverse
+        run: |
+          pyreverse -o mmd -p mesoSPIM mesoSPIM --only-classnames -d docs 
+
+      - name: Inject into README
+        run: |
+          python scripts/inject_mermaid.py
 
       - name: Generate API docs with sphinx-apidoc
         run: |
