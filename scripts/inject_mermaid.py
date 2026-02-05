@@ -1,11 +1,10 @@
 from pathlib import Path
 
-README = Path("README.md")
+README = Path("docs/README.md")
 MMD = Path("docs/classes_mesoSPIM.mmd")
 
 start = "<!-- PYREVERSE:START -->"
 end = "<!-- PYREVERSE:END -->"
-
 text = README.read_text(encoding="utf-8")
 before, rest = text.split(start)
 _, after = rest.split(end)
