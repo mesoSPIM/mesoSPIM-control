@@ -17,6 +17,7 @@ PIXEL_PITCH_MICRON = 4.25
 PX_LATERAL_MICRON = PIXEL_PITCH_MICRON/MAG
 PX_AXIAL_MICRON = 1.0
 THRESHOLD = 700
+MIN_BEAD_DISTANCE_UM = 15.0   # minimum distance between beads in microns
 
 
 import os
@@ -281,12 +282,13 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.pixel_pitch_micron = PIXEL_PITCH_MICRON
         self.px_axial_micron = PX_AXIAL_MICRON
         self.px_lateral_micron = PIXEL_PITCH_MICRON / MAG
+        self.min_bead_distance_um = MIN_BEAD_DISTANCE_UM
 
         # Default options
         self.options = {
             "pxPerUmAx": 1.0/self.px_axial_micron,
             "pxPerUmLat": 1.0/self.px_lateral_micron,
-            "windowUm": [15.0, 15.0, 15.0],
+            "windowUm": [self.min_bead_distance_um, self.min_bead_distance_um, self.min_bead_distance_um],
             "thresh": THRESHOLD,
         }
 
@@ -305,7 +307,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         params_group.setLayout(params_layout)
         vbox.addWidget(params_group)
 
-        params_layout.addWidget(QtWidgets.QLabel("System magnification:"))
+        params_layout.addWidget(QtWidgets.QLabel("Magnification:"))
         self.mag_edit = QtWidgets.QDoubleSpinBox()
         self.mag_edit.setRange(0.1, 100.0)
         self.mag_edit.setValue(self.mag)
@@ -340,12 +342,22 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         controls = QtWidgets.QHBoxLayout()
         vbox.addLayout(controls)
 
-        controls.addWidget(QtWidgets.QLabel("Threshold:"))
+        controls.addWidget(QtWidgets.QLabel("Min intensity:"))
         self.thresh_edit = QtWidgets.QDoubleSpinBox()
-        self.thresh_edit.setRange(0, 1e9)
+        self.thresh_edit.setRange(0, 20000)
         self.thresh_edit.setValue(self.options["thresh"])
         self.thresh_edit.setDecimals(1)
         controls.addWidget(self.thresh_edit)
+
+        controls.addSpacing(10)
+        controls.addWidget(QtWidgets.QLabel("Min dist betw beads (µm):"))
+        self.min_bead_dist_edit = QtWidgets.QDoubleSpinBox()
+        self.min_bead_dist_edit.setRange(1.0, 100.0)
+        self.min_bead_dist_edit.setValue(self.min_bead_distance_um)
+        self.min_bead_dist_edit.setDecimals(1)
+        self.min_bead_dist_edit.setSingleStep(1.0)
+        self.min_bead_dist_edit.valueChanged.connect(self.update_min_bead_distance)
+        controls.addWidget(self.min_bead_dist_edit)
 
         controls.addSpacing(10)
         controls.addWidget(QtWidgets.QLabel("Z min:"))
@@ -361,16 +373,21 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.zmax_edit.setValue(0)
         controls.addWidget(self.zmax_edit)
 
-        controls.addSpacing(10)
+        controls.addStretch(1)
+
+        # Second row of controls
+        controls2 = QtWidgets.QHBoxLayout()
+        vbox.addLayout(controls2)
+
         self.run_button = QtWidgets.QPushButton("Run analysis")
         self.run_button.clicked.connect(self.run_analysis)
-        controls.addWidget(self.run_button)
+        controls2.addWidget(self.run_button)
 
-        controls.addSpacing(20)
+        controls2.addSpacing(20)
         self.info_label = QtWidgets.QLabel("No image loaded")
-        controls.addWidget(self.info_label)
+        controls2.addWidget(self.info_label)
 
-        controls.addStretch(1)
+        controls2.addStretch(1)
 
         # Matplotlib canvas
         self.canvas = MplCanvas(self, width=12, height=20, dpi=100)
@@ -424,6 +441,11 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         # Update options
         self.options["pxPerUmAx"] = 1.0 / self.px_axial_micron
         self.options["pxPerUmLat"] = 1.0 / self.px_lateral_micron
+
+    def update_min_bead_distance(self):
+        """Update minimum bead distance parameter."""
+        self.min_bead_distance_um = float(self.min_bead_dist_edit.value())
+        self.options["windowUm"] = [self.min_bead_distance_um, self.min_bead_distance_um, self.min_bead_distance_um]
 
     # ---------- File operations ----------
 
