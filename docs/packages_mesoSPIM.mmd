@@ -89,6 +89,42 @@ classDiagram
   }
   class mesoSPIM_Zoom {
   }
+  class plugins {
+  }
+  class ImageWriterApi {
+  }
+  class ImageWriters {
+  }
+  class BigTiffWriter {
+  }
+  class H5BDVWriter {
+  }
+  class OmeZarrWriter {
+  }
+  class OmeZarrWriterMP {
+  }
+  class RawWriter {
+  }
+  class ShamWriter {
+  }
+  class TiffWriter {
+  }
+  class manager {
+  }
+  class support_files {
+  }
+  class ImageWriters {
+  }
+  class OmeZarrWriter {
+  }
+  class omezarr_writer {
+  }
+  class OmeZarrWriterMP {
+  }
+  class omezarr_writer {
+  }
+  class utils {
+  }
   class utils {
   }
   class acquisitions {
@@ -124,6 +160,7 @@ classDiagram
   class test_writing_speed {
   }
   mesoSPIM_Control --> mesoSPIM_MainWindow
+  mesoSPIM_Control --> manager
   mesoSPIM_FilterWheel --> ZWO_EFW
   mesoSPIM_FilterWheel --> pyzwoefw
   mesoSPIM_JoystickHandlers --> Demo_SidePanel
@@ -139,7 +176,9 @@ classDiagram
   mesoSPIM_Camera --> hamamatsu
   mesoSPIM_Camera --> hamamatsu_camera
   mesoSPIM_Camera --> acquisitions
+  mesoSPIM_Camera --> utility_functions
   mesoSPIM_CameraWindow --> optimization
+  mesoSPIM_CameraWindow --> utility_functions
   mesoSPIM_Core --> Demo_LaserEnabler
   mesoSPIM_Core --> mesoSPIM_LaserEnabler
   mesoSPIM_Core --> Demo_Shutter
@@ -150,6 +189,8 @@ classDiagram
   mesoSPIM_Core --> mesoSPIM_WaveFormGenerator
   mesoSPIM_Core --> acquisitions
   mesoSPIM_Core --> utility_functions
+  mesoSPIM_ImageWriter --> ImageWriterApi
+  mesoSPIM_ImageWriter --> utils
   mesoSPIM_ImageWriter --> acquisitions
   mesoSPIM_ImageWriter --> utility_functions
   mesoSPIM_MainWindow --> WebcamWindow
@@ -162,14 +203,31 @@ classDiagram
   mesoSPIM_MainWindow --> mesoSPIM_ScriptWindow
   mesoSPIM_MainWindow --> mesoSPIM_State
   mesoSPIM_MainWindow --> mesoSPIM_TileViewWindow
+  mesoSPIM_MainWindow --> utility_functions
   mesoSPIM_Optimizer --> optimization
   mesoSPIM_Serial --> mesoSPIM_FilterWheel
   mesoSPIM_Serial --> mesoSPIM_Stages
   mesoSPIM_Serial --> mesoSPIM_Zoom
+  mesoSPIM_Serial --> utility_functions
   mesoSPIM_Stages --> asicontrol
   mesoSPIM_Stages --> galilcontrol
   mesoSPIM_State --> acquisitions
+  mesoSPIM_WaveFormGenerator --> utility_functions
   mesoSPIM_WaveFormGenerator --> waveforms
+  BigTiffWriter --> ImageWriterApi
+  H5BDVWriter --> ImageWriterApi
+  H5BDVWriter --> utils
+  OmeZarrWriter --> ImageWriterApi
+  OmeZarrWriter --> omezarr_writer
+  OmeZarrWriter --> utils
+  OmeZarrWriterMP --> ImageWriterApi
+  OmeZarrWriterMP --> utils
+  RawWriter --> ImageWriterApi
+  ShamWriter --> ImageWriterApi
+  TiffWriter --> ImageWriterApi
+  manager --> ImageWriterApi
+  utils --> ImageWriterApi
+  utils --> manager
   delegates --> widgets
   filename_wizard --> utility_functions
   models --> acquisitions
