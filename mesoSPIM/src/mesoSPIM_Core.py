@@ -159,7 +159,7 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.serial_thread.start() # legacy
 
         ''' Setting waveform generation up '''
-        if self.cfg.waveformgeneration == 'NI':
+        if self.cfg.waveformgeneration in ('NI', 'cDAQ'):
             self.waveformer = mesoSPIM_WaveFormGenerator(self)
         elif self.cfg.waveformgeneration == 'DemoWaveFormGeneration':
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
@@ -175,9 +175,9 @@ class mesoSPIM_Core(QtCore.QObject):
         left_shutter_line = self.cfg.shutterdict['shutter_left']
         right_shutter_line = self.cfg.shutterdict['shutter_right']
 
-        if self.cfg.shutter == 'NI':
-            self.shutter_left = NI_Shutter(left_shutter_line)
-            self.shutter_right = NI_Shutter(right_shutter_line)
+        if self.cfg.shutter in ('NI','cDAQ'):
+            self.shutter_left = NI_Shutter(left_shutter_line) if left_shutter_line is not None else Demo_Shutter(left_shutter_line)
+            self.shutter_right = NI_Shutter(right_shutter_line) if right_shutter_line is not None else Demo_Shutter(right_shutter_line)
         elif self.cfg.shutter == 'Demo':
             self.shutter_left = Demo_Shutter(left_shutter_line)
             self.shutter_right = Demo_Shutter(right_shutter_line)
@@ -189,15 +189,16 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
         ''' Setting the laser enabler up '''
-        if self.cfg.laser == 'NI':
+        if self.cfg.laser in ('NI', 'cDAQ'):
             self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
-        elif self.cfg.laser == 'Demo':
+        elif 'demo' in self.cfg.laser.lower():
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
         self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
         self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
+        self.state['samplerate'] = self.cfg.startup['samplerate']
 
         self.start_time = 0
         self.stopflag = False
@@ -836,7 +837,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         move_dict = acq.get_delta_dict()
         laser = self.state['laser']
-        self.laserenabler.enable(laser)
+        self.laserenabler.enable(laser) # counter-intuitively the TTL laser enabler is slow here. Starts well before and ends well after actual AO waveforms.
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         for i in range(steps):
             if self.stopflag is True:
@@ -894,7 +895,6 @@ class mesoSPIM_Core(QtCore.QObject):
     def close_acquisition(self, acq, acq_list):
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
         if self.stopflag is False:
-            # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
             self.sig_end_image_series.emit(acq, acq_list)
 
