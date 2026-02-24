@@ -41,9 +41,9 @@ jobs:
         run: |
           pyreverse -o mmd -p mesoSPIM mesoSPIM --only-classnames -d docs 
 
-      - name: Inject into docs/README
-        run: |
-          python scripts/inject_mermaid.py
+      # - name: Inject into docs/README
+      #   run: |
+      #     python scripts/inject_mermaid.py
 
       - name: Generate API docs with sphinx-apidoc
         run: |
