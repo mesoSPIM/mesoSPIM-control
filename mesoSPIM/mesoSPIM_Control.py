@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov, Alan Watson, and others"
 __license__ = "GPL v3"
-__version__ = "1.2.0"
+__version__ = "1.20.0"
 
 import time
 import logging
