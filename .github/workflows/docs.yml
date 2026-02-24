@@ -25,7 +25,7 @@ jobs:
       - name: Install project & doc dependencies
         run: |
           pip install -e .
-          pip install "sphinx==7.2.6" "docutils<0.21" sphinx-autodoc-typehints "furo==2024.6.28" sphinx-copybutton
+          pip install "sphinx==7.2.6" "docutils<0.21" sphinx-autodoc-typehints furo sphinx-copybutton
           # Add extra Sphinx extensions here if you use them
           pip install myst-parser
           #pip install pylint
