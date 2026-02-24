@@ -29,7 +29,7 @@ jobs:
           # Add extra Sphinx extensions here if you use them
           pip install myst-parser
           #pip install pylint
-          pip install pyreverse
+          #pip install pyreverse
       - name: Copy README and CONTRIBUTING into docs
         run: |
           pwd
@@ -37,9 +37,9 @@ jobs:
           cp README.md docs/source/README.md
           cp CONTRIBUTING.md docs/source/CONTRIBUTING.md
 
-      - name: Generate class diagrams with pyreverse
-        run: |
-          pyreverse -o mmd -p mesoSPIM mesoSPIM --only-classnames -d docs 
+      # - name: Generate class diagrams with pyreverse
+      #   run: |
+      #     pyreverse -o mmd -p mesoSPIM mesoSPIM --only-classnames -d docs 
 
       # - name: Inject into docs/README
       #   run: |
