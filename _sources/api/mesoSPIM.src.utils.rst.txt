@@ -1,0 +1,109 @@
+mesoSPIM.src.utils package
+==========================
+
+Submodules
+----------
+
+mesoSPIM.src.utils.acquisitions module
+--------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.acquisitions
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.delegates module
+-----------------------------------
+
+.. automodule:: mesoSPIM.src.utils.delegates
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.filename\_wizard module
+------------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.filename_wizard
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.focus\_tracking\_wizard module
+-------------------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.focus_tracking_wizard
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.image\_processing\_wizard module
+---------------------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.image_processing_wizard
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.models module
+--------------------------------
+
+.. automodule:: mesoSPIM.src.utils.models
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.multicolor\_acquisition\_builder module
+----------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.multicolor_acquisition_builder
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.multicolor\_acquisition\_wizard module
+---------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.multicolor_acquisition_wizard
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.optimization module
+--------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.optimization
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.utility\_functions module
+--------------------------------------------
+
+.. automodule:: mesoSPIM.src.utils.utility_functions
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.waveforms module
+-----------------------------------
+
+.. automodule:: mesoSPIM.src.utils.waveforms
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.utils.widgets module
+---------------------------------
+
+.. automodule:: mesoSPIM.src.utils.widgets
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.utils
+   :members:
+   :show-inheritance:
+   :undoc-members:

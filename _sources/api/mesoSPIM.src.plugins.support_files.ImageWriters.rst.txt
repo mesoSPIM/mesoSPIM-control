@@ -1,0 +1,19 @@
+mesoSPIM.src.plugins.support\_files.ImageWriters package
+========================================================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriter
+   mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriterMP
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.plugins.support_files.ImageWriters
+   :members:
+   :show-inheritance:
+   :undoc-members:

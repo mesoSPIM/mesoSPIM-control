@@ -1,0 +1,46 @@
+mesoSPIM.src.plugins package
+============================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src.plugins.ImageWriters
+   mesoSPIM.src.plugins.support_files
+
+Submodules
+----------
+
+mesoSPIM.src.plugins.ImageWriterApi module
+------------------------------------------
+
+.. automodule:: mesoSPIM.src.plugins.ImageWriterApi
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.plugins.manager module
+-----------------------------------
+
+.. automodule:: mesoSPIM.src.plugins.manager
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.plugins.utils module
+---------------------------------
+
+.. automodule:: mesoSPIM.src.plugins.utils
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.plugins
+   :members:
+   :show-inheritance:
+   :undoc-members:

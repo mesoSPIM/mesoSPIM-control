@@ -1,0 +1,29 @@
+mesoSPIM.src.devices.shutters package
+=====================================
+
+Submodules
+----------
+
+mesoSPIM.src.devices.shutters.Demo\_Shutter module
+--------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.shutters.Demo_Shutter
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.devices.shutters.NI\_Shutter module
+------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.shutters.NI_Shutter
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.shutters
+   :members:
+   :show-inheritance:
+   :undoc-members:

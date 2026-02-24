@@ -1,0 +1,7 @@
+mesoSPIM
+========
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM

@@ -1,0 +1,21 @@
+mesoSPIM.src.devices.filter\_wheels.ZWO\_EFW package
+====================================================
+
+Submodules
+----------
+
+mesoSPIM.src.devices.filter\_wheels.ZWO\_EFW.pyzwoefw module
+------------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.filter_wheels.ZWO_EFW
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,21 @@
+mesoSPIM.src.plugins.support\_files.ImageWriters.OmeZarrWriterMP package
+========================================================================
+
+Submodules
+----------
+
+mesoSPIM.src.plugins.support\_files.ImageWriters.OmeZarrWriterMP.omezarr\_writer module
+---------------------------------------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriterMP.omezarr_writer
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriterMP
+   :members:
+   :show-inheritance:
+   :undoc-members:

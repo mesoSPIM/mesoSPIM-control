@@ -1,0 +1,151 @@
+mesoSPIM.src package
+====================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src.devices
+   mesoSPIM.src.plugins
+   mesoSPIM.src.utils
+
+Submodules
+----------
+
+mesoSPIM.src.WebcamWindow module
+--------------------------------
+
+.. automodule:: mesoSPIM.src.WebcamWindow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_AcquisitionManagerWindow module
+------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_AcquisitionManagerWindow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_Camera module
+------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_Camera
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_CameraWindow module
+------------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_CameraWindow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_ContrastWindow module
+--------------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_ContrastWindow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_Core module
+----------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_Core
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_ImageWriter module
+-----------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_ImageWriter
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_MainWindow module
+----------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_MainWindow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_Optimizer module
+---------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_Optimizer
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_ScriptWindow module
+------------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_ScriptWindow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_Serial module
+------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_Serial
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_Stages module
+------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_Stages
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_State module
+-----------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_State
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_TileViewWindow module
+--------------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_TileViewWindow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_WaveFormGenerator module
+-----------------------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_WaveFormGenerator
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.src.mesoSPIM\_Zoom module
+----------------------------------
+
+.. automodule:: mesoSPIM.src.mesoSPIM_Zoom
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,10 @@
+mesoSPIM.src.devices.servos package
+===================================
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.servos
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,37 @@
+mesoSPIM.test package
+=====================
+
+Submodules
+----------
+
+mesoSPIM.test.test\_serial module
+---------------------------------
+
+.. automodule:: mesoSPIM.test.test_serial
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.test.test\_tiling module
+---------------------------------
+
+.. automodule:: mesoSPIM.test.test_tiling
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+mesoSPIM.test.test\_writing\_speed module
+-----------------------------------------
+
+.. automodule:: mesoSPIM.test.test_writing_speed
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.test
+   :members:
+   :show-inheritance:
+   :undoc-members:

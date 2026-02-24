@@ -1,0 +1,29 @@
+mesoSPIM.src.devices.filter\_wheels package
+===========================================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src.devices.filter_wheels.ZWO_EFW
+
+Submodules
+----------
+
+mesoSPIM.src.devices.filter\_wheels.mesoSPIM\_FilterWheel module
+----------------------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.filter_wheels.mesoSPIM_FilterWheel
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.filter_wheels
+   :members:
+   :show-inheritance:
+   :undoc-members:

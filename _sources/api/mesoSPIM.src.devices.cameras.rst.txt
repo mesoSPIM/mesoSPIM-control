@@ -1,0 +1,29 @@
+mesoSPIM.src.devices.cameras package
+====================================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src.devices.cameras.hamamatsu
+
+Submodules
+----------
+
+mesoSPIM.src.devices.cameras.Demo\_Camera module
+------------------------------------------------
+
+.. automodule:: mesoSPIM.src.devices.cameras.Demo_Camera
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices.cameras
+   :members:
+   :show-inheritance:
+   :undoc-members:

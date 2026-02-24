@@ -1,0 +1,24 @@
+mesoSPIM.src.devices package
+============================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   mesoSPIM.src.devices.cameras
+   mesoSPIM.src.devices.filter_wheels
+   mesoSPIM.src.devices.joysticks
+   mesoSPIM.src.devices.lasers
+   mesoSPIM.src.devices.servos
+   mesoSPIM.src.devices.shutters
+   mesoSPIM.src.devices.stages
+
+Module contents
+---------------
+
+.. automodule:: mesoSPIM.src.devices
+   :members:
+   :show-inheritance:
+   :undoc-members:
