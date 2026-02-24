@@ -22,6 +22,16 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.parent = parent # the mesoSPIM_MainWindow() instance
         self.cfg = parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
+        self._first_image_drawn = False
+
+        # # Timer to display images at ~30fps max
+        # self._latest_frame = None
+        # self._latest_seq = 0
+        # self._displayed_seq = -1
+        #
+        # self._display_timer = QtCore.QTimer(self)
+        # self._display_timer.timeout.connect(self._display_latest)
+        # self._display_timer.start(33)  # cap at 30fps
 
         pg.setConfigOptions(imageAxisOrder='row-major')
         if (hasattr(self.cfg, 'ui_options') and self.cfg.ui_options['dark_mode']) or\
@@ -82,6 +92,12 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
         self.sig_update_status.connect(self.update_status)
+
+    def disable_auto_range(self):
+        ''' Hard disable ViewBox auto-range which was causing high CPU loads '''
+        vb = self.image_view.getView()  # ImageView's ViewBox
+        vb.disableAutoRange()
+        vb.enableAutoRange(x=False, y=False)  # belt + suspenders
 
     def adjust_levels(self, pct_low=25, pct_hi=99.99):
         ''''Adjust histogram levels'''
@@ -171,6 +187,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     #@QtCore.pyqtSlot(np.ndarray) # deprecated due to slow performance
     def set_image(self, image):
+        if image is None:
+            return
         log_cpu_core(logger, msg='set_image()')
         logger.debug(f"setImage() with shape {image.shape} started")
         if self.state['state'] in ('live', 'idle'):
@@ -204,7 +222,13 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
                 h.setVisible(False)
             for h in self.lightsheet_marker_L.getHandles():
                 h.setVisible(False)
-        self.draw_crosshairs()
+        # self.draw_crosshairs()
+
+        # Disable auto range after the first image is displayed
+        # avoids use after each subsequent image which leads to high CPU loads and microscope instability.
+        if not self._first_image_drawn:
+            self.disable_auto_range()
+            self._first_image_drawn = True
 
     @QtCore.pyqtSlot()
     def update_image_from_deque(self):
@@ -213,3 +237,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.set_image(image)
         else:
             return
+
+    # @QtCore.pyqtSlot()
+    # def update_image_from_deque(self):
+    #     if self.parent.core.frame_queue_display:
+    #         self._latest_frame = self.parent.core.frame_queue_display[0]
+    #         self._latest_seq += 1
+    #
+    # def _display_latest(self):
+    #     if self._latest_seq == self._displayed_seq:
+    #         return  # nothing new; minimal GIL time
+    #     self._displayed_seq = self._latest_seq
+    #     self.set_image(self._latest_frame)

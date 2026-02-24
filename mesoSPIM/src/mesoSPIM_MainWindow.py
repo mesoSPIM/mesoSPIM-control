@@ -5,6 +5,9 @@ import time
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.uic import loadUi
+
+from ..config.demo_config import plugins
+
 ''' Disabled taskbar button progress display due to problems with Anaconda default'''
 # if sys.platform == 'win32':
 #     from PyQt5.QtWinExtras import QWinTaskbarButton
@@ -131,7 +134,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core = mesoSPIM_Core(self.cfg, self)
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
-        self.core.serial_worker.moveToThread(self.core_thread) # Made the move buttons freeze the SW on Benchtop systems, possibly flawed.
+        self.core.serial_worker.moveToThread(self.core_thread) # depending of signal source, some commands are still executed in main (GUI) thread, eg move_relative() from button press
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -168,7 +171,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_launch_contrast_window.connect(self.launch_contrast_window)
 
         ''' Start the thread '''
-        self.core_thread.start(QtCore.QThread.HighPriority)
+        self.core_thread.start(QtCore.QThread.HighestPriority)
         try:
             self.thread().setPriority(QtCore.QThread.HighestPriority)
             logger.debug('Main Window Thread priority: '+str(self.thread().priority()))
@@ -554,7 +557,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def move_relative(self, pos_dict):
         assert len(pos_dict) == 1, f"Position dictionary expects only one entry, got {pos_dict}"
         key, value = list(pos_dict.keys())[0], list(pos_dict.values())[0]
-        self.sig_move_relative.emit(pos_dict)
+        #self.sig_move_relative.emit(pos_dict)
+        self.core.serial_worker.move_relative(pos_dict)  # direct call to ensure execution in main thread during live mode and avoid conflicts with core thread (stage freezing)
         if hasattr(self.cfg, 'ui_options') and ('button_sleep_ms_xyzft' in self.cfg.ui_options.keys()):
             axis = key[:-4]
             index = ['x', 'y', 'z', 'f', 'theta'].index(axis)
@@ -867,6 +871,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             #self.state['galvo_r_amplitude'] = self.galvo_amp_backup
             self.freezeGalvoButton.setText('Freeze galvos')
         self.sig_state_request.emit({'galvo_l_amplitude': self.state['galvo_l_amplitude']})
+        self.update_gui_from_state()
         #self.sig_state_request.emit({'galvo_r_amplitude': self.state['galvo_r_amplitude']})
 
     def choose_etl_config(self):

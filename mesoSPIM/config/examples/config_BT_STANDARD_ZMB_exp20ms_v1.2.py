@@ -1,6 +1,20 @@
 import numpy as np
 
-logging_level = 'DEBUG'
+logging_level = 'DEBUG' # 'INFO' or 'DEBUG'
+
+'''
+Options to control behavior of plugins
+"paths_list": Optional: Enables arbirtary locations for mesoSPIM to find plugins 
+"first_image_writer": Optional: Enables a favorite plugin to be at the top of the filenaming wizard. Builtin plugins 
+are listed as options, by any ImageWriter plugin can be 
+'''
+plugins = {
+    'path_list': [
+        "../src/plugins/ImageWriters",         # Ignored if it does not exits (use '/')
+        "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
+    ],
+    'first_image_writer': 'MP_OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+}
 
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_x_buttons' : True, # Here, specific sets of UI buttons can be disabled
@@ -95,59 +109,6 @@ camera_parameters = {'x_pixels' : 1024,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4]}
 
-For a Hamamatsu Orca Flash 4.0 V2 or V3, the following parameters are necessary:
-
-camera_parameters = {'x_pixels' : 2048,
-                     'y_pixels' : 2048,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
-                     'subsampling' : [1,2,4],
-                     'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
-                     'defect_correct_mode': 2,
-                     'binning' : '1x1',
-                     'readout_speed' : 1,
-                     'trigger_active' : 1,
-                     'trigger_mode' : 1, # it is unclear if this is the external lightsheeet mode - how to check this?
-                     'trigger_polarity' : 2, # positive pulse
-                     'trigger_source' : 2, # external
-                    }
-
-For a Photometrics Iris 15, the following parameters are necessary:
-
-camera_parameters = {'x_pixels' : 5056,
-                     'y_pixels' : 2960,
-                     'x_pixel_size_in_microns' : 4.25,
-                     'y_pixel_size_in_microns' : 4.25,
-                     'subsampling' : [1,2,4],
-                     'speed_table_index': 0,
-                     'exp_mode' : 'Edge Trigger', # Lots of options in PyVCAM --> see constants.py
-                     'readout_port': 0,
-                     'gain_index': 1,
-                     'exp_out_mode': 4, # 4: line out
-                     'binning' : '1x1',
-                     'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
-                     'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
-                     'scan_line_delay' : 6, # 10.26 us x factor, a factor = 6 equals 71.82 us
-                    }
-
-For a Photometrics Prime BSI Express, the following parameters are necessary:
-
-camera_parameters = {'x_pixels' : 2048, #5056
-                     'y_pixels' : 2048, # 2960
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
-                     'subsampling' : [1,2,4],
-                     'speed_table_index': 1, # 1 for 100 MHz
-                     'exp_mode' : 'Edge Trigger', # Lots of options in PyVCAM --> see constants.py
-                     'readout_port': 0,
-                     'gain_index': 1, # Enable HDR mode
-                     'exp_out_mode': 4, # 4: line out
-                     'binning' : '1x1',
-                     'scan_mode' : 1, # Scan mode options: {'Auto': 0, 'Line Delay': 1, 'Scan Width': 2}
-                     'scan_direction' : 0, # Scan direction options: {'Down': 0, 'Up': 1, 'Down/Up Alternate': 2}
-                     'scan_line_delay' : 3, # 11.2 us x factor, a factor = 3 equals 33.6 us
-                    }
 
 '''
 camera = 'Photometrics' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
@@ -189,7 +150,7 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' o
                     'y_load_position': 35000,
                     'y_unload_position': -20000,
                     'x_center_position': 500,
-                    'z_center_position': 500,
+                    'z_center_position': 28000,
                     'x_max' : 25000,
                     'x_min' : -25000,
                     'y_max' : 550000,
@@ -230,7 +191,7 @@ For a benchtop mesoSPIM with an ASI Tiger controller, the following parameters a
 The stage assignment dictionary assigns a mesoSPIM stage (xyzf and theta - dict key) to an ASI stage (XYZ etc)
 which are the values of the dict.
 '''
-asi_parameters = {'COMport' : 'COM23',
+asi_parameters = {'COMport' : 'COM6',
                   'baudrate' : 115200,
                   'stage_assignment': {'x':'X', 'f':'Y', 'z':'Z', 'theta':'T', 'y':'V'}, # The dictionary order is important here! Must match the ASI cards 1,2,3, let to right. This is standard ASI cards order: XYZTV
                   'encoder_conversion': {'X': 10., 'Y': 10., 'Z': 10., 'T': 1000., 'V': 10.}, # Num of encoder counts per um or degree, depending on stage type. The order match the 'stage_assignment' dictionary order.
@@ -265,8 +226,9 @@ For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
 
 filterdict = {'Empty' : 0, # Every config should contain this
               '405-488-561-640-Quadrupleblock' : 1,
-              '535/22 Brightline': 2,
-              '595/31 Brightline': 3,
+              '488LB RazorEdge': 2,
+              '520/35 BrightLine': 3,
+              '595/31 BrightLine': 4,
               }
 
 
@@ -287,11 +249,7 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 There should be always '1x' zoom present, for correct initialization of the software.
 '''
 
-zoomdict = {'0.9x' : 1,
-            '1x' : 2,
-            '1.2x' : 3,
-            '2x' : 4,
-            '4x' : 5,
+zoomdict = {'2x' : 4,
             '5x' : 6,
             '7.5x' : 7,
             '10x' : 8,
@@ -300,11 +258,7 @@ zoomdict = {'0.9x' : 1,
 '''
 Pixelsize in micron
 '''
-pixelsize = {'0.9x' : 4.25/0.9,
-            '1x': 4.25,
-            '1.2x' : 4.25/1.2,
-            '2x' : 4.25/2,
-            '4x' : 4.25/4,
+pixelsize = {'2x' : 4.25/2,
             '5x' : 4.25/5,
             '7.5x' : 4.25/7.5,
             '10x' : 4.25/10,
@@ -312,25 +266,91 @@ pixelsize = {'0.9x' : 4.25/0.9,
             }
 
 '''
- HDF5 parameters, if this format is used for data saving (optional).
+H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
 Downsampling and compression slows down writing by 5x - 10x, use with caution.
 Imaris can open these files if no subsampling and no compression is used.
 '''
-hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+H5_BDV_Writer = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
-        'flip_xyz': (True, False, False), # match BigStitcher coordinates to mesoSPIM axes.
+        'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy' : False, # True for Hamamatsu, False for Photometrix, possibly due to different coordinate systems.
         }
-
-buffering = {'use_ram_buffer': True, # If True, the data is buffered in RAM before writing to disk. If False, data is written to disk immediately after each frame
-             'percent_ram_free': 20, # If use_ram_buffer is True and once the free RAM is below this value, the data is written to disk.
-             }
-             
+            
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
 '''        
 scale_galvo_amp_with_zoom = True 
+
+'''
+OME.ZARR parameters
+This write generates ome.zarr specification multiscale data on the fly during acquisition.
+The default parameter should work pretty well for most setups with little to no performance degradation
+during acquisition. Defaults include compression which will save disk space and can also improve
+performance because less data is written to disk. Data are written into shards which limits the number of
+files generated on disk. 
+
+Chunks can be set to adjust with each multiscale. Base and target chunks are defined and will start 
+with the base shape and automatically shift towards target with each scale. Chunks have a big influence on IO.
+Bigger chunks means less and more efficient IO, very small chunks will degrade performance on some hardware. 
+Test on your hardware.
+
+ome_version: default: "0.5". Selects whether to write ome-zarr v0.5 (zarr v3 and support for sharding) or 
+v0.4 (zarr v2 and NO support for sharding). If "0.4" is selected, the 'shards' option is ignored.
+
+compression: default: zstd-5. This is a good trade off of compute and compression. In our tests, there is 
+little to no performance degradation when using this setting.
+
+generate_multiscales: default: True. True will generate ome-zarr specification multiscale during acquisition.
+False will only save the original resolution data.
+
+shards are defined by default. Be careful, shard shape must be defined carefully to prevent performance 
+degradation. We suggest that shards are shallow in Z and as large as you camera sensor in XY. 
+For best performance set the base and target chunks to the same z-depth as your shards.
+
+async_finalize: default: True. Enables acquisition of the next tile to proceed immediately while the multiscale 
+is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
+Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
+to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
+'''
+OME_Zarr_Writer = {
+    'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'generate_multiscales': False, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': 'zstd', # None, 'zstd', 'lz4'
+    'compression_level': 5, # 1-9
+    'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    'base_chunks': (128,5056//4,2960//2), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x). Here, optimized for fewer files.
+    'target_chunks': (128,5056//4,2960//2), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x). Here, optimized for fewer files.
+    'async_finalize': False, # True, False
+    'write_big_stitcher_xml': True, # BigStitcher XML file for compatibiliyt ('ome_version': '0.4')
+    'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
+    'transpose_xy' : False, # True for Hamamatsu, False for Photometrix, possibly due to different coordinate systems.
+    }
+
+MP_OME_Zarr_Writer = {
+    'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'generate_multiscales': False, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': 'zstd',  # None, 'zstd', 'lz4'
+    'compression_level': 5,  # 1-9
+    'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    'base_chunks': (128, 5056//4, 2960//2),
+    # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (128, 5056//4, 2960//2),
+    # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+    'async_finalize': False,  # True, False
+
+    # BigStitcher Specific Options
+    'write_big_stitcher_xml': True,  # True, False
+    'flip_xyz': (True, True, False),  # match BigStitcher coordinates to mesoSPIM axes.
+    'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
+
+    # Multiprocess options
+    'ring_buffer_size': 512,  # Max number of images in shared memory ring buffer
+         
+    # Write cache options. Write tile data to cache then move to acquisition folder
+    # None acquires data direct to acquisition folder.
+    'write_cache': 'F:/mesoSPIM_CACHE', # None, 'e:/path/to/fast/ssd/write/cache'
+}
 
 '''
 Initial acquisition parameters
@@ -349,10 +369,10 @@ startup = {
 'samplerate' : 100000,
 'sweeptime' : 0.26734,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
-'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-BT-DBE.csv',
+'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-benchtop.csv',
 'filepath' : 'F:/Test/file.tif',
 'folder' : 'F:/Test/',
-'snap_folder' : 'F:/Test/',
+'snap_folder' : 'X:/',
 'file_prefix' : '',
 'file_suffix' : '000001',
 'zoom' : '5x',
@@ -381,7 +401,7 @@ startup = {
 'galvo_l_phase' : np.pi/7,
 'galvo_r_frequency' : 99.9,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.23,
+'galvo_r_offset' : 0.15,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 10,
@@ -390,12 +410,14 @@ startup = {
 'laser_r_delay_%' : 10,
 'laser_r_pulse_%' : 87,
 'laser_r_max_amplitude_%' : 100,
+'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
+'stage_trigger_pulse_%' : 1,
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
 'camera_display_live_subsampling': 2,
-'camera_display_snap_subsampling': 1,
+'camera_display_snap_subsampling': 2,
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',

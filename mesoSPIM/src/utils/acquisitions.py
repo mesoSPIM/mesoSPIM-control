@@ -4,11 +4,12 @@ acquisitions.py
 
 Helper classes for mesoSPIM acquisitions
 '''
-
+from pathlib import Path
 import indexed
 import os.path
 import logging
 logger = logging.getLogger(__name__)
+from ..plugins.utils import get_image_writer_name_for_file_extension, get_image_writer_from_name
 
 
 class Acquisition(indexed.IndexedOrderedDict):
@@ -60,11 +61,13 @@ class Acquisition(indexed.IndexedOrderedDict):
                  shutterconfig='Left',
                  folder='tmp',
                  filename='one.tif',
+                 image_writer_plugin=get_image_writer_name_for_file_extension('.tif'),
                  etl_l_offset=0,
                  etl_l_amplitude=0,
                  etl_r_offset=0,
                  etl_r_amplitude=0,
-                 processing='MAX'):
+                 processing='MAX',
+                 ):
 
         super().__init__()
 
@@ -84,6 +87,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['shutterconfig']=shutterconfig
         self['folder']=folder
         self['filename']=filename
+        self['image_writer_plugin'] = image_writer_plugin
         self['etl_l_offset']=etl_l_offset
         self['etl_l_amplitude']=etl_l_amplitude
         self['etl_r_offset']=etl_r_offset
@@ -335,8 +339,12 @@ class AcquisitionList(list):
         ''' Returns a list of duplicated filenames '''
         filenames = []
         # Create a list of full file paths
+        # If the image writer is a single file format, all filenames should be the same, so skip adding to the list.
         for i in range(len(self)):
-            if self[i]['filename'][-3:] != '.h5':
+            image_writer_plugin = self[i]['image_writer_plugin']
+            image_writer_class = get_image_writer_from_name(image_writer_plugin).get('writer_class')
+            single_file_format = image_writer_class.file_names().SingleFileFormat
+            if not single_file_format:
                 filename = self[i]['folder']+'/'+self[i]['filename']
                 filenames.append(filename)
         duplicates = self.get_duplicates_in_list(filenames)

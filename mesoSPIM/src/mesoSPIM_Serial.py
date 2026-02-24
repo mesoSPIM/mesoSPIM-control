@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
-from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Tiger_Stage, mesoSPIM_ASI_MS2000_Stage, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Stages, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
 from .utils.utility_functions import log_cpu_core
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_center_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
     sig_status_message = QtCore.pyqtSignal(str)
-    sig_pause = QtCore.pyqtSignal(bool)
+    #sig_pause = QtCore.pyqtSignal(bool)
     
     def __init__(self, parent):
         super().__init__()
@@ -52,7 +52,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Demo':
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
-            self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters['COMport'], self.cfg.filterdict)
+            self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters, self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'ZWO':
             self.filterwheel = ZwoFilterWheel(self.cfg.filterdict, self)
         else:
@@ -83,14 +83,14 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage = mesoSPIM_PI_rotz_and_Galil_xyf_Stages(self)
         # elif self.cfg.stage_parameters['stage_type'] == 'PI_rotzf_and_Galil_xy':
         #     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)
-        elif self.cfg.stage_parameters['stage_type'] == 'TigerASI':
-            self.stage = mesoSPIM_ASI_Tiger_Stage(self)
-            self.stage.sig_pause.connect(self.pause)
+        elif 'asi' in self.cfg.stage_parameters['stage_type'].lower():
+            self.stage = mesoSPIM_ASI_Stages(self)
+            #self.stage.sig_pause.connect(self.pause)
             self.parent.sig_progress.connect(self.stage.log_slice)
-        elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
-            self.stage = mesoSPIM_ASI_MS2000_Stage(self)
-            self.stage.sig_pause.connect(self.pause)
-            self.parent.sig_progress.connect(self.stage.log_slice)
+        # elif self.cfg.stage_parameters['stage_type'] == 'MS2000ASI':
+        #     self.stage = mesoSPIM_ASI_MS2000_Stage(self)
+        #     #self.stage.sig_pause.connect(self.pause)
+        #     self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
         else:
@@ -132,10 +132,10 @@ class mesoSPIM_Serial(QtCore.QObject):
     def send_status_message(self, string):
         self.sig_status_message.emit(string)
 
-    @QtCore.pyqtSlot(bool)
-    def pause(self, boolean):
-        logger.debug(f'Pause signal received: {boolean}')
-        self.sig_pause.emit(boolean)
+#    @QtCore.pyqtSlot(bool)
+#    def pause(self, boolean):
+#        logger.debug(f'Pause signal received: {boolean}')
+#        self.sig_pause.emit(boolean)
 
     @QtCore.pyqtSlot(bool)
     def enable_ttl_motion(self, boolean):

@@ -89,6 +89,42 @@ classDiagram
   }
   class mesoSPIM_Zoom {
   }
+  class plugins {
+  }
+  class ImageWriterApi {
+  }
+  class ImageWriters {
+  }
+  class BigTiffWriter {
+  }
+  class H5BDVWriter {
+  }
+  class OmeZarrWriter {
+  }
+  class OmeZarrWriterMP {
+  }
+  class RawWriter {
+  }
+  class ShamWriter {
+  }
+  class TiffWriter {
+  }
+  class manager {
+  }
+  class support_files {
+  }
+  class ImageWriters {
+  }
+  class OmeZarrWriter {
+  }
+  class omezarr_writer {
+  }
+  class OmeZarrWriterMP {
+  }
+  class omezarr_writer {
+  }
+  class utils {
+  }
   class utils {
   }
   class acquisitions {
@@ -124,6 +160,7 @@ classDiagram
   class test_writing_speed {
   }
   mesoSPIM_Control --> mesoSPIM_MainWindow
+  mesoSPIM_Control --> manager
   mesoSPIM_FilterWheel --> ZWO_EFW
   mesoSPIM_FilterWheel --> pyzwoefw
   mesoSPIM_JoystickHandlers --> Demo_SidePanel
@@ -152,6 +189,8 @@ classDiagram
   mesoSPIM_Core --> mesoSPIM_WaveFormGenerator
   mesoSPIM_Core --> acquisitions
   mesoSPIM_Core --> utility_functions
+  mesoSPIM_ImageWriter --> ImageWriterApi
+  mesoSPIM_ImageWriter --> utils
   mesoSPIM_ImageWriter --> acquisitions
   mesoSPIM_ImageWriter --> utility_functions
   mesoSPIM_MainWindow --> WebcamWindow
@@ -175,6 +214,20 @@ classDiagram
   mesoSPIM_State --> acquisitions
   mesoSPIM_WaveFormGenerator --> utility_functions
   mesoSPIM_WaveFormGenerator --> waveforms
+  BigTiffWriter --> ImageWriterApi
+  H5BDVWriter --> ImageWriterApi
+  H5BDVWriter --> utils
+  OmeZarrWriter --> ImageWriterApi
+  OmeZarrWriter --> omezarr_writer
+  OmeZarrWriter --> utils
+  OmeZarrWriterMP --> ImageWriterApi
+  OmeZarrWriterMP --> utils
+  RawWriter --> ImageWriterApi
+  ShamWriter --> ImageWriterApi
+  TiffWriter --> ImageWriterApi
+  manager --> ImageWriterApi
+  utils --> ImageWriterApi
+  utils --> manager
   delegates --> widgets
   filename_wizard --> utility_functions
   models --> acquisitions

@@ -24,6 +24,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.acquisition_manager_window = parent.acquisition_manager_window
         self.cfg = parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
+        self.test_state = None
 
         '''Set up the UI'''
         if __name__ == '__main__':
@@ -47,11 +48,16 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.scene = QGraphicsScene()
         self.scene.setSceneRect(-300, -400, 600, 800)
         self.tile_overview.setScene(self.scene)
-        self.show_tiles()
-        # update the tiles every second
+
+        # update the tiles every 0.5 seconds while 'idle' and every 5 seconds while acquiring
+        self._last_running = None
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.show_tiles)
-        self.timer.start(500)  # milliseconds
+        self._idle_interval_ms = 500  # Tile update interval while NOT in state 'run_acquisition_list', 'run_selected_acquisition'
+        self._run_interval_ms = 5000  # Tile update interval while IN state 'run_acquisition_list', 'run_selected_acquisition'
+        self.timer.start(self._idle_interval_ms)  # milliseconds
+
+        # self.show_tiles() # self.timer handles first call to self.show_tiles()
 
         self.doubleSpinBox_scale.valueChanged.connect(lambda: self.on_scale_changed(self.doubleSpinBox_scale.value()))
 
@@ -60,6 +66,13 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         self.show_tiles()
 
     def show_tiles(self):
+        running = self.state['state'] in ('run_acquisition_list', 'run_selected_acquisition')
+
+        # Switch timer interval only when the mode changes (avoid spamming setInterval)
+        if running != self._last_running:
+            self.timer.setInterval(self._run_interval_ms if running else self._idle_interval_ms)
+            self._last_running = running
+
         self.scene.clear()
         self.pixel_size = self.cfg.pixelsize[self.state['zoom']]
         self.tile_size_x, self.tile_size_y = self.x_image_width * self.pixel_size, self.y_image_width * self.pixel_size

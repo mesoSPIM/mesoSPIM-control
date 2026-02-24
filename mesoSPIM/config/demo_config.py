@@ -9,6 +9,20 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 '''
 
 '''
+Options to control behavior of plugins
+"paths_list": Optional: Enables arbirtary locations for mesoSPIM to find plugins 
+"first_image_writer": Optional: Enables a favorite plugin to be at the top of the filenaming wizard. Builtin plugins 
+are listed as options, by any ImageWriter plugin can be 
+'''
+plugins = {
+    'path_list': [
+        "../src/plugins",         # Ignored if it does not exits (use '/')
+        "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
+    ],
+    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+}
+
+'''
 Dark mode: Renders the UI dark
 '''
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
@@ -21,7 +35,7 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_loading_buttons' : True,
               'flip_XYZFT_button_polarity': (True, False, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
               'button_sleep_ms_xyzft' : (250, 0, 250, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
-              'window_pos': (100, 100), # position of the main window on the screen, top left corner.
+              'window_pos': (0, 0), # position of the main window on the screen, top left corner.
               'usb_webcam_ID': 0, # open USB web-camera (if available): None,  0 (first cam), 1 (second cam), ...
               'flip_auto_LR_illumination': False, # flip the polarity of the "Auto L/R illumination" button in Acquisition Manager
                }
@@ -100,6 +114,7 @@ shutterdict = {'shutter_left' : 'PXI6259/port0/line0', # left (general) shutter
 Camera configuration
 
 For a DemoCamera, only the following options are necessary
+(x_pixels and y_pixels can be chosen arbitrarily):
 (x_pixels and y_pixels can be chosen arbitrarily):
 
 camera_parameters = {'x_pixels' : 1024,
@@ -249,7 +264,7 @@ asi_parameters = {'COMport' : 'COM32',
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
-                  'ttl_cards':(2,3),
+                  'ttl_cards':(2,3), # None if MS2000ASI; tuple of card numbers if TigerASI
                   }
 '''
 
@@ -261,8 +276,9 @@ For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary.
 '''
 filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel', 'ZWO'
                           'COMport' : 'COM3', # irrelevant for 'ZWO'
-                          'baudrate' : 115200, # relevant only for 'Dynamixel'
+                          'baudrate' : 115200, # relevant only for 'Dynamixel', 'Sutter'
                           'servo_id' :  1, # relevant only for 'Dynamixel'
+                          'wheel_speed': 3  # relevant only for 'Sutter'; valid range 0 (slowest) .. 7 (fastest)
                           }
 '''
 filterdict contains filter labels and their positions. The valid positions are:
@@ -328,15 +344,87 @@ pixelsize = {
             '5x Mitutoyo' : 1.0,}
 
 '''
- HDF5 parameters, if this format is used for data saving (optional).
+H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
 Downsampling and compression slows down writing by 5x - 10x, use with caution.
 Imaris can open these files if no subsampling and no compression is used.
 '''
-hdf5 = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
+H5_BDV_Writer = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), (1, 4, 4)) for 2-level (z,y,x) subsamp.
         'compression': None, # None, 'gzip', 'lzf'
         'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
         'transpose_xy': False, # in case X and Y axes need to be swapped for the correct tile positions
         }
+
+'''
+OME.ZARR parameters
+This write generates ome.zarr specification multiscale data on the fly during acquisition.
+The default parameter should work pretty well for most setups with little to no performance degradation
+during acquisition. Defaults include compression which will save disk space and can also improve
+performance because less data is written to disk. Data are written into shards which limits the number of
+files generated on disk. 
+
+Chunks can be set to adjust with each multiscale. Base and target chunks are defined and will start 
+with the base shape and automatically shift towards target with each scale. Chunks have a big influence on IO.
+Bigger chunks means less and more efficient IO, very small chunks will degrade performance on some hardware. 
+Test on your hardware.
+
+ome_version: default: "0.5". Selects whether to write ome-zarr v0.5 (zarr v3 and support for sharding) or 
+v0.4 (zarr v2 and NO support for sharding). If "0.4" is selected, the 'shards' option is ignored.
+
+compression: default: zstd-5. This is a good trade off of compute and compression. In our tests, there is 
+little to no performance degradation when using this setting.
+
+generate_multiscales: default: True. True will generate ome-zarr specification multiscale during acquisition.
+False will only save the original resolution data.
+
+shards are defined by default. Be careful, shard shape must be defined carefully to prevent performance 
+degradation. We suggest that shards are shallow in Z and as large as you camera sensor in XY. 
+For best performance set the base and target chunks to the same z-depth as your shards.
+
+async_finalize: default: True. Enables acquisition of the next tile to proceed immediately while the multiscale 
+is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
+Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
+to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
+'''
+OME_Zarr_Writer = {
+    'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': 'zstd', # None, 'zstd', 'lz4'
+    'compression_level': 5, # 1-9
+    'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    'base_chunks': (256,256,256), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (256,256,256), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+    'async_finalize': True, # True, False
+    
+    # BigStitcher Specific Options
+    'write_big_stitcher_xml': True, # True, False
+    'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
+    'transpose_xy': False, # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
+    }
+
+MP_OME_Zarr_Writer = {
+    'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': 'zstd',  # None, 'zstd', 'lz4'
+    'compression_level': 5,  # 1-9
+    'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    'base_chunks': (256, 256, 256),
+    # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (256, 256, 256),
+    # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+    'async_finalize': True,  # True, False
+
+    # BigStitcher Specific Options
+    'write_big_stitcher_xml': True,  # True, False
+    'flip_xyz': (True, True, False),  # match BigStitcher coordinates to mesoSPIM axes.
+    'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
+
+    # Multiprocess options
+    'ring_buffer_size': 16,  # Max number of images in shared memory ring buffer, 16 for simulation mode (eg laptop), 512 for production mode (fast workstation)
+         
+    # Write cache options. Write tile data to cache then move to acquisition folder
+    # None acquires data direct to acquisition folder.
+    'write_cache': None # None, 'e:/path/to/fast/ssd/write/cache'
+}
 
 '''
 Rescale the galvo amplitude when zoom is changed

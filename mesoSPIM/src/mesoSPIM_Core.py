@@ -141,7 +141,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.serial_worker.sig_position.connect(self.sig_position.emit)
         self.serial_worker.sig_status_message.connect(self.send_status_message_to_gui)
-        self.serial_worker.sig_pause.connect(self.pause)
+        #self.serial_worker.sig_pause.connect(self.pause)
         self.sig_polling_stage_position_start.connect(self.serial_worker.stage.pos_timer.start)
         self.sig_polling_stage_position_stop.connect(self.serial_worker.stage.pos_timer.stop)
         self.sig_move_absolute.connect(self.serial_worker.move_absolute)
@@ -158,7 +158,7 @@ class mesoSPIM_Core(QtCore.QObject):
         #self.serial_thread.start() # legacy
 
         ''' Setting waveform generation up '''
-        if self.cfg.waveformgeneration == 'NI':
+        if self.cfg.waveformgeneration in ('NI', 'cDAQ'):
             self.waveformer = mesoSPIM_WaveFormGenerator(self)
         elif self.cfg.waveformgeneration == 'DemoWaveFormGeneration':
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
@@ -174,9 +174,9 @@ class mesoSPIM_Core(QtCore.QObject):
         left_shutter_line = self.cfg.shutterdict['shutter_left']
         right_shutter_line = self.cfg.shutterdict['shutter_right']
 
-        if self.cfg.shutter == 'NI':
-            self.shutter_left = NI_Shutter(left_shutter_line)
-            self.shutter_right = NI_Shutter(right_shutter_line)
+        if self.cfg.shutter in ('NI','cDAQ'):
+            self.shutter_left = NI_Shutter(left_shutter_line) if left_shutter_line is not None else Demo_Shutter(left_shutter_line)
+            self.shutter_right = NI_Shutter(right_shutter_line) if right_shutter_line is not None else Demo_Shutter(right_shutter_line)
         elif self.cfg.shutter == 'Demo':
             self.shutter_left = Demo_Shutter(left_shutter_line)
             self.shutter_right = Demo_Shutter(right_shutter_line)
@@ -188,24 +188,25 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['max_laser_voltage'] = self.cfg.startup['max_laser_voltage']
 
         ''' Setting the laser enabler up '''
-        if self.cfg.laser == 'NI':
+        if self.cfg.laser in ('NI', 'cDAQ'):
             self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
-        elif self.cfg.laser == 'Demo':
+        elif 'demo' in self.cfg.laser.lower():
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
         self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
         self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
+        self.state['samplerate'] = self.cfg.startup['samplerate']
 
         self.start_time = 0
         self.stopflag = False
-        self.pauseflag = False
+        #self.pauseflag = False
 
-        if self.cfg.stage_parameters['stage_type'] in {'TigerASI'}:
-            assert hasattr(self.cfg,  'asi_parameters'), "Config file for 'TigerASI' must contain 'asi_parameters' dict."
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower(): # TTL option for ASI stages
+            assert hasattr(self.cfg,  'asi_parameters'), "Config file for ASI Stages must contain 'asi_parameters' dict."
             self.TTL_mode_enabled_in_cfg = self.read_config_parameter('ttl_motion_enabled', self.cfg.asi_parameters)
-        else:
+        else: # Default all other stages to TTL False
             self.TTL_mode_enabled_in_cfg = False
 
         self.metadata_file = None
@@ -331,15 +332,18 @@ class mesoSPIM_Core(QtCore.QObject):
     def stop(self):
         self.stopflag = True # This stopflag is a bit risky, needs to be updated to a more robust solution
         self.sig_stop_aquisition.emit() # send STOP signal to both Camera and ImageWriter threads
+        if self.TTL_mode_enabled_in_cfg is True:
+            self.sig_state_request.emit({'ttl_movement_enabled_during_acq': False})
         self.sig_polling_stage_position_start.emit()
         self.state['state'] = 'idle'
         self.sig_update_gui_from_state.emit()
         self.sig_finished.emit()
         self.frame_queue.clear() # clear the frame queue
 
-    @QtCore.pyqtSlot(bool)
-    def pause(self, boolean):
-        self.pauseflag = boolean
+
+#    @QtCore.pyqtSlot(bool)
+#    def pause(self, boolean):
+#        self.pauseflag = boolean
 
     def send_progress(self,
                       cur_acq,
@@ -552,8 +556,11 @@ class mesoSPIM_Core(QtCore.QObject):
         if laser_blanking:
             self.laserenabler.enable(laser)
         self.waveformer.start_tasks()
+        logger.debug("start_tasks() finished")
         self.waveformer.run_tasks()
+        logger.debug("run_tasks() finished")
         self.waveformer.stop_tasks()
+        logger.debug("stop_tasks() finished")
         if laser_blanking:
             self.laserenabler.disable_all()
 
@@ -576,9 +583,9 @@ class mesoSPIM_Core(QtCore.QObject):
             self.snap_image(laser_blanking)
             self.sig_get_live_image.emit()
 
-            while self.pauseflag is True:
-                time.sleep(0.1)
-                QtWidgets.QApplication.processEvents()
+#            while self.pauseflag is True:
+#                time.sleep(0.1)
+#                QtWidgets.QApplication.processEvents()
 
             QtWidgets.QApplication.processEvents()
 
@@ -787,6 +794,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
+        self.serial_worker.stage.report_position() # Last Position update before acquisition starts for proper tile view display
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
@@ -828,7 +836,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         move_dict = acq.get_delta_dict()
         laser = self.state['laser']
-        self.laserenabler.enable(laser)
+        self.laserenabler.enable(laser) # counter-intuitively the TTL laser enabler is slow here. Starts well before and ends well after actual AO waveforms.
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         for i in range(steps):
             if self.stopflag is True:
@@ -846,16 +854,16 @@ class mesoSPIM_Core(QtCore.QObject):
                 else: # clear key if no F-step is required
                     move_dict.pop('f_rel', None)
 
+                logger.debug(f'move_dict: {move_dict}')
+                self.move_relative(move_dict)
+
                 ''' The pauseflag allows:
                     - pausing running acquisitions
                     - wait for slow hardware to catch up (e.g. slow stages)
                 '''
-                logger.debug(f'move_dict: {move_dict}')
-                self.move_relative(move_dict)
-
-                while self.pauseflag is True:
-                    time.sleep(0.02)
-                    QtWidgets.QApplication.processEvents()
+#                while self.pauseflag is True:
+#                    time.sleep(0.02)
+#                    QtWidgets.QApplication.processEvents()
                 
                 QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                 self.image_count += 1
@@ -886,7 +894,6 @@ class mesoSPIM_Core(QtCore.QObject):
     def close_acquisition(self, acq, acq_list):
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
         if self.stopflag is False:
-            # self.move_absolute(acq.get_startpoint(), wait_until_done=True)
             self.close_image_series()
             self.sig_end_image_series.emit(acq, acq_list)
 
@@ -990,8 +997,9 @@ class mesoSPIM_Core(QtCore.QObject):
         Appends a metadata.txt file
         Path contains the file to be written
         '''
-        path = acq['folder'] + '/' + replace_with_underscores(acq['filename'])
-        metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+        metadata_path = self.image_writer.writer.metadata_file
+        # path = acq['folder'] + '/' + replace_with_underscores(acq['filename'])
+        # metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
         with open(metadata_path, 'a') as file:
             write_line(file, 'TIMING INFORMATION')
             write_line(file, 'Started stack', self.acq_start_time_string)

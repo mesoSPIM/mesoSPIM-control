@@ -3,6 +3,7 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 '''
 
 import os
+from pathlib import Path
 import time
 import numpy as np
 import tifffile
@@ -11,10 +12,10 @@ logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
 from distutils.version import StrictVersion
-import npy2bdv
 from .utils.acquisitions import AcquisitionList, Acquisition
-from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core
-
+from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core, timed
+from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
+from .plugins.utils import get_image_writer_from_name, get_image_writer_class_from_name
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
     def __init__(self, parent, frame_queue):
@@ -39,9 +40,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
-        self.bdv_writer = self.tiff_writer = self.tiff_mip_writer = self.mip_image = None
-        self.tiff_aliases = ('.tif', '.tiff')
-        self.bigtiff_aliases = ('.btf', '.tf2', '.tf8')
         self.check_versions()
 
     def check_versions(self):
@@ -62,14 +60,31 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             print(msg)
 
     def prepare_acquisition(self, acq, acq_list):
+
+        if acq == acq_list[0]:
+            self.writer_name = acq['image_writer_plugin']
+            self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
+
+
+        # Extract config values for writer from config file - field = 'name' attribute from Writer plugin
+        chunks = compression_method = compression_level = multiscales = overwrite = writer_config_file_values = None
+        if hasattr(self.cfg, self.writer_name):
+            writer_cfg_value = getattr(self.cfg, self.writer_name)
+            chunks = writer_cfg_value.get('chunks', None)
+            compression_method = writer_cfg_value.get('compression_method', None)
+            compression_level = writer_cfg_value.get('compression_level', 0)
+            multiscales = writer_cfg_value.get('multiscales', None)
+            overwrite = writer_cfg_value.get('overwrite', False)
+            writer_config_file_values = writer_cfg_value
+
         self.folder = acq['folder']
         self.filename = replace_with_underscores(acq['filename'])
-        self.path = os.path.realpath(self.folder+'/'+self.filename)
-        self.MIP_path = os.path.realpath(self.folder +'/MAX_'+ self.filename + '.tiff')
+        self.path = os.path.realpath(self.folder + '/' + self.filename)
+        # self.MIP_path = os.path.realpath(self.folder + '/MAX_' + self.filename + '.tiff')
         self.file_root, self.file_extension = os.path.splitext(self.path)
-        logger.info(f'Save path: {self.path}')
+        # logger.info(f'Save path: {self.path}')
 
-        self.binning_string = self.state['camera_binning'] # Should return a string in the form '2x4'
+        self.binning_string = self.state['camera_binning']  # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
         self.y_binning = int(self.binning_string[2])
 
@@ -77,62 +92,37 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
         self.max_frame = acq.get_image_count()
 
-        if self.file_extension == '.h5':
-            if hasattr(self.cfg, "hdf5"):
-                subsamp = self.cfg.hdf5['subsamp']
-                compression = self.cfg.hdf5['compression']
-                flip_flags = self.cfg.hdf5['flip_xyz']
-            else:
-                subsamp = ((1, 1, 1),)
-                compression = None
-                flip_flags = (False, False, False)
-            # create writer object if the view is first in the list
-            if acq == acq_list[0]:
-                self.bdv_writer = npy2bdv.BdvWriter(self.path,
-                                                    nilluminations=acq_list.get_n_shutter_configs(),
-                                                    nchannels=acq_list.get_n_lasers(),
-                                                    nangles=acq_list.get_n_angles(),
-                                                    ntiles=acq_list.get_n_tiles(),
-                                                    blockdim=((1, 256, 256),),
-                                                    subsamp=subsamp,
-                                                    compression=compression)
-            # x and y need to be exchanged to account for the image rotation
-            shape = (self.max_frame, self.x_pixels, self.y_pixels)
-            px_size_um = self.cfg.pixelsize[acq['zoom']]
-            sign_xyz = (1 - np.array(flip_flags)) * 2 - 1
-            if hasattr(self.cfg, "hdf5") and ('transpose_xy' in self.cfg.hdf5.keys()) and self.cfg.hdf5['transpose_xy']:
-                tile_translation = (sign_xyz[1] * acq['y_pos'] / px_size_um,
-                                    sign_xyz[0] * acq['x_pos'] / px_size_um,
-                                    sign_xyz[2] * acq['z_start'] / acq['z_step'])
-            else:
-                tile_translation = (sign_xyz[0] * acq['x_pos'] / px_size_um,
-                                    sign_xyz[1] * acq['y_pos'] / px_size_um,
-                                    sign_xyz[2] * acq['z_start'] / acq['z_step'])
-            affine_matrix = np.array(((1.0, 0.0, 0.0, tile_translation[0]),
-                                      (0.0, 1.0, 0.0, tile_translation[1]),
-                                      (0.0, 0.0, 1.0, tile_translation[2])))
-            self.bdv_writer.append_view(stack=None, virtual_stack_dim=shape,
-                                        illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
-                                        channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                        angle=acq_list.find_value_index(acq['rot'], 'rot'),
-                                        tile=acq_list.get_tile_index(acq),
-                                        voxel_units='um',
-                                        voxel_size_xyz=(px_size_um, px_size_um, acq['z_step']),
-                                        calibration=(1.0, 1.0, acq['z_step']/px_size_um),
-                                        m_affine=affine_matrix,
-                                        name_affine="Translation to Regular Grid"
-                                        )
-        elif self.file_extension == '.raw':
-            self.fsize = self.x_pixels*self.y_pixels
-            self.xy_stack = np.memmap(self.path, mode="write", dtype=np.uint16, shape=self.fsize * self.max_frame)
+        px_size_um = self.cfg.pixelsize[acq['zoom']]
 
-        elif self.file_extension in self.tiff_aliases:
-            self.tiff_writer = tifffile.TiffWriter(self.path, imagej=True)
+        write_request = WriteRequest(
+            uri = self.path,
+            shape = (self.max_frame, self.y_pixels, self.x_pixels), #(z,y,x)
+            dtype = 'uint16',
+            axes = 'ZYX',
+            x_res = px_size_um,
+            y_res = px_size_um,
+            z_res = acq['z_step'],
+            unit = 'microns',
+            chunks = chunks,
+            compression_method = compression_method,
+            compression_level = compression_level,
+            multiscales = multiscales,
+            overwrite = overwrite,
+            num_tiles = acq_list.get_n_tiles(),
+            num_channels = acq_list.get_n_lasers(),
+            num_rotations = acq_list.get_n_angles(),
+            num_shutters = acq_list.get_n_shutter_configs(),
+            acq = acq,
+            acq_list = acq_list,
+            writer_config_file_values = writer_config_file_values
+        )
 
-        elif self.file_extension in self.bigtiff_aliases:
-            self.tiff_writer = tifffile.TiffWriter(self.path, bigtiff=True)
+        logger.info(f'Opening ImageWriter: {self.writer.name}')
+        self.writer.open(write_request)
+        self.MIP_path = self.writer.MIP_path
 
-        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+        # Place holder prior to image processing plugins
+        if acq['processing'] == 'MAX':
             self.tiff_mip_writer = tifffile.TiffWriter(self.MIP_path, imagej=True)
             self.mip_image = np.zeros((self.x_pixels, self.y_pixels), 'uint16')
 
@@ -142,6 +132,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.acq = acq
         self.acq_list = acq_list
 
+        logger.info(f'Save path: {write_request.uri}')
+
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_images(self, acq, acq_list):
         """Write available images to disk. 
@@ -150,55 +142,52 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             while len(self.frame_queue) > 0:
                 logger.debug('image queue length: ' + str(len(self.frame_queue)))
-                image = np.rot90(self.frame_queue.popleft())
+                image = self.frame_queue.popleft().T[::-1]
                 self.image_to_disk(acq, acq_list, image)
         else:
             logger.debug('self.running_flag = False, no images written')
-
+    
+    @timed
     def image_to_disk(self, acq, acq_list, image):
-        logger.debug('image_to_disk() started') 
+        logger.debug('image_to_disk() started')
         log_cpu_core(logger, msg='image_to_disk()')
         if self.cur_image_counter % 5 == 0:
             self.parent.sig_status_message.emit('Writing to disk...')
-        xy_res = (1./self.cfg.pixelsize[acq['zoom']], 1./self.cfg.pixelsize[acq['zoom']])
-        if self.file_extension == '.h5':
-            self.bdv_writer.append_plane(plane=image, z=self.cur_image_counter,
-                                            illumination=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
-                                            channel=acq_list.find_value_index(acq['laser'], 'laser'),
-                                            angle=acq_list.find_value_index(acq['rot'], 'rot'),
-                                            tile=acq_list.get_tile_index(acq)
-                                            )
-            # flush H5 every 100 frames 
-            if (self.cur_image_counter + 1) % 100 == 0:
-                self.bdv_writer._file_object_h5.flush()
-                logger.debug(f'flushed at {self.cur_image_counter + 1} frames to disk')
-        elif self.file_extension == '.raw':
-            self.xy_stack[self.cur_image_counter * self.fsize:(self.cur_image_counter + 1) * self.fsize] = image.flatten()
-        elif self.file_extension in self.tiff_aliases:
-            self.tiff_writer.write(image[np.newaxis,...], contiguous=True, resolution=xy_res,
-                                    metadata={'spacing': acq['z_step'], 'unit': 'um'})
-        elif self.file_extension in self.bigtiff_aliases:
-            self.tiff_writer.write(image[np.newaxis,...], contiguous=False, resolution=xy_res, # tile=(1024,1024), compression='lzw', #compression requires imagecodecs
-                                    metadata={'spacing': acq['z_step'], 'unit': 'um'})
 
-        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
-            self.mip_image[:] = np.maximum(self.mip_image, image)
+        xy_res = (1. / self.cfg.pixelsize[acq['zoom']], 1. / self.cfg.pixelsize[acq['zoom']])
+
+        write = WriteImage(
+            image = image,
+            current_image_counter = self.cur_image_counter,
+            tile_number=acq_list.get_tile_index(acq),
+            laser=acq_list.find_value_index(acq['laser'], 'laser'),
+            shutter=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+            rot=acq_list.find_value_index(acq['rot'], 'rot'),
+            x_res=xy_res,
+            y_res=xy_res,
+            z_res=acq['z_step'],
+            unit='microns',
+            acq = acq,
+            acq_list = acq_list,
+        )
+
+        self.writer.write_frame(write)
+
+        # Place holder prior to image processing plugins
+        if acq['processing'] == 'MAX':
+            np.maximum(self.mip_image, image, out=self.mip_image)
+
 
         self.cur_image_counter += 1
         logger.debug('image_to_disk() ended')
-    
+
     @QtCore.pyqtSlot()
     def abort_writing(self):
         """Terminate writing and close all files if STOP button is pressed"""
         self.abort_flag = True
         if self.running_flag:
             try:
-                if self.file_extension == '.h5':
-                    self.bdv_writer.close()
-                elif self.file_extension == '.raw':
-                    del self.xy_stack
-                elif self.file_extension in (self.tiff_aliases + self.bigtiff_aliases):
-                    self.tiff_writer.close()
+                self.writer.abort()
                 self.metadata_file.close()
             except Exception as e:
                 logger.error(f'{e}')
@@ -210,35 +199,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_acquisition(self, acq, acq_list):
+        finalize_imsge = FinalizeImage(
+            acq = acq,
+            acq_list = acq_list,
+        )
         logger.info("end_acquisition() started")
-        if self.file_extension == '.h5':
-            if acq == acq_list[-1]:
-                try:
-                    self.bdv_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
-                    self.bdv_writer.set_attribute_labels('illumination', tuple(acq_list.get_unique_attr_list('shutterconfig')))
-                    self.bdv_writer.set_attribute_labels('angle', tuple(acq_list.get_unique_attr_list('rot')))
-                    self.bdv_writer.write_xml()
-                except:
-                    logger.error(f'HDF5 XML could not be written: {sys.exc_info()}')
-                try:
-                    self.bdv_writer.close()
-                except:
-                    logger.error(f'HDF5 file could not be closed: {sys.exc_info()}')
-            else:
-                self.bdv_writer._file_object_h5.flush()
-                logger.info(f'flushed H5')
-        elif self.file_extension == '.raw':
-            try:
-                del self.xy_stack
-            except Exception as e:
-                logger.error(f'{e}')
-        elif self.file_extension in (self.tiff_aliases + self.bigtiff_aliases):
-            try:
-                self.tiff_writer.close()
-            except Exception as e:
-                logger.error(f'{e}')
+        try:
+            self.writer.finalize(finalize_imsge)
+        except Exception as e:
+            logger.error(f'{e}')
 
-        if acq['processing'] == 'MAX' and self.file_extension in (('.raw',) + self.tiff_aliases + self.bigtiff_aliases):
+        # Place holder prior to image processing plugins
+        if acq['processing'] == 'MAX':
             try:
                 self.tiff_mip_writer.write(self.mip_image)
                 self.tiff_mip_writer.close()
@@ -303,8 +275,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     def write_metadata(self, acq, acq_list):
         logger.debug("write_metadata() started")
         ''' Writes a metadata.txt file. Path contains the file to be written '''
-        path = acq['folder'] + '/' + acq['filename']
-        metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+
+        metadata_path = self.writer.metadata_file
+        path = self.writer.metadata_file_describes_this_path
+        # path = acq['folder'] + '/' + acq['filename']
+        # metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
 
         if acq['filename'][-3:] == '.h5':
             if acq == acq_list[0]:

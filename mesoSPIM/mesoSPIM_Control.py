@@ -4,9 +4,9 @@ mesoSPIM_control.py
 The core module of the mesoSPIM software
 '''
 
-__authors__ = "mesoSPIM team"
+__authors__ = "Fabian Voigt, Nikita Vladimirov, Alan Watson, and others"
 __license__ = "GPL v3"
-__version__ = "1.11.1"
+__version__ = "1.2.0"
 
 import time
 import logging
@@ -18,9 +18,9 @@ import importlib.util
 from PyQt5 import QtWidgets, QtCore
 import qdarkstyle
 package_directory = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(package_directory)) # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
-from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
-
+sys.path.insert(0, os.path.dirname(
+    package_directory))  # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
+from mesoSPIM.src.plugins.manager import PluginRegistry
 
 def load_config_UI(current_path):
     '''
@@ -144,6 +144,20 @@ def main(embed_console=False, demo_mode=False):
     app = QtWidgets.QApplication(sys.argv)
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
+
+    # Register plugins at the earliest point before importing any other mesoSPIM modules
+    # to allow for flexible and global downstream use
+    # Appends imported plugin modules to sys.modules[MESOSPIM_PLUGIN_MODULE_PREFIX_plugin_name]
+    # Builtin 'plugins' are at ./plugins/ImageWriters/*.py; ./plugins/.../*.py} and defined in ./plugins/manager/DEFAULT_DIRS
+    # The config file can define arbitrary paths to store additional plugins
+    PluginRegistry(cfg)
+    # self.Writers = get_writer_plugins()
+    # self.Cameras = get_camera_plugins()             # Not implemented: possible use case
+    # self.Stage = get_stage_plugins()                # Not implemented: possible use case
+    # self.UI = get_ui_plugins()                      # Not implemented: possible use case
+    # self.Processing = get_processing_plugins()      # Not implemented: possible use case
+
+    from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
     ex = mesoSPIM_MainWindow(package_directory, cfg, "mesoSPIM Main Window, v. " + __version__)
     ex.show()
 

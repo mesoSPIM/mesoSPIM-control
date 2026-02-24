@@ -271,6 +271,9 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     def getFilenameColumn(self):
         return self._headers.index('Filename')
 
+    def getImageWriterPluginColumn(self):
+        return self._headers.index('Image_writer_plugin')
+
     def getFilename(self, row):
         return self._table[row]['filename']
 

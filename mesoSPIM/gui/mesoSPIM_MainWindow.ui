@@ -2916,7 +2916,7 @@ Focus</string>
             </widget>
             <widget class="QDoubleSpinBox" name="LeftGalvoPhaseSpinBox">
              <property name="enabled">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="geometry">
               <rect>
@@ -2943,7 +2943,7 @@ Focus</string>
             </widget>
             <widget class="QDoubleSpinBox" name="RightGalvoPhaseSpinBox">
              <property name="enabled">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="geometry">
               <rect>

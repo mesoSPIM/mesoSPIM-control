@@ -13,6 +13,14 @@ classDiagram
   }
   class ChooseFolderDelegate {
   }
+  class ChunkScheme {
+  }
+  class ChunkScheme {
+  }
+  class ChunkSpec {
+  }
+  class ChunkSpec {
+  }
   class ComboDelegate {
   }
   class DCAMAPI_INIT {
@@ -69,23 +77,25 @@ classDiagram
   }
   class FifthChannelPage {
   }
-  class FilenameWizard {
+  class FileNaming {
   }
-  class FilenameWizardBigTiffSelectionPage {
+  class FilenameWizard {
   }
   class FilenameWizardCheckResultsPage {
   }
   class FilenameWizardRawSelectionPage {
   }
-  class FilenameWizardSingleHDF5SelectionPage {
-  }
-  class FilenameWizardTiffSelectionPage {
-  }
   class FilenameWizardWelcomePage {
+  }
+  class FinalizeImage {
   }
   class FinishedTilingPage {
   }
   class FirstChannelPage {
+  }
+  class FlushPad {
+  }
+  class FlushPad {
   }
   class FocusTrackingWizard {
   }
@@ -101,6 +111,8 @@ classDiagram
   }
   class GenericChannelPage {
   }
+  class H5BDVWriter {
+  }
   class HCamData {
   }
   class HamamatsuCamera {
@@ -115,7 +127,13 @@ classDiagram
   }
   class ImageProcessingWizardWelcomePage {
   }
+  class ImageWriter {
+  }
   class IntensitySpinBoxDelegate {
+  }
+  class Live3DPyramidWriter {
+  }
+  class Live3DPyramidWriter {
   }
   class LudlFilterWheel {
   }
@@ -143,7 +161,17 @@ classDiagram
   }
   class NI_Shutter {
   }
+  class OMEZarrWriter {
+  }
+  class OMEZarrWriterMP {
+  }
+  class PluginRegistry {
+  }
   class ProgressBarDelegate {
+  }
+  class PyramidSpec {
+  }
+  class PyramidSpec {
   }
   class PythonHighlighter {
   }
@@ -151,13 +179,17 @@ classDiagram
   }
   class SecondChannelPage {
   }
+  class SelectionPage {
+  }
+  class ShamWriter {
+  }
   class SliderDelegate {
   }
   class SliderWithValue {
   }
   class SliderWithValueDelegate {
   }
-  class StageControlASITiger {
+  class StageControlASI {
   }
   class StageControlGalil {
   }
@@ -171,11 +203,27 @@ classDiagram
   }
   class ThirdChannelPage {
   }
+  class TiffWriter {
+  }
+  class TiffWriter {
+  }
+  class TiffWriter {
+  }
   class TilingWelcomePage {
   }
   class VirtualStages {
   }
   class WebcamWindow {
+  }
+  class WriteImage {
+  }
+  class WriteRequest {
+  }
+  class WriterCapabilities {
+  }
+  class XmlWriter {
+  }
+  class XmlWriter {
   }
   class ZstepSpinBoxDelegate {
   }
@@ -183,9 +231,7 @@ classDiagram
   }
   class _EFW_INFO {
   }
-  class mesoSPIM_ASI_MS2000_Stage {
-  }
-  class mesoSPIM_ASI_Tiger_Stage {
+  class mesoSPIM_ASI_Stages {
   }
   class mesoSPIM_AcquisitionManagerWindow {
   }
@@ -249,21 +295,25 @@ classDiagram
   mesoSPIM_HamamatsuCamera --|> mesoSPIM_GenericCamera
   mesoSPIM_PCOCamera --|> mesoSPIM_GenericCamera
   mesoSPIM_PhotometricsCamera --|> mesoSPIM_GenericCamera
-  mesoSPIM_ASI_MS2000_Stage --|> mesoSPIM_Stage
-  mesoSPIM_ASI_Tiger_Stage --|> mesoSPIM_Stage
+  mesoSPIM_ASI_Stages --|> mesoSPIM_Stage
   mesoSPIM_DemoStage --|> mesoSPIM_Stage
   mesoSPIM_PI_1toN --|> mesoSPIM_Stage
   mesoSPIM_PI_NtoN --|> mesoSPIM_Stage
   mesoSPIM_PI_rotz_and_Galil_xyf_Stages --|> mesoSPIM_Stage
   mesoSPIM_DemoWaveFormGenerator --|> mesoSPIM_WaveFormGenerator
+  TiffWriter --|> ImageWriter
+  H5BDVWriter --|> ImageWriter
+  OMEZarrWriter --|> ImageWriter
+  OMEZarrWriterMP --|> ImageWriter
+  TiffWriter --|> ImageWriter
+  ShamWriter --|> ImageWriter
+  TiffWriter --|> ImageWriter
   MarkFocusPositionDelegate --|> MarkPositionDelegate
   MarkRotationPositionDelegate --|> MarkPositionDelegate
   MarkXPositionDelegate --|> MarkPositionDelegate
   MarkYPositionDelegate --|> MarkPositionDelegate
   MarkZPositionDelegate --|> MarkPositionDelegate
-  FilenameWizardBigTiffSelectionPage --|> AbstractSelectionPage
-  FilenameWizardSingleHDF5SelectionPage --|> AbstractSelectionPage
-  FilenameWizardTiffSelectionPage --|> AbstractSelectionPage
+  SelectionPage --|> AbstractSelectionPage
   FifthChannelPage --|> GenericChannelPage
   FirstChannelPage --|> GenericChannelPage
   FourthChannelPage --|> GenericChannelPage
@@ -286,7 +336,7 @@ classDiagram
   Demo_Shutter --* mesoSPIM_Core : shutter_right
   NI_Shutter --* mesoSPIM_Core : shutter_left
   NI_Shutter --* mesoSPIM_Core : shutter_right
-  StageControlASITiger --* mesoSPIM_ASI_Tiger_Stage : asi_stages
+  StageControlASI --* mesoSPIM_ASI_Stages : asi_stages
   StageControlGalil --* mesoSPIM_PI_rotz_and_Galil_xyf_Stages : xyf_stage
   py --* StageControlGalil : g
   mesoSPIM_AcquisitionManagerWindow --* mesoSPIM_MainWindow : acquisition_manager_window
@@ -303,8 +353,7 @@ classDiagram
   PythonHighlighter --* mesoSPIM_ScriptWindow : highlight
   mesoSPIM_ScriptWindow --* mesoSPIM_MainWindow : scriptwindow
   mesoSPIM_Serial --* mesoSPIM_Core : serial_worker
-  mesoSPIM_ASI_MS2000_Stage --* mesoSPIM_Serial : stage
-  mesoSPIM_ASI_Tiger_Stage --* mesoSPIM_Serial : stage
+  mesoSPIM_ASI_Stages --* mesoSPIM_Serial : stage
   mesoSPIM_DemoStage --* mesoSPIM_Serial : stage
   mesoSPIM_PI_1toN --* mesoSPIM_Serial : stage
   mesoSPIM_PI_NtoN --* mesoSPIM_Serial : stage
@@ -317,5 +366,15 @@ classDiagram
   DemoZoom --* mesoSPIM_Serial : zoom
   DynamixelZoom --* mesoSPIM_Serial : zoom
   MitutoyoZoom --* mesoSPIM_Serial : zoom
+  Live3DPyramidWriter --* OMEZarrWriter : omezarr_writer
+  XmlWriter --* OMEZarrWriter : xml_writer
   AcquisitionList --* MulticolorTilingWizard : acq_list
   AcquisitionModel --* mesoSPIM_AcquisitionManagerWindow : model
+  WriteRequest --o ImageWriter : req
+  WriteRequest --o OMEZarrWriterMP : req
+  ChunkScheme --o Live3DPyramidWriter : chunk_scheme
+  FlushPad --o Live3DPyramidWriter : flush_pad
+  PyramidSpec --o Live3DPyramidWriter : spec
+  ChunkScheme --o Live3DPyramidWriter : chunk_scheme
+  FlushPad --o Live3DPyramidWriter : flush_pad
+  PyramidSpec --o Live3DPyramidWriter : spec
