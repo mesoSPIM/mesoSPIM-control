@@ -15,7 +15,7 @@ user-friendly GUI for complex multichannel, multiview, and tiling acquisitions.
 
 .. note::
 
-   The documentation is currently under active development (Dec 2025).
+   The documentation is currently under development.
 
 Contents
 --------
