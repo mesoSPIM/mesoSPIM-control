@@ -1,10 +1,10 @@
-## Release [1.2] - TBD
+## Release February 2026 [1.2.0]
 :rocket: Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.
 
 ### New Features :sparkles:
 - :gem: **OME-ZARR multi-scale writer**: Full support for OME-ZARR 0.4 (zarr v2) and 0.5 (zarr v3) formats with automatic multi-scale pyramid generation. Configurable output with write cache options.
 - :gem: **BigStitcher XML generation**: Automatic generation of BigStitcher-compatible metadata files for seamless downstream image stitching and processing.
-- :gem: **PSF analysis GUI tool**: Built-in Point Spread Function analysis tool for optical characterization and optimization.
+- :gem: **PSF analysis GUI tool**: Built-in Point Spread Function analysis tool for optical characterization and optimization. Configurable system magnification, voxel size, FOV dimensions, and minimum bead distance (`MIN_BEAD_DISTANCE_UM`). Exported PNG files now include a descriptive title.
 - Stage coordinates now included in OME-ZARR coordinate transforms for precise spatial metadata.
 - Filter name inclusion in acquisition filenames for better data organization.
 - Baud rate and wheel speed configuration options for Sutter filter wheels.
@@ -19,6 +19,7 @@
 - Addition of `@timed` decorator for performance profiling of critical functions.
 
 ### Hardware Control & Support :wrench:
+- **cDAQ hardware integration**: Added support for National Instruments cDAQ devices for synchronized I/O operations.
 - **ASI Tiger and MS2000 stages**: Unified stage controller with enhanced axis handling, TTL trigger support, and multi-axis motion validation.
 - Improved serial communication thread safety for ASI stage commands to prevent conflicts between GUI and Core threads.
 - Axis list discovery from StageControlASITiger for dynamic stage configuration.
@@ -38,12 +39,12 @@
 
 ### User Interface & Configuration :lollipop:
 - New and updated config examples for Benchtop, mesoSPIM-v6, other systems
+- New cDAQ config example (`config_benchtop-cDAQ.py`) for NI cDAQ-based systems.
 - New mandatory dictionaries `plugins={}`, `H5_BDV_Writer={}`, `OME_Zarr_Writer={}`, `MP_OME_Zarr_Writer={}` in config files. See `demo_config.py`.
 - Experimental high-speed imaging config file examples (up to 6-8 FPS framerate).
 - Option for asynchronous OME-ZARR file closure.
 - Optional multiscale generation control in config file.
 - Galvo phase widgets enabled for interactive optimization.
-- Improved plugin architecture for image writers with discoverable default plugin paths (#91).
 
 ### System Changes & Architecture :triangular_ruler:
 - **Plugin system for image writers**: Modular architecture allowing custom image writer implementations (#91).
