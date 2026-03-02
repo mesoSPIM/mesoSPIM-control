@@ -34,6 +34,14 @@ multiview, and tiled imaging of large cleared-tissue samples.
    New to mesoSPIM?  Start with the :doc:`getting_started` page to install
    the software and run it in demo mode within minutes.
 
+.. note::
+
+   These docs were initially drafted with AI assistance and may contain
+   inaccuracies or gaps.  If you spot an error or something unclear, please
+   open an `issue on GitHub <https://github.com/mesoSPIM/mesoSPIM-control/issues>`_
+   or post in the `image.sc forum <https://forum.image.sc/tag/mesospim>`_ —
+   your feedback is very welcome!
+
 ----
 
 .. grid:: 2

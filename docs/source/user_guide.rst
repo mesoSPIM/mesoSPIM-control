@@ -60,11 +60,6 @@ Shutter and laser selection
 * Select the active **laser** from the wavelength drop-down.  Only lasers
   listed in ``laserdict`` will appear.
 
-Single-image acquisition (Snap)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Set the exposure time (ms), choose a filename, and click **Snap** to capture
-a single image without creating an acquisition entry.
 
 Camera window
 -------------
@@ -73,10 +68,6 @@ The live view updates continuously when a laser and shutter are open.
 Right-click the histogram to set intensity levels; the **Auto** button fits
 the display to the current frame.
 
-.. tip::
-
-   Excessive ``autorange`` calls can cause GUI stuttering during acquisition.
-   Use a fixed display range in production runs.
 
 Acquisition Manager
 -------------------
@@ -91,11 +82,16 @@ illumination (laser, filter, shutter), and file settings.
 Common workflow:
 
 1. Move the sample to the desired start position using the Main window.
-2. Click **Add current position** to create a new entry.
-3. Set the **Z start / Z end / Z step** values for a Z-stack.
-4. Choose the **laser**, **filter**, and **shutter** arm.
-5. Enter the **exposure time** and **filename**.
-6. Repeat for additional positions or channels.
+2. Select the laser, shutter, filter settings for the acquisition entry.  The live view
+   will update to reflect the current settings, so you can preview before
+   acquiring.
+3. Click **Add Raw** to create a new entry in the Acquisition Manager, or use the first entry to overwrite it.
+4. Click **Mark ALL** to copy the current stage coordinates and light-sheet settings to the entry.  Alternatively, use the **Mark ..** buttons to mark individual parameters (eg XY position).
+5. Click small **M** button next to **Z start / Z end / Z step** values to mark the positions and step for a Z-stack.
+6. Choose the **laser**, **filter**, and **shutter** arm.
+7. Enter the **filename** using the **Filename Wizard**.
+8. Repeat for additional positions or channels.
+9. For a tiled (mosaic) acquisition, use the **Tiling Wizard** to populate the Acquisition Manager.
 
 Acquisition modes
 ~~~~~~~~~~~~~~~~~
@@ -106,20 +102,19 @@ Acquisition modes
 
    * - Mode
      - Description
-   * - **Single plane**
-     - One image per entry.
-   * - **Z-stack**
-     - Sweeps the Z axis from *Z start* to *Z end* in *Z step* increments.
-   * - **Tiled**
-     - Combines multiple XY positions into a seamless mosaic (uses the
-       Tile View window to plan overlap).
-   * - **Multiview / dual-illumination**
-     - Alternates Left / Right illumination between planes.
+   * - **Live**
+     - Live mode (preview).
+   * - **Snap**
+     - Single image with current settings.
+   * - **Single acquisition (Z-stack)**
+     - Sweeps the sample from *Z start* to *Z end* in *Z step* increments while illuminating with the light-sheet, using the stage coordinates and light-sheet settings from the Acquisition Manager entry.
+   * - **Multiple acquisitions (Z-stacks)**
+     - Takes all stacks defined in the Acquisition Manager sequentially; this can combine multiple XY positions into a mosaic (see the Tile View window to plan overlap) and loop through multiple channels and illumination settings.
    * - **Time-lapse**
-     - Repeats the entire acquisition list at defined time intervals.
+     - Experimental feature that repeats the entire acquisition list at defined time intervals.
 
 .. figure:: ../../docs/screenshots/timelapse-launch.png
-   :alt: Time-lapse launch dialog
+   :alt: Time-lapse launch dialog (experimental)
    :width: 60%
 
    Time-lapse configuration dialog.
@@ -135,11 +130,10 @@ Select the image writer in the file-naming wizard:
 
    * - Writer
      - Description
-   * - ``OME_Zarr_Writer``
-     - OME-ZARR 0.4 (zarr v2) with automatic multi-scale pyramid.
-       Recommended for new acquisitions.
    * - ``MP_OME_Zarr_Writer``
-     - Multi-process OME-ZARR writer — faster on systems with fast SSDs.
+     - Multi-process OME-ZARR writer — faster on systems with fast SSDs. Recommended for new acquisitions.
+   * - ``OME_Zarr_Writer``
+     - OME-ZARR 0.4 (zarr v2) with automatic multi-scale pyramid. Single-core implementation.
    * - ``H5_BDV_Writer``
      - HDF5/BigDataViewer format compatible with BigStitcher.
    * - ``Tiff_Writer``
@@ -152,7 +146,7 @@ Select the image writer in the file-naming wizard:
 Running an acquisition
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Click **Run** in the Acquisition Manager toolbar to start.  Progress is shown
+Click **Run Acquisition List** in the Main Window to start.  Progress is shown
 in the status bar and log.  To stop mid-acquisition click **Stop**.
 
 Script window
@@ -164,21 +158,6 @@ images, and iterate over acquisition lists.
 
 A selection of example scripts is in ``mesoSPIM/scripts/``.
 
-Keyboard shortcuts
-------------------
-
-.. list-table::
-   :widths: 15 85
-   :header-rows: 1
-
-   * - Key
-     - Action
-   * - ``Space``
-     - Stop current acquisition
-   * - ``F5``
-     - Refresh GUI from hardware state
-   * - ``Ctrl+S``
-     - Save acquisition list
 
 Logging and troubleshooting
 ----------------------------
