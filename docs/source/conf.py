@@ -76,6 +76,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
     "myst_parser",
+    "sphinx_design",
 ]
 
 autodoc_mock_imports = [
@@ -105,6 +106,13 @@ autodoc_mock_imports = [
 # Optional but useful
 myst_enable_extensions = [
     "colon_fence",
+]
+
+# Suppress known/expected warnings
+suppress_warnings = [
+    "autodoc.mocked_object",  # expected: many hw-dep modules are mocked
+    "myst.header",            # CHANGELOG.md starts with H2, not H1
+    "docutils",               # lone * in PyQt5 auto-generated pyqtSignal docstrings
 ]
 
 templates_path = ["_templates"]

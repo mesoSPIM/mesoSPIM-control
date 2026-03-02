@@ -1,4 +1,4 @@
-## Release February 2026 [1.2.0]
+## Release February 2026 [1.20.0]
 :rocket: Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.
 
 ### New Features :sparkles:
