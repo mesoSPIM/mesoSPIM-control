@@ -49,12 +49,10 @@ Cameras
      - Driver / SDK
    * - Hamamatsu Orca Flash 4.0 V2/V3
      - `Hamamatsu DCAM API <https://dcam-api.com/>`_.
-       Use `HCImage <https://dcam-api.com/hamamatsu-software/>`_ to test
-       camera connectivity.
+       Use `HCImage <https://hcimage.com/download/>`_ to test camera connectivity.
    * - Photometrics (PVCAM)
-     - `PVCAM and PVCAM-SDK <https://www.photometrics.com/support/software/>`_
-       plus the `PyVCAM <https://github.com/Photometrics/PyVCAM>`_ Python
-       package (requires MS Visual C++ 14.0+).
+     - `PVCAM and PVCAM-SDK <https://www.teledynevisionsolutions.com/products/pvcam-sdk-amp-driver/?model=PVCAM-SDK>`_
+       plus the `PyVCAM <https://github.com/Photometrics/PyVCAM>`_ Python package (requires MS Visual C++ 14.0+).
    * - PCO cameras
      - ``pip install pco`` (version ≥ 0.1.3 recommended).
 

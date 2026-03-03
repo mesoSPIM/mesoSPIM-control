@@ -26,9 +26,6 @@ If you find a bug or unexpected behavior, please report an [issue](https://githu
 Because mesoSPIM is a complex hardware-software-user system and often individually customized, it is quite difficult to run good tests that cover such diverse systems. So, be careful! 
 Test the code fist in hardware-simulation mode (using `demo_config.py` file), then on real hardware, ideally with some sample.
 
-It is a good habit to write simple [unit tests](https://github.com/mesoSPIM/mesoSPIM-control/tree/release/candidate-py12/mesoSPIM/test)
-**before** you implement a feature (so-called test-driven release/candidate-py12, TDD), this helps immensely in debugging. But we understand that this is not always possible, and can be very time-consuming.
-
 ## Share you ideas and feature requests
 If you have an idea or feature request that can significantly improve mesosPIM user experience - 
 share it in [Forum](https://forum.image.sc/tag/mesospim). We can implement it!

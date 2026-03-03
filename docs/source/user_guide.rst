@@ -29,8 +29,8 @@ The application has five main windows:
      - Live camera preview with auto-range intensity scaling.
    * - **Acquisition Manager**
      - Build, edit, and run multi-position / multi-channel acquisition lists.
-   * - **Script window**
-     - Run Python scripts against the live mesoSPIM state.
+   * - **Tile overview window**
+     - Overview of tile positions and overlaps.
    * - **Webcam window**
      - Optional USB webcam feed for sample monitoring (configurable in
        ``ui_options``).
@@ -85,9 +85,9 @@ Common workflow:
 2. Select the laser, shutter, filter settings for the acquisition entry.  The live view
    will update to reflect the current settings, so you can preview before
    acquiring.
-3. Click **Add Raw** to create a new entry in the Acquisition Manager, or use the first entry to overwrite it.
+3. Click **Add Row** to create a new entry in the Acquisition Manager, or use the first entry to overwrite it.
 4. Click **Mark ALL** to copy the current stage coordinates and light-sheet settings to the entry.  Alternatively, use the **Mark ..** buttons to mark individual parameters (eg XY position).
-5. Click small **M** button next to **Z start / Z end / Z step** values to mark the positions and step for a Z-stack.
+5. Click small **M** button next to **Z start / Z end / Z step** values to mark the positions and step for a Z-stack. Small **M** button appears always on the right side of the cell that is being manipulated.
 6. Choose the **laser**, **filter**, and **shutter** arm.
 7. Enter the **filename** using the **Filename Wizard**.
 8. Repeat for additional positions or channels.
@@ -106,12 +106,12 @@ Acquisition modes
      - Live mode (preview).
    * - **Snap**
      - Single image with current settings.
-   * - **Single acquisition (Z-stack)**
+   * - **Run selected acquisition**
      - Sweeps the sample from *Z start* to *Z end* in *Z step* increments while illuminating with the light-sheet, using the stage coordinates and light-sheet settings from the Acquisition Manager entry.
-   * - **Multiple acquisitions (Z-stacks)**
-     - Takes all stacks defined in the Acquisition Manager sequentially; this can combine multiple XY positions into a mosaic (see the Tile View window to plan overlap) and loop through multiple channels and illumination settings.
+   * - **Run Run Acquisition list**
+     - Takes all stacks defined in the Acquisition Manager sequentially; this can combine multiple XY positions into a mosaic (see the **Tile Overview window** to plan overlap) and loop through multiple channels and illumination settings.
    * - **Time-lapse**
-     - Experimental feature that repeats the entire acquisition list at defined time intervals.
+     - Experimental feature that can be triggered via scripting window that repeats the entire acquisition list at defined time intervals.
 
 .. figure:: ../../docs/screenshots/timelapse-launch.png
    :alt: Time-lapse launch dialog (experimental)
