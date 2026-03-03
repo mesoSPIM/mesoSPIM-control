@@ -58,16 +58,16 @@ the ``stage_parameters`` dict.
      - ``'DemoStage'``
      - Simulation; no hardware.
    * - **PI (1 controller → N axes)**
-     - ``'mesoSPIM_PI_1toN'``
+     - ``'PI_1controllerNstages'``
      - Single PI controller (e.g. C-884, serves up to 6 axes incl. rotation) for all axes. Default for mesoSPIM v4–v5.
    * - **PI (N controllers → N axes)**
-     - ``'mesoSPIM_PI_NtoN'``
+     - ``'PI_NcontrollersNstages'``
      - One PI controller per axis (e.g. C-663, one stage per controller). mesoSPIM v5 option.
    * - **PI (rot+Z) + Galil (X,Y,F)**
-     - ``'mesoSPIM_PI_rotz_and_Galil_xyf_Stages'``
+     - ``'PI_rotz_and_Galil_xyf_Stages'``
      - Mixed PI / Galil setup (mesoSPIM v4–v5). Galil support is deprecated.
    * - **ASI Tiger / MS2000**
-     - ``'mesoSPIM_ASI_Stages'``
+     - ``'TigerASI'``
      - ASI Tiger TG8-BASIC: 4 motor slots + 5 free slots. Benchtop mesoSPIM default controller; supports TTL trigger.
 
 PI stages require the `PI software suite <https://www.physikinstrumente.com/en/products/motion-control-software/>`_.
@@ -85,16 +85,16 @@ Filter wheels
      - Config key
      - Notes
    * - **Demo**
-     - ``'DemoFilterWheel'``
+     - ``'Demo'``
      - Simulation.
    * - **Ludl 96A350**
-     - ``'LudlFilterWheel'``
+     - ``'Ludl'``
      - 32 mm, 10 positions. Large filter wheel with separate MAC6000 controller, serial cable. mesoSPIM v4–v5.
    * - **Sutter Lambda 10**
-     - ``'SutterFilterWheel'``
+     - ``'Sutter'``
      - 25 mm, 10 positions. Serial communication; configurable baud rate and wheel speed. Deprecated (used in early versions).
    * - **ZWO EFW-MINI**
-     - ``'ZWO_EFW'``
+     - ``'ZWO'``
      - 31 mm, 5 positions. Compact, low-cost astronomy filter wheel with integrated USB controller. mesoSPIM Benchtop. Requires ``pyzwoefw`` bindings.
 
 Zoom / magnification
