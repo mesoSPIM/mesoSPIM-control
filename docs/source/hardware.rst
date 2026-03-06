@@ -20,10 +20,13 @@ Cameras
      - Software simulator; no driver required.
    * - **Hamamatsu Orca Flash 4.0 V3**
      - ``'HamamatsuOrca'``
-     - 2048 × 2048, 6.5 µm pixel. Supported and recommended. Requires `DCAM API <https://dcam-api.com/>`_. Use PCIe frame grabber (not USB3).
+     - 2048 × 2048, 6.5 µm pixel. Supported and recommended for classic mesoSPIM v4–v5. Requires `DCAM API <https://dcam-api.com/>`_. Use PCIe frame grabber (not USB3). Config: ``sensor_mode=12``, ``readout_speed=1``.
    * - **Hamamatsu Orca Fusion**
      - ``'HamamatsuOrca'``
-     - 2304 × 2304, 6.5 µm pixel. Tested, stable. Use CoaXPress frame grabber (not USB3). Requires DCAM API.
+     - 2304 × 2304, 6.5 µm pixel. Tested, stable. Use CoaXPress frame grabber (not USB3). Requires DCAM API. Config: ``sensor_mode=12``, ``readout_speed=2``.
+   * - **Hamamatsu Orca Lightning**
+     - ``'HamamatsuOrca'``
+     - 4608 × 2592, 5.5 µm pixel. High-speed sCMOS; used in mesoSPIM v6 (ZMB / HIFO). Requires DCAM API with Lightning firmware. Config: ``trigger_mode=1`` (NORMAL), ``high_dynamic_range_mode=2``; no ``readout_speed`` key.
    * - **Teledyne Photometrics Kinetix**
      - ``'Photometrics'``
      - 3200 × 3200, 6.5 µm pixel. Tested, stable. High resolution across entire FOV only with large-FOV detection objectives. Requires PVCAM + PVCAM-SDK + PyVCAM.
@@ -58,14 +61,14 @@ the ``stage_parameters`` dict.
      - ``'DemoStage'``
      - Simulation; no hardware.
    * - **PI (1 controller → N axes)**
-     - ``'PI_1controllerNstages'``
-     - Single PI controller (e.g. C-884, serves up to 6 axes incl. rotation) for all axes. Default for mesoSPIM v4–v5.
+     - ``'PI'`` or ``'PI_1controllerNstages'``
+     - Single PI C-884 controller (up to 6 axes incl. rotation). Both keys are accepted. Axes: V4 stage set uses M-112K033 / L-406.40DG10 / M-116.DG / M-406.4PD; V5 uses L-509 series. Default for mesoSPIM v4–v6 (ZMB/USZ/HIFO sites).
    * - **PI (N controllers → N axes)**
      - ``'PI_NcontrollersNstages'``
      - One PI controller per axis (e.g. C-663, one stage per controller). mesoSPIM v5 option.
    * - **PI (rot+Z) + Galil (X,Y,F)**
-     - ``'PI_rotz_and_Galil_xyf_Stages'``
-     - Mixed PI / Galil setup (mesoSPIM v4–v5). Galil support is deprecated.
+     - ``'PI_rotz_and_Galil_xyf'``
+     - PI C-884 drives rotation (M-061.PD) and Z (M-406.4PD); Galil DMC drives X/Y/F (Ethernet or serial). Used in mesoSPIM H45 geometry (HIFO), currently deprecated.
    * - **ASI Tiger / MS2000**
      - ``'TigerASI'``
      - ASI Tiger TG8-BASIC: 4 motor slots + 5 free slots. Benchtop mesoSPIM default controller; supports TTL trigger.
@@ -87,15 +90,15 @@ Filter wheels
    * - **Demo**
      - ``'Demo'``
      - Simulation.
-   * - **Ludl 96A350**
+   * - **Ludl 96A350 (single)**
      - ``'Ludl'``
-     - 32 mm, 10 positions. Large filter wheel with separate MAC6000 controller, serial cable. mesoSPIM v4–v5.
+     - 32 mm, 10 positions (0–9; Ludl position 10 = index 0). Large filter wheel with separate MAC6000 controller, serial cable. mesoSPIM v4–v6 at ZMB/USZ/H45 sites. Supports **dual-wheel** mode: set two Ludl wheels, use tuples ``(pos_wheel1, pos_wheel2)`` as filter positions.
    * - **Sutter Lambda 10**
      - ``'Sutter'``
      - 25 mm, 10 positions. Serial communication; configurable baud rate and wheel speed. Deprecated (used in early versions).
    * - **ZWO EFW-MINI**
      - ``'ZWO'``
-     - 31 mm, 5 positions. Compact, low-cost astronomy filter wheel with integrated USB controller. mesoSPIM Benchtop. Requires ``pyzwoefw`` bindings.
+     - 31 mm, 5 positions (0–4). Compact, low-cost astronomy filter wheel with integrated USB controller. mesoSPIM Benchtop and v6. Requires ``pyzwoefw`` bindings.
 
 Zoom / magnification
 --------------------
@@ -115,7 +118,7 @@ Zoom / magnification
      - Robotis Dynamixel servo for motorised zoom body.
    * - **Mitutoyo turret**
      - ``'Mitu'``
-     - Mitutoyo motorized turret.
+     - Mitutoyo motorized objective-turret revolver. Baudrate **9600**; positions A–E map to objective magnifications (e.g. 2×/5×/7.5×/10×/20×). Used in mesoSPIM v6 (ZMB) and some Benchtop setups.
 
 Lasers / laser enable
 ---------------------
@@ -135,7 +138,10 @@ Individual laser lines are enabled / blanked via **digital output** lines.
      - Simulation.
    * - **NI DAQ digital enable**
      - ``'NI'``
-     - One DO line per laser (see ``laserdict`` in :doc:`configuration`).
+     - One DO line per laser (see ``laserdict`` in :doc:`configuration`). Analog modulation via AO lines on the same card.
+   * - **NI cDAQ digital enable**
+     - ``'cDAQ'``
+     - CompactDAQ version (e.g. ``cDAQ1Mod2``). Used with the cDAQ waveform-generation backend.
 
 Shutters
 --------
@@ -152,7 +158,10 @@ Shutters
      - Simulation.
    * - **NI DAQ**
      - ``'NI'``
-     - Digital output shutter control (see ``shutterdict``).
+     - Digital output shutter control (see ``shutterdict``). 
+   * - **NI cDAQ**
+     - ``'cDAQ'``
+     - CompactDAQ digital output shutter (e.g. ``/cDAQ1Mod1/port0/line2``). Used with the cDAQ waveform-generation backend.
 
 Data acquisition (DAQ)
 -----------------------
@@ -170,12 +179,12 @@ modulation, and camera triggers are generated by National Instruments cards.
    * - **Demo waveform generator**
      - ``'DemoWaveFormGeneration'``
      - Simulation.
-   * - **NI PXI/PCIe (AO)**
+   * - **NI PXI/PCIe (AO) — classic**
      - ``'NI'``
-     - PXI6259 (galvo/ETL) + PXI6733 (lasers), or equivalent.
-   * - **NI cDAQ**
-     - ``'NI_cDAQ'``
-     - USB/Ethernet cDAQ chassis; see ``config_benchtop-cDAQ.py`` example.
+     - Two-card system: PXI6259 (galvo/ETL AO + shutter DO) + PXI6733 (laser AO + DO). Classic mesoSPIM v4–v5 (ZMB, USZ, H45). Single-card variants also work (e.g. PXI1Slot4 for Benchtop; PXI1Slot2 at UCL).
+   * - **NI CompactDAQ chassis**
+     - ``'cDAQ'``
+     - USB/Ethernet cDAQ chassis with NI-9401 (digital) and NI-9264 (analog) modules; see ``config_benchtop-cDAQ.py`` example. Note: concurrent-task limits apply (≤ 1 DO, 1 AO, 4 counters).
 
 Adding custom hardware
 -----------------------
