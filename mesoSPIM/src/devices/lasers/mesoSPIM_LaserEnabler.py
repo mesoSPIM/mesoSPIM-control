@@ -1,7 +1,5 @@
 """
 mesoSPIM Module for enabling single laser lines via NI-DAQmx
-
-Authors: Fabian Voigt, Nikita Vladimirov
 """
 
 import nidaqmx

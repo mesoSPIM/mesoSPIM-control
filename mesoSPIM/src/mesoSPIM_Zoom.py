@@ -1,7 +1,5 @@
 """
 mesoSPIM Module for controlling a discrete zoom changer
-
-Authors: Fabian Voigt, Nikita Vladimirov
 """
 
 import time

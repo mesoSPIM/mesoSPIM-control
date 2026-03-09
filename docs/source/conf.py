@@ -98,8 +98,6 @@ autodoc_mock_imports = [
     "distutils",
     "dcamapi",               # Hamamatsu camera API
     "libgclib",              # Galil stage library
-    "mesoSPIM",              # To mock deeply nested mesoSPIM references
-    "src",                   # To prevent 'No module named src' errors
 ]
 
 
