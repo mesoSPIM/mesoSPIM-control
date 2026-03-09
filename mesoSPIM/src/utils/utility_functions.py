@@ -55,7 +55,14 @@ def write_line(file, key='', value=''):
         file.write('\n')
 
 def gb_size_of_array_shape(shape):
-        '''Given a tuple of array shape, return the size in GB of at uint16 array'''
+        '''Given a tuple of array shape, return the size in GB of a uint16 array.
+
+        Args:
+            shape (tuple[int]): Array dimensions, e.g. ``(100, 2048, 2048)``.
+
+        Returns:
+            float: Size in gibibytes (GiB).
+        '''
         for idx,ii in enumerate(shape):
             if idx == 0:
                 total = ii
@@ -66,11 +73,29 @@ def gb_size_of_array_shape(shape):
 
 
 def replace_with_underscores(string):
-    ''' Replaces spaces, slashes etc with underscores or numerals '''
+    '''Replace spaces, slashes and percent signs with underscores or ASCII equivalents.
+
+    Used for sanitising file and folder names produced from user inputs.
+
+    Args:
+        string (str): Raw string, e.g. a filter name like ``"488 nm / 50%"``.
+
+    Returns:
+        str: Sanitised string safe for use in file paths.
+    '''
     s = string.replace(' ', '_').replace('/', '_').replace('%', 'pct')
     return s
 
 def log_cpu_core(logger, msg=""):
+    '''Log (at DEBUG level) which logical CPU core the calling thread is currently running on.
+
+    Useful for verifying thread affinity in the Core / Camera / Writer thread model——each
+    Qt thread should remain pinned to a consistent CPU core.
+
+    Args:
+        logger (logging.Logger): Logger instance used for the debug message.
+        msg (str): Optional prefix string included in the log message.
+    '''
     pid = os.getpid()
     proc = psutil.Process(pid)
     #core = proc.cpu_num()  # returns the current logical CPU number. Linux only.

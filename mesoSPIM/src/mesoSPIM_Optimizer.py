@@ -20,6 +20,30 @@ from PyQt5.uic import loadUi
 class mesoSPIM_Optimizer(QtWidgets.QWidget):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_move_absolute = QtCore.pyqtSignal(dict)
+    '''GUI widget for automated optimisation of imaging parameters.
+
+    Implements a 1-D Gaussian-fit-based auto-focus and parameter optimiser
+    as described in:
+
+        Royer *et al.*, *Nature Biotechnology* 34, 1267–1278 (2016).
+        https://doi.org/10.1038/nbt.3708
+
+    Supported optimisation modes (set via the ``comboBoxMode`` drop-down):
+
+    * **ETL offset** — searches ``etl_l_offset`` / ``etl_r_offset`` for the
+      value that maximises the DCT-Shannon sharpness metric.
+    * **ETL amplitude** — searches ``etl_l_amplitude`` / ``etl_r_amplitude``
+      to maximise contrast depth.
+    * **Focus** — moves the focus (F) axis to find the sharpest plane.
+
+    Workflow:
+
+    1. Click **Run** to trigger :meth:`run_optimization`.
+    2. The algorithm snaps images at ``n_points`` positions spanning
+       \u00b1 ``search_amplitude`` around the current state value.
+    3. Results are fitted with a Gaussian and displayed in a pop-up window.
+    4. Click **Accept** / **Discard** to keep or revert the new optimum.
+    '''
 
     def __init__(self, parent=None):
         '''Parent must be an mesoSPIM_MainWindow() object'''
@@ -57,6 +81,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def update_image(self):
+        """Pull the latest frame from ``frame_queue_display`` and update the current ROI."""
         logger.debug(f"Optimizer: updating image, len(self.parent.core.frame_queue_display) = {len(self.parent.core.frame_queue_display)}")
         self.image = self.parent.core.frame_queue_display[0]
         self.roi = self.image[self.roi_dims[1]:self.roi_dims[1] + self.roi_dims[3],
@@ -67,6 +92,15 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.roi_dims = np.array(roi_dims).clip(min=0).astype(int)
 
     def set_roi(self, orientation='h', roi_perc=0.25):
+        """Set a rectangular ROI on the camera window and update :attr:`roi_dims`.
+
+        Args:
+            orientation (str): ``'h'`` — horizontal strip across the image centre;
+                ``'v'`` — vertical strip; ``'c'`` — centred square;
+                ``None`` — full image frame.
+            roi_perc (float): Fraction of the image dimension used for the ROI,
+                e.g. ``0.25`` = 25 %.
+        """
         img_w, img_h = self.parent.camera_window.get_image_shape()
         if orientation == 'h':
             self.parent.camera_window.set_roi('box', (0, img_h*(1-roi_perc)//2, img_w, int(img_h*roi_perc)))
@@ -81,6 +115,12 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
             raise ValueError("Orientation must be one of ('h', 'v', None).")
 
     def set_parameters(self, param_dict=None, update_gui=True):
+        """Update internal optimiser parameters from a dict and refresh the GUI.
+
+        Args:
+            param_dict (dict, optional): Any subset of ``{'mode', 'amplitude', 'n_points'}``.
+            update_gui (bool): Call :meth:`update_gui` after applying the parameters.
+        """
         if param_dict:
             if 'mode' in param_dict.keys():
                 self.mode = param_dict['mode']
@@ -152,6 +192,17 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def run_optimization(self):
+        """Execute the optimisation sweep and display results in a pop-up window.
+
+        * Stops Live mode if active.
+        * Reads parameters from the GUI controls.
+        * Snaps ``n_points`` images uniformly distributed over the search range,
+          computing the DCT-Shannon sharpness metric :func:`~mesoSPIM.src.utils.optimization.shannon_dct`
+          for each.
+        * Fits a Gaussian to the metric curve to locate the optimum.
+        * Opens a :meth:`create_results_window` overlay for the user to accept
+          or discard the new parameter value.
+        """
         self.parent.sig_state_request.emit({'state': 'idle'}) # stop Live if it is running
         time.sleep(0.5)
         self.get_params_from_gui()
@@ -231,6 +282,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def accept_new_state(self):
+        """Apply the fitted optimum value, snap a confirmation image, and close the results window."""
         self.set_state(float(self.new_state))
         print(f"Fitted value: {self.new_state:.3f}")
         time.sleep(self.delay_s)
@@ -242,6 +294,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def discard_new_state(self):
+        """Discard the fitted optimum and close the results window without changing hardware state."""
         self.new_state = None
         self.results_window.deleteLater()
         self.results_window = None

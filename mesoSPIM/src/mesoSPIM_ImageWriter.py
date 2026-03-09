@@ -18,6 +18,15 @@ from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
 from .plugins.utils import get_image_writer_from_name, get_image_writer_class_from_name
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
+    """Image and metadata writer that runs in its own high-priority QThread.
+
+    Consumes raw frames pushed into ``frame_queue`` by :class:`mesoSPIM_Camera` and
+    writes them to disk using a pluggable writer backend (TIFF, HDF5, OME-ZARR, …).
+    Writer backends are selected per-acquisition via the ``image_writer_plugin`` field
+    of each :class:`~mesoSPIM.src.utils.acquisitions.Acquisition`.
+
+    Signals are connected by :class:`mesoSPIM_Core` during construction.
+    """
     def __init__(self, parent, frame_queue):
         '''Image and metadata writer class. Parent is mesoSPIM_Camera() object'''
         super().__init__()
@@ -60,7 +69,16 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             print(msg)
 
     def prepare_acquisition(self, acq, acq_list):
+        """Open the writer backend and prepare file paths for a new acquisition.
 
+        For the very first acquisition in *acq_list* this also instantiates the
+        writer plugin.  Called via ``BlockingQueuedConnection`` from
+        :class:`mesoSPIM_Core` before imaging starts.
+
+        Args:
+            acq (Acquisition): The current acquisition descriptor.
+            acq_list (AcquisitionList): The full list being executed.
+        """
         if acq == acq_list[0]:
             self.writer_name = acq['image_writer_plugin']
             self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
@@ -149,6 +167,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
     
     @timed
     def image_to_disk(self, acq, acq_list, image):
+        """Write a single pre-transposed frame to the open writer backend.
+
+        Args:
+            acq (Acquisition): Active acquisition descriptor (provides zoom, z_step …).
+            acq_list (AcquisitionList): Full list (provides tile/channel/rotation indices).
+            image (np.ndarray): 2-D ``uint16`` array already transposed by the caller.
+        """
         logger.debug('image_to_disk() started')
         log_cpu_core(logger, msg='image_to_disk()')
         if self.cur_image_counter % 5 == 0:
@@ -199,6 +224,15 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def end_acquisition(self, acq, acq_list):
+        """Finalise and close the writer backend after the last frame of an acquisition.
+
+        Also closes any optional MIP (maximum intensity projection) TIFF file.
+        Called via ``BlockingQueuedConnection`` from :class:`mesoSPIM_Core`.
+
+        Args:
+            acq (Acquisition): The completed acquisition.
+            acq_list (AcquisitionList): The full acquisition list.
+        """
         finalize_imsge = FinalizeImage(
             acq = acq,
             acq_list = acq_list,
@@ -220,6 +254,11 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.running_flag = False
 
     def write_snap_image(self, image):
+        """Save a single snap-shot frame to the snap folder as a timestamped TIFF.
+
+        Args:
+            image (np.ndarray): 2-D ``uint16`` frame from the camera.
+        """
         timestr = time.strftime("%Y%m%d-%H%M%S")
         filename = timestr + '.tif'
         path = self.state['snap_folder'] + '/' + filename
@@ -233,6 +272,14 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             print(f"Error: Snap folder does not exist: {self.state['snap_folder']}. Choose it from the menu.")
 
     def write_snap_metadata(self, path):
+        """Write a plain-text metadata sidecar file alongside a snap TIFF.
+
+        Records current laser, intensity, zoom, filter, stage positions, ETL
+        parameters, and camera settings.
+
+        Args:
+            path (str): Absolute path of the snap TIFF whose sidecar is to be written.
+        """
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
         with open(metadata_path, 'w') as file:
             write_line(file, 'CFG')

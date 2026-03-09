@@ -286,6 +286,23 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.sig_state_request.emit({key : value})
 
     def set_state(self, state):
+        """Dispatch a high-level state string to the appropriate acquisition method.
+
+        Accepted values and their effect:
+
+        * ``'live'`` — start continuous live preview.
+        * ``'snap'`` — acquire and save a single snap image.
+        * ``'run_selected_acquisition'`` — run the row currently selected in the
+          Acquisition Manager table.
+        * ``'run_acquisition_list'`` — run every acquisition in the list.
+        * ``'preview_acquisition_with_z_update'`` / ``'preview_acquisition_without_z_update'``
+          — drive stages to the start/end of an acquisition without recording.
+        * ``'idle'`` — stop all ongoing activities.
+        * ``'lightsheet_alignment_mode'`` / ``'visual_mode'`` — special live modes.
+
+        Args:
+            state (str): One of the state strings listed above.
+        """
         if state == 'live':
             self.state['state'] = 'live'
             self.sig_state_request.emit({'state':'live'})
@@ -330,6 +347,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.visual_mode()
 
     def stop(self):
+        """Abort any ongoing acquisition, reset state to ``'idle'``, and clear the frame queue."""
         self.stopflag = True # This stopflag is a bit risky, needs to be updated to a more robust solution
         self.sig_stop_aquisition.emit() # send STOP signal to both Camera and ImageWriter threads
         if self.TTL_mode_enabled_in_cfg is True:
@@ -368,6 +386,12 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_filter(self, filter, wait_until_done=False):
+        """Switch the emission filter wheel to the named filter position.
+
+        Args:
+            filter (str): Filter name as defined in ``cfg.filterdict``.
+            wait_until_done (bool): If ``True``, block until the wheel is settled.
+        """
         self.send_status_message_to_gui('Filter changed to '+filter)
         if wait_until_done:
             logger.debug('Setting filter to '+filter)
@@ -379,6 +403,18 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def set_zoom(self, zoom, wait_until_done=True, update_etl=True):
+        """Move the zoom body / objective revolver and optionally update ETL calibration.
+
+        If ``f_objective_exchange`` is configured in the stage parameters, the focus
+        axis is first driven to the exchange position before the zoom changes, then
+        returned to its previous value.
+
+        Args:
+            zoom (str): Zoom designation as defined in ``cfg.zoomdict`` (e.g. ``'2x'``).
+            wait_until_done (bool): Block until the zoom mechanism has settled.
+            update_etl (bool): Emit a state request to reload ETL parameters for the
+                new zoom value from the calibration CSV.
+        """
         self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
         # Move to the objective exchange position if necessary
         f_pos_old = None
@@ -404,6 +440,15 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_laser(self, laser, wait_until_done=False, update_etl=True):
+        """Select the active laser line and optionally reload ETL parameters for it.
+
+        Args:
+            laser (str): Laser designation as defined in ``cfg.laserdict`` (e.g. ``'488 nm'``).
+            wait_until_done (bool): If ``True``, use a blocking signal so the waveformer
+                applies the change before this call returns.
+            update_etl (bool): Whether to update ETL parameters from calibration for the
+                new laser.
+        """
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'laser' : laser})
             if update_etl:
@@ -416,6 +461,12 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def set_intensity(self, intensity, wait_until_done=False):
+        """Set the laser intensity (analogue voltage) via the waveform generator.
+
+        Args:
+            intensity (int | float): Intensity value 0–100 (%).
+            wait_until_done (bool): If ``True``, block until the waveformer has applied it.
+        """
         if wait_until_done:
             self.sig_state_request_and_wait_until_done.emit({'intensity': intensity})
         else:
@@ -423,14 +474,30 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(float)
     def set_camera_exposure_time(self, time):
+        """Forward a new exposure time (in seconds) to the waveform generator state.
+
+        Args:
+            time (float): Exposure duration in seconds.
+        """
         self.sig_state_request.emit({'camera_exposure_time' : time})
 
     @QtCore.pyqtSlot(float)
     def set_camera_line_interval(self, time):
+        """Forward a new camera line interval (sCMOS rolling-shutter timing) to the waveform generator state.
+
+        Args:
+            time (float): Line interval in seconds.
+        """
         self.sig_state_request.emit({'camera_line_interval' : time})
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, dict, wait_until_done=False):
+        """Move one or more stage axes by a relative offset.
+
+        Args:
+            dict (dict): Axis → step mapping, e.g. ``{'x_rel': 100.0}`` (in μm).
+            wait_until_done (bool): If ``True``, block until the move is complete.
+        """
         if wait_until_done:
             self.sig_move_relative_and_wait_until_done.emit(dict)
         else:
@@ -438,6 +505,15 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
+        """Move one or more stage axes to an absolute position.
+
+        Args:
+            sdict (dict): Axis → target mapping, e.g. ``{'z_abs': 5000.0}`` (in μm).
+            wait_until_done (bool): If ``True``, calls the serial worker directly
+                (bypassing the signal) to block until the move completes.
+            use_internal_position (bool): When ``True``, the stage applies the
+                user-visible offset stored in :class:`mesoSPIM_StateSingleton`.
+        """
         if wait_until_done:
             logger.debug('Core: move_absolute (wait_until_done=True) has started')
             #self.sig_move_absolute_and_wait_until_done.emit(sdict) # THIS was running in MainWindow thread, very stubbornly, unless changed to direct call. Otherwise it was causing a lot of synchronization problems.
@@ -448,18 +524,35 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(list)
     def zero_axes(self, list):
+        """Define the current position as the zero/origin for the given axes.
+
+        Args:
+            list (list[str]): Axis names to zero, e.g. ``['x', 'y']``.
+        """
         self.sig_zero_axes.emit(list)
 
     @QtCore.pyqtSlot(list)
     def unzero_axes(self, list):
+        """Restore the physical (absolute) coordinate system for the given axes.
+
+        Args:
+            list (list[str]): Axis names to unzero, e.g. ``['x', 'z']``.
+        """
         self.sig_unzero_axes.emit(list)
 
     @QtCore.pyqtSlot()
     def stop_movement(self):
+        """Send an emergency stop signal to all stage axes."""
         self.sig_stop_movement.emit()
 
     @QtCore.pyqtSlot(str)
     def set_shutterconfig(self, shutterconfig):
+        """Select which light-sheet shutter(s) are opened during illumination.
+
+        Args:
+            shutterconfig (str): One of ``'Left'``, ``'Right'``, ``'Both'``, or
+                ``'Interleaved'``.
+        """
         self.sig_state_request.emit({'shutterconfig': shutterconfig})
         self.sig_update_gui_from_shutter_state.emit()
 
@@ -571,6 +664,12 @@ class mesoSPIM_Core(QtCore.QObject):
         logger.debug("close_image_series() finished")
 
     def live(self):
+        """Run a continuous live-preview loop using the current state parameters.
+
+        Starts the camera in live mode, streams frames to the camera window
+        via ``frame_queue_display``, and drives NI-DAQ waveforms repeatedly
+        until :meth:`stop` sets ``self.stopflag = True``.
+        """
         self.stopflag = False
         self.sig_prepare_live.emit()
         laser = self.state['laser']
@@ -595,6 +694,14 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_finished.emit()
 
     def start(self, row=None):
+        """Entry point for running one selected acquisition or the full acquisition list.
+
+        Performs pre-flight checks (disk space, motion limits), then delegates to
+        :meth:`run_acquisition_list` or :meth:`run_selected_acquisition`.
+
+        Args:
+            row (int | None): Table row index to run, or ``None`` to run all rows.
+        """
         self.stopflag = False
         if row is None:
             acq_list = self.state['acq_list']
@@ -692,6 +799,15 @@ class mesoSPIM_Core(QtCore.QObject):
         self.start_time = time.time()
 
     def run_acquisition_list(self, acq_list):
+        """Iterate over every acquisition in *acq_list* and image each one.
+
+        For each :class:`~mesoSPIM.src.utils.acquisitions.Acquisition`, calls
+        :meth:`prepare_acquisition`, :meth:`run_acquisition`, and
+        :meth:`close_acquisition` sequentially, unless ``self.stopflag`` is set.
+
+        Args:
+            acq_list (AcquisitionList): The list of acquisitions to execute.
+        """
         for acq in acq_list:
             if not self.stopflag:
                 self.prepare_acquisition(acq, acq_list)
@@ -731,6 +847,14 @@ class mesoSPIM_Core(QtCore.QObject):
             self.send_status_message_to_gui('Acquisition stopped')
 
     def preview_acquisition(self, z_update=True):
+        """Drive the stages along the start/end positions of the selected acquisition without acquiring images.
+
+        Useful for visually verifying sample placement and focus before a full run.
+
+        Args:
+            z_update (bool): If ``True``, move z to the acquisition start z; if
+                ``False``, keep z at its current position and only update x/y/f/theta.
+        """
         self.stopflag = False
         row = self.state['selected_row']
         acq = self.state['acq_list'][row]
@@ -828,6 +952,17 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_write_metadata.emit(acq, acq_list)
 
     def run_acquisition(self, acq, acq_list):
+        """Execute a single acquisition: start waveforms, trigger the camera, and collect frames.
+
+        Steps the z (and optionally f) axis ``acq.get_image_count()`` times,
+        emitting ``sig_add_images_to_image_series`` at each plane so the
+        ImageWriter receives frames in order.  Honours ``self.stopflag`` for
+        mid-acquisition abort.
+
+        Args:
+            acq (Acquisition): Acquisition descriptor for the current volume.
+            acq_list (AcquisitionList): Full list (provides tile/channel/rotation context).
+        """
         steps = acq.get_image_count()
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
@@ -892,6 +1027,15 @@ class mesoSPIM_Core(QtCore.QObject):
         self.close_shutters()
 
     def close_acquisition(self, acq, acq_list):
+        """Finalise a single acquisition: flush the image series, collect timing, and increment the counter.
+
+        Also disables TTL motion if it was enabled for ASI stages, and appends
+        timing metadata to the sidecar file.
+
+        Args:
+            acq (Acquisition): The just-completed acquisition.
+            acq_list (AcquisitionList): Full list being executed.
+        """
         self.sig_status_message.emit('Closing Acquisition: Saving data & freeing up memory')
         if self.stopflag is False:
             self.close_image_series()
@@ -912,6 +1056,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def execute_script(self, script):
+        """Execute a user-provided Python script string inside the Core event loop.
+
+        The script runs with access to ``self`` (the Core object) so it can call
+        any public API method.  Errors are caught via ``traceback.print_exc()``.
+
+        Args:
+            script (str): Valid Python source code to execute.
+        """
         self.state['state'] = 'running_script'
         try:
             exec(script)
@@ -922,6 +1074,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_update_gui_from_state.emit()
 
     def lightsheet_alignment_mode(self):
+        """Continuous live mode that alternates left/right shutters for dual-lightsheet co-alignment.
+
+        Loops until ``self.stopflag`` is set, alternating ``'Left'`` and ``'Right'`` shutter configs between snaps.
+        """
         '''Switches shutters after each image to allow coalignment of both lightsheets'''
         self.stopflag = False
         self.sig_prepare_live.emit()
@@ -939,6 +1095,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_finished.emit()
 
     def visual_mode(self):
+        """Continuous live mode with ETL amplitude set to zero for widefield-style illumination.
+
+        ETL amplitudes are temporarily zeroed so the light-sheet does not sweep,
+        giving a fixed illumination plane for visual inspection.  The previous ETL
+        amplitudes are restored on exit.
+        """
         old_l_amp = self.state['etl_l_amplitude']
         old_r_amp = self.state['etl_r_amplitude']
         self.sig_state_request.emit({'etl_l_amplitude' : 0})
@@ -974,9 +1136,22 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def send_status_message_to_gui(self, string):
+        """Emit a status string to the main window status bar.
+
+        Args:
+            string (str): Human-readable message to display.
+        """
         self.sig_status_message.emit(string)
 
     def list_to_string_with_carriage_return(self, input_list):
+        """Join list items into a newline-separated string for warning dialogs or logs.
+
+        Args:
+            input_list (list): Items to join.
+
+        Returns:
+            str: All items joined by ``' \\n '``.
+        """
         mystring = ''
         for i in input_list:
             mystring = mystring + ' \n ' + i    
