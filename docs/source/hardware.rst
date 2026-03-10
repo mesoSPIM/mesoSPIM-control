@@ -35,7 +35,10 @@ Cameras
      - 2048 × 2048, 6.5 µm pixel. Tested, stable. Requires PVCAM + PVCAM-SDK + PyVCAM.
    * - **Teledyne Photometrics Iris 15**
      - ``'Photometrics'``
-     - 5056 × 2960, 4.25 µm pixel. Supported and recommended for mesoSPIM-2.0 (Benchtop). Requires PVCAM + PVCAM-SDK + PyVCAM.
+     - 5056 × 2960, 4.25 µm pixel. Supported and recommended for Benchtop-mesoSPIM. Requires PVCAM + PVCAM-SDK + PyVCAM. Default config: ``exp_mode='Edge Trigger'``, ``gain_index=1``, ``scan_mode=1`` (Line Delay).
+   * - **Teledyne Photometrics Retiga E9**
+     - ``'Photometrics'``
+     - 3000 × 3000, 3.76 µm pixel. Requires PVCAM + PVCAM-SDK + PyVCAM. Use USB3 frame grabber. Supported and recommended for Benchtop-mesoSPIM. Default config: ``exp_mode='Edge Trigger'``, ``gain_index=3`` (HDR), ``exp_out_mode=4`` (line out), ``scan_mode=1`` (Line Delay).
    * - **PCO cameras**
      - ``'PCO'``
      - Requires the ``pco`` Python package (≥ 0.1.3).
