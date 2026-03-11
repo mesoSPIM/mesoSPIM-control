@@ -242,7 +242,22 @@ class mesoSPIM_Camera(QtCore.QObject):
 
 
 class mesoSPIM_GenericCamera(QtCore.QObject):
-    ''' Generic mesoSPIM camera class meant for subclassing.'''
+    '''Abstract base class for all mesoSPIM camera drivers.
+
+    Concrete subclasses override the hardware-interaction methods listed below.
+    The base class reads sensor dimensions and binning from ``cfg.camera_parameters``
+    and provides no-op stubs for every camera lifecycle method.
+
+    Lifecycle sequence expected by :class:`mesoSPIM_Core`:
+
+    * **Live mode**: ``open_camera`` → ``initialize_live_mode`` → ``get_live_image``
+      (repeated) → ``close_live_mode`` → ``close_camera``
+    * **Acquisition**: ``open_camera`` → ``initialize_image_series`` →
+      ``get_images_in_series`` (repeated) → ``close_image_series`` → ``close_camera``
+
+    All subclass instances run in the **Camera thread** (a high-priority
+    ``QThread`` spawned in :class:`mesoSPIM_Core`).
+    '''
 
     def __init__(self, parent):
         super().__init__()
@@ -312,6 +327,12 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
 
 
 class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
+    '''Software-only camera driver for use without physical hardware.
+
+    Generates synthetic sinusoidal fringe images so that the GUI, image
+    writer, and acquisition-sequencing logic can be exercised without a
+    physical camera.  Used for development, demos, and CI/testing.
+    '''
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -352,6 +373,13 @@ class mesoSPIM_DemoCamera(mesoSPIM_GenericCamera):
 
 
 class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
+    '''Camera driver for Hamamatsu ORCA-Flash / ORCA-Fusion cameras.
+
+    Uses the `hamamatsu_camera` Python wrapper (a ctypes-based interface to
+    the DCAM-API SDK included in ``devices/cameras/hamamatsu/``).
+    Sensor mode, defect correction, binning, and readout speed are applied at
+    ``open_camera()`` time from ``cfg.camera_parameters``.
+    '''
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -462,6 +490,12 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
 
 class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
+    '''Camera driver for Photometrics (Teledyne) sCMOS cameras.
+
+    Uses the ``pyvcam`` Python SDK.  Requires the PVCAM runtime to be installed
+    on the host PC.  Camera properties (speed table index, port index, gain,
+    exposure mode) are configured in ``cfg.camera_parameters``.
+    '''
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -619,6 +653,12 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         
 
 class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
+    '''Camera driver for PCO scientific cameras (e.g. pco.edge sCMOS).
+
+    Uses the ``pco`` Python SDK (``pip install pco``).  Acquires frames in
+    rolling-shutter light-sheet mode; frame transfer timing is set by the
+    global line interval from ``cfg.startup``.
+    '''
     def __init__(self, parent):
         super().__init__(parent)
         logger.info('PCO Cam initialized')

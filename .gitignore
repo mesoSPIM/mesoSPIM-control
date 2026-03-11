@@ -32,3 +32,6 @@ mesoSPIM/test/fixtures/
 *.lnk
 !mesoSPIM/mesoSpim.bat
 !mesoSPIM/mesoSpim-shortcut.lnk
+docs/_build/
+docs/build_log.txt
+/.vscode

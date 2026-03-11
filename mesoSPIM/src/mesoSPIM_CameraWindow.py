@@ -15,6 +15,30 @@ logger = logging.getLogger(__name__)
 class mesoSPIM_CameraWindow(QtWidgets.QWidget):
     sig_update_roi = QtCore.pyqtSignal(tuple)
     sig_update_status = QtCore.pyqtSignal()
+    '''Live-view camera display window for mesoSPIM.
+
+    Renders camera frames in real time using PyQtGraph\'s
+    :class:`~pyqtgraph.ImageView` widget.  Key features:
+
+    * **Subsampled display** — independent sub-sampling factors controlled GUI :class:`mesoSPIM_MainWindow` for live and
+      acquisition modes (``camera_display_live_subsampling`` /  ``camera_display_acquisition_subsampling`` from state).
+    * **Histogram / level adjustment** — manual (button) or automatic percentile
+      stretch via :meth:`adjust_levels`.
+    * **Overlays** — three overlay modes selectable from a combo-box:
+
+      * *LS marker* — colour-coded arrow showing active light-sheet direction.
+      * *Box ROI* — draggable rectangle used by :class:`mesoSPIM_Optimizer`.
+      * *None* — clean view.
+
+    * **ROI reporting** — emits ``sig_update_roi`` whenever the box ROI changes
+      so that the Optimizer can crop its sharpness measurements.
+
+    * **Status updates** — emits ``sig_update_status`` to notify other components
+      of changes in the camera window status.
+
+    Receives frames via :meth:`set_image` (called from the Core thread via
+    a queued connection).
+    '''
 
     def __init__(self, parent=None):
         super().__init__()
@@ -100,12 +124,26 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         vb.enableAutoRange(x=False, y=False)  # belt + suspenders
 
     def adjust_levels(self, pct_low=25, pct_hi=99.99):
+        """Stretch the display histogram to the *pct_low*–*pct_hi* percentile range.
+
+        Args:
+            pct_low (float): Lower percentile clipping level (default 25).
+            pct_hi (float): Upper percentile clipping level (default 99.99).
+        """
         ''''Adjust histogram levels'''
         img = self.image_view.getImageItem().image
         self.image_view.setLevels(min=np.percentile(img, pct_low), max=np.percentile(img, pct_hi))
 
     def px2um(self, px, scale=1):
-        '''Unit converter'''
+        """Convert a pixel distance to micrometres using the current zoom pixel size.
+
+        Args:
+            px (float): Pixel count.
+            scale (float): Additional scaling factor (e.g. the display sub-sampling ratio).
+
+        Returns:
+            float: Distance in micrometres.
+        """
         return scale * px * self.cfg.pixelsize[self.state['zoom']]
 
     @QtCore.pyqtSlot(str)
@@ -119,6 +157,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.set_roi('LS marker', (0, 0, w, h))
 
     def get_roi(self):
+        """Return the image array within the currently active overlay ROI.
+
+        If the overlay is a draggable box the ROI is cropped to that region
+        and ``sig_update_roi`` is emitted with ``(x, y, w, h)``.  Otherwise
+        the full image is returned and the ROI covers the whole frame.
+
+        Returns:
+            numpy.ndarray: 2-D uint16 pixel array of the ROI.
+        """
         im_item = self.image_view.getImageItem()
         if self.overlay == 'box' and self.roi_drawn:
             roi = self.roi_box.getArrayRegion(im_item.image, im_item)
@@ -132,6 +179,15 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         return roi
 
     def set_roi(self, mode='box', x_y_w_h=(0, 0, 100, 100)):
+        """Set the overlay mode and reposition the ROI rectangle.
+
+        Args:
+            mode (str or None): ``'box'`` — show draggable rectangle;
+                ``'LS marker'`` — show light-sheet direction arrows;
+                ``None`` — no overlay.
+            x_y_w_h (tuple): ``(x, y, width, height)`` in *screen* (sub-sampled)
+                pixel coordinates.
+        """
         assert mode in ('box', None, 'LS marker'), f"Mode must be in ('box', None, 'LS marker'), received {mode} instead"
         self.overlay = mode
         x, y, w, h = x_y_w_h
@@ -167,10 +223,16 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.status_label.setText(f"Image dimensions: {roi.shape}")
 
     def draw_crosshairs(self):
+        """Add (or re-add) the red crosshair lines to the image view."""
         self.image_view.addItem(self.vLine)
         self.image_view.addItem(self.hLine)
 
     def draw_lightsheet_marker(self):
+        """Show the yellow arrow overlay indicating the active light-sheet side.
+
+        The left arrow is shown when ``state['shutterconfig']`` is ``'Left'``,
+        the right arrow when it is ``'Right'``, and both when it is ``'Both'``.
+        """
         if self.state['shutterconfig'] == 'Left':
             self.lightsheet_marker_R.setOpacity(0)
             self.lightsheet_marker_L.setOpacity(1)
@@ -232,6 +294,10 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def update_image_from_deque(self):
+        """Poll the head of ``frame_queue_display`` and call :meth:`set_image` if a frame is available.
+
+        If the deque is empty the call is a no-op.
+        """
         if len(self.parent.core.frame_queue_display) > 0:
             image = self.parent.core.frame_queue_display[0]
             self.set_image(image)

@@ -1,176 +1,137 @@
 # -*- coding: utf-8 -*-
-#
-# Configuration file for the Sphinx documentation builder.
-#
-# This file does only contain a selection of the most common options. For a
-# full list see the documentation:
-# http://www.sphinx-doc.org/en/master/config
-
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
-print(os.path.abspath('../..'))
+import importlib
+import types
+import ctypes
+import platform
+
+# --- Path setup -------------------------------------------------------------
+
+DOCS_DIR = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(DOCS_DIR, "..", ".."))
+sys.path.insert(0, PROJECT_ROOT)
+
+# --- Project information -----------------------------------------------------
+
+project = "mesoSPIM Control"
+author = "mesoSPIM team"
+copyright = "mesoSPIM team"
+version = ""
+release = "1.20.0"
+
+# --- Docs-only hacks ---------------------------------------------------------
+# 1) Fake GetCurrentProcessorNumber on non-Windows platforms to avoid crashes in psutil
+if not hasattr(ctypes, "windll") or platform.system() != "Windows":
+    dummy_kernel32 = types.SimpleNamespace(
+        GetCurrentProcessorNumber=lambda: 0
+    )
+    ctypes.windll = types.SimpleNamespace(kernel32=dummy_kernel32)
 
 
-# -- Project information -----------------------------------------------------
+# 2) Fake ZWO EFW bindings module so mesoSPIM_Control import doesn't crash
+MODULE_NAME = "mesoSPIM.src.devices.filter_wheels.ZWO_EFW.pyzwoefw"
+try:
+    importlib.import_module(MODULE_NAME)
+except Exception:
+    # Create a simple dummy module and insert it into sys.modules
+    dummy_efw = types.ModuleType(MODULE_NAME)
+    # Provide minimal attributes that your code might touch
+    # For now we just define a no-op function placeholder
+    def _dummy_init():
+        return 0
+    dummy_efw.EFWInit = _dummy_init
+    dummy_efw.EFWClose = lambda *args, **kwargs: None
+    sys.modules[MODULE_NAME] = dummy_efw
 
-project = 'mesoSPIM Control'
-copyright = '2018, Fabian F. Voigt'
-author = 'Fabian F. Voigt'
+# 3) Patch Dynamixel dxl_x64_c.dll load so it doesn't crash on Linux in docs build
+try:
+    # Try importing the real module; on Linux this will usually fail with invalid ELF header
+    import mesoSPIM.src.devices.servos.dynamixel.dynamixel_functions as _dxl_funcs  # noqa: F401
+except Exception:
+    # Emulate what dynamixel_functions expects, but without loading the DLL
+    try:
+        dxl_mod_name = "mesoSPIM.src.devices.servos.dynamixel.dynamixel_functions"
+        dxl_mod = importlib.import_module(dxl_mod_name)
+    except Exception:
+        dxl_mod = types.ModuleType(dxl_mod_name)
+        sys.modules[dxl_mod_name] = dxl_mod
+    # Provide a fake dxl_lib object with dummy methods
+    class _DummyDxlLib:
+        def __getattr__(self, name):
+            # Any DLL function call becomes a no-op that returns 0
+            def _dummy(*args, **kwargs):
+                return 0
+            return _dummy
+    dxl_mod.dxl_lib = _DummyDxlLib()
 
-# The short X.Y version
-version = ''
-# The full version, including alpha/beta/rc tags
-release = '0.0.1'
+# --- General configuration ---------------------------------------------------
 
-
-# -- General configuration ---------------------------------------------------
-
-# If your documentation needs a minimal Sphinx version, state it here.
-#
-# needs_sphinx = '1.0'
-
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.coverage",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.githubpages",
+    "sphinx.ext.napoleon",
+    "myst_parser",
+    "sphinx_design",
 ]
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+autodoc_mock_imports = [
+    "scipy",
+    "PyQt5",
+    "PyQt5_sip",
+    "nidaqmx",
+    "indexed",
+    "pipython",
+    "serial",       # this is the package name for pyserial
+    "pyqtgraph",
+    "pywinusb",
+    "tifffile",
+    "qdarkstyle",
+    "npy2bdv",
+    "future",
+    "matplotlib",
+    "psutil",
+    "distutils",
+    "dcamapi",               # Hamamatsu camera API
+    "libgclib",              # Galil stage library
+]
 
-# The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
 
-# The master toctree document.
-master_doc = 'index'
+# Optional but useful
+myst_enable_extensions = [
+    "colon_fence",
+]
 
-# The language for content autogenerated by Sphinx. Refer to documentation
-# for a list of supported languages.
-#
-# This is also used if you do content translation via gettext catalogs.
-# Usually you set "language" from the command line for these cases.
-language = None
+# Suppress known/expected warnings
+suppress_warnings = [
+    "autodoc.mocked_object",  # expected: many hw-dep modules are mocked
+    "myst.header",            # CHANGELOG.md starts with H2, not H1
+    "docutils",               # lone * in PyQt5 auto-generated pyqtSignal docstrings
+]
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path .
+templates_path = ["_templates"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+master_doc = "index"
+language = "en"
 exclude_patterns = []
+pygments_style = "sphinx"
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+# --- HTML output -------------------------------------------------------------
+html_theme = "furo"
+html_static_path = ["_static"]
+htmlhelp_basename = "mesoSPIMControldoc"
 
+# --- Extension settings ------------------------------------------------------
 
-# -- Options for HTML output -------------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = 'alabaster'
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# html_theme_options = {}
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
-
-# Custom sidebar templates, must be a dictionary that maps document names
-# to template names.
-#
-# The default sidebars (for documents that don't match any pattern) are
-# defined by theme itself.  Builtin themes are using these templates by
-# default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
-# 'searchbox.html']``.
-#
-# html_sidebars = {}
-
-
-# -- Options for HTMLHelp output ---------------------------------------------
-
-# Output file base name for HTML help builder.
-htmlhelp_basename = 'mesoSPIMControldoc'
-
-
-# -- Options for LaTeX output ------------------------------------------------
-
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
 }
 
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, 'mesoSPIMControl.tex', 'mesoSPIM Control Documentation',
-     'Fabian F. Voigt', 'manual'),
-]
-
-
-# -- Options for manual page output ------------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'mesospimcontrol', 'mesoSPIM Control Documentation',
-     [author], 1)
-]
-
-
-# -- Options for Texinfo output ----------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-    (master_doc, 'mesoSPIMControl', 'mesoSPIM Control Documentation',
-     author, 'mesoSPIMControl', 'One line description of project.',
-     'Miscellaneous'),
-]
-
-
-# -- Extension configuration -------------------------------------------------
-
-# -- Options for intersphinx extension ---------------------------------------
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
-
-# -- Options for todo extension ----------------------------------------------
-
-# If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True

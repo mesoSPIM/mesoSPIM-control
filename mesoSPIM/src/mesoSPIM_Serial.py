@@ -19,7 +19,21 @@ from .utils.utility_functions import log_cpu_core
 logger = logging.getLogger(__name__)
 
 class mesoSPIM_Serial(QtCore.QObject):
-    '''This class handles mesoSPIM serial connections'''
+    '''This class handles mesoSPIM serial connections.
+
+    Acts as a facade over three hardware sub-systems:
+
+    * **Stage** — one of several concrete :class:`mesoSPIM_Stage` subclasses
+      (PI, ASI, Demo …) selected from the config file.
+    * **Filter wheel** — one of the :class:`mesoSPIM_FilterWheel` implementations
+      (Ludl, Dynamixel, Sutter, ZWO, Demo).
+    * **Zoom** — one of the :class:`DynamixelZoom` / :class:`MitutoyoZoom` /
+      :class:`DemoZoom` implementations.
+
+    All three are instantiated in ``__init__`` based on config parameters.
+    This object stays in the **Core thread** (see :class:`mesoSPIM_Core`);
+    slot calls therefore run synchronously in that event loop.
+    '''
     sig_finished = QtCore.pyqtSignal()
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_position = QtCore.pyqtSignal(dict)
@@ -116,6 +130,15 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):
+        """Route state-change requests from Core to the appropriate hardware method.
+
+        Recognised keys: ``'filter'``, ``'zoom'``, ``'stage_program'``,
+        ``'ttl_movement_enabled_during_acq'``.
+
+        Args:
+            sdict (dict): Key/value pairs describing the desired state change.
+            wait_until_done (bool): Passed down to ``set_filter`` / ``set_zoom``.
+        """
         logger.debug(f'mesoSPIM_Serial state request: {sdict}')
         for key, value in zip(sdict.keys(), sdict.values()):
             if key == 'filter':
@@ -130,6 +153,11 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def send_status_message(self, string):
+        """Re-emit a stage status message up to :class:`mesoSPIM_Core` / GUI.
+
+        Args:
+            string (str): Human-readable status string from the stage driver.
+        """
         self.sig_status_message.emit(string)
 
 #    @QtCore.pyqtSlot(bool)
@@ -139,6 +167,11 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(bool)
     def enable_ttl_motion(self, boolean):
+        """Enable or disable TTL-triggered motion on ASI stages during an acquisition.
+
+        Args:
+            boolean (bool): ``True`` to enable TTL motion, ``False`` to disable.
+        """
         self.stage.enable_ttl_motion(boolean)
 
     def stage_limits_OK(self, sdict, safety_margin_n_moves=3):
@@ -159,6 +192,15 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
+        """Move one or more axes by a relative offset after checking motion limits.
+
+        If the requested movement would violate a stage limit, the move is
+        suppressed and a warning message is emitted instead.
+
+        Args:
+            sdict (dict): Axis → step mapping, e.g. ``{'z_rel': 50.0}`` (μm).
+            wait_until_done (bool): Block until the stage controller confirms completion.
+        """
         log_cpu_core(logger, msg='move_relative()')
         logger.debug(f'mesoSPIM_Serial moving relative: {sdict}')
         if self.stage_limits_OK(sdict):
@@ -168,11 +210,28 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
+        """Move one or more axes to an absolute position.
+
+        Args:
+            sdict (dict): Axis → target mapping, e.g. ``{'x_abs': 1000.0}`` (μm).
+            wait_until_done (bool): Block until the stage controller confirms completion.
+            use_internal_position (bool): Apply the user-visible position offset stored
+                in :class:`mesoSPIM_StateSingleton` when ``True``.
+        """
         logger.debug(f'mesoSPIM_Serial moving absolute: {sdict}')
         self.stage.move_absolute(sdict, wait_until_done=wait_until_done, use_internal_position=use_internal_position)
 
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
+        """Receive a position update from the stage driver and broadcast it to the GUI.
+
+        Writes the new position into :class:`mesoSPIM_StateSingleton` and emits
+        ``sig_position`` so the main window can update the position readouts.
+
+        Args:
+            sdict (dict): Position dictionary, e.g.
+                ``{'x_pos': 0.0, 'y_pos': 0.0, 'z_pos': 0.0, 'f_pos': 0.0, 'theta_pos': 0.0}``.
+        """
         log_cpu_core(logger, msg='report_position()')
         logger.debug(f'mesoSPIM_Serial reporting position: {sdict}')
         self.state['position'] = sdict
@@ -180,17 +239,36 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def go_to_rotation_position(self, wait_until_done=False):
+        """Move the rotation axis to the stored rotation/sample-exchange position.
+
+        Args:
+            wait_until_done (bool): Block until the rotation is complete.
+        """
         logger.debug('Going to rotation position')
         self.stage.go_to_rotation_position(wait_until_done=wait_until_done)
 
     @QtCore.pyqtSlot(str)
     def set_filter(self, sfilter, wait_until_done=False):
+        """Move the filter wheel to the named filter position and update state.
+
+        Args:
+            sfilter (str): Filter name as defined in ``cfg.filterdict``.
+            wait_until_done (bool): Block until the wheel has settled.
+        """
         logger.debug(f'Setting filter to {sfilter}')
         self.filterwheel.set_filter(sfilter, wait_until_done=wait_until_done)
         self.state['filter'] = sfilter
 
     @QtCore.pyqtSlot(str)
     def set_zoom(self, zoom, wait_until_done=True):
+        """Move the zoom body to the named zoom position and update state.
+
+        State is updated *before* the physical move to keep the GUI responsive.
+
+        Args:
+            zoom (str): Zoom designation, e.g. ``'2x'``, as defined in ``cfg.zoomdict``.
+            wait_until_done (bool): Block until the zoom mechanism has settled.
+        """
         ''' Here, the state parameters are set before sending the value to the zoom --
         this is to avoid laggy update loops with the GUI.'''
         self.state['zoom'] = zoom
@@ -198,4 +276,5 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.zoom.set_zoom(zoom, wait_until_done=wait_until_done)
 
     def execute_stage_program(self):
+        """Trigger the pre-loaded Galil/ASI stage program for TTL-driven motion."""
         self.stage.execute_program()

@@ -54,8 +54,26 @@ class MyStyle(QtWidgets.QProxyStyle):
         super().drawPrimitive(element, option, painter, widget)
 
 class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
+    '''Acquisition table editor and sequencer for mesoSPIM.
 
-    model_changed = QtCore.pyqtSignal(AcquisitionModel)
+    Provides a spreadsheet-like interface (backed by :class:`AcquisitionModel`)
+    where each row represents one tiled Z-stack ("acquisition").  Columns include
+    position (x, y, z, f, theta), Z range and step size, filter, laser, intensity,
+    exposure, zoom, ETL parameters, and output file path.
+
+    Key capabilities:
+
+    * **Add / delete / copy / reorder** rows in the acquisition list.
+    * **Mark current** buttons to capture the live stage position, ETL state,
+      and/or filter into the selected row without typing.
+    * **Save / Load** the table as a binary file.
+    * **Wizards** for tiling patterns, focus tracking, and image-processing pipelines.
+    * **Auto-illumination** button to automatically set illumination parameters
+      based on the current acquisition list.
+
+    The model ``state`` key ``'acquisition_list'`` is kept in sync with the
+    table so that :class:`mesoSPIM_Core` can iterate over it.
+    '''
     sig_warning = QtCore.pyqtSignal(str)
     sig_move_absolute = QtCore.pyqtSignal(dict)
 
@@ -298,6 +316,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             exec(string_to_execute)
 
     def update_acquisition_time_prediction(self):
+        """Compute and display the estimated total acquisition time in the GUI label.
+
+        Uses the current camera framerate from state and sums up the planned
+        Z-stack images across all rows in the acquisition model.
+        """
         framerate = self.state['current_framerate']
         total_time = self.state['acq_list'].get_acquisition_time(framerate)
         self.state['predicted_acq_list_time'] = total_time
@@ -305,6 +328,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.AcquisitionTimeLabel.setText(time_string)
 
     def update_acquisition_size_prediction(self):
+        """Compute and display the estimated total data size for the current acquisition list."""
         bytes_total = self.parent.core.get_required_disk_space(self.model.get_acquisition_list())
         self.PredictedSizeLabel.setText(format_data_size(bytes_total))
 
