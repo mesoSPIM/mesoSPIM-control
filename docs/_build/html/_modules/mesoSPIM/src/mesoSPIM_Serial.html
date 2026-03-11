@@ -1,0 +1,566 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>mesoSPIM.src.mesoSPIM_Serial - mesoSPIM Control 1.20.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">mesoSPIM Control 1.20.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">mesoSPIM Control 1.20.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../hardware.html">Supported Hardware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for mesoSPIM.src.mesoSPIM_Serial</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Serial thread for the mesoSPIM project</span>
+<span class="sd">======================================</span>
+
+<span class="sd">This thread handles all connections with serial devices such as stages,</span>
+<span class="sd">filter wheels, zoom systems etc.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtCore</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt5.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">Qt</span>
+<span class="sd">&#39;&#39;&#39; Import mesoSPIM modules &#39;&#39;&#39;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.devices.filter_wheels.mesoSPIM_FilterWheel</span><span class="w"> </span><span class="kn">import</span> <span class="n">mesoSPIM_DemoFilterWheel</span><span class="p">,</span> <span class="n">DynamixelFilterWheel</span><span class="p">,</span> <span class="n">LudlFilterWheel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.devices.filter_wheels.mesoSPIM_FilterWheel</span><span class="w"> </span><span class="kn">import</span> <span class="n">ZwoFilterWheel</span><span class="p">,</span> <span class="n">SutterLambda10BFilterWheel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.mesoSPIM_Zoom</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamixelZoom</span><span class="p">,</span> <span class="n">DemoZoom</span><span class="p">,</span> <span class="n">MitutoyoZoom</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.mesoSPIM_Stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">mesoSPIM_PI_1toN</span><span class="p">,</span> <span class="n">mesoSPIM_PI_NtoN</span><span class="p">,</span> <span class="n">mesoSPIM_ASI_Stages</span><span class="p">,</span> <span class="n">mesoSPIM_DemoStage</span><span class="p">,</span> <span class="n">mesoSPIM_PI_rotz_and_Galil_xyf_Stages</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils.utility_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_cpu_core</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Serial">
+<a class="viewcode-back" href="../../../api/index.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">mesoSPIM_Serial</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;This class handles mesoSPIM serial connections.</span>
+
+<span class="sd">    Acts as a facade over three hardware sub-systems:</span>
+
+<span class="sd">    * **Stage** — one of several concrete :class:`mesoSPIM_Stage` subclasses</span>
+<span class="sd">      (PI, ASI, Demo …) selected from the config file.</span>
+<span class="sd">    * **Filter wheel** — one of the :class:`mesoSPIM_FilterWheel` implementations</span>
+<span class="sd">      (Ludl, Dynamixel, Sutter, ZWO, Demo).</span>
+<span class="sd">    * **Zoom** — one of the :class:`DynamixelZoom` / :class:`MitutoyoZoom` /</span>
+<span class="sd">      :class:`DemoZoom` implementations.</span>
+
+<span class="sd">    All three are instantiated in ``__init__`` based on config parameters.</span>
+<span class="sd">    This object stays in the **Core thread** (see :class:`mesoSPIM_Core`);</span>
+<span class="sd">    slot calls therefore run synchronously in that event loop.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">sig_finished</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_state_request</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">sig_position</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">sig_zero_axes</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">sig_unzero_axes</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">sig_stop_movement</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_load_sample</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_unload_sample</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_center_sample</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_mark_rotation_position</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="n">sig_status_message</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="c1">#sig_pause = QtCore.pyqtSignal(bool)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Assign the parent class to a instance variable for callbacks &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">cfg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">state</span> <span class="c1"># the mesoSPIM_StateSingleton() instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Attaching the filterwheel &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Ludl&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">LudlFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Dynamixel&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">DynamixelFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;servo_id&#39;</span><span class="p">],</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;baudrate&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Demo&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">mesoSPIM_DemoFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Sutter&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">SutterLambda10BFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;ZWO&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span> <span class="o">=</span> <span class="n">ZwoFilterWheel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterdict</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Filter wheel type unknown: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">filterwheel_parameters</span><span class="p">[</span><span class="s1">&#39;filterwheel_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Attaching the zoom &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Dynamixel&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="n">DynamixelZoom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoomdict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;servo_id&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;baudrate&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;Mitu&#39;</span><span class="p">,</span> <span class="s1">&#39;Mitutoyo&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="n">MitutoyoZoom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoomdict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;COMport&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;baudrate&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;Demo&#39;</span><span class="p">,</span> <span class="s1">&#39;DemoZoom&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span> <span class="o">=</span> <span class="n">DemoZoom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoomdict</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Zoom type unknown: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">zoom_parameters</span><span class="p">[</span><span class="s1">&#39;zoom_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Attaching the stage &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;PI&#39;</span><span class="p">,</span> <span class="s1">&#39;PI_1controllerNstages&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_PI_1toN</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PI_NcontrollersNstages&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_PI_NtoN</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;GalilStage&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_GalilStages(self)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;PI_rot_and_Galil_xyzf&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_PI_rot_and_Galil_xyzf_Stages(self)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;PI_f_rot_and_Galil_xyz&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_PI_f_rot_and_Galil_xyz_Stages(self)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PI_rotz_and_Galil_xyf&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_PI_rotz_and_Galil_xyf_Stages</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;PI_rotzf_and_Galil_xy&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_PI_rotzf_and_Galil_xy_Stages(self)</span>
+        <span class="k">elif</span> <span class="s1">&#39;asi&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_ASI_Stages</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="c1">#self.stage.sig_pause.connect(self.pause)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_progress</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">log_slice</span><span class="p">)</span>
+        <span class="c1"># elif self.cfg.stage_parameters[&#39;stage_type&#39;] == &#39;MS2000ASI&#39;:</span>
+        <span class="c1">#     self.stage = mesoSPIM_ASI_MS2000_Stage(self)</span>
+        <span class="c1">#     #self.stage.sig_pause.connect(self.pause)</span>
+        <span class="c1">#     self.parent.sig_progress.connect(self.stage.log_slice)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;DemoStage&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">mesoSPIM_DemoStage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Stage type unknown: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">stage_parameters</span><span class="p">[</span><span class="s1">&#39;stage_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">sig_status_message</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">send_status_message</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">sig_position</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">report_position</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Stage not initalized! Please check the config file&#39;</span><span class="p">)</span>
+
+        <span class="c1"># self.parent.sig_move_absolute.connect(self.move_absolute)</span>
+        <span class="c1"># self.parent.sig_move_absolute_and_wait_until_done.connect(lambda sdict: self.move_absolute(sdict, wait_until_done=True))</span>
+        <span class="c1"># WARNING: do not use type=Qt.BlockingQueuedConnection for _wait_until_done signals, as this will cause a deadlock!</span>
+        <span class="c1"># The mesoSPIM_Serial object is executed in the parent (Core) thread, and type=Qt.BlockingQueuedConnection can be used only between threads.</span>
+        <span class="c1"># Using type=Qt.BlockingQueuedConnection withing the same thread will cause a deadlock.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_zero_axes</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_zero_axes</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_unzero_axes</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_unzero_axes</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_stop_movement</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_stop_movement</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_load_sample</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_load_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_unload_sample</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_unload_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sig_center_sample</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_center_sample</span><span class="o">.</span><span class="n">emit</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">state_request_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Route state-change requests from Core to the appropriate hardware method.</span>
+
+<span class="sd">        Recognised keys: ``&#39;filter&#39;``, ``&#39;zoom&#39;``, ``&#39;stage_program&#39;``,</span>
+<span class="sd">        ``&#39;ttl_movement_enabled_during_acq&#39;``.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sdict (dict): Key/value pairs describing the desired state change.</span>
+<span class="sd">            wait_until_done (bool): Passed down to ``set_filter`` / ``set_zoom``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial state request: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sdict</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">sdict</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;filter&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;zoom&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_zoom</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;stage_program&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">execute_stage_program</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;ttl_movement_enabled_during_acq&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">enable_ttl_motion</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;state change: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_status_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Re-emit a stage status message up to :class:`mesoSPIM_Core` / GUI.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            string (str): Human-readable status string from the stage driver.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_status_message</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+
+<span class="c1">#    @QtCore.pyqtSlot(bool)</span>
+<span class="c1">#    def pause(self, boolean):</span>
+<span class="c1">#        logger.debug(f&#39;Pause signal received: {boolean}&#39;)</span>
+<span class="c1">#        self.sig_pause.emit(boolean)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">enable_ttl_motion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boolean</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enable or disable TTL-triggered motion on ASI stages during an acquisition.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            boolean (bool): ``True`` to enable TTL motion, ``False`` to disable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">enable_ttl_motion</span><span class="p">(</span><span class="n">boolean</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Serial.stage_limits_OK">
+<a class="viewcode-back" href="../../../api/index.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.stage_limits_OK">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage_limits_OK</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">safety_margin_n_moves</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Safety margin is added to deal with delays in position reporting.&#39;&#39;&#39;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Checking stage limits: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;x_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;y_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;z_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;theta_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;f_rel&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">sdict</span><span class="p">:</span>
+                <span class="n">axis</span> <span class="o">=</span> <span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
+                <span class="n">condition</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;(self.stage.</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">_min &lt; self.stage.</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">_pos + </span><span class="si">{</span><span class="n">safety_margin_n_moves</span><span class="si">}</span><span class="s2"> * sdict[&#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39;] &lt; self.stage.</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">_max)&quot;</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">eval</span><span class="p">(</span><span class="n">condition</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">send_status_message</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Relative movement stopped: </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1"> motion limit would be reached!&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span><span class="p">:</span> <span class="c1"># clear previous warning message</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_status_message</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_warning</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_relative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Move one or more axes by a relative offset after checking motion limits.</span>
+
+<span class="sd">        If the requested movement would violate a stage limit, the move is</span>
+<span class="sd">        suppressed and a warning message is emitted instead.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sdict (dict): Axis → step mapping, e.g. ``{&#39;z_rel&#39;: 50.0}`` (μm).</span>
+<span class="sd">            wait_until_done (bool): Block until the stage controller confirms completion.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">log_cpu_core</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;move_relative()&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial moving relative: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_limits_OK</span><span class="p">(</span><span class="n">sdict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">move_relative</span><span class="p">(</span><span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Stage limits reached: motion stopped&#39;</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">move_absolute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_internal_position</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Move one or more axes to an absolute position.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sdict (dict): Axis → target mapping, e.g. ``{&#39;x_abs&#39;: 1000.0}`` (μm).</span>
+<span class="sd">            wait_until_done (bool): Block until the stage controller confirms completion.</span>
+<span class="sd">            use_internal_position (bool): Apply the user-visible position offset stored</span>
+<span class="sd">                in :class:`mesoSPIM_StateSingleton` when ``True``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial moving absolute: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">move_absolute</span><span class="p">(</span><span class="n">sdict</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">,</span> <span class="n">use_internal_position</span><span class="o">=</span><span class="n">use_internal_position</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">report_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sdict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Receive a position update from the stage driver and broadcast it to the GUI.</span>
+
+<span class="sd">        Writes the new position into :class:`mesoSPIM_StateSingleton` and emits</span>
+<span class="sd">        ``sig_position`` so the main window can update the position readouts.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sdict (dict): Position dictionary, e.g.</span>
+<span class="sd">                ``{&#39;x_pos&#39;: 0.0, &#39;y_pos&#39;: 0.0, &#39;z_pos&#39;: 0.0, &#39;f_pos&#39;: 0.0, &#39;theta_pos&#39;: 0.0}``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">log_cpu_core</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;report_position()&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mesoSPIM_Serial reporting position: </span><span class="si">{</span><span class="n">sdict</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_position</span><span class="o">.</span><span class="n">emit</span><span class="p">({</span><span class="s1">&#39;position&#39;</span><span class="p">:</span> <span class="n">sdict</span><span class="p">})</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">go_to_rotation_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Move the rotation axis to the stored rotation/sample-exchange position.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            wait_until_done (bool): Block until the rotation is complete.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Going to rotation position&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">go_to_rotation_position</span><span class="p">(</span><span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sfilter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Move the filter wheel to the named filter position and update state.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sfilter (str): Filter name as defined in ``cfg.filterdict``.</span>
+<span class="sd">            wait_until_done (bool): Block until the wheel has settled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Setting filter to </span><span class="si">{</span><span class="n">sfilter</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filterwheel</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="n">sfilter</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sfilter</span>
+
+    <span class="nd">@QtCore</span><span class="o">.</span><span class="n">pyqtSlot</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_zoom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zoom</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Move the zoom body to the named zoom position and update state.</span>
+
+<span class="sd">        State is updated *before* the physical move to keep the GUI responsive.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            zoom (str): Zoom designation, e.g. ``&#39;2x&#39;``, as defined in ``cfg.zoomdict``.</span>
+<span class="sd">            wait_until_done (bool): Block until the zoom mechanism has settled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39; Here, the state parameters are set before sending the value to the zoom --</span>
+<span class="sd">        this is to avoid laggy update loops with the GUI.&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;zoom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zoom</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;pixelsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">pixelsize</span><span class="p">[</span><span class="n">zoom</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zoom</span><span class="o">.</span><span class="n">set_zoom</span><span class="p">(</span><span class="n">zoom</span><span class="p">,</span> <span class="n">wait_until_done</span><span class="o">=</span><span class="n">wait_until_done</span><span class="p">)</span>
+
+<div class="viewcode-block" id="mesoSPIM_Serial.execute_stage_program">
+<a class="viewcode-back" href="../../../api/index.html#mesoSPIM.src.mesoSPIM_Serial.mesoSPIM_Serial.execute_stage_program">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_stage_program</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Trigger the pre-loaded Galil/ASI stage program for TTL-driven motion.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">execute_program</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; mesoSPIM team
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=2a6ef5f7"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    </body>
+</html>
