@@ -910,7 +910,7 @@ class mesoSPIM_Core(QtCore.QObject):
         target_rotation = startpoint['theta_abs']
         self.acq_start_time = time.time()
         self.acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
-        # stop asking stages about their positions, to avoid messing up serial comm during acquisition:
+        # stop asking stages about their positions, to avoid messing up serial comm during acquisition. Position polling runs in MainWindow GUI thread, not in Core thread!
         self.sig_polling_stage_position_stop.emit()
         self.sig_status_message.emit('Going to start position')
         ''' Check if sample has to be rotated, allow some tolerance '''
@@ -918,7 +918,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
-        self.serial_worker.stage.report_position() # Last Position update before acquisition starts for proper tile view display
+        self.serial_worker.stage.report_position() # Last Position update before acquisition starts for proper tile view display, directly from the Core thread
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
         self.set_filter(acq['filter'], wait_until_done=True)
@@ -941,9 +941,8 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_relative(acq.get_delta_z_and_delta_f_dict(inverted=True))
             time.sleep(0.1)
             self.move_relative(acq.get_delta_z_and_delta_f_dict())
-            time.sleep(0.1)
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq': True})
-            time.sleep(0.05)
+            logger.debug(f"ASI Z- and F- stages moved ({acq.get_delta_z_and_delta_f_dict()}) at the start position and TTL mode set to True")
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list) # signal to the Camera
@@ -982,15 +981,20 @@ class mesoSPIM_Core(QtCore.QObject):
             else:
                 self.snap_image_in_series(laser_blanking)
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
-                ''' Get the current correct f_step'''
-                f_step = self.f_step_generator.__next__()
-                if f_step != 0:
-                    move_dict.update({'f_rel':f_step})
-                else: # clear key if no F-step is required
-                    move_dict.pop('f_rel', None)
 
-                logger.debug(f'move_dict: {move_dict}')
-                self.move_relative(move_dict)
+                if not self.state['ttl_movement_enabled_during_acq']:
+                    # Z and F moves via serial commands at each plane
+                    f_step = self.f_step_generator.__next__()
+                    if f_step != 0:
+                        move_dict.update({'f_rel':f_step})
+                    else: # clear key if no F-step is required
+                        move_dict.pop('f_rel', None)
+
+                    logger.debug(f'move_dict: {move_dict}')
+                    self.move_relative(move_dict)
+
+                else:
+                    logger.debug(f'Z and F steps of ASI stages triggered by TTL')
 
                 ''' The pauseflag allows:
                     - pausing running acquisitions
@@ -1042,11 +1046,10 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_end_image_series.emit(acq, acq_list)
 
         if self.TTL_mode_enabled_in_cfg is True:
-            logger.debug('Attempting to set TTL mode to False')
-            time.sleep(0.05) # add some buffer time for serial execution
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq' : False})
-            time.sleep(0.05)  # buffer time
             logger.debug('TTL mode set to False')
+
+        self.serial_worker.stage.report_position() # Position update when acquisition ends, for logging. Executes in Core thread, direct call.
 
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
