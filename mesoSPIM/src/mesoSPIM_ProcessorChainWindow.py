@@ -15,10 +15,11 @@ class ProcessorChainWindow(QtWidgets.QDialog):
     Allows users to add/remove processors, enable/disable them, and reorder.
     """
     
-    def __init__(self, parent=None, processor_chain=None):
+    def __init__(self, parent=None, processor_chain=None, config_filepath=None):
         super().__init__(parent)
         self.parent = parent
         self.processor_chain = processor_chain
+        self.config_filepath = config_filepath
         
         self.setWindowTitle("Image Processor Chain")
         self.setMinimumSize(600, 400)
@@ -203,6 +204,10 @@ class ProcessorChainWindow(QtWidgets.QDialog):
                     self.processor_chain.enable_processor(i)
                 else:
                     self.processor_chain.disable_processor(i)
+        
+        # Save to config file
+        if self.config_filepath and self.processor_chain:
+            self.processor_chain.save_to_file(self.config_filepath)
         
         self._update_status()
         logger.info("Processor chain configuration applied")

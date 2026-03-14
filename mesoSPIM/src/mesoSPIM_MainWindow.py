@@ -138,6 +138,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.waveformer.moveToThread(self.core_thread)
         self.core.serial_worker.moveToThread(self.core_thread) # depending of signal source, some commands are still executed in main (GUI) thread, eg move_relative() from button press
 
+        # Load processor chain configuration from file
+        self._load_processor_chain_config()
+
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
@@ -384,6 +387,20 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
         self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
+
+        # Add Processor Chain menu item to View menu
+        self.actionProcessor_Chain = QtWidgets.QAction("Processor Chain", self)
+        self.actionProcessor_Chain.setShortcut(QtGui.QKeySequence("Ctrl+Shift+P"))
+        self.menuView.addAction(self.actionProcessor_Chain)
+        self.actionProcessor_Chain.triggered.connect(self.launch_processor_chain_window)
+
+        # Add toolbar
+        self.toolbar = self.addToolBar("Processing")
+        self.toolbar.setMovable(False)
+        self.actionProcessor_Chain_Toolbar = QtWidgets.QAction("Processor Chain", self)
+        self.actionProcessor_Chain_Toolbar.setToolTip("Configure image processing chain (Ctrl+Shift+P)")
+        self.toolbar.addAction(self.actionProcessor_Chain_Toolbar)
+        self.actionProcessor_Chain_Toolbar.triggered.connect(self.launch_processor_chain_window)
 
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
@@ -776,10 +793,23 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if not self.processor_chain_window:
             self.processor_chain_window = ProcessorChainWindow(
                 self, 
-                processor_chain=self.core.camera_worker.processor_chain
+                processor_chain=self.core.camera_worker.processor_chain,
+                config_filepath=self.processor_chain_config_path
             )
         else:
             self.processor_chain_window.show()
+
+    def _load_processor_chain_config(self):
+        """Load processor chain configuration from config file."""
+        import os
+        config_dir = os.path.dirname(self.cfg.__file__)
+        self.processor_chain_config_path = os.path.join(config_dir, 'processor_chain.json')
+        
+        from mesoSPIM_ProcessorChain import ProcessorChain
+        config = ProcessorChain.load_from_file(self.processor_chain_config_path)
+        if config:
+            self.core.camera_worker.processor_chain.set_config(config)
+            logger.info(f"Loaded processor chain: {config}")
 
     def enable_stop_button(self, boolean):
         self.StopButton.setEnabled(boolean)

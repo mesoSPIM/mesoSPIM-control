@@ -3,10 +3,12 @@ Processor Chain - Manages a chain of image processors that can be applied sequen
 """
 
 import logging
+import json
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 import numpy as np
 
-from .plugins.utils import get_image_processor_plugins, get_image_processor_class_from_name
+from mesoSPIM.src.plugins.utils import get_image_processor_plugins, get_image_processor_class_from_name
 
 logger = logging.getLogger(__name__)
 
@@ -266,3 +268,49 @@ class ProcessorChain:
                 if proc_config:
                     idx = len(self._processors) - 1
                     self.configure_processor(idx, proc_config)
+
+    def save_to_file(self, filepath: str) -> bool:
+        """
+        Save the processor chain configuration to a JSON file.
+        
+        Args:
+            filepath: Path to the JSON file
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            config = self.get_config()
+            path = Path(filepath)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, 'w') as f:
+                json.dump(config, f, indent=2)
+            logger.info(f"Processor chain configuration saved to {filepath}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save processor chain config to {filepath}: {e}")
+            return False
+
+    @classmethod
+    def load_from_file(cls, filepath: str) -> Dict[str, Any]:
+        """
+        Load a processor chain configuration from a JSON file.
+        
+        Args:
+            filepath: Path to the JSON file
+            
+        Returns:
+            Dict with chain configuration, or empty dict if file doesn't exist
+        """
+        try:
+            path = Path(filepath)
+            if not path.exists():
+                logger.info(f"Processor chain config file not found: {filepath}")
+                return {}
+            with open(path, 'r') as f:
+                config = json.load(f)
+            logger.info(f"Processor chain configuration loaded from {filepath}")
+            return config
+        except Exception as e:
+            logger.error(f"Failed to load processor chain config from {filepath}: {e}")
+            return {}

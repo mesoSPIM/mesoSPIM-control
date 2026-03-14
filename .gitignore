@@ -18,6 +18,7 @@ prototypes/python-essentials/temp\.tif
 mesoSPIM/config/etl_parameters/*
 !mesoSPIM/config/etl_parameters/ETL-parameters-benchtop.csv
 mesoSPIM/config/*.py
+mesoSPIM/config/processor_chain.json
 !mesoSPIM/config/demo_config.py
 !mesoSPIM/config/*example*_config.py
 !mesoSPIM/config/examples/*.py
