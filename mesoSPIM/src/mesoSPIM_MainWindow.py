@@ -17,6 +17,7 @@ from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
+from .mesoSPIM_ProcessorChainWindow import ProcessorChainWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
@@ -76,6 +77,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_poke_demo_thread = QtCore.pyqtSignal()
     sig_launch_optimizer = QtCore.pyqtSignal(dict)
     sig_launch_contrast_window = QtCore.pyqtSignal()
+    sig_launch_processor_chain_window = QtCore.pyqtSignal()
 
     def __init__(self, package_directory, config, title="mesoSPIM Main Window"):
         super().__init__()
@@ -163,12 +165,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.optimizer = None
         self.contrast_window = None
+        self.processor_chain_window = None
 
         # Signal from state to GUI
         #self.state.sig_updated.connect(self.update_gui_from_state) # too frequent updates because of stage polling
         # The signal switchboard, MainWindow -> Core
         self.sig_launch_optimizer.connect(self.launch_optimizer)
         self.sig_launch_contrast_window.connect(self.launch_contrast_window)
+        self.sig_launch_processor_chain_window.connect(self.launch_processor_chain_window)
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighestPriority)
@@ -418,6 +422,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.centerButton.clicked.connect(self.sig_center_sample.emit)
         self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'etl_offset', 'amplitude': 0.5}))
         self.ContrastWindowButton.clicked.connect(lambda: self.sig_launch_contrast_window.emit())
+
+        # Keyboard shortcut for processor chain window (Ctrl+Shift+P)
+        self.processor_chain_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+Shift+P"), self)
+        self.processor_chain_shortcut.activated.connect(self.launch_processor_chain_window)
 
         ''' Disabling UI buttons if necessary '''
         if hasattr(self.cfg, 'ui_options'):
@@ -762,6 +770,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else:
             self.contrast_window.active = True
             self.contrast_window.show()
+
+    @QtCore.pyqtSlot()
+    def launch_processor_chain_window(self):
+        if not self.processor_chain_window:
+            self.processor_chain_window = ProcessorChainWindow(
+                self, 
+                processor_chain=self.core.camera_worker.processor_chain
+            )
+        else:
+            self.processor_chain_window.show()
 
     def enable_stop_button(self, boolean):
         self.StopButton.setEnabled(boolean)

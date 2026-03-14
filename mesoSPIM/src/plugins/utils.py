@@ -8,6 +8,7 @@ import types
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
 from mesoSPIM.src.plugins.manager import MESOSPIM_PLUGIN_MODULE_PREFIX
 from mesoSPIM.src.plugins.ImageWriterApi import ImageWriter
+from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor
 
 # ------------------------------------------------------------------------------------------------------------------- #
 #                                        General Plugin-discovery utilities                                           #
@@ -95,6 +96,74 @@ def get_image_writer_class_from_name(name: str):
     for writer in get_image_writer_plugins():
         if name == writer['name']:
             return writer['writer_class']
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
+#                                      ImageProcessor Plugin-specific utilities                                      #
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def list_image_processor_plugins():
+    '''Return a list of all registered image processor plugins'''
+    classes = []
+    modules = list_all_registered_mesospim_plugin_modules(prefix=MESOSPIM_PLUGIN_MODULE_PREFIX)
+    for mod in modules:
+        current_classes = list_plugin_classes_of_type(mod, type=ImageProcessor)
+        classes += current_classes
+    return classes
+
+def get_image_processor_plugins():
+    '''Return a list of dict of all registered processor plugins with names, descriptions, capabilities and callable class'''
+    processors = []
+    processor_classes = list_image_processor_plugins()
+    for processor in processor_classes:
+        current_processor = {
+            'name': processor.name(),
+            'description': processor.description(),
+            'capabilities': processor.capabilities(),
+            'processor_class': processor
+        }
+        processors.append(current_processor)
+    return processors
+
+def get_image_processor_from_name(name: str):
+    '''
+    Return the processor dict given its name attribute
+    Structure of processor is determined by function get_processor_plugins()
+    '''
+    for processor in get_image_processor_plugins():
+        if name == processor['name']:
+            return processor
+
+def get_image_processor_class_from_name(name: str):
+    '''
+    Return the processor class given its name attribute
+    This processor class is used directly for processing images
+    processor = processor_class()
+    processed_image = processor.process_frame(image)
+    '''
+    for processor in get_image_processor_plugins():
+        if name == processor['name']:
+            return processor['processor_class']
+
+def create_processor(name: str, params: dict = None):
+    '''
+    Factory function to create a processor instance by name.
+    
+    Args:
+        name: Processor name (from ImageProcessor.name())
+        params: Optional configuration parameters
+        
+    Returns:
+        Instance of the requested processor
+    '''
+    processor_class = get_image_processor_class_from_name(name)
+    if processor_class is None:
+        raise ValueError(f"Unknown processor: {name}")
+    
+    processor = processor_class()
+    if params:
+        processor.configure(params)
+    return processor
 
 
 # ------------------------------------------------------------------------------------------------------------------- #

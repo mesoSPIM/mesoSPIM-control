@@ -17,6 +17,7 @@ except:
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import log_cpu_core, timed
+from .mesoSPIM_ProcessorChain import ProcessorChain
 
 
 class mesoSPIM_Camera(QtCore.QObject):
@@ -86,6 +87,8 @@ class mesoSPIM_Camera(QtCore.QObject):
 
         self.camera.open_camera()
         logger.info('Camera initialized')
+
+        self.processor_chain = ProcessorChain()
 
     def __del__(self):
         try:
@@ -167,6 +170,8 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.cur_image = 0
         logger.info(f'Camera: Finished Preparing Image Series')
         self.start_time = time.time()
+        
+        self.processor_chain.reset()
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     @timed
@@ -180,6 +185,10 @@ class mesoSPIM_Camera(QtCore.QObject):
                 log_cpu_core(logger, msg='add_images_to_series()')
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
+                
+                if self.processor_chain.is_enabled:
+                    images = [self.processor_chain.process(img) for img in images]
+                
                 self.frame_queue.extend(images) # push the list of images into queue
                 # show an image every other timepoint to prevent GUI freezing in long acquisitions
                 if self.cur_image % self.camera_display_temporal_subsampling == 0:
@@ -210,6 +219,10 @@ class mesoSPIM_Camera(QtCore.QObject):
         """"Snap an image and display it"""
         log_cpu_core(logger, msg='snap_image()')
         image = self.camera.get_image().T[::-1]
+        
+        if self.processor_chain.is_enabled:
+            image = self.processor_chain.process(image)
+        
         self.frame_queue_display.append(image) # push the first image into the display queue
         logger.info(f"Image appended to display queue: len(frame_queue_display)={len(self.frame_queue_display)}")
         self.sig_camera_frame.emit() # signal the GUI to update the display
@@ -222,13 +235,20 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.live_image_count = 0
         self.start_time = time.time()
         logger.info('Camera: Preparing Live Mode')
+        
+        self.processor_chain.reset()
 
     @QtCore.pyqtSlot()
     def get_live_image(self):
         images = self.camera.get_live_image()
         log_cpu_core(logger, msg='get_live_image()')
         for image in images:
-            self.frame_queue_display.append(image.T[::-1]) # push the first image into the display queue
+            processed_image = image.T[::-1]
+            
+            if self.processor_chain.is_enabled:
+                processed_image = self.processor_chain.process(processed_image)
+            
+            self.frame_queue_display.append(processed_image) # push the first image into the display queue
             self.sig_camera_frame.emit() # signal the GUI to update the display
             self.live_image_count += 1
             #self.sig_camera_status.emit(str(self.live_image_count))
