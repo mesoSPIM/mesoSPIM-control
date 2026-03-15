@@ -6,6 +6,7 @@ information from multiple frames. It supports models that take 1, 3, 5, 7, 9, or
 """
 
 import logging
+import torch.autograd.grad_mode
 from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -158,8 +159,11 @@ class NeuralDenoiseProcessor(ImageProcessor):
             from mesoSPIM.src.plugins.support_files.ImageProcessors.NeuralDenoise.autoencoder3DLowProfile import \
                 Autoencoder
             self._model = Autoencoder()
-            model.load_state_dict(torch.load(model_path, map_location=self._device))
-            model.eval()
+            self._model.load_state_dict(torch.load(model_path, map_location=self._device))
+            self._model.eval()
+            # print('Compiling model')
+            # self._model = torch.compile(self._model, mode="reduce-overhead")
+
 
             # self._model = torch.jit.load(model_path, map_location=self._device)
             # self._model.eval()
@@ -300,13 +304,18 @@ class NeuralDenoiseProcessor(ImageProcessor):
         
         # Run inference
         frame_tensor = self._torch.from_numpy(frame_array).float().to(self._device)
-        
-        with self._torch.no_grad():
-            try:
+
+        try:
+            with torch.inference_mode():
+                print('In inference mode')
+                # with torch.autocast(device_type=self._device.type, dtype=torch.bfloat16):
+                # print('Next Step Inference')
                 output = self._model(frame_tensor)
-            except Exception as e:
-                logger.error(f"Inference failed: {e}")
-                return image
+                print(f'Frame Processed shape: {output.shape}')
+        except Exception as e:
+            print(f'Inference failed: {e}')
+            logger.error(f"Inference failed: {e}")
+            return image
         
         # Extract middle frame (the denoised output)
         if isinstance(output, tuple):
