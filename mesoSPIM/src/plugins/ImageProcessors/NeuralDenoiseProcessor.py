@@ -12,7 +12,6 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor, ProcessorCapabilities, API_VERSION
-from mesoSPIM.src.plugins.support_files.ImageProcessors.NeuralDenoise.autoencoder3DLowProfile import Autoencoder
 
 # Install zarr via pip if needed
 from mesoSPIM.src.plugins.utils import install_and_import
@@ -156,10 +155,12 @@ class NeuralDenoiseProcessor(ImageProcessor):
             # Load model - adjust based on your model architecture
             # This is a placeholder - adjust based on actual model format
             print('Trying to load model')
+            from mesoSPIM.src.plugins.support_files.ImageProcessors.NeuralDenoise.autoencoder3DLowProfile import \
+                Autoencoder
             self._model = Autoencoder()
             model.load_state_dict(torch.load(model_path, map_location=self._device))
             model.eval()
-            
+
             # self._model = torch.jit.load(model_path, map_location=self._device)
             # self._model.eval()
             # logger.info(f"Loaded neural denoising model: {model_path}")
