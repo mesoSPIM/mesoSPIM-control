@@ -119,6 +119,22 @@ class NeuralDenoiseProcessor(ImageProcessor):
         self._pending_outputs.clear()
         self._last_frame = None
 
+    def _normalize(self, tensor):
+        '''Convert to values betwen 0-1 and normalize'''
+        tensor /= 65534
+        mean = tensor.mean()
+        std = tensor.std()
+        tensor -= mean
+        tensor /= std
+        return tensor, mean, std
+
+    def _denormalize(self, tensor, mean, std):
+        tensor *= std
+        tensor += mean
+        tensor *= 65534
+        return tensor
+
+
     def _load_model(self):
         """Lazy load the PyTorch model."""
         if self._model is not None:
@@ -310,7 +326,9 @@ class NeuralDenoiseProcessor(ImageProcessor):
                 print('In inference mode')
                 # with torch.autocast(device_type=self._device.type, dtype=torch.bfloat16):
                 # print('Next Step Inference')
+                frame_tensor, mean, std = self._normalize(frame_tensor)
                 output = self._model(frame_tensor)
+                output = self._denormalize(output, mean, std)
                 print(f'Frame Processed shape: {output.shape}')
         except Exception as e:
             print(f'Inference failed: {e}')
