@@ -2,6 +2,7 @@
 import inspect
 import sys
 import subprocess
+import importlib.metadata
 import logging
 logger = logging.getLogger(__name__)
 import types
@@ -170,29 +171,59 @@ def create_processor(name: str, params: dict = None):
 #                                      Helpers to ensure functioning plugins                                          #
 # ------------------------------------------------------------------------------------------------------------------- #
 
-def install_and_import(package_name, version=None):
+# def install_and_import(package_name, version=None):
+#     """
+#     Attempts to import a package. If not found, attempts to install
+#     a specific version (if specified) or the latest version.
+#     """
+#
+#     # Format the installation target
+#     install_target = f"{package_name}=={version}" if version else package_name
+#
+#     try:
+#         __import__(package_name)
+#         # print(f"'{package_name}' already imported (version check might be needed).")
+#     except ImportError:
+#         print(f"'{package_name}' not found. Attempting to install {install_target}...")
+#         try:
+#             # Use the same Python executable to ensure pip installs into the correct environment
+#             subprocess.check_call([sys.executable, "-m", "pip", "install", install_target])
+#             print(f"'{install_target}' installed successfully.")
+#             __import__(package_name)  # Import the newly installed package
+#         except subprocess.CalledProcessError as e:
+#             print(f"Failed to install '{install_target}'. Error: {e}")
+#             sys.exit(1)
+#         except Exception as e:
+#             print(f"An unexpected error occurred during installation: {e}")
+#             sys.exit(1)
+
+
+def install_and_import(package_name, version=None, index_url=None, force_reinstall=False):
     """
-    Attempts to import a package. If not found, attempts to install
-    a specific version (if specified) or the latest version.
+    Import a package if available; otherwise install it.
+    If index_url is provided, pip installs from that index.
     """
 
-    # Format the installation target
     install_target = f"{package_name}=={version}" if version else package_name
 
-    try:
-        __import__(package_name)
-        # print(f"'{package_name}' already imported (version check might be needed).")
-    except ImportError:
-        print(f"'{package_name}' not found. Attempting to install {install_target}...")
+    need_install = force_reinstall
+    if not need_install:
         try:
-            # Use the same Python executable to ensure pip installs into the correct environment
-            subprocess.check_call([sys.executable, "-m", "pip", "install", install_target])
-            print(f"'{install_target}' installed successfully.")
-            __import__(package_name)  # Import the newly installed package
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to install '{install_target}'. Error: {e}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"An unexpected error occurred during installation: {e}")
-            sys.exit(1)
+            __import__(package_name)
+            print(f"'{package_name}' already importable.")
+            return
+        except ImportError:
+            need_install = True
 
+    if need_install:
+        print(f"Installing {install_target} ...")
+        cmd = [sys.executable, "-m", "pip", "install"]
+        if force_reinstall:
+            cmd += ["--force-reinstall"]
+        if index_url:
+            cmd += ["--index-url", index_url]
+        cmd += [install_target]
+
+        subprocess.check_call(cmd)
+        __import__(package_name)
+        print(f"Installed '{install_target}' successfully.")
