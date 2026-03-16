@@ -97,10 +97,10 @@ class Autoencoder(nn.Module):
                 f"Expected input shape (N,D,H,W) or (N,1,D,H,W), got {tuple(x.shape)}"
             )
 
-        if x.shape[2] % 2 == 0:
-            raise ValueError(
-                f"Expected an odd number of z-planes so there is a center slice, got D={x.shape[2]}"
-            )
+        # if x.shape[2] % 2 == 0:
+        #     raise ValueError(
+        #         f"Expected an odd number of z-planes so there is a center slice, got D={x.shape[2]}"
+        #     )
 
         skips = [x]
 
@@ -149,8 +149,8 @@ class Autoencoder(nn.Module):
         x = self.out1(x)                  # (N, 8, D, H, W)
         x = self.out2(x)                  # (N, 8, D, H, W)
 
-        center_idx = x.shape[2] // 2
-        x = x[:, :, center_idx, :, :]     # (N, 8, H, W)
+        # center_idx = x.shape[2] // 2
+        x = x[:, :, -1, :, :]     # (N, 8, H, W)
 
         x = self.final2d(x)               # (N, 1, H, W)
         return x
