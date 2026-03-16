@@ -6,7 +6,6 @@ information from multiple frames. It supports models that take 1, 3, 5, 7, 9, or
 """
 
 import logging
-from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Optional
 import numpy as np
@@ -35,12 +34,15 @@ class NeuralDenoiseProcessor(ImageProcessor):
     """
 
     def __init__(self):
-        self.num_frames = 3  # Default to 3-frame model
+        self.num_frames = 3
         self.device = 'auto'
         self._model = None
         self._torch = None
-        self._buffer = deque(maxlen=self.num_frames)
-        self._last_frame = None
+
+        self._gpu_raw_buffer = None
+        self._gpu_input_buffer = None
+        self._frame_shape = None
+        self._gpu_initialized = False
 
     @classmethod
     def api_version(cls) -> str:
@@ -59,7 +61,7 @@ class NeuralDenoiseProcessor(ImageProcessor):
         return ProcessorCapabilities(
             dtype_in=["uint8", "uint16", "float32"],
             dtype_out=["uint8", "uint16", "float32"],
-            ndim=[2, 3],
+            ndim=[2],
             is_inplace=False,
             streaming_safe=False,
         )
@@ -83,20 +85,28 @@ class NeuralDenoiseProcessor(ImageProcessor):
         }
 
     def configure(self, params: Dict[str, Any]) -> None:
-        """Configure the processor with parameters."""
         if 'num_frames' in params:
             num_frames = int(params['num_frames'])
             if num_frames not in [1, 3, 5, 7, 9, 11]:
                 logger.warning(f"Invalid num_frames {num_frames}, using 3")
                 num_frames = 3
-            
-            # Reset buffer if num_frames changed
+
             if num_frames != self.num_frames:
                 self.num_frames = num_frames
-                self._buffer = deque(maxlen=self.num_frames)
-        
+                self._model = None
+                self._gpu_raw_buffer = None
+                self._gpu_input_buffer = None
+                self._frame_shape = None
+                self._gpu_initialized = False
+
         if 'device' in params:
-            self.device = params['device']
+            if params['device'] != self.device:
+                self.device = params['device']
+                self._model = None
+                self._gpu_raw_buffer = None
+                self._gpu_input_buffer = None
+                self._frame_shape = None
+                self._gpu_initialized = False
 
     def get_config(self) -> Dict[str, Any]:
         return {
@@ -105,9 +115,11 @@ class NeuralDenoiseProcessor(ImageProcessor):
         }
 
     def reset(self) -> None:
-        """Reset the frame buffer and counter."""
-        self._buffer = deque(maxlen=self.num_frames)
-        self._last_frame = None
+        """Reset the frame buffer."""
+        self._gpu_raw_buffer = None
+        self._gpu_input_buffer = None
+        self._frame_shape = None
+        self._gpu_initialized = False
 
     def _normalize(self, tensor):
         """
@@ -200,6 +212,25 @@ class NeuralDenoiseProcessor(ImageProcessor):
             logger.error(f"Failed to load model: {e}")
             raise
 
+    def _ensure_gpu_buffers(self, image: np.ndarray) -> None:
+        if image.ndim != 2:
+            raise ValueError(f"Expected 2D frame input, got shape {image.shape}")
+
+        H, W = image.shape
+        shape = (H, W)
+
+        if self._gpu_raw_buffer is not None and self._frame_shape == shape:
+            return
+
+        self._frame_shape = shape
+        self._gpu_raw_buffer = self._torch.empty(
+            (1, self.num_frames, H, W),
+            dtype=self._torch.float32,
+            device=self._device,
+        )
+        self._gpu_input_buffer = self._torch.empty_like(self._gpu_raw_buffer)
+        self._gpu_initialized = False
+
     def process_frame(self, image: np.ndarray) -> np.ndarray:
         """Process a single frame through the temporal denoising buffer.
 
@@ -217,35 +248,36 @@ class NeuralDenoiseProcessor(ImageProcessor):
                 return image
 
         input_dtype = image.dtype
-        image_copy = image.copy()
-        self._last_frame = image_copy
 
-        # First frame: fill the entire buffer with copies of the first frame
-        if len(self._buffer) == 0:
-            self._buffer = deque(
-                [image_copy.copy() for _ in range(self.num_frames)],
-                maxlen=self.num_frames
-            )
+        image = np.ascontiguousarray(image)
+        self._ensure_gpu_buffers(image)
+
+        # image_c = np.ascontiguousarray(image)
+        new_frame_gpu = self._torch.from_numpy(image).to(self._device, dtype=self._torch.float32)
+
+        # new_frame_gpu = self._torch.from_numpy(image).to(
+        #     self._device, dtype=self._torch.float32, non_blocking=True
+        # )
+
+        if not self._gpu_initialized:
+            self._gpu_raw_buffer[:] = new_frame_gpu.unsqueeze(0).unsqueeze(0)
+            self._gpu_initialized = True
         else:
-            # Later frames: append newest, automatically drop oldest
-            self._buffer.append(image_copy)
+            self._gpu_raw_buffer[:, :-1].copy_(self._gpu_raw_buffer[:, 1:].clone())
+            self._gpu_raw_buffer[:, -1].copy_(new_frame_gpu)
 
-        # Stack buffer into (D, H, W)
-        frame_array = np.stack(list(self._buffer), axis=0)
-
-        # Add batch dimension -> (1, D, H, W)
-        frame_tensor = self._torch.from_numpy(frame_array).float().unsqueeze(0).to(self._device)
+        self._gpu_input_buffer.copy_(self._gpu_raw_buffer)
 
         try:
             with self._torch.inference_mode():
                 if self._device.type == "cuda":
                     with self._torch.autocast(device_type="cuda", dtype=self._torch.float16):
-                        frame_tensor, mean, std = self._normalize(frame_tensor)
-                        output = self._model(frame_tensor)
+                        self._gpu_input_buffer, mean, std = self._normalize(self._gpu_input_buffer)
+                        output = self._model(self._gpu_input_buffer)
                         output = self._denormalize(output, mean, std)
                 else:
-                    frame_tensor, mean, std = self._normalize(frame_tensor)
-                    output = self._model(frame_tensor)
+                    self._gpu_input_buffer, mean, std = self._normalize(self._gpu_input_buffer)
+                    output = self._model(self._gpu_input_buffer)
                     output = self._denormalize(output, mean, std)
         except Exception as e:
             print(f"Inference failed: {e}")
@@ -255,12 +287,9 @@ class NeuralDenoiseProcessor(ImageProcessor):
         if isinstance(output, tuple):
             output = output[0]
 
-        # Model output should be (1, 1, H, W)
         result = output[0, 0].detach().float().cpu().numpy()
-
-        # Cast back to original input dtype
-        # denormalize maintains float 0-1 range, so we can just scale and cast back to uint16 or uint8
         result = np.clip(result, 0.0, 1.0)
+
         if input_dtype == np.uint16:
             result = np.rint(result * 65535.0).astype(np.uint16, copy=False)
         elif input_dtype == np.uint8:
