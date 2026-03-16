@@ -6,7 +6,6 @@ information from multiple frames. It supports models that take 1, 3, 5, 7, 9, or
 """
 
 import logging
-import torch.autograd.grad_mode
 from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -16,8 +15,8 @@ from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor, ProcessorCapa
 
 # Install zarr via pip if needed
 from mesoSPIM.src.plugins.utils import install_and_import
-install_and_import('torch')
-install_and_import('torchvision')
+install_and_import('torch', index_url="https://download.pytorch.org/whl/cu128")
+install_and_import('torchvision', index_url="https://download.pytorch.org/whl/cu128")
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +141,7 @@ class NeuralDenoiseProcessor(ImageProcessor):
         
         try:
             import torch
+            # import torch.autograd.grad_mode
             self._torch = torch
         except ImportError:
             print('Failed to import torch')
@@ -151,9 +151,9 @@ class NeuralDenoiseProcessor(ImageProcessor):
         
         # Determine device
         if self.device == 'auto':
-            self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self._device = self._torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
-            self._device = torch.device(self.device)
+            self._device = self._torch.device(self.device)
         
         logger.info(f"NeuralDenoiseProcessor using device: {self._device}")
         
@@ -169,19 +169,31 @@ class NeuralDenoiseProcessor(ImageProcessor):
         logger.info(f"Loading model from: {model_path}")
         
         try:
-            # Load model - adjust based on your model architecture
-            # This is a placeholder - adjust based on actual model format
+
             print('Trying to load model')
             from mesoSPIM.src.plugins.support_files.ImageProcessors.NeuralDenoise.autoencoder3DLowProfile import \
                 Autoencoder
-            self._model = Autoencoder()
-            self._model.load_state_dict(torch.load(model_path, map_location=self._device))
+            self._model = Autoencoder().to(self._device)
+            state_dict = self._torch.load(model_path, map_location=self._device)
+            self._model.load_state_dict(state_dict)
             self._model.eval()
-            # print('Compiling model')
-            # self._model = torch.compile(self._model, mode="reduce-overhead")
 
+            """
+            Compile is causing errors probably due to windows. Linux has better support.
+            
+            Inference failed: Cannot find a working triton installation. Either the package is not installed or it is too old. More information on installing Triton can be found at: https://github.com/triton-lang/triton
 
-            # self._model = torch.jit.load(model_path, map_location=self._device)
+            Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+            try:
+                print('Compiling model')
+                self._model = self._torch.compile(self._model, mode="reduce-overhead")
+            except:
+                print('Model compilation failed, using uncompiled model')
+                logger.warning("Model compilation failed, using uncompiled model. This may result in slower inference.")
+            """
+
+            # self._model = self._torch.jit.load(model_path, map_location=self._device)
             # self._model.eval()
             # logger.info(f"Loaded neural denoising model: {model_path}")
         except Exception as e:
@@ -322,13 +334,16 @@ class NeuralDenoiseProcessor(ImageProcessor):
         frame_tensor = self._torch.from_numpy(frame_array).float().to(self._device)
 
         try:
-            with torch.inference_mode():
-                print('In inference mode')
-                # with torch.autocast(device_type=self._device.type, dtype=torch.bfloat16):
-                # print('Next Step Inference')
-                frame_tensor, mean, std = self._normalize(frame_tensor)
-                output = self._model(frame_tensor)
-                output = self._denormalize(output, mean, std)
+            with self._torch.inference_mode():
+                if self._device.type == "cuda":
+                    with self._torch.autocast(device_type="cuda", dtype=self._torch.float16):
+                        frame_tensor, mean, std = self._normalize(frame_tensor)
+                        output = self._model(frame_tensor)
+                        output = self._denormalize(output, mean, std)
+                else:
+                    frame_tensor, mean, std = self._normalize(frame_tensor)
+                    output = self._model(frame_tensor)
+                    output = self._denormalize(output, mean, std)
                 print(f'Frame Processed shape: {output.shape}')
         except Exception as e:
             print(f'Inference failed: {e}')
