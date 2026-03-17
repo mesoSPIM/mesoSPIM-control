@@ -465,6 +465,24 @@
          </property>
         </widget>
        </item>
+       <item row="2" column="7">
+        <widget class="QPushButton" name="GroupByIlluminationButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Collapse rows with the same illumination side (Left/Right) into a single representative row. Click again to expand.</string>
+         </property>
+         <property name="text">
+          <string>Group by Illumination (L/R)</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
     </layout>

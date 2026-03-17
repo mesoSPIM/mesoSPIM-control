@@ -148,8 +148,9 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
 
         self.GroupByChannelButton.toggled.connect(self.toggle_group_by_channel)
+        self.GroupByIlluminationButton.toggled.connect(self.toggle_group_by_illumination)
         self._propagating_group_changes = False
-        self._group_map = {}  # laser -> [ordered list of row indices]
+        self._group_map = {}  # key -> [ordered list of row indices]
         # Propagation must be connected before _reapply_grouping_if_active so it
         # fires first and sibling rows are in sync before headers are refreshed.
         self.model.dataChanged.connect(self._propagate_grouped_edit)
@@ -533,54 +534,82 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         return msg_box.exec_()
 
-    def toggle_group_by_channel(self, checked):
-        '''Toggle the group-by-channel display mode.
+    def _apply_grouping(self, key_getter, label_getter):
+        '''Generic grouping engine shared by channel and illumination modes.
 
-        When *checked* is True, rows that share the same laser value are
-        collapsed: only the first row per laser is shown and the vertical
-        header displays "<laser> (N stacks)".  When *checked* is False all
-        rows are restored.
+        Args:
+            key_getter: callable(row) -> str   — extracts the grouping key for a row
+            label_getter: callable(key, count) -> str — builds the vertical header label
         '''
-        if checked:
-            self.GroupByChannelButton.setText('Ungroup by Laser')
-            self.apply_group_by_channel()
-        else:
-            self.GroupByChannelButton.setText('Group by Laser')
-            self.clear_group_by_channel()
-
-    def apply_group_by_channel(self):
-        '''Hide all but the first row for each unique laser value and update
-        the vertical header to show per-channel stack counts.
-
-        Also rebuilds ``_group_map`` (laser → ordered list of row indices) so
-        that ``_propagate_grouped_edit`` knows which rows belong together.
-        '''
-        laser_rows = {}  # laser -> [row, row, ...] in model order
+        key_rows = {}
         for row in range(self.model.rowCount()):
-            laser = self.model.getLaser(row)
-            if laser not in laser_rows:
-                laser_rows[laser] = []
-            laser_rows[laser].append(row)
+            key = key_getter(row)
+            if key not in key_rows:
+                key_rows[key] = []
+            key_rows[key].append(row)
 
-        self._group_map = laser_rows
+        self._group_map = key_rows
 
         grouped_headers = {}
-        for laser, rows in laser_rows.items():
+        for key, rows in key_rows.items():
             first_row = rows[0]
-            count = len(rows)
-            label = f"{laser} ({count} stack{'s' if count != 1 else ''})"
-            grouped_headers[first_row] = label
+            grouped_headers[first_row] = label_getter(key, len(rows))
             for row in rows:
                 self.table.setRowHidden(row, row != first_row)
 
         self.model.set_grouped_headers(grouped_headers)
 
-    def clear_group_by_channel(self):
+    def _clear_grouping(self):
         '''Show all rows and restore default "Stack N" vertical header labels.'''
         self._group_map = {}
         for row in range(self.model.rowCount()):
             self.table.setRowHidden(row, False)
         self.model.set_grouped_headers(None)
+
+    def toggle_group_by_channel(self, checked):
+        '''Toggle grouping rows by laser (channel).'''
+        if checked:
+            self.GroupByChannelButton.setText('Ungroup by Laser')
+            # Deactivate the other group button without triggering its handler
+            self.GroupByIlluminationButton.blockSignals(True)
+            self.GroupByIlluminationButton.setChecked(False)
+            self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
+            self.GroupByIlluminationButton.blockSignals(False)
+            self.apply_group_by_channel()
+        else:
+            self.GroupByChannelButton.setText('Group by Laser')
+            self._clear_grouping()
+
+    def apply_group_by_channel(self):
+        '''Group rows by laser value.'''
+        self._apply_grouping(
+            key_getter=lambda row: self.model.getLaser(row),
+            label_getter=lambda key, n: f"{key} ({n} stack{'s' if n != 1 else ''})"
+        )
+
+    def toggle_group_by_illumination(self, checked):
+        '''Toggle grouping rows by illumination side (Left / Right).'''
+        if checked:
+            self.GroupByIlluminationButton.setText('Ungroup by Illumination')
+            # Deactivate the other group button without triggering its handler
+            self.GroupByChannelButton.blockSignals(True)
+            self.GroupByChannelButton.setChecked(False)
+            self.GroupByChannelButton.setText('Group by Laser')
+            self.GroupByChannelButton.blockSignals(False)
+            self.apply_group_by_illumination()
+        else:
+            self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
+            self._clear_grouping()
+
+    def apply_group_by_illumination(self):
+        '''Group rows by (laser, illumination side) combination.'''
+        self._apply_grouping(
+            key_getter=lambda row: (self.model.getLaser(row), self.model.getShutterconfig(row)),
+            label_getter=lambda key, n: f"{key[0]}, {key[1]} ({n} stack{'s' if n != 1 else ''})"
+        )
+
+    # keep old name as an alias so existing callers still work
+    clear_group_by_channel = _clear_grouping
 
     def _propagate_grouped_edit(self, top_left, bottom_right):
         '''When in grouped mode, propagate edits on a representative row to all
@@ -591,7 +620,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         '''
         if self._propagating_group_changes:
             return
-        if not self.GroupByChannelButton.isChecked() or not self._group_map:
+        if not (self.GroupByChannelButton.isChecked() or self.GroupByIlluminationButton.isChecked()) or not self._group_map:
             return
         changed_row = top_left.row()
         col_start = top_left.column()
@@ -615,6 +644,8 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         '''Re-apply grouping whenever the model changes (data edit, row add/remove).'''
         if self.GroupByChannelButton.isChecked():
             self.apply_group_by_channel()
+        elif self.GroupByIlluminationButton.isChecked():
+            self.apply_group_by_illumination()
 
     def auto_illumination(self, margin_um=500):
         message = 'Illumination (Left/Right) will be changed based on x-positions of tiles on the grid.\n\n'
