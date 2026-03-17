@@ -146,9 +146,9 @@ class Acquisition(indexed.IndexedOrderedDict):
             f_rel = -f_rel
         
         if not inverted:
-            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : z_rel, 'f_rel' : f_rel, 'theta_rel': 0}
+            return {'x_rel' : 0.0, 'y_rel': 0.0, 'z_rel' : z_rel, 'f_rel' : f_rel, 'theta_rel': 0.0}
         else:
-            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : -z_rel, 'f_rel' : -f_rel, 'theta_rel': 0}
+            return {'x_rel' : 0.0, 'y_rel': 0.0, 'z_rel' : -z_rel, 'f_rel' : -f_rel, 'theta_rel': 0.0}
 
     def get_delta_dict(self):
         ''' Returns relative movement dict for z-steps and f-steps'''

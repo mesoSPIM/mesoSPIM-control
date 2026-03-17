@@ -942,7 +942,8 @@ class mesoSPIM_Core(QtCore.QObject):
             time.sleep(0.1)
             self.move_relative(acq.get_delta_z_and_delta_f_dict())
             self.sig_state_request.emit({'ttl_movement_enabled_during_acq': True})
-            logger.debug(f"ASI Z- and F- stages moved ({acq.get_delta_z_and_delta_f_dict()}) at the start position and TTL mode set to True")
+            delta_dict = acq.get_delta_z_and_delta_f_dict()
+            logger.debug(f"ASI Z- and F- stages moved ({{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in delta_dict.items()])}}}) at the start position and TTL mode set to True")
 
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list) # signal to the Camera
@@ -990,7 +991,7 @@ class mesoSPIM_Core(QtCore.QObject):
                     else: # clear key if no F-step is required
                         move_dict.pop('f_rel', None)
 
-                    logger.debug(f'move_dict: {move_dict}')
+                    logger.debug(f"move_dict: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in move_dict.items()])}}}")
                     self.move_relative(move_dict)
 
                 else:

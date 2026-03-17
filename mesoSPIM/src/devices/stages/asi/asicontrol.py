@@ -167,7 +167,7 @@ class StageControlASI(QtCore.QObject):
         command_string = 'R'
         for axis in motion_dict.keys():
             if self.axis_in_config_check(axis):
-                command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*self.encoder_conversion[axis])
+                command_string = command_string + ' ' + axis + '=' + f"{motion_dict[axis]*self.encoder_conversion[axis]:.3f}"
         if command_string != 'R':
             command_string += '\r'
             self._send_command(command_string.encode('ascii'))
@@ -183,7 +183,7 @@ class StageControlASI(QtCore.QObject):
         command_string = 'M'
         for axis in motion_dict.keys():
             if self.axis_in_config_check(axis):
-                command_string = command_string + ' ' + axis + '=' + str(motion_dict[axis]*self.encoder_conversion[axis])
+                command_string = command_string + ' ' + axis + '=' + f"{motion_dict[axis]*self.encoder_conversion[axis]:.3f}"
                 
         if command_string != 'M':
             command_string += '\r'
