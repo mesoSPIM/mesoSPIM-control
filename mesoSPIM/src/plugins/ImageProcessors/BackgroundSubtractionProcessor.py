@@ -42,6 +42,34 @@ class BackgroundSubtractionProcessor(ImageProcessor):
             streaming_safe=False,
         )
 
+    @classmethod
+    def parameter_descriptions(cls) -> Dict[str, Dict[str, Any]]:
+        return {
+            'method': {
+                'type': 'str',
+                'default': 'rolling_ball',
+                'choices': ['rolling_ball', 'threshold'],
+                'description': 'Background estimation mode.',
+            },
+            'radius': {
+                'type': 'int',
+                'default': 50,
+                'min': 1,
+                'max': 1000,
+                'step': 1,
+                'description': 'Uniform filter radius used for rolling-ball approximation.',
+            },
+            'threshold': {
+                'type': 'float',
+                'default': 0.0,
+                'min': 0.0,
+                'max': 65535.0,
+                'step': 1.0,
+                'decimals': 1,
+                'description': 'Constant value subtracted in threshold mode.',
+            },
+        }
+
     def configure(self, params: Dict[str, Any]) -> None:
         if 'method' in params:
             self.method = params['method']

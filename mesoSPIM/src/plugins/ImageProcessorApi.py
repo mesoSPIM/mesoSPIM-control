@@ -111,6 +111,9 @@ class ImageProcessorWithConfig(ImageProcessor, Protocol):
                     'default': default_value,
                     'min': min_value,  # for int/float
                     'max': max_value,  # for int/float
+                    'step': step_value,  # optional for int/float widgets
+                    'decimals': decimal_count,  # optional for float widgets
+                    'choices': [allowed, values],  # optional for enums/dropdowns
                     'description': 'human readable description'
                 }
             }

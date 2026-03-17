@@ -797,7 +797,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 config_filepath=self.processor_chain_config_path
             )
         else:
-            self.processor_chain_window.show()
+            self.processor_chain_window.refresh_from_chain()
+        self.processor_chain_window.show()
 
     def _load_processor_chain_config(self):
         """Load processor chain configuration from config file."""

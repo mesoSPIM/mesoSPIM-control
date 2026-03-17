@@ -36,3 +36,4 @@ mesoSPIM/test/fixtures/
 docs/_build/
 docs/build_log.txt
 /.vscode
+PROJECT_CONTEXT.md

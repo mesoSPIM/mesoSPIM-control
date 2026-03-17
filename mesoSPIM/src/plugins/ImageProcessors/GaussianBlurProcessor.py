@@ -39,6 +39,20 @@ class GaussianBlurProcessor(ImageProcessor):
             streaming_safe=True,
         )
 
+    @classmethod
+    def parameter_descriptions(cls) -> Dict[str, Dict[str, Any]]:
+        return {
+            'sigma': {
+                'type': 'float',
+                'default': 1.0,
+                'min': 0.0,
+                'max': 100.0,
+                'step': 0.1,
+                'decimals': 2,
+                'description': 'Gaussian smoothing sigma in pixels.',
+            }
+        }
+
     def configure(self, params: Dict[str, Any]) -> None:
         if 'sigma' in params:
             self.sigma = float(params['sigma'])

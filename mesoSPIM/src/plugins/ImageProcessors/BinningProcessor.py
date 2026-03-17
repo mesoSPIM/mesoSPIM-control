@@ -40,6 +40,25 @@ class BinningProcessor(ImageProcessor):
             streaming_safe=True,
         )
 
+    @classmethod
+    def parameter_descriptions(cls) -> Dict[str, Dict[str, Any]]:
+        return {
+            'bin_factor': {
+                'type': 'int',
+                'default': 2,
+                'min': 1,
+                'max': 16,
+                'step': 1,
+                'description': 'Square binning factor applied to X and Y.',
+            },
+            'method': {
+                'type': 'str',
+                'default': 'mean',
+                'choices': ['mean', 'sum', 'max'],
+                'description': 'Reduction method used inside each bin.',
+            },
+        }
+
     def configure(self, params: Dict[str, Any]) -> None:
         if 'bin_factor' in params:
             self.bin_factor = int(params['bin_factor'])

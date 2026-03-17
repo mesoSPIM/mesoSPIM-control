@@ -72,14 +72,14 @@ class NeuralDenoiseProcessor(ImageProcessor):
             'num_frames': {
                 'type': 'int',
                 'default': 3,
-                'min': 1,
-                'max': 11,
+                'choices': [1, 3, 5, 7, 9, 11],
                 'description': 'Number of frames for temporal denoising (1, 3, 5, 7, 9, or 11). '
                                'Must have corresponding denoise_Nframe.pth model file.'
             },
             'device': {
                 'type': 'str',
                 'default': 'auto',
+                'choices': ['auto', 'cuda', 'cpu'],
                 'description': 'Device for inference: "auto" (GPU if available), "cuda", or "cpu"'
             }
         }
