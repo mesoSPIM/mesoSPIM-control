@@ -147,6 +147,16 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
 
+        self.GroupByChannelButton.toggled.connect(self.toggle_group_by_channel)
+        self._propagating_group_changes = False
+        self._group_map = {}  # laser -> [ordered list of row indices]
+        # Propagation must be connected before _reapply_grouping_if_active so it
+        # fires first and sibling rows are in sync before headers are refreshed.
+        self.model.dataChanged.connect(self._propagate_grouped_edit)
+        self.model.dataChanged.connect(self._reapply_grouping_if_active)
+        self.model.rowsInserted.connect(self._reapply_grouping_if_active)
+        self.model.rowsRemoved.connect(self._reapply_grouping_if_active)
+
         font = QtGui.QFont()
         font.setPointSize(14)
         self.table.horizontalHeader().setFont(font)
@@ -234,16 +244,19 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.display_warning("Can't delete last row!")
 
     def delete_all_rows(self):
-        ''' 
-        Displays a warning that this will delete the entire table
-        and then proceeds to delete if the user clicks 'Yes'
+        '''Delete all currently selected rows (requires at least one selection;
+        prevents deletion of the very last remaining row).
         '''
-        reply = QtWidgets.QMessageBox.warning(self,"mesoSPIM Warning",
-                'Do you want to delete the table?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No )
-        
-        if reply == QtWidgets.QMessageBox.Yes:
-            self.model.deleteTable()
+        rows = self.get_selected_rows()
+        if not rows:
+            self.display_no_row_selected_warning()
+            return
+        unique_rows = sorted(set(rows), reverse=True)  # delete from bottom up
+        if len(unique_rows) >= self.model.rowCount():
+            self.display_warning("Can't delete all rows — at least one must remain!")
+            return
+        for row in unique_rows:
+            self.model.removeRows(row, 1)
 
     def copy_row(self):
         row = self.get_first_selected_row()
@@ -519,6 +532,89 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         msg_box.setFont(font)
         msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         return msg_box.exec_()
+
+    def toggle_group_by_channel(self, checked):
+        '''Toggle the group-by-channel display mode.
+
+        When *checked* is True, rows that share the same laser value are
+        collapsed: only the first row per laser is shown and the vertical
+        header displays "<laser> (N stacks)".  When *checked* is False all
+        rows are restored.
+        '''
+        if checked:
+            self.GroupByChannelButton.setText('Ungroup by Laser')
+            self.apply_group_by_channel()
+        else:
+            self.GroupByChannelButton.setText('Group by Laser')
+            self.clear_group_by_channel()
+
+    def apply_group_by_channel(self):
+        '''Hide all but the first row for each unique laser value and update
+        the vertical header to show per-channel stack counts.
+
+        Also rebuilds ``_group_map`` (laser → ordered list of row indices) so
+        that ``_propagate_grouped_edit`` knows which rows belong together.
+        '''
+        laser_rows = {}  # laser -> [row, row, ...] in model order
+        for row in range(self.model.rowCount()):
+            laser = self.model.getLaser(row)
+            if laser not in laser_rows:
+                laser_rows[laser] = []
+            laser_rows[laser].append(row)
+
+        self._group_map = laser_rows
+
+        grouped_headers = {}
+        for laser, rows in laser_rows.items():
+            first_row = rows[0]
+            count = len(rows)
+            label = f"{laser} ({count} stack{'s' if count != 1 else ''})"
+            grouped_headers[first_row] = label
+            for row in rows:
+                self.table.setRowHidden(row, row != first_row)
+
+        self.model.set_grouped_headers(grouped_headers)
+
+    def clear_group_by_channel(self):
+        '''Show all rows and restore default "Stack N" vertical header labels.'''
+        self._group_map = {}
+        for row in range(self.model.rowCount()):
+            self.table.setRowHidden(row, False)
+        self.model.set_grouped_headers(None)
+
+    def _propagate_grouped_edit(self, top_left, bottom_right):
+        '''When in grouped mode, propagate edits on a representative row to all
+        other rows in that laser group.
+
+        The guard ``_propagating_group_changes`` prevents the ``setData`` calls
+        inside this method from triggering another propagation round.
+        '''
+        if self._propagating_group_changes:
+            return
+        if not self.GroupByChannelButton.isChecked() or not self._group_map:
+            return
+        changed_row = top_left.row()
+        col_start = top_left.column()
+        col_end = bottom_right.column()
+        for laser, rows in self._group_map.items():
+            if rows and changed_row == rows[0]:
+                siblings = rows[1:]
+                if not siblings:
+                    return
+                self._propagating_group_changes = True
+                try:
+                    for sibling_row in siblings:
+                        for col in range(col_start, col_end + 1):
+                            value = self.model.data(self.model.index(changed_row, col))
+                            self.model.setData(self.model.index(sibling_row, col), value)
+                finally:
+                    self._propagating_group_changes = False
+                return
+
+    def _reapply_grouping_if_active(self, *args):
+        '''Re-apply grouping whenever the model changes (data edit, row add/remove).'''
+        if self.GroupByChannelButton.isChecked():
+            self.apply_group_by_channel()
 
     def auto_illumination(self, margin_um=500):
         message = 'Illumination (Left/Right) will be changed based on x-positions of tiles on the grid.\n\n'

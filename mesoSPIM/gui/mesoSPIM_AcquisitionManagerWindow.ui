@@ -92,10 +92,10 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Deletes all rows in the table</string>
+          <string>Deletes all selected rows</string>
          </property>
          <property name="text">
-          <string>Delete all Rows</string>
+          <string>Delete selected Rows</string>
          </property>
         </widget>
        </item>
@@ -444,6 +444,24 @@
          </property>
          <property name="text">
           <string>Auto L/R illumination</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="7">
+        <widget class="QPushButton" name="GroupByChannelButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Collapse rows with the same laser (channel) into a single representative row. Click again to expand.</string>
+         </property>
+         <property name="text">
+          <string>Group by Laser</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

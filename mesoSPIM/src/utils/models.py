@@ -30,6 +30,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
         ''' Get the headers as the capitalized keys from the first acquisition '''
         self._headers = self._table.get_capitalized_keylist()
+        self._grouped_headers = None
 
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
@@ -69,7 +70,20 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return self._headers[section]
             if orientation == QtCore.Qt.Vertical:
+                if self._grouped_headers is not None and section in self._grouped_headers:
+                    return self._grouped_headers[section]
                 return 'Stack ' + str(section)
+
+    def set_grouped_headers(self, grouped_headers):
+        '''Set custom vertical header labels for grouped display.
+
+        Args:
+            grouped_headers: dict mapping model row index -> label string,
+                             or None to restore default "Stack N" labels.
+        '''
+        self._grouped_headers = grouped_headers
+        if self.rowCount() > 0:
+            self.headerDataChanged.emit(QtCore.Qt.Vertical, 0, self.rowCount() - 1)
 
     def data(self, index, role = QtCore.Qt.DisplayRole):
         ''' Data allows to fetch one item'''
