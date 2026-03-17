@@ -182,9 +182,13 @@ class NeuralDenoiseProcessor(ImageProcessor):
         try:
 
             print('Trying to load model')
-            from mesoSPIM.src.plugins.support_files.ImageProcessors.NeuralDenoise.autoencoder3DLowProfile import \
-                Autoencoder
-            self._model = Autoencoder().to(self._device)
+            # from mesoSPIM.src.plugins.support_files.ImageProcessors.NeuralDenoise.autoencoder3DLowProfile import \
+            #     Autoencoder as net
+            # self._model = net().to(self._device)
+            from mesoSPIM.src.plugins.support_files.ImageProcessors.NeuralDenoise.casualResidual import \
+                CausalLastPlaneDenoiser as net
+            # self._model = net(in_planes=self.num_frames, base_ch=32).to(self._device)
+            self._model = net(in_planes=self.num_frames, base_ch=8).to(self._device)
             state_dict = self._torch.load(model_path, map_location=self._device)
             self._model.load_state_dict(state_dict)
             self._model.eval()

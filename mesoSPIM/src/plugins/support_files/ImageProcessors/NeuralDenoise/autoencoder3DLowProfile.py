@@ -20,7 +20,7 @@ class Autoencoder(nn.Module):
     Option A implemented:
         - 3D encoder/decoder over a small z-stack
         - pool only in XY, never in Z
-        - final prediction is made from the CENTER z-plane features only
+        - final prediction is made from the LAST z-plane features only
     """
     def __init__(self):
         super().__init__()
