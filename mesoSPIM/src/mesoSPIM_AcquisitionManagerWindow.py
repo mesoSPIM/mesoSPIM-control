@@ -293,25 +293,26 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         Here, I need the configuration to provide the options for the
         delegates.
         '''
-        self.delegate_dict = {'x_pos' :  'MarkXPositionDelegate(self)',
-                              'y_pos' : 'MarkYPositionDelegate(self)',
-                              'z_start' : 'MarkZPositionDelegate(self)',
-                              'z_end' : 'MarkZPositionDelegate(self)',
-                              'z_step' : 'ZstepSpinBoxDelegate(self)',
-                              'rot' : 'RotationSpinBoxDelegate(self)',
-                              'f_start' : 'MarkFocusPositionDelegate(self)',
-                              'f_end' : 'MarkFocusPositionDelegate(self)',
-                              'filter' : 'ComboDelegate(self,[key for key in self.cfg.filterdict.keys()])',
-                              'intensity' : 'IntensitySpinBoxDelegate(self)',
-                              'laser' : 'ComboDelegate(self,[key for key in self.cfg.laserdict.keys()])',
-                              'zoom' : 'ComboDelegate(self,[key for key in self.cfg.zoomdict.keys()])',
-                              'shutterconfig' : 'ComboDelegate(self,[key for key in self.cfg.shutteroptions])',
-                              'folder' : 'ChooseFolderDelegate(self)',
-                              'etl_l_offset' : 'ETLSpinBoxDelegate(self)',
-                              'etl_l_amplitude' : 'ETLSpinBoxDelegate(self)',
-                              'etl_r_offset' : 'ETLSpinBoxDelegate(self)',
-                              'etl_r_amplitude' : 'ETLSpinBoxDelegate(self)',
-                              }
+        self.delegate_dict = {
+            'x_pos':         lambda: MarkXPositionDelegate(self),
+            'y_pos':         lambda: MarkYPositionDelegate(self),
+            'z_start':       lambda: MarkZPositionDelegate(self),
+            'z_end':         lambda: MarkZPositionDelegate(self),
+            'z_step':        lambda: ZstepSpinBoxDelegate(self),
+            'rot':           lambda: RotationSpinBoxDelegate(self),
+            'f_start':       lambda: MarkFocusPositionDelegate(self),
+            'f_end':         lambda: MarkFocusPositionDelegate(self),
+            'filter':        lambda: ComboDelegate(self, list(self.cfg.filterdict.keys())),
+            'intensity':     lambda: IntensitySpinBoxDelegate(self),
+            'laser':         lambda: ComboDelegate(self, list(self.cfg.laserdict.keys())),
+            'zoom':          lambda: ComboDelegate(self, list(self.cfg.zoomdict.keys())),
+            'shutterconfig': lambda: ComboDelegate(self, list(self.cfg.shutteroptions)),
+            'folder':        lambda: ChooseFolderDelegate(self),
+            'etl_l_offset':     lambda: ETLSpinBoxDelegate(self),
+            'etl_l_amplitude':  lambda: ETLSpinBoxDelegate(self),
+            'etl_r_offset':     lambda: ETLSpinBoxDelegate(self),
+            'etl_r_amplitude':  lambda: ETLSpinBoxDelegate(self),
+        }
 
         self.persistent_editor_column_indices=[]
         ''' Go through the dictionary keys of the
@@ -321,14 +322,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         find the index of a certain key and set the delegate accordingly
 
         '''
-        for key in self.delegate_dict :
+        for key, delegate_factory in self.delegate_dict.items():
             column_index = self.model._table[0].keys().index(key)
-            ''' As some of the delegates expect options, a hack using exec was used: '''
-            string_to_execute = 'self.table.setItemDelegateForColumn(column_index,'+self.delegate_dict[key]+')'
-            delegate_object = exec(self.delegate_dict[key])
-
+            delegate_object = delegate_factory()
+            self.table.setItemDelegateForColumn(column_index, delegate_object)
             self.persistent_editor_column_indices.append(column_index)
-            exec(string_to_execute)
 
     def update_acquisition_time_prediction(self):
         """Compute and display the estimated total acquisition time in the GUI label.

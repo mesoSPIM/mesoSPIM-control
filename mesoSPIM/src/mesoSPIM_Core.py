@@ -230,21 +230,20 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
+        _dispatch = {
+            'filter':               self.set_filter,
+            'zoom':                 self.set_zoom,
+            'laser':                self.set_laser,
+            'intensity':            self.set_intensity,
+            'shutterconfig':        self.set_shutterconfig,
+            'state':                self.set_state,
+            'camera_exposure_time': self.set_camera_exposure_time,
+            'camera_line_interval': self.set_camera_line_interval,
+        }
         for key, value in zip(dict.keys(),dict.values()):
             logger.info(f'State request: Key: {key}, Value: {value}')
-            '''
-            The request handling is done with exec() to write fewer lines of
-            code.
-            '''
-            if key in ('filter',
-                       'zoom',
-                       'laser',
-                       'intensity',
-                       'shutterconfig',
-                       'state',
-                       'camera_exposure_time',
-                       'camera_line_interval'):
-                exec('self.set_'+key+'(value)')
+            if key in _dispatch:
+                _dispatch[key](value)
 
             elif key in ('samplerate',
                        'sweeptime',

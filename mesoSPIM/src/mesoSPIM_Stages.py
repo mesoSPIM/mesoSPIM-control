@@ -265,8 +265,8 @@ class mesoSPIM_Stage(QtCore.QObject):
         for each axis in *list* (e.g. ``['x', 'z']``)."""
         for axis in list:
             try:
-                exec('self.int_' + axis + '_pos_offset = -self.' + axis + '_pos') # update the position offset
-            except:
+                setattr(self, 'int_' + axis + '_pos_offset', -getattr(self, axis + '_pos'))
+            except AttributeError:
                 logger.info('Zeroing of axis: ', axis, 'failed')
 
     def unzero_axes(self, list):
@@ -274,8 +274,8 @@ class mesoSPIM_Stage(QtCore.QObject):
         the hardware coordinate as the user-visible position."""
         for axis in list:
             try:
-                exec('self.int_' + axis + '_pos_offset = 0') # zero the position offset
-            except:
+                setattr(self, 'int_' + axis + '_pos_offset', 0)
+            except AttributeError:
                 logger.info('Unzeroing of axis: ', axis, 'failed')
 
     def load_sample(self):

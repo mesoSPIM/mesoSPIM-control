@@ -95,18 +95,17 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
-        '''The request handling is done with exec() to write fewer lines of code. '''
+        _dispatch = {
+            'camera_exposure_time':                  self.set_camera_exposure_time,
+            'camera_line_interval':                  self.set_camera_line_interval,
+            'state':                                 self.set_state,
+            'camera_display_live_subsampling':       self.set_camera_display_live_subsampling,
+            'camera_display_acquisition_subsampling': self.set_camera_display_acquisition_subsampling,
+            'camera_binning':                        self.set_camera_binning,
+        }
         for key, value in zip(dict.keys(), dict.values()):
-            if key in ('camera_exposure_time',
-                        'camera_line_interval',
-                        'state',
-                        'camera_display_live_subsampling',
-                        'camera_display_acquisition_subsampling',
-                        'camera_binning'):
-                exec('self.set_'+key+'(value)')
-            elif key == 'state':
-                if value == 'live':
-                    logger.debug('Thread name during live: '+ (QtCore.QThread.currentThread().objectName()))
+            if key in _dispatch:
+                _dispatch[key](value)
 
     def set_state(self, value):
         pass
