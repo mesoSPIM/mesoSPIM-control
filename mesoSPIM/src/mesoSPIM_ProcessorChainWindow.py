@@ -24,6 +24,7 @@ class ProcessorChainWindow(QtWidgets.QDialog):
         self._entry_counter = 0
         self._current_entry_id = None
         self._parameter_widgets = {}
+        self._live_parameter_changes_pending_save = False
 
         self.setWindowTitle("Image Processor Chain")
         self.setMinimumSize(860, 520)
@@ -87,6 +88,18 @@ class ProcessorChainWindow(QtWidgets.QDialog):
         self.parameter_intro_label = QtWidgets.QLabel("Select a processor in the active chain to review and edit its parameters.")
         self.parameter_intro_label.setWordWrap(True)
         params_layout.addWidget(self.parameter_intro_label)
+
+        self.auto_apply_params_checkbox = QtWidgets.QCheckBox("Auto-apply parameter changes")
+        self.auto_apply_params_checkbox.setToolTip(
+            "Apply parameter edits to the live processor chain immediately. "
+            "Click Apply to save them to the config file."
+        )
+        self.auto_apply_params_checkbox.toggled.connect(self._on_auto_apply_toggled)
+        params_layout.addWidget(self.auto_apply_params_checkbox)
+
+        self.auto_apply_hint_label = QtWidgets.QLabel("Parameter edits stay staged until you click Apply.")
+        self.auto_apply_hint_label.setWordWrap(True)
+        params_layout.addWidget(self.auto_apply_hint_label)
 
         self.parameter_scroll_area = QtWidgets.QScrollArea()
         self.parameter_scroll_area.setWidgetResizable(True)
@@ -240,8 +253,8 @@ class ProcessorChainWindow(QtWidgets.QDialog):
         self._populate_chain(selected_entry_id=self._working_chain[current_row + 1]['id'])
         self.chain_list.setCurrentRow(current_row + 1)
 
-    def _apply_changes(self):
-        """Apply the staged chain changes to the live processor chain."""
+    def _apply_working_chain_to_live_chain(self, save=False):
+        """Apply the current working chain to the live processor chain."""
         if self.processor_chain is None:
             return
 
@@ -258,13 +271,22 @@ class ProcessorChainWindow(QtWidgets.QDialog):
         }
         self.processor_chain.set_config(config)
 
-        # Save to config file
-        if self.config_filepath and self.processor_chain:
+        if save and self.config_filepath and self.processor_chain:
             self.processor_chain.save_to_file(self.config_filepath)
+
+        if save:
+            self._live_parameter_changes_pending_save = False
 
         self.refresh_from_chain(selected_entry_id=self._current_entry_id)
         self._update_status()
-        logger.info("Processor chain configuration applied")
+        if save:
+            logger.info("Processor chain configuration applied and saved")
+        else:
+            logger.info("Processor chain configuration applied to live chain")
+
+    def _apply_changes(self):
+        """Apply the staged chain changes to the live processor chain and save them."""
+        self._apply_working_chain_to_live_chain(save=True)
     
     def _update_status(self):
         """Update the status label."""
@@ -273,6 +295,20 @@ class ProcessorChainWindow(QtWidgets.QDialog):
             return
 
         enabled_count = sum(1 for entry in self._working_chain if entry['enabled'])
+        auto_apply_enabled = self.auto_apply_params_checkbox.isChecked()
+
+        if auto_apply_enabled:
+            if enabled_count > 0:
+                status_text = f"Active: {enabled_count} of {len(self._working_chain)} processors enabled"
+            else:
+                status_text = "No processors enabled"
+
+            if self._live_parameter_changes_pending_save:
+                status_text += " (parameter edits are live; click Apply to save)"
+            else:
+                status_text += " (parameter edits auto-apply; click Apply to save)"
+            self.status_label.setText(status_text)
+            return
 
         if enabled_count > 0:
             self.status_label.setText(f"Active: {enabled_count} of {len(self._working_chain)} processors enabled (pending until Apply)")
@@ -286,11 +322,12 @@ class ProcessorChainWindow(QtWidgets.QDialog):
         self._current_entry_id = None
 
         if self.processor_chain is not None:
-            for proc in self.processor_chain.chain:
+            for live_index, proc in enumerate(self.processor_chain.chain):
                 entry = self._create_working_entry(
                     proc['name'],
                     enabled=proc.get('enabled', True),
                     config=proc.get('instance').get_config() if proc.get('instance') else {},
+                    live_index=live_index,
                 )
                 if entry is not None:
                     self._working_chain.append(entry)
@@ -307,7 +344,7 @@ class ProcessorChainWindow(QtWidgets.QDialog):
         for proc in self.processor_chain.available_processors:
             self.processor_info[proc['name']] = proc
 
-    def _create_working_entry(self, name, enabled=True, config=None):
+    def _create_working_entry(self, name, enabled=True, config=None, live_index=None):
         """Create a local editable processor entry."""
         processor_class = self._get_processor_class(name)
         if processor_class is None:
@@ -323,6 +360,7 @@ class ProcessorChainWindow(QtWidgets.QDialog):
 
         entry = {
             'id': self._entry_counter,
+            'live_index': live_index,
             'name': name,
             'enabled': enabled,
             'config': dict(config),
@@ -424,6 +462,50 @@ class ProcessorChainWindow(QtWidgets.QDialog):
 
         self._parameter_widgets = {}
         self.parameter_message_label.setText(message)
+
+    def _on_auto_apply_toggled(self, checked):
+        """Refresh status and parameter hint text when auto-apply changes."""
+        if checked:
+            self.auto_apply_hint_label.setText(
+                "Parameter edits affect the live chain immediately. Click Apply to save them."
+            )
+            entry = self._find_entry_by_id(self._current_entry_id)
+            if entry is not None:
+                self._apply_entry_config_to_live_chain(entry)
+        else:
+            self.auto_apply_hint_label.setText(
+                "Parameter edits stay staged until you click Apply."
+            )
+        self._update_status()
+
+    def _apply_entry_config_to_live_chain(self, entry):
+        """Apply one entry's config to the corresponding live processor when possible."""
+        if self.processor_chain is None or entry is None:
+            return False
+
+        live_index = entry.get('live_index')
+        if live_index is None:
+            self.parameter_message_label.setText(
+                "This processor is not in the live chain yet. Click Apply to add it and save its parameters."
+            )
+            return False
+
+        live_chain = self.processor_chain.chain
+        if live_index >= len(live_chain):
+            return False
+
+        live_entry = live_chain[live_index]
+        if live_entry.get('name') != entry['name']:
+            logger.warning(
+                "Skipping auto-apply for %s because the live chain no longer matches the staged entry",
+                entry['name'],
+            )
+            return False
+
+        if self.processor_chain.configure_processor(live_index, dict(entry['config'])):
+            self._live_parameter_changes_pending_save = True
+            return True
+        return False
 
     def _show_parameter_editor(self, entry_id):
         """Build the parameter editor for the selected staged processor entry."""
@@ -532,6 +614,10 @@ class ProcessorChainWindow(QtWidgets.QDialog):
             if item.data(QtCore.Qt.UserRole) == entry_id:
                 item.setToolTip(self._build_item_tooltip(entry))
                 break
+
+        if self.auto_apply_params_checkbox.isChecked():
+            self._apply_entry_config_to_live_chain(entry)
+        self._update_status()
 
     def _infer_parameter_descriptions(self, entry):
         """Infer editable parameter metadata from the current config values."""
