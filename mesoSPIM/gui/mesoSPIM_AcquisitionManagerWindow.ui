@@ -483,6 +483,24 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="7">
+        <widget class="QPushButton" name="GroupSelectedButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Collapse the currently selected rows into a single representative row. Click again to expand.</string>
+         </property>
+         <property name="text">
+          <string>Group Selected Rows</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
     </layout>

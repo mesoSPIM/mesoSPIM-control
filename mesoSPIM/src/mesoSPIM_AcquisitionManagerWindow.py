@@ -149,6 +149,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         self.GroupByChannelButton.toggled.connect(self.toggle_group_by_channel)
         self.GroupByIlluminationButton.toggled.connect(self.toggle_group_by_illumination)
+        self.GroupSelectedButton.toggled.connect(self.toggle_group_selected_rows)
         self._propagating_group_changes = False
         self._group_map = {}  # key -> [ordered list of row indices]
         # Propagation must be connected before _reapply_grouping_if_active so it
@@ -570,11 +571,15 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         '''Toggle grouping rows by laser (channel).'''
         if checked:
             self.GroupByChannelButton.setText('Ungroup by Laser')
-            # Deactivate the other group button without triggering its handler
+            # Deactivate the other group buttons without triggering their handlers
             self.GroupByIlluminationButton.blockSignals(True)
             self.GroupByIlluminationButton.setChecked(False)
             self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
             self.GroupByIlluminationButton.blockSignals(False)
+            self.GroupSelectedButton.blockSignals(True)
+            self.GroupSelectedButton.setChecked(False)
+            self.GroupSelectedButton.setText('Group Selected Rows')
+            self.GroupSelectedButton.blockSignals(False)
             self.apply_group_by_channel()
         else:
             self.GroupByChannelButton.setText('Group by Laser')
@@ -591,11 +596,15 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         '''Toggle grouping rows by illumination side (Left / Right).'''
         if checked:
             self.GroupByIlluminationButton.setText('Ungroup by Illumination')
-            # Deactivate the other group button without triggering its handler
+            # Deactivate the other group buttons without triggering their handlers
             self.GroupByChannelButton.blockSignals(True)
             self.GroupByChannelButton.setChecked(False)
             self.GroupByChannelButton.setText('Group by Laser')
             self.GroupByChannelButton.blockSignals(False)
+            self.GroupSelectedButton.blockSignals(True)
+            self.GroupSelectedButton.setChecked(False)
+            self.GroupSelectedButton.setText('Group Selected Rows')
+            self.GroupSelectedButton.blockSignals(False)
             self.apply_group_by_illumination()
         else:
             self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
@@ -608,19 +617,61 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             label_getter=lambda key, n: f"{key[0]}, {key[1]} ({n} stack{'s' if n != 1 else ''})"
         )
 
+    def toggle_group_selected_rows(self, checked):
+        '''Toggle manual grouping of the currently selected rows.'''
+        if checked:
+            rows = sorted(set(self.get_selected_rows() or []))
+            if len(rows) < 2:
+                self.GroupSelectedButton.blockSignals(True)
+                self.GroupSelectedButton.setChecked(False)
+                self.GroupSelectedButton.blockSignals(False)
+                self.display_warning('Select at least 2 rows to group.')
+                return
+            self.GroupSelectedButton.setText('Ungroup Selected')
+            # Deactivate the other group buttons without triggering their handlers
+            self.GroupByChannelButton.blockSignals(True)
+            self.GroupByChannelButton.setChecked(False)
+            self.GroupByChannelButton.setText('Group by Laser')
+            self.GroupByChannelButton.blockSignals(False)
+            self.GroupByIlluminationButton.blockSignals(True)
+            self.GroupByIlluminationButton.setChecked(False)
+            self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
+            self.GroupByIlluminationButton.blockSignals(False)
+            self._apply_group_selected_rows(rows)
+        else:
+            self.GroupSelectedButton.setText('Group Selected Rows')
+            self._clear_grouping()
+
+    def _apply_group_selected_rows(self, rows):
+        '''Collapse the given row indices into a single representative row.'''
+        n = len(rows)
+        selected_set = set(rows)
+        # Build _group_map: selected rows as one group, non-selected as singletons
+        self._group_map = {'__selected__': rows}
+        for row in range(self.model.rowCount()):
+            if row not in selected_set:
+                self._group_map[row] = [row]
+        # Update visibility and header
+        grouped_headers = {}
+        first = rows[0]
+        grouped_headers[first] = f"Selected ({n} stack{'s' if n != 1 else ''})"
+        for row in range(self.model.rowCount()):
+            self.table.setRowHidden(row, row in selected_set and row != first)
+        self.model.set_grouped_headers(grouped_headers)
+
     # keep old name as an alias so existing callers still work
     clear_group_by_channel = _clear_grouping
 
     def _propagate_grouped_edit(self, top_left, bottom_right):
         '''When in grouped mode, propagate edits on a representative row to all
-        other rows in that laser group.
+        other rows in that group.
 
         The guard ``_propagating_group_changes`` prevents the ``setData`` calls
         inside this method from triggering another propagation round.
         '''
         if self._propagating_group_changes:
             return
-        if not (self.GroupByChannelButton.isChecked() or self.GroupByIlluminationButton.isChecked()) or not self._group_map:
+        if not self._group_map:
             return
         changed_row = top_left.row()
         col_start = top_left.column()
