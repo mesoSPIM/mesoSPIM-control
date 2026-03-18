@@ -362,7 +362,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.generalControlButtons.setEnabled(False)
 
     def save_table(self):
-        path , _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save Table', directory='./acq_table.bin')
+        path , _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save Table', directory='./acq_table.csv')
         if path:
             self.model.saveModel(path)
         self.set_state()

@@ -5,7 +5,7 @@ from .acquisitions import Acquisition, AcquisitionList
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import copy
-import pickle
+import csv
 
 
 class AcquisitionModel(QtCore.QAbstractTableModel):
@@ -356,9 +356,13 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             return AcquisitionList([self._table[row]])
 
     def saveModel(self, filename):
-        ''' Allows to serialize a model via pickle '''
-        with open(filename, "wb" ) as file:
-            pickle.dump(self._table, file)
+        ''' Saves the acquisition table as a CSV file '''
+        keys = self._table.get_keylist()
+        with open(filename, 'w', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=keys)
+            writer.writeheader()
+            for acq in self._table:
+                writer.writerow(dict(acq))
 
     def setTable(self, table):
         self.modelAboutToBeReset.emit()
@@ -370,8 +374,24 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     
     def loadModel(self, filename):
         self.modelAboutToBeReset.emit()
-        with open(filename, "rb" ) as file:
-            self._table = pickle.load(file)
+        ref = Acquisition()
+        type_map = {key: type(ref[key]) for key in ref.keys()}
+        new_table = AcquisitionList([])
+        with open(filename, 'r', newline='') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                acq = Acquisition()
+                for key, value in row.items():
+                    expected_type = type_map.get(key, str)
+                    try:
+                        acq[key] = expected_type(value)
+                    except (ValueError, TypeError):
+                        try:
+                            acq[key] = float(value)
+                        except (ValueError, TypeError):
+                            acq[key] = value
+                new_table.append(acq)
+        self._table = new_table
         self.modelReset.emit()
 
     def deleteTable(self):

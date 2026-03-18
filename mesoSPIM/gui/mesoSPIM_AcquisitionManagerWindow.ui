@@ -155,7 +155,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Saves the table</string>
+          <string>Saves the table as a CSV file</string>
          </property>
          <property name="text">
           <string>Save Table</string>
@@ -290,7 +290,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Loads a saved table.</string>
+          <string>Loads a saved table from a CSV file</string>
          </property>
          <property name="text">
           <string>Load Table</string>
