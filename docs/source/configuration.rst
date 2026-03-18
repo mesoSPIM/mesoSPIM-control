@@ -30,20 +30,47 @@ comments freely.  The sections below describe every top-level variable.
 plugins
 ~~~~~~~
 
-Controls where mesoSPIM looks for image-writer plugins and which writer
-appears first in the file-naming wizard.
+Controls where mesoSPIM looks for plugins and which image writer appears first
+in the file-naming wizard.
 
 .. code-block:: python
 
    plugins = {
        'path_list': [
-           "../src/plugins",                # relative paths work
-           "C:/a/different/plugin/location",
-       ],
+            "../src/plugins",                # relative paths work
+            "C:/a/different/plugin/location",
+        ],
        'first_image_writer': 'OME_Zarr_Writer',
-       # other options: 'H5_BDV_Writer', 'MP_OME_Zarr_Writer',
-       #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+        # other options: 'H5_BDV_Writer', 'MP_OME_Zarr_Writer',
+        #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+    }
+
+``path_list`` adds extra directories that are scanned for both image-writer
+and image-processor plugins. Built-in plugins are always loaded from the
+repository's plugin directories.
+
+``first_image_writer`` only affects the ordering in the file-naming wizard. It
+does not force a writer for all acquisitions.
+
+Writer-specific settings are provided through additional top-level dictionaries
+named after the writer itself, for example:
+
+.. code-block:: python
+
+   OME_Zarr_Writer = {
+       'ome_version': '0.5',
+       'generate_multiscales': True,
+       'compression': 'zstd',
+       'compression_level': 5,
    }
+
+These dictionaries are read by the selected writer at acquisition time.
+
+Image processors are handled differently: they are configured in the
+processor-chain dialog and persisted to ``processor_chain.json`` next to the
+active microscope config file rather than through top-level config variables.
+
+See :doc:`plugins` for the full developer-facing plugin guide.
 
 ui_options
 ~~~~~~~~~~

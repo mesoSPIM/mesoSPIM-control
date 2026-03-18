@@ -103,6 +103,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    :caption: Developer documentation
 
    contributing
+   plugins
    api/index
 
 Indices and tables

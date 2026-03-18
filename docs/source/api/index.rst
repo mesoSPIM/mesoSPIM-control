@@ -62,9 +62,13 @@ Key architectural concepts
     calibration values.
 
 **Plugin system** (``src/plugins/``)
-    Custom image writers can be registered via ``PluginRegistry`` and
-    ``ImageWriterApi``, allowing new file formats or live-streaming sinks to be
-    added without modifying the core acquisition loop.
+    mesoSPIM currently supports two plugin families: image writers and image
+    processors. Writers extend acquisition output formats through
+    ``ImageWriterApi``. Processors extend the live and acquisition pipeline
+    through ``ImageProcessorApi`` and the processor chain. Both are discovered
+    through ``PluginRegistry``.
+
+    See :doc:`../plugins` for the author guide.
 
 Core modules
 ------------
