@@ -3,6 +3,7 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 '''
 
 import os
+import json
 from pathlib import Path
 import time
 import numpy as np
@@ -49,7 +50,35 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
+        self.active_processor_metadata = []
         self.check_versions()
+
+    def _get_enabled_processor_metadata(self):
+        """Return enabled processor configs from the live processor chain."""
+        processor_chain = getattr(self.parent.camera_worker, 'processor_chain', None)
+        if processor_chain is None:
+            return []
+
+        config = processor_chain.get_config()
+        processors = config.get('processors', [])
+        return [processor for processor in processors if processor.get('enabled')]
+
+    def _format_processor_metadata_value(self, value):
+        if isinstance(value, (dict, list, tuple)):
+            return json.dumps(value, sort_keys=True, default=str)
+        return value
+
+    def _write_processor_metadata(self, file, processors):
+        """Write enabled processor provenance into the metadata sidecar."""
+        write_line(file, 'IMAGE PROCESSORS')
+        write_line(file, 'Processor count', len(processors))
+
+        for index, processor in enumerate(processors, start=1):
+            write_line(file, f'Processor {index}', processor.get('name', 'Unknown'))
+            for key, value in processor.get('config', {}).items():
+                write_line(file, key, self._format_processor_metadata_value(value))
+
+        write_line(file)
 
     def check_versions(self):
         """Take care of API changes in different library versions"""
@@ -82,6 +111,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if acq == acq_list[0]:
             self.writer_name = acq['image_writer_plugin']
             self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
+
+        self.active_processor_metadata = self._get_enabled_processor_metadata()
 
 
         # Extract config values for writer from config file - field = 'name' attribute from Writer plugin
@@ -281,6 +312,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             path (str): Absolute path of the snap TIFF whose sidecar is to be written.
         """
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+        processor_metadata = self._get_enabled_processor_metadata()
         with open(metadata_path, 'w') as file:
             write_line(file, 'CFG')
             write_line(file, 'Laser', self.state['laser'])
@@ -317,6 +349,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
             write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
             write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
+            write_line(file)
+            self._write_processor_metadata(file, processor_metadata)
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_metadata(self, acq, acq_list):
@@ -382,5 +416,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
         write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
         write_line(self.metadata_file)
+        self._write_processor_metadata(self.metadata_file, self.active_processor_metadata)
         self.metadata_file.close()
         logger.debug("write_metadata() ended")
