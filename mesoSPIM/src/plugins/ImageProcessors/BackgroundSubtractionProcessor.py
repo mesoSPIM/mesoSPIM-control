@@ -5,6 +5,7 @@ Background Subtraction Processor - Rolling ball background estimation
 import numpy as np
 from typing import Any, Dict, Iterable
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor, ProcessorCapabilities, API_VERSION
+from mesoSPIM.src.plugins.utils import count_domain_to_uint16
 
 
 class BackgroundSubtractionProcessor(ImageProcessor):
@@ -36,7 +37,7 @@ class BackgroundSubtractionProcessor(ImageProcessor):
     def capabilities(cls) -> ProcessorCapabilities:
         return ProcessorCapabilities(
             dtype_in=["uint8", "uint16", "float32"],
-            dtype_out=["float32"],
+            dtype_out=["uint16"],
             ndim=[2, 3],
             is_inplace=False,
             streaming_safe=False,
@@ -96,18 +97,17 @@ class BackgroundSubtractionProcessor(ImageProcessor):
         elif self.method == 'threshold':
             return self._threshold_subtraction(image)
         else:
-            return image
+            return count_domain_to_uint16(image)
 
     def _rolling_ball_subtraction(self, image: np.ndarray) -> np.ndarray:
         try:
             from scipy.ndimage import uniform_filter
             background = uniform_filter(image, size=2 * self.radius + 1, mode='reflect')
             result = image - background
-            result = np.clip(result, 0, None)
-            return result
+            return count_domain_to_uint16(result)
         except ImportError:
-            return image
+            return count_domain_to_uint16(image)
 
     def _threshold_subtraction(self, image: np.ndarray) -> np.ndarray:
         result = image - self.threshold
-        return np.clip(result, 0, None)
+        return count_domain_to_uint16(result)

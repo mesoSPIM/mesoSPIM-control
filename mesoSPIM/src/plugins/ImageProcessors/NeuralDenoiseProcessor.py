@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor, ProcessorCapabilities, API_VERSION
+from mesoSPIM.src.plugins.utils import count_domain_to_uint16, normalized_to_uint16
 
 # Install zarr via pip if needed
 from mesoSPIM.src.plugins.utils import install_and_import
@@ -60,7 +61,7 @@ class NeuralDenoiseProcessor(ImageProcessor):
     def capabilities(cls) -> ProcessorCapabilities:
         return ProcessorCapabilities(
             dtype_in=["uint8", "uint16", "float32"],
-            dtype_out=["uint8", "uint16", "float32"],
+            dtype_out=["uint16"],
             ndim=[2],
             is_inplace=False,
             streaming_safe=False,
@@ -249,9 +250,7 @@ class NeuralDenoiseProcessor(ImageProcessor):
             except Exception as e:
                 print(f"Failed to load neural denoising model: {e}. Passing through unprocessed.")
                 logger.warning(f"Failed to load neural denoising model: {e}. Passing through unprocessed.")
-                return image
-
-        input_dtype = image.dtype
+                return count_domain_to_uint16(image)
 
         image = np.ascontiguousarray(image)
         self._ensure_gpu_buffers(image)
@@ -286,25 +285,13 @@ class NeuralDenoiseProcessor(ImageProcessor):
         except Exception as e:
             print(f"Inference failed: {e}")
             logger.error(f"Inference failed: {e}")
-            return image
+            return count_domain_to_uint16(image)
 
         if isinstance(output, tuple):
             output = output[0]
 
         result = output[0, 0].detach().float().cpu().numpy()
-        result = np.clip(result, 0.0, 1.0)
-
-        if input_dtype == np.uint16:
-            result = np.rint(result * 65535.0).astype(np.uint16, copy=False)
-        elif input_dtype == np.uint8:
-            result = np.rint(result * 255.0).astype(np.uint8, copy=False)
-        elif input_dtype == np.float32:
-            result = result.astype(np.float32, copy=False)
-        else:
-            logger.warning(f"Unexpected input dtype {input_dtype}, returning float32")
-            result = result.astype(np.float32, copy=False)
-
-        return result
+        return normalized_to_uint16(result)
 
     def flush(self) -> Optional[np.ndarray]:
         """No flush output needed for last-frame prediction."""

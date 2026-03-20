@@ -5,6 +5,7 @@ Identity Processor - Pass-through processor for testing
 import numpy as np
 from typing import Any, Dict, Iterable
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor, ProcessorCapabilities, API_VERSION
+from mesoSPIM.src.plugins.utils import count_domain_to_uint16
 
 
 class IdentityProcessor(ImageProcessor):
@@ -29,11 +30,11 @@ class IdentityProcessor(ImageProcessor):
     def capabilities(cls) -> ProcessorCapabilities:
         return ProcessorCapabilities(
             dtype_in=["uint8", "uint16", "float32", "float64"],
-            dtype_out=["uint8", "uint16", "float32", "float64"],
+            dtype_out=["uint16"],
             ndim=[2, 3],
             is_inplace=True,
             streaming_safe=True,
         )
 
     def process_frame(self, image: np.ndarray) -> np.ndarray:
-        return image.copy() if not image.flags['WRITEABLE'] else image
+        return count_domain_to_uint16(image)

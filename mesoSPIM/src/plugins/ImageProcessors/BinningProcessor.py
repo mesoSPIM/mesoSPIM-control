@@ -5,6 +5,7 @@ Binning Processor - Pixel binning for downsampling
 import numpy as np
 from typing import Any, Dict, Iterable
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor, ProcessorCapabilities, API_VERSION
+from mesoSPIM.src.plugins.utils import count_domain_to_uint16
 
 
 class BinningProcessor(ImageProcessor):
@@ -34,7 +35,7 @@ class BinningProcessor(ImageProcessor):
     def capabilities(cls) -> ProcessorCapabilities:
         return ProcessorCapabilities(
             dtype_in=["uint8", "uint16", "float32"],
-            dtype_out=["uint16", "float32"],
+            dtype_out=["uint16"],
             ndim=[2, 3],
             is_inplace=False,
             streaming_safe=True,
@@ -79,18 +80,19 @@ class BinningProcessor(ImageProcessor):
         new_w = w // bin_factor
         
         if new_h == 0 or new_w == 0:
-            return image
+            return count_domain_to_uint16(image)
         
         if image.ndim == 2:
             cropped = image[:new_h * bin_factor, :new_w * bin_factor]
             reshaped = cropped.reshape(new_h, bin_factor, new_w, bin_factor)
             if self.method == 'mean':
-                return reshaped.mean(axis=(1, 3)).astype(image.dtype)
+                result = reshaped.astype(np.float32).mean(axis=(1, 3))
             elif self.method == 'sum':
-                return reshaped.sum(axis=(1, 3)).astype(image.dtype)
+                result = reshaped.astype(np.uint32).sum(axis=(1, 3))
             elif self.method == 'max':
-                return reshaped.max(axis=(1, 3)).astype(image.dtype)
+                result = reshaped.max(axis=(1, 3))
             else:
-                return reshaped.mean(axis=(1, 3)).astype(image.dtype)
+                result = reshaped.astype(np.float32).mean(axis=(1, 3))
+            return count_domain_to_uint16(result)
         else:
-            return image
+            return count_domain_to_uint16(image)

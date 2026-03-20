@@ -258,10 +258,11 @@ Optional but strongly recommended methods:
 * ``reset()``
 * ``parameter_descriptions()``
 
-The processor chain currently always calls ``process_frame()``. Capability
-fields such as input dtype, output dtype, dimensionality, and in-place support
-are useful documentation, but they are not strictly enforced by the current
-runtime.
+The processor chain currently always calls ``process_frame()``. Built-in
+processors are expected to return writer-ready ``uint16`` arrays for the
+normal acquisition path, even if they do their internal math in floating
+point. Capability fields such as input dtype, output dtype, dimensionality,
+and in-place support should match that runtime behavior.
 
 Parameter Editor Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -322,6 +323,8 @@ Before considering a processor complete, verify that it:
 * can be added, enabled, disabled, reordered, and removed
 * works correctly in live view
 * behaves acceptably during acquisition, not just in demo tests
+* returns properly clipped and scaled ``uint16`` output without relying on the
+  processor chain to coerce dtype
 * persists and restores its settings through ``processor_chain.json``
 * handles repeated reconfiguration cleanly
 

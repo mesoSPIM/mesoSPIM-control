@@ -5,6 +5,7 @@ Gaussian Blur Processor - Simple spatial denoising
 import numpy as np
 from typing import Any, Dict, Iterable
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor, ProcessorCapabilities, API_VERSION
+from mesoSPIM.src.plugins.utils import count_domain_to_uint16
 
 
 class GaussianBlurProcessor(ImageProcessor):
@@ -33,7 +34,7 @@ class GaussianBlurProcessor(ImageProcessor):
     def capabilities(cls) -> ProcessorCapabilities:
         return ProcessorCapabilities(
             dtype_in=["uint8", "uint16", "float32"],
-            dtype_out=["float32"],
+            dtype_out=["uint16"],
             ndim=[2, 3],
             is_inplace=False,
             streaming_safe=True,
@@ -63,6 +64,7 @@ class GaussianBlurProcessor(ImageProcessor):
     def process_frame(self, image: np.ndarray) -> np.ndarray:
         try:
             from scipy.ndimage import gaussian_filter
-            return gaussian_filter(image.astype(np.float32), sigma=self.sigma)
+            result = gaussian_filter(image.astype(np.float32), sigma=self.sigma)
+            return count_domain_to_uint16(result)
         except ImportError:
-            return image
+            return count_domain_to_uint16(image)

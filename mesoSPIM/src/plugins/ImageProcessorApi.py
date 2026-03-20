@@ -59,8 +59,13 @@ class ImageProcessor(Protocol):
             image: Input image array (2D or 3D)
             
         Returns:
-            Processed image array of same shape
+            Processed image array of same shape.
+
+            Built-in mesoSPIM processors are expected to return writer-ready
+            ``uint16`` data in the normal acquisition pipeline, even if they use
+            floating-point math internally.
         """
+        raise NotImplementedError
 
     def process_frame_inplace(self, image: np.ndarray) -> None:
         """

@@ -5,11 +5,29 @@ import subprocess
 import importlib.metadata
 import logging
 logger = logging.getLogger(__name__)
+import numpy as np
 import types
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
 from mesoSPIM.src.plugins.manager import MESOSPIM_PLUGIN_MODULE_PREFIX
 from mesoSPIM.src.plugins.ImageWriterApi import ImageWriter
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor
+
+
+def count_domain_to_uint16(image: np.ndarray) -> np.ndarray:
+    """Convert count-domain image data to uint16 with clipping."""
+    image = np.asarray(image)
+    image = np.nan_to_num(image, nan=0.0, posinf=65535.0, neginf=0.0)
+    image = np.clip(np.rint(image), 0, 65535)
+    return image.astype(np.uint16, copy=False)
+
+
+def normalized_to_uint16(image: np.ndarray) -> np.ndarray:
+    """Convert normalized float data in the range [0, 1] to uint16."""
+    image = np.asarray(image)
+    image = np.nan_to_num(image, nan=0.0, posinf=1.0, neginf=0.0)
+    image = np.clip(image, 0.0, 1.0)
+    image = np.rint(image * 65535.0)
+    return image.astype(np.uint16, copy=False)
 
 # ------------------------------------------------------------------------------------------------------------------- #
 #                                        General Plugin-discovery utilities                                           #
