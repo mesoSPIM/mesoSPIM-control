@@ -344,6 +344,22 @@ pixelsize = {
             '5x Mitutoyo' : 1.0,}
 
 '''
+Objective metadata
+Stored in acquisition metadata sidecars and does not change mesoSPIM behavior.
+Add or remove keys as needed for your microscope.
+'''
+objective_parameters = {
+            'name': 'Demo objective',
+            'model_number': 'DEMO-001',
+            'magnification': '1x',
+            'numerical_aperture': 0.28,
+            'working_distance_mm': 34,
+            'immersion_medium': 'air',
+            'design_refractive_index': 1.0,
+            'coverglass_thickness_mm': 0.17,
+            }
+
+'''
 H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
 Downsampling and compression slows down writing by 5x - 10x, use with caution.
 Imaris can open these files if no subsampling and no compression is used.

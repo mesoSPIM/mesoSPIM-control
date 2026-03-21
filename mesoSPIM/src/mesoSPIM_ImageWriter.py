@@ -63,10 +63,21 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         processors = config.get('processors', [])
         return [processor for processor in processors if processor.get('enabled')]
 
-    def _format_processor_metadata_value(self, value):
+    def _format_metadata_value(self, value):
         if isinstance(value, (dict, list, tuple)):
             return json.dumps(value, sort_keys=True, default=str)
         return value
+
+    def _write_objective_metadata(self, file):
+        """Write optional objective metadata from the config sidecar block."""
+        objective_parameters = getattr(self.cfg, 'objective_parameters', {}) or {}
+        if not objective_parameters:
+            return
+
+        write_line(file, 'OBJECTIVE PARAMETERS')
+        for key, value in objective_parameters.items():
+            write_line(file, key, self._format_metadata_value(value))
+        write_line(file)
 
     def _write_processor_metadata(self, file, processors):
         """Write enabled processor provenance into the metadata sidecar."""
@@ -76,7 +87,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         for index, processor in enumerate(processors, start=1):
             write_line(file, f'Processor {index}', processor.get('name', 'Unknown'))
             for key, value in processor.get('config', {}).items():
-                write_line(file, key, self._format_processor_metadata_value(value))
+                write_line(file, key, self._format_metadata_value(value))
 
         write_line(file)
 
@@ -350,6 +361,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
             write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
             write_line(file)
+            self._write_objective_metadata(file)
             self._write_processor_metadata(file, processor_metadata)
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
@@ -416,6 +428,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
         write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
         write_line(self.metadata_file)
+        self._write_objective_metadata(self.metadata_file)
         self._write_processor_metadata(self.metadata_file, self.active_processor_metadata)
         self.metadata_file.close()
         logger.debug("write_metadata() ended")

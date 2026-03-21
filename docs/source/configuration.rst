@@ -186,6 +186,29 @@ camera
 
 For Photometrics camera parameter examples, see ``demo_config.py``.
 
+objective_parameters
+~~~~~~~~~~~~~~~~~~~~
+
+Optional microscope-specific objective metadata that is copied into acquisition
+and snap metadata sidecar files. These fields are descriptive only and do not
+change instrument behavior.
+
+.. code-block:: python
+
+   objective_parameters = {
+       'name': 'Olympus XLPLN10XSVMP',
+       'model_number': '1-U2B933',
+       'magnification': '10x',
+       'numerical_aperture': 0.6,
+       'working_distance_mm': 8.0,
+       'immersion_medium': 'silicone oil',
+       'design_refractive_index': 1.406,
+       'coverglass_thickness_mm': 0.17,
+   }
+
+You can add extra keys if your lab wants to track additional objective details;
+mesoSPIM writes the dictionary entries as-is into the metadata text file.
+
 stages / zoom / ETL
 ~~~~~~~~~~~~~~~~~~~~
 
