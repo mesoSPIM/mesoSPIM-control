@@ -68,16 +68,42 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             return json.dumps(value, sort_keys=True, default=str)
         return value
 
-    def _write_objective_metadata(self, file):
-        """Write optional objective metadata from the config sidecar block."""
-        objective_parameters = getattr(self.cfg, 'objective_parameters', {}) or {}
-        if not objective_parameters:
+    def _write_metadata_section(self, file, title, parameters):
+        if not parameters:
             return
 
-        write_line(file, 'OBJECTIVE PARAMETERS')
-        for key, value in objective_parameters.items():
+        write_line(file, title)
+        for key, value in parameters.items():
             write_line(file, key, self._format_metadata_value(value))
         write_line(file)
+
+    def _get_microscope_metadata(self):
+        microscope_parameters = getattr(self.cfg, 'microscope_parameters', {}) or {}
+        if not isinstance(microscope_parameters, dict):
+            microscope_parameters = {}
+
+        general_metadata = {}
+        nested_sections = {}
+
+        for key, value in microscope_parameters.items():
+            if isinstance(value, dict):
+                nested_sections[key] = value
+            else:
+                general_metadata[key] = value
+
+        if 'objective' not in nested_sections:
+            objective_parameters = getattr(self.cfg, 'objective_parameters', {}) or {}
+            if isinstance(objective_parameters, dict) and objective_parameters:
+                nested_sections['objective'] = objective_parameters
+
+        return general_metadata, nested_sections
+
+    def _write_microscope_metadata(self, file):
+        general_metadata, nested_sections = self._get_microscope_metadata()
+        self._write_metadata_section(file, 'MICROSCOPE PARAMETERS', general_metadata)
+
+        for key, value in nested_sections.items():
+            self._write_metadata_section(file, str(key).upper(), value)
 
     def _write_processor_metadata(self, file, processors):
         """Write enabled processor provenance into the metadata sidecar."""
@@ -361,7 +387,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
             write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
             write_line(file)
-            self._write_objective_metadata(file)
+            self._write_microscope_metadata(file)
             self._write_processor_metadata(file, processor_metadata)
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
@@ -428,7 +454,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
         write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
         write_line(self.metadata_file)
-        self._write_objective_metadata(self.metadata_file)
+        self._write_microscope_metadata(self.metadata_file)
         self._write_processor_metadata(self.metadata_file, self.active_processor_metadata)
         self.metadata_file.close()
         logger.debug("write_metadata() ended")

@@ -186,28 +186,47 @@ camera
 
 For Photometrics camera parameter examples, see ``demo_config.py``.
 
-objective_parameters
-~~~~~~~~~~~~~~~~~~~~
+microscope_parameters
+~~~~~~~~~~~~~~~~~~~~~
 
-Optional microscope-specific objective metadata that is copied into acquisition
-and snap metadata sidecar files. These fields are descriptive only and do not
-change instrument behavior.
+Optional microscope-specific metadata that is copied into acquisition and snap
+metadata sidecar files. These fields are descriptive only and do not change
+instrument behavior.
 
 .. code-block:: python
 
-   objective_parameters = {
-       'name': 'Olympus XLPLN10XSVMP',
-       'model_number': '1-U2B933',
-       'magnification': '10x',
-       'numerical_aperture': 0.6,
-       'working_distance_mm': 8.0,
-       'immersion_medium': 'silicone oil',
-       'design_refractive_index': 1.406,
-       'coverglass_thickness_mm': 0.17,
-   }
+   microscope_parameters = {
+       'name': 'Atlas mesoSPIM',
+       'location': 'Imaging room 2.14',
+       'instrument_id': 'MSPIM-01',
+       'notes': 'Dual-sided setup with custom sample chamber',
+       'objective': {
+           'name': 'Olympus XLPLN10XSVMP',
+           'model_number': '1-U2B933',
+           'magnification': '10x',
+           'numerical_aperture': 0.6,
+           'working_distance_mm': 8.0,
+           'immersion_medium': 'silicone oil',
+           'design_refractive_index': 1.406,
+           'coverglass_thickness_mm': 0.17,
+       },
+       'users': {
+           'authorized': ['Doe, John', 'Doe, Jane', 'Chewbacca'],
+           'owner': 'Leia Organa',
+       },
+    }
 
-You can add extra keys if your lab wants to track additional objective details;
-mesoSPIM writes the dictionary entries as-is into the metadata text file.
+Top-level non-dictionary entries are written into a ``MICROSCOPE PARAMETERS``
+block. Top-level dictionary entries are expanded one level deep into separate
+blocks named after the key, for example ``objective`` -> ``OBJECTIVE`` and
+``users`` -> ``USERS``.
+
+Lists, tuples, and deeper nested dictionaries inside those blocks are written as
+JSON-formatted values on a single line.
+
+For backward compatibility, the legacy top-level ``objective_parameters``
+dictionary is still supported. If ``microscope_parameters['objective']`` is not
+present, mesoSPIM writes ``objective_parameters`` into an ``OBJECTIVE`` block.
 
 stages / zoom / ETL
 ~~~~~~~~~~~~~~~~~~~~

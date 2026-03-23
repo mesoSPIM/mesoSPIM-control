@@ -8,6 +8,34 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 (The extension has to be .py).
 '''
 
+
+'''
+Microscope metadata
+Stored in acquisition metadata sidecars and does not change mesoSPIM behavior.
+Add or remove keys as needed for your microscope.
+'''
+microscope_parameters = {
+            'name': 'Demo mesoSPIM',
+            'institution': 'University of Demo',
+            'location': 'Demo room',
+            'instrument_id': 'DEMO-001',
+            'notes': 'Example configuration for demo mode',
+            'objective_parameters': {
+                        'name': 'Demo objective',
+                        'model_number': 'DEMO-001',
+                        'magnification': '1x',
+                        'numerical_aperture': 0.28,
+                        'working_distance_mm': 34,
+                        'immersion_medium': 'air',
+                        'design_refractive_index': 1.0,
+                        'coverglass_thickness_mm': 0.17,
+                        },
+            'users': {
+                        'authorized': ['Doe, John', 'Doe, Jane', 'Chewbacca'],
+                        'owner': 'Demo Operator',
+                        }
+            }
+                 
 '''
 Options to control behavior of plugins
 "paths_list": Optional: Enables arbirtary locations for mesoSPIM to find plugins 
@@ -343,21 +371,6 @@ pixelsize = {
             '4x Olympus' : 1.25,
             '5x Mitutoyo' : 1.0,}
 
-'''
-Objective metadata
-Stored in acquisition metadata sidecars and does not change mesoSPIM behavior.
-Add or remove keys as needed for your microscope.
-'''
-objective_parameters = {
-            'name': 'Demo objective',
-            'model_number': 'DEMO-001',
-            'magnification': '1x',
-            'numerical_aperture': 0.28,
-            'working_distance_mm': 34,
-            'immersion_medium': 'air',
-            'design_refractive_index': 1.0,
-            'coverglass_thickness_mm': 0.17,
-            }
 
 '''
 H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
