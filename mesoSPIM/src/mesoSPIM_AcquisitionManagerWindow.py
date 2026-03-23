@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import logging
+import statistics
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
@@ -696,35 +697,26 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         elif self.GroupByIlluminationButton.isChecked():
             self.apply_group_by_illumination()
 
-    def auto_illumination(self, margin_um=500):
-        message = 'Illumination (Left/Right) will be changed based on x-positions of tiles on the grid.\n\n'
-        message += f'Only tiles closest to the grid edges will be changed, within 500 µm from the "x_min" and "x_max" of the acquisition table.\n\n'
-        message += 'The best illumination for tiles that are closer to the grid center is sample-dependent and must be selected manually.'
-        message_box =  self.display_information(message,12)
+    def auto_illumination(self):
+        message = 'Illumination (Left/Right) will be changed for ALL tiles based on x-positions relative to the median X of the acquisition table.\n\n'
+        message += 'Tiles with X < median → Right illumination.\n'
+        message += 'Tiles with X ≥ median → Left illumination.'
+        message_box = self.display_information(message, 12)
         if message_box == QMessageBox.Cancel:
             return
         x_pos_list = []
         # collect all x positions
-        for row in range(0,self.model.rowCount()):
+        for row in range(0, self.model.rowCount()):
+            x_pos_list.append(self.model.getXPosition(row))
+        x_median = statistics.median(x_pos_list)
+        flip = 'flip_auto_LR_illumination' in self.cfg.ui_options and self.cfg.ui_options['flip_auto_LR_illumination']
+        for row in range(0, self.model.rowCount()):
             x_pos = self.model.getXPosition(row)
-            x_pos_list.append(x_pos)
-        # for edge positions, set the illumination based on them
-        x_min = min(x_pos_list)
-        x_max = max(x_pos_list)
-        for row in range(0,self.model.rowCount()):
-            x_pos = self.model.getXPosition(row)
-            if x_pos <= x_min + margin_um:
-                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
-                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Right'.")
-                    self.model.setShutterconfig(row, 'Right')
-                else:
-                    self.model.setShutterconfig(row, 'Left')
-            elif x_pos >= x_max - margin_um:
-                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
-                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Left'.")
-                    self.model.setShutterconfig(row, 'Left')
-                else:
-                    self.model.setShutterconfig(row, 'Right')
+            if x_pos < x_median:
+                side = 'Left' if flip else 'Right'
             else:
-                pass
+                side = 'Right' if flip else 'Left'
+            if flip:
+                logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to '{side}'.")
+            self.model.setShutterconfig(row, side)
 
