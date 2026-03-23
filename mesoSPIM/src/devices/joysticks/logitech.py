@@ -85,11 +85,11 @@ class FarmSimulatorSidePanel(QtCore.QObject):
         self.axis5_timer.timeout.connect(lambda: self.sig_axis_moved.emit(5, self.axis5_value))
 
     def start_axis_timer(self, axis):
-        value = exec('self.axis'+str(axis)+'_value')
-        exec('self.axis'+str(axis)+'_timer.start(self.timeout_interval)')
+        value = getattr(self, 'axis' + str(axis) + '_value')
+        getattr(self, 'axis' + str(axis) + '_timer').start(self.timeout_interval)
 
     def stop_axis_timer(self, axis):
-        exec('self.axis'+str(axis)+'_timer.stop()')
+        getattr(self, 'axis' + str(axis) + '_timer').stop()
 
     def __del__(self):
         try:
@@ -187,7 +187,7 @@ class FarmSimulatorSidePanel(QtCore.QObject):
 
             if value-128 == -128 or value-128 == 127:
                 ''' Assign a certain axis the min or max value '''
-                exec('self.axis'+str(axis_id)+'_value = value')
+                setattr(self, 'axis' + str(axis_id) + '_value', value)
                 ''' Start timers. Because this is executed from
                 another thread, a signal has to be used here.'''
                 self.sig_start_timer.emit(axis_id)

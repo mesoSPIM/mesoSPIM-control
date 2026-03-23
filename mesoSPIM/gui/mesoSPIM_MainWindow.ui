@@ -3396,6 +3396,27 @@ Focus</string>
              </item>
             </layout>
            </widget>
+           <widget class="QPushButton" name="SaveToConfigButton">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>600</y>
+              <width>431</width>
+              <height>51</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>Save current Parameters tab values to a config file (overwrite current or save as new file)</string>
+            </property>
+            <property name="text">
+             <string>Save config file</string>
+            </property>
+           </widget>
           </widget>
           <widget class="QWidget" name="AlignmentTabWidget">
            <attribute name="title">

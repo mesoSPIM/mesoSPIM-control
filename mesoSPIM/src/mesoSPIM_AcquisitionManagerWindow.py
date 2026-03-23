@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import logging
+import statistics
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 
@@ -147,6 +148,18 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         # self.SetRotationPointButton.clicked.connect(lambda bool: self.set_rotation_point() if bool is True else self.delete_rotation_point())
         self.SetFoldersButton.clicked.connect(self.set_folder_names)
 
+        self.GroupByChannelButton.toggled.connect(self.toggle_group_by_channel)
+        self.GroupByIlluminationButton.toggled.connect(self.toggle_group_by_illumination)
+        self.GroupSelectedButton.toggled.connect(self.toggle_group_selected_rows)
+        self._propagating_group_changes = False
+        self._group_map = {}  # key -> [ordered list of row indices]
+        # Propagation must be connected before _reapply_grouping_if_active so it
+        # fires first and sibling rows are in sync before headers are refreshed.
+        self.model.dataChanged.connect(self._propagate_grouped_edit)
+        self.model.dataChanged.connect(self._reapply_grouping_if_active)
+        self.model.rowsInserted.connect(self._reapply_grouping_if_active)
+        self.model.rowsRemoved.connect(self._reapply_grouping_if_active)
+
         font = QtGui.QFont()
         font.setPointSize(14)
         self.table.horizontalHeader().setFont(font)
@@ -234,16 +247,19 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
             self.display_warning("Can't delete last row!")
 
     def delete_all_rows(self):
-        ''' 
-        Displays a warning that this will delete the entire table
-        and then proceeds to delete if the user clicks 'Yes'
+        '''Delete all currently selected rows (requires at least one selection;
+        prevents deletion of the very last remaining row).
         '''
-        reply = QtWidgets.QMessageBox.warning(self,"mesoSPIM Warning",
-                'Do you want to delete the table?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No )
-        
-        if reply == QtWidgets.QMessageBox.Yes:
-            self.model.deleteTable()
+        rows = self.get_selected_rows()
+        if not rows:
+            self.display_no_row_selected_warning()
+            return
+        unique_rows = sorted(set(rows), reverse=True)  # delete from bottom up
+        if len(unique_rows) >= self.model.rowCount():
+            self.display_warning("Can't delete all rows — at least one must remain!")
+            return
+        for row in unique_rows:
+            self.model.removeRows(row, 1)
 
     def copy_row(self):
         row = self.get_first_selected_row()
@@ -278,25 +294,26 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         Here, I need the configuration to provide the options for the
         delegates.
         '''
-        self.delegate_dict = {'x_pos' :  'MarkXPositionDelegate(self)',
-                              'y_pos' : 'MarkYPositionDelegate(self)',
-                              'z_start' : 'MarkZPositionDelegate(self)',
-                              'z_end' : 'MarkZPositionDelegate(self)',
-                              'z_step' : 'ZstepSpinBoxDelegate(self)',
-                              'rot' : 'RotationSpinBoxDelegate(self)',
-                              'f_start' : 'MarkFocusPositionDelegate(self)',
-                              'f_end' : 'MarkFocusPositionDelegate(self)',
-                              'filter' : 'ComboDelegate(self,[key for key in self.cfg.filterdict.keys()])',
-                              'intensity' : 'IntensitySpinBoxDelegate(self)',
-                              'laser' : 'ComboDelegate(self,[key for key in self.cfg.laserdict.keys()])',
-                              'zoom' : 'ComboDelegate(self,[key for key in self.cfg.zoomdict.keys()])',
-                              'shutterconfig' : 'ComboDelegate(self,[key for key in self.cfg.shutteroptions])',
-                              'folder' : 'ChooseFolderDelegate(self)',
-                              'etl_l_offset' : 'ETLSpinBoxDelegate(self)',
-                              'etl_l_amplitude' : 'ETLSpinBoxDelegate(self)',
-                              'etl_r_offset' : 'ETLSpinBoxDelegate(self)',
-                              'etl_r_amplitude' : 'ETLSpinBoxDelegate(self)',
-                              }
+        self.delegate_dict = {
+            'x_pos':         lambda: MarkXPositionDelegate(self),
+            'y_pos':         lambda: MarkYPositionDelegate(self),
+            'z_start':       lambda: MarkZPositionDelegate(self),
+            'z_end':         lambda: MarkZPositionDelegate(self),
+            'z_step':        lambda: ZstepSpinBoxDelegate(self),
+            'rot':           lambda: RotationSpinBoxDelegate(self),
+            'f_start':       lambda: MarkFocusPositionDelegate(self),
+            'f_end':         lambda: MarkFocusPositionDelegate(self),
+            'filter':        lambda: ComboDelegate(self, list(self.cfg.filterdict.keys())),
+            'intensity':     lambda: IntensitySpinBoxDelegate(self),
+            'laser':         lambda: ComboDelegate(self, list(self.cfg.laserdict.keys())),
+            'zoom':          lambda: ComboDelegate(self, list(self.cfg.zoomdict.keys())),
+            'shutterconfig': lambda: ComboDelegate(self, list(self.cfg.shutteroptions)),
+            'folder':        lambda: ChooseFolderDelegate(self),
+            'etl_l_offset':     lambda: ETLSpinBoxDelegate(self),
+            'etl_l_amplitude':  lambda: ETLSpinBoxDelegate(self),
+            'etl_r_offset':     lambda: ETLSpinBoxDelegate(self),
+            'etl_r_amplitude':  lambda: ETLSpinBoxDelegate(self),
+        }
 
         self.persistent_editor_column_indices=[]
         ''' Go through the dictionary keys of the
@@ -306,14 +323,11 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         find the index of a certain key and set the delegate accordingly
 
         '''
-        for key in self.delegate_dict :
+        for key, delegate_factory in self.delegate_dict.items():
             column_index = self.model._table[0].keys().index(key)
-            ''' As some of the delegates expect options, a hack using exec was used: '''
-            string_to_execute = 'self.table.setItemDelegateForColumn(column_index,'+self.delegate_dict[key]+')'
-            delegate_object = exec(self.delegate_dict[key])
-
+            delegate_object = delegate_factory()
+            self.table.setItemDelegateForColumn(column_index, delegate_object)
             self.persistent_editor_column_indices.append(column_index)
-            exec(string_to_execute)
 
     def update_acquisition_time_prediction(self):
         """Compute and display the estimated total acquisition time in the GUI label.
@@ -348,7 +362,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         self.generalControlButtons.setEnabled(False)
 
     def save_table(self):
-        path , _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save Table', directory='./acq_table.bin')
+        path , _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save Table', directory='./acq_table.csv')
         if path:
             self.model.saveModel(path)
         self.set_state()
@@ -520,35 +534,189 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
         msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         return msg_box.exec_()
 
-    def auto_illumination(self, margin_um=500):
-        message = 'Illumination (Left/Right) will be changed based on x-positions of tiles on the grid.\n\n'
-        message += f'Only tiles closest to the grid edges will be changed, within 500 µm from the "x_min" and "x_max" of the acquisition table.\n\n'
-        message += 'The best illumination for tiles that are closer to the grid center is sample-dependent and must be selected manually.'
-        message_box =  self.display_information(message,12)
+    def _apply_grouping(self, key_getter, label_getter):
+        '''Generic grouping engine shared by channel and illumination modes.
+
+        Args:
+            key_getter: callable(row) -> str   — extracts the grouping key for a row
+            label_getter: callable(key, count) -> str — builds the vertical header label
+        '''
+        key_rows = {}
+        for row in range(self.model.rowCount()):
+            key = key_getter(row)
+            if key not in key_rows:
+                key_rows[key] = []
+            key_rows[key].append(row)
+
+        self._group_map = key_rows
+
+        grouped_headers = {}
+        for key, rows in key_rows.items():
+            first_row = rows[0]
+            grouped_headers[first_row] = label_getter(key, len(rows))
+            for row in rows:
+                self.table.setRowHidden(row, row != first_row)
+
+        self.model.set_grouped_headers(grouped_headers)
+
+    def _clear_grouping(self):
+        '''Show all rows and restore default "Stack N" vertical header labels.'''
+        self._group_map = {}
+        for row in range(self.model.rowCount()):
+            self.table.setRowHidden(row, False)
+        self.model.set_grouped_headers(None)
+
+    def toggle_group_by_channel(self, checked):
+        '''Toggle grouping rows by laser (channel).'''
+        if checked:
+            self.GroupByChannelButton.setText('Ungroup by Laser')
+            # Deactivate the other group buttons without triggering their handlers
+            self.GroupByIlluminationButton.blockSignals(True)
+            self.GroupByIlluminationButton.setChecked(False)
+            self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
+            self.GroupByIlluminationButton.blockSignals(False)
+            self.GroupSelectedButton.blockSignals(True)
+            self.GroupSelectedButton.setChecked(False)
+            self.GroupSelectedButton.setText('Group Selected Rows')
+            self.GroupSelectedButton.blockSignals(False)
+            self.apply_group_by_channel()
+        else:
+            self.GroupByChannelButton.setText('Group by Laser')
+            self._clear_grouping()
+
+    def apply_group_by_channel(self):
+        '''Group rows by laser value.'''
+        self._apply_grouping(
+            key_getter=lambda row: self.model.getLaser(row),
+            label_getter=lambda key, n: f"{key} ({n} stack{'s' if n != 1 else ''})"
+        )
+
+    def toggle_group_by_illumination(self, checked):
+        '''Toggle grouping rows by illumination side (Left / Right).'''
+        if checked:
+            self.GroupByIlluminationButton.setText('Ungroup by Illumination')
+            # Deactivate the other group buttons without triggering their handlers
+            self.GroupByChannelButton.blockSignals(True)
+            self.GroupByChannelButton.setChecked(False)
+            self.GroupByChannelButton.setText('Group by Laser')
+            self.GroupByChannelButton.blockSignals(False)
+            self.GroupSelectedButton.blockSignals(True)
+            self.GroupSelectedButton.setChecked(False)
+            self.GroupSelectedButton.setText('Group Selected Rows')
+            self.GroupSelectedButton.blockSignals(False)
+            self.apply_group_by_illumination()
+        else:
+            self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
+            self._clear_grouping()
+
+    def apply_group_by_illumination(self):
+        '''Group rows by (laser, illumination side) combination.'''
+        self._apply_grouping(
+            key_getter=lambda row: (self.model.getLaser(row), self.model.getShutterconfig(row)),
+            label_getter=lambda key, n: f"{key[0]}, {key[1]} ({n} stack{'s' if n != 1 else ''})"
+        )
+
+    def toggle_group_selected_rows(self, checked):
+        '''Toggle manual grouping of the currently selected rows.'''
+        if checked:
+            rows = sorted(set(self.get_selected_rows() or []))
+            if len(rows) < 2:
+                self.GroupSelectedButton.blockSignals(True)
+                self.GroupSelectedButton.setChecked(False)
+                self.GroupSelectedButton.blockSignals(False)
+                self.display_warning('Select at least 2 rows to group.')
+                return
+            self.GroupSelectedButton.setText('Ungroup Selected')
+            # Deactivate the other group buttons without triggering their handlers
+            self.GroupByChannelButton.blockSignals(True)
+            self.GroupByChannelButton.setChecked(False)
+            self.GroupByChannelButton.setText('Group by Laser')
+            self.GroupByChannelButton.blockSignals(False)
+            self.GroupByIlluminationButton.blockSignals(True)
+            self.GroupByIlluminationButton.setChecked(False)
+            self.GroupByIlluminationButton.setText('Group by Illumination (L/R)')
+            self.GroupByIlluminationButton.blockSignals(False)
+            self._apply_group_selected_rows(rows)
+        else:
+            self.GroupSelectedButton.setText('Group Selected Rows')
+            self._clear_grouping()
+
+    def _apply_group_selected_rows(self, rows):
+        '''Collapse the given row indices into a single representative row.'''
+        n = len(rows)
+        selected_set = set(rows)
+        # Build _group_map: selected rows as one group, non-selected as singletons
+        self._group_map = {'__selected__': rows}
+        for row in range(self.model.rowCount()):
+            if row not in selected_set:
+                self._group_map[row] = [row]
+        # Update visibility and header
+        grouped_headers = {}
+        first = rows[0]
+        grouped_headers[first] = f"Selected ({n} stack{'s' if n != 1 else ''})"
+        for row in range(self.model.rowCount()):
+            self.table.setRowHidden(row, row in selected_set and row != first)
+        self.model.set_grouped_headers(grouped_headers)
+
+    # keep old name as an alias so existing callers still work
+    clear_group_by_channel = _clear_grouping
+
+    def _propagate_grouped_edit(self, top_left, bottom_right):
+        '''When in grouped mode, propagate edits on a representative row to all
+        other rows in that group.
+
+        The guard ``_propagating_group_changes`` prevents the ``setData`` calls
+        inside this method from triggering another propagation round.
+        '''
+        if self._propagating_group_changes:
+            return
+        if not self._group_map:
+            return
+        changed_row = top_left.row()
+        col_start = top_left.column()
+        col_end = bottom_right.column()
+        for laser, rows in self._group_map.items():
+            if rows and changed_row == rows[0]:
+                siblings = rows[1:]
+                if not siblings:
+                    return
+                self._propagating_group_changes = True
+                try:
+                    for sibling_row in siblings:
+                        for col in range(col_start, col_end + 1):
+                            value = self.model.data(self.model.index(changed_row, col))
+                            self.model.setData(self.model.index(sibling_row, col), value)
+                finally:
+                    self._propagating_group_changes = False
+                return
+
+    def _reapply_grouping_if_active(self, *args):
+        '''Re-apply grouping whenever the model changes (data edit, row add/remove).'''
+        if self.GroupByChannelButton.isChecked():
+            self.apply_group_by_channel()
+        elif self.GroupByIlluminationButton.isChecked():
+            self.apply_group_by_illumination()
+
+    def auto_illumination(self):
+        message = 'Illumination (Left/Right) will be changed for ALL tiles based on x-positions relative to the median X of the acquisition table.\n\n'
+        message += 'Tiles with X < median → Right illumination.\n'
+        message += 'Tiles with X ≥ median → Left illumination.'
+        message_box = self.display_information(message, 12)
         if message_box == QMessageBox.Cancel:
             return
         x_pos_list = []
         # collect all x positions
-        for row in range(0,self.model.rowCount()):
+        for row in range(0, self.model.rowCount()):
+            x_pos_list.append(self.model.getXPosition(row))
+        x_median = statistics.median(x_pos_list)
+        flip = 'flip_auto_LR_illumination' in self.cfg.ui_options and self.cfg.ui_options['flip_auto_LR_illumination']
+        for row in range(0, self.model.rowCount()):
             x_pos = self.model.getXPosition(row)
-            x_pos_list.append(x_pos)
-        # for edge positions, set the illumination based on them
-        x_min = min(x_pos_list)
-        x_max = max(x_pos_list)
-        for row in range(0,self.model.rowCount()):
-            x_pos = self.model.getXPosition(row)
-            if x_pos <= x_min + margin_um:
-                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
-                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Right'.")
-                    self.model.setShutterconfig(row, 'Right')
-                else:
-                    self.model.setShutterconfig(row, 'Left')
-            elif x_pos >= x_max - margin_um:
-                if 'flip_auto_LR_illumination' in self.cfg.ui_options.keys() and self.cfg.ui_options['flip_auto_LR_illumination']:
-                    logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to 'Left'.")
-                    self.model.setShutterconfig(row, 'Left')
-                else:
-                    self.model.setShutterconfig(row, 'Right')
+            if x_pos < x_median:
+                side = 'Left' if flip else 'Right'
             else:
-                pass
+                side = 'Right' if flip else 'Left'
+            if flip:
+                logger.info(f"Config parameter 'flip_auto_LR_illumination' = True. Illumination of tile {row} will be set to '{side}'.")
+            self.model.setShutterconfig(row, side)
 

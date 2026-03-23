@@ -149,7 +149,7 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' o
                     'y_load_position': 35000,
                     'y_unload_position': -20000,
                     'x_center_position': 500,
-                    'z_center_position': 500,
+                    'z_center_position': 20000,
                     'x_max' : 25000,
                     'x_min' : -25000,
                     'y_max' : 550000,
@@ -226,6 +226,8 @@ For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
 filterdict = {'Empty' : 0, # Every config should contain this
               '405-488-561-640-Quadrupleblock' : 1,
               '488LB RazorEdge': 2,
+              '520/35 BrightLine': 3,
+              '595/31 BrightLine': 4,
               }
 
 
@@ -335,7 +337,7 @@ MP_OME_Zarr_Writer = {
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (128, 5056//4, 2960//2),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-    'async_finalize': False,  # True, False
+    'async_finalize': True,  # True, False
 
     # BigStitcher Specific Options
     'write_big_stitcher_xml': True,  # True, False
@@ -347,7 +349,7 @@ MP_OME_Zarr_Writer = {
          
     # Write cache options. Write tile data to cache then move to acquisition folder
     # None acquires data direct to acquisition folder.
-    'write_cache': 'F:/mesoSPIM_CACHE', # None, 'e:/path/to/fast/ssd/write/cache'
+    'write_cache': None, # None, 'e:/path/to/fast/ssd/write/cache'
 }
 
 '''
@@ -394,12 +396,12 @@ startup = {
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 100,
 'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : -0.75,
+'galvo_l_offset' : 0.0,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : 1.0,
 'galvo_r_frequency' : 100,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 1.3,
+'galvo_r_offset' : 0.0,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 1,
@@ -410,7 +412,7 @@ startup = {
 'laser_r_max_amplitude_%' : 100,
 'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
 'stage_trigger_pulse_%' : 1,
-'camera_delay_%' : 1,
+'camera_delay_%' : 0,
 'camera_pulse_%' : 1,
 'camera_exposure_time':0.010,
 'camera_line_interval':0.000075, # Hamamatsu parameter

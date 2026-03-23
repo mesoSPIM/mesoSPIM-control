@@ -146,9 +146,9 @@ class Acquisition(indexed.IndexedOrderedDict):
             f_rel = -f_rel
         
         if not inverted:
-            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : z_rel, 'f_rel' : f_rel, 'theta_rel': 0}
+            return {'x_rel' : 0.0, 'y_rel': 0.0, 'z_rel' : z_rel, 'f_rel' : f_rel, 'theta_rel': 0.0}
         else:
-            return {'x_rel' : 0, 'y_rel': 0, 'z_rel' : -z_rel, 'f_rel' : -f_rel, 'theta_rel': 0}
+            return {'x_rel' : 0.0, 'y_rel': 0.0, 'z_rel' : -z_rel, 'f_rel' : -f_rel, 'theta_rel': 0.0}
 
     def get_delta_dict(self):
         ''' Returns relative movement dict for z-steps and f-steps'''
@@ -187,7 +187,7 @@ class Acquisition(indexed.IndexedOrderedDict):
                 'f_abs': self['f_end'],
                 }
 
-    def get_focus_stepsize_generator(self, f_stage_min_step_um=0.25):
+    def get_focus_stepsize_generator(self, f_stage_min_step_um=0.1):
         ''''
         Provides a generator object to correct rounding errors for focus tracking acquisitions.
 
@@ -198,7 +198,7 @@ class Acquisition(indexed.IndexedOrderedDict):
         Therefore, the generator tracks the rounding error and applies correcting steps here and there
         to minimize the error.
 
-        This assumes a minimum step size of around 0.25 micron that the focus stage is capable of.
+        This assumes a minimum step size of around 0.1 micron that the focus stage is capable of.
 
         This method contains lots of round functions to keep residual rounding errors at bay.
         '''

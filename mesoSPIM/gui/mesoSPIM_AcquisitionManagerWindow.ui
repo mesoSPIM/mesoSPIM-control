@@ -92,10 +92,10 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Deletes all rows in the table</string>
+          <string>Deletes all selected rows</string>
          </property>
          <property name="text">
-          <string>Delete all Rows</string>
+          <string>Delete selected Rows</string>
          </property>
         </widget>
        </item>
@@ -155,7 +155,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Saves the table</string>
+          <string>Saves the table as a CSV file</string>
          </property>
          <property name="text">
           <string>Save Table</string>
@@ -192,7 +192,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="0">
+       <item row="1" column="1">
         <widget class="QPushButton" name="AddButton">
          <property name="font">
           <font>
@@ -290,7 +290,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Loads a saved table.</string>
+          <string>Loads a saved table from a CSV file</string>
          </property>
          <property name="text">
           <string>Load Table</string>
@@ -444,6 +444,60 @@
          </property>
          <property name="text">
           <string>Auto L/R illumination</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="7">
+        <widget class="QPushButton" name="GroupByChannelButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Collapse rows with the same laser (channel) into a single representative row. Click again to expand.</string>
+         </property>
+         <property name="text">
+          <string>Group by Laser</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="7">
+        <widget class="QPushButton" name="GroupByIlluminationButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Collapse rows with the same illumination side (Left/Right) into a single representative row. Click again to expand.</string>
+         </property>
+         <property name="text">
+          <string>Group by Illumination (L/R)</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="7">
+        <widget class="QPushButton" name="GroupSelectedButton">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Collapse the currently selected rows into a single representative row. Click again to expand.</string>
+         </property>
+         <property name="text">
+          <string>Group Selected Rows</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

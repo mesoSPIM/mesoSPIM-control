@@ -1,0 +1,800 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Contributing" href="contributing.html"><link rel="prev" title="Supported Hardware" href="hardware.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>Changelog - mesoSPIM Control 1.20.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">mesoSPIM Control 1.20.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">mesoSPIM Control 1.20.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Supported Hardware</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Changelog</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/changelog.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">¶</a></h1>
+<p>Full release notes.  For the Git commit history see the
+<a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control/commits/master">GitHub repository</a>.</p>
+<section id="release-february-2026-1-20-0">
+<h2>Release February 2026 [1.20.0]<a class="headerlink" href="#release-february-2026-1-20-0" title="Link to this heading">¶</a></h2>
+<p>🚀 Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.</p>
+<section id="new-features">
+<h3>New Features ✨<a class="headerlink" href="#new-features" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>💎 <strong>OME-ZARR multi-scale writer</strong>: Full support for OME-ZARR 0.4 (zarr v2) and 0.5 (zarr v3) formats with automatic multi-scale pyramid generation. Configurable output with write cache options.</p></li>
+<li><p>💎 <strong>BigStitcher XML generation</strong>: Automatic generation of BigStitcher-compatible metadata files for seamless downstream image stitching and processing.</p></li>
+<li><p>💎 <strong>PSF analysis GUI tool</strong>: Built-in Point Spread Function analysis tool for optical characterization and optimization. Configurable system magnification, voxel size, FOV dimensions, and minimum bead distance (<code class="docutils literal notranslate"><span class="pre">MIN_BEAD_DISTANCE_UM</span></code>). Exported PNG files now include a descriptive title.</p></li>
+<li><p>Stage coordinates now included in OME-ZARR coordinate transforms for precise spatial metadata.</p></li>
+<li><p>Filter name inclusion in acquisition filenames for better data organization.</p></li>
+<li><p>Baud rate and wheel speed configuration options for Sutter filter wheels.</p></li>
+<li><p>Consolidated ASI Tiger and MS2000 stage classes with shared trigger support.</p></li>
+<li><p>Experimental Sham Imagewriter for testing and validation workflows.</p></li>
+<li><p>Axis discovery and validation system for configured ASI stages.</p></li>
+</ul>
+</section>
+<section id="performance">
+<h3>Performance 🚀<a class="headerlink" href="#performance" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>🔥 <strong>Reduced GUI-induced stuttering and lockups</strong> during acquisition through improved thread synchronization and data handling.</p></li>
+<li><p>Improved memory and core utilization efficiency for OME-ZARR downsampling and writing operations.</p></li>
+<li><p>Optimized thread priority management for ASI Tiger stages.</p></li>
+<li><p>Addition of <code class="docutils literal notranslate"><span class="pre">&#64;timed</span></code> decorator for performance profiling of critical functions.</p></li>
+</ul>
+</section>
+<section id="hardware-control-support">
+<h3>Hardware Control &amp; Support 🔧<a class="headerlink" href="#hardware-control-support" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>cDAQ hardware integration</strong>: Added support for National Instruments cDAQ devices for synchronized I/O operations.</p></li>
+<li><p><strong>ASI Tiger and MS2000 stages</strong>: Unified stage controller with enhanced axis handling, TTL trigger support, and multi-axis motion validation.</p></li>
+<li><p>Improved serial communication thread safety for ASI stage commands to prevent conflicts between GUI and Core threads.</p></li>
+<li><p>Axis list discovery from StageControlASITiger for dynamic stage configuration.</p></li>
+<li><p>Relative and absolute movement testing and validation for both stage types.</p></li>
+<li><p>Multi-process OME-ZARR writer support (#91) with configurable write cache for fast SSD drives (#97).</p></li>
+</ul>
+</section>
+<section id="bugfixes">
+<h3>Bugfixes 🐛<a class="headerlink" href="#bugfixes" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Resolved GUI freezing and stuttering issues due to camera window <code class="docutils literal notranslate"><span class="pre">autorange</span></code> function issue in <code class="docutils literal notranslate"><span class="pre">pyqtgraph</span></code> library (#101).</p></li>
+<li><p>Fixed ASI hiccups and freezing by removing pause signals and ensuring Move button commands execute in Main (GUI) thread.</p></li>
+<li><p>Fixed sticky frozen galvo state with proper <code class="docutils literal notranslate"><span class="pre">update_gui_from_state()</span></code> synchronization.</p></li>
+<li><p>Fixed unzeroing galvo amplitude getting stuck during interactive optimization.</p></li>
+<li><p>Support for multi-part file extensions (e.g., <code class="docutils literal notranslate"><span class="pre">.ome.zarr</span></code>) and dots in filenames (e.g., <code class="docutils literal notranslate"><span class="pre">Mag7.5</span></code>).</p></li>
+<li><p>Proper handling of special characters in metadata (% signs removal, underscore replacement).</p></li>
+<li><p>Fixed empty description handling in file name generation.</p></li>
+<li><p>OME-ZARR tile naming now compatible with BigStitcher requirements.</p></li>
+<li><p>Improved dimension naming for OME-ZARR arrays for better downstream tool compatibility.</p></li>
+</ul>
+</section>
+<section id="user-interface-configuration">
+<h3>User Interface &amp; Configuration 🍭<a class="headerlink" href="#user-interface-configuration" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>New and updated config examples for Benchtop, mesoSPIM-v6, other systems</p></li>
+<li><p>New cDAQ config example (<code class="docutils literal notranslate"><span class="pre">config_benchtop-cDAQ.py</span></code>) for NI cDAQ-based systems.</p></li>
+<li><p>New mandatory dictionaries <code class="docutils literal notranslate"><span class="pre">plugins={}</span></code>, <code class="docutils literal notranslate"><span class="pre">H5_BDV_Writer={}</span></code>, <code class="docutils literal notranslate"><span class="pre">OME_Zarr_Writer={}</span></code>, <code class="docutils literal notranslate"><span class="pre">MP_OME_Zarr_Writer={}</span></code> in config files. See <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code>.</p></li>
+<li><p>Experimental high-speed imaging config file examples (up to 6-8 FPS framerate).</p></li>
+<li><p>Option for asynchronous OME-ZARR file closure.</p></li>
+<li><p>Optional multiscale generation control in config file.</p></li>
+<li><p>Galvo phase widgets enabled for interactive optimization.</p></li>
+</ul>
+</section>
+<section id="system-changes-architecture">
+<h3>System Changes &amp; Architecture 📐<a class="headerlink" href="#system-changes-architecture" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Plugin system for image writers</strong>: Modular architecture allowing custom image writer implementations (#91).</p></li>
+<li><p>Updated dependencies for Python 3.12 compatibility.</p></li>
+<li><p>Improved async finalization process for large file writes.</p></li>
+<li><p>Enhanced logging and debugging capabilities with time-stamped function profiling.</p></li>
+<li><p>Deprecated buffering option configuration fully removed in favor of improved core performance.</p></li>
+</ul>
+</section>
+</section>
+<section id="release-september-2025-1-11-1">
+<h2>Release September 2025 [1.11.1]<a class="headerlink" href="#release-september-2025-1-11-1" title="Link to this heading">¶</a></h2>
+<p>🚀 Overhaul of internal bootlnecks that hampered performance on some systems and caused GUI freezing / high CPU loads.</p>
+<section id="id1">
+<h3>Bugfixes 🐛<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>fixed excessive communication between threads causing high CPU load on some systems.</p></li>
+<li><p>moved <code class="docutils literal notranslate"><span class="pre">serial_worker</span></code> into <code class="docutils literal notranslate"><span class="pre">core</span></code> thread to avoid conflicts of relative motion operations with GUI thread.</p></li>
+<li><p>added CPU core identifiers for different operations in <code class="docutils literal notranslate"><span class="pre">debug</span></code> mode or logging, to pinpoint performance issues.</p></li>
+<li><p>fixed autofocus (AF) function in the GUI.</p></li>
+<li><p>returned <code class="docutils literal notranslate"><span class="pre">'camera_display_live_subsampling':</span> <span class="pre">2,</span> </code>,  <code class="docutils literal notranslate"><span class="pre">'camera_display_acquisition_subsampling':</span> <span class="pre">2,</span></code> and <code class="docutils literal notranslate"><span class="pre">'camera_display_temporal_subsampling':</span> <span class="pre">2,</span></code> into the config file, to reduce camera display load on older computers.</p></li>
+<li><p>fixed light-sheet markers and box ROI markers in the Camera window, which were not displayed correctly after zoom change.</p></li>
+</ul>
+</section>
+</section>
+<section id="release-march-2025-1-11-0">
+<h2>Release March 2025 [1.11.0].<a class="headerlink" href="#release-march-2025-1-11-0" title="Link to this heading">¶</a></h2>
+<section id="id2">
+<h3>Performance 🚀<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>implementation of time lapse function via script. See example script at <code class="docutils literal notranslate"><span class="pre">mesoSPIM/scripts/timelapse.py</span></code> for details.</p></li>
+<li><p>images can now be displayed at full resolution during either live mode or acquisition, with no performance penalty. Deprecated config parameters:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="s1">&#39;camera_display_live_subsampling&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+<span class="s1">&#39;camera_display_acquisition_subsampling&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+</pre></div>
+</div>
+<p>to enjoy full-resolution image in real time. The corresponding GUI elements for controlling the downsampling were removed.</p>
+</section>
+<section id="id3">
+<h3>Bugfixes 🐛<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>duplication of sub-stacks while writing large H5 files (&gt;0.5 TB) and freezing at the end of acquisition. Fixed by replacing signal/slot mechanism for CameraWindow image update to deque mechanism. Boosted performance and stability.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MAX</span></code> projection is always on by default, if the dataset is asvaed in TIFF or RAW format. No need to check the box in the Image Processing Wizard. This generates maximum intensity projection as TIFF file for each stack in the acquisition list.</p></li>
+<li><p>explicit initialization of the first raw in Acquisition Manager, to avoid undefined GUI widget states.</p></li>
+</ul>
+</section>
+</section>
+<section id="release-december-2024-1-10-2">
+<h2>Release December 2024 [1.10.2].<a class="headerlink" href="#release-december-2024-1-10-2" title="Link to this heading">¶</a></h2>
+<section id="id4">
+<h3>Performance 🚀<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>migration to Python 3.12 for better performance and compatibility with the latest libraries.</p></li>
+<li><p>faster loading and response time of the GUI</p></li>
+<li><p>subsampling of the camera image for less frequent rendering in the GUI (less CPU load) during acquisition, controlled by <code class="docutils literal notranslate"><span class="pre">'camera_display_temporal_subsampling':</span> <span class="pre">2,</span></code> parameter in the config file. Value <code class="docutils literal notranslate"><span class="pre">1</span></code> means no subsampling (show every image during acquisition).</p></li>
+<li><p>change recommended package manager to <code class="docutils literal notranslate"><span class="pre">mamba</span></code> to avoid Anaconda license issues.</p></li>
+<li><p>change the default timer for stage position update from 50 ms to 100 ms, to reduce communication and logging overhead. ASI stages updated every 200 ms, PI stages every 100 ms.</p></li>
+<li><p>zoom dictionary can include multi-word names like <code class="docutils literal notranslate"><span class="pre">5x</span> <span class="pre">Mitutoyo</span></code> instead of <code class="docutils literal notranslate"><span class="pre">5x</span></code> for better UI and meta-infomation.</p></li>
+<li><p>spinboxes are limited in scroll speed to allow hardware catch up with UI in the interactive mode</p></li>
+<li><p>#82: uploading UCL-Bechtop config file <code class="docutils literal notranslate"><span class="pre">config/examples/config_benchtop_UCL_5laser.py</span></code> by &#64;TchLenn and parsing of double-digit strings like <code class="docutils literal notranslate"><span class="pre">ao21:22</span></code> in config file.</p></li>
+<li><p>remove <code class="docutils literal notranslate"><span class="pre">Log</span></code> tab from the GUI, as it was not used by the users and was causing unnecessary overhead, esp. in DEBUG mode.</p></li>
+</ul>
+</section>
+<section id="user-interface">
+<h3>User Interface 🍭<a class="headerlink" href="#user-interface" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>ETL config files (.csv) are automatically checked and updated with the <code class="docutils literal notranslate"><span class="pre">laser</span></code>-<code class="docutils literal notranslate"><span class="pre">zoom</span></code> combination selected in GUI, to avoid errors in the acquisition. User can even start with an empty ETL config file, it will be auto-filled with the <code class="docutils literal notranslate"><span class="pre">laser</span></code>-<code class="docutils literal notranslate"><span class="pre">zoom</span></code> combinations on the go.</p></li>
+<li><p>more tooltips added to the GUI elements for better user experience.</p></li>
+</ul>
+</section>
+<section id="system-changes">
+<h3>🔧 system changes<a class="headerlink" href="#system-changes" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>pip depenencies are frozen for staibilty</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM_State</span></code> is only nominally a singleton, but actually inherited by classes from their parent class to ensure unique state and thread safety.</p></li>
+<li><p>no signal from <code class="docutils literal notranslate"><span class="pre">mesoSPIM_State</span></code> every time the state is updated. The GUI is updated from state by a separate signal/slot from member classes, on demand.</p></li>
+<li><p>bugfix: serial communication with ASI stages is now thread-safe, with no conflicts between GUI (Main) and Core threads.</p></li>
+<li><p>bugfix: parsing config file with either <code class="docutils literal notranslate"><span class="pre">'laser_task_line'</span> <span class="pre">:</span>&#160; <span class="pre">'PXI6733/ao0:3'</span></code> or <code class="docutils literal notranslate"><span class="pre">'/PXI6733/ao0:3'</span></code> notation (Alan Watson).</p></li>
+</ul>
+</section>
+</section>
+<section id="release-candidate-august-2024-1-10-0-cancelled-due-to-performance-issues-on-some-setups">
+<h2>Release candidate August 2024 [1.10.0]. Cancelled due to performance issues on some setups.<a class="headerlink" href="#release-candidate-august-2024-1-10-0-cancelled-due-to-performance-issues-on-some-setups" title="Link to this heading">¶</a></h2>
+<section id="id5">
+<h3>Performance 🚀<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>improved acquisition speed from 2.5 to 5 FPS, by moving image writing to a separate thread and using <code class="docutils literal notranslate"><span class="pre">collections.deque</span></code> mechanism for frame sharing between the camera and image writing threads, instead of less-performant <code class="docutils literal notranslate"><span class="pre">QThread</span></code> signal/slot mechanism.</p></li>
+<li><p>best writing speed and lowest CPU overhead is achieved with NVMe SSD disks, recommended.</p></li>
+<li><p>the option <code class="docutils literal notranslate"><span class="pre">buffering</span> <span class="pre">=</span> <span class="pre">{...}</span></code> in config file is deprecated from v.1.10.0 and will be ignored, due to improved program performance.</p></li>
+<li><p>dependencies are updated to the latest versions: <code class="docutils literal notranslate"><span class="pre">numpy</span></code>, <code class="docutils literal notranslate"><span class="pre">scipy</span></code>, <code class="docutils literal notranslate"><span class="pre">tifffile</span></code>, etc.</p></li>
+</ul>
+</section>
+</section>
+<section id="release-july-2024-1-9-0">
+<h2>Release July 2024 [1.9.0]<a class="headerlink" href="#release-july-2024-1-9-0" title="Link to this heading">¶</a></h2>
+<section id="id6">
+<h3>User Interface 🍭<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>💎  “Auto L/R illumination” button in the Acquisition manager to select tile illumination based on its x-position.</p></li>
+<li><p>💎 A long awaited feature: <strong>Tile Overview</strong> window (<em>View/Open Tile Overview</em>), showing the entire acquisition area with tile positions, their overlap, and current FOV position relative to them.</p>
+<ul>
+<li><p>Some setups need to flip x- and/or y-stage polarity for correct tile display: use <code class="docutils literal notranslate"><span class="pre">'flip_XYZFT_button_polarity':</span> <span class="pre">(True,</span> <span class="pre">False,</span> <span class="pre">False,</span> <span class="pre">False,</span> <span class="pre">False),</span></code> in the config file.</p></li>
+</ul>
+</li>
+<li><p>💎 Center Button added in the Main Window GUI, for bringing the sample holder in the X- and Z- center relative to the light-sheet and detection objective.</p></li>
+<li><p>during acqusition, the currently acquiring row is highlighted in <strong>Acquisition Manager</strong> and in <strong>Tile Overview</strong> windows.
+This has to be set up in the config file with <code class="docutils literal notranslate"><span class="pre">'x_center_position'</span></code> and <code class="docutils literal notranslate"><span class="pre">'z_center_position'</span></code> parameters for stage motion.</p></li>
+<li><p>Buttons for movement in horizontal plane got shorter, for more intuitive navigation.</p></li>
+<li><p>Current FPS shown in the progress bar.</p></li>
+<li><p>Webcam window always opens at startup, empty if no camera is present in config file: <code class="docutils literal notranslate"><span class="pre">'usb_webcam_ID':</span> <span class="pre">0,</span> <span class="pre">#</span> <span class="pre">open</span> <span class="pre">USB</span> <span class="pre">web-camera</span> <span class="pre">(if</span> <span class="pre">available):</span> <span class="pre">None,</span>&#160; <span class="pre">0</span> <span class="pre">(first</span> <span class="pre">cam),</span> <span class="pre">1</span> <span class="pre">(second</span> <span class="pre">cam),</span> <span class="pre">...</span></code></p></li>
+<li><p>Tooltips were added to the navigation buttons.</p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>Bugfixes 🐛<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>occasional glitch with ASI stages caused by updating stage positions between acquisitions, with serial communication going in two separate threads (mainWindow vs Core).</p></li>
+<li><p>check motion limits for all tiles before starting the acquisition list, in absolute or relative coodinates (zeroed axes or not).</p></li>
+<li><p>estimated remaining acquisition time is now calculated correctly, based on the current frame rate.</p></li>
+<li><p>sample centering and objectiv exchange positions work also when in zeroed-stage regime (local coordinates, user-defined). No need to inactivate <code class="docutils literal notranslate"><span class="pre">Zero</span> <span class="pre">F-stage</span></code> button for safe revolver operation.</p></li>
+</ul>
+</section>
+</section>
+<section id="release-february-2024-1-8-3">
+<h2>Release February 2024 [1.8.3]<a class="headerlink" href="#release-february-2024-1-8-3" title="Link to this heading">¶</a></h2>
+<section id="id8">
+<h3>User Interface 🍭<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
+<p>💎 Light-sheet direction is shown in the camera window as an image overlay. It interactively changes depending on the Left/Right/Both arms illimination state.</p>
+</section>
+<section id="hardware-control">
+<h3>Hardware control 🔧<a class="headerlink" href="#hardware-control" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Support of Mitutoyo 5-position objective turret (revolver, part #378-726D), for mesoSPIM v4-5 <a class="reference external" href="https://github.com/mesoSPIM/benchtop-hardware/tree/main/v4-5-upgrade-2023">upgrade</a>.</p></li>
+<li><p>Safety movement of the focus stage backward to <code class="docutils literal notranslate"><span class="pre">f_objective_exchange</span></code> position for motorized objective exchange. The <code class="docutils literal notranslate"><span class="pre">f_objective_exchange</span></code> parameter is defined in the config file.</p></li>
+<li><p>Optional buffering of images into RAM and flushing to disk when RAM is full or the stack is finished, <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control/pull/72">PR#72</a> by <a class="reference external" href="https://github.com/AlanMWatson">&#64;AlanMWatson</a>. Controlled by adding <code class="docutils literal notranslate"><span class="pre">buffering</span></code> dictionary to the config file.</p></li>
+<li><p>support of ZWO 2” 7-position filterwheel support (PR#79 by Fabian Voigt)</p></li>
+<li><p>checks and warnings for AO maximum voltage range (5V or 10V, which depends on hardware, but can be damaging if not set correctly).</p></li>
+</ul>
+</section>
+<section id="id9">
+<h3>Bugfixes 🐛<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>incorrect focus stage steps when interpolating between two focus positions in a stack. Reported and tested by Ivana Gantar and Laura Batti (Wyss Center Geneva). Affected small-amplitude focus interpolation, where required F-stage steps between planes were smaller than minimum feasible stage step. The minimum feasible stage step changed from 0.1 to 0.25 µm in function <code class="docutils literal notranslate"><span class="pre">get_focus_stepsize_generator(self,</span> <span class="pre">f_stage_min_step_um=0.25)</span></code>.</p></li>
+<li><p>no more dropped frames during long acquisitions with slow disks.</p></li>
+</ul>
+</section>
+</section>
+<section id="release-january-2023-1-8-2">
+<h2>Release January 2023 [1.8.2]<a class="headerlink" href="#release-january-2023-1-8-2" title="Link to this heading">¶</a></h2>
+<section id="id10">
+<h3>Hardware control<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>New filter wheel <a class="reference external" href="https://astronomy-imaging-camera.com/product/efw-mini">ZWO EFWmini</a> supported</p></li>
+<li><p>added <code class="docutils literal notranslate"><span class="pre">'speed'</span></code> config parameter for ASI Tiger controller that allows to change default speed settings.</p></li>
+<li><p>more <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control/tree/master/mesoSPIM/config/examples">config examples</a> from various systems were uploaded.</p></li>
+</ul>
+</section>
+<section id="id11">
+<h3>User interface<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>official <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control/tree/master/mesoSPIM/gui/mesoSPIM-logo.png">mesoSPIM logo</a> is uploaded, also for use as desktop icon (mesoSPIM-logo.ico)</p></li>
+<li><p>non-relevant ETL settings are grayed out depending on the left/right illumination to minimize confusion during ETL optimization (#71).</p></li>
+<li><p>for slow stages the <strong>Move</strong> buttons can be set to sleep for <em>N</em> ms to limit the click frequency from the user (prevent stage runout): paremeter <code class="docutils literal notranslate"><span class="pre">'button_sleep_ms_xyzft'</span> <span class="pre">:</span> <span class="pre">(250,</span> <span class="pre">0,</span> <span class="pre">250,</span> <span class="pre">0,</span> <span class="pre">0),</span></code> in the <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control/blob/master/mesoSPIM/config/demo_config.py">config file</a>.</p></li>
+<li><p>file names now include magnification and rotation (if several rotations are present)</p></li>
+<li><p>GUI allows to change <code class="docutils literal notranslate"><span class="pre">scale_galvo_amp_with_zoom</span></code> flag interactively,</p></li>
+<li><p>developer-only GUI sections have smaller font and are marked as such,</p></li>
+<li><p><strong>STOP Stages</strong> button is big red.</p></li>
+</ul>
+</section>
+<section id="bug-fixes">
+<h3>Bug fixes<a class="headerlink" href="#bug-fixes" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>tile translation metadata in XML/H5 data were transposed in some configurations (x-y)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'etl_l_delay_%'</span></code> config parameter was updated to avoid edge artifacts in ETL scanning</p></li>
+<li><p>in auto-focus optimization pipeline, the first image of the sequence was incorrect</p></li>
+</ul>
+</section>
+</section>
+<section id="release-november-2022-1-8-1">
+<h2>Release November 2022 [1.8.1]<a class="headerlink" href="#release-november-2022-1-8-1" title="Link to this heading">¶</a></h2>
+<section id="id12">
+<h3>Hardware control<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h3>
+<p>✨ Galvo amplitude can be automatically rescaled depending on selected zoom.
+Add <code class="docutils literal notranslate"><span class="pre">scale_galvo_amp_with_zoom</span> <span class="pre">=</span> <span class="pre">True</span></code> to config file to enable this feature.</p>
+<p>🔧 Galvo and ETL of non-active arm are held still to minimize unnecessary heating and stress.</p>
+<p>💎 Optional webcam window can be opened (e.g. for sample overview)</p>
+</section>
+<section id="logging-and-data-management">
+<h3>Logging and data management<a class="headerlink" href="#logging-and-data-management" title="Link to this heading">¶</a></h3>
+<p>🔧 Logging can be defined in config file using <code class="docutils literal notranslate"><span class="pre">logging_level</span> <span class="pre">=</span> <span class="pre">'DEBUG'</span></code> parameter (possible values <code class="docutils literal notranslate"><span class="pre">INFO</span></code>,<code class="docutils literal notranslate"><span class="pre">DEBUG</span></code>).</p>
+<p>🔧 Log messages are printed in <code class="docutils literal notranslate"><span class="pre">Log</span></code> tab for quick review, in addition to the log file.</p>
+<p>💎 BigTIFF file support</p>
+</section>
+<section id="id13">
+<h3>User interface<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h3>
+<p>🔧 User is forced to select clearing-specific ETL parameters file (e.g. <code class="docutils literal notranslate"><span class="pre">ETL-CLARITY-cuvette40x40.csv</span></code>) at the startup, to avoid non-optimal default settings (often forgotten step).</p>
+<p>💎 <code class="docutils literal notranslate"><span class="pre">Acquisition</span> <span class="pre">Manager</span></code> shows estimated dataset size (GB) before acquisition to help planning data management.</p>
+<p>💎 Disk space check: if the disk has insufficient free space, acquisition does not start (shows error message).</p>
+<p>✨ New icon for the desktop shortcut.</p>
+<p>💎 Optional <code class="docutils literal notranslate"><span class="pre">Image</span> <span class="pre">Contrast</span></code> window can be opened from Alignment Tab (for calibration purposes)</p>
+<p>🔧 Multi-tile wizard can have up to 4 channels (previously max: 3).</p>
+<p>🔧 Version management can now be done using PyPi: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mesospim-control</span></code>.
+Control software can be launched in Anaconda prompt from any folder, by <code class="docutils literal notranslate"><span class="pre">mesospim-control</span></code> command.
+Beware that installation path is determined by Anaconda and can be deep (inconvenient). Feature for developers.</p>
+<p>💎 Stage position indicators turn red if stage is within 1 mm from software limits.</p>
+<p>💎 <code class="docutils literal notranslate"><span class="pre">Main</span> <span class="pre">Window</span> <span class="pre">&gt;</span> <span class="pre">View</span> <span class="pre">&gt;</span> <span class="pre">Cascade</span> <span class="pre">windows</span></code> to bring all windows to screen center (for small screens).</p>
+<p>🔧 Config file simplified, redundant blocks removed (<code class="docutils literal notranslate"><span class="pre">galvo_etl_designation</span></code>, <code class="docutils literal notranslate"><span class="pre">laser_designation</span></code>), warnings are issued if deprecated blocks are present.</p>
+<p>🔧 Remove F-stage homing to <code class="docutils literal notranslate"><span class="pre">startfocus</span></code> position, since it added overhead (manual focusing) every time the software was restarted.</p>
+</section>
+<section id="id14">
+<h3>Bug fixes<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h3>
+<p>🐛 laser lines were hard-coded <code class="docutils literal notranslate"><span class="pre">0:7</span></code>, irrespective of config file settings.</p>
+<p>🐛 PI stage did not send position updates properly due to missing signal/slot connection: stages were frequently stuck outside of allowed range.</p>
+<p>🐛 Image and metadata files are closed properly if the acquisition is aborted.</p>
+<p>🐛 <code class="docutils literal notranslate"><span class="pre">npy2bdv</span></code> was creating XML files unreadabla for Imaris, due to extra spaces between affine transofmration matrix values.
+Fixed in <code class="docutils literal notranslate"><span class="pre">npy2bdv==1.0.8</span></code>, upgrade via <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">npy2bdv</span></code>.</p>
+</section>
+<section id="benchtop-hardware-support">
+<h3>Benchtop hardware support<a class="headerlink" href="#benchtop-hardware-support" title="Link to this heading">¶</a></h3>
+<p>💎 All DAQ waveforms can be generated by a single NI-6733 card (up to 4 laser lines).</p>
+<p>💎 ASI Tiger stage controller, with TTL triggering option.</p>
+<p>💎 Photometrics Iris 15 camera</p>
+<p>💎 Arm switching / shutter control by <code class="docutils literal notranslate"><span class="pre">shutterswitch</span></code> parameter in config file.</p>
+<p>💎 DIY filter wheel, driven by Dynamixel servo (same model as V5 zoom servo)</p>
+<p>🐛 fix: ASI Tiger communication issues resolved, multithreading simplified.</p>
+</section>
+</section>
+<section id="release-november-2021-1-7-1">
+<h2>Release November 2021 [1.7.1]<a class="headerlink" href="#release-november-2021-1-7-1" title="Link to this heading">¶</a></h2>
+<p>✨ TIFF file name pattern for multi-tile/channel datasets is fully compatible with BigStitcher auto-loader, no renaming is needed.</p>
+<p>🐛 fix: Files must always have extension (currently one of <code class="docutils literal notranslate"><span class="pre">.tiff</span></code>, <code class="docutils literal notranslate"><span class="pre">.tif</span></code>, <code class="docutils literal notranslate"><span class="pre">.raw</span></code>, <code class="docutils literal notranslate"><span class="pre">.h5</span></code>). Files without extension return an error.</p>
+<p>⚠️ Default file format for data saving has changed to <code class="docutils literal notranslate"><span class="pre">.h5</span></code> for streamlined import into BigStitcher.</p>
+<p>💎 💎 💎 Autofocus has been added and works beautifully, outperforming expert human in focusing accuracy by 10x. Highly recommended!</p>
+<p>🐛 fix: Going back to previously configured channel in the <code class="docutils literal notranslate"><span class="pre">Tiling</span> <span class="pre">Manager</span></code> appended a new channel to the acquisition list, rather than amending it.</p>
+<p>✨ Laser intensity can be edited directly via spinbox, alternative to slider.
+In Acquisition manager, slider is replaced by a spinbox for convenience.
+⚠️ This change makes old acq tables incompatible with the new software.</p>
+<p>✨ <code class="docutils literal notranslate"><span class="pre">Mark</span> <span class="pre">All</span></code> button is added to the Acquisition Manager, per &#64;raacampbell request.</p>
+<p>♻️ Buttons <code class="docutils literal notranslate"><span class="pre">Mark</span> <span class="pre">Rotation</span> <span class="pre">Position</span></code> and <code class="docutils literal notranslate"><span class="pre">Go</span> <span class="pre">To</span> <span class="pre">Rotation</span> <span class="pre">Position</span></code> are removed from the main panel,
+since they are redundant and rarely (if ever) used. Rotation position can be marked in the Acquisition Manager,
+and one can go to rotation position by using increment buttons.</p>
+<p>🐛 fixed: Image processing option generates MAX projections as TIFF files when output file format is either <code class="docutils literal notranslate"><span class="pre">.raw</span></code> or <code class="docutils literal notranslate"><span class="pre">.tiff</span></code>, #60.</p>
+<p>✨ File name wizard auto-starts after Tiling Wizard.</p>
+<p>💎 Image sharpness metric of user-defined ROI (by DCTS algorithm) is added to the Camera Window for easier adjustment of focus and ETL values.</p>
+<p>💎 TIFF files can be opened for preview: <code class="docutils literal notranslate"><span class="pre">Ctrl</span> <span class="pre">+</span> <span class="pre">O</span></code>.</p>
+<p>💎 Button <code class="docutils literal notranslate"><span class="pre">Freeze</span> <span class="pre">galvos</span></code> is added to ETL tab for quick adjustment of ETL parameters outside of sample, see <a class="reference external" href="https://www.youtube.com/watch?v=dcJ9a7VALi8">video tutorial</a>.</p>
+<p>⚠️ Recommended Python upgrade to 3.7 because some libraries have limited support for 3.6 (e.g. <code class="docutils literal notranslate"><span class="pre">tifffile</span></code>).</p>
+<p>💎 💎 Saving datasets as ImageJ TIFF files, including big ones (Fiji TIFF format that allows &gt; 4 GB size). Voxel dimension saved in TIFF metadata.</p>
+</section>
+<section id="release-july-2021-1-6-0">
+<h2>Release July 2021 [1.6.0]<a class="headerlink" href="#release-july-2021-1-6-0" title="Link to this heading">¶</a></h2>
+<p>💎 Simplified installation and upgrading via <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-r</span> <span class="pre">requirements-anaconda.txt</span></code>. See <a class="reference external" href="https://github.com/mesoSPIM/mesoSPIM-control#python">installation instructions</a>.</p>
+<p>💎 Easy launching via double-clicking <code class="docutils literal notranslate"><span class="pre">start_mesoSPIM.bat</span></code> file (needs to be configured by the user).</p>
+<p>💎 Support of multiple PI single-axis controllers, thanks to #52 by &#64;drchrisch.
+Note the changes in config file: single multi-axis controller (C-884) is initialized by <code class="docutils literal notranslate"><span class="pre">'PI_1controllerNstages'</span></code>,
+while multiple single-axis controllers (C-663) by <code class="docutils literal notranslate"><span class="pre">'PI_NcontrollersNstages'</span></code>.</p>
+<p>🐛 Incorrect tiling count (off by -1 in some cases) is fixed.</p>
+<section id="id15">
+<h3>[0.1.5]<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>💎 Improved Tiling Wizard:</p>
+<ul>
+<li><p>buttons <code class="docutils literal notranslate"><span class="pre">x-start,</span> <span class="pre">x-end,</span> <span class="pre">y-start,</span> <span class="pre">y-end</span></code> added for easier navigation:
+no need to search for corners of imaginary box around the sample.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">left,</span> <span class="pre">then</span> <span class="pre">right</span></code> illuminations can be created automatically for each tile: no need for manual duplication
+and changing the illumination directions in the Acquisition Manager.</p></li>
+</ul>
+</li>
+<li><p>💎 Improved saving options in Fiji/BigStitcher H5 format:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">laser</span></code>, <code class="docutils literal notranslate"><span class="pre">illumination</span></code>, <code class="docutils literal notranslate"><span class="pre">angle</span></code> attributes are saved in the BigStitcher XML file.</p></li>
+<li><p>(optional) downsampling and compression are supported.</p></li>
+</ul>
+</li>
+<li><p>💎 Image window got <code class="docutils literal notranslate"><span class="pre">Adjust</span> <span class="pre">levels</span></code> button for automatic intensity adjustment.</p></li>
+<li><p>💎 Image window got optional <code class="docutils literal notranslate"><span class="pre">Box</span> <span class="pre">overlay</span></code> to help measure sample dimensions.</p></li>
+<li><p>🔍 Tests for tiling and serial communication are created.</p></li>
+<li><p>🐛 <strong>Bugfix:</strong> long-standing <code class="docutils literal notranslate"><span class="pre">permission</span> <span class="pre">denied</span></code> issues with serial communication
+to filter wheel and zoom servo are fixed.
+The fix opens serial ports once and keeps them open during the session.
+The root cause was due to laser control software polling serial ports regularly, thus blocking access to them.</p></li>
+</ul>
+</section>
+<section id="id16">
+<h3>[0.1.4]<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>⚠️ <strong>Config files need to be updated</strong> Please note: Updating to this version requires updating your microscope configuration file. Please copy the new configuration options from the <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code> file into your config files.</p></li>
+<li><p>⚠️ 💎 <strong>New handling of config files</strong> - If there is a single config file (without a ‘demo’ prefix in the filename and apart from the <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code>-file) in the config folder, the software will automatically load this file. Otherwise, the config selection GUI is opened. This is especially helpful when operating a mesoSPIM with multiple users. Thanks to &#64;raacampbell for this feature!</p></li>
+<li><p>💎 <strong>New: Writing HDF5</strong> - If all rows in the acquistion manager contain the same file name (ending in <code class="docutils literal notranslate"><span class="pre">.h5</span></code>), the entire acquisition list will be saved in a single hdf5 file and a XML created automatically. Both can then be loaded into <a class="reference external" href="https://imagej.net/BigStitcher">Bigstitcher</a> for stitching &amp; multiview fusion. This file format is also readable by Imaris. For this, the <code class="docutils literal notranslate"><span class="pre">npy2bdv</span></code> package by &#64;nvladimus needs to be installed via pip.</p></li>
+<li><p>💎 <strong>New: Dark mode</strong> - If the <code class="docutils literal notranslate"><span class="pre">dark_mode</span></code> option in the config file is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, the user interface appears in a dark mode. For this, the <code class="docutils literal notranslate"><span class="pre">qdarkstyle</span></code> package needs to be installed via <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">qdarkstyle</span></code>.</p></li>
+<li><p>💎 <strong>New: Camera and Acquisition Manager Windows can be reopened</strong> - A new menu allows the camera and acquisition manager windows to be reopened in case they get closed. The same menu bar allows exiting the program as well.</p></li>
+<li><p>💎 <strong>New: Disabling arrow buttons</strong> - To allow mesoSPIM configurations with less than 5 motorized stages, the arrow buttons in the main window can now be disabled in the configuration file. Typical examples are a mesoSPIM without a rotation stage or a mesoSPIM using only a single motorized z-stage. This feature can also be useful if the serial connection to the stages is too slow and pressing the arrow buttons leads to incorrect movements.</p></li>
+<li><p>💎 <strong>Interactive IPython console</strong> - If the software is launched via <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">mesoSPIM-control.py</span> <span class="pre">-C</span></code>, an interactive IPython console is launched for debugging. Feature by &#64;raacampbell.</p></li>
+<li><p>💎 <strong>Command-line demo mode option</strong> - If the software is launched via <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">mesoSPIM-control.py</span> <span class="pre">-D</span></code>, it launches automatically into demo mode. Feature by &#64;raacampbell.</p></li>
+<li><p>💎 <strong>New: Support for PCO cameras</strong> - PCO cameras with lightsheet mode are now supported. For this the <code class="docutils literal notranslate"><span class="pre">pco</span></code> Python package needs to be installed via <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pco</span></code>. Currently, the only tested camera is the PCO panda 4.2 bi with lightsheet firmware.</p></li>
+<li><p>💎 <strong>New: Support for Sutter Lambda 10B Filter Controller</strong> Thanks to Kevin Dean &#64;AdvancedImagingUTSW, Sutter filter wheels are now supported.</p></li>
+<li><p>💎 <strong>New: Support for Physik Instrumente stepper motor stages in a XYZ configuration</strong> Thanks to &#64;drchrisch, a mesoSPIM configuration (‘PI_xyz’) using stepper motor stages for sample movement is now supported. Please note that this is currently not supporting focus movements or sample rotations.</p></li>
+<li><p>💎 <strong>New: Support for Physik Instrumente C-863 controller in a single-stage config</strong> To allow setting up a simplified mesoSPIM using only a single motorized z-stage (all other stages need to be manually operated), the combination of the C-863 motor controller and L-509 stage is now supported (‘PI_z’)</p></li>
+<li><p>✨ <strong>Improvement:</strong> <strong>Disabling movement buttons in the GUI</strong> By modifying the <code class="docutils literal notranslate"><span class="pre">ui_options</span></code> dictionary in the configuration file, the X,Y,Z, focus, rotation, and load/unload buttons can be disabled. This allows modifing the UI for mesoSPIM setups which do not utilize the full set of 5 axes. Disabled buttons are greyed out.</p></li>
+<li><p>✨ <strong>Improvement:</strong> <strong>Updated multicolor tiling wizard</strong> The tiling wizard now displays the FOV size and calculates the X and Y FOV offsets using a percentage setting. For this, the pixel size settings in the configuration file need to be set correctly.</p></li>
+<li><p>✨ <strong>Improvement:</strong> <strong>Physik Instrumente stages now report their referencing status after startup in the logfile</strong> This allows for easier diagnosis of unreferenced stages during startup. Feature by &#64;raacampbell.</p></li>
+<li><p>🐛 <strong>Bugfix:</strong> Binning was not working properly with all cameras.</p></li>
+<li><p>🐛 <strong>Bugfix:</strong> Removed unnecessary imports.</p></li>
+<li><p>🐛 <strong>Bugfix:</strong> Laser power setting <code class="docutils literal notranslate"><span class="pre">max_laser_voltage</span></code> was always 10V, ignoring the config file. This can damage some lasers that operate on lower command voltage.</p></li>
+</ul>
+</section>
+</section>
+<section id="release-march-13-2020-0-1-3">
+<h2>Release March 13, 2020 [0.1.3]<a class="headerlink" href="#release-march-13-2020-0-1-3" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>⚠️ <strong>Depending on your microscope configuration, this release breaks backward compatibility with previous configuration files. If necessary, update your configuration file using <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code> as an example.</strong></p></li>
+<li><p>⚠️ <strong>There are new startup parameters in the config file - make sure to update your config files accordingly</strong>. For example, <code class="docutils literal notranslate"><span class="pre">average_frame_rate</span></code> has been added.</p></li>
+<li><p>⚠️ <strong>This release removes unnecessary configuration files from the public repository - make sure to back up your mesoSPIM &amp; ETL configuration files beforehand. In addition, old example acquisition tables (in <code class="docutils literal notranslate"><span class="pre">mesoSPIM-control\mesoSPIM\acquisitions\</span></code>) are removed as well.</strong></p></li>
+<li><p>💎 <strong>New: Support for more cameras</strong>: <strong>Photometrics</strong> cameras are now supported if <code class="docutils literal notranslate"><span class="pre">PyVCAM</span></code> and the PVCAM-SDK are installed. Only the Iris 15 has been tested so far. In addition, the <strong>Hamamatsu Orca Fusion</strong> is now supported.</p></li>
+<li><p>💎 <strong>New: Multicolor tiling wizard</strong>: The Tiling wizard can now support up to 3 color channels with different ETL parameters and focus tracking settings.</p></li>
+<li><p>💎 <strong>New: Full demo mode - addresses #16</strong>: <code class="docutils literal notranslate"><span class="pre">mesoSPIM-control</span></code> can now be run without any microscope hardware by using the <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code> configuration file.</p></li>
+<li><p>💎 <strong>New: Snap function</strong> – Single pictures can now be taken by clicking the snap button. The filename is autogenerated from the current time. Files are saved as <code class="docutils literal notranslate"><span class="pre">.tif</span></code> which requires <code class="docutils literal notranslate"><span class="pre">tifffile</span></code> as an additional library.</p></li>
+<li><p>💎 <strong>New: Acquisition time prediction</strong> – <code class="docutils literal notranslate"><span class="pre">mesoSPIM-control</span></code> now measures the average framerate every 100 frames to predict the acquisition time. To have a correct initial estimate
+in the <code class="docutils literal notranslate"><span class="pre">Acquisition</span> <span class="pre">Manager</span></code>, please update the <code class="docutils literal notranslate"><span class="pre">average_frame_rate</span></code> with the measured values
+from your microscope (are now logged in the metadata files after an acquisition).</p></li>
+<li><p>💎 <strong>New: Focus tracking</strong> – Different start and end focus positions can now be specified in the Acquisition Manager. When moving the sample to acquire the stack, the microscope changes focus according to a linear interpolation between these values. At z_start, the microscope moves the detection path
+to f_start and at z_end, the detection path focus is at z_end. This allows imaging a liquid-filled sample cuvette without an immersion cuvette. The <code class="docutils literal notranslate"><span class="pre">Mark</span> <span class="pre">current</span> <span class="pre">focus</span></code> button changes both values at once.</p></li>
+<li><p>💎 <strong>New: Improved acquisition previews</strong> – An additional checkbox allows to switch off Z axis movements when previewing acquisitions. This way, the field-of-view does not move outside of the sample which is especially helpful when updating ETL value for individual tiles/stacks in large acquisition tables. ⚠️ When previewing an acquistion requires a rotation, z movements still occur for safety reasons.</p></li>
+<li><p>💎 <strong>New: Image Processing Wizard</strong>: <code class="docutils literal notranslate"><span class="pre">mesoSPIM-control</span></code> now has an Image Processing Wizard (accessible via a button in the <code class="docutils literal notranslate"><span class="pre">Acquisition</span> <span class="pre">Manager</span></code>). Currently, this allows maximum projections to be generated automatically after acquisitions.</p></li>
+<li><p>✨ <strong>Improvement:</strong> <code class="docutils literal notranslate"><span class="pre">Acquisition</span> <span class="pre">Manager</span></code>: Naming of buttons has been improved, in addition, <strong>tooltips</strong> have been added to improve usability.</p></li>
+<li><p>✨ <strong>Improvement:</strong> Removed unnecessary microscope and ETL configuration files cluttering the repository. Changed <code class="docutils literal notranslate"><span class="pre">.gitignore</span></code> correspondingly - future changes to configuration files. This addresses issue #16.</p></li>
+<li><p>✨ <strong>Improvement:</strong> The software now provides more verbose warnings when acquisitions cannot be started due to missing folders, duplicated filenames and already existing files.</p></li>
+<li><p>✨ <strong>Improvement:</strong> Better warnings if no row is selected while clicking Mark buttons.</p></li>
+<li><p>✨ <strong>New:</strong> Added a <code class="docutils literal notranslate"><span class="pre">CHANGELOG.md</span></code> file</p></li>
+<li><p>🐛 <strong>Bugfix:</strong> Manually entering a value in a field in the Acquisition Manager table would change values in other rows as well if the row had been copied before.</p></li>
+<li><p>🐛 <strong>Bugfix:</strong> Mark buttons and dropdown menus in the Acquisition Manager table slowed down the GUI when a lot of rows (&gt;25) were present. As a fix, only the selected row shows the menu.</p></li>
+<li><p>🐛 <strong>Bugfix #26:</strong> Fixed: First row is selected by mark buttons by default if only a single row exists in the Acquisition Manager Table</p></li>
+<li><p>🐛 <strong>Bugfix #27:</strong> Fixed: Entering text into boxes is a bit buggy</p></li>
+<li><p>🐛 <strong>Bugfix #30:</strong> Fixed: Zooming drop down menu often fails to update after a zoom</p></li>
+<li><p>🐛 <strong>Bugfix #31:</strong> Fixed: <code class="docutils literal notranslate"><span class="pre">demo_config.py</span></code> now contains subsampling settings</p></li>
+<li><p>🐛 <strong>Bugfix #34:</strong> Fixed: Last frame in a stack is blank due to an off-by-one error</p></li>
+<li><p>🐛 <strong>Bugfix #35:</strong> Fixed: Software crashes when one folder (to save data in) in the acquisition list does not exist</p></li>
+</ul>
+</section>
+<section id="release-august-19th-2019-0-1-2">
+<h2>Release August 19th, 2019 [0.1.2]<a class="headerlink" href="#release-august-19th-2019-0-1-2" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>New:</strong> Logging is now supported. Logfiles go in the <code class="docutils literal notranslate"><span class="pre">log</span></code> folder.</p></li>
+<li><p><strong>New:</strong> Improved support for a specific mesoSPIM configuration using sample &amp; focusing stages by Steinmayer Mechantronik and in combination with PI stages for sample rotation and z-movement.</p></li>
+<li><p><strong>Fix:</strong> Reduced the output to the command line</p></li>
+<li><p><strong>Fix:</strong> To decrease laggyness of the GUI in live mode and during acquisitions, display subsampling is now available. This way, less image data has to be rendered by the GUI.</p></li>
+<li><p><strong>Fix:</strong> Fixed a variety of multithreading bugs.</p></li>
+<li><p><strong>Fix:</strong> Galvo amplitude and frequency in the startup part of the configuration file are now used to set startup parameters properly</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="contributing.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Contributing</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="hardware.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Supported Hardware</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; mesoSPIM team
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Changelog</a><ul>
+<li><a class="reference internal" href="#release-february-2026-1-20-0">Release February 2026 [1.20.0]</a><ul>
+<li><a class="reference internal" href="#new-features">New Features ✨</a></li>
+<li><a class="reference internal" href="#performance">Performance 🚀</a></li>
+<li><a class="reference internal" href="#hardware-control-support">Hardware Control &amp; Support 🔧</a></li>
+<li><a class="reference internal" href="#bugfixes">Bugfixes 🐛</a></li>
+<li><a class="reference internal" href="#user-interface-configuration">User Interface &amp; Configuration 🍭</a></li>
+<li><a class="reference internal" href="#system-changes-architecture">System Changes &amp; Architecture 📐</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-september-2025-1-11-1">Release September 2025 [1.11.1]</a><ul>
+<li><a class="reference internal" href="#id1">Bugfixes 🐛</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-march-2025-1-11-0">Release March 2025 [1.11.0].</a><ul>
+<li><a class="reference internal" href="#id2">Performance 🚀</a></li>
+<li><a class="reference internal" href="#id3">Bugfixes 🐛</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-december-2024-1-10-2">Release December 2024 [1.10.2].</a><ul>
+<li><a class="reference internal" href="#id4">Performance 🚀</a></li>
+<li><a class="reference internal" href="#user-interface">User Interface 🍭</a></li>
+<li><a class="reference internal" href="#system-changes">🔧 system changes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-candidate-august-2024-1-10-0-cancelled-due-to-performance-issues-on-some-setups">Release candidate August 2024 [1.10.0]. Cancelled due to performance issues on some setups.</a><ul>
+<li><a class="reference internal" href="#id5">Performance 🚀</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-july-2024-1-9-0">Release July 2024 [1.9.0]</a><ul>
+<li><a class="reference internal" href="#id6">User Interface 🍭</a></li>
+<li><a class="reference internal" href="#id7">Bugfixes 🐛</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-february-2024-1-8-3">Release February 2024 [1.8.3]</a><ul>
+<li><a class="reference internal" href="#id8">User Interface 🍭</a></li>
+<li><a class="reference internal" href="#hardware-control">Hardware control 🔧</a></li>
+<li><a class="reference internal" href="#id9">Bugfixes 🐛</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-january-2023-1-8-2">Release January 2023 [1.8.2]</a><ul>
+<li><a class="reference internal" href="#id10">Hardware control</a></li>
+<li><a class="reference internal" href="#id11">User interface</a></li>
+<li><a class="reference internal" href="#bug-fixes">Bug fixes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-november-2022-1-8-1">Release November 2022 [1.8.1]</a><ul>
+<li><a class="reference internal" href="#id12">Hardware control</a></li>
+<li><a class="reference internal" href="#logging-and-data-management">Logging and data management</a></li>
+<li><a class="reference internal" href="#id13">User interface</a></li>
+<li><a class="reference internal" href="#id14">Bug fixes</a></li>
+<li><a class="reference internal" href="#benchtop-hardware-support">Benchtop hardware support</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-november-2021-1-7-1">Release November 2021 [1.7.1]</a></li>
+<li><a class="reference internal" href="#release-july-2021-1-6-0">Release July 2021 [1.6.0]</a><ul>
+<li><a class="reference internal" href="#id15">[0.1.5]</a></li>
+<li><a class="reference internal" href="#id16">[0.1.4]</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#release-march-13-2020-0-1-3">Release March 13, 2020 [0.1.3]</a></li>
+<li><a class="reference internal" href="#release-august-19th-2019-0-1-2">Release August 19th, 2019 [0.1.2]</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=2a6ef5f7"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    </body>
+</html>

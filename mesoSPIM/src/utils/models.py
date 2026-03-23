@@ -5,7 +5,7 @@ from .acquisitions import Acquisition, AcquisitionList
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import copy
-import pickle
+import csv
 
 
 class AcquisitionModel(QtCore.QAbstractTableModel):
@@ -30,6 +30,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
         ''' Get the headers as the capitalized keys from the first acquisition '''
         self._headers = self._table.get_capitalized_keylist()
+        self._grouped_headers = None
 
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
 
@@ -69,7 +70,20 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return self._headers[section]
             if orientation == QtCore.Qt.Vertical:
+                if self._grouped_headers is not None and section in self._grouped_headers:
+                    return self._grouped_headers[section]
                 return 'Stack ' + str(section)
+
+    def set_grouped_headers(self, grouped_headers):
+        '''Set custom vertical header labels for grouped display.
+
+        Args:
+            grouped_headers: dict mapping model row index -> label string,
+                             or None to restore default "Stack N" labels.
+        '''
+        self._grouped_headers = grouped_headers
+        if self.rowCount() > 0:
+            self.headerDataChanged.emit(QtCore.Qt.Vertical, 0, self.rowCount() - 1)
 
     def data(self, index, role = QtCore.Qt.DisplayRole):
         ''' Data allows to fetch one item'''
@@ -342,9 +356,13 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
             return AcquisitionList([self._table[row]])
 
     def saveModel(self, filename):
-        ''' Allows to serialize a model via pickle '''
-        with open(filename, "wb" ) as file:
-            pickle.dump(self._table, file)
+        ''' Saves the acquisition table as a CSV file '''
+        keys = self._table.get_keylist()
+        with open(filename, 'w', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=keys)
+            writer.writeheader()
+            for acq in self._table:
+                writer.writerow(dict(acq))
 
     def setTable(self, table):
         self.modelAboutToBeReset.emit()
@@ -356,8 +374,24 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     
     def loadModel(self, filename):
         self.modelAboutToBeReset.emit()
-        with open(filename, "rb" ) as file:
-            self._table = pickle.load(file)
+        ref = Acquisition()
+        type_map = {key: type(ref[key]) for key in ref.keys()}
+        new_table = AcquisitionList([])
+        with open(filename, 'r', newline='') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                acq = Acquisition()
+                for key, value in row.items():
+                    expected_type = type_map.get(key, str)
+                    try:
+                        acq[key] = expected_type(value)
+                    except (ValueError, TypeError):
+                        try:
+                            acq[key] = float(value)
+                        except (ValueError, TypeError):
+                            acq[key] = value
+                new_table.append(acq)
+        self._table = new_table
         self.modelReset.emit()
 
     def deleteTable(self):
