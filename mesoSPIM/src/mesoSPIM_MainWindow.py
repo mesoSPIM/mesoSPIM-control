@@ -1,4 +1,6 @@
 # mesoSPIM MainWindow
+import os
+import re
 import tifffile
 import logging
 import time
@@ -467,6 +469,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
         self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
+        self.SaveToConfigButton.clicked.connect(self.save_parameters_to_config)
         self.SnapFolderIndicator.setText(self.state['snap_folder'])
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
@@ -891,6 +894,84 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def save_etl_config(self):
         ''' Save current ETL parameters into config '''
         self.sig_save_etl_config.emit()
+
+    def save_parameters_to_config(self):
+        """Save current Parameters-tab values back into the startup dict of a config file.
+        Opens a Save-As dialog pre-filled with the current config path.
+        If the chosen file already exists the user is asked to confirm overwrite.
+        """
+        config_file = getattr(self.cfg, '__file__', None)
+        if config_file is None:
+            QtWidgets.QMessageBox.warning(self, 'Error',
+                'Config file path is not available (module has no __file__ attribute).')
+            return
+
+        save_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Save parameters to config file', config_file,
+            'Python config file (*.py)', options=QtWidgets.QFileDialog.DontConfirmOverwrite)
+        if not save_path:
+            return
+
+        if os.path.exists(save_path):
+            answer = QtWidgets.QMessageBox.question(
+                self, 'Overwrite?',
+                f'File already exists:\n{save_path}\n\nOverwrite it?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            if answer != QtWidgets.QMessageBox.Yes:
+                return
+
+        params = {
+            'sweeptime':                         self.state['sweeptime'],
+            'camera_exposure_time':              self.state['camera_exposure_time'],
+            'camera_delay_%':                    self.state['camera_delay_%'],
+            'camera_pulse_%':                    self.state['camera_pulse_%'],
+            'laser_l_delay_%':                   self.state['laser_l_delay_%'],
+            'laser_r_delay_%':                   self.state['laser_r_delay_%'],
+            'laser_l_pulse_%':                   self.state['laser_l_pulse_%'],
+            'laser_r_pulse_%':                   self.state['laser_r_pulse_%'],
+            'laser_l_max_amplitude_%':           self.state['laser_l_max_amplitude_%'],
+            'laser_r_max_amplitude_%':           self.state['laser_r_max_amplitude_%'],
+            'galvo_l_frequency':                 self.state['galvo_l_frequency'],
+            'galvo_r_frequency':                 self.state['galvo_r_frequency'],
+            'galvo_l_amplitude':                 self.state['galvo_l_amplitude'],
+            'galvo_l_offset':                    self.state['galvo_l_offset'],
+            'galvo_r_offset':                    self.state['galvo_r_offset'],
+            'galvo_l_phase':                     self.state['galvo_l_phase'],
+            'galvo_r_phase':                     self.state['galvo_r_phase'],
+            'etl_l_delay_%':                     self.state['etl_l_delay_%'],
+            'etl_r_delay_%':                     self.state['etl_r_delay_%'],
+            'etl_l_ramp_rising_%':               self.state['etl_l_ramp_rising_%'],
+            'etl_r_ramp_rising_%':               self.state['etl_r_ramp_rising_%'],
+            'etl_l_ramp_falling_%':              self.state['etl_l_ramp_falling_%'],
+            'etl_r_ramp_falling_%':              self.state['etl_r_ramp_falling_%'],
+            'camera_binning':                    self.state['camera_binning'],
+            'camera_display_live_subsampling':        self.state['camera_display_live_subsampling'],
+            'camera_display_acquisition_subsampling': self.state['camera_display_acquisition_subsampling'],
+        }
+
+        with open(config_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        updated_keys, skipped_keys = [], []
+        for key, value in params.items():
+            # Match 'key' : value or "key" : value anywhere in the file;
+            # stops before a comma, newline, or inline comment.
+            pattern = r"(['\"]" + re.escape(key) + r"['\"]\s*:\s*)([^,\n#]+)"
+            new_content, count = re.subn(pattern, r'\g<1>' + repr(value), content)
+            if count > 0:
+                content = new_content
+                updated_keys.append(key)
+            else:
+                skipped_keys.append(key)
+
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        result_msg = f'Saved {len(updated_keys)} parameters to:\n{save_path}'
+        if skipped_keys:
+            result_msg += '\n\nNot found in startup dict (skipped):\n' + ', '.join(skipped_keys)
+        logger.info(f'Saved parameters to config file: {save_path}')
+        QtWidgets.QMessageBox.information(self, 'Saved', result_msg)
 
     def display_warning(self, string):
         warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning', string, QtWidgets.QMessageBox.Ok)
