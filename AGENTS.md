@@ -155,4 +155,4 @@
 - Use `PROJECT_CONTEXT.md` only for session-handoff notes: recent changes, current priorities, validation gaps, and open questions.
 - Keep stable repo guidance in `AGENTS.md`; do not duplicate build commands, coding conventions, or evergreen architecture notes in `PROJECT_CONTEXT.md`.
 - Read `PROJECT_CONTEXT.md` before starting work, and update it at the end of each work session so the next agent can get up to speed quickly.
-- `PROJECT_CONTEXT.md` is ignored by git and will not be included in commits. Use it for local notes note only. If the file does not exist, create it.
+- `PROJECT_CONTEXT.md` is ignored by git and will not be included in commits. Use it for local notes only. If the file does not exist, create it.
