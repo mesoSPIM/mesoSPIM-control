@@ -28,6 +28,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     Signals are connected by :class:`mesoSPIM_Core` during construction.
     """
+    sig_end_acquisition_done = QtCore.pyqtSignal()  # emitted after end_acquisition cleanup is complete
+
     def __init__(self, parent, frame_queue):
         '''Image and metadata writer class. Parent is mesoSPIM_Camera() object'''
         super().__init__()
@@ -295,7 +297,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         """Finalise and close the writer backend after the last frame of an acquisition.
 
         Also closes any optional MIP (maximum intensity projection) TIFF file.
-        Called via ``BlockingQueuedConnection`` from :class:`mesoSPIM_Core`.
+        Called via ``QueuedConnection`` from :class:`mesoSPIM_Core`; signals
+        ``sig_end_acquisition_done`` when finished so the Core can resume.
 
         Args:
             acq (Acquisition): The completed acquisition.
@@ -320,6 +323,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 logger.error(f'{e}')
 
         self.running_flag = False
+        self.sig_end_acquisition_done.emit()
 
     def write_snap_image(self, image):
         """Save a single snap-shot frame to the snap folder as a timestamped TIFF.

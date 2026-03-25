@@ -25,6 +25,7 @@ class mesoSPIM_Camera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal()
     sig_write_images = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_finished = QtCore.pyqtSignal()
+    sig_end_image_series_done = QtCore.pyqtSignal()  # emitted after end_image_series cleanup is complete
     sig_update_gui_from_state = QtCore.pyqtSignal()
     sig_status_message = QtCore.pyqtSignal(str)
 
@@ -212,6 +213,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)
         logger.info(f'Camera: Framerate: {framerate:.2f}')
         self.sig_finished.emit()
+        self.sig_end_image_series_done.emit()
 
     @QtCore.pyqtSlot(bool)
     def snap_image(self, write_flag=True):
