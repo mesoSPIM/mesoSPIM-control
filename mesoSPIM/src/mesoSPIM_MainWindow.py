@@ -982,7 +982,6 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             'laser_r_max_amplitude_%':           self.state['laser_r_max_amplitude_%'],
             'galvo_l_frequency':                 self.state['galvo_l_frequency'],
             'galvo_r_frequency':                 self.state['galvo_r_frequency'],
-            'galvo_l_amplitude':                 self.state['galvo_l_amplitude'],
             'galvo_l_offset':                    self.state['galvo_l_offset'],
             'galvo_r_offset':                    self.state['galvo_r_offset'],
             'galvo_l_phase':                     self.state['galvo_l_phase'],
