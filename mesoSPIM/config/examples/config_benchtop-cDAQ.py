@@ -39,11 +39,6 @@ waveformgeneration = 'cDAQ' # 'DemoWaveFormGeneration' or 'NI' or 'cDAQ'
 '''
 compactDAQ limitations:
 https://www.ni.com/en/support/documentation/supplemental/18/number-of-concurrent-tasks-on-a-compactdaq-chassis-gen-ii.html
-Number of tasks is limited (1 DI, 1 DO, 1 AO, 4 general-purpose counters), first reserved task gets the most resources.
-The data streams are comprised by an 8KB block of memory that is divided up into six or seven First In First Out (FIFO) data buffers. 
-These data buffers vary in size, and the largest data buffers are assigned to the first tasks that get reserved. 
-Thus, in order to get the best streaming performance, make sure to reserve your highest bandwidth tasks first. 
-Your first two tasks will reserve 2048 bytes each, the third, fourth and fifth tasks will reserve 1024 bytes each and the sixth and seventh tasks will reserve 512 bytes each.
 
 Tasks:
 - DO: master_trigger_task, 
@@ -63,7 +58,7 @@ DIGITAL OUTPUTS (P0.0-P0.3, NI-9401 card in slot 1, 'cDAQ1Mod1'):
 
 DIGITAL INPUTS (P0.4, NI-9401 card in slot 1, 'cDAQ1Mod1'):
 - '/cDAQ1Mod1/PFI4' (aka P0.4/PFI4, pin20, see above) of the same card cDAQ1Mod1. Triggers camera, stage, galvo/ETL tasks. 
-Note: This also makes four pins P0.4-0.7 cofigured for input-only.
+Note: This also makes four pins P0.4-0.7 configured for input-only.
 
 ANALOG OUTPUTS (NI-9264 card in slot 3, 'cDAQ1Mod3'):
 - galvos, ETL controllers to 'cDAQ1Mod3/ao0:3' terminals. Pins 1-4, ground pins on the opposite side.
@@ -75,20 +70,23 @@ Input/output mode can be assigned only to digital pins P0.0-P0.3, P0.4-P0.7, or 
 Connecting BNC cables to the ground: 
 Signal pin - Ground pin, label:
 
-'cDAQ1Mod1', NI-9401 (digital) card in slot 1:
+'cDAQ1Mod1', NI-9401 (digital) card in slot 1: 
+<< hardware timed tasks, needs them reserved >>
 Pin14-Pin1, 'master_trigger_out_line'
 Pin19-Pin6, 'camera_trigger_out_line', must be counter-out type of pin
-Pin16-Pin3, 'shutter_right', arm switching
+Pin16-Pin3, 'stage_trigger_out_line', must be counter-out type of pin
 Pin20-Pin7, '/cDAQ1Mod1/PFI4' ('camera_trigger_source', 'galvo_etl_task_trigger_source', 'laser_task_trigger_source', and 'stage_trigger_source'). Could this be done via internal wiring instead?
 
-'cDAQ1Mod2', NI-9401 (digital) card in slot 2:
-Pin25-Pin3, 'stage_trigger_out_line', must be counter-out type of pin
-Pin14-Pin1, 'cDAQ1Mod2/port0/line0', laser enable line for 405 nm
-Pin16-Pin3, 'cDAQ1Mod2/port0/line1', laser enable line for 488 nm
-Pin17-Pin4, 'cDAQ1Mod2/port0/line2', laser enable line for 561 nm
-Pin19-Pin6, 'cDAQ1Mod2/port0/line3', laser enable line for 637 nm
+'cDAQ1Mod2', NI-9401 (digital) card in slot 2: 
+<< software timed tasks, needs NO task reservation >>
+Pin14-Pin3, 'cDAQ1Mod2/port0/line0', 'shutter_right', arm switching
+Pin16-Pin3, 'cDAQ1Mod2/port0/line1', laser enable line for 405 nm
+Pin17-Pin4, 'cDAQ1Mod2/port0/line2', laser enable line for 488 nm
+Pin19-Pin6, 'cDAQ1Mod2/port0/line3', laser enable line for 561 nm
+Pin20-Pin7, 'cDAQ1Mod2/port0/line4', laser enable line for 638 nm
 
-'cDAQ1Mod3', NI-9264 (analog, DSUB-connector version) card in slot 3:
+'cDAQ1Mod3', NI-9264 (analog, DSUB-connector version) card in slot 3: 
+<< hardware timed tasks, needs them reserved >>
 Pin1-Pin20, 'cDAQ1Mod3/ao0', galvo L
 Pin2-Pin21, 'cDAQ1Mod3/ao1', galvo R
 Pin3-Pin22, 'cDAQ1Mod3/ao2', ETL L
@@ -124,10 +122,10 @@ laser_blanking = 'images' # 'images' by default, unless laser enable is connecte
 Values are DO ports used for laser ENABLE digital signal.
 Critical: keys must be sorted by increasing wavelength order: 405, 488, 561, etc.
 '''
-laserdict = {'405 nm': 'cDAQ1Mod2/port0/line0',
-             '488 nm': 'cDAQ1Mod2/port0/line1',
-             '561 nm': 'cDAQ1Mod2/port0/line2',
-             '638 nm': 'cDAQ1Mod2/port0/line3',
+laserdict = {'405 nm': 'cDAQ1Mod2/port0/line1',
+             '488 nm': 'cDAQ1Mod2/port0/line2',
+             '561 nm': 'cDAQ1Mod2/port0/line3',
+             '638 nm': 'cDAQ1Mod2/port0/line4',
              }
 
 '''
@@ -136,7 +134,7 @@ Shutter configuration
 
 shutter = 'cDAQ' # 'Demo' or 'NI' or 'cDAQ'
 shutterdict = {'shutter_left' : None, # empty terminal, general shutter, optional
-              'shutter_right' : '/cDAQ1Mod1/port0/line2', # arm switching
+              'shutter_right' : 'cDAQ1Mod2/port0/line0', # arm switching
               }
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
@@ -236,7 +234,7 @@ asi_parameters = {'COMport' : 'COM23',
                   'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # num of encoder counts per um or degree, depending on stage type.
                   'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
                   'stage_trigger_source': '/cDAQ1Mod1/PFI4',
-                  'stage_trigger_out_line': '/cDAQ1Mod1/ctr2', # must be COUNTER-OUT (CO) type of pin. 
+                  'stage_trigger_out_line': '/cDAQ1Mod1/ctr2', # must be COUNTER-OUT (CO) type of pin and sit on the same card as 'master_trigger_out_line' and 'camera_trigger_out_line' lines.
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
