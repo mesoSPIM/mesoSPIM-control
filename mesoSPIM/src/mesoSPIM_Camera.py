@@ -175,6 +175,7 @@ class mesoSPIM_Camera(QtCore.QObject):
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     @timed
+    @log_cpu_core
     def add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
             logger.debug('Thread name during add images: '+ QtCore.QThread.currentThread().objectName())
@@ -182,7 +183,6 @@ class mesoSPIM_Camera(QtCore.QObject):
         if self.stopflag is False:
             if self.cur_image < self.max_frame:
                 logger.debug(f'Adding images to series')
-                log_cpu_core(logger, msg='add_images_to_series()')
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
                 
@@ -216,9 +216,9 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.sig_end_image_series_done.emit()
 
     @QtCore.pyqtSlot(bool)
+    @log_cpu_core
     def snap_image(self, write_flag=True):
         """"Snap an image and display it"""
-        log_cpu_core(logger, msg='snap_image()')
         image = self.camera.get_image().T[::-1]
         
         if self.processor_chain.is_enabled:
@@ -240,9 +240,9 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.processor_chain.reset()
 
     @QtCore.pyqtSlot()
+    @log_cpu_core
     def get_live_image(self):
         images = self.camera.get_live_image()
-        log_cpu_core(logger, msg='get_live_image()')
         for image in images:
             processed_image = image.T[::-1]
             

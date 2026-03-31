@@ -4,6 +4,7 @@ mesoSPIM Stage classes
 '''
 import time
 import logging
+import threading
 from PyQt5 import QtCore
 #from .mesoSPIM_State import mesoSPIM_StateSingleton
 logger = logging.getLogger(__name__)
@@ -55,6 +56,8 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.parent.sig_unload_sample.connect(self.unload_sample)
         self.parent.sig_center_sample.connect(self.center_sample)
 
+        self._serial_lock = threading.Lock()
+
         self.pos_timer = QtCore.QTimer(self)
         self.pos_timer.timeout.connect(self.report_position)
         self.pos_timer.start(100) # previously 50, which is unnecessary fast
@@ -97,10 +100,7 @@ class mesoSPIM_Stage(QtCore.QObject):
         self.int_theta_pos_offset = 0
 
         '''
-        Setting movement limits: currently hardcoded
-
-        Open question: Should these be in mm or microns?
-        Answer: Microns for now....
+        Setting movement limits
         '''
         self.x_max = self.cfg.stage_parameters['x_max']
         self.x_min = self.cfg.stage_parameters['x_min']
@@ -1932,7 +1932,8 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
         self.asi_stages.current_z_slice = slice
 
     def report_position(self):
-        position_dict = self.asi_stages.read_position()
+        with self._serial_lock:
+            position_dict = self.asi_stages.read_position()
         if position_dict is not None:
             # positions = [position_dict[x] for x in self.axes]
             if 'x' in self.asi_stages.axis_keys:
@@ -2000,10 +2001,12 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
                     self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
             if motion_dict != {}:
-                self.asi_stages.move_relative(motion_dict)
+                with self._serial_lock:
+                    self.asi_stages.move_relative(motion_dict)
 
             if wait_until_done:
-                self.asi_stages.wait_until_done()
+                with self._serial_lock:
+                    self.asi_stages.wait_until_done()
     
     def move_absolute(self, dict, wait_until_done=False, use_internal_position=True):
         '''
@@ -2061,13 +2064,16 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
                 logger.error(f"The theta-move is outside of min-max range, check your config file, 'theta_min' and 'theta_max'.")
 
         if motion_dict:
-            self.asi_stages.move_absolute(motion_dict)
+            with self._serial_lock:
+                self.asi_stages.move_absolute(motion_dict)
         
         if wait_until_done is True:
-            self.asi_stages.wait_until_done()
+            with self._serial_lock:
+                self.asi_stages.wait_until_done()
         
     def stop(self):
-        self.asi_stages.stop()
+        with self._serial_lock:
+            self.asi_stages.stop()
 
     def load_sample(self):
         y_abs = self.cfg.stage_parameters['y_load_position']

@@ -1,8 +1,6 @@
 '''
 Contains a variety of mesoSPIM utility functions
 '''
-import os
-import psutil
 import ctypes
 import logging
 logger = logging.getLogger(__name__)
@@ -86,21 +84,19 @@ def replace_with_underscores(string):
     s = string.replace(' ', '_').replace('/', '_').replace('%', 'pct')
     return s
 
-def log_cpu_core(logger, msg=""):
-    '''Log (at DEBUG level) which logical CPU core the calling thread is currently running on.
+def log_cpu_core(func):
+    '''Decorator to log (at DEBUG level) which logical CPU core the calling thread is currently running on.
 
     Useful for verifying thread affinity in the Core / Camera / Writer thread model——each
     Qt thread should remain pinned to a consistent CPU core.
-
-    Args:
-        logger (logging.Logger): Logger instance used for the debug message.
-        msg (str): Optional prefix string included in the log message.
     '''
-    pid = os.getpid()
-    proc = psutil.Process(pid)
-    #core = proc.cpu_num()  # returns the current logical CPU number. Linux only.
-    core = GetCurrentProcessorNumber()  # Windows only.
-    logger.debug(f"{msg} running on logical CPU core: {core}")
+    import functools
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        core = GetCurrentProcessorNumber()  # Windows only.
+        logger.debug(f"{func.__name__}() running on logical CPU core: {core}")
+        return func(*args, **kwargs)
+    return wrapper
 
 def timed(func):
     '''Decorator to time functions and log the elapsed time'''
