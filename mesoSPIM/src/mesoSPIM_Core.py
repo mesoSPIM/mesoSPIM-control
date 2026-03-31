@@ -561,10 +561,8 @@ class mesoSPIM_Core(QtCore.QObject):
                 user-visible offset stored in :class:`mesoSPIM_StateSingleton`.
         """
         if wait_until_done:
-            logger.debug('Core: move_absolute (wait_until_done=True) has started')
             #self.sig_move_absolute_and_wait_until_done.emit(sdict) # THIS was running in MainWindow thread, very stubbornly, unless changed to direct call. Otherwise it was causing a lot of synchronization problems.
             self.serial_worker.move_absolute(sdict, wait_until_done=True, use_internal_position=use_internal_position)
-            logger.debug('Core: move_absolute (wait_until_done=True) has finished')
         else:
             self.sig_move_absolute.emit(sdict)
 
@@ -663,6 +661,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_finished.emit()
         QtWidgets.QApplication.processEvents()
 
+    @log_cpu_core
     def snap_image(self, laser_blanking=True):
         '''Snaps a single image after updating the waveforms.
 
@@ -670,7 +669,6 @@ class mesoSPIM_Core(QtCore.QObject):
         but there is additional overhead due to the need to write the
         waveforms into the buffers of the NI cards.
         '''
-        log_cpu_core(logger, msg='snap_image()')
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
         laser = self.state['laser']
@@ -688,9 +686,9 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.create_tasks()
         self.waveformer.write_waveforms_to_tasks()
 
+    @log_cpu_core
     def snap_image_in_series(self, laser_blanking=True):
         '''Snaps and image from a series without waveform update'''
-        log_cpu_core(logger, msg='snap_image_in_series()')
         laser = self.state['laser']
         if laser_blanking:
             self.laserenabler.enable(laser)
@@ -703,9 +701,9 @@ class mesoSPIM_Core(QtCore.QObject):
         if laser_blanking:
             self.laserenabler.disable_all()
 
+    @log_cpu_core
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
-        log_cpu_core(logger, msg='close_image_series()')
         self.waveformer.close_tasks()
         logger.debug("close_image_series() finished")
 

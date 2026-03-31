@@ -248,10 +248,10 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.lightsheet_marker_L.setOpacity(0)
 
     #@QtCore.pyqtSlot(np.ndarray) # deprecated due to slow performance
+    @log_cpu_core
     def set_image(self, image):
         if image is None:
             return
-        log_cpu_core(logger, msg='set_image()')
         logger.debug(f"setImage() with shape {image.shape} started")
         if self.state['state'] in ('live', 'idle'):
             subsampling_ratio = self.state['camera_display_live_subsampling']

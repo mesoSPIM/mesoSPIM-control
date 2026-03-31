@@ -236,6 +236,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             logger.debug('self.running_flag = False, no images written')
     
     @timed
+    @log_cpu_core
     def image_to_disk(self, acq, acq_list, image):
         """Write a single pre-transposed frame to the open writer backend.
 
@@ -245,7 +246,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             image (np.ndarray): 2-D ``uint16`` array already transposed by the caller.
         """
         logger.debug('image_to_disk() started')
-        log_cpu_core(logger, msg='image_to_disk()')
         if self.cur_image_counter % 5 == 0:
             self.parent.sig_status_message.emit('Writing to disk...')
 
