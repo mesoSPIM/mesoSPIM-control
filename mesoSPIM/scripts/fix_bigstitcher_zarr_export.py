@@ -218,23 +218,51 @@ def _fix_one(
     target_zattr = json.loads(target_zattr_path.read_text())
     target_datasets = target_zattr.get("multiscales", [])[0].get("datasets", [])
     typer.echo(f"  [info] Target has {len(target_datasets)} resolution level(s):")
-    for d in target_datasets:
-        typer.echo(f"           path={d.get('path')}  transforms={d.get('coordinateTransformations')}")
 
-    # The target already has correct XY scales and relative Z multipliers.
-    # We only need to correct the absolute Z voxel size using the source value.
-    source_z = scales_list_zyx[0][0]  # e.g. 4.0 µm
-    target_z_base = target_datasets[0]["coordinateTransformations"][0]["scale"][2]
-    typer.echo(f"  [info] Correcting Z scale: {target_z_base} -> {source_z} µm (base level)")
+    # Base voxel size from source (s0), axes order is (t, c, z, y, x)
+    source_z  = scales_list_zyx[0][0]   # e.g. 4.0 µm
+    source_xy = scales_list_zyx[0][1]   # e.g. 0.17 µm
 
     for dataset in target_datasets:
+        path = dataset.get("path")       # e.g. "0", "1", ... "7"
         coord_transform = dataset["coordinateTransformations"][0]
-        current_scale = coord_transform["scale"]
-        current_z = current_scale[2]
-        # Preserve the relative Z multiplier across levels, apply correct base Z
-        new_z = source_z * (current_z / target_z_base)
-        current_scale[2] = new_z
-        # XY (indices 3, 4) are left untouched — already correct in target
+
+        # Read downsamplingFactors from the per-level .zattrs
+        # BigStitcher writes them as [x_factor, y_factor, z_factor, 1, 1]
+        level_zattrs_path = zarr_root / path / ".zattrs"
+        if level_zattrs_path.exists():
+            level_zattrs = json.loads(level_zattrs_path.read_text())
+            factors = level_zattrs.get("downsamplingFactors", None)
+        else:
+            factors = None
+
+        if factors is not None:
+            # downsamplingFactors order from BigStitcher: [x, y, z, c, t]
+            factor_x = factors[0]
+            factor_y = factors[1]
+            factor_z = factors[2]
+            new_scale = [
+                1.0,                        # t
+                1.0,                        # c
+                source_z  * factor_z,       # z
+                source_xy * factor_y,       # y
+                source_xy * factor_x,       # x
+            ]
+            typer.echo(
+                f"    level {path}: downsamplingFactors={factors} "
+                f"-> scale={new_scale}"
+            )
+        else:
+            # Fallback: keep existing scale but fix Z proportionally
+            current_scale = coord_transform["scale"]
+            new_scale = list(current_scale)
+            new_scale[2] = source_z
+            typer.echo(
+                f"    level {path}: no downsamplingFactors found, "
+                f"using fallback scale={new_scale}"
+            )
+
+        coord_transform["scale"] = new_scale
 
     # --- Channel names + colors ---
     # napari-ome-zarr requires a 'color' (hex) on every omero.channels entry.

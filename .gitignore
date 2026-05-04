@@ -33,6 +33,7 @@ mesoSPIM/test/fixtures/
 *.lnk
 !mesoSPIM/mesoSpim.bat
 !mesoSPIM/mesoSpim-shortcut.lnk
+!mesoSpim/scripts/launch_napari.bat
 docs/_build/
 docs/build_log.txt
 /.vscode
