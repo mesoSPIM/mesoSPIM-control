@@ -240,7 +240,9 @@ All positions are absolute.
 'stage_type' option:
 ASI stages, 'stage_type' : 'TigerASI', 'MS2000ASI'
 PI stages, 'stage_type' : 'PI' or 'PI_1controllerNstages' (equivalent), 'PI_NcontrollersNstages'
-Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy',
+Legacy mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy'
+New flexible mixed stages, 'stage_type' : 'Mixed' (requires both asi_parameters and pi_parameters with stage_assignment dicts)
+Demo mode, 'stage_type' : 'DemoStage'
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI', etc, see above
@@ -262,6 +264,18 @@ stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1contr
                     }
 
 ''''
+If 'stage_type' = 'DemoStage':
+No additional parameters needed (demo mode).
+
+If 'stage_type' = 'Mixed':
+The 'Mixed' stage type allows flexible mixing of ASI and PI controllers. Each axis (x, y, z, f, theta)
+can be assigned to either controller. Requires both asi_parameters and pi_parameters, each with a 
+'stage_assignment' dict that maps mesoSPIM axis names to hardware designations (None for unassigned axes).
+Example:
+  asi_parameters = {..., 'stage_assignment': {'z': 'Z', 'theta': 'T', 'x': None, 'y': None, 'f': None}}
+  pi_parameters = {..., 'stage_assignment': {'x': 1, 'y': 2, 'f': 3}}
+This configuration runs z and theta on ASI, while x, y, and f run on the PI controller.
+
 If 'stage_type' = 'PI_1controllerNstages' (vanilla mesoSPIM V5 with single 6-axis controller):
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),

@@ -2089,3 +2089,378 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
             self.ttl_motion_currently_enabled = boolean
             logger.info('TTL Motion currently enabled: '+str(boolean))
             self.state['ttl_movement_enabled_during_acq'] = boolean
+
+    def execute_program(self):
+        pass  # ASI TTL triggering is hardware-driven; no explicit program execution needed
+
+
+class mesoSPIM_Mixed_Stages(mesoSPIM_Stage):
+    '''Stage driver that combines an ASI Tiger controller with one or more PI controllers.
+
+    Axes are divided between the two controller families via the ``stage_assignment``
+    dictionaries in the config file. Each axis can be assigned to either ASI or PI, but not both.
+
+    * ``cfg.asi_parameters['stage_assignment']``: maps mesoSPIM axis names
+      (``'x'``, ``'y'``, ``'z'``, ``'theta'``, ``'f'``) to ASI axis letters.
+      Set the value to ``None`` for any axis that should NOT be driven by ASI.
+    * ``cfg.pi_parameters['stage_assignment']``: maps mesoSPIM axis names to
+      PI axis numbers (1-based integers). Supports any combination of axes.
+
+    Example config (single PI axis)::
+
+        stage_parameters = {'stage_type': 'Mixed', ...}
+
+        asi_parameters = {
+            'stage_assignment': {'x': 'X', 'y': 'V', 'z': 'Z', 'theta': 'T', 'f': None},
+            ...
+        }
+
+        pi_parameters = {
+            'controllername': 'C-884',
+            'stages': ('M-112K033',),
+            'serialnum': ('119046748',),
+            'refmode': (None,),
+            'stage_assignment': {'f': 1},  # f on PI axis 1
+        }
+
+    Example config (multiple PI axes)::
+
+        asi_parameters = {
+            'stage_assignment': {'z': 'Z', 'theta': 'T', 'x': None, 'y': None, 'f': None},
+            ...
+        }
+
+        pi_parameters = {
+            'controllername': 'C-884',
+            'stages': ('L-509.20SD00', 'L-509.40SD00', 'M-112K033'),
+            'serialnum': ('119046748',),
+            'refmode': (None,),
+            'stage_assignment': {'x': 1, 'y': 2, 'f': 3},  # x, y, f on PI axes 1, 2, 3
+        }
+
+
+    TTL-triggered motion (for ASI z-scanning) is preserved and works identically
+    to the pure-ASI stage driver.  The PI axis (``f``) moves only in response to
+    explicit software commands.
+    '''
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from pipython import GCSDevice, pitools
+        self.pitools = pitools
+        from .devices.stages.asi.asicontrol import StageControlASI
+
+        # ---- Validate configuration before initializing hardware ----
+        # Read config dicts first
+        self.asi_parameters = self.cfg.asi_parameters
+        self.mesoSPIM2ASIdict = self.asi_parameters['stage_assignment']
+        
+        assert hasattr(self.cfg, 'pi_parameters') and 'stage_assignment' in self.cfg.pi_parameters, \
+            "Config file with 'Mixed' stage must have 'pi_parameters' with a 'stage_assignment' dict."
+        self.pi_parameters = self.cfg.pi_parameters
+        self.pi_stage_assignment = self.pi_parameters['stage_assignment']
+        
+        # Compute axis assignments
+        self.asi_axes = {ax for ax, asi_ax in self.mesoSPIM2ASIdict.items() if asi_ax is not None}
+        self.pi_axes = set(self.pi_stage_assignment.keys())
+        
+        # Check for double assignment before creating hardware
+        double_assigned = self.asi_axes & self.pi_axes
+        if double_assigned:
+            raise ValueError(f"Configuration error: axes {double_assigned} are assigned to both ASI and PI controllers. "
+                           f"Each axis must be assigned to exactly one controller.")
+        
+        # ---- ASI setup ----
+        self.ttl_cards = self.asi_parameters['ttl_cards']
+        
+        # Create a filtered copy of asi_parameters with only non-None stage assignments
+        # (StageControlASI will fail if it encounters None values in stage_assignment)
+        asi_params_filtered = self.asi_parameters.copy()
+        asi_params_filtered['stage_assignment'] = {ax: asi_ax 
+                                                    for ax, asi_ax in self.mesoSPIM2ASIdict.items() 
+                                                    if asi_ax is not None}
+        self.asi_stages = StageControlASI(asi_params_filtered)
+        
+        assert hasattr(self.cfg, 'asi_parameters'), \
+            "Config file with 'Mixed' stage must have 'asi_parameters' dict."
+        self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
+        self.ttl_motion_currently_enabled = False
+        self._set_asi_speed_from_config()
+        logger.info(f'Mixed stage: ASI axes configured: {self.asi_stages.axis_keys}')
+
+        # ---- PI setup ----
+        self.pidevice = None
+        self.pi_device_connected = False
+
+        controllername = self.pi_parameters['controllername']
+        stages = list(self.pi_parameters['stages'])
+        serialnum = self.pi_parameters['serialnum']
+        refmode = self.pi_parameters.get('refmode', (None,))
+
+        try:
+            self.pidevice = GCSDevice(controllername)
+            self.pidevice.ConnectUSB(serialnum=serialnum)
+            if refmode and any(r is not None for r in refmode):
+                # join non-None refmodes into a single string as pitools expects
+                refmodes_str = ' '.join(r for r in refmode if r is not None)
+                self.pitools.startup(self.pidevice, stages=stages, refmodes=refmodes_str)
+            else:
+                self.pitools.startup(self.pidevice, stages=stages)
+            self.pi_device_connected = True
+            logger.info(f'Mixed stage: PI axes configured: {self.pi_axes}')
+        except Exception as e:
+            logger.error(f'Failed to connect PI device: {e}. PI axes will not be available.')
+            self.pi_device_connected = False
+            self.pidevice = None
+
+        self.pos_timer.setInterval(250)
+        logger.info('Mixed ASI+PI stages initialized')
+
+    def __del__(self):
+        try:
+            self.asi_stages.close()
+        except Exception:
+            pass
+        try:
+            self.pidevice.unload()
+        except Exception:
+            pass
+
+    def _set_asi_speed_from_config(self):
+        if 'speed' in self.cfg.asi_parameters:
+            command = 'S'
+            for axis, speed in self.cfg.asi_parameters['speed'].items():
+                if self.asi_stages.axis_in_config_check(axis):
+                    command += ' ' + axis + '=' + str(speed)
+                else:
+                    logger.error(f'Axis {axis} not in ASI axes list, check config file')
+            command += '\r'
+            self.asi_stages._send_command(command.encode('ascii'))
+        else:
+            logger.info("'speed' not found in asi_parameters, using default values.")
+
+    @QtCore.pyqtSlot(dict)
+    def log_slice(self, dictionary):
+        self.asi_stages.current_z_slice = dictionary['current_image_in_acq']
+
+    def report_position(self):
+        # Read ASI positions
+        with self._serial_lock:
+            position_dict = self.asi_stages.read_position()
+        if position_dict is not None:
+            if 'x' in self.asi_axes:
+                self.x_pos = position_dict[self.mesoSPIM2ASIdict['x']]
+            if 'y' in self.asi_axes:
+                self.y_pos = position_dict[self.mesoSPIM2ASIdict['y']]
+            if 'z' in self.asi_axes:
+                self.z_pos = position_dict[self.mesoSPIM2ASIdict['z']]
+            if 'f' in self.asi_axes:
+                self.f_pos = position_dict[self.mesoSPIM2ASIdict['f']]
+            if 'theta' in self.asi_axes:
+                self.theta_pos = position_dict[self.mesoSPIM2ASIdict['theta']]
+
+        # Read PI positions (all axes assigned to PI)
+        if self.pi_device_connected and self.pi_axes:
+            try:
+                pi_axis_nums = list(self.pi_stage_assignment.values())
+                positions = self.pidevice.qPOS(pi_axis_nums)
+                for axis_name, pi_axis_num in self.pi_stage_assignment.items():
+                    # For theta, no unit conversion; for others, convert from mm to micrometers
+                    if axis_name == 'theta':
+                        setattr(self, f'{axis_name}_pos', positions[pi_axis_num])
+                    else:
+                        setattr(self, f'{axis_name}_pos', round(positions[pi_axis_num] * 1000, 3))
+            except Exception:
+                pass
+
+        self.create_position_dict()
+        self.int_x_pos = self.x_pos + self.int_x_pos_offset
+        self.int_y_pos = self.y_pos + self.int_y_pos_offset
+        self.int_z_pos = self.z_pos + self.int_z_pos_offset
+        self.int_f_pos = self.f_pos + self.int_f_pos_offset
+        self.int_theta_pos = self.theta_pos + self.int_theta_pos_offset
+        self.create_internal_position_dict()
+        self.sig_position.emit(self.int_position_dict)
+
+    @QtCore.pyqtSlot(dict)
+    def move_relative(self, sdict, wait_until_done=False):
+        # ASI relative moves (x, y, z, theta, f)
+        motion_dict = {}
+        if not self.ttl_motion_currently_enabled:
+            if 'x' in self.asi_axes and 'x_rel' in sdict:
+                x_rel = sdict['x_rel']
+                if self.x_min < self.x_pos + x_rel < self.x_max:
+                    motion_dict[self.mesoSPIM2ASIdict['x']] = round(x_rel, 3)
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: X Motion limit would be reached!')
+            if 'y' in self.asi_axes and 'y_rel' in sdict:
+                y_rel = sdict['y_rel']
+                if self.y_min < self.y_pos + y_rel < self.y_max:
+                    motion_dict[self.mesoSPIM2ASIdict['y']] = round(y_rel, 3)
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: Y Motion limit would be reached!')
+            if 'z' in self.asi_axes and 'z_rel' in sdict:
+                z_rel = sdict['z_rel']
+                if self.z_min < self.z_pos + z_rel < self.z_max:
+                    motion_dict[self.mesoSPIM2ASIdict['z']] = round(z_rel, 3)
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: Z Motion limit would be reached!')
+            if 'f' in self.asi_axes and 'f_rel' in sdict:
+                f_rel = sdict['f_rel']
+                if self.f_min < self.f_pos + f_rel < self.f_max:
+                    motion_dict[self.mesoSPIM2ASIdict['f']] = round(f_rel, 3)
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: F Motion limit would be reached!')
+            if 'theta' in self.asi_axes and 'theta_rel' in sdict:
+                theta_rel = sdict['theta_rel']
+                if self.theta_min < self.theta_pos + theta_rel < self.theta_max:
+                    motion_dict[self.mesoSPIM2ASIdict['theta']] = int(theta_rel)
+                else:
+                    self.sig_status_message.emit('Relative movement stopped: Theta Motion limit would be reached!')
+
+            if motion_dict:
+                with self._serial_lock:
+                    self.asi_stages.move_relative(motion_dict)
+            if wait_until_done:
+                with self._serial_lock:
+                    self.asi_stages.wait_until_done()
+
+        # PI relative moves (all axes assigned to PI)
+        if self.pi_device_connected and self.pi_axes:
+            pi_motion_dict = {}
+            for axis_name in self.pi_axes:
+                key = f'{axis_name}_rel'
+                if key in sdict:
+                    current_pos = getattr(self, f'{axis_name}_pos')
+                    axis_min = getattr(self, f'{axis_name}_min')
+                    axis_max = getattr(self, f'{axis_name}_max')
+                    rel_val = sdict[key]
+                    if axis_min < current_pos + rel_val < axis_max:
+                        pi_axis_num = self.pi_stage_assignment[axis_name]
+                        # theta doesn't need unit conversion; others go from um to mm
+                        if axis_name == 'theta':
+                            pi_motion_dict[pi_axis_num] = rel_val
+                        else:
+                            pi_motion_dict[pi_axis_num] = rel_val / 1000
+                    else:
+                        self.sig_status_message.emit(f'Relative movement stopped: {axis_name.upper()} Motion limit would be reached!')
+            
+            if pi_motion_dict:
+                try:
+                    self.pidevice.MVR(pi_motion_dict)
+                    if wait_until_done:
+                        self.pitools.waitontarget(self.pidevice)
+                except Exception as e:
+                    logger.error(f"PI relative move failed: {e}")
+
+    @QtCore.pyqtSlot(dict)
+    def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
+        if use_internal_position:
+            x_offset = self.int_x_pos_offset
+            y_offset = self.int_y_pos_offset
+            z_offset = self.int_z_pos_offset
+            f_offset = self.int_f_pos_offset
+            theta_offset = self.int_theta_pos_offset
+        else:
+            x_offset = y_offset = z_offset = f_offset = theta_offset = 0
+
+        # ASI absolute moves (x, y, z, theta)
+        motion_dict = {}
+        if 'x' in self.asi_axes and 'x_abs' in sdict:
+            x_abs = sdict['x_abs'] - x_offset
+            if self.x_min < x_abs < self.x_max:
+                motion_dict[self.mesoSPIM2ASIdict['x']] = round(x_abs, 3)
+            else:
+                logger.error("x-move outside min-max range, check 'x_min'/'x_max' in config.")
+        if 'y' in self.asi_axes and 'y_abs' in sdict:
+            y_abs = sdict['y_abs'] - y_offset
+            if self.y_min < y_abs < self.y_max:
+                motion_dict[self.mesoSPIM2ASIdict['y']] = round(y_abs, 3)
+            else:
+                logger.error("y-move outside min-max range, check 'y_min'/'y_max' in config.")
+        if 'z' in self.asi_axes and 'z_abs' in sdict:
+            z_abs = sdict['z_abs'] - z_offset
+            if self.z_min < z_abs < self.z_max:
+                motion_dict[self.mesoSPIM2ASIdict['z']] = round(z_abs, 3)
+            else:
+                logger.error("z-move outside min-max range, check 'z_min'/'z_max' in config.")
+        if 'theta' in self.asi_axes and 'theta_abs' in sdict:
+            theta_abs = sdict['theta_abs'] - theta_offset
+            if self.theta_min < theta_abs < self.theta_max:
+                motion_dict[self.mesoSPIM2ASIdict['theta']] = int(theta_abs)
+            else:
+                logger.error("theta-move outside min-max range, check 'theta_min'/'theta_max' in config.")
+        if 'f' in self.asi_axes and 'f_abs' in sdict:
+            f_abs = sdict['f_abs'] - f_offset
+            if self.f_min < f_abs < self.f_max:
+                motion_dict[self.mesoSPIM2ASIdict['f']] = round(f_abs, 3)
+            else:
+                logger.error("f-move outside min-max range, check 'f_min'/'f_max' in config.")
+
+        if motion_dict:
+            with self._serial_lock:
+                self.asi_stages.move_absolute(motion_dict)
+        if wait_until_done:
+            with self._serial_lock:
+                self.asi_stages.wait_until_done()
+
+        # PI absolute moves (all axes assigned to PI)
+        if self.pi_device_connected and self.pi_axes:
+            pi_motion_dict = {}
+            for axis_name in self.pi_axes:
+                key = f'{axis_name}_abs'
+                if key in sdict:
+                    # Get offset for this axis
+                    offset_key = f'int_{axis_name}_pos_offset' if use_internal_position else None
+                    if offset_key:
+                        offset = getattr(self, offset_key)
+                    else:
+                        offset = 0
+                    
+                    abs_val = sdict[key] - offset
+                    axis_min = getattr(self, f'{axis_name}_min')
+                    axis_max = getattr(self, f'{axis_name}_max')
+                    
+                    if axis_min < abs_val < axis_max:
+                        pi_axis_num = self.pi_stage_assignment[axis_name]
+                        # theta doesn't need unit conversion; others go from um to mm
+                        if axis_name == 'theta':
+                            pi_motion_dict[pi_axis_num] = abs_val
+                        else:
+                            pi_motion_dict[pi_axis_num] = abs_val / 1000
+                    else:
+                        logger.error(f"{axis_name}-move {abs_val} outside range ({axis_min}, {axis_max}), "
+                                     f"check '{axis_name}_min'/'{axis_name}_max' in config.")
+            
+            if pi_motion_dict:
+                try:
+                    self.pidevice.MOV(pi_motion_dict)
+                    if wait_until_done:
+                        self.pitools.waitontarget(self.pidevice)
+                except Exception as e:
+                    logger.error(f"PI absolute move failed: {e}")
+
+    @QtCore.pyqtSlot()
+    def stop(self):
+        with self._serial_lock:
+            self.asi_stages.stop()
+        if self.pi_device_connected:
+            try:
+                self.pidevice.STP(noraise=True)
+            except Exception:
+                pass
+
+    def load_sample(self):
+        y_abs = self.cfg.stage_parameters['y_load_position']
+        self.move_absolute({'y_abs': round(y_abs)})
+
+    def unload_sample(self):
+        y_abs = self.cfg.stage_parameters['y_unload_position']
+        self.move_absolute({'y_abs': round(y_abs)})
+
+    def enable_ttl_motion(self, boolean):
+        if self.ttl_motion_enabled_during_acq:
+            self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
+            self.ttl_motion_currently_enabled = boolean
+            logger.info('TTL Motion currently enabled: ' + str(boolean))
+            self.state['ttl_movement_enabled_during_acq'] = boolean
