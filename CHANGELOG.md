@@ -1,4 +1,20 @@
 ## Release candidate
+### New Features ✨
+- 💎 **Image Processor plugin system**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.
+- Acquisition Manager: group rows by illumination/laser, "Group selected rows" and "Delete selected rows" buttons, and save/load the acquisition table as CSV.
+- "Save config file" button on the Parameters tab, writing current sweep, camera, laser, galvo and ETL settings back to the active config file.
+- Optional descriptive metadata and objective parameters in config files, included in acquisition metadata.
+
+### Hardware Control & Support 🔧
+- ASI stages: increased command precision (0.X → 0.XXX), fixed sub-micron interpolation, and added thread-safety locking for serial communication.
+- Auto Left/Right illumination now uses the median tile X position as the midline, instead of edge-only margins.
+
+### Bugfixes 🐛
+- Fixed BigStitcher OME-ZARR Z-scale and channel naming.
+- Fixed scale metadata at different resolutions.
+- Fixed image processors causing GUI lockouts by using non-blocking cleanup connections.
+- Removed galvo amplitude from saved state to prevent zero-amplitude settings on reload.
+
 ### GUI Improvements 🖥️
 - All GUI windows now automatically resize to fit the available screen resolution and are repositioned so they stay fully visible on smaller monitors.
 - Tile Overview and Webcam windows are arranged in the right-most quarter of the screen (stacked vertically) on startup.
