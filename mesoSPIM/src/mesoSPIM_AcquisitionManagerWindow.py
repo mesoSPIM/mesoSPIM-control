@@ -33,7 +33,7 @@ from .utils.multicolor_acquisition_wizard import MulticolorTilingWizard
 from .utils.filename_wizard import FilenameWizard
 from .utils.focus_tracking_wizard import FocusTrackingWizard
 from .utils.image_processing_wizard import ImageProcessingWizard
-from .utils.utility_functions import convert_seconds_to_string
+from .utils.utility_functions import convert_seconds_to_string, fit_window_to_screen
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QMessageBox
 
@@ -88,6 +88,7 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
 
         loadUi(self.parent.package_directory + '/gui/mesoSPIM_AcquisitionManagerWindow.ui', self)
         self.setWindowTitle('mesoSPIM Acquisition Manager')
+        fit_window_to_screen(self)
 
         self.MoveUpButton.clicked.connect(self.move_selected_row_up)
         self.MoveDownButton.clicked.connect(self.move_selected_row_down)

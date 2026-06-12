@@ -3,10 +3,49 @@ Contains a variety of mesoSPIM utility functions
 '''
 import ctypes
 import logging
+from PyQt5 import QtWidgets
 logger = logging.getLogger(__name__)
 
 # Windows API binding
 GetCurrentProcessorNumber = ctypes.windll.kernel32.GetCurrentProcessorNumber
+
+
+def fit_window_to_screen(window, margin=60):
+    '''Shrink a window so it fits within the available screen geometry.
+
+    The mesoSPIM .ui files specify fixed window sizes that can exceed the
+    resolution of smaller monitors. The windows are built from resizable Qt
+    layouts, so shrinking them down still leaves a usable, scaled-down GUI.
+    Windows that already fit are left untouched.
+
+    Args:
+        window (QWidget): The window to resize.
+        margin (int): Pixels to leave free between the window and the edges
+            of the available screen area (taskbars etc.).
+    '''
+    available = QtWidgets.QApplication.primaryScreen().availableGeometry()
+    target_width = min(window.width(), available.width() - margin)
+    target_height = min(window.height(), available.height() - margin)
+    if target_width < window.width() or target_height < window.height():
+        window.resize(max(target_width, 1), max(target_height, 1))
+
+
+def move_window_into_screen(window, x, y):
+    '''Move a window to (x, y), clamped so it stays fully within the available screen.
+
+    Useful when a saved/configured window position (or a tiled layout based on
+    it) would otherwise place a window partially or fully off-screen, e.g.
+    after switching to a smaller monitor.
+
+    Args:
+        window (QWidget): The window to move.
+        x (int): Desired x position (left edge).
+        y (int): Desired y position (top edge).
+    '''
+    available = QtWidgets.QApplication.primaryScreen().availableGeometry()
+    x = min(max(x, available.left()), max(available.left(), available.right() - window.width()))
+    y = min(max(y, available.top()), max(available.top(), available.bottom() - window.height()))
+    window.move(x, y)
 
 def convert_seconds_to_string(delta_t):
     '''

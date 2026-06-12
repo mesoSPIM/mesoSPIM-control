@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.uic import loadUi
+from .utils.utility_functions import fit_window_to_screen
 import logging
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class mesoSPIM_ContrastWindow(QtWidgets.QWidget):
         self.setLayout(layout)
         layout.addWidget(self.image_view)
         self.resize(900, 900)
+        fit_window_to_screen(self)
         self.show()
 
     def _contrast(self, roi):

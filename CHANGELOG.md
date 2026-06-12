@@ -1,3 +1,9 @@
+## Release candidate
+### GUI Improvements 🖥️
+- All GUI windows now automatically resize to fit the available screen resolution and are repositioned so they stay fully visible on smaller monitors.
+- Tile Overview and Webcam windows are arranged in the right-most quarter of the screen (stacked vertically) on startup.
+- Camera Window opens narrower (1200 px wide) by default.
+
 ## Release February 2026 [1.20.0]
 🚀 Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.
 

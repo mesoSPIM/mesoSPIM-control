@@ -25,7 +25,7 @@ from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
-from .utils.utility_functions import log_cpu_core
+from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Setting up the user interface windows
         loadUi(self.package_directory + '/gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle(title)
+        fit_window_to_screen(self)
 
         # Discontinued
         # Connect log display widget
@@ -120,12 +121,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             window_pos = self.cfg.ui_options['window_pos']
         else:
             window_pos = (100, 100)
-        self.move(window_pos[0], window_pos[1])
-        self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
-        self.tile_view_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1])
-        self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
+        move_window_into_screen(self, window_pos[0], window_pos[1])
+        move_window_into_screen(self.camera_window, window_pos[0] + self.width() + 50, window_pos[1])
+        move_window_into_screen(self.acquisition_manager_window, window_pos[0], window_pos[1] + self.height() + 50)
+
+        # Tile View and Webcam windows occupy the right-most quarter of the screen,
+        # stacked on top of each other (Tile View above, Webcam below)
+        available = QtWidgets.QApplication.primaryScreen().availableGeometry()
+        quarter_width = available.width() // 4
+        half_height = available.height() // 2
+        right_x = available.right() - quarter_width + 1
+        self.tile_view_window.move(right_x, available.top())
         if self.webcam_window:
-            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1] + self.height())
+            self.webcam_window.move(right_x, available.top() + half_height)
 
         # set up some Acq manager signals
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
@@ -1036,8 +1044,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             window_pos = self.cfg.ui_options['window_pos']
         else:
             window_pos = (100, 100)
-        self.move(window_pos[0], window_pos[1])
-        self.camera_window.move(window_pos[0] + 100, window_pos[1] + 100)
-        self.acquisition_manager_window.move(window_pos[0] + 200, window_pos[1] + 200)
+        move_window_into_screen(self, window_pos[0], window_pos[1])
+        move_window_into_screen(self.camera_window, window_pos[0] + 100, window_pos[1] + 100)
+        move_window_into_screen(self.acquisition_manager_window, window_pos[0] + 200, window_pos[1] + 200)
         if self.webcam_window:
-            self.webcam_window.move(window_pos[0] + 300, window_pos[1] + 300)
+            move_window_into_screen(self.webcam_window, window_pos[0] + 300, window_pos[1] + 300)
