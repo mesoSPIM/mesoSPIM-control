@@ -8,7 +8,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 import pyqtgraph as pg
 from .utils.optimization import shannon_dct
-from .utils.utility_functions import log_cpu_core
+from .utils.utility_functions import log_cpu_core, fit_window_to_screen
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         else:
             loadUi(self.parent.package_directory + '/gui/mesoSPIM_CameraWindow.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Camera Window')
+        fit_window_to_screen(self)
 
         self.status_label.setText("Status: OK")
 

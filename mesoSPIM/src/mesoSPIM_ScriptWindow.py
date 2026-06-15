@@ -9,6 +9,8 @@ import time
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 
+from .utils.utility_functions import fit_window_to_screen
+
 class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
     ''' At some point: Change this into a Factory class for creating script windows '''
 
@@ -21,6 +23,7 @@ class mesoSPIM_ScriptWindow(QtWidgets.QWidget):
 
         self.setWindowTitle('mesoSPIM Script Editor')
         self.setGeometry(100, 100, 600, 800)
+        fit_window_to_screen(self)
 
         self.LoadScriptButton = QtWidgets.QPushButton('Load Script')
         self.LoadScriptButton.setStyleSheet('QPushButton{font-size: 21px}')
