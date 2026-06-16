@@ -1,4 +1,5 @@
 import sys
+import time
 import pyqtgraph as pg
 import numpy as np
 import matplotlib
@@ -16,11 +17,12 @@ class mesoSPIM_ContrastWindow(QtWidgets.QWidget):
         super().__init__()
         self.parent = parent
         self.active = True
+        self._last_update = 0.0
         self.image_view = pg.ImageView()
         cmap = pg.colormap.get('jet', source='matplotlib')
         self.image_view.setColorMap(cmap)
         self.setWindowTitle("Contrast map")
-        layout = pg.QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addWidget(self.image_view)
         self.resize(900, 900)
@@ -31,20 +33,28 @@ class mesoSPIM_ContrastWindow(QtWidgets.QWidget):
         """Compute the contrast value, (max-min)/(max+min), from the image roi"""
         mini = np.percentile(roi, 1)
         maxi = np.percentile(roi, 99)
-        contrast = (maxi - mini) / (maxi + mini)
+        denom = maxi + mini
+        contrast = (maxi - mini) / denom if denom != 0 else 0.0
         return contrast
 
-    @QtCore.pyqtSlot(np.ndarray)
-    def set_image(self, image):
-        if self.active: # do updates only if widget window is active (visible), to minimize overhead.
-            roi_h = roi_w = 128 # px, roi size
-            N_ROIs_H, N_ROIs_W = int(np.ceil(image.shape[0] / roi_h)), int(np.ceil(image.shape[1] / roi_w))
-            contrast_map = np.zeros((N_ROIs_H, N_ROIs_W))
-            for j in range(N_ROIs_H):
-                for i in range(N_ROIs_W):
-                    roi = image[j * roi_h:(j + 1) * roi_h, i * roi_w:(i + 1) * roi_w]
-                    contrast_map[j, i] = self._contrast(roi)
-            self.image_view.setImage(contrast_map, autoLevels=False, autoHistogramRange=False, autoRange=False)
+    @QtCore.pyqtSlot()
+    def set_image(self):
+        if not self.active or not self.parent.core.frame_queue_display:
+            return
+        now = time.monotonic()
+        if now - self._last_update < 0.2:  # cap at 5 fps to keep GUI responsive
+            return
+        self._last_update = now
+        image = self.parent.core.frame_queue_display[0]
+        N_ROIs_H, N_ROIs_W = 8, 8
+        roi_h = image.shape[0] // N_ROIs_H
+        roi_w = image.shape[1] // N_ROIs_W
+        contrast_map = np.zeros((N_ROIs_H, N_ROIs_W))
+        for j in range(N_ROIs_H):
+            for i in range(N_ROIs_W):
+                roi = image[j * roi_h:(j + 1) * roi_h, i * roi_w:(i + 1) * roi_w]
+                contrast_map[j, i] = self._contrast(roi)
+        self.image_view.setImage(contrast_map, autoLevels=False, autoHistogramRange=False, autoRange=False)
 
     def closeEvent(self, event):
         """Override close event: window becomes hidden and inactive, but still exists and ready to pop up when called"""
