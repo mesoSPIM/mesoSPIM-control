@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_pdf import PdfPages
 
-from tifffile import imread
+from tifffile import imread, imwrite
 
 
 # =============================
@@ -421,6 +421,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         save_png_action.triggered.connect(self.save_png_figure)
         file_menu.addAction(save_png_action)
 
+        save_psf_action = QtWidgets.QAction("Save average PSF as TIF...", self)
+        save_psf_action.triggered.connect(self.save_average_psf)
+        file_menu.addAction(save_psf_action)
+
         file_menu.addSeparator()
 
         exit_action = QtWidgets.QAction("Exit", self)
@@ -645,6 +649,65 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             fig.savefig(fname, dpi=300, format="png")
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PNG:\n{e}")
+
+    def save_average_psf(self):
+        """Average normalised sub-volumes around each detected bead and save as a 3D TIF."""
+        if self.im is None or self.centers is None or len(self.centers) == 0:
+            QtWidgets.QMessageBox.warning(self, "Warning", "Run analysis first to detect beads.")
+            return
+
+        xy_um = 10.0
+        z_planes = 20
+        xy_px = round(xy_um / self.px_lateral_micron)
+        if xy_px % 2 == 0:
+            xy_px += 1  # odd → bead centre lands on the middle pixel
+        window = [z_planes, xy_px, xy_px]
+
+        # self.centers are in sub_im coordinates (offset by zmin); map back to full image
+        zmin = int(self.zmin_edit.value())
+        vols, skipped = [], 0
+        for c in self.centers:
+            c_full = c.copy()
+            c_full[0] += zmin
+            vol = volume(self.im, c_full, window)
+            if vol is not None:
+                vols.append(vol)
+            else:
+                skipped += 1
+
+        if not vols:
+            QtWidgets.QMessageBox.warning(
+                self, "Warning",
+                "No beads have enough margin for PSF extraction with the current window.\n"
+                f"Required: {z_planes} z-planes × {xy_px}×{xy_px} px lateral."
+            )
+            return
+
+        avg_psf = (np.mean(np.stack(vols, axis=0), axis=0) * 65535).clip(0, 65535).astype(np.uint16)
+
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save average PSF",
+            f"avg-psf({self.experiment_key}).tif",
+            "TIF files (*.tif *.tiff)"
+        )
+        if not fname:
+            return
+        if not fname.lower().endswith(('.tif', '.tiff')):
+            fname += '.tif'
+
+        try:
+            imwrite(
+                fname, avg_psf,
+                imagej=True,
+                resolution=(1.0 / self.px_lateral_micron, 1.0 / self.px_lateral_micron),
+                metadata={'spacing': self.px_axial_micron, 'unit': 'um', 'axes': 'ZYX'},
+            )
+            msg = f"Average PSF saved from {len(vols)} beads, shape {avg_psf.shape}"
+            if skipped:
+                msg += f" ({skipped} bead(s) skipped: too close to image edge)"
+            self.info_label.setText(msg)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PSF TIF:\n{e}")
 
     # ---------- Analysis ----------
 
