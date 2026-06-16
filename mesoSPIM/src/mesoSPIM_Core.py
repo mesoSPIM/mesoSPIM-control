@@ -208,7 +208,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.stopflag = False
         #self.pauseflag = False
 
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower(): # TTL option for ASI stages
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed': # TTL option for ASI stages
             assert hasattr(self.cfg,  'asi_parameters'), "Config file for ASI Stages must contain 'asi_parameters' dict."
             self.TTL_mode_enabled_in_cfg = self.read_config_parameter('ttl_motion_enabled', self.cfg.asi_parameters)
         else: # Default all other stages to TTL False

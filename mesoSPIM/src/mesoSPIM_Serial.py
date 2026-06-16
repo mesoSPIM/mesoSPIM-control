@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
-from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Stages, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Stages, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_Mixed_Stages
 from .utils.utility_functions import log_cpu_core, timed
 
 logger = logging.getLogger(__name__)
@@ -105,6 +105,9 @@ class mesoSPIM_Serial(QtCore.QObject):
         #     self.stage = mesoSPIM_ASI_MS2000_Stage(self)
         #     #self.stage.sig_pause.connect(self.pause)
         #     self.parent.sig_progress.connect(self.stage.log_slice)
+        elif self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
+            self.stage = mesoSPIM_Mixed_Stages(self)
+            self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
         else:
