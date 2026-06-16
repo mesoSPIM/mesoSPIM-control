@@ -478,6 +478,18 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             )
             return
 
+        if np.issubdtype(im.dtype, np.integer):
+            sat_value = np.iinfo(im.dtype).max
+            n_sat = int(np.sum(im == sat_value))
+            if n_sat > 0:
+                pct = 100.0 * n_sat / im.size
+                QtWidgets.QMessageBox.warning(
+                    self, "Saturation warning",
+                    f"{n_sat:,} pixels ({pct:.2f}%) are saturated "
+                    f"(value = {sat_value}, dtype = {im.dtype}).\n"
+                    "PSF fits on saturated beads will be unreliable."
+                )
+
         self.im = im.astype(np.float32)
         self.filename = fname
 
