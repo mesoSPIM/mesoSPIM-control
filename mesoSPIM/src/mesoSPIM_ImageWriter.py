@@ -325,23 +325,25 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.running_flag = False
         self.sig_end_acquisition_done.emit()
 
-    def write_snap_image(self, image):
+    def write_snap_image(self, image, prefix=''):
         """Save a single snap-shot frame to the snap folder as a timestamped TIFF.
 
         Args:
             image (np.ndarray): 2-D ``uint16`` frame from the camera.
+            prefix (str): Optional text prepended to the filename, separated by ``_``.
         """
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        filename = timestr + '.tif'
+        filename = (prefix + '_' if prefix else '') + timestr + '.tif'
         path = self.state['snap_folder'] + '/' + filename
-        if os.path.exists(self.state['snap_folder']):
-            try:
-                tifffile.imsave(path, image, photometric='minisblack')
-                self.write_snap_metadata(path)
-            except Exception as e:
-                logger.error(f"{e}")
-        else:
-            print(f"Error: Snap folder does not exist: {self.state['snap_folder']}. Choose it from the menu.")
+        try:
+            px_um = self.state['pixelsize']
+            xy_res = (1. / px_um, 1. / px_um)
+            tifffile.imsave(path, image, photometric='minisblack',
+                            imagej=True, resolution=xy_res,
+                            metadata={'unit': 'um'})
+            self.write_snap_metadata(path)
+        except Exception as e:
+            logger.error(f"{e}")
 
     def write_snap_metadata(self, path):
         """Write a plain-text metadata sidecar file alongside a snap TIFF.

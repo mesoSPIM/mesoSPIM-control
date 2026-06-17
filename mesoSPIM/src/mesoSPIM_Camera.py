@@ -23,6 +23,7 @@ from .mesoSPIM_ProcessorChain import ProcessorChain
 class mesoSPIM_Camera(QtCore.QObject):
     '''Top-level class for all cameras'''
     sig_camera_frame = QtCore.pyqtSignal()
+    sig_snap_image_ready = QtCore.pyqtSignal()  # emitted after snap; image is in frame_queue_display
     sig_write_images = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_finished = QtCore.pyqtSignal()
     sig_end_image_series_done = QtCore.pyqtSignal()  # emitted after end_image_series cleanup is complete
@@ -228,7 +229,7 @@ class mesoSPIM_Camera(QtCore.QObject):
         logger.info(f"Image appended to display queue: len(frame_queue_display)={len(self.frame_queue_display)}")
         self.sig_camera_frame.emit() # signal the GUI to update the display
         if write_flag:
-            self.parent.image_writer.write_snap_image(image) # Dangerous, not thread safe!
+            self.sig_snap_image_ready.emit()
 
     @QtCore.pyqtSlot()
     def prepare_live(self):

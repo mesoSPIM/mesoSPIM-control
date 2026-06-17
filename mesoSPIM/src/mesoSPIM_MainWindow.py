@@ -171,6 +171,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+        self.core.camera_worker.sig_snap_image_ready.connect(self.save_snap_image)
+        self._last_snap_prefix = ''
 
         self.sig_move_absolute.connect(self.core.move_absolute, type=QtCore.Qt.QueuedConnection)
         # Set stages, revolver, filter to initialization positions defined in the config file:
@@ -716,6 +718,28 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)
+
+    @QtCore.pyqtSlot()
+    def save_snap_image(self):
+        """Show a prefix dialog after snap, then save the image from the display queue."""
+        if not self.core.frame_queue_display:
+            return
+        snap_folder = self.state['snap_folder']
+        if not os.path.exists(snap_folder):
+            QtWidgets.QMessageBox.critical(
+                self, "Snap folder not found",
+                f"Snap folder does not exist:\n{snap_folder}\n\nPlease choose a valid folder from the menu."
+            )
+            return
+        image = self.core.frame_queue_display[0]
+        prefix, ok = QtWidgets.QInputDialog.getText(
+            self, 'Save snap image', 'File name prefix (leave empty to skip):',
+            text=self._last_snap_prefix
+        )
+        if not ok:
+            return
+        self._last_snap_prefix = prefix
+        self.core.image_writer.write_snap_image(image, prefix=prefix)
         
     def run_live(self):
         self.sig_state_request.emit({'state':'live'})
