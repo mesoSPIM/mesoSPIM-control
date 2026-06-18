@@ -31,8 +31,8 @@ class mesoSPIM_ContrastWindow(QtWidgets.QWidget):
 
     def _contrast(self, roi):
         """Compute the contrast value, (max-min)/(max+min), from the image roi"""
-        mini = np.percentile(roi, 1)
-        maxi = np.percentile(roi, 99)
+        mini = np.percentile(roi, 0.1)
+        maxi = np.percentile(roi, 99.9)
         denom = maxi + mini
         contrast = (maxi - mini) / denom if denom != 0 else 0.0
         return contrast
