@@ -27,6 +27,7 @@
 - Camera Window opens narrower (1200 px wide) by default.
 - Progress bar labels and bars (Acquisition/Time Point/Total Progress) use a smaller, consistent 12pt font to reduce vertical space.
 - More Pythonic, higher-contrast syntax highlighting (distinct colors for builtins, decorators, comments vs. strings, etc.) in the Script Editor window.
+- Z-step and F-step up/down button icons now have a linear-perspective taper (narrow/wide ends) for a more 3D look, replacing the flat up/down arrow icons.
 
 ## Release February 2026 [1.20.0]
 🚀 Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.

@@ -58,7 +58,7 @@
          <x>0</x>
          <y>0</y>
          <width>921</width>
-         <height>1300</height>
+         <height>1305</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -991,7 +991,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>70</y>
+                <y>90</y>
                 <width>111</width>
                 <height>81</height>
                </rect>
@@ -1011,7 +1011,7 @@
               </property>
               <property name="icon">
                <iconset>
-                <normaloff>up-blue.png</normaloff>up-blue.png</iconset>
+                <normaloff>up-blue-perspective.png</normaloff>up-blue-perspective.png</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -1030,7 +1030,7 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>280</y>
+                <y>250</y>
                 <width>111</width>
                 <height>81</height>
                </rect>
@@ -1050,7 +1050,7 @@
               </property>
               <property name="icon">
                <iconset>
-                <normaloff>down-blue.png</normaloff>down-blue.png</iconset>
+                <normaloff>down-blue-perspective.png</normaloff>down-blue-perspective.png</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -1069,14 +1069,14 @@
               <property name="geometry">
                <rect>
                 <x>10</x>
-                <y>160</y>
+                <y>180</y>
                 <width>111</width>
-                <height>111</height>
+                <height>60</height>
                </rect>
               </property>
               <property name="font">
                <font>
-                <pointsize>16</pointsize>
+                <pointsize>14</pointsize>
                 <weight>50</weight>
                 <italic>false</italic>
                 <bold>false</bold>
@@ -1255,7 +1255,7 @@
              <property name="geometry">
               <rect>
                <x>20</x>
-               <y>100</y>
+               <y>120</y>
                <width>111</width>
                <height>81</height>
               </rect>
@@ -1275,7 +1275,7 @@
              </property>
              <property name="icon">
               <iconset>
-               <normaloff>up-green.png</normaloff>up-green.png</iconset>
+               <normaloff>up-green-perspective.png</normaloff>up-green-perspective.png</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -1294,14 +1294,14 @@
              <property name="geometry">
               <rect>
                <x>20</x>
-               <y>190</y>
+               <y>210</y>
                <width>111</width>
-               <height>111</height>
+               <height>60</height>
               </rect>
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
                <weight>50</weight>
                <italic>false</italic>
                <bold>false</bold>
@@ -1325,7 +1325,7 @@
              <property name="geometry">
               <rect>
                <x>20</x>
-               <y>310</y>
+               <y>280</y>
                <width>111</width>
                <height>81</height>
               </rect>
@@ -1345,7 +1345,7 @@
              </property>
              <property name="icon">
               <iconset>
-               <normaloff>down-green.png</normaloff>down-green.png</iconset>
+               <normaloff>down-green-perspective.png</normaloff>down-green-perspective.png</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -1412,14 +1412,14 @@
              <property name="geometry">
               <rect>
                <x>140</x>
-               <y>190</y>
+               <y>180</y>
                <width>111</width>
                <height>111</height>
               </rect>
              </property>
              <property name="font">
               <font>
-               <pointsize>16</pointsize>
+               <pointsize>14</pointsize>
                <weight>50</weight>
                <italic>false</italic>
                <bold>false</bold>
