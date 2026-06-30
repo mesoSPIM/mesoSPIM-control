@@ -53,6 +53,8 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_warning = QtCore.pyqtSignal(str)
     sig_progress = QtCore.pyqtSignal(dict)
     sig_run_timepoint = QtCore.pyqtSignal(int)
+    sig_time_lapse_finished = QtCore.pyqtSignal()    # emitted when all time points completed normally
+    sig_time_lapse_cancelled = QtCore.pyqtSignal()   # emitted when stop_time_lapse() cancels a running time lapse
 
     ''' Camera-related signals '''
     sig_prepare_image_series = QtCore.pyqtSignal(Acquisition, AcquisitionList)
@@ -101,6 +103,11 @@ class mesoSPIM_Core(QtCore.QObject):
         # parent.sig_state_request -> self.state_request_handler
         # self.sig_state_request -> self.waveformer.state_request_handler
         self.sig_run_timepoint.connect(self.parent.run_timepoint, type=QtCore.Qt.QueuedConnection)
+        self.sig_time_lapse_finished.connect(self.parent.on_time_lapse_finished, type=QtCore.Qt.QueuedConnection)
+        self.sig_time_lapse_cancelled.connect(self.parent.on_time_lapse_cancelled, type=QtCore.Qt.QueuedConnection)
+        self.sig_finished.connect(self._on_acquisition_finished_during_time_lapse, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_run_time_lapse.connect(self.run_time_lapse, type=QtCore.Qt.QueuedConnection)
+        self.parent.sig_stop_time_lapse.connect(self.stop_time_lapse, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_state_request.connect(self.state_request_handler, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_execute_script.connect(self.execute_script, type=QtCore.Qt.QueuedConnection)
         self.parent.sig_move_relative.connect(self.move_relative, type=QtCore.Qt.QueuedConnection)
@@ -218,6 +225,10 @@ class mesoSPIM_Core(QtCore.QObject):
         # self.acquisition_list_rotation_position = {}
         self.state['state'] = 'idle'
         self.time_counter = 0
+        self.timelapse_active = False
+        self.timelapse_waiting_for_finish = False
+        self.timelapse_tpoints = 0
+        self.timelapse_interval_sec = 0
 
         # Flags for non-blocking end-of-image-series synchronisation.
         # Set to True when the corresponding "done" signal is received.
@@ -1103,13 +1114,13 @@ class mesoSPIM_Core(QtCore.QObject):
                 if self.image_count % 100 == 0:
                     self.state['current_framerate'] = self.image_count / time_passed
 
-                if ((self.image_count + 1) % 5 == 0) or (self.total_image_count % (self.image_count + 1) == 0):
+                if (self.image_count % 5 == 0) or (self.image_count == self.total_image_count):
                     self.send_progress(self.acquisition_count,
                                     self.total_acquisition_count,
                                     i + 1,
                                     steps,
                                     self.total_image_count,
-                                    self.image_count + 1,
+                                    self.image_count,
                                     convert_seconds_to_string(time_passed),
                                     convert_seconds_to_string(time_remaining))
         self.laserenabler.disable_all()
@@ -1282,12 +1293,51 @@ class mesoSPIM_Core(QtCore.QObject):
             write_line(file)
 
     def run_time_lapse(self, tpoints=1, time_interval_sec=60):
-        '''A quick and dirty implementation of time lapse via recursive function.'''	
-        if self.time_counter >= tpoints:
+        '''Starts (or restarts) a time lapse: runs the acquisition list once per
+        time point. Each time point only starts once the previous one has fully
+        finished (tracked via sig_finished), then waits time_interval_sec before
+        starting the next one (0 = "as fast as possible"). This avoids starting
+        overlapping acquisitions, which would otherwise race on the acquisition
+        list's filenames.'''
+        self.time_counter = 0
+        self.timelapse_active = True
+        self.timelapse_tpoints = tpoints
+        self.timelapse_interval_sec = time_interval_sec
+        self.timelapse_waiting_for_finish = False
+        self._start_next_time_lapse_timepoint()
+
+    def _start_next_time_lapse_timepoint(self):
+        '''A quick and dirty implementation of time lapse via recursive,
+        completion-driven scheduling.'''
+        if not self.timelapse_active:
+            return  # cancelled via stop_time_lapse(), which already emitted sig_time_lapse_cancelled
+        if self.time_counter >= self.timelapse_tpoints:
             print("Timer sequence finished")
             self.time_counter = 0
+            self.timelapse_active = False
+            self.timelapse_waiting_for_finish = False
+            self.sig_time_lapse_finished.emit()
             return
-        print(f"Running time point {self.time_counter} out of {tpoints - 1}...")
-        QtCore.QTimer.singleShot(time_interval_sec*1000, lambda: self.run_time_lapse(tpoints, time_interval_sec))
+        print(f"Running time point {self.time_counter} out of {self.timelapse_tpoints - 1}...")
+        self.timelapse_waiting_for_finish = True
         self.sig_run_timepoint.emit(self.time_counter)
         self.time_counter += 1
+
+    def _on_acquisition_finished_during_time_lapse(self):
+        '''Connected to sig_finished. If the just-finished acquisition was the
+        one started for the current time lapse time point, schedule the next
+        time point after the configured interval.'''
+        if self.timelapse_active and self.timelapse_waiting_for_finish:
+            self.timelapse_waiting_for_finish = False
+            QtCore.QTimer.singleShot(self.timelapse_interval_sec*1000, self._start_next_time_lapse_timepoint)
+
+    def stop_time_lapse(self):
+        '''Cancels a running time lapse. The currently running acquisition list
+        (if any) is not aborted by this alone; use stop() for that. No further
+        time points will be started.'''
+        was_active = self.timelapse_active
+        self.timelapse_active = False
+        self.timelapse_waiting_for_finish = False
+        self.time_counter = 0
+        if was_active:
+            self.sig_time_lapse_cancelled.emit()

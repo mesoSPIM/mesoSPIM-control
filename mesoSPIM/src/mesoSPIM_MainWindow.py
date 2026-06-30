@@ -80,6 +80,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_launch_optimizer = QtCore.pyqtSignal(dict)
     sig_launch_contrast_window = QtCore.pyqtSignal()
     sig_launch_processor_chain_window = QtCore.pyqtSignal()
+    sig_run_time_lapse = QtCore.pyqtSignal(int, int)
+    sig_stop_time_lapse = QtCore.pyqtSignal()
 
     def __init__(self, package_directory, config, title="mesoSPIM Main Window"):
         super().__init__()
@@ -115,6 +117,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.open_webcam_window()
 
         self.scriptwindow = None
+
+        self.timelapse_in_progress = False
+        self.timelapse_total_timepoints = 1
+        self.timelapse_current_timepoint = 0
 
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
@@ -171,6 +177,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+        self.core.sig_time_lapse_finished.connect(self.on_time_lapse_finished)
+        self.core.sig_time_lapse_cancelled.connect(self.on_time_lapse_cancelled)
         self.core.camera_worker.sig_snap_image_ready.connect(self.save_snap_image)
         self._last_snap_prefix = ''
 
@@ -366,21 +374,33 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         remaining_time_string = dict['remaining_time_string']
         fps = self.state['current_framerate']
 
-        self.AcquisitionProgressBar.setValue(int((cur_image+1)/images_in_acq*100))
-        self.TotalProgressBar.setValue(int((image_count+1)/tot_images*100))
+        self.AcquisitionProgressBar.setValue(int(cur_image/images_in_acq*100))
+        self.AcquisitionProgressBar.setFormat('%p% Image: '+ str(cur_image) + '/' + str(images_in_acq) + '  FPS: ' + '{:.1f}'.format(fps))
+
+        if self.timelapse_in_progress:
+            ''' Total Progress spans the whole timelapse: every time point contributes
+            an equal share, assuming each time point runs the same acquisition list. '''
+            tp = self.timelapse_current_timepoint
+            total_tp = self.timelapse_total_timepoints
+            total_progress_value = int((tp*tot_images + image_count) / (total_tp*tot_images) * 100)
+            self.TotalProgressBar.setValue(total_progress_value)
+            self.TotalProgressBar.setFormat('%p% Time Point: '+ str(tp+1) +\
+                                            '/' + str(total_tp) +\
+                                             ' Acq: '+ str(cur_acq+1) +\
+                                            '/' + str(tot_acqs) + ' ' +\
+                                                'Time: ' + time_passed_string + \
+                                                ' Remaining: ' + remaining_time_string)
+        else:
+            self.TotalProgressBar.setValue(int(image_count/tot_images*100))
+            self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
+                                            '/' + str(tot_acqs) + ' ' +\
+                                                'Time: ' + time_passed_string + \
+                                                ' Remaining: ' + remaining_time_string)
 
         ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
-            self.win_taskbar_button.progress().setValue(int((image_count+1)/tot_images*100))
+            self.win_taskbar_button.progress().setValue(int(image_count/tot_images*100))
         '''
-
-        self.AcquisitionProgressBar.setFormat('%p% Image: '+ str(cur_image+1) + '/' + str(images_in_acq) + '  FPS: ' + '{:.1f}'.format(fps))
-        self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
-                                        '/' + str(tot_acqs) +\
-                                         ' ' + ' Image: '+ str(image_count) +\
-                                        '/' + str(tot_images) + ' ' +\
-                                            'Time: ' + time_passed_string + \
-                                            ' Remaining: ' + remaining_time_string)
 
     def create_script_window(self):
         """
@@ -491,7 +511,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.SnapButton.clicked.connect(self.run_snap)
         self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
-        self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
+        self.StopButton.clicked.connect(self.stop_acquisition_and_timelapse)
         self.LightsheetSwitchingModeButton.clicked.connect(self.run_lightsheet_alignment_mode)
         self.VisualModeButton.clicked.connect(self.run_visual_mode)
 
@@ -568,6 +588,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
         self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
+
+        ''' Timelapse tab '''
+        self.AsFastAsPossibleCheckBox.toggled.connect(self.toggle_timelapse_interval)
+        self.toggle_timelapse_interval(self.AsFastAsPossibleCheckBox.isChecked())  # sync initial state set in the .ui file
+        self.EnableTimelapseCheckBox.toggled.connect(self.RunTimelapseButton.setEnabled)
+        self.RunTimelapseButton.clicked.connect(self.run_timelapse)
+
         self.LaserIntensitySlider.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
@@ -616,6 +643,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def scale_galvo_amp_w_zoom(self):
         self.state['galvo_amp_scale_w_zoom'] = self.checkBoxScaleWZoom.isChecked()
+
+    @QtCore.pyqtSlot(bool)
+    def toggle_timelapse_interval(self, checked):
+        ''' Disables the Acquisition Interval spinboxes when 'As fast as possible' is checked '''
+        self.TimelapseHoursSpinBox.setEnabled(not checked)
+        self.TimelapseMinutesSpinBox.setEnabled(not checked)
+        self.TimelapseSecondsSpinBox.setEnabled(not checked)
 
     @QtCore.pyqtSlot()
     def update_GUI_by_shutter_state(self):
@@ -742,6 +776,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.image_writer.write_snap_image(image, prefix=prefix)
         
     def run_live(self):
+        self.TimePointProgressBar.setValue(0)
+        self.TimePointProgressBar.setFormat('%p%')
         self.sig_state_request.emit({'state':'live'})
         logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
         self.sig_poke_demo_thread.emit()
@@ -777,6 +813,46 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setVisible(True)
         '''
 
+    def run_timelapse(self):
+        ''' Starts a basic timelapse sequence (see scripts/timelapse.py) using the
+        parameters set on the Timelapse tab. The acquisition list is run once per
+        time point; time points are scheduled by mesoSPIM_Core.run_time_lapse(). '''
+        tpoints = self.TimelapseTimepointsSpinBox.value()
+        if self.AsFastAsPossibleCheckBox.isChecked():
+            interval_sec = 0
+        else:
+            interval_sec = (self.TimelapseHoursSpinBox.value() * 3600
+                             + self.TimelapseMinutesSpinBox.value() * 60
+                             + self.TimelapseSecondsSpinBox.value())
+        self.timelapse_total_timepoints = tpoints
+        self.timelapse_current_timepoint = 0
+        self.timelapse_in_progress = True
+        self.TimePointProgressBar.setValue(0)
+        self.TimePointProgressBar.setFormat(f'%p% (0/{tpoints})')
+        self.RunTimelapseButton.setEnabled(False)
+        self.sig_run_time_lapse.emit(tpoints, interval_sec)
+
+    def stop_acquisition_and_timelapse(self):
+        ''' Aborts the current acquisition and cancels any further timelapse time points. '''
+        self.sig_state_request.emit({'state':'idle'})
+        self.sig_stop_time_lapse.emit()
+
+    @QtCore.pyqtSlot()
+    def on_time_lapse_finished(self):
+        ''' Re-enables the Run Timelapse button once a timelapse sequence has
+        completed normally. The Time Point progress bar is left showing 100%. '''
+        self.timelapse_in_progress = False
+        self.RunTimelapseButton.setEnabled(self.EnableTimelapseCheckBox.isChecked())
+
+    @QtCore.pyqtSlot()
+    def on_time_lapse_cancelled(self):
+        ''' Re-enables the Run Timelapse button and resets the Time Point progress
+        bar to 0 once a timelapse sequence has been cancelled via the Stop button. '''
+        self.timelapse_in_progress = False
+        self.RunTimelapseButton.setEnabled(self.EnableTimelapseCheckBox.isChecked())
+        self.TimePointProgressBar.setValue(0)
+        self.TimePointProgressBar.setFormat('%p%')
+
     def run_lightsheet_alignment_mode(self):
         self.sig_state_request.emit({'state':'lightsheet_alignment_mode'})
         self.set_progressbars_to_busy()
@@ -800,6 +876,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(int)
     def run_timepoint(self, timepoint):
         self.acquisition_manager_window.append_time_index_to_filenames(timepoint)
+        total = getattr(self, 'timelapse_total_timepoints', 1)
+        self.timelapse_current_timepoint = timepoint
+        self.TimePointProgressBar.setValue(int((timepoint + 1) / total * 100))
+        self.TimePointProgressBar.setFormat(f'%p% ({timepoint + 1}/{total})')
         self.run_acquisition_list()
 
     @QtCore.pyqtSlot(dict)
@@ -862,6 +942,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.RunAcquisitionListButton.setEnabled(boolean)
         self.VisualModeButton.setEnabled(boolean)
         self.LightsheetSwitchingModeButton.setEnabled(boolean)
+        # Only re-enable Run Timelapse if 'Enable Timelapse' is still checked
+        self.RunTimelapseButton.setEnabled(boolean and self.EnableTimelapseCheckBox.isChecked())
 
     def finished(self):
         self.enable_stop_button(False)

@@ -1,6 +1,7 @@
 ## Release candidate
 ### New Features ✨
 - 💎 **Image Processor plugin system**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.
+- 💎 **Timelapse acquisitions**: New "Timelapse" tab to repeatedly run the configured acquisition list over time. Set the interval (hours/minutes/seconds) or enable "As fast as possible" (default on), and the number of time points. "Run Timelapse" starts the sequence (only available once "Enable Timelapse" is checked); "Stop" cancels any further time points. A new "Time Point" progress bar tracks the current time point, and "Total Progress" now spans the whole timelapse instead of resetting every time point.
 - Acquisition Manager: group rows by illumination/laser, "Group selected rows" and "Delete selected rows" buttons, and save/load the acquisition table as CSV.
 - "Save config file" button on the Parameters tab, writing current sweep, camera, laser, galvo and ETL settings back to the active config file.
 - Optional descriptive metadata and objective parameters in config files, included in acquisition metadata.
@@ -14,11 +15,13 @@
 - Fixed scale metadata at different resolutions.
 - Fixed image processors causing GUI lockouts by using non-blocking cleanup connections.
 - Removed galvo amplitude from saved state to prevent zero-amplitude settings on reload.
+- Fixed Acquisition/Total Progress bars stalling below 100% at the end of an acquisition: an off-by-one in the image counter caused the final progress update to be silently dropped by Qt (out-of-range values are ignored, not clamped).
 
 ### GUI Improvements 🖥️
 - All GUI windows now automatically resize to fit the available screen resolution and are repositioned so they stay fully visible on smaller monitors.
 - Tile Overview and Webcam windows are arranged in the right-most quarter of the screen (stacked vertically) on startup.
 - Camera Window opens narrower (1200 px wide) by default.
+- Progress bar labels and bars (Acquisition/Time Point/Total Progress) use a smaller, consistent 12pt font to reduce vertical space.
 
 ## Release February 2026 [1.20.0]
 🚀 Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.
