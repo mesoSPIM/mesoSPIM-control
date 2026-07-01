@@ -250,10 +250,24 @@ def plot_psf_subplot(ax, fit_tuple, scale, Max, title):
 # =============================
 
 class MplCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=10, height=20, dpi=300):
-        self.fig = plt.Figure(figsize=(width, height), dpi=dpi)
+    def __init__(self, parent=None, dpi=100):
+        self.fig = plt.Figure(dpi=dpi)
         super().__init__(self.fig)
         self.setParent(parent)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if not self.fig.get_axes():
+            return
+        w = max(self.width(), 1)
+        h = max(self.height(), 1)
+        dpi = self.fig.get_dpi()
+        self.fig.set_size_inches(w / dpi, h / dpi, forward=False)
+        try:
+            self.fig.tight_layout(pad=1.0, w_pad=0.7, h_pad=0.7)
+        except Exception:
+            pass
+        self.draw_idle()
 
 
 # =============================
@@ -390,7 +404,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         controls2.addStretch(1)
 
         # Matplotlib canvas
-        self.canvas = MplCanvas(self, width=12, height=20, dpi=100)
+        self.canvas = MplCanvas(self, dpi=100)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                     QtWidgets.QSizePolicy.Expanding)
         self.canvas.setSizePolicy(size_policy)
@@ -639,14 +653,24 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         if not fname.lower().endswith(".png"):
             fname += ".png"
 
+        EXPORT_W_IN, EXPORT_H_IN = 12.0, 9.0  # fixed export dimensions (inches @ 300 DPI), 4:3
         try:
             fig = self.canvas.fig
-            # Add title from filename
+            display_size = fig.get_size_inches().copy()
+
+            fig.set_size_inches(EXPORT_W_IN, EXPORT_H_IN, forward=False)
+            suptitle_obj = None
             if self.filename:
-                fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
-            # Ensure layout is up to date before saving
+                suptitle_obj = fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
             fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
             fig.savefig(fname, dpi=300, format="png")
+
+            # Restore display state
+            if suptitle_obj is not None:
+                suptitle_obj.remove()
+            fig.set_size_inches(*display_size, forward=False)
+            fig.tight_layout(pad=1.0, w_pad=0.7, h_pad=0.7)
+            self.canvas.draw()
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PNG:\n{e}")
 
@@ -790,9 +814,11 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         import matplotlib.gridspec as gridspec
 
-        # Adjust overall figure size if you want bigger plots in absolute terms
-        # (this affects the embedded canvas size too, but you can tune as needed)
-        fig.set_size_inches(10, 8)  # width, height in inches
+        # Sync figure size to the current canvas widget size so subplots fill the window.
+        dpi = fig.get_dpi()
+        w_in = max(self.canvas.width(), 100) / dpi
+        h_in = max(self.canvas.height(), 100) / dpi
+        fig.set_size_inches(w_in, h_in, forward=False)
 
         # GridSpec: 2 rows, 2 columns, but with unequal row heights
         # row_heights: top row = 1, bottom row = 2.5 (so bottom ~70% of height)
