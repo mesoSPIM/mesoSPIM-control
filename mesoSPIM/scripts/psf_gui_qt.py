@@ -655,22 +655,15 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         EXPORT_W_IN, EXPORT_H_IN = 12.0, 9.0  # fixed export dimensions (inches @ 300 DPI), 4:3
         try:
-            fig = self.canvas.fig
-            display_size = fig.get_size_inches().copy()
-
-            fig.set_size_inches(EXPORT_W_IN, EXPORT_H_IN, forward=False)
-            suptitle_obj = None
+            from matplotlib.backends.backend_agg import FigureCanvasAgg
+            export_fig = plt.Figure(figsize=(EXPORT_W_IN, EXPORT_H_IN), dpi=300)
+            FigureCanvasAgg(export_fig)  # attach non-interactive Agg backend for rendering
             if self.filename:
-                suptitle_obj = fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
-            fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
-            fig.savefig(fname, dpi=300, format="png")
-
-            # Restore display state
-            if suptitle_obj is not None:
-                suptitle_obj.remove()
-            fig.set_size_inches(*display_size, forward=False)
-            fig.tight_layout(pad=1.0, w_pad=0.7, h_pad=0.7)
-            self.canvas.draw()
+                export_fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
+            self._populate_figure(export_fig)
+            export_fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
+            export_fig.savefig(fname, dpi=300, format="png")
+            plt.close(export_fig)
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PNG:\n{e}")
 
@@ -795,33 +788,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.canvas.fig.clear()
         self.canvas.draw()
 
-    def update_plots(self):
-        """
-        Layout:
-            Top row (small): 2 histograms (axial, lateral)
-            Bottom row (large): 2 PSF maps (axial, lateral) that are taller and wider,
-            visually dominating the page.
-
-        We use GridSpec to give more space to the bottom row and slightly more width
-        to the image plots.
-        """
-        if self.stats_df is None or self.stats_df.empty or self.smoothed is None:
-            self.clear_plots()
-            return
-
-        fig = self.canvas.fig
-        fig.clear()
-
+    def _populate_figure(self, fig):
+        """Draw histograms and PSF maps onto *fig*. Uses current self.stats_df / self.smoothed."""
         import matplotlib.gridspec as gridspec
 
-        # Sync figure size to the current canvas widget size so subplots fill the window.
-        dpi = fig.get_dpi()
-        w_in = max(self.canvas.width(), 100) / dpi
-        h_in = max(self.canvas.height(), 100) / dpi
-        fig.set_size_inches(w_in, h_in, forward=False)
-
-        # GridSpec: 2 rows, 2 columns, but with unequal row heights
-        # row_heights: top row = 1, bottom row = 2.5 (so bottom ~70% of height)
         gs = gridspec.GridSpec(
             2, 2,
             height_ratios=[1.0, 2.5],
@@ -829,7 +799,6 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             figure=fig
         )
 
-        # ---------- Top row: histograms (smaller) ----------
         ax_hist_axial = fig.add_subplot(gs[0, 0])
         ax_hist_lat   = fig.add_subplot(gs[0, 1])
 
@@ -848,50 +817,53 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         ax_hist_lat.set_xlabel("Lateral FWHM (µm)")
         ax_hist_lat.set_ylabel("# Beads")
 
-        # ---------- Bottom row: PSF maps (larger) ----------
         ax_im_axial = fig.add_subplot(gs[1, 0])
         ax_im_lat   = fig.add_subplot(gs[1, 1])
 
-        smoothed_img = self.smoothed   # already 2D max-projection
+        smoothed_img = self.smoothed
         cmap = "jet"
 
-        # Axial FWHM map
-        ax_im_axial.imshow(smoothed_img, cmap="gray", aspect="equal", extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
+        ax_im_axial.imshow(smoothed_img, cmap="gray", aspect="equal",
+                           extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay0 = ax_im_axial.scatter(
-            (self.stats_df["X"]*self.px_lateral_micron).tolist(),
-            (self.stats_df["Y"]*self.px_lateral_micron).tolist(),
+            (self.stats_df["X"] * self.px_lateral_micron).tolist(),
+            (self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMax"].tolist(),
-            cmap=cmap,
-            vmin=0,
-            vmax=5,
-            s=20,   # marker size; increase if you want larger dots
-            edgecolors="none"
+            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
         )
         ax_im_axial.set_title("PSF: Axial FWHM")
         ax_im_axial.set_xlabel("FOV_X (µm)")
         ax_im_axial.set_ylabel("FOV_Y (µm)")
-        cbar0 = fig.colorbar(overlay0, ax=ax_im_axial, fraction=0.040, pad=0.02)
-        #cbar0.set_label("Axial FWHM (µm)")
+        fig.colorbar(overlay0, ax=ax_im_axial, fraction=0.040, pad=0.02)
 
-        # Lateral FWHM map
-        ax_im_lat.imshow(smoothed_img, cmap="gray", aspect="equal", extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
+        ax_im_lat.imshow(smoothed_img, cmap="gray", aspect="equal",
+                         extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay1 = ax_im_lat.scatter(
-            (self.stats_df["X"]*self.px_lateral_micron).tolist(),
-            (self.stats_df["Y"]*self.px_lateral_micron).tolist(),
+            (self.stats_df["X"] * self.px_lateral_micron).tolist(),
+            (self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMlat"].tolist(),
-            cmap=cmap,
-            vmin=0,
-            vmax=5,
-            s=20,
-            edgecolors="none"
+            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
         )
         ax_im_lat.set_title("PSF: Lateral FWHM")
         ax_im_lat.set_xlabel("FOV_X (µm)")
         ax_im_lat.set_ylabel("FOV_Y (µm)")
-        cbar1 = fig.colorbar(overlay1, ax=ax_im_lat, fraction=0.040, pad=0.02)
-        cbar1.set_label("FWHM (µm)")
+        fig.colorbar(overlay1, ax=ax_im_lat, fraction=0.040, pad=0.02).set_label("FWHM (µm)")
 
-        # Make layout tight but leave some breathing room
+    def update_plots(self):
+        if self.stats_df is None or self.stats_df.empty or self.smoothed is None:
+            self.clear_plots()
+            return
+
+        fig = self.canvas.fig
+        fig.clear()
+
+        # Sync figure size to the current canvas widget size so subplots fill the window.
+        dpi = fig.get_dpi()
+        w_in = max(self.canvas.width(), 100) / dpi
+        h_in = max(self.canvas.height(), 100) / dpi
+        fig.set_size_inches(w_in, h_in, forward=False)
+
+        self._populate_figure(fig)
         fig.tight_layout(pad=1.0, w_pad=0.7, h_pad=0.7)
         self.canvas.draw()
 
