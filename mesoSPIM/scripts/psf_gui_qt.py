@@ -653,7 +653,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         if not fname.lower().endswith(".png"):
             fname += ".png"
 
-        EXPORT_W_IN, EXPORT_H_IN = 12.0, 9.0  # fixed export dimensions (inches @ 300 DPI), 4:3
+        EXPORT_W_IN, EXPORT_H_IN = 12.0, 6.0  # fixed export dimensions (inches @ 300 DPI), 4:2
         try:
             from matplotlib.backends.backend_agg import FigureCanvasAgg
             export_fig = plt.Figure(figsize=(EXPORT_W_IN, EXPORT_H_IN), dpi=300)
