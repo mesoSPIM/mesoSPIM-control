@@ -25,9 +25,11 @@
 - All GUI windows now automatically resize to fit the available screen resolution and are repositioned so they stay fully visible on smaller monitors.
 - Tile Overview and Webcam windows are arranged in the right-most quarter of the screen (stacked vertically) on startup.
 - Camera Window opens narrower (1200 px wide) by default.
+- Camera Window: new "Line roi" overlay — a draggable two-endpoint line segment (green) selectable from the overlay combo box; the status bar shows live length in pixels and µm.
 - Progress bar labels and bars (Acquisition/Time Point/Total Progress) use a smaller, consistent 12pt font to reduce vertical space.
 - More Pythonic, higher-contrast syntax highlighting (distinct colors for builtins, decorators, comments vs. strings, etc.) in the Script Editor window.
 - Z-step and F-step up/down button icons now have a linear-perspective taper (narrow/wide ends) for a more 3D look, replacing the flat up/down arrow icons.
+- PSF analysis tool: figure now always fills the window on first draw and after resize; PNG export always uses a fixed 12×9 in (4:3) canvas at 300 DPI for consistent output regardless of window size.
 
 ## Release February 2026 [1.20.0]
 🚀 Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.

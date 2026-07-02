@@ -210,8 +210,8 @@ camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
 camera_parameters = {'x_pixels' : 5056,
                      'y_pixels' : 2960,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
+                     'x_pixel_size_in_microns' : 5,
+                     'y_pixel_size_in_microns' : 5,
                      'subsampling' : [1,2,4],
                      'camera_id' : 0,
                      'sensor_mode' : 12,    # 12 for progressive

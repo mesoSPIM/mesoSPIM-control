@@ -98,6 +98,11 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         w, h = self.x_image_width//self.ini_subsampling, self.y_image_width//self.ini_subsampling
         self.roi_box = pg.RectROI((0, 0), (w, h), sideScalers=True)
         self.roi_drawn = False
+        self.roi_line = pg.LineSegmentROI(
+            [(w // 4, h // 2), (3 * w // 4, h // 2)],
+            pen=pg.mkPen('g', width=2)
+        )
+        self.line_drawn = False
 
         # Create polygons that show light-sheet direction
         self.points_R = np.array([[0, self.y_image_width//self.ini_subsampling//2 - 25],
@@ -116,6 +121,7 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         self.adjustLevelsButton.clicked.connect(self.adjust_levels)
         self.overlayCombo.currentTextChanged.connect(self.change_overlay)
         self.roi_box.sigRegionChangeFinished.connect(self.update_status)
+        self.roi_line.sigRegionChangeFinished.connect(self.update_status)
         self.sig_update_status.connect(self.update_status)
 
     def disable_auto_range(self):
@@ -152,6 +158,8 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
         w, h = self.get_image_shape()
         if overlay_name == 'Box roi':
             self.set_roi('box', (w//2 - 50, h//2 - 50, 100, 100))
+        elif overlay_name == 'Line roi':
+            self.set_roi('line', (0, 0, w, h))
         elif overlay_name == 'Overlay: none':
             self.set_roi(None, (0, 0, w, h))
         elif overlay_name == 'LS marker':
@@ -179,27 +187,52 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.sig_update_roi.emit((0, 0, w, h))
         return roi
 
+    def get_line_length_px(self):
+        """Return the length of the line ROI in display (image) pixels.
+
+        Handle positions in roi_line.handles[i]['pos'] are in the ROI's local
+        coordinate system, which shares axes and scale with image pixel space.
+        The length vector between the two handles is invariant to ROI translation,
+        so this is correct regardless of where the line is dragged.
+        """
+        h0 = self.roi_line.handles[0]['pos']
+        h1 = self.roi_line.handles[1]['pos']
+        return np.hypot(h1.x() - h0.x(), h1.y() - h0.y())
+
     def set_roi(self, mode='box', x_y_w_h=(0, 0, 100, 100)):
         """Set the overlay mode and reposition the ROI rectangle.
 
         Args:
             mode (str or None): ``'box'`` — show draggable rectangle;
+                ``'line'`` — show draggable line segment;
                 ``'LS marker'`` — show light-sheet direction arrows;
                 ``None`` — no overlay.
-            x_y_w_h (tuple): ``(x, y, width, height)`` in *screen* (sub-sampled)
-                pixel coordinates.
+            x_y_w_h (tuple): ``(x, y, width, height)`` used only for ``'box'`` mode.
         """
-        assert mode in ('box', None, 'LS marker'), f"Mode must be in ('box', None, 'LS marker'), received {mode} instead"
+        assert mode in ('box', 'line', None, 'LS marker'), \
+            f"Mode must be in ('box', 'line', None, 'LS marker'), received {mode} instead"
         self.overlay = mode
-        x, y, w, h = x_y_w_h
-        self.roi_box.setPos((x, y))
-        self.roi_box.setSize((w, h))
-        if self.overlay in (None, 'LS marker') and self.roi_drawn:
-            self.image_view.removeItem(self.roi_box)
-            self.roi_drawn = False
-        elif self.overlay == 'box' and not self.roi_drawn:
+
+        # Box ROI
+        if mode == 'box':
+            x, y, w, h = x_y_w_h
+            self.roi_box.setPos((x, y))
+            self.roi_box.setSize((w, h))
+        if mode == 'box' and not self.roi_drawn:
             self.image_view.addItem(self.roi_box)
             self.roi_drawn = True
+        elif mode != 'box' and self.roi_drawn:
+            self.image_view.removeItem(self.roi_box)
+            self.roi_drawn = False
+
+        # Line ROI
+        if mode == 'line' and not self.line_drawn:
+            self.image_view.addItem(self.roi_line)
+            self.line_drawn = True
+        elif mode != 'line' and self.line_drawn:
+            self.image_view.removeItem(self.roi_line)
+            self.line_drawn = False
+
         self.sig_update_status.emit()
 
     def get_image_shape(self):
@@ -213,9 +246,13 @@ class mesoSPIM_CameraWindow(QtWidgets.QWidget):
             self.status_label.setText(f"Screen ROI size: W {int(w)} px, {int(self.px2um(w, subsampling)):,} \u03BCm. "
                                       f"H {int(h)} px, {int(self.px2um(h, subsampling)):,} \u03BCm. "
                                       f"Screen subsampling {subsampling}.")
-                                      #f"sharpness {np.round(1e4 * shannon_dct(roi)):.0f}")
             self.hide_light_sheet_marker()
-        elif self.overlay == None:
+        elif self.overlay == 'line':
+            length_px = self.get_line_length_px()
+            length_um = self.px2um(length_px, subsampling)
+            self.status_label.setText(f"Line length: {length_px:.1f} px,  {length_um:.1f} \u03BCm. " f"Screen subsampling {subsampling}.")
+            self.hide_light_sheet_marker()
+        elif self.overlay is None:
             self.hide_light_sheet_marker()
             self.status_label.setText(f"Image dimensions: {roi.shape}")
         elif self.overlay == 'LS marker':

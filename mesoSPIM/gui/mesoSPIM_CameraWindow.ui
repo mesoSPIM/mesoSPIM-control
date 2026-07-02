@@ -91,6 +91,11 @@
          <string>Box roi</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Line roi</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item>
