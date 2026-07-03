@@ -1178,6 +1178,43 @@ class mesoSPIM_Core(QtCore.QObject):
         self.state['state']='idle'
         self.sig_update_gui_from_state.emit()
 
+    # Reports the outcome of a start_remote_scripting attempt back to the GUI
+    # (ok, message) so the dialog never shows a false "running" on a bind failure.
+    sig_remote_scripting_started = QtCore.pyqtSignal(bool, str)
+
+    @QtCore.pyqtSlot(str, int, str)
+    def start_remote_scripting(self, host, port, token):
+        '''Start the remote scripting server (Tools -> Remote Scripting...).
+
+        Runs on the Core's own thread (invoked via a queued connection) so the
+        server's QTcpServer lives here, where execute_script runs. `token` gates
+        access: when non-empty a client must send it before any script runs.
+        Restart-safe: stops any prior instance first. Emits
+        sig_remote_scripting_started(ok, message); on a bind failure (e.g. port in
+        use) ok is False so the GUI can report it. See mesoSPIM_RemoteScripting.py.
+        '''
+        from .mesoSPIM_RemoteScripting import RemoteScriptingServer
+        self.stop_remote_scripting()
+        try:
+            self._remote_scripting_server = RemoteScriptingServer(self, host, int(port), token or None)
+        except Exception as exc:
+            logger.exception('Remote scripting server failed to start')
+            self.sig_remote_scripting_started.emit(False, str(exc))
+            return
+        logger.info(f'Remote scripting server on {host}:{port} (token {"set" if token else "off"})')
+        self.sig_remote_scripting_started.emit(True, f'{host}:{port}')
+
+    @QtCore.pyqtSlot()
+    def stop_remote_scripting(self):
+        '''Stop the remote scripting server if running (idempotent).'''
+        srv = getattr(self, '_remote_scripting_server', None)
+        if srv is not None:
+            try:
+                srv.stop()
+            except Exception:
+                logger.exception('Error stopping remote scripting server')
+            self._remote_scripting_server = None
+
     def lightsheet_alignment_mode(self):
         """Continuous live mode that alternates left/right shutters for dual-lightsheet co-alignment.
 

@@ -77,6 +77,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     sig_save_etl_config = QtCore.pyqtSignal()
     sig_poke_demo_thread = QtCore.pyqtSignal()
+    # Remote scripting server (Tools -> Remote Scripting...). Emitted to the Core
+    # (queued) so the server's socket lives on the Core's own thread.
+    sig_start_remote_scripting = QtCore.pyqtSignal(str, int, str)
+    sig_stop_remote_scripting = QtCore.pyqtSignal()
     sig_launch_optimizer = QtCore.pyqtSignal(dict)
     sig_launch_contrast_window = QtCore.pyqtSignal()
     sig_launch_processor_chain_window = QtCore.pyqtSignal()
@@ -196,6 +200,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_launch_optimizer.connect(self.launch_optimizer)
         self.sig_launch_contrast_window.connect(self.launch_contrast_window)
         self.sig_launch_processor_chain_window.connect(self.launch_processor_chain_window)
+        self.sig_start_remote_scripting.connect(self.core.start_remote_scripting, type=QtCore.Qt.QueuedConnection)
+        self.sig_stop_remote_scripting.connect(self.core.stop_remote_scripting, type=QtCore.Qt.QueuedConnection)
+        self.core.sig_remote_scripting_started.connect(self.on_remote_scripting_started)
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighestPriority)
@@ -273,6 +280,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def close_app(self):
         #self.log_display_handler.flushOnClose = False #discontinued
         logger.info('Closing the application')
+        if getattr(self, '_remote_scripting_running', False):
+            self.sig_stop_remote_scripting.emit()
+            self._remote_scripting_running = False
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:
@@ -419,6 +429,23 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
         self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
+        # Add a "Tools -> Remote Scripting..." entry programmatically (no .ui change).
+        # `self.menuBar` is the QMenuBar *widget* from the .ui (it shadows
+        # QMainWindow.menuBar()), so add to it as an attribute. Reuse an existing
+        # Tools menu if one is ever added, rather than creating a duplicate.
+        self._remote_scripting_running = False
+        self._rs_refresh = None
+        self.menuTools = None
+        for _action in self.menuBar.actions():
+            if _action.menu() is not None and _action.text().replace('&', '') == 'Tools':
+                self.menuTools = _action.menu()
+                break
+        if self.menuTools is None:
+            self.menuTools = self.menuBar.addMenu('Tools')
+        self.actionRemoteScripting = QtWidgets.QAction('Remote Scripting...', self)
+        self.actionRemoteScripting.setStatusTip('Start/stop the external Python scripting server')
+        self.actionRemoteScripting.triggered.connect(self.open_remote_scripting_dialog)
+        self.menuTools.addAction(self.actionRemoteScripting)
 
         # Add Processor Chain menu item to View menu
         self.actionProcessor_Chain = QtWidgets.QAction("Processor Chain", self)
@@ -1137,6 +1164,104 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def display_warning(self, string):
         warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning', string, QtWidgets.QMessageBox.Ok)
+
+    def on_remote_scripting_started(self, ok, message):
+        '''Result of a start attempt from the Core (queued): update state + dialog.
+
+        On failure (e.g. the port is in use) the server did NOT start, so the
+        dialog must not show "running". Warn the operator with the reason.
+        '''
+        self._remote_scripting_running = ok
+        if not ok:
+            QtWidgets.QMessageBox.warning(
+                self, 'Remote Scripting', f'Could not start the server: {message}')
+        if self._rs_refresh is not None:
+            self._rs_refresh()
+
+    def open_remote_scripting_dialog(self):
+        '''Start/stop the remote scripting server (external Python control API).
+
+        Off by default. A client sends a Python script; it runs in the Core
+        context (the same Script Window path) and its console output is returned.
+        A script is ARBITRARY code on this PC, so: host 127.0.0.1 = same machine
+        only; set a token before exposing it on the network; plain TCP, so the
+        token gates casual LAN access but is not sniffer-proof (tunnel for
+        untrusted nets).
+        '''
+        import secrets
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle('Remote Scripting')
+        form = QtWidgets.QFormLayout(dlg)
+        warn = QtWidgets.QLabel('Runs arbitrary Python on this PC. Use a token to expose on a network.')
+        warn.setWordWrap(True)
+        form.addRow(warn)
+        host_edit = QtWidgets.QLineEdit(getattr(self, '_rs_host', '127.0.0.1'))
+        port_edit = QtWidgets.QLineEdit(str(getattr(self, '_rs_port', 42000)))
+        # Secure by default: pre-fill a fresh random token so starting the server
+        # is never accidentally open. The operator can clear it to run open on
+        # localhost (a network bind with no token is still confirmed in do_start).
+        token_edit = QtWidgets.QLineEdit(getattr(self, '_rs_token', '') or secrets.token_urlsafe(16))
+        token_edit.setPlaceholderText('blank = open (localhost only)')
+        gen_btn = QtWidgets.QPushButton('Generate')
+        gen_btn.clicked.connect(lambda: token_edit.setText(secrets.token_urlsafe(16)))
+        token_row = QtWidgets.QHBoxLayout()
+        token_row.addWidget(token_edit)
+        token_row.addWidget(gen_btn)
+        status = QtWidgets.QLabel()
+        form.addRow('Host:', host_edit)
+        form.addRow('Port:', port_edit)
+        form.addRow('Token:', token_row)
+        form.addRow('Status:', status)
+        start_btn = QtWidgets.QPushButton('Start')
+        stop_btn = QtWidgets.QPushButton('Stop')
+        btns = QtWidgets.QHBoxLayout()
+        btns.addWidget(start_btn)
+        btns.addWidget(stop_btn)
+        form.addRow(btns)
+
+        def refresh():
+            running = self._remote_scripting_running
+            status.setText(f"running on {getattr(self, '_rs_host', '')}:{getattr(self, '_rs_port', '')}"
+                           if running else 'stopped')
+            start_btn.setEnabled(not running)
+            stop_btn.setEnabled(running)
+            for w in (host_edit, port_edit, token_edit, gen_btn):
+                w.setEnabled(not running)
+
+        def do_start():
+            try:
+                port = int(port_edit.text())
+            except ValueError:
+                QtWidgets.QMessageBox.warning(dlg, 'Remote Scripting', 'Port must be a number.')
+                return
+            host = host_edit.text().strip() or '127.0.0.1'
+            token = token_edit.text().strip()
+            if host not in ('127.0.0.1', 'localhost') and not token:
+                if QtWidgets.QMessageBox.question(
+                        dlg, 'No token',
+                        'Exposing arbitrary-Python execution on the network with no token lets any '
+                        'machine on the LAN run code on this PC. Start anyway?',
+                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No) != QtWidgets.QMessageBox.Yes:
+                    return
+            self._rs_host, self._rs_port, self._rs_token = host, port, token
+            # Do NOT assume success here: the Core binds the socket on its own
+            # thread and may fail (port in use). on_remote_scripting_started sets
+            # the running state and refreshes the dialog from the real outcome.
+            self.sig_start_remote_scripting.emit(host, port, token)
+
+        def do_stop():
+            self.sig_stop_remote_scripting.emit()
+            self._remote_scripting_running = False
+            refresh()
+
+        start_btn.clicked.connect(do_start)
+        stop_btn.clicked.connect(do_stop)
+        # Let the started-signal handler refresh this dialog while it is open
+        # (a modal exec_ still pumps queued cross-thread signals).
+        self._rs_refresh = refresh
+        refresh()
+        dlg.exec_()
+        self._rs_refresh = None
 
     def choose_snap_folder(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open csv File', self.state['snap_folder'])
