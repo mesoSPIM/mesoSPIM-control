@@ -827,7 +827,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
                            extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay0 = ax_im_axial.scatter(
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
-            (self.stats_df["Y"] * self.px_lateral_micron).tolist(),
+            (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMax"].tolist(),
             cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
         )
@@ -840,7 +840,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
                          extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay1 = ax_im_lat.scatter(
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
-            (self.stats_df["Y"] * self.px_lateral_micron).tolist(),
+            (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMlat"].tolist(),
             cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
         )
