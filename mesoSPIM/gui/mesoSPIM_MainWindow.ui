@@ -3870,9 +3870,20 @@ Focus</string>
      <string>Plugins</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuUtils">
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Utils</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
    <addaction name="menuPlugins"/>
+   <addaction name="menuUtils"/>
   </widget>
   <action name="actionClose">
    <property name="text">

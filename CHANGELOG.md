@@ -7,6 +7,7 @@
 - Acquisition Manager: group rows by illumination/laser, "Group selected rows" and "Delete selected rows" buttons, and save/load the acquisition table as CSV.
 - "Save config file" button on the Parameters tab, writing current sweep, camera, laser, galvo and ETL settings back to the active config file.
 - Optional descriptive metadata and objective parameters in config files, included in acquisition metadata.
+- New "Utils" menu with "PSF (beads) analysis from a stack", launching the PSF analysis tool from within mesoSPIM_control, preloaded with either the most recently completed acquisition's stack or a user-chosen TIFF file, with system magnification/pixel size/Z-step passed in automatically.
 
 ### Hardware Control & Support 🔧
 - ASI stages: increased command precision (0.X → 0.XXX), fixed sub-micron interpolation, and added thread-safety locking for serial communication.
@@ -20,6 +21,7 @@
 - Fixed Acquisition/Total Progress bars stalling below 100% at the end of an acquisition: an off-by-one in the image counter caused the final progress update to be silently dropped by Qt (out-of-range values are ignored, not clamped).
 - Fixed errors when launching the "Open image contrast window" button; improved responsiveness and capped the contrast ROI grid at 8×8. Contrast calculation now uses 0.1/99.9 percentiles instead of 1/99 for less clipping-sensitive results.
 - Z-Step spinbox in the Acquisition Manager table now accepts decimal values instead of rounding to the nearest integer.
+- PSF analysis tool: fixed the axial/lateral FWHM maps being flipped vertically relative to the underlying bead image (bead Y-coordinates were plotted in the wrong orientation relative to `imshow`'s default origin).
 
 ### GUI Improvements 🖥️
 - All GUI windows now automatically resize to fit the available screen resolution and are repositioned so they stay fully visible on smaller monitors.
@@ -30,6 +32,7 @@
 - More Pythonic, higher-contrast syntax highlighting (distinct colors for builtins, decorators, comments vs. strings, etc.) in the Script Editor window.
 - Z-step and F-step up/down button icons now have a linear-perspective taper (narrow/wide ends) for a more 3D look, replacing the flat up/down arrow icons.
 - PSF analysis tool: figure now always fills the window on first draw and after resize; PNG export always uses a fixed 12×9 in (4:3) canvas at 300 DPI for consistent output regardless of window size.
+- Menu bar reorganized: new "Plugins" menu (Processor Chain moved here from the View menu, and its separate standalone toolbar button removed) and new "Utils" menu (PSF analysis launcher).
 
 ## Release February 2026 [1.20.0]
 🚀 Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.

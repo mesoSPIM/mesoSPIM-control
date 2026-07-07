@@ -426,6 +426,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.menuPlugins.addAction(self.actionProcessor_Chain)
         self.actionProcessor_Chain.triggered.connect(self.launch_processor_chain_window)
 
+        # Add PSF analysis menu item to Utils menu
+        self.actionPSF_Analysis = QtWidgets.QAction("PSF (beads) analysis from a stack", self)
+        self.menuUtils.addAction(self.actionPSF_Analysis)
+        self.actionPSF_Analysis.triggered.connect(self.launch_psf_analysis_window)
+
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
@@ -906,6 +911,60 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else:
             self.processor_chain_window.refresh_from_chain()
         self.processor_chain_window.show()
+
+    @QtCore.pyqtSlot()
+    def launch_psf_analysis_window(self):
+        """
+        Launch the PSF (beads) analysis tool. Lets the user choose whether to
+        preload the most recently completed acquisition's stack (re-read from
+        disk, since acquisitions stream straight to disk and are never kept in
+        RAM as a full 3D array), or browse for an arbitrary TIFF stack instead.
+        """
+        from .utils.psf_gui_qt import launch_psf_analysis
+
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setWindowTitle("PSF (beads) analysis")
+        msg_box.setText("Load the most recently acquired stack, or browse for a TIFF file yourself?")
+        last_button = msg_box.addButton("Last acquired stack", QtWidgets.QMessageBox.AcceptRole)
+        msg_box.addButton("Browse for TIFF file...", QtWidgets.QMessageBox.ActionRole)
+        cancel_button = msg_box.addButton(QtWidgets.QMessageBox.Cancel)
+        msg_box.exec_()
+        clicked = msg_box.clickedButton()
+
+        if clicked is None or clicked == cancel_button:
+            return
+
+        stack, mag, pixel_pitch_micron, z_step_micron, filename = None, None, None, None, None
+
+        if clicked == last_button:
+            # self.core.image_writer.acq/.path always reflect the acquisition it most
+            # recently wrote, whether that came from "Run Acquisition List" or
+            # "Run Selected Acquisition" - unlike self.state['selected_row'], which is
+            # reset to 0 for single-acquisition runs and would point at the wrong row.
+            acq = getattr(self.core.image_writer, 'acq', None)
+            path = getattr(self.core.image_writer, 'path', None)
+            if acq is None or path is None or not os.path.isfile(path):
+                QtWidgets.QMessageBox.warning(self, "PSF analysis", "No completed acquisition found yet.")
+                return
+            try:
+                stack = tifffile.imread(path)
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "PSF analysis", f"Failed to load stack:\n{e}")
+                return
+            # cfg.pixelsize is already the effective sample-space pixel size (µm/px),
+            # so mag=1.0 makes psf_gui_qt's mag/pixel_pitch decomposition a no-op.
+            mag = 1.0
+            pixel_pitch_micron = self.cfg.pixelsize[acq['zoom']]
+            z_step_micron = acq['z_step']
+            filename = path
+
+        # For "Browse...", stack stays None: the PSF window opens empty and the
+        # user picks a file via its own File > Open TIF...
+
+        self.psf_analysis_window = launch_psf_analysis(
+            stack, mag=mag, pixel_pitch_micron=pixel_pitch_micron,
+            z_step_micron=z_step_micron, filename=filename, parent=self
+        )
 
     def _load_processor_chain_config(self):
         """Load processor chain configuration from config file."""

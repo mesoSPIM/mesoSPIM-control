@@ -275,8 +275,28 @@ class MplCanvas(FigureCanvas):
 # =============================
 
 class PSFMainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None, stack=None, mag=None, pixel_pitch_micron=None,
+                 z_step_micron=None, filename=None):
+        """
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, so the window can be launched embedded in another Qt app
+            (e.g. mesoSPIM_control) instead of only as a standalone application.
+        stack : np.ndarray, optional
+            3D (Z, Y, X) image stack to preload, e.g. straight from an acquisition,
+            without going through "Open TIF...".
+        mag : float, optional
+            Effective system magnification. Defaults to MAG.
+        pixel_pitch_micron : float, optional
+            Camera pixel pitch in microns. Defaults to PIXEL_PITCH_MICRON.
+        z_step_micron : float, optional
+            Z stepsize in microns. Defaults to PX_AXIAL_MICRON.
+        filename : str, optional
+            Name to associate with a preloaded *stack* (used for the experiment key
+            and info label). Not a path that gets read from disk.
+        """
+        super().__init__(parent)
 
         self.setWindowTitle("Bead PSF Analysis (www.mesoSPIM.org). GPL-3 License.")
         self.resize(720, 1280)
@@ -292,10 +312,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.stats_df = None  # PSF DataFrame (FWHMlat, FWHMax, X, Y, Z, Max)
 
         # System parameters (editable via GUI)
-        self.mag = MAG
-        self.pixel_pitch_micron = PIXEL_PITCH_MICRON
-        self.px_axial_micron = PX_AXIAL_MICRON
-        self.px_lateral_micron = PIXEL_PITCH_MICRON / MAG
+        self.mag = mag if mag is not None else MAG
+        self.pixel_pitch_micron = pixel_pitch_micron if pixel_pitch_micron is not None else PIXEL_PITCH_MICRON
+        self.px_axial_micron = z_step_micron if z_step_micron is not None else PX_AXIAL_MICRON
+        self.px_lateral_micron = self.pixel_pitch_micron / self.mag
         self.min_bead_distance_um = MIN_BEAD_DISTANCE_UM
 
         # Default options
@@ -307,6 +327,9 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         }
 
         self._init_ui()
+
+        if stack is not None:
+            self.load_stack(stack, filename=filename)
 
     # ---------- UI setup ----------
 
@@ -485,16 +508,28 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         try:
             im = imread(fname)
-            self.FOV_Y_um, self.FOV_X_um = im.shape[1] * self.px_lateral_micron, im.shape[2] * self.px_lateral_micron
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
             return
+
+        self.load_stack(im, filename=fname)
+
+    def load_stack(self, im, filename=None):
+        """
+        Load a 3D (Z, Y, X) image stack into the analysis window, whether it came
+        from "Open TIF..." or was handed in directly (e.g. from mesoSPIM_control
+        right after an acquisition).
+        """
+        im = np.asarray(im)
 
         if im.ndim != 3:
             QtWidgets.QMessageBox.critical(
                 self, "Error", f"Expected 3D stack, got shape {im.shape}"
             )
             return
+
+        self.FOV_Y_um = im.shape[1] * self.px_lateral_micron
+        self.FOV_X_um = im.shape[2] * self.px_lateral_micron
 
         if np.issubdtype(im.dtype, np.integer):
             sat_value = np.iinfo(im.dtype).max
@@ -509,7 +544,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
                 )
 
         self.im = im.astype(np.float32)
-        self.filename = fname
+        self.filename = filename
 
         zmax = self.im.shape[0] - 1
         self.zmin_edit.setRange(0, zmax)
@@ -517,10 +552,9 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.zmin_edit.setValue(0)
         self.zmax_edit.setValue(zmax)
 
-        self.info_label.setText(
-            f"Loaded: {os.path.basename(fname)}, shape={self.im.shape}"
-        )
-        # Cconstruct experiment_key
+        label = os.path.basename(self.filename) if self.filename else "in-memory stack"
+        self.info_label.setText(f"Loaded: {label}, shape={self.im.shape}")
+
         # use TIF file name (without path) as experiment key
         if self.filename:
             self.experiment_key = os.path.splitext(os.path.basename(self.filename))[0]
@@ -866,6 +900,26 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self._populate_figure(fig)
         fig.tight_layout(pad=1.0, w_pad=0.7, h_pad=0.7)
         self.canvas.draw()
+
+# =============================
+#  EMBEDDING API
+# =============================
+
+def launch_psf_analysis(stack, mag=None, pixel_pitch_micron=None, z_step_micron=None,
+                         filename=None, parent=None):
+    """
+    Open a PSFMainWindow preloaded with *stack*, for use from another Qt application
+    (e.g. mesoSPIM_control) that already runs its own QApplication event loop.
+
+    Returns the PSFMainWindow instance; the caller must keep a reference to it
+    (e.g. store it on self) or Qt will garbage-collect and close the window.
+    """
+    win = PSFMainWindow(parent=parent, stack=stack, mag=mag,
+                        pixel_pitch_micron=pixel_pitch_micron,
+                        z_step_micron=z_step_micron, filename=filename)
+    win.show()
+    return win
+
 
 # =============================
 #  ENTRY POINT
