@@ -420,19 +420,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
-        # Add Processor Chain menu item to View menu
+        # Add Processor Chain menu item to Plugins menu
         self.actionProcessor_Chain = QtWidgets.QAction("Processor Chain", self)
         self.actionProcessor_Chain.setShortcut(QtGui.QKeySequence("Ctrl+Shift+P"))
-        self.menuView.addAction(self.actionProcessor_Chain)
+        self.menuPlugins.addAction(self.actionProcessor_Chain)
         self.actionProcessor_Chain.triggered.connect(self.launch_processor_chain_window)
-
-        # Add toolbar
-        self.toolbar = self.addToolBar("Processing")
-        self.toolbar.setMovable(False)
-        self.actionProcessor_Chain_Toolbar = QtWidgets.QAction("Processor Chain", self)
-        self.actionProcessor_Chain_Toolbar.setToolTip("Configure image processing chain (Ctrl+Shift+P)")
-        self.toolbar.addAction(self.actionProcessor_Chain_Toolbar)
-        self.actionProcessor_Chain_Toolbar.triggered.connect(self.launch_processor_chain_window)
 
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """

@@ -3860,8 +3860,19 @@ Focus</string>
     <addaction name="actionOpen_Tile_Overview"/>
     <addaction name="actionCascade_windows"/>
    </widget>
+   <widget class="QMenu" name="menuPlugins">
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Plugins</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
+   <addaction name="menuPlugins"/>
   </widget>
   <action name="actionClose">
    <property name="text">
