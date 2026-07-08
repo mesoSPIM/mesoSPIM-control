@@ -928,13 +928,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         last_button = msg_box.addButton("Last acquired stack", QtWidgets.QMessageBox.AcceptRole)
         msg_box.addButton("Browse for TIFF file...", QtWidgets.QMessageBox.ActionRole)
         cancel_button = msg_box.addButton(QtWidgets.QMessageBox.Cancel)
+        font = msg_box.font()
+        font.setPointSize(14)
+        msg_box.setFont(font)
+        for button in msg_box.buttons():
+            button.setFont(font)
         msg_box.exec_()
         clicked = msg_box.clickedButton()
 
         if clicked is None or clicked == cancel_button:
             return
 
-        stack, mag, pixel_pitch_micron, z_step_micron, filename = None, None, None, None, None
+        stack, filename = None, None
+        # Camera pixel pitch is fixed by hardware, independent of the acquisition's zoom setting.
+        pixel_pitch_micron = self.cfg.camera_parameters['x_pixel_size_in_microns']
+        mag, z_step_micron = None, None
 
         if clicked == last_button:
             # self.core.image_writer.acq/.path always reflect the acquisition it most
@@ -951,20 +959,25 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "PSF analysis", f"Failed to load stack:\n{e}")
                 return
-            # cfg.pixelsize is already the effective sample-space pixel size (µm/px),
-            # so mag=1.0 makes psf_gui_qt's mag/pixel_pitch decomposition a no-op.
-            mag = 1.0
-            pixel_pitch_micron = self.cfg.pixelsize[acq['zoom']]
+            mag = self._parse_zoom_magnification(acq['zoom'])
             z_step_micron = acq['z_step']
             filename = path
-
-        # For "Browse...", stack stays None: the PSF window opens empty and the
-        # user picks a file via its own File > Open TIF...
+        else:
+            # "Browse...": stack stays None, the PSF window opens empty and the user
+            # picks a file via its own File > Open TIF..., but still prefill mag from
+            # the microscope's current live zoom setting.
+            mag = self._parse_zoom_magnification(self.state['zoom'])
 
         self.psf_analysis_window = launch_psf_analysis(
             stack, mag=mag, pixel_pitch_micron=pixel_pitch_micron,
             z_step_micron=z_step_micron, filename=filename, parent=self
         )
+
+    @staticmethod
+    def _parse_zoom_magnification(zoom_string):
+        """Extract the numeric magnification from a zoom label, e.g. '5x Mitutoyo' -> 5.0."""
+        match = re.match(r'\s*([\d.]+)\s*[xX]', zoom_string)
+        return float(match.group(1)) if match else 1.0
 
     def _load_processor_chain_config(self):
         """Load processor chain configuration from config file."""
