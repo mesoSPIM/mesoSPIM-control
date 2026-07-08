@@ -929,7 +929,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         msg_box.addButton("Browse for TIFF file...", QtWidgets.QMessageBox.ActionRole)
         cancel_button = msg_box.addButton(QtWidgets.QMessageBox.Cancel)
         font = msg_box.font()
-        font.setPointSize(14)
+        font.setPointSize(12)
         msg_box.setFont(font)
         for button in msg_box.buttons():
             button.setFont(font)
