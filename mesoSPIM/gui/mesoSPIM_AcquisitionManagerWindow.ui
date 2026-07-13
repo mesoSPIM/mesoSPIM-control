@@ -389,7 +389,7 @@
           <string>Predicted acquisition time in hh:mm:ss, based framerate in the config file.</string>
          </property>
          <property name="text">
-          <string>Estimated time &amp; size:</string>
+          <string>Acquisition time &amp; size (est.):</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -404,7 +404,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Predicted data size</string>
+          <string>Predicted acquisition size</string>
          </property>
          <property name="text">
           <string>0 G</string>

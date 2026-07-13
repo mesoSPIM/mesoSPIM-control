@@ -345,6 +345,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         Displays a message in the status bar for a time in ms
         """
         self.statusBar().showMessage(string)
+        if (string == 'Acquisition list closed' and self.timelapse_in_progress
+                and self.timelapse_current_timepoint + 1 < self.timelapse_total_timepoints):
+            # Another time point is still to come: the next one only starts once the
+            # Acquisition Interval wait (after this acquisition's end) has elapsed.
+            self.statusBar().showMessage('Waiting for next time point to start')
 
     def pos2str(self, position):
         """ Little helper method for converting positions to strings """
@@ -381,16 +386,25 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if self.timelapse_in_progress:
             ''' Total Progress spans the whole timelapse: every time point contributes
             an equal share, assuming each time point runs the same acquisition list.
-            Time/Remaining are computed over the whole timelapse (wall-clock time since
-            it started, extrapolated from the fraction of the timelapse completed so far),
-            not just the current stack/time point. '''
+            "Time:" is the real wall-clock time since the timelapse started. "Remaining:"
+            is modeled the same way as the Timelapse tab's estimate label: the current
+            time point's remaining acquisition time (from the measured framerate) plus,
+            for each full time point still to come, its own acquisition time PLUS one
+            Acquisition Interval wait (which happens between the end of one time point's
+            acquisition and the start of the next, not between their start times). '''
             tp = self.timelapse_current_timepoint
             total_tp = self.timelapse_total_timepoints
             fraction_done = (tp*tot_images + image_count) / (total_tp*tot_images)
             total_progress_value = int(fraction_done * 100)
             timelapse_time_passed = time.time() - self.timelapse_start_time
-            timelapse_time_remaining = (timelapse_time_passed / fraction_done * (1 - fraction_done)
-                                         if fraction_done > 0 else 0)
+
+            total_time = self.state['predicted_acq_list_time']  # estimated duration of one time point's acquisition list
+            interval_sec = self.get_timelapse_interval_sec()
+            remaining_images_in_current_tp = max(tot_images - image_count, 0)
+            remaining_time_current_tp = remaining_images_in_current_tp / fps if fps > 0 else 0
+            remaining_full_timepoints = max(total_tp - tp - 1, 0)
+            timelapse_time_remaining = (remaining_time_current_tp
+                                         + remaining_full_timepoints * (total_time + interval_sec))
             self.TotalProgressBar.setValue(total_progress_value)
             self.TotalProgressBar.setFormat('%p% Time Point: '+ str(tp+1) +\
                                             '/' + str(total_tp) +\
@@ -599,6 +613,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.toggle_timelapse_interval(self.AsFastAsPossibleCheckBox.isChecked())  # sync initial state set in the .ui file
         self.EnableTimelapseCheckBox.toggled.connect(self.RunTimelapseButton.setEnabled)
         self.RunTimelapseButton.clicked.connect(self.run_timelapse)
+
+        # Refresh the estimated acquisition rate / timelapse duration label every 2 s.
+        self.timelapse_estimate_timer = QTimer(self)
+        self.timelapse_estimate_timer.timeout.connect(self.update_timelapse_estimate)
+        self.timelapse_estimate_timer.start(2000)
+        self.update_timelapse_estimate()
 
         self.LaserIntensitySlider.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
@@ -818,17 +838,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setVisible(True)
         '''
 
+    def get_timelapse_interval_sec(self):
+        ''' Reads the acquisition interval from the Timelapse tab, in seconds.
+        Returns 0 if "As fast as possible" is checked (no waiting between time points). '''
+        if self.AsFastAsPossibleCheckBox.isChecked():
+            return 0
+        return (self.TimelapseHoursSpinBox.value() * 3600
+                + self.TimelapseMinutesSpinBox.value() * 60
+                + self.TimelapseSecondsSpinBox.value())
+
     def run_timelapse(self):
         ''' Starts a basic timelapse sequence (see scripts/timelapse.py) using the
         parameters set on the Timelapse tab. The acquisition list is run once per
         time point; time points are scheduled by mesoSPIM_Core.run_time_lapse(). '''
         tpoints = self.TimelapseTimepointsSpinBox.value()
-        if self.AsFastAsPossibleCheckBox.isChecked():
-            interval_sec = 0
-        else:
-            interval_sec = (self.TimelapseHoursSpinBox.value() * 3600
-                             + self.TimelapseMinutesSpinBox.value() * 60
-                             + self.TimelapseSecondsSpinBox.value())
+        interval_sec = self.get_timelapse_interval_sec()
         self.timelapse_total_timepoints = tpoints
         self.timelapse_current_timepoint = 0
         self.timelapse_in_progress = True
@@ -837,6 +861,35 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.TimePointProgressBar.setFormat(f'%p% (0/{tpoints})')
         self.RunTimelapseButton.setEnabled(False)
         self.sig_run_time_lapse.emit(tpoints, interval_sec)
+
+    def update_timelapse_estimate(self):
+        ''' Refreshes the Timelapse tab's estimated start-to-start interval and total
+        timelapse duration. Called every 2 s by self.timelapse_estimate_timer.
+
+        Uses the Acquisition Manager's predicted per-timepoint acquisition time
+        (state['predicted_acq_list_time'], from update_acquisition_time_prediction()),
+        which is itself based on state['current_framerate'] - seeded at startup from
+        cfg.startup['average_frame_rate'] and refined from real measurements once
+        acquisitions are running. '''
+        total_time = self.state['predicted_acq_list_time']
+        if not total_time or total_time <= 0:
+            self.TimelapseEstimateLabel.setText(
+                "Est. interval between START of acquisitions (hh:mm:ss): --:--:--\n"
+                "Est. timelapse duration (hh:mm:ss): --:--:--"
+            )
+            return
+
+        tpoints = self.TimelapseTimepointsSpinBox.value()
+        interval_sec = self.get_timelapse_interval_sec()
+        # Time between the start of one stack and the start of the next: with "As fast
+        # as possible" interval_sec is 0, so this is just the stack's own duration.
+        period_sec = total_time + interval_sec
+        total_duration = tpoints * total_time + max(tpoints - 1, 0) * interval_sec
+
+        self.TimelapseEstimateLabel.setText(
+            f"Est. interval between START of acquisitions (hh:mm:ss): {convert_seconds_to_string(period_sec)}\n"
+            f"Est. timelapse duration (hh:mm:ss): {convert_seconds_to_string(total_duration)}"
+        )
 
     def stop_acquisition_and_timelapse(self):
         ''' Aborts the current acquisition and cancels any further timelapse time points. '''

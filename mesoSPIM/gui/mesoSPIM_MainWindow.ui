@@ -3592,6 +3592,9 @@ Focus</string>
               <pointsize>12</pointsize>
              </font>
             </property>
+            <property name="toolTip">
+             <string>Wait time between the END of one acquisition and the START of the next - not between the start of two consecutive acquisitions. The next acquisition always begins only once the previous one has fully finished.</string>
+            </property>
             <property name="title">
              <string>Acquisition Interval</string>
             </property>
@@ -3626,6 +3629,9 @@ Focus</string>
               <font>
                <pointsize>12</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Wait time between the END of one acquisition and the START of the next - not between the start of two consecutive acquisitions. The next acquisition always begins only once the previous one has fully finished.</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -3672,6 +3678,9 @@ Focus</string>
                <pointsize>12</pointsize>
               </font>
              </property>
+             <property name="toolTip">
+              <string>Wait time between the END of one acquisition and the START of the next - not between the start of two consecutive acquisitions. The next acquisition always begins only once the previous one has fully finished.</string>
+             </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
@@ -3716,6 +3725,9 @@ Focus</string>
               <font>
                <pointsize>12</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Wait time between the END of one acquisition and the START of the next - not between the start of two consecutive acquisitions. The next acquisition always begins only once the previous one has fully finished.</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -3801,6 +3813,25 @@ Focus</string>
             </property>
             <property name="value">
              <number>1</number>
+            </property>
+           </widget>
+           <widget class="QLabel" name="TimelapseEstimateLabel">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>300</y>
+              <width>691</width>
+              <height>51</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>12</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Est. interval between START of acquisitions (hh:mm:ss): --:--:--
+Est. timelapse duration (hh:mm:ss): --:--:--</string>
             </property>
            </widget>
           </widget>
