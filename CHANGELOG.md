@@ -1,13 +1,14 @@
-## Release candidate
+## Release July 2026 [1.25.0]
 ### New Features ✨
 - 💎 **Image Processor plugin system**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.
 - 💎 **Timelapse acquisitions**: New "Timelapse" tab to repeatedly run the configured acquisition list over time. Set the interval (hours/minutes/seconds) or enable "As fast as possible" (default on), and the number of time points. "Run Timelapse" starts the sequence (only available once "Enable Timelapse" is checked); "Stop" cancels any further time points. A new "Time Point" progress bar tracks the current time point, and "Total Progress" now spans the whole timelapse instead of resetting every time point.
+- 💎 **PSF (beads) analysis from a stack**, launching the PSF analysis tool from within mesoSPIM_control ("Utils" menu), preloaded with either the most recently completed acquisition's stack or a user-chosen TIFF file, with system magnification/pixel size/Z-step passed in automatically. Exports beads FWHM statistics and publication-ready graphs. "Save average PSF as TIF…" exports a peak-normalised, bead-centred sub-volume averaged across all detected beads (skipping beads too close to the image boundary), plus an image-saturation warning.
+- 💎 **Acquisition Manager**: group rows by illumination/laser, "Group selected rows" and "Delete selected rows" buttons, and save/load the acquisition table as CSV.
 - Snap: file name prefix dialog before saving, pixel size now written into snap TIFF metadata, and a check that the snap folder still exists before saving.
-- PSF analysis tool: "Save average PSF as TIF…" exports a peak-normalised, bead-centred sub-volume averaged across all detected beads (skipping beads too close to the image boundary), plus an image-saturation warning.
-- Acquisition Manager: group rows by illumination/laser, "Group selected rows" and "Delete selected rows" buttons, and save/load the acquisition table as CSV.
+
 - "Save config file" button on the Parameters tab, writing current sweep, camera, laser, galvo and ETL settings back to the active config file.
 - Optional descriptive metadata and objective parameters in config files, included in acquisition metadata.
-- New "Utils" menu with "PSF (beads) analysis from a stack", launching the PSF analysis tool from within mesoSPIM_control, preloaded with either the most recently completed acquisition's stack or a user-chosen TIFF file, with system magnification/pixel size/Z-step passed in automatically.
+
 
 ### Hardware Control & Support 🔧
 - ASI stages: increased command precision (0.X → 0.XXX), fixed sub-micron interpolation, and added thread-safety locking for serial communication.
