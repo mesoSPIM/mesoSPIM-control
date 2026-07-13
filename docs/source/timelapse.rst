@@ -1,9 +1,13 @@
 Time-lapse Acquisitions
 ========================
 
+Timelapse on mesoSPIM? Why not! Although originally mesoSPIMs were designed
+for fixed and cleared samples, they can also be used for live imaging of
+small transparent organisms (e.g. plants, embryos, larvae) that change over time.
+
 The **Timelapse** tab in the Main window repeats the current acquisition list
-at defined time points, without having to write a script. Each time point
-runs the exact same acquisition list configured in the Acquisition Manager.
+at defined time points. Each time point runs the exact same acquisition list
+configured in the Acquisition Manager.
 
 .. figure:: ../../docs/screenshots/TimelapseGUI.png
    :alt: Timelapse tab in the Main window

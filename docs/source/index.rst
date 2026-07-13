@@ -83,6 +83,12 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Measure axial/lateral FWHM from a bead stack, standalone or from the Utils menu.
 
+   .. grid-item-card:: :octicon:`filter` Image Processing Plugins
+      :link: image_processors
+      :link-type: doc
+
+      Built-in processors, the Processor Chain window, and GPU acceleration.
+
    .. grid-item-card:: :octicon:`cpu` Supported Hardware
       :link: hardware
       :link-type: doc
@@ -108,6 +114,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    user_guide
    timelapse
    psf_analysis
+   image_processors
    hardware
    changelog
 

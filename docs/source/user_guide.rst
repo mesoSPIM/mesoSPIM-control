@@ -152,19 +152,11 @@ how acquired image data is stored on disk for that acquisition entry.
 Processor chain
 ~~~~~~~~~~~~~~~~
 
-Image processors are configured separately in the processor-chain window.
-Processors can modify frames before they are shown in live view and before the
-same processed data is written to disk.
-
-Useful behavior to keep in mind:
-
-* The processor chain is managed in the GUI, not in the microscope config file.
-* Clicking **Apply** saves processor-chain changes to ``processor_chain.json``.
-* If auto-apply is enabled in the processor editor, parameter changes can take
-  effect in the live chain immediately, but **Apply** is still required to save
-  them for the next session.
-
-For plugin-author details, see :doc:`plugins`.
+Image processors modify frames before they are shown in live view and before
+the same processed data is written to disk. They are configured from
+**Plugins → Processor Chain** — see :doc:`image_processors` for the built-in
+processors, the Processor Chain window, and GPU acceleration notes. For
+plugin-author details, see :doc:`plugins`.
 
 Plugins and Utils menus
 ~~~~~~~~~~~~~~~~~~~~~~~~

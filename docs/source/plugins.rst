@@ -337,13 +337,9 @@ useful to understand:
 * **Image writers** are chosen in the file-naming wizard for each acquisition
   entry.
 * **Image processors** are configured in the processor-chain window, available
-  from the main window menu and toolbar.
-* Processor settings are saved only when the user clicks **Apply** in the
-  processor-chain window.
-* When auto-apply is enabled in that window, parameter edits can affect the
-  live processor chain immediately, but **Apply** is still required to save the
-  configuration to disk.
-* Processors affect both live display and acquired image data.
+  from **Plugins → Processor Chain** in the main window menu bar. Processors
+  affect both live display and acquired image data. See :doc:`image_processors`
+  for the built-in processors and a full walkthrough of that window.
 
 Testing Plugins
 ---------------
