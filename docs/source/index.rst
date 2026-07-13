@@ -71,6 +71,18 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Walk-through of the GUI, acquisition modes, and scripting.
 
+   .. grid-item-card:: :octicon:`clock` Time-lapse Acquisitions
+      :link: timelapse
+      :link-type: doc
+
+      Repeating an acquisition list over time: setup, timing model, and progress.
+
+   .. grid-item-card:: :octicon:`pulse` Bead PSF Analysis
+      :link: psf_analysis
+      :link-type: doc
+
+      Measure axial/lateral FWHM from a bead stack, standalone or from the Utils menu.
+
    .. grid-item-card:: :octicon:`cpu` Supported Hardware
       :link: hardware
       :link-type: doc
@@ -94,6 +106,8 @@ multiview, and tiled imaging of large cleared-tissue samples.
    installation
    configuration
    user_guide
+   timelapse
+   psf_analysis
    hardware
    changelog
 
@@ -103,6 +117,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    :caption: Developer documentation
 
    contributing
+   plugins
    api/index
 
 Indices and tables

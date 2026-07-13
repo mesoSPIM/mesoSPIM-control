@@ -1,3 +1,40 @@
+## Release July 2026 [1.25.0]
+### New Features ✨
+- 💎 **Image Processor plugin system**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.
+- 💎 **Timelapse acquisitions**: New "Timelapse" tab to repeatedly run the configured acquisition list over time. Set the interval (hours/minutes/seconds) or enable "As fast as possible" (default on), and the number of time points. "Run Timelapse" starts the sequence (only available once "Enable Timelapse" is checked); "Stop" cancels any further time points. A new "Time Point" progress bar tracks the current time point, and "Total Progress" now spans the whole timelapse instead of resetting every time point.
+- 💎 **PSF (beads) analysis from a stack**, launching the PSF analysis tool from within mesoSPIM_control ("Utils" menu), preloaded with either the most recently completed acquisition's stack or a user-chosen TIFF file, with system magnification/pixel size/Z-step passed in automatically. Exports beads FWHM statistics and publication-ready graphs. "Save average PSF as TIF…" exports a peak-normalised, bead-centred sub-volume averaged across all detected beads (skipping beads too close to the image boundary), plus an image-saturation warning.
+- 💎 **Acquisition Manager**: group rows by illumination/laser, "Group selected rows" and "Delete selected rows" buttons, and save/load the acquisition table as CSV.
+- Snap: file name prefix dialog before saving, pixel size now written into snap TIFF metadata, and a check that the snap folder still exists before saving.
+
+- "Save config file" button on the Parameters tab, writing current sweep, camera, laser, galvo and ETL settings back to the active config file.
+- Optional descriptive metadata and objective parameters in config files, included in acquisition metadata.
+
+
+### Hardware Control & Support 🔧
+- ASI stages: increased command precision (0.X → 0.XXX), fixed sub-micron interpolation, and added thread-safety locking for serial communication.
+- Auto Left/Right illumination now uses the median tile X position as the midline, instead of edge-only margins.
+
+### Bugfixes 🐛
+- Fixed BigStitcher OME-ZARR Z-scale and channel naming.
+- Fixed scale metadata at different resolutions.
+- Fixed image processors causing GUI lockouts by using non-blocking cleanup connections.
+- Removed galvo amplitude from saved state to prevent zero-amplitude settings on reload.
+- Fixed Acquisition/Total Progress bars stalling below 100% at the end of an acquisition: an off-by-one in the image counter caused the final progress update to be silently dropped by Qt (out-of-range values are ignored, not clamped).
+- Fixed errors when launching the "Open image contrast window" button; improved responsiveness and capped the contrast ROI grid at 8×8. Contrast calculation now uses 0.1/99.9 percentiles instead of 1/99 for less clipping-sensitive results.
+- Z-Step spinbox in the Acquisition Manager table now accepts decimal values instead of rounding to the nearest integer.
+- PSF analysis tool: fixed the axial/lateral FWHM maps being flipped vertically relative to the underlying bead image (bead Y-coordinates were plotted in the wrong orientation relative to `imshow`'s default origin).
+
+### GUI Improvements 🖥️
+- All GUI windows now automatically resize to fit the available screen resolution and are repositioned so they stay fully visible on smaller monitors.
+- Tile Overview and Webcam windows are arranged in the right-most quarter of the screen (stacked vertically) on startup.
+- Camera Window opens narrower (1200 px wide) by default.
+- Camera Window: new "Line roi" overlay — a draggable two-endpoint line segment (green) selectable from the overlay combo box; the status bar shows live length in pixels and µm.
+- Progress bar labels and bars (Acquisition/Time Point/Total Progress) use a smaller, consistent 12pt font to reduce vertical space.
+- More Pythonic, higher-contrast syntax highlighting (distinct colors for builtins, decorators, comments vs. strings, etc.) in the Script Editor window.
+- Z-step and F-step up/down button icons now have a linear-perspective taper (narrow/wide ends) for a more 3D look, replacing the flat up/down arrow icons.
+- PSF analysis tool: figure now always fills the window on first draw and after resize; PNG export always uses a fixed 12×9 in (4:3) canvas at 300 DPI for consistent output regardless of window size.
+- Menu bar reorganized: new "Plugins" menu (Processor Chain moved here from the View menu, and its separate standalone toolbar button removed) and new "Utils" menu (PSF analysis launcher).
+
 ## Release February 2026 [1.20.0]
 🚀 Major performance optimizations, new OME-ZARR multi-scale output format, and improved ASI stage support.
 

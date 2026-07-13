@@ -38,6 +38,13 @@ The application has five main windows:
 Main window
 -----------
 
+.. figure:: ../../docs/screenshots/MainWindow.png
+   :alt: mesoSPIM-control Main window
+   :width: 60%
+
+   Main window (Movement tab): menu bar, mode tabs, stage controls, position
+   read-out, illumination controls, and acquisition/progress controls.
+
 Stage controls
 ~~~~~~~~~~~~~~
 
@@ -111,13 +118,9 @@ Acquisition modes
    * - **Run Run Acquisition list**
      - Takes all stacks defined in the Acquisition Manager sequentially; this can combine multiple XY positions into a mosaic (see the **Tile Overview window** to plan overlap) and loop through multiple channels and illumination settings.
    * - **Time-lapse**
-     - Experimental feature that can be triggered via scripting window that repeats the entire acquisition list at defined time intervals.
-
-.. figure:: ../../docs/screenshots/timelapse-launch.png
-   :alt: Time-lapse launch dialog (experimental)
-   :width: 60%
-
-   Time-lapse configuration dialog.
+     - Repeats the entire acquisition list at defined time intervals. Configured
+       from its own **Timelapse** tab — see :doc:`timelapse` for setup, timing
+       model, and progress indicators.
 
 Output file formats
 ~~~~~~~~~~~~~~~~~~~~
@@ -142,6 +145,37 @@ Select the image writer in the file-naming wizard:
      - BigTIFF for stacks larger than 4 GB.
    * - ``RAW_Writer``
      - Raw 16-bit binary dump.
+
+Writers are part of the mesoSPIM plugin system. The selected writer controls
+how acquired image data is stored on disk for that acquisition entry.
+
+Processor chain
+~~~~~~~~~~~~~~~~
+
+Image processors are configured separately in the processor-chain window.
+Processors can modify frames before they are shown in live view and before the
+same processed data is written to disk.
+
+Useful behavior to keep in mind:
+
+* The processor chain is managed in the GUI, not in the microscope config file.
+* Clicking **Apply** saves processor-chain changes to ``processor_chain.json``.
+* If auto-apply is enabled in the processor editor, parameter changes can take
+  effect in the live chain immediately, but **Apply** is still required to save
+  them for the next session.
+
+For plugin-author details, see :doc:`plugins`.
+
+Plugins and Utils menus
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Main window menu bar also has:
+
+* **Plugins → Processor Chain** — opens the processor-chain window described
+  above.
+* **Utils → PSF (beads) analysis from a stack** — launches the
+  :doc:`Bead PSF Analysis <psf_analysis>` tool, preloaded with the most
+  recently completed acquisition or a chosen TIFF file.
 
 Running an acquisition
 ~~~~~~~~~~~~~~~~~~~~~~

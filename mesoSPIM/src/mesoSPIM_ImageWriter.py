@@ -3,6 +3,7 @@ mesoSPIM Image Writer class, intended to run in the Camera Thread and handle fil
 '''
 
 import os
+import json
 from pathlib import Path
 import time
 import numpy as np
@@ -27,6 +28,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
     Signals are connected by :class:`mesoSPIM_Core` during construction.
     """
+    sig_end_acquisition_done = QtCore.pyqtSignal()  # emitted after end_acquisition cleanup is complete
+
     def __init__(self, parent, frame_queue):
         '''Image and metadata writer class. Parent is mesoSPIM_Camera() object'''
         super().__init__()
@@ -49,7 +52,72 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
         self.file_extension = ''
+        self.active_processor_metadata = []
         self.check_versions()
+
+    def _get_enabled_processor_metadata(self):
+        """Return enabled processor configs from the live processor chain."""
+        processor_chain = getattr(self.parent.camera_worker, 'processor_chain', None)
+        if processor_chain is None:
+            return []
+
+        config = processor_chain.get_config()
+        processors = config.get('processors', [])
+        return [processor for processor in processors if processor.get('enabled')]
+
+    def _format_metadata_value(self, value):
+        if isinstance(value, (dict, list, tuple)):
+            return json.dumps(value, sort_keys=True, default=str)
+        return value
+
+    def _write_metadata_section(self, file, title, parameters):
+        if not parameters:
+            return
+
+        write_line(file, title)
+        for key, value in parameters.items():
+            write_line(file, key, self._format_metadata_value(value))
+        write_line(file)
+
+    def _get_microscope_metadata(self):
+        microscope_parameters = getattr(self.cfg, 'microscope_parameters', {}) or {}
+        if not isinstance(microscope_parameters, dict):
+            microscope_parameters = {}
+
+        general_metadata = {}
+        nested_sections = {}
+
+        for key, value in microscope_parameters.items():
+            if isinstance(value, dict):
+                nested_sections[key] = value
+            else:
+                general_metadata[key] = value
+
+        if 'objective' not in nested_sections:
+            objective_parameters = getattr(self.cfg, 'objective_parameters', {}) or {}
+            if isinstance(objective_parameters, dict) and objective_parameters:
+                nested_sections['objective'] = objective_parameters
+
+        return general_metadata, nested_sections
+
+    def _write_microscope_metadata(self, file):
+        general_metadata, nested_sections = self._get_microscope_metadata()
+        self._write_metadata_section(file, 'MICROSCOPE PARAMETERS', general_metadata)
+
+        for key, value in nested_sections.items():
+            self._write_metadata_section(file, str(key).upper(), value)
+
+    def _write_processor_metadata(self, file, processors):
+        """Write enabled processor provenance into the metadata sidecar."""
+        write_line(file, 'IMAGE PROCESSORS')
+        write_line(file, 'Processor count', len(processors))
+
+        for index, processor in enumerate(processors, start=1):
+            write_line(file, f'Processor {index}', processor.get('name', 'Unknown'))
+            for key, value in processor.get('config', {}).items():
+                write_line(file, key, self._format_metadata_value(value))
+
+        write_line(file)
 
     def check_versions(self):
         """Take care of API changes in different library versions"""
@@ -82,6 +150,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if acq == acq_list[0]:
             self.writer_name = acq['image_writer_plugin']
             self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
+
+        self.active_processor_metadata = self._get_enabled_processor_metadata()
 
 
         # Extract config values for writer from config file - field = 'name' attribute from Writer plugin
@@ -166,6 +236,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             logger.debug('self.running_flag = False, no images written')
     
     @timed
+    @log_cpu_core
     def image_to_disk(self, acq, acq_list, image):
         """Write a single pre-transposed frame to the open writer backend.
 
@@ -175,7 +246,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             image (np.ndarray): 2-D ``uint16`` array already transposed by the caller.
         """
         logger.debug('image_to_disk() started')
-        log_cpu_core(logger, msg='image_to_disk()')
         if self.cur_image_counter % 5 == 0:
             self.parent.sig_status_message.emit('Writing to disk...')
 
@@ -227,7 +297,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         """Finalise and close the writer backend after the last frame of an acquisition.
 
         Also closes any optional MIP (maximum intensity projection) TIFF file.
-        Called via ``BlockingQueuedConnection`` from :class:`mesoSPIM_Core`.
+        Called via ``QueuedConnection`` from :class:`mesoSPIM_Core`; signals
+        ``sig_end_acquisition_done`` when finished so the Core can resume.
 
         Args:
             acq (Acquisition): The completed acquisition.
@@ -252,24 +323,27 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 logger.error(f'{e}')
 
         self.running_flag = False
+        self.sig_end_acquisition_done.emit()
 
-    def write_snap_image(self, image):
+    def write_snap_image(self, image, prefix=''):
         """Save a single snap-shot frame to the snap folder as a timestamped TIFF.
 
         Args:
             image (np.ndarray): 2-D ``uint16`` frame from the camera.
+            prefix (str): Optional text prepended to the filename, separated by ``_``.
         """
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        filename = timestr + '.tif'
+        filename = (prefix + '_' if prefix else '') + timestr + '.tif'
         path = self.state['snap_folder'] + '/' + filename
-        if os.path.exists(self.state['snap_folder']):
-            try:
-                tifffile.imsave(path, image, photometric='minisblack')
-                self.write_snap_metadata(path)
-            except Exception as e:
-                logger.error(f"{e}")
-        else:
-            print(f"Error: Snap folder does not exist: {self.state['snap_folder']}. Choose it from the menu.")
+        try:
+            px_um = self.state['pixelsize']
+            xy_res = (1. / px_um, 1. / px_um)
+            tifffile.imsave(path, image, photometric='minisblack',
+                            imagej=True, resolution=xy_res,
+                            metadata={'unit': 'um'})
+            self.write_snap_metadata(path)
+        except Exception as e:
+            logger.error(f"{e}")
 
     def write_snap_metadata(self, path):
         """Write a plain-text metadata sidecar file alongside a snap TIFF.
@@ -281,6 +355,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             path (str): Absolute path of the snap TIFF whose sidecar is to be written.
         """
         metadata_path = os.path.dirname(path) + '/' + os.path.basename(path) + '_meta.txt'
+        processor_metadata = self._get_enabled_processor_metadata()
         with open(metadata_path, 'w') as file:
             write_line(file, 'CFG')
             write_line(file, 'Laser', self.state['laser'])
@@ -317,6 +392,9 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             write_line(file, 'camera_line_interval', self.state['camera_line_interval'])
             write_line(file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
             write_line(file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
+            write_line(file)
+            self._write_microscope_metadata(file)
+            self._write_processor_metadata(file, processor_metadata)
 
     @QtCore.pyqtSlot(Acquisition, AcquisitionList)
     def write_metadata(self, acq, acq_list):
@@ -382,5 +460,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(self.metadata_file, 'x_pixels', self.cfg.camera_parameters['x_pixels'])
         write_line(self.metadata_file, 'y_pixels', self.cfg.camera_parameters['y_pixels'])
         write_line(self.metadata_file)
+        self._write_microscope_metadata(self.metadata_file)
+        self._write_processor_metadata(self.metadata_file, self.active_processor_metadata)
         self.metadata_file.close()
         logger.debug("write_metadata() ended")

@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_pdf import PdfPages
 
-from tifffile import imread
+from tifffile import imread, imwrite
 
 
 # =============================
@@ -250,10 +250,24 @@ def plot_psf_subplot(ax, fit_tuple, scale, Max, title):
 # =============================
 
 class MplCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=10, height=20, dpi=300):
-        self.fig = plt.Figure(figsize=(width, height), dpi=dpi)
+    def __init__(self, parent=None, dpi=100):
+        self.fig = plt.Figure(dpi=dpi)
         super().__init__(self.fig)
         self.setParent(parent)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if not self.fig.get_axes():
+            return
+        w = max(self.width(), 1)
+        h = max(self.height(), 1)
+        dpi = self.fig.get_dpi()
+        self.fig.set_size_inches(w / dpi, h / dpi, forward=False)
+        try:
+            self.fig.tight_layout(pad=1.0, w_pad=0.7, h_pad=0.7)
+        except Exception:
+            pass
+        self.draw_idle()
 
 
 # =============================
@@ -261,8 +275,28 @@ class MplCanvas(FigureCanvas):
 # =============================
 
 class PSFMainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None, stack=None, mag=None, pixel_pitch_micron=None,
+                 z_step_micron=None, filename=None):
+        """
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, so the window can be launched embedded in another Qt app
+            (e.g. mesoSPIM_control) instead of only as a standalone application.
+        stack : np.ndarray, optional
+            3D (Z, Y, X) image stack to preload, e.g. straight from an acquisition,
+            without going through "Open TIF...".
+        mag : float, optional
+            Effective system magnification. Defaults to MAG.
+        pixel_pitch_micron : float, optional
+            Camera pixel pitch in microns. Defaults to PIXEL_PITCH_MICRON.
+        z_step_micron : float, optional
+            Z stepsize in microns. Defaults to PX_AXIAL_MICRON.
+        filename : str, optional
+            Name to associate with a preloaded *stack* (used for the experiment key
+            and info label). Not a path that gets read from disk.
+        """
+        super().__init__(parent)
 
         self.setWindowTitle("Bead PSF Analysis (www.mesoSPIM.org). GPL-3 License.")
         self.resize(720, 1280)
@@ -278,10 +312,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.stats_df = None  # PSF DataFrame (FWHMlat, FWHMax, X, Y, Z, Max)
 
         # System parameters (editable via GUI)
-        self.mag = MAG
-        self.pixel_pitch_micron = PIXEL_PITCH_MICRON
-        self.px_axial_micron = PX_AXIAL_MICRON
-        self.px_lateral_micron = PIXEL_PITCH_MICRON / MAG
+        self.mag = mag if mag is not None else MAG
+        self.pixel_pitch_micron = pixel_pitch_micron if pixel_pitch_micron is not None else PIXEL_PITCH_MICRON
+        self.px_axial_micron = z_step_micron if z_step_micron is not None else PX_AXIAL_MICRON
+        self.px_lateral_micron = self.pixel_pitch_micron / self.mag
         self.min_bead_distance_um = MIN_BEAD_DISTANCE_UM
 
         # Default options
@@ -293,6 +327,9 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         }
 
         self._init_ui()
+
+        if stack is not None:
+            self.load_stack(stack, filename=filename)
 
     # ---------- UI setup ----------
 
@@ -390,7 +427,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         controls2.addStretch(1)
 
         # Matplotlib canvas
-        self.canvas = MplCanvas(self, width=12, height=20, dpi=100)
+        self.canvas = MplCanvas(self, dpi=100)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                     QtWidgets.QSizePolicy.Expanding)
         self.canvas.setSizePolicy(size_policy)
@@ -420,6 +457,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         save_png_action = QtWidgets.QAction("Save figure as PNG (300 DPI)...", self)
         save_png_action.triggered.connect(self.save_png_figure)
         file_menu.addAction(save_png_action)
+
+        save_psf_action = QtWidgets.QAction("Save average PSF as TIF...", self)
+        save_psf_action.triggered.connect(self.save_average_psf)
+        file_menu.addAction(save_psf_action)
 
         file_menu.addSeparator()
 
@@ -467,10 +508,19 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         try:
             im = imread(fname)
-            self.FOV_Y_um, self.FOV_X_um = im.shape[1] * self.px_lateral_micron, im.shape[2] * self.px_lateral_micron
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
             return
+
+        self.load_stack(im, filename=fname)
+
+    def load_stack(self, im, filename=None):
+        """
+        Load a 3D (Z, Y, X) image stack into the analysis window, whether it came
+        from "Open TIF..." or was handed in directly (e.g. from mesoSPIM_control
+        right after an acquisition).
+        """
+        im = np.asarray(im)
 
         if im.ndim != 3:
             QtWidgets.QMessageBox.critical(
@@ -478,8 +528,23 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             )
             return
 
+        self.FOV_Y_um = im.shape[1] * self.px_lateral_micron
+        self.FOV_X_um = im.shape[2] * self.px_lateral_micron
+
+        if np.issubdtype(im.dtype, np.integer):
+            sat_value = np.iinfo(im.dtype).max
+            n_sat = int(np.sum(im == sat_value))
+            if n_sat > 0:
+                pct = 100.0 * n_sat / im.size
+                QtWidgets.QMessageBox.warning(
+                    self, "Saturation warning",
+                    f"{n_sat:,} pixels ({pct:.2f}%) are saturated "
+                    f"(value = {sat_value}, dtype = {im.dtype}).\n"
+                    "PSF fits on saturated beads will be unreliable."
+                )
+
         self.im = im.astype(np.float32)
-        self.filename = fname
+        self.filename = filename
 
         zmax = self.im.shape[0] - 1
         self.zmin_edit.setRange(0, zmax)
@@ -487,10 +552,9 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.zmin_edit.setValue(0)
         self.zmax_edit.setValue(zmax)
 
-        self.info_label.setText(
-            f"Loaded: {os.path.basename(fname)}, shape={self.im.shape}"
-        )
-        # Cconstruct experiment_key
+        label = os.path.basename(self.filename) if self.filename else "in-memory stack"
+        self.info_label.setText(f"Loaded: {label}, shape={self.im.shape}")
+
         # use TIF file name (without path) as experiment key
         if self.filename:
             self.experiment_key = os.path.splitext(os.path.basename(self.filename))[0]
@@ -623,16 +687,78 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         if not fname.lower().endswith(".png"):
             fname += ".png"
 
+        EXPORT_W_IN, EXPORT_H_IN = 9.0, 12.0  # fixed export dimensions (inches @ 300 DPI), 3:4
         try:
-            fig = self.canvas.fig
-            # Add title from filename
+            from matplotlib.backends.backend_agg import FigureCanvasAgg
+            export_fig = plt.Figure(figsize=(EXPORT_W_IN, EXPORT_H_IN), dpi=300)
+            FigureCanvasAgg(export_fig)  # attach non-interactive Agg backend for rendering
             if self.filename:
-                fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
-            # Ensure layout is up to date before saving
-            fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
-            fig.savefig(fname, dpi=300, format="png")
+                export_fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
+            self._populate_figure(export_fig)
+            export_fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
+            export_fig.savefig(fname, dpi=300, format="png")
+            plt.close(export_fig)
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PNG:\n{e}")
+
+    def save_average_psf(self):
+        """Average normalised sub-volumes around each detected bead and save as a 3D TIF."""
+        if self.im is None or self.centers is None or len(self.centers) == 0:
+            QtWidgets.QMessageBox.warning(self, "Warning", "Run analysis first to detect beads.")
+            return
+
+        xy_um = 10.0
+        z_planes = 20
+        xy_px = round(xy_um / self.px_lateral_micron)
+        if xy_px % 2 == 0:
+            xy_px += 1  # odd → bead centre lands on the middle pixel
+        window = [z_planes, xy_px, xy_px]
+
+        # self.centers are in sub_im coordinates (offset by zmin); map back to full image
+        zmin = int(self.zmin_edit.value())
+        vols, skipped = [], 0
+        for c in self.centers:
+            c_full = c.copy()
+            c_full[0] += zmin
+            vol = volume(self.im, c_full, window)
+            if vol is not None:
+                vols.append(vol)
+            else:
+                skipped += 1
+
+        if not vols:
+            QtWidgets.QMessageBox.warning(
+                self, "Warning",
+                "No beads have enough margin for PSF extraction with the current window.\n"
+                f"Required: {z_planes} z-planes × {xy_px}×{xy_px} px lateral."
+            )
+            return
+
+        avg_psf = (np.mean(np.stack(vols, axis=0), axis=0) * 65535).clip(0, 65535).astype(np.uint16)
+
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save average PSF",
+            f"avg-psf({self.experiment_key}).tif",
+            "TIF files (*.tif *.tiff)"
+        )
+        if not fname:
+            return
+        if not fname.lower().endswith(('.tif', '.tiff')):
+            fname += '.tif'
+
+        try:
+            imwrite(
+                fname, avg_psf,
+                imagej=True,
+                resolution=(1.0 / self.px_lateral_micron, 1.0 / self.px_lateral_micron),
+                metadata={'spacing': self.px_axial_micron, 'unit': 'um', 'axes': 'ZYX'},
+            )
+            msg = f"Average PSF saved from {len(vols)} beads, shape {avg_psf.shape}"
+            if skipped:
+                msg += f" ({skipped} bead(s) skipped: too close to image edge)"
+            self.info_label.setText(msg)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save PSF TIF:\n{e}")
 
     # ---------- Analysis ----------
 
@@ -696,31 +822,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.canvas.fig.clear()
         self.canvas.draw()
 
-    def update_plots(self):
-        """
-        Layout:
-            Top row (small): 2 histograms (axial, lateral)
-            Bottom row (large): 2 PSF maps (axial, lateral) that are taller and wider,
-            visually dominating the page.
-
-        We use GridSpec to give more space to the bottom row and slightly more width
-        to the image plots.
-        """
-        if self.stats_df is None or self.stats_df.empty or self.smoothed is None:
-            self.clear_plots()
-            return
-
-        fig = self.canvas.fig
-        fig.clear()
-
+    def _populate_figure(self, fig):
+        """Draw histograms and PSF maps onto *fig*. Uses current self.stats_df / self.smoothed."""
         import matplotlib.gridspec as gridspec
 
-        # Adjust overall figure size if you want bigger plots in absolute terms
-        # (this affects the embedded canvas size too, but you can tune as needed)
-        fig.set_size_inches(10, 8)  # width, height in inches
-
-        # GridSpec: 2 rows, 2 columns, but with unequal row heights
-        # row_heights: top row = 1, bottom row = 2.5 (so bottom ~70% of height)
         gs = gridspec.GridSpec(
             2, 2,
             height_ratios=[1.0, 2.5],
@@ -728,7 +833,6 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             figure=fig
         )
 
-        # ---------- Top row: histograms (smaller) ----------
         ax_hist_axial = fig.add_subplot(gs[0, 0])
         ax_hist_lat   = fig.add_subplot(gs[0, 1])
 
@@ -747,52 +851,75 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         ax_hist_lat.set_xlabel("Lateral FWHM (µm)")
         ax_hist_lat.set_ylabel("# Beads")
 
-        # ---------- Bottom row: PSF maps (larger) ----------
         ax_im_axial = fig.add_subplot(gs[1, 0])
         ax_im_lat   = fig.add_subplot(gs[1, 1])
 
-        smoothed_img = self.smoothed   # already 2D max-projection
+        smoothed_img = self.smoothed
         cmap = "jet"
 
-        # Axial FWHM map
-        ax_im_axial.imshow(smoothed_img, cmap="gray", aspect="equal", extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
+        ax_im_axial.imshow(smoothed_img, cmap="gray", aspect="equal",
+                           extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay0 = ax_im_axial.scatter(
-            (self.stats_df["X"]*self.px_lateral_micron).tolist(),
-            (self.stats_df["Y"]*self.px_lateral_micron).tolist(),
+            (self.stats_df["X"] * self.px_lateral_micron).tolist(),
+            (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMax"].tolist(),
-            cmap=cmap,
-            vmin=0,
-            vmax=5,
-            s=20,   # marker size; increase if you want larger dots
-            edgecolors="none"
+            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
         )
         ax_im_axial.set_title("PSF: Axial FWHM")
         ax_im_axial.set_xlabel("FOV_X (µm)")
         ax_im_axial.set_ylabel("FOV_Y (µm)")
-        cbar0 = fig.colorbar(overlay0, ax=ax_im_axial, fraction=0.040, pad=0.02)
-        #cbar0.set_label("Axial FWHM (µm)")
+        fig.colorbar(overlay0, ax=ax_im_axial, fraction=0.040, pad=0.02)
 
-        # Lateral FWHM map
-        ax_im_lat.imshow(smoothed_img, cmap="gray", aspect="equal", extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
+        ax_im_lat.imshow(smoothed_img, cmap="gray", aspect="equal",
+                         extent=(0, self.FOV_X_um, 0, self.FOV_Y_um))
         overlay1 = ax_im_lat.scatter(
-            (self.stats_df["X"]*self.px_lateral_micron).tolist(),
-            (self.stats_df["Y"]*self.px_lateral_micron).tolist(),
+            (self.stats_df["X"] * self.px_lateral_micron).tolist(),
+            (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMlat"].tolist(),
-            cmap=cmap,
-            vmin=0,
-            vmax=5,
-            s=20,
-            edgecolors="none"
+            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
         )
         ax_im_lat.set_title("PSF: Lateral FWHM")
         ax_im_lat.set_xlabel("FOV_X (µm)")
         ax_im_lat.set_ylabel("FOV_Y (µm)")
-        cbar1 = fig.colorbar(overlay1, ax=ax_im_lat, fraction=0.040, pad=0.02)
-        cbar1.set_label("FWHM (µm)")
+        fig.colorbar(overlay1, ax=ax_im_lat, fraction=0.040, pad=0.02).set_label("FWHM (µm)")
 
-        # Make layout tight but leave some breathing room
+    def update_plots(self):
+        if self.stats_df is None or self.stats_df.empty or self.smoothed is None:
+            self.clear_plots()
+            return
+
+        fig = self.canvas.fig
+        fig.clear()
+
+        # Sync figure size to the current canvas widget size so subplots fill the window.
+        dpi = fig.get_dpi()
+        w_in = max(self.canvas.width(), 100) / dpi
+        h_in = max(self.canvas.height(), 100) / dpi
+        fig.set_size_inches(w_in, h_in, forward=False)
+
+        self._populate_figure(fig)
         fig.tight_layout(pad=1.0, w_pad=0.7, h_pad=0.7)
         self.canvas.draw()
+
+# =============================
+#  EMBEDDING API
+# =============================
+
+def launch_psf_analysis(stack, mag=None, pixel_pitch_micron=None, z_step_micron=None,
+                         filename=None, parent=None):
+    """
+    Open a PSFMainWindow preloaded with *stack*, for use from another Qt application
+    (e.g. mesoSPIM_control) that already runs its own QApplication event loop.
+
+    Returns the PSFMainWindow instance; the caller must keep a reference to it
+    (e.g. store it on self) or Qt will garbage-collect and close the window.
+    """
+    win = PSFMainWindow(parent=parent, stack=stack, mag=mag,
+                        pixel_pitch_micron=pixel_pitch_micron,
+                        z_step_micron=z_step_micron, filename=filename)
+    win.show()
+    return win
+
 
 # =============================
 #  ENTRY POINT

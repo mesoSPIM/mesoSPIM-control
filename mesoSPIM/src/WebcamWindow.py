@@ -15,6 +15,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
 from PyQt5.QtMultimedia import QCameraInfo, QCamera, QCameraViewfinderSettings
 from PyQt5.QtMultimediaWidgets import QCameraViewfinder
+from .utils.utility_functions import fit_window_to_screen
 
 
 class WebcamWindow(QtWidgets.QWidget):
@@ -27,6 +28,7 @@ class WebcamWindow(QtWidgets.QWidget):
         self.WEBCAM_ID = webcam_id
         loadUi('gui/WebcamWindow.ui', self)
         self.setWindowTitle(f'Webcam view, camera ID {self.WEBCAM_ID}')
+        fit_window_to_screen(self)
         self.show()
         if self.WEBCAM_ID is not None:
             self.start_capture()

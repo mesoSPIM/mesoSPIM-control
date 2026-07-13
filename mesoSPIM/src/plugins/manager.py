@@ -9,10 +9,12 @@ logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Dict, Type, Iterable
 from .ImageWriterApi import ImageWriter, API_VERSION
+from .ImageProcessorApi import ImageProcessor
 
 # Default DIRS for builtin image writers
 DEFAULT_DIRS: list[Path] = [
     Path.cwd() / "src/plugins/ImageWriters",
+    Path.cwd() / "src/plugins/ImageProcessors",
 ]
 
 MESOSPIM_PLUGIN_MODULE_PREFIX = 'mesospim_plugin'
@@ -30,6 +32,7 @@ class PluginRegistry:
             self.plugins_dirs += [Path(x) for x in paths]
 
         self._writers: Dict[str, Type[ImageWriter]] = {}
+        self._processors: Dict[str, Type[ImageProcessor]] = {}
         self.load_from_dirs()
 
     def register(self, cls: Type[ImageWriter]) -> None:
@@ -40,6 +43,21 @@ class PluginRegistry:
         if cls.api_version().split(".")[0] != API_VERSION.split(".")[0]:
             return
         self._writers[cls.name()] = cls
+
+    def register_processor(self, cls: Type[ImageProcessor]) -> None:
+        """Register an ImageProcessor plugin."""
+        if not isinstance(cls, type):
+            return
+        if not hasattr(cls, "api_version") or not hasattr(cls, "name"):
+            return
+        if cls.api_version().split(".")[0] != API_VERSION.split(".")[0]:
+            return
+        self._processors[cls.name()] = cls
+
+    @property
+    def processors(self) -> Dict[str, Type[ImageProcessor]]:
+        """Return registered processors."""
+        return self._processors
 
     def load_from_dirs(self) -> None:
         for d in self.plugins_dirs:
@@ -53,9 +71,10 @@ class PluginRegistry:
                         hook = getattr(mod, "register_mesospim_plugins", None)
                         if callable(hook):
                             hook(self)
-                        # 2) auto-scan for classes that look like Writers
+                        # 2) auto-scan for classes that look like Writers or Processors
                         for obj in mod.__dict__.values():
                             self.register(obj)  # harmless if not a Writer
+                            self.register_processor(obj)  # harmless if not a Processor
                         logger.info(f'Loaded plugin module: {path}')
                     except Exception:
                         logger.error(f'Failed to load plugin module: {d}')

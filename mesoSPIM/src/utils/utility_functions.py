@@ -1,14 +1,51 @@
 '''
 Contains a variety of mesoSPIM utility functions
 '''
-import os
-import psutil
 import ctypes
 import logging
+from PyQt5 import QtWidgets
 logger = logging.getLogger(__name__)
 
 # Windows API binding
 GetCurrentProcessorNumber = ctypes.windll.kernel32.GetCurrentProcessorNumber
+
+
+def fit_window_to_screen(window, margin=60):
+    '''Shrink a window so it fits within the available screen geometry.
+
+    The mesoSPIM .ui files specify fixed window sizes that can exceed the
+    resolution of smaller monitors. The windows are built from resizable Qt
+    layouts, so shrinking them down still leaves a usable, scaled-down GUI.
+    Windows that already fit are left untouched.
+
+    Args:
+        window (QWidget): The window to resize.
+        margin (int): Pixels to leave free between the window and the edges
+            of the available screen area (taskbars etc.).
+    '''
+    available = QtWidgets.QApplication.primaryScreen().availableGeometry()
+    target_width = min(window.width(), available.width() - margin)
+    target_height = min(window.height(), available.height() - margin)
+    if target_width < window.width() or target_height < window.height():
+        window.resize(max(target_width, 1), max(target_height, 1))
+
+
+def move_window_into_screen(window, x, y):
+    '''Move a window to (x, y), clamped so it stays fully within the available screen.
+
+    Useful when a saved/configured window position (or a tiled layout based on
+    it) would otherwise place a window partially or fully off-screen, e.g.
+    after switching to a smaller monitor.
+
+    Args:
+        window (QWidget): The window to move.
+        x (int): Desired x position (left edge).
+        y (int): Desired y position (top edge).
+    '''
+    available = QtWidgets.QApplication.primaryScreen().availableGeometry()
+    x = min(max(x, available.left()), max(available.left(), available.right() - window.width()))
+    y = min(max(y, available.top()), max(available.top(), available.bottom() - window.height()))
+    window.move(x, y)
 
 def convert_seconds_to_string(delta_t):
     '''
@@ -86,21 +123,19 @@ def replace_with_underscores(string):
     s = string.replace(' ', '_').replace('/', '_').replace('%', 'pct')
     return s
 
-def log_cpu_core(logger, msg=""):
-    '''Log (at DEBUG level) which logical CPU core the calling thread is currently running on.
+def log_cpu_core(func):
+    '''Decorator to log (at DEBUG level) which logical CPU core the calling thread is currently running on.
 
     Useful for verifying thread affinity in the Core / Camera / Writer thread model——each
     Qt thread should remain pinned to a consistent CPU core.
-
-    Args:
-        logger (logging.Logger): Logger instance used for the debug message.
-        msg (str): Optional prefix string included in the log message.
     '''
-    pid = os.getpid()
-    proc = psutil.Process(pid)
-    #core = proc.cpu_num()  # returns the current logical CPU number. Linux only.
-    core = GetCurrentProcessorNumber()  # Windows only.
-    logger.debug(f"{msg} running on logical CPU core: {core}")
+    import functools
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        core = GetCurrentProcessorNumber()  # Windows only.
+        logger.debug(f"{func.__name__}() running on logical CPU core: {core}")
+        return func(*args, **kwargs)
+    return wrapper
 
 def timed(func):
     '''Decorator to time functions and log the elapsed time'''

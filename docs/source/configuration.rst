@@ -30,20 +30,47 @@ comments freely.  The sections below describe every top-level variable.
 plugins
 ~~~~~~~
 
-Controls where mesoSPIM looks for image-writer plugins and which writer
-appears first in the file-naming wizard.
+Controls where mesoSPIM looks for plugins and which image writer appears first
+in the file-naming wizard.
 
 .. code-block:: python
 
    plugins = {
        'path_list': [
-           "../src/plugins",                # relative paths work
-           "C:/a/different/plugin/location",
-       ],
+            "../src/plugins",                # relative paths work
+            "C:/a/different/plugin/location",
+        ],
        'first_image_writer': 'OME_Zarr_Writer',
-       # other options: 'H5_BDV_Writer', 'MP_OME_Zarr_Writer',
-       #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+        # other options: 'H5_BDV_Writer', 'MP_OME_Zarr_Writer',
+        #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+    }
+
+``path_list`` adds extra directories that are scanned for both image-writer
+and image-processor plugins. Built-in plugins are always loaded from the
+repository's plugin directories.
+
+``first_image_writer`` only affects the ordering in the file-naming wizard. It
+does not force a writer for all acquisitions.
+
+Writer-specific settings are provided through additional top-level dictionaries
+named after the writer itself, for example:
+
+.. code-block:: python
+
+   OME_Zarr_Writer = {
+       'ome_version': '0.5',
+       'generate_multiscales': True,
+       'compression': 'zstd',
+       'compression_level': 5,
    }
+
+These dictionaries are read by the selected writer at acquisition time.
+
+Image processors are handled differently: they are configured in the
+processor-chain dialog and persisted to ``processor_chain.json`` next to the
+active microscope config file rather than through top-level config variables.
+
+See :doc:`plugins` for the full developer-facing plugin guide.
 
 ui_options
 ~~~~~~~~~~
@@ -158,6 +185,48 @@ camera
    binning_dict = {'1x1': (1, 1), '2x2': (2, 2), '4x4': (4, 4)}
 
 For Photometrics camera parameter examples, see ``demo_config.py``.
+
+microscope_parameters
+~~~~~~~~~~~~~~~~~~~~~
+
+Optional microscope-specific metadata that is copied into acquisition and snap
+metadata sidecar files. These fields are descriptive only and do not change
+instrument behavior.
+
+.. code-block:: python
+
+   microscope_parameters = {
+       'name': 'Atlas mesoSPIM',
+       'location': 'Imaging room 2.14',
+       'instrument_id': 'MSPIM-01',
+       'notes': 'Dual-sided setup with custom sample chamber',
+       'objective': {
+           'name': 'Olympus XLPLN10XSVMP',
+           'model_number': '1-U2B933',
+           'magnification': '10x',
+           'numerical_aperture': 0.6,
+           'working_distance_mm': 8.0,
+           'immersion_medium': 'silicone oil',
+           'design_refractive_index': 1.406,
+           'coverglass_thickness_mm': 0.17,
+       },
+       'users': {
+           'authorized': ['Doe, John', 'Doe, Jane', 'Chewbacca'],
+           'owner': 'Leia Organa',
+       },
+    }
+
+Top-level non-dictionary entries are written into a ``MICROSCOPE PARAMETERS``
+block. Top-level dictionary entries are expanded one level deep into separate
+blocks named after the key, for example ``objective`` -> ``OBJECTIVE`` and
+``users`` -> ``USERS``.
+
+Lists, tuples, and deeper nested dictionaries inside those blocks are written as
+JSON-formatted values on a single line.
+
+For backward compatibility, the legacy top-level ``objective_parameters``
+dictionary is still supported. If ``microscope_parameters['objective']`` is not
+present, mesoSPIM writes ``objective_parameters`` into an ``OBJECTIVE`` block.
 
 stages / zoom / ETL
 ~~~~~~~~~~~~~~~~~~~~

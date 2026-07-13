@@ -11,6 +11,7 @@ from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
 from PyQt5.uic import loadUi
 #import pyqtgraph as pg
+from .utils.utility_functions import fit_window_to_screen
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class mesoSPIM_TileViewWindow(QtWidgets.QWidget):
         else:
             loadUi(self.parent.package_directory + '/gui/mesoSPIM_Tile_Overview.ui', self)
         self.setWindowTitle('mesoSPIM-Control: Tile Overview Window')
+        fit_window_to_screen(self)
 
         ''' This is flipped to account for image rotation '''
         self.y_image_width = self.cfg.camera_parameters['x_pixels']

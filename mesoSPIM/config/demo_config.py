@@ -8,6 +8,34 @@ with real hardware one-by-one. Make sure to rename your new configuration file t
 (The extension has to be .py).
 '''
 
+
+'''
+Microscope metadata
+Stored in acquisition metadata sidecars and does not change mesoSPIM behavior.
+Add or remove keys as needed for your microscope.
+'''
+microscope_parameters = {
+            'name': 'Demo mesoSPIM',
+            'institution': 'University of Demo',
+            'location': 'Demo room',
+            'instrument_id': 'DEMO-001',
+            'notes': 'Example configuration for demo mode',
+            'objective_parameters': {
+                        'name': 'Demo objective',
+                        'model_number': 'DEMO-001',
+                        'magnification': '1x',
+                        'numerical_aperture': 0.28,
+                        'working_distance_mm': 34,
+                        'immersion_medium': 'air',
+                        'design_refractive_index': 1.0,
+                        'coverglass_thickness_mm': 0.17,
+                        },
+            'users': {
+                        'authorized': ['Doe, John', 'Doe, Jane', 'Chewbacca'],
+                        'owner': 'Demo Operator',
+                        }
+            }
+                 
 '''
 Options to control behavior of plugins
 "paths_list": Optional: Enables arbirtary locations for mesoSPIM to find plugins 
@@ -182,8 +210,8 @@ camera = 'DemoCamera' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics'
 
 camera_parameters = {'x_pixels' : 5056,
                      'y_pixels' : 2960,
-                     'x_pixel_size_in_microns' : 6.5,
-                     'y_pixel_size_in_microns' : 6.5,
+                     'x_pixel_size_in_microns' : 5,
+                     'y_pixel_size_in_microns' : 5,
                      'subsampling' : [1,2,4],
                      'camera_id' : 0,
                      'sensor_mode' : 12,    # 12 for progressive
@@ -212,7 +240,9 @@ All positions are absolute.
 'stage_type' option:
 ASI stages, 'stage_type' : 'TigerASI', 'MS2000ASI'
 PI stages, 'stage_type' : 'PI' or 'PI_1controllerNstages' (equivalent), 'PI_NcontrollersNstages'
-Mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy',
+Legacy mixed stages, 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_xyz', 'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy'
+New flexible mixed stages, 'stage_type' : 'Mixed' (requires both asi_parameters and pi_parameters with stage_assignment dicts)
+Demo mode, 'stage_type' : 'DemoStage'
 '''
 
 stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1controllerNstages', 'PI_NcontrollersNstages', 'TigerASI', etc, see above
@@ -234,6 +264,18 @@ stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1contr
                     }
 
 ''''
+If 'stage_type' = 'DemoStage':
+No additional parameters needed (demo mode).
+
+If 'stage_type' = 'Mixed':
+The 'Mixed' stage type allows flexible mixing of ASI and PI controllers. Each axis (x, y, z, f, theta)
+can be assigned to either controller. Requires both asi_parameters and pi_parameters, each with a 
+'stage_assignment' dict that maps mesoSPIM axis names to hardware designations (None for unassigned axes).
+Example:
+  asi_parameters = {..., 'stage_assignment': {'z': 'Z', 'theta': 'T', 'x': None, 'y': None, 'f': None}}
+  pi_parameters = {..., 'stage_assignment': {'x': 1, 'y': 2, 'f': 3}}
+This configuration runs z and theta on ASI, while x, y, and f run on the PI controller.
+
 If 'stage_type' = 'PI_1controllerNstages' (vanilla mesoSPIM V5 with single 6-axis controller):
 pi_parameters = {'controllername' : 'C-884',
                  'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
@@ -342,6 +384,7 @@ pixelsize = {
             '2x' : 2.5,
             '4x Olympus' : 1.25,
             '5x Mitutoyo' : 1.0,}
+
 
 '''
 H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).

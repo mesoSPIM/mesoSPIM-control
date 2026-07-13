@@ -27,7 +27,10 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
               'enable_loading_buttons' : True,
+              'flip_XYZFT_button_polarity': (True, True, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
+              'button_sleep_ms_xyzft' : (0, 0, 0, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'usb_webcam_ID': 0, # open USB web-camera (if available): 0 (first cam), 1 (second cam), ...
+              'flip_auto_LR_illumination': False, # flip the polarity of the "Auto L/R illumination" button in Acquisition Manager
                }
 
 '''
@@ -39,11 +42,6 @@ waveformgeneration = 'cDAQ' # 'DemoWaveFormGeneration' or 'NI' or 'cDAQ'
 '''
 compactDAQ limitations:
 https://www.ni.com/en/support/documentation/supplemental/18/number-of-concurrent-tasks-on-a-compactdaq-chassis-gen-ii.html
-Number of tasks is limited (1 DI, 1 DO, 1 AO, 4 general-purpose counters), first reserved task gets the most resources.
-The data streams are comprised by an 8KB block of memory that is divided up into six or seven First In First Out (FIFO) data buffers. 
-These data buffers vary in size, and the largest data buffers are assigned to the first tasks that get reserved. 
-Thus, in order to get the best streaming performance, make sure to reserve your highest bandwidth tasks first. 
-Your first two tasks will reserve 2048 bytes each, the third, fourth and fifth tasks will reserve 1024 bytes each and the sixth and seventh tasks will reserve 512 bytes each.
 
 Tasks:
 - DO: master_trigger_task, 
@@ -63,7 +61,7 @@ DIGITAL OUTPUTS (P0.0-P0.3, NI-9401 card in slot 1, 'cDAQ1Mod1'):
 
 DIGITAL INPUTS (P0.4, NI-9401 card in slot 1, 'cDAQ1Mod1'):
 - '/cDAQ1Mod1/PFI4' (aka P0.4/PFI4, pin20, see above) of the same card cDAQ1Mod1. Triggers camera, stage, galvo/ETL tasks. 
-Note: This also makes four pins P0.4-0.7 cofigured for input-only.
+Note: This also makes four pins P0.4-0.7 configured for input-only.
 
 ANALOG OUTPUTS (NI-9264 card in slot 3, 'cDAQ1Mod3'):
 - galvos, ETL controllers to 'cDAQ1Mod3/ao0:3' terminals. Pins 1-4, ground pins on the opposite side.
@@ -75,20 +73,23 @@ Input/output mode can be assigned only to digital pins P0.0-P0.3, P0.4-P0.7, or 
 Connecting BNC cables to the ground: 
 Signal pin - Ground pin, label:
 
-'cDAQ1Mod1', NI-9401 (digital) card in slot 1:
+'cDAQ1Mod1', NI-9401 (digital) card in slot 1: 
+<< hardware timed tasks, needs them reserved >>
 Pin14-Pin1, 'master_trigger_out_line'
 Pin19-Pin6, 'camera_trigger_out_line', must be counter-out type of pin
-Pin16-Pin3, 'shutter_right', arm switching
+Pin16-Pin3, 'stage_trigger_out_line', must be counter-out type of pin
 Pin20-Pin7, '/cDAQ1Mod1/PFI4' ('camera_trigger_source', 'galvo_etl_task_trigger_source', 'laser_task_trigger_source', and 'stage_trigger_source'). Could this be done via internal wiring instead?
 
-'cDAQ1Mod2', NI-9401 (digital) card in slot 2:
-Pin25-Pin3, 'stage_trigger_out_line', must be counter-out type of pin
-Pin14-Pin1, 'cDAQ1Mod2/port0/line0', laser enable line for 405 nm
-Pin16-Pin3, 'cDAQ1Mod2/port0/line1', laser enable line for 488 nm
-Pin17-Pin4, 'cDAQ1Mod2/port0/line2', laser enable line for 561 nm
-Pin19-Pin6, 'cDAQ1Mod2/port0/line3', laser enable line for 637 nm
+'cDAQ1Mod2', NI-9401 (digital) card in slot 2: 
+<< software timed tasks, needs NO task reservation >>
+Pin14-Pin3, 'cDAQ1Mod2/port0/line0', 'shutter_right', arm switching
+Pin16-Pin3, 'cDAQ1Mod2/port0/line1', laser enable line for 405 nm
+Pin17-Pin4, 'cDAQ1Mod2/port0/line2', laser enable line for 488 nm
+Pin19-Pin6, 'cDAQ1Mod2/port0/line3', laser enable line for 561 nm
+Pin20-Pin7, 'cDAQ1Mod2/port0/line4', laser enable line for 638 nm
 
-'cDAQ1Mod3', NI-9264 (analog, DSUB-connector version) card in slot 3:
+'cDAQ1Mod3', NI-9264 (analog, DSUB-connector version) card in slot 3: 
+<< hardware timed tasks, needs them reserved >>
 Pin1-Pin20, 'cDAQ1Mod3/ao0', galvo L
 Pin2-Pin21, 'cDAQ1Mod3/ao1', galvo R
 Pin3-Pin22, 'cDAQ1Mod3/ao2', ETL L
@@ -124,10 +125,10 @@ laser_blanking = 'images' # 'images' by default, unless laser enable is connecte
 Values are DO ports used for laser ENABLE digital signal.
 Critical: keys must be sorted by increasing wavelength order: 405, 488, 561, etc.
 '''
-laserdict = {'405 nm': 'cDAQ1Mod2/port0/line0',
-             '488 nm': 'cDAQ1Mod2/port0/line1',
-             '561 nm': 'cDAQ1Mod2/port0/line2',
-             '638 nm': 'cDAQ1Mod2/port0/line3',
+laserdict = {'405 nm': 'cDAQ1Mod2/port0/line1',
+             '488 nm': 'cDAQ1Mod2/port0/line2',
+             '561 nm': 'cDAQ1Mod2/port0/line3',
+             '638 nm': 'cDAQ1Mod2/port0/line4',
              }
 
 '''
@@ -136,7 +137,7 @@ Shutter configuration
 
 shutter = 'cDAQ' # 'Demo' or 'NI' or 'cDAQ'
 shutterdict = {'shutter_left' : None, # empty terminal, general shutter, optional
-              'shutter_right' : '/cDAQ1Mod1/port0/line2', # arm switching
+              'shutter_right' : 'cDAQ1Mod2/port0/line0', # arm switching
               }
 
 ''' A bit of a hack: Shutteroptions for the GUI '''
@@ -211,8 +212,8 @@ Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 '''
 
 stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
-                    'y_load_position': 10000,
-                    'y_unload_position': -45000,
+                    'y_load_position': -45000,
+                    'y_unload_position': -75000,
                     'x_max' : 51000,
                     'x_min' : -46000,
                     'y_max' : 160000,
@@ -236,7 +237,7 @@ asi_parameters = {'COMport' : 'COM23',
                   'encoder_conversion': {'V': 10., 'Z': 10., 'T': 1000., 'X': 10., 'Y': 10.}, # num of encoder counts per um or degree, depending on stage type.
                   'speed': {'V': 3., 'Z': 3., 'T': 30., 'X': 3., 'Y': 3.}, # mm/s or deg/s.
                   'stage_trigger_source': '/cDAQ1Mod1/PFI4',
-                  'stage_trigger_out_line': '/cDAQ1Mod1/ctr2', # must be COUNTER-OUT (CO) type of pin. 
+                  'stage_trigger_out_line': '/cDAQ1Mod1/ctr2', # must be COUNTER-OUT (CO) type of pin and sit on the same card as 'master_trigger_out_line' and 'camera_trigger_out_line' lines.
                   'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
                   'stage_trigger_pulse_%' : 1,
                   'ttl_motion_enabled': True,
@@ -287,26 +288,24 @@ The keys in the zoomdict define what zoom positions are displayed in the selecti
 There should be always '1x' zoom present, for correct initialization of the software.
 '''
 
-zoomdict = {'1x' : 2,
-            '1.2x' : 3,
+zoomdict = {
             '2x' : 4,
-            '4x' : 5,
             '5x' : 6,
             '7.5x' : 7,
             '10x' : 8,
             '20x' : 9,
+            '25x' : 10
             }
 '''
 Pixelsize in micron
 '''
-pixelsize = {'1x': 4.25,
-            '1.2x' : 4.25/1.2,
+pixelsize = {
             '2x' : 4.25/2,
-            '4x' : 4.25/4,
             '5x' : 4.25/5,
             '7.5x' : 4.25/7.5,
             '10x' : 4.25/10,
             '20x' : 4.25/20,
+            '25x' : 4.25/25,
             }
 
 '''
@@ -353,7 +352,7 @@ to make mesoSPSIM pause after each tile acquisition until the multiscale is fini
 '''
 OME_Zarr_Writer = {
     'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': False, #True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd', # None, 'zstd', 'lz4'
     'compression_level': 5, # 1-9
     'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
@@ -369,7 +368,7 @@ OME_Zarr_Writer = {
 
 MP_OME_Zarr_Writer = {
     'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': False, # True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd',  # None, 'zstd', 'lz4'
     'compression_level': 5,  # 1-9
     'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
@@ -385,7 +384,7 @@ MP_OME_Zarr_Writer = {
     'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
 
     # Multiprocess options
-    'ring_buffer_size': 16,  # Max number of images in shared memory ring buffer, 16 for simulation mode (eg laptop), 512 for production mode (fast workstation)
+    'ring_buffer_size': 512,  # Max number of images in shared memory ring buffer, 16 for simulation mode (eg laptop), 512 for production mode (fast workstation)
 
     # Write cache options. Write tile data to cache then move to acquisition folder
     # None acquires data direct to acquisition folder.
@@ -413,7 +412,7 @@ When setting up a new mesoSPIM, make sure that:
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 25000, # limited to 25kS/s for cDAQ cards
-'sweeptime' : 0.26734,
+'sweeptime' : 0.267,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-BT-DBE.csv',
 'filepath' : 'F:/Test/file.tif',
@@ -430,36 +429,36 @@ startup = {
 'shutterconfig':'Left', # Can be "Left", "Right","Both","Interleaved"
 'laser_interleaving':False,
 'filter' : 'Empty',
-'etl_l_delay_%' : 5,
-'etl_l_ramp_rising_%' : 90,
-'etl_l_ramp_falling_%' : 5,
+'etl_l_delay_%' : 5.0,
+'etl_l_ramp_rising_%' : 90.0,
+'etl_l_ramp_falling_%' : 5.0,
 'etl_l_amplitude' : 0.7,
 'etl_l_offset' : 2.3,
 'etl_r_delay_%' : 2.5,
-'etl_r_ramp_rising_%' : 5,
-'etl_r_ramp_falling_%' : 85,
+'etl_r_ramp_rising_%' : 5.0,
+'etl_r_ramp_falling_%' : 85.0,
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
 'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : -0.24,
+'galvo_l_offset' : 0.10,
 'galvo_l_duty_cycle' : 50,
-'galvo_l_phase' : np.pi/7,
+'galvo_l_phase' : 0.45,
 'galvo_r_frequency' : 99.9,
 'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.16,
+'galvo_r_offset' : 0.06,
 'galvo_r_duty_cycle' : 50,
-'galvo_r_phase' : np.pi/7,
+'galvo_r_phase' : 0.45,
 'laser_l_delay_%' : 10,
-'laser_l_pulse_%' : 87,
+'laser_l_pulse_%' : 87.0,
 'laser_l_max_amplitude_%' : 100,
 'laser_r_delay_%' : 10,
-'laser_r_pulse_%' : 87,
+'laser_r_pulse_%' : 87.0,
 'laser_r_max_amplitude_%' : 100,
 'stage_trigger_delay_%' : 92.5, # Set to 92.5 for stage triggering exactly after the ETL sweep
 'stage_trigger_pulse_%' : 1,
 'camera_delay_%' : 10,
-'camera_pulse_%' : 1,
+'camera_pulse_%' : 1.0,
 'camera_exposure_time':0.02,
 'camera_line_interval':0.000075,
 'camera_display_live_subsampling': 2,

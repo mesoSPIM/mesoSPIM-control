@@ -409,7 +409,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%','camera_delay_%'])
         self.master_trigger_task = nidaqmx.Task()
         self.camera_trigger_task = nidaqmx.Task()
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower():
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
             self.stage_trigger_task = nidaqmx.Task()
 
         # Check if 1 or 2 DAQ cards are used for AO waveform generation
@@ -448,7 +448,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             logger.debug("cDAQ: camera_trigger_task reserved.")
 
         '''Housekeeping: Setting up the counter task for the stage TTL trigger for certain stages'''
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower():
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
             assert hasattr(self.cfg, 'asi_parameters'), "Config file with an ASI stage must contain 'asi_parameters' dictionary"
             trig_line = self.parent.read_config_parameter('stage_trigger_out_line', self.cfg.asi_parameters)
             trig_source = self.parent.read_config_parameter('stage_trigger_source', self.cfg.asi_parameters)
@@ -515,7 +515,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         signals until run_tasks() is called.
         """
         self.camera_trigger_task.start()
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower():
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
             self.stage_trigger_task.start()
         if self.ao_cards == 2:
             self.galvo_etl_task.start()
@@ -549,7 +549,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         logger.debug("AO tasks wait_until_done() finished")
         self.camera_trigger_task.wait_until_done() 
         logger.debug("camera_trigger_task.wait_until_done() finished")
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower():
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
             self.stage_trigger_task.wait_until_done()
             logger.debug("stage_trigger_task.wait_until_done() finished")
 
@@ -563,7 +563,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.stop()
         self.camera_trigger_task.stop()
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower():
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
             self.stage_trigger_task.stop()
         self.master_trigger_task.stop()
         logger.debug("All tasks stopped")
@@ -580,7 +580,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         else:
             self.galvo_etl_laser_task.close()
         self.camera_trigger_task.close()
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower():
+        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
             self.stage_trigger_task.close()
         self.master_trigger_task.close()
         logger.debug("All tasks closed")

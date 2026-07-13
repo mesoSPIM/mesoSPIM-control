@@ -13,8 +13,8 @@ from PyQt5.QtCore import Qt
 from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel, DynamixelFilterWheel, LudlFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
-from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Stages, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages
-from .utils.utility_functions import log_cpu_core
+from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Stages, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_Mixed_Stages
+from .utils.utility_functions import log_cpu_core, timed
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,9 @@ class mesoSPIM_Serial(QtCore.QObject):
         #     self.stage = mesoSPIM_ASI_MS2000_Stage(self)
         #     #self.stage.sig_pause.connect(self.pause)
         #     self.parent.sig_progress.connect(self.stage.log_slice)
+        elif self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
+            self.stage = mesoSPIM_Mixed_Stages(self)
+            self.parent.sig_progress.connect(self.stage.log_slice)
         elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
             self.stage = mesoSPIM_DemoStage(self)
         else:
@@ -176,7 +179,7 @@ class mesoSPIM_Serial(QtCore.QObject):
 
     def stage_limits_OK(self, sdict, safety_margin_n_moves=3):
         '''Safety margin is added to deal with delays in position reporting.'''
-        logger.debug(f'Checking stage limits: {sdict}')
+        logger.debug(f"Checking stage limits: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in sdict.items()])}}}")
         for key in ('x_rel', 'y_rel', 'z_rel', 'theta_rel', 'f_rel'):
             if key in sdict:
                 axis = key[:-4]
@@ -190,6 +193,7 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.stage_limits_warning = False
         return True
 
+    @log_cpu_core
     @QtCore.pyqtSlot(dict)
     def move_relative(self, sdict, wait_until_done=False):
         """Move one or more axes by a relative offset after checking motion limits.
@@ -201,13 +205,13 @@ class mesoSPIM_Serial(QtCore.QObject):
             sdict (dict): Axis → step mapping, e.g. ``{'z_rel': 50.0}`` (μm).
             wait_until_done (bool): Block until the stage controller confirms completion.
         """
-        log_cpu_core(logger, msg='move_relative()')
-        logger.debug(f'mesoSPIM_Serial moving relative: {sdict}')
+        logger.debug(f"mesoSPIM_Serial moving relative: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in sdict.items()])}}}")
         if self.stage_limits_OK(sdict):
             self.stage.move_relative(sdict, wait_until_done=wait_until_done)
         else:
             logger.info('Stage limits reached: motion stopped')
 
+    @timed
     @QtCore.pyqtSlot(dict)
     def move_absolute(self, sdict, wait_until_done=False, use_internal_position=True):
         """Move one or more axes to an absolute position.
@@ -218,9 +222,10 @@ class mesoSPIM_Serial(QtCore.QObject):
             use_internal_position (bool): Apply the user-visible position offset stored
                 in :class:`mesoSPIM_StateSingleton` when ``True``.
         """
-        logger.debug(f'mesoSPIM_Serial moving absolute: {sdict}')
+        logger.debug(f"mesoSPIM_Serial moving absolute: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in sdict.items()])}}}")
         self.stage.move_absolute(sdict, wait_until_done=wait_until_done, use_internal_position=use_internal_position)
 
+    @log_cpu_core
     @QtCore.pyqtSlot(dict)
     def report_position(self, sdict):
         """Receive a position update from the stage driver and broadcast it to the GUI.
@@ -232,8 +237,7 @@ class mesoSPIM_Serial(QtCore.QObject):
             sdict (dict): Position dictionary, e.g.
                 ``{'x_pos': 0.0, 'y_pos': 0.0, 'z_pos': 0.0, 'f_pos': 0.0, 'theta_pos': 0.0}``.
         """
-        log_cpu_core(logger, msg='report_position()')
-        logger.debug(f'mesoSPIM_Serial reporting position: {sdict}')
+        logger.debug(f"mesoSPIM_Serial reporting position: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in sdict.items()])}}}")
         self.state['position'] = sdict
         self.sig_position.emit({'position': sdict})
 

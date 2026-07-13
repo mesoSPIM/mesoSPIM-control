@@ -1,4 +1,6 @@
 # mesoSPIM MainWindow
+import os
+import re
 import tifffile
 import logging
 import time
@@ -17,12 +19,13 @@ from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
+from .mesoSPIM_ProcessorChainWindow import ProcessorChainWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
-from .utils.utility_functions import log_cpu_core
+from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +79,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_poke_demo_thread = QtCore.pyqtSignal()
     sig_launch_optimizer = QtCore.pyqtSignal(dict)
     sig_launch_contrast_window = QtCore.pyqtSignal()
+    sig_launch_processor_chain_window = QtCore.pyqtSignal()
+    sig_run_time_lapse = QtCore.pyqtSignal(int, int)
+    sig_stop_time_lapse = QtCore.pyqtSignal()
 
     def __init__(self, package_directory, config, title="mesoSPIM Main Window"):
         super().__init__()
@@ -90,6 +96,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         # Setting up the user interface windows
         loadUi(self.package_directory + '/gui/mesoSPIM_MainWindow.ui', self)
         self.setWindowTitle(title)
+        fit_window_to_screen(self)
 
         # Discontinued
         # Connect log display widget
@@ -111,17 +118,29 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.scriptwindow = None
 
+        self.timelapse_in_progress = False
+        self.timelapse_total_timepoints = 1
+        self.timelapse_current_timepoint = 0
+        self.timelapse_start_time = 0
+
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
             window_pos = self.cfg.ui_options['window_pos']
         else:
             window_pos = (100, 100)
-        self.move(window_pos[0], window_pos[1])
-        self.camera_window.move(window_pos[0] + self.width() + 50, window_pos[1])
-        self.tile_view_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1])
-        self.acquisition_manager_window.move(window_pos[0], window_pos[1] + self.height() + 50)
+        move_window_into_screen(self, window_pos[0], window_pos[1])
+        move_window_into_screen(self.camera_window, window_pos[0] + self.width() + 50, window_pos[1])
+        move_window_into_screen(self.acquisition_manager_window, window_pos[0], window_pos[1] + self.height() + 50)
+
+        # Tile View and Webcam windows occupy the right-most quarter of the screen,
+        # stacked on top of each other (Tile View above, Webcam below)
+        available = QtWidgets.QApplication.primaryScreen().availableGeometry()
+        quarter_width = available.width() // 4
+        half_height = available.height() // 2
+        right_x = available.right() - quarter_width + 1
+        self.tile_view_window.move(right_x, available.top())
         if self.webcam_window:
-            self.webcam_window.move(window_pos[0] + self.width() + self.camera_window.width() + 2*50, window_pos[1] + self.height())
+            self.webcam_window.move(right_x, available.top() + half_height)
 
         # set up some Acq manager signals
         self.acquisition_manager_window.sig_warning.connect(self.display_warning)
@@ -135,6 +154,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.moveToThread(self.core_thread)
         self.core.waveformer.moveToThread(self.core_thread)
         self.core.serial_worker.moveToThread(self.core_thread) # depending of signal source, some commands are still executed in main (GUI) thread, eg move_relative() from button press
+
+        # Load processor chain configuration from file
+        self._load_processor_chain_config()
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -156,6 +178,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+        self.core.sig_time_lapse_finished.connect(self.on_time_lapse_finished)
+        self.core.sig_time_lapse_cancelled.connect(self.on_time_lapse_cancelled)
+        self.core.camera_worker.sig_snap_image_ready.connect(self.save_snap_image)
+        self._last_snap_prefix = ''
 
         self.sig_move_absolute.connect(self.core.move_absolute, type=QtCore.Qt.QueuedConnection)
         # Set stages, revolver, filter to initialization positions defined in the config file:
@@ -163,12 +189,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.optimizer = None
         self.contrast_window = None
+        self.processor_chain_window = None
 
         # Signal from state to GUI
         #self.state.sig_updated.connect(self.update_gui_from_state) # too frequent updates because of stage polling
         # The signal switchboard, MainWindow -> Core
         self.sig_launch_optimizer.connect(self.launch_optimizer)
         self.sig_launch_contrast_window.connect(self.launch_contrast_window)
+        self.sig_launch_processor_chain_window.connect(self.launch_processor_chain_window)
 
         ''' Start the thread '''
         self.core_thread.start(QtCore.QThread.HighestPriority)
@@ -317,6 +345,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         Displays a message in the status bar for a time in ms
         """
         self.statusBar().showMessage(string)
+        if (string == 'Acquisition list closed' and self.timelapse_in_progress
+                and self.timelapse_current_timepoint + 1 < self.timelapse_total_timepoints):
+            # Another time point is still to come: the next one only starts once the
+            # Acquisition Interval wait (after this acquisition's end) has elapsed.
+            self.statusBar().showMessage('Waiting for next time point to start')
 
     def pos2str(self, position):
         """ Little helper method for converting positions to strings """
@@ -347,21 +380,49 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         remaining_time_string = dict['remaining_time_string']
         fps = self.state['current_framerate']
 
-        self.AcquisitionProgressBar.setValue(int((cur_image+1)/images_in_acq*100))
-        self.TotalProgressBar.setValue(int((image_count+1)/tot_images*100))
+        self.AcquisitionProgressBar.setValue(int(cur_image/images_in_acq*100))
+        self.AcquisitionProgressBar.setFormat('%p% Image: '+ str(cur_image) + '/' + str(images_in_acq) + '  FPS: ' + '{:.1f}'.format(fps))
+
+        if self.timelapse_in_progress:
+            ''' Total Progress spans the whole timelapse: every time point contributes
+            an equal share, assuming each time point runs the same acquisition list.
+            "Time:" is the real wall-clock time since the timelapse started. "Remaining:"
+            is modeled the same way as the Timelapse tab's estimate label: the current
+            time point's remaining acquisition time (from the measured framerate) plus,
+            for each full time point still to come, its own acquisition time PLUS one
+            Acquisition Interval wait (which happens between the end of one time point's
+            acquisition and the start of the next, not between their start times). '''
+            tp = self.timelapse_current_timepoint
+            total_tp = self.timelapse_total_timepoints
+            fraction_done = (tp*tot_images + image_count) / (total_tp*tot_images)
+            total_progress_value = int(fraction_done * 100)
+            timelapse_time_passed = time.time() - self.timelapse_start_time
+
+            total_time = self.state['predicted_acq_list_time']  # estimated duration of one time point's acquisition list
+            interval_sec = self.get_timelapse_interval_sec()
+            remaining_images_in_current_tp = max(tot_images - image_count, 0)
+            remaining_time_current_tp = remaining_images_in_current_tp / fps if fps > 0 else 0
+            remaining_full_timepoints = max(total_tp - tp - 1, 0)
+            timelapse_time_remaining = (remaining_time_current_tp
+                                         + remaining_full_timepoints * (total_time + interval_sec))
+            self.TotalProgressBar.setValue(total_progress_value)
+            self.TotalProgressBar.setFormat('%p% Time Point: '+ str(tp+1) +\
+                                            '/' + str(total_tp) +\
+                                             ' Acq: '+ str(cur_acq+1) +\
+                                            '/' + str(tot_acqs) + ' ' +\
+                                                'Time: ' + convert_seconds_to_string(timelapse_time_passed) + \
+                                                ' Remaining: ' + convert_seconds_to_string(timelapse_time_remaining))
+        else:
+            self.TotalProgressBar.setValue(int(image_count/tot_images*100))
+            self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
+                                            '/' + str(tot_acqs) + ' ' +\
+                                                'Time: ' + time_passed_string + \
+                                                ' Remaining: ' + remaining_time_string)
 
         ''' Disabled taskbar button progress display due to problems with Anaconda default
         if sys.platform == 'win32':
-            self.win_taskbar_button.progress().setValue(int((image_count+1)/tot_images*100))
+            self.win_taskbar_button.progress().setValue(int(image_count/tot_images*100))
         '''
-
-        self.AcquisitionProgressBar.setFormat('%p% Image: '+ str(cur_image+1) + '/' + str(images_in_acq) + '  FPS: ' + '{:.1f}'.format(fps))
-        self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
-                                        '/' + str(tot_acqs) +\
-                                         ' ' + ' Image: '+ str(image_count) +\
-                                        '/' + str(tot_images) + ' ' +\
-                                            'Time: ' + time_passed_string + \
-                                            ' Remaining: ' + remaining_time_string)
 
     def create_script_window(self):
         """
@@ -380,6 +441,17 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
         self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
+
+        # Add Processor Chain menu item to Plugins menu
+        self.actionProcessor_Chain = QtWidgets.QAction("Processor Chain", self)
+        self.actionProcessor_Chain.setShortcut(QtGui.QKeySequence("Ctrl+Shift+P"))
+        self.menuPlugins.addAction(self.actionProcessor_Chain)
+        self.actionProcessor_Chain.triggered.connect(self.launch_processor_chain_window)
+
+        # Add PSF analysis menu item to Utils menu
+        self.actionPSF_Analysis = QtWidgets.QAction("PSF (beads) analysis from a stack", self)
+        self.menuUtils.addAction(self.actionPSF_Analysis)
+        self.actionPSF_Analysis.triggered.connect(self.launch_psf_analysis_window)
 
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
@@ -419,6 +491,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'etl_offset', 'amplitude': 0.5}))
         self.ContrastWindowButton.clicked.connect(lambda: self.sig_launch_contrast_window.emit())
 
+        # Keyboard shortcut for processor chain window (Ctrl+Shift+P)
+        self.processor_chain_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+Shift+P"), self)
+        self.processor_chain_shortcut.activated.connect(self.launch_processor_chain_window)
+
         ''' Disabling UI buttons if necessary '''
         if hasattr(self.cfg, 'ui_options'):
             if self.cfg.ui_options['enable_x_buttons'] is False:
@@ -454,7 +530,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.SnapButton.clicked.connect(self.run_snap)
         self.RunSelectedAcquisitionButton.clicked.connect(self.run_selected_acquisition)
         self.RunAcquisitionListButton.clicked.connect(self.run_acquisition_list)
-        self.StopButton.clicked.connect(lambda: self.sig_state_request.emit({'state':'idle'}))
+        self.StopButton.clicked.connect(self.stop_acquisition_and_timelapse)
         self.LightsheetSwitchingModeButton.clicked.connect(self.run_lightsheet_alignment_mode)
         self.VisualModeButton.clicked.connect(self.run_visual_mode)
 
@@ -467,6 +543,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
 
         self.ChooseSnapFolderButton.clicked.connect(self.choose_snap_folder)
+        self.SaveToConfigButton.clicked.connect(self.save_parameters_to_config)
         self.SnapFolderIndicator.setText(self.state['snap_folder'])
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
 
@@ -530,6 +607,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
         self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
+
+        ''' Timelapse tab '''
+        self.AsFastAsPossibleCheckBox.toggled.connect(self.toggle_timelapse_interval)
+        self.toggle_timelapse_interval(self.AsFastAsPossibleCheckBox.isChecked())  # sync initial state set in the .ui file
+        self.EnableTimelapseCheckBox.toggled.connect(self.RunTimelapseButton.setEnabled)
+        self.RunTimelapseButton.clicked.connect(self.run_timelapse)
+
+        # Refresh the estimated acquisition rate / timelapse duration label every 2 s.
+        self.timelapse_estimate_timer = QTimer(self)
+        self.timelapse_estimate_timer.timeout.connect(self.update_timelapse_estimate)
+        self.timelapse_estimate_timer.start(2000)
+        self.update_timelapse_estimate()
+
         self.LaserIntensitySlider.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
@@ -578,6 +668,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def scale_galvo_amp_w_zoom(self):
         self.state['galvo_amp_scale_w_zoom'] = self.checkBoxScaleWZoom.isChecked()
+
+    @QtCore.pyqtSlot(bool)
+    def toggle_timelapse_interval(self, checked):
+        ''' Disables the Acquisition Interval spinboxes when 'As fast as possible' is checked '''
+        self.TimelapseHoursSpinBox.setEnabled(not checked)
+        self.TimelapseMinutesSpinBox.setEnabled(not checked)
+        self.TimelapseSecondsSpinBox.setEnabled(not checked)
 
     @QtCore.pyqtSlot()
     def update_GUI_by_shutter_state(self):
@@ -680,8 +777,32 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.set_progressbars_to_busy()
         self.enable_mode_control_buttons(False)
         self.enable_stop_button(True)
+
+    @QtCore.pyqtSlot()
+    def save_snap_image(self):
+        """Show a prefix dialog after snap, then save the image from the display queue."""
+        if not self.core.frame_queue_display:
+            return
+        snap_folder = self.state['snap_folder']
+        if not os.path.exists(snap_folder):
+            QtWidgets.QMessageBox.critical(
+                self, "Snap folder not found",
+                f"Snap folder does not exist:\n{snap_folder}\n\nPlease choose a valid folder from the menu."
+            )
+            return
+        image = self.core.frame_queue_display[0]
+        prefix, ok = QtWidgets.QInputDialog.getText(
+            self, 'Save snap image', 'File name prefix (leave empty to skip):',
+            text=self._last_snap_prefix
+        )
+        if not ok:
+            return
+        self._last_snap_prefix = prefix
+        self.core.image_writer.write_snap_image(image, prefix=prefix)
         
     def run_live(self):
+        self.TimePointProgressBar.setValue(0)
+        self.TimePointProgressBar.setFormat('%p%')
         self.sig_state_request.emit({'state':'live'})
         logger.debug('Thread name during live: '+ QtCore.QThread.currentThread().objectName())
         self.sig_poke_demo_thread.emit()
@@ -717,6 +838,80 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.win_taskbar_button.progress().setVisible(True)
         '''
 
+    def get_timelapse_interval_sec(self):
+        ''' Reads the acquisition interval from the Timelapse tab, in seconds.
+        Returns 0 if "As fast as possible" is checked (no waiting between time points). '''
+        if self.AsFastAsPossibleCheckBox.isChecked():
+            return 0
+        return (self.TimelapseHoursSpinBox.value() * 3600
+                + self.TimelapseMinutesSpinBox.value() * 60
+                + self.TimelapseSecondsSpinBox.value())
+
+    def run_timelapse(self):
+        ''' Starts a basic timelapse sequence (see scripts/timelapse.py) using the
+        parameters set on the Timelapse tab. The acquisition list is run once per
+        time point; time points are scheduled by mesoSPIM_Core.run_time_lapse(). '''
+        tpoints = self.TimelapseTimepointsSpinBox.value()
+        interval_sec = self.get_timelapse_interval_sec()
+        self.timelapse_total_timepoints = tpoints
+        self.timelapse_current_timepoint = 0
+        self.timelapse_in_progress = True
+        self.timelapse_start_time = time.time()
+        self.TimePointProgressBar.setValue(0)
+        self.TimePointProgressBar.setFormat(f'%p% (0/{tpoints})')
+        self.RunTimelapseButton.setEnabled(False)
+        self.sig_run_time_lapse.emit(tpoints, interval_sec)
+
+    def update_timelapse_estimate(self):
+        ''' Refreshes the Timelapse tab's estimated start-to-start interval and total
+        timelapse duration. Called every 2 s by self.timelapse_estimate_timer.
+
+        Uses the Acquisition Manager's predicted per-timepoint acquisition time
+        (state['predicted_acq_list_time'], from update_acquisition_time_prediction()),
+        which is itself based on state['current_framerate'] - seeded at startup from
+        cfg.startup['average_frame_rate'] and refined from real measurements once
+        acquisitions are running. '''
+        total_time = self.state['predicted_acq_list_time']
+        if not total_time or total_time <= 0:
+            self.TimelapseEstimateLabel.setText(
+                "Est. interval between START of acquisitions (hh:mm:ss): --:--:--\n"
+                "Est. timelapse duration (hh:mm:ss): --:--:--"
+            )
+            return
+
+        tpoints = self.TimelapseTimepointsSpinBox.value()
+        interval_sec = self.get_timelapse_interval_sec()
+        # Time between the start of one stack and the start of the next: with "As fast
+        # as possible" interval_sec is 0, so this is just the stack's own duration.
+        period_sec = total_time + interval_sec
+        total_duration = tpoints * total_time + max(tpoints - 1, 0) * interval_sec
+
+        self.TimelapseEstimateLabel.setText(
+            f"Est. interval between START of acquisitions (hh:mm:ss): {convert_seconds_to_string(period_sec)}\n"
+            f"Est. timelapse duration (hh:mm:ss): {convert_seconds_to_string(total_duration)}"
+        )
+
+    def stop_acquisition_and_timelapse(self):
+        ''' Aborts the current acquisition and cancels any further timelapse time points. '''
+        self.sig_state_request.emit({'state':'idle'})
+        self.sig_stop_time_lapse.emit()
+
+    @QtCore.pyqtSlot()
+    def on_time_lapse_finished(self):
+        ''' Re-enables the Run Timelapse button once a timelapse sequence has
+        completed normally. The Time Point progress bar is left showing 100%. '''
+        self.timelapse_in_progress = False
+        self.RunTimelapseButton.setEnabled(self.EnableTimelapseCheckBox.isChecked())
+
+    @QtCore.pyqtSlot()
+    def on_time_lapse_cancelled(self):
+        ''' Re-enables the Run Timelapse button and resets the Time Point progress
+        bar to 0 once a timelapse sequence has been cancelled via the Stop button. '''
+        self.timelapse_in_progress = False
+        self.RunTimelapseButton.setEnabled(self.EnableTimelapseCheckBox.isChecked())
+        self.TimePointProgressBar.setValue(0)
+        self.TimePointProgressBar.setFormat('%p%')
+
     def run_lightsheet_alignment_mode(self):
         self.sig_state_request.emit({'state':'lightsheet_alignment_mode'})
         self.set_progressbars_to_busy()
@@ -740,6 +935,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(int)
     def run_timepoint(self, timepoint):
         self.acquisition_manager_window.append_time_index_to_filenames(timepoint)
+        total = getattr(self, 'timelapse_total_timepoints', 1)
+        self.timelapse_current_timepoint = timepoint
+        self.TimePointProgressBar.setValue(int((timepoint + 1) / total * 100))
+        self.TimePointProgressBar.setFormat(f'%p% ({timepoint + 1}/{total})')
         self.run_acquisition_list()
 
     @QtCore.pyqtSlot(dict)
@@ -763,6 +962,97 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.contrast_window.active = True
             self.contrast_window.show()
 
+    @QtCore.pyqtSlot()
+    def launch_processor_chain_window(self):
+        if not self.processor_chain_window:
+            self.processor_chain_window = ProcessorChainWindow(
+                self, 
+                processor_chain=self.core.camera_worker.processor_chain,
+                config_filepath=self.processor_chain_config_path
+            )
+        else:
+            self.processor_chain_window.refresh_from_chain()
+        self.processor_chain_window.show()
+
+    @QtCore.pyqtSlot()
+    def launch_psf_analysis_window(self):
+        """
+        Launch the PSF (beads) analysis tool. Lets the user choose whether to
+        preload the most recently completed acquisition's stack (re-read from
+        disk, since acquisitions stream straight to disk and are never kept in
+        RAM as a full 3D array), or browse for an arbitrary TIFF stack instead.
+        """
+        from .utils.psf_gui_qt import launch_psf_analysis
+
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setWindowTitle("PSF (beads) analysis")
+        msg_box.setText("Load the most recently acquired stack, or browse for a TIFF file yourself?")
+        last_button = msg_box.addButton("Last acquired stack", QtWidgets.QMessageBox.AcceptRole)
+        msg_box.addButton("Browse for TIFF file...", QtWidgets.QMessageBox.ActionRole)
+        cancel_button = msg_box.addButton(QtWidgets.QMessageBox.Cancel)
+        font = msg_box.font()
+        font.setPointSize(12)
+        msg_box.setFont(font)
+        for button in msg_box.buttons():
+            button.setFont(font)
+        msg_box.exec_()
+        clicked = msg_box.clickedButton()
+
+        if clicked is None or clicked == cancel_button:
+            return
+
+        stack, filename = None, None
+        # Camera pixel pitch is fixed by hardware, independent of the acquisition's zoom setting.
+        pixel_pitch_micron = self.cfg.camera_parameters['x_pixel_size_in_microns']
+        mag, z_step_micron = None, None
+
+        if clicked == last_button:
+            # self.core.image_writer.acq/.path always reflect the acquisition it most
+            # recently wrote, whether that came from "Run Acquisition List" or
+            # "Run Selected Acquisition" - unlike self.state['selected_row'], which is
+            # reset to 0 for single-acquisition runs and would point at the wrong row.
+            acq = getattr(self.core.image_writer, 'acq', None)
+            path = getattr(self.core.image_writer, 'path', None)
+            if acq is None or path is None or not os.path.isfile(path):
+                QtWidgets.QMessageBox.warning(self, "PSF analysis", "No completed acquisition found yet.")
+                return
+            try:
+                stack = tifffile.imread(path)
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "PSF analysis", f"Failed to load stack:\n{e}")
+                return
+            mag = self._parse_zoom_magnification(acq['zoom'])
+            z_step_micron = acq['z_step']
+            filename = path
+        else:
+            # "Browse...": stack stays None, the PSF window opens empty and the user
+            # picks a file via its own File > Open TIF..., but still prefill mag from
+            # the microscope's current live zoom setting.
+            mag = self._parse_zoom_magnification(self.state['zoom'])
+
+        self.psf_analysis_window = launch_psf_analysis(
+            stack, mag=mag, pixel_pitch_micron=pixel_pitch_micron,
+            z_step_micron=z_step_micron, filename=filename, parent=self
+        )
+
+    @staticmethod
+    def _parse_zoom_magnification(zoom_string):
+        """Extract the numeric magnification from a zoom label, e.g. '5x Mitutoyo' -> 5.0."""
+        match = re.match(r'\s*([\d.]+)\s*[xX]', zoom_string)
+        return float(match.group(1)) if match else 1.0
+
+    def _load_processor_chain_config(self):
+        """Load processor chain configuration from config file."""
+        import os
+        config_dir = os.path.dirname(self.cfg.__file__)
+        self.processor_chain_config_path = os.path.join(config_dir, 'processor_chain.json')
+        
+        from mesoSPIM_ProcessorChain import ProcessorChain
+        config = ProcessorChain.load_from_file(self.processor_chain_config_path)
+        if config:
+            self.core.camera_worker.processor_chain.set_config(config)
+            logger.info(f"Loaded processor chain: {config}")
+
     def enable_stop_button(self, boolean):
         self.StopButton.setEnabled(boolean)
     
@@ -778,6 +1068,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.RunAcquisitionListButton.setEnabled(boolean)
         self.VisualModeButton.setEnabled(boolean)
         self.LightsheetSwitchingModeButton.setEnabled(boolean)
+        # Only re-enable Run Timelapse if 'Enable Timelapse' is still checked
+        self.RunTimelapseButton.setEnabled(boolean and self.EnableTimelapseCheckBox.isChecked())
 
     def finished(self):
         self.enable_stop_button(False)
@@ -892,6 +1184,83 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' Save current ETL parameters into config '''
         self.sig_save_etl_config.emit()
 
+    def save_parameters_to_config(self):
+        """Save current Parameters-tab values back into the startup dict of a config file.
+        Opens a Save-As dialog pre-filled with the current config path.
+        If the chosen file already exists the user is asked to confirm overwrite.
+        """
+        config_file = getattr(self.cfg, '__file__', None)
+        if config_file is None:
+            QtWidgets.QMessageBox.warning(self, 'Error',
+                'Config file path is not available (module has no __file__ attribute).')
+            return
+
+        save_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Save parameters to config file', config_file,
+            'Python config file (*.py)', options=QtWidgets.QFileDialog.DontConfirmOverwrite)
+        if not save_path:
+            return
+
+        if os.path.exists(save_path):
+            answer = QtWidgets.QMessageBox.question(
+                self, 'Overwrite?',
+                f'File already exists:\n{save_path}\n\nOverwrite it?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            if answer != QtWidgets.QMessageBox.Yes:
+                return
+
+        params = {
+            'sweeptime':                         self.state['sweeptime'],
+            'camera_exposure_time':              self.state['camera_exposure_time'],
+            'camera_delay_%':                    self.state['camera_delay_%'],
+            'camera_pulse_%':                    self.state['camera_pulse_%'],
+            'laser_l_delay_%':                   self.state['laser_l_delay_%'],
+            'laser_r_delay_%':                   self.state['laser_r_delay_%'],
+            'laser_l_pulse_%':                   self.state['laser_l_pulse_%'],
+            'laser_r_pulse_%':                   self.state['laser_r_pulse_%'],
+            'laser_l_max_amplitude_%':           self.state['laser_l_max_amplitude_%'],
+            'laser_r_max_amplitude_%':           self.state['laser_r_max_amplitude_%'],
+            'galvo_l_frequency':                 self.state['galvo_l_frequency'],
+            'galvo_r_frequency':                 self.state['galvo_r_frequency'],
+            'galvo_l_offset':                    self.state['galvo_l_offset'],
+            'galvo_r_offset':                    self.state['galvo_r_offset'],
+            'galvo_l_phase':                     self.state['galvo_l_phase'],
+            'galvo_r_phase':                     self.state['galvo_r_phase'],
+            'etl_l_delay_%':                     self.state['etl_l_delay_%'],
+            'etl_r_delay_%':                     self.state['etl_r_delay_%'],
+            'etl_l_ramp_rising_%':               self.state['etl_l_ramp_rising_%'],
+            'etl_r_ramp_rising_%':               self.state['etl_r_ramp_rising_%'],
+            'etl_l_ramp_falling_%':              self.state['etl_l_ramp_falling_%'],
+            'etl_r_ramp_falling_%':              self.state['etl_r_ramp_falling_%'],
+            'camera_binning':                    self.state['camera_binning'],
+            'camera_display_live_subsampling':        self.state['camera_display_live_subsampling'],
+            'camera_display_acquisition_subsampling': self.state['camera_display_acquisition_subsampling'],
+        }
+
+        with open(config_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        updated_keys, skipped_keys = [], []
+        for key, value in params.items():
+            # Match 'key' : value or "key" : value anywhere in the file;
+            # stops before a comma, newline, or inline comment.
+            pattern = r"(['\"]" + re.escape(key) + r"['\"]\s*:\s*)([^,\n#]+)"
+            new_content, count = re.subn(pattern, r'\g<1>' + repr(value), content)
+            if count > 0:
+                content = new_content
+                updated_keys.append(key)
+            else:
+                skipped_keys.append(key)
+
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        result_msg = f'Saved {len(updated_keys)} parameters to:\n{save_path}'
+        if skipped_keys:
+            result_msg += '\n\nNot found in startup dict (skipped):\n' + ', '.join(skipped_keys)
+        logger.info(f'Saved parameters to config file: {save_path}')
+        QtWidgets.QMessageBox.information(self, 'Saved', result_msg)
+
     def display_warning(self, string):
         warning = QtWidgets.QMessageBox.warning(None,'mesoSPIM Warning', string, QtWidgets.QMessageBox.Ok)
 
@@ -907,8 +1276,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             window_pos = self.cfg.ui_options['window_pos']
         else:
             window_pos = (100, 100)
-        self.move(window_pos[0], window_pos[1])
-        self.camera_window.move(window_pos[0] + 100, window_pos[1] + 100)
-        self.acquisition_manager_window.move(window_pos[0] + 200, window_pos[1] + 200)
+        move_window_into_screen(self, window_pos[0], window_pos[1])
+        move_window_into_screen(self.camera_window, window_pos[0] + 100, window_pos[1] + 100)
+        move_window_into_screen(self.acquisition_manager_window, window_pos[0] + 200, window_pos[1] + 200)
         if self.webcam_window:
-            self.webcam_window.move(window_pos[0] + 300, window_pos[1] + 300)
+            move_window_into_screen(self.webcam_window, window_pos[0] + 300, window_pos[1] + 300)

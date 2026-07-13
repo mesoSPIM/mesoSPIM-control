@@ -197,7 +197,7 @@ class ZstepSpinBoxDelegate(QtWidgets.QStyledItemDelegate):
 
     def setEditorData(self, editor, index):
         editor.blockSignals(True)
-        editor.setValue(int(index.model().data(index, role=QtCore.Qt.EditRole)))
+        editor.setValue(float(index.model().data(index, role=QtCore.Qt.EditRole)))
         editor.blockSignals(False)
 
     def setModelData(self, editor, model, index):
