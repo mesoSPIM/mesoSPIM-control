@@ -5,6 +5,13 @@ The **Timelapse** tab in the Main window repeats the current acquisition list
 at defined time points, without having to write a script. Each time point
 runs the exact same acquisition list configured in the Acquisition Manager.
 
+.. figure:: ../../docs/screenshots/TimelapseGUI.png
+   :alt: Timelapse tab in the Main window
+   :width: 60%
+
+   The Timelapse tab: Acquisition Interval, number of time points, and the
+   live estimate label.
+
 .. tip::
 
    Build and test your acquisition list first with **Run Acquisition List**

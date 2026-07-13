@@ -38,6 +38,13 @@ The application has five main windows:
 Main window
 -----------
 
+.. figure:: ../../docs/screenshots/MainWindow.png
+   :alt: mesoSPIM-control Main window
+   :width: 60%
+
+   Main window (Movement tab): menu bar, mode tabs, stage controls, position
+   read-out, illumination controls, and acquisition/progress controls.
+
 Stage controls
 ~~~~~~~~~~~~~~
 
