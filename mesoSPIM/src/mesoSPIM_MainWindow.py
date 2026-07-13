@@ -25,7 +25,7 @@ from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
-from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen
+from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +121,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.timelapse_in_progress = False
         self.timelapse_total_timepoints = 1
         self.timelapse_current_timepoint = 0
+        self.timelapse_start_time = 0
 
         # arrange the windows on the screen, tiled
         if hasattr(self.cfg, 'ui_options') and 'window_pos' in self.cfg.ui_options.keys():
@@ -379,17 +380,24 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         if self.timelapse_in_progress:
             ''' Total Progress spans the whole timelapse: every time point contributes
-            an equal share, assuming each time point runs the same acquisition list. '''
+            an equal share, assuming each time point runs the same acquisition list.
+            Time/Remaining are computed over the whole timelapse (wall-clock time since
+            it started, extrapolated from the fraction of the timelapse completed so far),
+            not just the current stack/time point. '''
             tp = self.timelapse_current_timepoint
             total_tp = self.timelapse_total_timepoints
-            total_progress_value = int((tp*tot_images + image_count) / (total_tp*tot_images) * 100)
+            fraction_done = (tp*tot_images + image_count) / (total_tp*tot_images)
+            total_progress_value = int(fraction_done * 100)
+            timelapse_time_passed = time.time() - self.timelapse_start_time
+            timelapse_time_remaining = (timelapse_time_passed / fraction_done * (1 - fraction_done)
+                                         if fraction_done > 0 else 0)
             self.TotalProgressBar.setValue(total_progress_value)
             self.TotalProgressBar.setFormat('%p% Time Point: '+ str(tp+1) +\
                                             '/' + str(total_tp) +\
                                              ' Acq: '+ str(cur_acq+1) +\
                                             '/' + str(tot_acqs) + ' ' +\
-                                                'Time: ' + time_passed_string + \
-                                                ' Remaining: ' + remaining_time_string)
+                                                'Time: ' + convert_seconds_to_string(timelapse_time_passed) + \
+                                                ' Remaining: ' + convert_seconds_to_string(timelapse_time_remaining))
         else:
             self.TotalProgressBar.setValue(int(image_count/tot_images*100))
             self.TotalProgressBar.setFormat('%p% Acq: '+ str(cur_acq+1) +\
@@ -824,6 +832,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.timelapse_total_timepoints = tpoints
         self.timelapse_current_timepoint = 0
         self.timelapse_in_progress = True
+        self.timelapse_start_time = time.time()
         self.TimePointProgressBar.setValue(0)
         self.TimePointProgressBar.setFormat(f'%p% (0/{tpoints})')
         self.RunTimelapseButton.setEnabled(False)
