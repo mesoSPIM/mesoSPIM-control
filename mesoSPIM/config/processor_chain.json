@@ -1,0 +1,9 @@
+{
+  "processors": [
+    {
+      "name": "Identity",
+      "enabled": true,
+      "config": {}
+    }
+  ]
+}
