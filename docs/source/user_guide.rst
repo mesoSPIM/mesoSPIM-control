@@ -159,6 +159,17 @@ Useful behavior to keep in mind:
 
 For plugin-author details, see :doc:`plugins`.
 
+Plugins and Utils menus
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Main window menu bar also has:
+
+* **Plugins → Processor Chain** — opens the processor-chain window described
+  above.
+* **Utils → PSF (beads) analysis from a stack** — launches the
+  :doc:`Bead PSF Analysis <psf_analysis>` tool, preloaded with the most
+  recently completed acquisition or a chosen TIFF file.
+
 Running an acquisition
 ~~~~~~~~~~~~~~~~~~~~~~
 

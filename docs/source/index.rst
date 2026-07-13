@@ -77,6 +77,12 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Repeating an acquisition list over time: setup, timing model, and progress.
 
+   .. grid-item-card:: :octicon:`pulse` Bead PSF Analysis
+      :link: psf_analysis
+      :link-type: doc
+
+      Measure axial/lateral FWHM from a bead stack, standalone or from the Utils menu.
+
    .. grid-item-card:: :octicon:`cpu` Supported Hardware
       :link: hardware
       :link-type: doc
@@ -101,6 +107,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    configuration
    user_guide
    timelapse
+   psf_analysis
    hardware
    changelog
 
