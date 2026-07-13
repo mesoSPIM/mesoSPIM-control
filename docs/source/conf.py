@@ -18,7 +18,7 @@ project = "mesoSPIM Control"
 author = "mesoSPIM team"
 copyright = "mesoSPIM team"
 version = ""
-release = "1.20.0"
+release = "latest"
 
 # --- Docs-only hacks ---------------------------------------------------------
 # 1) Fake GetCurrentProcessorNumber on non-Windows platforms to avoid crashes in psutil
