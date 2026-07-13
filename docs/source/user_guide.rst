@@ -111,13 +111,9 @@ Acquisition modes
    * - **Run Run Acquisition list**
      - Takes all stacks defined in the Acquisition Manager sequentially; this can combine multiple XY positions into a mosaic (see the **Tile Overview window** to plan overlap) and loop through multiple channels and illumination settings.
    * - **Time-lapse**
-     - Experimental feature that can be triggered via scripting window that repeats the entire acquisition list at defined time intervals.
-
-.. figure:: ../../docs/screenshots/timelapse-launch.png
-   :alt: Time-lapse launch dialog (experimental)
-   :width: 60%
-
-   Time-lapse configuration dialog.
+     - Repeats the entire acquisition list at defined time intervals. Configured
+       from its own **Timelapse** tab — see :doc:`timelapse` for setup, timing
+       model, and progress indicators.
 
 Output file formats
 ~~~~~~~~~~~~~~~~~~~~
