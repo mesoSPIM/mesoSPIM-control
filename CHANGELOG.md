@@ -1,3 +1,12 @@
+## Unreleased
+### Bugfixes 🐛
+- PSF analysis tool: fixed bead detection finding 0 beads (or crashing) on beads elongated/wiggly in Z (e.g. stage-jitter artifacts): `keepBeads()` now keeps the brightest candidate among mutually-close peaks instead of discarding all of them, and 0 detected beads is reported in the UI instead of raising an uncaught error.
+- PSF analysis tool: beads sitting too close to a Z-stack edge for the configured fitting window are now excluded (previously a window that exactly touched the edge was silently accepted, giving an unreliable, baseline-biased axial fit).
+
+### GUI Improvements 🖥️
+- PSF analysis tool: axial (Z) fitting window is now a separate "Z fit window (µm)" control, independent of "Min dist betw beads (µm)", so it can be widened for beads with a broad/wiggly axial profile without also enlarging the lateral crop. Default increased 15→30 µm.
+- PSF analysis tool: new "Histogram X max" and "Colorbar max" controls to adjust the FWHM histogram/map display ranges and redraw the existing results, without re-running the analysis.
+
 ## Release July 2026 [1.25.0]
 ### New Features ✨
 - 💎 **Image Processor plugin system**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.

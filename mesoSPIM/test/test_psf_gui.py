@@ -135,6 +135,33 @@ class TestElongatedBeadRegression(unittest.TestCase):
         self.assertEqual(len(centers), 0)
         self.assertEqual(psf_list, [])
 
+    def test_bead_touching_z_edge_is_excluded(self):
+        """A bead close enough to the Z-stack boundary that its fitting window
+        cannot fit with room to spare must be excluded, rather than analyzed with
+        a window that silently touches the edge (whose profile then has no
+        guarantee of having decayed back to baseline)."""
+        shape = (25, 80, 80)
+        z_window = 20  # half-window = 10
+        options = {
+            "pxPerUmAx": 1.0,
+            "pxPerUmLat": 1.0,
+            "windowUm": [float(z_window), 15.0, 15.0],
+            "thresh": 700,
+        }
+        window = [z_window, 15, 15]
+
+        # z=10: 10 - window//2(=10) == 0, exactly touching the low edge -> excluded
+        im_touching = np.full(shape, 300.0, dtype=np.float32)
+        im_touching[10, 40, 40] = 9000.0
+        kept_touching = psf.keepBeads(im_touching, window, np.array([[10, 40, 40]]), options)
+        self.assertEqual(len(kept_touching), 0, "bead with zero Z margin must be excluded")
+
+        # z=11: one plane of margin to spare -> kept
+        im_clear = np.full(shape, 300.0, dtype=np.float32)
+        im_clear[11, 40, 40] = 9000.0
+        kept_clear = psf.keepBeads(im_clear, window, np.array([[11, 40, 40]]), options)
+        self.assertEqual(len(kept_clear), 1, "bead with nonzero Z margin should be kept")
+
 
 if __name__ == "__main__":
     unittest.main()

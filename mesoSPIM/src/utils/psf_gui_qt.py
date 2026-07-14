@@ -18,6 +18,9 @@ PX_LATERAL_MICRON = PIXEL_PITCH_MICRON/MAG
 PX_AXIAL_MICRON = 1.0
 THRESHOLD = 700
 MIN_BEAD_DISTANCE_UM = 15.0   # minimum distance between beads in microns
+Z_FIT_WINDOW_UM = 30.0        # axial (Z) extent of the per-bead fitting window, in microns
+HIST_XMAX_UM = 6.0            # upper x-axis limit for the FWHM histograms, in microns
+COLORBAR_MAX_UM = 5.0         # upper color-scale limit for the FWHM maps, in microns
 
 
 import os
@@ -46,9 +49,14 @@ from tifffile import imread, imwrite
 # =============================
 
 def inside(shape, center, window):
+    """A bead's fitting window must fit inside the volume with room to spare.
+    Strict inequalities: a window that exactly touches the edge leaves zero
+    margin, so there's no guarantee the profile has decayed back to baseline
+    within it (e.g. a bead sitting right at the top/bottom of the acquired
+    Z-stack)."""
     return np.all([
-        (center[i] - window[i] // 2 >= 0) &
-        (center[i] + window[i] // 2 <= shape[i])
+        (center[i] - window[i] // 2 > 0) &
+        (center[i] + window[i] // 2 < shape[i])
         for i in range(3)
     ])
 
@@ -147,6 +155,11 @@ def keepBeads(im, window, centers, options):
 
     keep_inside = np.where([inside(im.shape, x, window) for x in centers])[0]
     centers_keep = centers[keep_inside, :]
+
+    n_excluded_edge = len(centers) - len(centers_keep)
+    if n_excluded_edge > 0:
+        print(f'keepBeads(): {n_excluded_edge} candidate(s) excluded - too close to a '
+              f'stack edge for the current fitting window')
     print(f'keepBeads() done: {len(centers_keep)} found')
 
     return centers_keep
@@ -320,12 +333,17 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.px_axial_micron = z_step_micron if z_step_micron is not None else PX_AXIAL_MICRON
         self.px_lateral_micron = self.pixel_pitch_micron / self.mag
         self.min_bead_distance_um = MIN_BEAD_DISTANCE_UM
+        self.z_fit_window_um = Z_FIT_WINDOW_UM
+
+        # Plot display ranges (editable via GUI, redraw only - no re-analysis needed)
+        self.hist_xmax_um = HIST_XMAX_UM
+        self.colorbar_max_um = COLORBAR_MAX_UM
 
         # Default options
         self.options = {
             "pxPerUmAx": 1.0/self.px_axial_micron,
             "pxPerUmLat": 1.0/self.px_lateral_micron,
-            "windowUm": [self.min_bead_distance_um, self.min_bead_distance_um, self.min_bead_distance_um],
+            "windowUm": [self.z_fit_window_um, self.min_bead_distance_um, self.min_bead_distance_um],
             "thresh": THRESHOLD,
         }
 
@@ -400,6 +418,21 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         controls.addWidget(self.min_bead_dist_edit)
 
         controls.addSpacing(10)
+        controls.addWidget(QtWidgets.QLabel("Z fit window (µm):"))
+        self.z_fit_window_edit = QtWidgets.QDoubleSpinBox()
+        self.z_fit_window_edit.setRange(1.0, 200.0)
+        self.z_fit_window_edit.setValue(self.z_fit_window_um)
+        self.z_fit_window_edit.setDecimals(1)
+        self.z_fit_window_edit.setSingleStep(1.0)
+        self.z_fit_window_edit.setToolTip(
+            "Axial extent of the per-bead fitting window. Independent of 'Min dist "
+            "betw beads', so it can be widened for beads with a broad/wiggly axial "
+            "profile (e.g. stage jitter) without also enlarging the lateral crop."
+        )
+        self.z_fit_window_edit.valueChanged.connect(self.update_z_fit_window)
+        controls.addWidget(self.z_fit_window_edit)
+
+        controls.addSpacing(10)
         controls.addWidget(QtWidgets.QLabel("Z min:"))
         self.zmin_edit = QtWidgets.QSpinBox()
         self.zmin_edit.setRange(0, 100000)
@@ -428,6 +461,39 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         controls2.addWidget(self.info_label)
 
         controls2.addStretch(1)
+
+        # Third row of controls: plot display ranges (redraw only, no re-analysis)
+        controls3 = QtWidgets.QHBoxLayout()
+        vbox.addLayout(controls3)
+
+        controls3.addWidget(QtWidgets.QLabel("Histogram X max (µm):"))
+        self.hist_xmax_edit = QtWidgets.QDoubleSpinBox()
+        self.hist_xmax_edit.setRange(1.0, 200.0)
+        self.hist_xmax_edit.setValue(self.hist_xmax_um)
+        self.hist_xmax_edit.setDecimals(1)
+        self.hist_xmax_edit.setSingleStep(1.0)
+        self.hist_xmax_edit.setToolTip(
+            "Upper x-axis limit for both FWHM histograms. Redraws the existing "
+            "plots; does not require re-running the analysis."
+        )
+        self.hist_xmax_edit.valueChanged.connect(self.update_plot_ranges)
+        controls3.addWidget(self.hist_xmax_edit)
+
+        controls3.addSpacing(10)
+        controls3.addWidget(QtWidgets.QLabel("Colorbar max (µm):"))
+        self.colorbar_max_edit = QtWidgets.QDoubleSpinBox()
+        self.colorbar_max_edit.setRange(1.0, 200.0)
+        self.colorbar_max_edit.setValue(self.colorbar_max_um)
+        self.colorbar_max_edit.setDecimals(1)
+        self.colorbar_max_edit.setSingleStep(1.0)
+        self.colorbar_max_edit.setToolTip(
+            "Upper color-scale limit for both FWHM maps. Redraws the existing "
+            "plots; does not require re-running the analysis."
+        )
+        self.colorbar_max_edit.valueChanged.connect(self.update_plot_ranges)
+        controls3.addWidget(self.colorbar_max_edit)
+
+        controls3.addStretch(1)
 
         # Matplotlib canvas
         self.canvas = MplCanvas(self, dpi=100)
@@ -495,9 +561,23 @@ class PSFMainWindow(QtWidgets.QMainWindow):
                 self.update_plots()
 
     def update_min_bead_distance(self):
-        """Update minimum bead distance parameter."""
+        """Update minimum bead distance parameter (also the lateral fitting window)."""
         self.min_bead_distance_um = float(self.min_bead_dist_edit.value())
-        self.options["windowUm"] = [self.min_bead_distance_um, self.min_bead_distance_um, self.min_bead_distance_um]
+        self.options["windowUm"][1] = self.min_bead_distance_um
+        self.options["windowUm"][2] = self.min_bead_distance_um
+
+    def update_z_fit_window(self):
+        """Update the axial (Z) fitting window, independent of the lateral window."""
+        self.z_fit_window_um = float(self.z_fit_window_edit.value())
+        self.options["windowUm"][0] = self.z_fit_window_um
+
+    def update_plot_ranges(self):
+        """Update the histogram/colorbar display ranges and redraw the existing
+        results, without re-running the bead detection/fitting analysis."""
+        self.hist_xmax_um = float(self.hist_xmax_edit.value())
+        self.colorbar_max_um = float(self.colorbar_max_edit.value())
+        if self.stats_df is not None and not self.stats_df.empty:
+            self.update_plots()
 
     # ---------- File operations ----------
 
@@ -848,15 +928,13 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         axial_vals = self.stats_df["FWHMax"].tolist()
         lat_vals   = self.stats_df["FWHMlat"].tolist()
 
-        ax_hist_axial.hist(axial_vals, 20, range=(1, 6))
-        ax_hist_axial.set_xlim([1, 6])
+        ax_hist_axial.hist(axial_vals, 20, range=(1, self.hist_xmax_um))
+        ax_hist_axial.set_xlim([1, self.hist_xmax_um])
         ax_hist_axial.set_xlabel("Axial FWHM (µm)")
-        ax_hist_axial.set_xticks(range(1, 7))
         ax_hist_axial.set_ylabel("# Beads")
 
-        ax_hist_lat.hist(lat_vals, 20, range=(1, 6))
-        ax_hist_lat.set_xlim([1, 6])
-        ax_hist_lat.set_xticks(range(1, 7))
+        ax_hist_lat.hist(lat_vals, 20, range=(1, self.hist_xmax_um))
+        ax_hist_lat.set_xlim([1, self.hist_xmax_um])
         ax_hist_lat.set_xlabel("Lateral FWHM (µm)")
         ax_hist_lat.set_ylabel("# Beads")
 
@@ -872,7 +950,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
             (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMax"].tolist(),
-            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
+            cmap=cmap, vmin=0, vmax=self.colorbar_max_um, s=20, edgecolors="none"
         )
         ax_im_axial.set_title("PSF: Axial FWHM")
         ax_im_axial.set_xlabel("FOV_X (µm)")
@@ -885,7 +963,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
             (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMlat"].tolist(),
-            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
+            cmap=cmap, vmin=0, vmax=self.colorbar_max_um, s=20, edgecolors="none"
         )
         ax_im_lat.set_title("PSF: Lateral FWHM")
         ax_im_lat.set_xlabel("FOV_X (µm)")
