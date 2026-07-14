@@ -540,6 +540,14 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         open_action.triggered.connect(self.open_tif)
         file_menu.addAction(open_action)
 
+        simulate_action = QtWidgets.QAction("Simulate...", self)
+        simulate_action.setToolTip(
+            "Generate a synthetic 3-bead stack of known FWHM using the current "
+            "system parameters, and run the analysis - a quick demo/sanity check."
+        )
+        simulate_action.triggered.connect(self.simulate_demo)
+        file_menu.addAction(simulate_action)
+
         file_menu.addSeparator()
 
         save_txt_action = QtWidgets.QAction("Save stats as TXT...", self)
@@ -625,6 +633,52 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             return
 
         self.load_stack(im, filename=fname)
+
+    def simulate_demo(self):
+        """Generate a synthetic 3-bead TIFF stack of known FWHM, using the current
+        system parameters (magnification, pixel pitch, Z-step), load it, and run
+        the analysis - a quick, no-file-needed demo/sanity check of the tool."""
+        FWHM_LAT_UM = 1.0
+        FWHM_AX_UM = 2.0
+        amplitude, baseline = 5000.0, 300.0
+
+        sigma_lat_px = (FWHM_LAT_UM / 2.3548) / self.px_lateral_micron
+        sigma_ax_px = (FWHM_AX_UM / 2.3548) / self.px_axial_micron
+
+        # Size the volume with generous margin around the current Z fit window and
+        # min bead-separation settings, so all 3 beads are reliably detected
+        # regardless of whatever the user currently has configured.
+        z_half_px = int(np.ceil(1.5 * self.z_fit_window_um / 2.0 / self.px_axial_micron)) + 5
+        lat_half_px = int(np.ceil(1.5 * self.min_bead_distance_um / self.px_lateral_micron)) + 10
+
+        shape = (2 * z_half_px + 1, 4 * lat_half_px, 4 * lat_half_px)
+        z0 = z_half_px
+        centers = [
+            (z0, lat_half_px, lat_half_px),
+            (z0, lat_half_px, 3 * lat_half_px),
+            (z0, 3 * lat_half_px, 2 * lat_half_px),
+        ]
+
+        zz, yy, xx = np.meshgrid(
+            np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]), indexing="ij"
+        )
+        im = np.full(shape, baseline, dtype=np.float64)
+        for z_c, y_c, x_c in centers:
+            r2 = (
+                (zz - z_c) ** 2 / (2 * sigma_ax_px ** 2)
+                + (yy - y_c) ** 2 / (2 * sigma_lat_px ** 2)
+                + (xx - x_c) ** 2 / (2 * sigma_lat_px ** 2)
+            )
+            im = im + amplitude * np.exp(-r2)
+        im = im.astype(np.uint16)
+
+        self.load_stack(im, filename="simulated_3beads.tif")
+        self.thresh_edit.setValue(baseline + amplitude * 0.2)
+        self.run_analysis()
+        self.info_label.setText(
+            f"Simulated 3 beads (ground truth FWHM: lateral={FWHM_LAT_UM:.2f} µm, "
+            f"axial={FWHM_AX_UM:.2f} µm). {self.info_label.text()}"
+        )
 
     def load_stack(self, im, filename=None):
         """
