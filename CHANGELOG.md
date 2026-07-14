@@ -5,7 +5,7 @@
 
 ### GUI Improvements 🖥️
 - PSF analysis tool: axial (Z) fitting window is now a separate "Z fit window (µm)" control, independent of "Min dist betw beads (µm)", so it can be widened for beads with a broad/wiggly axial profile without also enlarging the lateral crop. Default increased 15→30 µm.
-- PSF analysis tool: new "Histogram X max" and "Colorbar max" controls to adjust the FWHM histogram/map display ranges and redraw the existing results, without re-running the analysis.
+- PSF analysis tool: separate "Histogram X max" and "Colorbar max" controls for axial vs. lateral FWHM, to adjust the histogram/map display ranges independently and redraw the existing results, without re-running the analysis.
 
 ## Release July 2026 [1.25.0]
 ### New Features ✨

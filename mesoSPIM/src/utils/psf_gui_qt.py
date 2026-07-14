@@ -19,8 +19,10 @@ PX_AXIAL_MICRON = 1.0
 THRESHOLD = 700
 MIN_BEAD_DISTANCE_UM = 15.0   # minimum distance between beads in microns
 Z_FIT_WINDOW_UM = 30.0        # axial (Z) extent of the per-bead fitting window, in microns
-HIST_XMAX_UM = 6.0            # upper x-axis limit for the FWHM histograms, in microns
-COLORBAR_MAX_UM = 5.0         # upper color-scale limit for the FWHM maps, in microns
+HIST_XMAX_AX_UM = 6.0         # upper x-axis limit for the axial FWHM histogram, in microns
+HIST_XMAX_LAT_UM = 6.0        # upper x-axis limit for the lateral FWHM histogram, in microns
+COLORBAR_MAX_AX_UM = 5.0      # upper color-scale limit for the axial FWHM map, in microns
+COLORBAR_MAX_LAT_UM = 5.0     # upper color-scale limit for the lateral FWHM map, in microns
 
 
 import os
@@ -336,8 +338,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.z_fit_window_um = Z_FIT_WINDOW_UM
 
         # Plot display ranges (editable via GUI, redraw only - no re-analysis needed)
-        self.hist_xmax_um = HIST_XMAX_UM
-        self.colorbar_max_um = COLORBAR_MAX_UM
+        self.hist_xmax_ax_um = HIST_XMAX_AX_UM
+        self.hist_xmax_lat_um = HIST_XMAX_LAT_UM
+        self.colorbar_max_ax_um = COLORBAR_MAX_AX_UM
+        self.colorbar_max_lat_um = COLORBAR_MAX_LAT_UM
 
         # Default options
         self.options = {
@@ -466,32 +470,39 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         controls3 = QtWidgets.QHBoxLayout()
         vbox.addLayout(controls3)
 
-        controls3.addWidget(QtWidgets.QLabel("Histogram X max (µm):"))
-        self.hist_xmax_edit = QtWidgets.QDoubleSpinBox()
-        self.hist_xmax_edit.setRange(1.0, 200.0)
-        self.hist_xmax_edit.setValue(self.hist_xmax_um)
-        self.hist_xmax_edit.setDecimals(1)
-        self.hist_xmax_edit.setSingleStep(1.0)
-        self.hist_xmax_edit.setToolTip(
-            "Upper x-axis limit for both FWHM histograms. Redraws the existing "
-            "plots; does not require re-running the analysis."
-        )
-        self.hist_xmax_edit.valueChanged.connect(self.update_plot_ranges)
-        controls3.addWidget(self.hist_xmax_edit)
+        def make_range_spinbox(label_text, initial_value, tooltip):
+            controls3.addWidget(QtWidgets.QLabel(label_text))
+            edit = QtWidgets.QDoubleSpinBox()
+            edit.setRange(1.0, 200.0)
+            edit.setValue(initial_value)
+            edit.setDecimals(1)
+            edit.setSingleStep(1.0)
+            edit.setToolTip(tooltip)
+            edit.valueChanged.connect(self.update_plot_ranges)
+            controls3.addWidget(edit)
+            controls3.addSpacing(10)
+            return edit
 
-        controls3.addSpacing(10)
-        controls3.addWidget(QtWidgets.QLabel("Colorbar max (µm):"))
-        self.colorbar_max_edit = QtWidgets.QDoubleSpinBox()
-        self.colorbar_max_edit.setRange(1.0, 200.0)
-        self.colorbar_max_edit.setValue(self.colorbar_max_um)
-        self.colorbar_max_edit.setDecimals(1)
-        self.colorbar_max_edit.setSingleStep(1.0)
-        self.colorbar_max_edit.setToolTip(
-            "Upper color-scale limit for both FWHM maps. Redraws the existing "
-            "plots; does not require re-running the analysis."
+        self.hist_xmax_ax_edit = make_range_spinbox(
+            "Hist X max, axial (µm):", self.hist_xmax_ax_um,
+            "Upper x-axis limit for the axial FWHM histogram. Redraws the "
+            "existing plots; does not require re-running the analysis."
         )
-        self.colorbar_max_edit.valueChanged.connect(self.update_plot_ranges)
-        controls3.addWidget(self.colorbar_max_edit)
+        self.hist_xmax_lat_edit = make_range_spinbox(
+            "Hist X max, lateral (µm):", self.hist_xmax_lat_um,
+            "Upper x-axis limit for the lateral FWHM histogram. Redraws the "
+            "existing plots; does not require re-running the analysis."
+        )
+        self.colorbar_max_ax_edit = make_range_spinbox(
+            "Colorbar max, axial (µm):", self.colorbar_max_ax_um,
+            "Upper color-scale limit for the axial FWHM map. Redraws the "
+            "existing plots; does not require re-running the analysis."
+        )
+        self.colorbar_max_lat_edit = make_range_spinbox(
+            "Colorbar max, lateral (µm):", self.colorbar_max_lat_um,
+            "Upper color-scale limit for the lateral FWHM map. Redraws the "
+            "existing plots; does not require re-running the analysis."
+        )
 
         controls3.addStretch(1)
 
@@ -574,8 +585,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
     def update_plot_ranges(self):
         """Update the histogram/colorbar display ranges and redraw the existing
         results, without re-running the bead detection/fitting analysis."""
-        self.hist_xmax_um = float(self.hist_xmax_edit.value())
-        self.colorbar_max_um = float(self.colorbar_max_edit.value())
+        self.hist_xmax_ax_um = float(self.hist_xmax_ax_edit.value())
+        self.hist_xmax_lat_um = float(self.hist_xmax_lat_edit.value())
+        self.colorbar_max_ax_um = float(self.colorbar_max_ax_edit.value())
+        self.colorbar_max_lat_um = float(self.colorbar_max_lat_edit.value())
         if self.stats_df is not None and not self.stats_df.empty:
             self.update_plots()
 
@@ -928,13 +941,13 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         axial_vals = self.stats_df["FWHMax"].tolist()
         lat_vals   = self.stats_df["FWHMlat"].tolist()
 
-        ax_hist_axial.hist(axial_vals, 20, range=(1, self.hist_xmax_um))
-        ax_hist_axial.set_xlim([1, self.hist_xmax_um])
+        ax_hist_axial.hist(axial_vals, 20, range=(1, self.hist_xmax_ax_um))
+        ax_hist_axial.set_xlim([1, self.hist_xmax_ax_um])
         ax_hist_axial.set_xlabel("Axial FWHM (µm)")
         ax_hist_axial.set_ylabel("# Beads")
 
-        ax_hist_lat.hist(lat_vals, 20, range=(1, self.hist_xmax_um))
-        ax_hist_lat.set_xlim([1, self.hist_xmax_um])
+        ax_hist_lat.hist(lat_vals, 20, range=(1, self.hist_xmax_lat_um))
+        ax_hist_lat.set_xlim([1, self.hist_xmax_lat_um])
         ax_hist_lat.set_xlabel("Lateral FWHM (µm)")
         ax_hist_lat.set_ylabel("# Beads")
 
@@ -950,7 +963,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
             (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMax"].tolist(),
-            cmap=cmap, vmin=0, vmax=self.colorbar_max_um, s=20, edgecolors="none"
+            cmap=cmap, vmin=0, vmax=self.colorbar_max_ax_um, s=20, edgecolors="none"
         )
         ax_im_axial.set_title("PSF: Axial FWHM")
         ax_im_axial.set_xlabel("FOV_X (µm)")
@@ -963,7 +976,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
             (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMlat"].tolist(),
-            cmap=cmap, vmin=0, vmax=self.colorbar_max_um, s=20, edgecolors="none"
+            cmap=cmap, vmin=0, vmax=self.colorbar_max_lat_um, s=20, edgecolors="none"
         )
         ax_im_lat.set_title("PSF: Lateral FWHM")
         ax_im_lat.set_xlabel("FOV_X (µm)")
