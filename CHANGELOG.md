@@ -1,6 +1,6 @@
 ## Release July 2026 [1.25.0]
 ### New Features ✨
-- 💎 **Image Processor plugin system**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.
+- 💎 **Image Processor plugin system (beta version)**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.
 - 💎 **Timelapse acquisitions**: New "Timelapse" tab to repeatedly run the configured acquisition list over time. Set the interval (hours/minutes/seconds) or enable "As fast as possible" (default on), and the number of time points. "Run Timelapse" starts the sequence (only available once "Enable Timelapse" is checked); "Stop" cancels any further time points. A new "Time Point" progress bar tracks the current time point, and "Total Progress" now spans the whole timelapse instead of resetting every time point.
 - 💎 **PSF (beads) analysis from a stack**, launching the PSF analysis tool from within mesoSPIM_control ("Utils" menu), preloaded with either the most recently completed acquisition's stack or a user-chosen TIFF file, with system magnification/pixel size/Z-step passed in automatically. Exports beads FWHM statistics and publication-ready graphs. "Save average PSF as TIF…" exports a peak-normalised, bead-centred sub-volume averaged across all detected beads (skipping beads too close to the image boundary), plus an image-saturation warning.
 - 💎 **Acquisition Manager**: group rows by illumination/laser, "Group selected rows" and "Delete selected rows" buttons, and save/load the acquisition table as CSV.
@@ -15,8 +15,7 @@
 - Auto Left/Right illumination now uses the median tile X position as the midline, instead of edge-only margins.
 
 ### Bugfixes 🐛
-- Fixed BigStitcher OME-ZARR Z-scale and channel naming.
-- Fixed scale metadata at different resolutions.
+- Fixed BigStitcher OME-ZARR Z-scale and channel naming, scale metadata at different resolutions, via `scripts/fix_bigstitcher_zarr_export.py`
 - Fixed image processors causing GUI lockouts by using non-blocking cleanup connections.
 - Removed galvo amplitude from saved state to prevent zero-amplitude settings on reload.
 - Fixed Acquisition/Total Progress bars stalling below 100% at the end of an acquisition: an off-by-one in the image counter caused the final progress update to be silently dropped by Qt (out-of-range values are ignored, not clamped).

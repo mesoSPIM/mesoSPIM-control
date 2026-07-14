@@ -1,4 +1,4 @@
-Image Processing Plugins
+Image Processing Plugins (beta)
 ==========================
 
 mesoSPIM-control can apply a configurable chain of image-processing steps to
