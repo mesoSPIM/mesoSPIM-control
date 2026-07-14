@@ -118,33 +118,36 @@ def keepBeads(im, window, centers, options):
     if centers is None or len(centers) == 0:
         return np.zeros((0, 3), dtype=int)
 
-    centersM = np.asarray([
-        [
-            c[0] / options["pxPerUmAx"],
-            c[1] / options["pxPerUmLat"],
-            c[2] / options["pxPerUmLat"],
-        ]
-        for c in centers
-    ])
-    print("centersM done")
-
-    if len(centersM) == 1:
-        centers_keep = centers
-    elif len(centersM) >= 2:
-        distance_matrix = pairwise_distances(centersM)
-        distance_matrix.sort(axis=1)
-        centerDists = distance_matrix[:, 1]
-        print("centerDists done")
-
+    if len(centers) >= 2:
+        centersM = np.asarray([
+            [
+                c[0] / options["pxPerUmAx"],
+                c[1] / options["pxPerUmLat"],
+                c[2] / options["pxPerUmLat"],
+            ]
+            for c in centers
+        ])
         min_distance = float(min(options["windowUm"]))
-        keep = np.where(centerDists > min_distance)[0]
+        distance_matrix = pairwise_distances(centersM)
+
+        # Greedy non-max suppression: candidates within min_distance of each other are
+        # almost certainly sub-peaks of the same bead (e.g. multiple noisy local maxima
+        # along a single bead that is elongated/out-of-focus), so keep only the
+        # brightest one per cluster instead of discarding every candidate involved.
+        intensities = np.asarray([im[c[0], c[1], c[2]] for c in centers])
+        order = np.argsort(intensities)[::-1]
+        suppressed = np.zeros(len(centers), dtype=bool)
+        keep = []
+        for i in order:
+            if suppressed[i]:
+                continue
+            keep.append(i)
+            suppressed |= distance_matrix[i] <= min_distance
         centers = centers[keep, :]
 
-        keep_inside = np.where([inside(im.shape, x, window) for x in centers])[0]
-        print(f'keepBeads() done: {len(keep_inside)} found')
-        centers_keep = centers[keep_inside, :]
-    else:
-        centers_keep = np.zeros((0, 3), dtype=int)
+    keep_inside = np.where([inside(im.shape, x, window) for x in centers])[0]
+    centers_keep = centers[keep_inside, :]
+    print(f'keepBeads() done: {len(centers_keep)} found')
 
     return centers_keep
 
@@ -811,9 +814,15 @@ class PSFMainWindow(QtWidgets.QMainWindow):
                 "FWHMax": axFWHM,
             })
 
-        self.stats_df = pd.DataFrame(rows).set_index("bead_id")
+        columns = ["bead_id", "Z", "Y", "X", "MaxIntensity", "FWHMlat", "FWHMax"]
+        self.stats_df = pd.DataFrame(rows, columns=columns).set_index("bead_id")
 
-        self.info_label.setText(f"{len(self.beads)} beads found; stats computed")
+        if not rows:
+            self.info_label.setText(
+                "0 beads found. Try lowering 'Min intensity' or 'Min dist betw beads'."
+            )
+        else:
+            self.info_label.setText(f"{len(self.beads)} beads found; stats computed")
         self.update_plots()
 
     # ---------- Plotting ----------
