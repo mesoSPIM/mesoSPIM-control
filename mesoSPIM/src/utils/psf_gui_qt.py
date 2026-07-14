@@ -167,6 +167,22 @@ def keepBeads(im, window, centers, options):
     return centers_keep
 
 
+def safe_median(series):
+    """Median of a pandas Series, guarding against all-NaN input."""
+    vals = series.to_numpy()
+    if np.all(np.isnan(vals)):
+        return np.nan
+    return np.nanmedian(vals)
+
+
+def safe_std(series):
+    """Standard deviation of a pandas Series, guarding against all-NaN input."""
+    vals = series.to_numpy()
+    if np.all(np.isnan(vals)):
+        return np.nan
+    return np.nanstd(vals, ddof=0)
+
+
 def gauss(x, a, mu, sigma, b):
     return a * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2)) + b
 
@@ -682,19 +698,6 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         # Convenience alias, like PSF in the notebook
         PSF = self.stats_df
 
-        # Compute stats; guard against all-NaN columns
-        def safe_median(series):
-            vals = series.to_numpy()
-            if np.all(np.isnan(vals)):
-                return np.nan
-            return np.nanmedian(vals)
-
-        def safe_std(series):
-            vals = series.to_numpy()
-            if np.all(np.isnan(vals)):
-                return np.nan
-            return np.nanstd(vals, ddof=0)
-
         n_beads = len(PSF)
 
         med_lat = safe_median(PSF["FWHMlat"])
@@ -790,7 +793,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             FigureCanvasAgg(export_fig)  # attach non-interactive Agg backend for rendering
             if self.filename:
                 export_fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
-            self._populate_figure(export_fig)
+            self._populate_figure(export_fig, annotate_stats=True)
             export_fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
             export_fig.savefig(fname, dpi=300, format="png")
             plt.close(export_fig)
@@ -924,8 +927,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.canvas.fig.clear()
         self.canvas.draw()
 
-    def _populate_figure(self, fig):
-        """Draw histograms and PSF maps onto *fig*. Uses current self.stats_df / self.smoothed."""
+    def _populate_figure(self, fig, annotate_stats=False):
+        """Draw histograms and PSF maps onto *fig*. Uses current self.stats_df / self.smoothed.
+        If annotate_stats is True, print median +/- std as a text line above each histogram
+        (used for PNG export)."""
         import matplotlib.gridspec as gridspec
 
         gs = gridspec.GridSpec(
@@ -950,6 +955,17 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         ax_hist_lat.set_xlim([1, self.hist_xmax_lat_um])
         ax_hist_lat.set_xlabel("Lateral FWHM (µm)")
         ax_hist_lat.set_ylabel("# Beads")
+
+        if annotate_stats:
+            med_ax = safe_median(self.stats_df["FWHMax"])
+            std_ax = safe_std(self.stats_df["FWHMax"])
+            med_lat = safe_median(self.stats_df["FWHMlat"])
+            std_lat = safe_std(self.stats_df["FWHMlat"])
+            for ax, med, std in ((ax_hist_axial, med_ax, std_ax), (ax_hist_lat, med_lat, std_lat)):
+                ax.text(
+                    0.5, 1.02, f"median = {med:.2f} ± {std:.2f} µm",
+                    transform=ax.transAxes, ha="center", va="bottom", fontsize=9
+                )
 
         ax_im_axial = fig.add_subplot(gs[1, 0])
         ax_im_lat   = fig.add_subplot(gs[1, 1])
