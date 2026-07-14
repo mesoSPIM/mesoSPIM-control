@@ -368,6 +368,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         }
 
         self._init_ui()
+        self.setAcceptDrops(True)
 
         if stack is not None:
             self.load_stack(stack, filename=filename)
@@ -633,6 +634,23 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             return
 
         self.load_stack(im, filename=fname)
+
+    def dragEnterEvent(self, event):
+        urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
+        if any(url.toLocalFile().lower().endswith((".tif", ".tiff")) for url in urls):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        for url in event.mimeData().urls():
+            path = url.toLocalFile()
+            if path.lower().endswith((".tif", ".tiff")):
+                try:
+                    im = imread(path)
+                except Exception as e:
+                    QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
+                    return
+                self.load_stack(im, filename=path)
+                return
 
     def simulate_demo(self):
         """Generate a synthetic 3-bead TIFF stack of known FWHM, using the current
@@ -1000,13 +1018,13 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         axial_vals = self.stats_df["FWHMax"].tolist()
         lat_vals   = self.stats_df["FWHMlat"].tolist()
 
-        ax_hist_axial.hist(axial_vals, 20, range=(1, self.hist_xmax_ax_um))
-        ax_hist_axial.set_xlim([1, self.hist_xmax_ax_um])
+        ax_hist_axial.hist(axial_vals, 20, range=(0, self.hist_xmax_ax_um))
+        ax_hist_axial.set_xlim([0, self.hist_xmax_ax_um])
         ax_hist_axial.set_xlabel("Axial FWHM (µm)")
         ax_hist_axial.set_ylabel("# Beads")
 
-        ax_hist_lat.hist(lat_vals, 20, range=(1, self.hist_xmax_lat_um))
-        ax_hist_lat.set_xlim([1, self.hist_xmax_lat_um])
+        ax_hist_lat.hist(lat_vals, 20, range=(0, self.hist_xmax_lat_um))
+        ax_hist_lat.set_xlim([0, self.hist_xmax_lat_um])
         ax_hist_lat.set_xlabel("Lateral FWHM (µm)")
         ax_hist_lat.set_ylabel("# Beads")
 
