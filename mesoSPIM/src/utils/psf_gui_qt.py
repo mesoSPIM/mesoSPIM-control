@@ -1090,32 +1090,33 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.canvas.draw()
 
 # =============================
-#  EMBEDDING API
-# =============================
-
-def launch_psf_analysis(stack, mag=None, pixel_pitch_micron=None, z_step_micron=None,
-                         filename=None, parent=None):
-    """
-    Open a PSFMainWindow preloaded with *stack*, for use from another Qt application
-    (e.g. mesoSPIM_control) that already runs its own QApplication event loop.
-
-    Returns the PSFMainWindow instance; the caller must keep a reference to it
-    (e.g. store it on self) or Qt will garbage-collect and close the window.
-    """
-    win = PSFMainWindow(parent=parent, stack=stack, mag=mag,
-                        pixel_pitch_micron=pixel_pitch_micron,
-                        z_step_micron=z_step_micron, filename=filename)
-    win.show()
-    return win
-
-
-# =============================
 #  ENTRY POINT
 # =============================
 
 def main():
+    """Standalone entry point. Also used by mesoSPIM_control, which launches this
+    script as a separate process (via subprocess.Popen) rather than embedding it in
+    its own process, so a long-running analysis can't block the main GUI."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Bead PSF Analysis tool")
+    parser.add_argument("tiff_path", nargs="?", default=None,
+                         help="TIFF z-stack to preload on startup")
+    parser.add_argument("--mag", type=float, default=None, help="System magnification")
+    parser.add_argument("--pixel-pitch", type=float, default=None, dest="pixel_pitch",
+                         help="Camera pixel pitch in microns")
+    parser.add_argument("--z-step", type=float, default=None, dest="z_step",
+                         help="Z stepsize in microns")
+    args = parser.parse_args()
+
     app = QtWidgets.QApplication(sys.argv)
-    win = PSFMainWindow()
+    win = PSFMainWindow(mag=args.mag, pixel_pitch_micron=args.pixel_pitch, z_step_micron=args.z_step)
+    if args.tiff_path:
+        try:
+            im = imread(args.tiff_path)
+            win.load_stack(im, filename=args.tiff_path)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(win, "Error", f"Failed to open file:\n{e}")
     win.show()
     sys.exit(app.exec_())
 

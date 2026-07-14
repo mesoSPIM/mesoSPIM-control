@@ -38,6 +38,10 @@ dialog lets you choose between:
   from the microscope's current live zoom setting; other parameters may need
   manual adjustment.
 
+Either way, mesoSPIM-control launches the tool as a **separate OS process**
+(``subprocess.Popen``, not an in-process window), so a long-running bead
+detection/fitting analysis can never block the Main window's own GUI thread.
+
 As a standalone application
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -48,7 +52,14 @@ directly, e.g. to analyze a bead stack acquired on a different system:
 
    python mesoSPIM/src/utils/psf_gui_qt.py
 
-Then use **File → Open TIF...** to load a 3D TIFF stack.
+Then use **File → Open TIF...** (or drag and drop a file onto the window) to
+load a 3D TIFF stack. A stack can also be preloaded directly from the command
+line, along with the system parameters mesoSPIM-control passes when it
+launches the tool this way:
+
+.. code-block:: bash
+
+   python mesoSPIM/src/utils/psf_gui_qt.py path/to/stack.tif --mag 20 --pixel-pitch 4.25 --z-step 1.0
 
 System Parameters
 -------------------
