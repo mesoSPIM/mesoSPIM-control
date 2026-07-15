@@ -26,6 +26,7 @@ from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this li
 from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
+from .mesoSPIM_RemoteControl_GUI import RemoteControlGUI
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
 
@@ -276,6 +277,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def close_app(self):
         #self.log_display_handler.flushOnClose = False #discontinued
         logger.info('Closing the application')
+        self.remote_control.shutdown()
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:
@@ -609,6 +611,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
         self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
+
+        self.remote_control = RemoteControlGUI(self)
 
         ''' Timelapse tab '''
         self.AsFastAsPossibleCheckBox.toggled.connect(self.toggle_timelapse_interval)
