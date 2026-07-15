@@ -1,6 +1,8 @@
 # mesoSPIM MainWindow
 import os
 import re
+import sys
+import subprocess
 import tifffile
 import logging
 import time
@@ -977,13 +979,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def launch_psf_analysis_window(self):
         """
-        Launch the PSF (beads) analysis tool. Lets the user choose whether to
+        Launch the PSF (beads) analysis tool as a separate OS process (not an
+        in-process window), so a long-running bead detection/fitting run can't
+        block mesoSPIM_control's own GUI thread. Lets the user choose whether to
         preload the most recently completed acquisition's stack (re-read from
-        disk, since acquisitions stream straight to disk and are never kept in
-        RAM as a full 3D array), or browse for an arbitrary TIFF stack instead.
+        disk by the child process, since acquisitions stream straight to disk
+        and are never kept in RAM as a full 3D array), or browse for an
+        arbitrary TIFF stack instead.
         """
-        from .utils.psf_gui_qt import launch_psf_analysis
-
         msg_box = QtWidgets.QMessageBox(self)
         msg_box.setWindowTitle("PSF (beads) analysis")
         msg_box.setText("Load the most recently acquired stack, or browse for a TIFF file yourself?")
@@ -1001,7 +1004,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if clicked is None or clicked == cancel_button:
             return
 
-        stack, filename = None, None
+        filename = None
         # Camera pixel pitch is fixed by hardware, independent of the acquisition's zoom setting.
         pixel_pitch_micron = self.cfg.camera_parameters['x_pixel_size_in_microns']
         mag, z_step_micron = None, None
@@ -1016,24 +1019,38 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             if acq is None or path is None or not os.path.isfile(path):
                 QtWidgets.QMessageBox.warning(self, "PSF analysis", "No completed acquisition found yet.")
                 return
-            try:
-                stack = tifffile.imread(path)
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "PSF analysis", f"Failed to load stack:\n{e}")
-                return
             mag = self._parse_zoom_magnification(acq['zoom'])
             z_step_micron = acq['z_step']
             filename = path
         else:
-            # "Browse...": stack stays None, the PSF window opens empty and the user
+            # "Browse...": no file passed, the PSF window opens empty and the user
             # picks a file via its own File > Open TIF..., but still prefill mag from
             # the microscope's current live zoom setting.
             mag = self._parse_zoom_magnification(self.state['zoom'])
 
-        self.psf_analysis_window = launch_psf_analysis(
-            stack, mag=mag, pixel_pitch_micron=pixel_pitch_micron,
-            z_step_micron=z_step_micron, filename=filename, parent=self
-        )
+        self._launch_psf_analysis_subprocess(filename, mag, pixel_pitch_micron, z_step_micron)
+
+    def _launch_psf_analysis_subprocess(self, filename, mag, pixel_pitch_micron, z_step_micron):
+        """Start mesoSPIM/src/utils/psf_gui_qt.py as an independent process."""
+        script_path = os.path.join(os.path.dirname(__file__), 'utils', 'psf_gui_qt.py')
+        cmd = [sys.executable, script_path]
+        if filename:
+            cmd.append(filename)
+        if mag is not None:
+            cmd += ['--mag', str(mag)]
+        if pixel_pitch_micron is not None:
+            cmd += ['--pixel-pitch', str(pixel_pitch_micron)]
+        if z_step_micron is not None:
+            cmd += ['--z-step', str(z_step_micron)]
+
+        if not hasattr(self, '_psf_analysis_processes'):
+            self._psf_analysis_processes = []
+        try:
+            proc = subprocess.Popen(cmd)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "PSF analysis", f"Failed to launch PSF analysis tool:\n{e}")
+            return
+        self._psf_analysis_processes.append(proc)
 
     @staticmethod
     def _parse_zoom_magnification(zoom_string):

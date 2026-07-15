@@ -112,10 +112,11 @@ multiview, and tiled imaging of large cleared-tissue samples.
    installation
    configuration
    user_guide
-   timelapse
+   hardware
+   file_formats
    psf_analysis
    image_processors
-   hardware
+   timelapse
    changelog
 
 .. toctree::

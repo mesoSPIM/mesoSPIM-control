@@ -1,3 +1,20 @@
+## Unreleased
+### Bugfixes 🐛
+- PSF analysis tool: fixed bead detection finding 0 beads (or crashing) on beads elongated/wiggly in Z (e.g. stage-jitter artifacts): `keepBeads()` now keeps the brightest candidate among mutually-close peaks instead of discarding all of them, and 0 detected beads is reported in the UI instead of raising an uncaught error.
+- PSF analysis tool: beads sitting too close to a Z-stack edge for the configured fitting window are now excluded (previously a window that exactly touched the edge was silently accepted, giving an unreliable, baseline-biased axial fit).
+- PSF analysis tool: FWHM histograms no longer silently drop beads with a measured FWHM below 1 µm. The histogram range's lower bound was hardcoded to 1, so `ax.hist(..., range=(1, xmax))` excluded any value under that from the bar counts entirely (not just from view) - noticeable e.g. with sub-micron lateral FWHM. Lower bound is now 0.
+- PSF analysis tool now excludes beads with any saturated pixel (value at the numerical max of the file's dtype, e.g. 65535 for uint16) within their fitting window, instead of only warning about saturation stack-wide at load time and fitting them anyway.
+- PSF analysis tool: fixed the axial/lateral FWHM standard deviation sometimes being huge (100s of µm in a stack only ~100 µm deep) while the median stayed reasonable. `curve_fit`'s Gaussian sigma was unbounded, so a bead with a weak/noisy profile could occasionally converge on a degenerate, very broad "fit" (or even a negative sigma, giving a negative FWHM) that wildly skewed the std without affecting the (outlier-robust) median. Sigma is now bounded to the fitting window's own extent.
+
+### GUI Improvements 🖥️
+- PSF analysis tool: axial (Z) fitting window is now a separate "Z fit window (µm)" control, independent of "Min dist betw beads (µm)", so it can be widened for beads with a broad/wiggly axial profile without also enlarging the lateral crop. Default increased 15→30 µm.
+- PSF analysis tool: separate "Histogram X max" and "Colorbar max" controls for axial vs. lateral FWHM, to adjust the histogram/map display ranges independently and redraw the existing results, without re-running the analysis.
+- PSF analysis tool: PNG export now prints median ± std as a text line above each histogram.
+- PSF analysis tool: new File → Simulate... command generates a synthetic 3-bead stack of known FWHM using the current system parameters and runs the analysis, as a quick no-file-needed demo/sanity check.
+- PSF analysis tool: TIFF stacks can now be loaded by dragging and dropping the file onto the window, instead of only via File → Open TIF....
+- PSF analysis tool now launches as a separate OS process when opened from the Utils menu, instead of running inside mesoSPIM_control's own process, so a long-running analysis can no longer block the Main window's GUI.
+- PSF analysis tool: Save stats/PNG/average-PSF dialogs (and File → Open TIF...) now default to the folder the current stack was loaded from, instead of the working directory.
+
 ## Release July 2026 [1.25.0]
 ### New Features ✨
 - 💎 **Image Processor plugin system (beta version)**: configurable chain of post-processing steps applied to acquired images, with a new "Image Processor Chain" window for adding, reordering and tuning processors. Built-in processors include background subtraction, binning, Gaussian blur, Difference-of-Gaussians, and a neural-network based denoiser (with CUDA support and an auto-apply option). Processor chain configuration persists across sessions and is recorded in acquisition metadata.

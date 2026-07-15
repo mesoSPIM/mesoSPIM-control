@@ -38,4 +38,4 @@ docs/_build/
 docs/build_log.txt
 /.vscode
 PROJECT_CONTEXT.md
-.claude/skills/python-env.md
+.claude/skills

@@ -18,6 +18,11 @@ PX_LATERAL_MICRON = PIXEL_PITCH_MICRON/MAG
 PX_AXIAL_MICRON = 1.0
 THRESHOLD = 700
 MIN_BEAD_DISTANCE_UM = 15.0   # minimum distance between beads in microns
+Z_FIT_WINDOW_UM = 30.0        # axial (Z) extent of the per-bead fitting window, in microns
+HIST_XMAX_AX_UM = 6.0         # upper x-axis limit for the axial FWHM histogram, in microns
+HIST_XMAX_LAT_UM = 6.0        # upper x-axis limit for the lateral FWHM histogram, in microns
+COLORBAR_MAX_AX_UM = 5.0      # upper color-scale limit for the axial FWHM map, in microns
+COLORBAR_MAX_LAT_UM = 5.0     # upper color-scale limit for the lateral FWHM map, in microns
 
 
 import os
@@ -46,9 +51,14 @@ from tifffile import imread, imwrite
 # =============================
 
 def inside(shape, center, window):
+    """A bead's fitting window must fit inside the volume with room to spare.
+    Strict inequalities: a window that exactly touches the edge leaves zero
+    margin, so there's no guarantee the profile has decayed back to baseline
+    within it (e.g. a bead sitting right at the top/bottom of the acquired
+    Z-stack)."""
     return np.all([
-        (center[i] - window[i] // 2 >= 0) &
-        (center[i] + window[i] // 2 <= shape[i])
+        (center[i] - window[i] // 2 > 0) &
+        (center[i] + window[i] // 2 < shape[i])
         for i in range(3)
     ])
 
@@ -118,35 +128,75 @@ def keepBeads(im, window, centers, options):
     if centers is None or len(centers) == 0:
         return np.zeros((0, 3), dtype=int)
 
-    centersM = np.asarray([
-        [
-            c[0] / options["pxPerUmAx"],
-            c[1] / options["pxPerUmLat"],
-            c[2] / options["pxPerUmLat"],
-        ]
-        for c in centers
-    ])
-    print("centersM done")
-
-    if len(centersM) == 1:
-        centers_keep = centers
-    elif len(centersM) >= 2:
-        distance_matrix = pairwise_distances(centersM)
-        distance_matrix.sort(axis=1)
-        centerDists = distance_matrix[:, 1]
-        print("centerDists done")
-
+    if len(centers) >= 2:
+        centersM = np.asarray([
+            [
+                c[0] / options["pxPerUmAx"],
+                c[1] / options["pxPerUmLat"],
+                c[2] / options["pxPerUmLat"],
+            ]
+            for c in centers
+        ])
         min_distance = float(min(options["windowUm"]))
-        keep = np.where(centerDists > min_distance)[0]
+        distance_matrix = pairwise_distances(centersM)
+
+        # Greedy non-max suppression: candidates within min_distance of each other are
+        # almost certainly sub-peaks of the same bead (e.g. multiple noisy local maxima
+        # along a single bead that is elongated/out-of-focus), so keep only the
+        # brightest one per cluster instead of discarding every candidate involved.
+        intensities = np.asarray([im[c[0], c[1], c[2]] for c in centers])
+        order = np.argsort(intensities)[::-1]
+        suppressed = np.zeros(len(centers), dtype=bool)
+        keep = []
+        for i in order:
+            if suppressed[i]:
+                continue
+            keep.append(i)
+            suppressed |= distance_matrix[i] <= min_distance
         centers = centers[keep, :]
 
-        keep_inside = np.where([inside(im.shape, x, window) for x in centers])[0]
-        print(f'keepBeads() done: {len(keep_inside)} found')
-        centers_keep = centers[keep_inside, :]
-    else:
-        centers_keep = np.zeros((0, 3), dtype=int)
+    keep_inside = np.where([inside(im.shape, x, window) for x in centers])[0]
+    centers_keep = centers[keep_inside, :]
+
+    n_excluded_edge = len(centers) - len(centers_keep)
+    if n_excluded_edge > 0:
+        print(f'keepBeads(): {n_excluded_edge} candidate(s) excluded - too close to a '
+              f'stack edge for the current fitting window')
+
+    saturation_value = options.get("saturationValue")
+    if saturation_value is not None and len(centers_keep) > 0:
+        def window_is_saturated(c):
+            z0, z1 = c[0] - window[0] // 2, c[0] + window[0] // 2
+            y0, y1 = c[1] - window[1] // 2, c[1] + window[1] // 2
+            x0, x1 = c[2] - window[2] // 2, c[2] + window[2] // 2
+            return bool(np.any(im[z0:z1, y0:y1, x0:x1] >= saturation_value))
+
+        not_saturated = np.array([not window_is_saturated(c) for c in centers_keep])
+        n_excluded_sat = int(np.sum(~not_saturated))
+        if n_excluded_sat > 0:
+            print(f'keepBeads(): {n_excluded_sat} candidate(s) excluded - saturated '
+                  f'pixel(s) in the fitting window')
+        centers_keep = centers_keep[not_saturated]
+
+    print(f'keepBeads() done: {len(centers_keep)} found')
 
     return centers_keep
+
+
+def safe_median(series):
+    """Median of a pandas Series, guarding against all-NaN input."""
+    vals = series.to_numpy()
+    if np.all(np.isnan(vals)):
+        return np.nan
+    return np.nanmedian(vals)
+
+
+def safe_std(series):
+    """Standard deviation of a pandas Series, guarding against all-NaN input."""
+    vals = series.to_numpy()
+    if np.all(np.isnan(vals)):
+        return np.nan
+    return np.nanstd(vals, ddof=0)
 
 
 def gauss(x, a, mu, sigma, b):
@@ -155,10 +205,18 @@ def gauss(x, a, mu, sigma, b):
 
 def fit(yRaw, scale):
     y = yRaw - (yRaw[0] + yRaw[-1]) / 2
-    x = (np.arange(y.shape[0]) - y.shape[0] / 2.0)
+    n = y.shape[0]
+    x = (np.arange(n) - n / 2.0)
+
+    # Bound sigma to the profile's own extent (and amplitude to be positive) so a
+    # weak/noisy profile can't make curve_fit converge on a degenerate, very broad
+    # "fit" - without bounds, sigma (and thus FWHM) can run away to values far
+    # beyond the physical window, wildly inflating the std of FWHM across beads
+    # even though most individual fits are fine.
+    bounds = ([0, -n / 2, 1e-3, -np.inf], [np.inf, n / 2, n, np.inf])
 
     try:
-        popt, pcov = curve_fit(gauss, x, y, p0=[1, 0, 1, 0])
+        popt, pcov = curve_fit(gauss, x, y, p0=[1, 0, 1, 0], bounds=bounds)
         FWHM = 2.3548 * popt[2] / scale
         yFit = gauss(x, *popt)
     except Exception:
@@ -304,6 +362,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         # Data holders
         self.im = None
         self.filename = None
+        self.load_folder = None  # folder the current stack was loaded from, for save dialogs
         self.psf_list = None
         self.beads = None
         self.maxima = None
@@ -317,16 +376,26 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.px_axial_micron = z_step_micron if z_step_micron is not None else PX_AXIAL_MICRON
         self.px_lateral_micron = self.pixel_pitch_micron / self.mag
         self.min_bead_distance_um = MIN_BEAD_DISTANCE_UM
+        self.z_fit_window_um = Z_FIT_WINDOW_UM
+
+        # Plot display ranges (editable via GUI, redraw only - no re-analysis needed)
+        self.hist_xmax_ax_um = HIST_XMAX_AX_UM
+        self.hist_xmax_lat_um = HIST_XMAX_LAT_UM
+        self.colorbar_max_ax_um = COLORBAR_MAX_AX_UM
+        self.colorbar_max_lat_um = COLORBAR_MAX_LAT_UM
 
         # Default options
         self.options = {
             "pxPerUmAx": 1.0/self.px_axial_micron,
             "pxPerUmLat": 1.0/self.px_lateral_micron,
-            "windowUm": [self.min_bead_distance_um, self.min_bead_distance_um, self.min_bead_distance_um],
+            "windowUm": [self.z_fit_window_um, self.min_bead_distance_um, self.min_bead_distance_um],
             "thresh": THRESHOLD,
+            "saturationValue": None,  # set in load_stack() from the file's integer dtype, if any
         }
+        self.saturation_value = None
 
         self._init_ui()
+        self.setAcceptDrops(True)
 
         if stack is not None:
             self.load_stack(stack, filename=filename)
@@ -397,6 +466,21 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         controls.addWidget(self.min_bead_dist_edit)
 
         controls.addSpacing(10)
+        controls.addWidget(QtWidgets.QLabel("Z fit window (µm):"))
+        self.z_fit_window_edit = QtWidgets.QDoubleSpinBox()
+        self.z_fit_window_edit.setRange(1.0, 200.0)
+        self.z_fit_window_edit.setValue(self.z_fit_window_um)
+        self.z_fit_window_edit.setDecimals(1)
+        self.z_fit_window_edit.setSingleStep(1.0)
+        self.z_fit_window_edit.setToolTip(
+            "Axial extent of the per-bead fitting window. Independent of 'Min dist "
+            "betw beads', so it can be widened for beads with a broad/wiggly axial "
+            "profile (e.g. stage jitter) without also enlarging the lateral crop."
+        )
+        self.z_fit_window_edit.valueChanged.connect(self.update_z_fit_window)
+        controls.addWidget(self.z_fit_window_edit)
+
+        controls.addSpacing(10)
         controls.addWidget(QtWidgets.QLabel("Z min:"))
         self.zmin_edit = QtWidgets.QSpinBox()
         self.zmin_edit.setRange(0, 100000)
@@ -426,6 +510,46 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         controls2.addStretch(1)
 
+        # Third row of controls: plot display ranges (redraw only, no re-analysis)
+        controls3 = QtWidgets.QHBoxLayout()
+        vbox.addLayout(controls3)
+
+        def make_range_spinbox(label_text, initial_value, tooltip):
+            controls3.addWidget(QtWidgets.QLabel(label_text))
+            edit = QtWidgets.QDoubleSpinBox()
+            edit.setRange(1.0, 200.0)
+            edit.setValue(initial_value)
+            edit.setDecimals(1)
+            edit.setSingleStep(1.0)
+            edit.setToolTip(tooltip)
+            edit.valueChanged.connect(self.update_plot_ranges)
+            controls3.addWidget(edit)
+            controls3.addSpacing(10)
+            return edit
+
+        self.hist_xmax_ax_edit = make_range_spinbox(
+            "Hist X max, axial (µm):", self.hist_xmax_ax_um,
+            "Upper x-axis limit for the axial FWHM histogram. Redraws the "
+            "existing plots; does not require re-running the analysis."
+        )
+        self.hist_xmax_lat_edit = make_range_spinbox(
+            "Hist X max, lateral (µm):", self.hist_xmax_lat_um,
+            "Upper x-axis limit for the lateral FWHM histogram. Redraws the "
+            "existing plots; does not require re-running the analysis."
+        )
+        self.colorbar_max_ax_edit = make_range_spinbox(
+            "Colorbar max, axial (µm):", self.colorbar_max_ax_um,
+            "Upper color-scale limit for the axial FWHM map. Redraws the "
+            "existing plots; does not require re-running the analysis."
+        )
+        self.colorbar_max_lat_edit = make_range_spinbox(
+            "Colorbar max, lateral (µm):", self.colorbar_max_lat_um,
+            "Upper color-scale limit for the lateral FWHM map. Redraws the "
+            "existing plots; does not require re-running the analysis."
+        )
+
+        controls3.addStretch(1)
+
         # Matplotlib canvas
         self.canvas = MplCanvas(self, dpi=100)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
@@ -443,6 +567,14 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         open_action = QtWidgets.QAction("Open TIF...", self)
         open_action.triggered.connect(self.open_tif)
         file_menu.addAction(open_action)
+
+        simulate_action = QtWidgets.QAction("Simulate...", self)
+        simulate_action.setToolTip(
+            "Generate a synthetic 3-bead stack of known FWHM using the current "
+            "system parameters, and run the analysis - a quick demo/sanity check."
+        )
+        simulate_action.triggered.connect(self.simulate_demo)
+        file_menu.addAction(simulate_action)
 
         file_menu.addSeparator()
 
@@ -492,15 +624,31 @@ class PSFMainWindow(QtWidgets.QMainWindow):
                 self.update_plots()
 
     def update_min_bead_distance(self):
-        """Update minimum bead distance parameter."""
+        """Update minimum bead distance parameter (also the lateral fitting window)."""
         self.min_bead_distance_um = float(self.min_bead_dist_edit.value())
-        self.options["windowUm"] = [self.min_bead_distance_um, self.min_bead_distance_um, self.min_bead_distance_um]
+        self.options["windowUm"][1] = self.min_bead_distance_um
+        self.options["windowUm"][2] = self.min_bead_distance_um
+
+    def update_z_fit_window(self):
+        """Update the axial (Z) fitting window, independent of the lateral window."""
+        self.z_fit_window_um = float(self.z_fit_window_edit.value())
+        self.options["windowUm"][0] = self.z_fit_window_um
+
+    def update_plot_ranges(self):
+        """Update the histogram/colorbar display ranges and redraw the existing
+        results, without re-running the bead detection/fitting analysis."""
+        self.hist_xmax_ax_um = float(self.hist_xmax_ax_edit.value())
+        self.hist_xmax_lat_um = float(self.hist_xmax_lat_edit.value())
+        self.colorbar_max_ax_um = float(self.colorbar_max_ax_edit.value())
+        self.colorbar_max_lat_um = float(self.colorbar_max_lat_edit.value())
+        if self.stats_df is not None and not self.stats_df.empty:
+            self.update_plots()
 
     # ---------- File operations ----------
 
     def open_tif(self):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Open TIF z-stack", "",
+            self, "Open TIF z-stack", self.load_folder or "",
             "TIF files (*.tif *.tiff);;All files (*)"
         )
         if not fname:
@@ -513,6 +661,69 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             return
 
         self.load_stack(im, filename=fname)
+
+    def dragEnterEvent(self, event):
+        urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
+        if any(url.toLocalFile().lower().endswith((".tif", ".tiff")) for url in urls):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        for url in event.mimeData().urls():
+            path = url.toLocalFile()
+            if path.lower().endswith((".tif", ".tiff")):
+                try:
+                    im = imread(path)
+                except Exception as e:
+                    QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
+                    return
+                self.load_stack(im, filename=path)
+                return
+
+    def simulate_demo(self):
+        """Generate a synthetic 3-bead TIFF stack of known FWHM, using the current
+        system parameters (magnification, pixel pitch, Z-step), load it, and run
+        the analysis - a quick, no-file-needed demo/sanity check of the tool."""
+        FWHM_LAT_UM = 1.0
+        FWHM_AX_UM = 2.0
+        amplitude, baseline = 5000.0, 300.0
+
+        sigma_lat_px = (FWHM_LAT_UM / 2.3548) / self.px_lateral_micron
+        sigma_ax_px = (FWHM_AX_UM / 2.3548) / self.px_axial_micron
+
+        # Size the volume with generous margin around the current Z fit window and
+        # min bead-separation settings, so all 3 beads are reliably detected
+        # regardless of whatever the user currently has configured.
+        z_half_px = int(np.ceil(1.5 * self.z_fit_window_um / 2.0 / self.px_axial_micron)) + 5
+        lat_half_px = int(np.ceil(1.5 * self.min_bead_distance_um / self.px_lateral_micron)) + 10
+
+        shape = (2 * z_half_px + 1, 4 * lat_half_px, 4 * lat_half_px)
+        z0 = z_half_px
+        centers = [
+            (z0, lat_half_px, lat_half_px),
+            (z0, lat_half_px, 3 * lat_half_px),
+            (z0, 3 * lat_half_px, 2 * lat_half_px),
+        ]
+
+        zz, yy, xx = np.meshgrid(
+            np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]), indexing="ij"
+        )
+        im = np.full(shape, baseline, dtype=np.float64)
+        for z_c, y_c, x_c in centers:
+            r2 = (
+                (zz - z_c) ** 2 / (2 * sigma_ax_px ** 2)
+                + (yy - y_c) ** 2 / (2 * sigma_lat_px ** 2)
+                + (xx - x_c) ** 2 / (2 * sigma_lat_px ** 2)
+            )
+            im = im + amplitude * np.exp(-r2)
+        im = im.astype(np.uint16)
+
+        self.load_stack(im, filename="simulated_3beads.tif")
+        self.thresh_edit.setValue(baseline + amplitude * 0.2)
+        self.run_analysis()
+        self.info_label.setText(
+            f"Simulated 3 beads (ground truth FWHM: lateral={FWHM_LAT_UM:.2f} µm, "
+            f"axial={FWHM_AX_UM:.2f} µm). {self.info_label.text()}"
+        )
 
     def load_stack(self, im, filename=None):
         """
@@ -531,20 +742,27 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.FOV_Y_um = im.shape[1] * self.px_lateral_micron
         self.FOV_X_um = im.shape[2] * self.px_lateral_micron
 
+        self.saturation_value = None
         if np.issubdtype(im.dtype, np.integer):
             sat_value = np.iinfo(im.dtype).max
             n_sat = int(np.sum(im == sat_value))
             if n_sat > 0:
+                self.saturation_value = sat_value
                 pct = 100.0 * n_sat / im.size
                 QtWidgets.QMessageBox.warning(
                     self, "Saturation warning",
                     f"{n_sat:,} pixels ({pct:.2f}%) are saturated "
                     f"(value = {sat_value}, dtype = {im.dtype}).\n"
-                    "PSF fits on saturated beads will be unreliable."
+                    "Beads with any saturated pixel in their fitting window will be "
+                    "excluded from the analysis automatically."
                 )
+        self.options["saturationValue"] = self.saturation_value
 
         self.im = im.astype(np.float32)
         self.filename = filename
+        if filename and os.path.isfile(filename):
+            # Not set for e.g. the Simulate demo, whose "filename" isn't a real path.
+            self.load_folder = os.path.dirname(os.path.abspath(filename))
 
         zmax = self.im.shape[0] - 1
         self.zmin_edit.setRange(0, zmax)
@@ -564,6 +782,13 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.clear_plots()
         self.psf_list = self.beads = self.maxima = self.centers = self.smoothed = None
         self.stats_df = None
+
+    def _default_save_path(self, default_name):
+        """Suggested path for a save dialog: *default_name* inside the folder the
+        current stack was loaded from, if known, else just *default_name*."""
+        if self.load_folder:
+            return os.path.join(self.load_folder, default_name)
+        return default_name
 
     def save_txt(self):
         """
@@ -585,19 +810,6 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         # Convenience alias, like PSF in the notebook
         PSF = self.stats_df
-
-        # Compute stats; guard against all-NaN columns
-        def safe_median(series):
-            vals = series.to_numpy()
-            if np.all(np.isnan(vals)):
-                return np.nan
-            return np.nanmedian(vals)
-
-        def safe_std(series):
-            vals = series.to_numpy()
-            if np.all(np.isnan(vals)):
-                return np.nan
-            return np.nanstd(vals, ddof=0)
 
         n_beads = len(PSF)
 
@@ -631,7 +843,8 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         # Ask where to save
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save summary stats as TXT", f"bead-summary-stats({self.experiment_key}).txt",
+            self, "Save summary stats as TXT",
+            self._default_save_path(f"bead-summary-stats({self.experiment_key}).txt"),
             "Text files (*.txt)"
         )
         if not fname:
@@ -653,7 +866,8 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             return
 
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save stats as CSV", f"beads-full-stats({self.experiment_key}).csv",
+            self, "Save stats as CSV",
+            self._default_save_path(f"beads-full-stats({self.experiment_key}).csv"),
             "CSV files (*.csv)"
         )
         if not fname:
@@ -679,7 +893,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save current figure as PNG (300 DPI)",
-            f"psf-summary({self.experiment_key}).png",
+            self._default_save_path(f"psf-summary({self.experiment_key}).png"),
             "PNG images (*.png)"
         )
         if not fname:
@@ -694,7 +908,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             FigureCanvasAgg(export_fig)  # attach non-interactive Agg backend for rendering
             if self.filename:
                 export_fig.suptitle(os.path.basename(self.filename), fontsize=12, y=0.995)
-            self._populate_figure(export_fig)
+            self._populate_figure(export_fig, annotate_stats=True)
             export_fig.tight_layout(pad=1.0, w_pad=0.8, h_pad=1.2, rect=[0, 0, 1, 0.99])
             export_fig.savefig(fname, dpi=300, format="png")
             plt.close(export_fig)
@@ -738,7 +952,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save average PSF",
-            f"avg-psf({self.experiment_key}).tif",
+            self._default_save_path(f"avg-psf({self.experiment_key}).tif"),
             "TIF files (*.tif *.tiff)"
         )
         if not fname:
@@ -811,9 +1025,15 @@ class PSFMainWindow(QtWidgets.QMainWindow):
                 "FWHMax": axFWHM,
             })
 
-        self.stats_df = pd.DataFrame(rows).set_index("bead_id")
+        columns = ["bead_id", "Z", "Y", "X", "MaxIntensity", "FWHMlat", "FWHMax"]
+        self.stats_df = pd.DataFrame(rows, columns=columns).set_index("bead_id")
 
-        self.info_label.setText(f"{len(self.beads)} beads found; stats computed")
+        if not rows:
+            self.info_label.setText(
+                "0 beads found. Try lowering 'Min intensity' or 'Min dist betw beads'."
+            )
+        else:
+            self.info_label.setText(f"{len(self.beads)} beads found; stats computed")
         self.update_plots()
 
     # ---------- Plotting ----------
@@ -822,8 +1042,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.canvas.fig.clear()
         self.canvas.draw()
 
-    def _populate_figure(self, fig):
-        """Draw histograms and PSF maps onto *fig*. Uses current self.stats_df / self.smoothed."""
+    def _populate_figure(self, fig, annotate_stats=False):
+        """Draw histograms and PSF maps onto *fig*. Uses current self.stats_df / self.smoothed.
+        If annotate_stats is True, print median +/- std as a text line above each histogram
+        (used for PNG export)."""
         import matplotlib.gridspec as gridspec
 
         gs = gridspec.GridSpec(
@@ -839,17 +1061,26 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         axial_vals = self.stats_df["FWHMax"].tolist()
         lat_vals   = self.stats_df["FWHMlat"].tolist()
 
-        ax_hist_axial.hist(axial_vals, 20, range=(1, 6))
-        ax_hist_axial.set_xlim([1, 6])
+        ax_hist_axial.hist(axial_vals, 20, range=(0, self.hist_xmax_ax_um))
+        ax_hist_axial.set_xlim([0, self.hist_xmax_ax_um])
         ax_hist_axial.set_xlabel("Axial FWHM (µm)")
-        ax_hist_axial.set_xticks(range(1, 7))
         ax_hist_axial.set_ylabel("# Beads")
 
-        ax_hist_lat.hist(lat_vals, 20, range=(1, 6))
-        ax_hist_lat.set_xlim([1, 6])
-        ax_hist_lat.set_xticks(range(1, 7))
+        ax_hist_lat.hist(lat_vals, 20, range=(0, self.hist_xmax_lat_um))
+        ax_hist_lat.set_xlim([0, self.hist_xmax_lat_um])
         ax_hist_lat.set_xlabel("Lateral FWHM (µm)")
         ax_hist_lat.set_ylabel("# Beads")
+
+        if annotate_stats:
+            med_ax = safe_median(self.stats_df["FWHMax"])
+            std_ax = safe_std(self.stats_df["FWHMax"])
+            med_lat = safe_median(self.stats_df["FWHMlat"])
+            std_lat = safe_std(self.stats_df["FWHMlat"])
+            for ax, med, std in ((ax_hist_axial, med_ax, std_ax), (ax_hist_lat, med_lat, std_lat)):
+                ax.text(
+                    0.5, 1.02, f"median = {med:.2f} ± {std:.2f} µm",
+                    transform=ax.transAxes, ha="center", va="bottom", fontsize=9
+                )
 
         ax_im_axial = fig.add_subplot(gs[1, 0])
         ax_im_lat   = fig.add_subplot(gs[1, 1])
@@ -863,7 +1094,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
             (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMax"].tolist(),
-            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
+            cmap=cmap, vmin=0, vmax=self.colorbar_max_ax_um, s=20, edgecolors="none"
         )
         ax_im_axial.set_title("PSF: Axial FWHM")
         ax_im_axial.set_xlabel("FOV_X (µm)")
@@ -876,7 +1107,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             (self.stats_df["X"] * self.px_lateral_micron).tolist(),
             (self.FOV_Y_um - self.stats_df["Y"] * self.px_lateral_micron).tolist(),
             c=self.stats_df["FWHMlat"].tolist(),
-            cmap=cmap, vmin=0, vmax=5, s=20, edgecolors="none"
+            cmap=cmap, vmin=0, vmax=self.colorbar_max_lat_um, s=20, edgecolors="none"
         )
         ax_im_lat.set_title("PSF: Lateral FWHM")
         ax_im_lat.set_xlabel("FOV_X (µm)")
@@ -902,32 +1133,33 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.canvas.draw()
 
 # =============================
-#  EMBEDDING API
-# =============================
-
-def launch_psf_analysis(stack, mag=None, pixel_pitch_micron=None, z_step_micron=None,
-                         filename=None, parent=None):
-    """
-    Open a PSFMainWindow preloaded with *stack*, for use from another Qt application
-    (e.g. mesoSPIM_control) that already runs its own QApplication event loop.
-
-    Returns the PSFMainWindow instance; the caller must keep a reference to it
-    (e.g. store it on self) or Qt will garbage-collect and close the window.
-    """
-    win = PSFMainWindow(parent=parent, stack=stack, mag=mag,
-                        pixel_pitch_micron=pixel_pitch_micron,
-                        z_step_micron=z_step_micron, filename=filename)
-    win.show()
-    return win
-
-
-# =============================
 #  ENTRY POINT
 # =============================
 
 def main():
+    """Standalone entry point. Also used by mesoSPIM_control, which launches this
+    script as a separate process (via subprocess.Popen) rather than embedding it in
+    its own process, so a long-running analysis can't block the main GUI."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Bead PSF Analysis tool")
+    parser.add_argument("tiff_path", nargs="?", default=None,
+                         help="TIFF z-stack to preload on startup")
+    parser.add_argument("--mag", type=float, default=None, help="System magnification")
+    parser.add_argument("--pixel-pitch", type=float, default=None, dest="pixel_pitch",
+                         help="Camera pixel pitch in microns")
+    parser.add_argument("--z-step", type=float, default=None, dest="z_step",
+                         help="Z stepsize in microns")
+    args = parser.parse_args()
+
     app = QtWidgets.QApplication(sys.argv)
-    win = PSFMainWindow()
+    win = PSFMainWindow(mag=args.mag, pixel_pitch_micron=args.pixel_pitch, z_step_micron=args.z_step)
+    if args.tiff_path:
+        try:
+            im = imread(args.tiff_path)
+            win.load_stack(im, filename=args.tiff_path)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(win, "Error", f"Failed to open file:\n{e}")
     win.show()
     sys.exit(app.exec_())
 
