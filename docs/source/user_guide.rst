@@ -125,29 +125,10 @@ Acquisition modes
 Output file formats
 ~~~~~~~~~~~~~~~~~~~~
 
-Select the image writer in the file-naming wizard:
-
-.. list-table::
-   :widths: 25 75
-   :header-rows: 1
-
-   * - Writer
-     - Description
-   * - ``MP_OME_Zarr_Writer``
-     - Multi-process OME-ZARR writer — faster on systems with fast SSDs. Recommended for new acquisitions.
-   * - ``OME_Zarr_Writer``
-     - OME-ZARR 0.4 (zarr v2) with automatic multi-scale pyramid. Single-core implementation.
-   * - ``H5_BDV_Writer``
-     - HDF5/BigDataViewer format compatible with BigStitcher.
-   * - ``Tiff_Writer``
-     - Single TIFF per plane — simple and universal.
-   * - ``Big_Tiff_Writer``
-     - BigTIFF for stacks larger than 4 GB.
-   * - ``RAW_Writer``
-     - Raw 16-bit binary dump.
-
-Writers are part of the mesoSPIM plugin system. The selected writer controls
-how acquired image data is stored on disk for that acquisition entry.
+Select the image writer for each acquisition entry in the file-naming
+wizard. Writers are part of the mesoSPIM plugin system; see
+:doc:`file_formats` for a full comparison (extensions, pyramids,
+compression, downstream compatibility) and configuration examples.
 
 Processor chain
 ~~~~~~~~~~~~~~~~

@@ -83,6 +83,12 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Measure axial/lateral FWHM from a bead stack, standalone or from the Utils menu.
 
+   .. grid-item-card:: :octicon:`file-binary` Output File Formats
+      :link: file_formats
+      :link-type: doc
+
+      TIFF, BigTIFF, RAW, HDF5/BigDataViewer, and OME-Zarr writers compared.
+
    .. grid-item-card:: :octicon:`cpu` Supported Hardware
       :link: hardware
       :link-type: doc
@@ -108,6 +114,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    user_guide
    timelapse
    psf_analysis
+   file_formats
    hardware
    changelog
 

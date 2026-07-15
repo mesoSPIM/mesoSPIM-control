@@ -64,7 +64,8 @@ named after the writer itself, for example:
        'compression_level': 5,
    }
 
-These dictionaries are read by the selected writer at acquisition time.
+These dictionaries are read by the selected writer at acquisition time. See
+:doc:`file_formats` for every writer's available options and what they do.
 
 Image processors are handled differently: they are configured in the
 processor-chain dialog and persisted to ``processor_chain.json`` next to the
