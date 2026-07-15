@@ -354,6 +354,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         # Data holders
         self.im = None
         self.filename = None
+        self.load_folder = None  # folder the current stack was loaded from, for save dialogs
         self.psf_list = None
         self.beads = None
         self.maxima = None
@@ -639,7 +640,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
     def open_tif(self):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Open TIF z-stack", "",
+            self, "Open TIF z-stack", self.load_folder or "",
             "TIF files (*.tif *.tiff);;All files (*)"
         )
         if not fname:
@@ -751,6 +752,9 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         self.im = im.astype(np.float32)
         self.filename = filename
+        if filename and os.path.isfile(filename):
+            # Not set for e.g. the Simulate demo, whose "filename" isn't a real path.
+            self.load_folder = os.path.dirname(os.path.abspath(filename))
 
         zmax = self.im.shape[0] - 1
         self.zmin_edit.setRange(0, zmax)
@@ -770,6 +774,13 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.clear_plots()
         self.psf_list = self.beads = self.maxima = self.centers = self.smoothed = None
         self.stats_df = None
+
+    def _default_save_path(self, default_name):
+        """Suggested path for a save dialog: *default_name* inside the folder the
+        current stack was loaded from, if known, else just *default_name*."""
+        if self.load_folder:
+            return os.path.join(self.load_folder, default_name)
+        return default_name
 
     def save_txt(self):
         """
@@ -824,7 +835,8 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         # Ask where to save
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save summary stats as TXT", f"bead-summary-stats({self.experiment_key}).txt",
+            self, "Save summary stats as TXT",
+            self._default_save_path(f"bead-summary-stats({self.experiment_key}).txt"),
             "Text files (*.txt)"
         )
         if not fname:
@@ -846,7 +858,8 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             return
 
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save stats as CSV", f"beads-full-stats({self.experiment_key}).csv",
+            self, "Save stats as CSV",
+            self._default_save_path(f"beads-full-stats({self.experiment_key}).csv"),
             "CSV files (*.csv)"
         )
         if not fname:
@@ -872,7 +885,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save current figure as PNG (300 DPI)",
-            f"psf-summary({self.experiment_key}).png",
+            self._default_save_path(f"psf-summary({self.experiment_key}).png"),
             "PNG images (*.png)"
         )
         if not fname:
@@ -931,7 +944,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save average PSF",
-            f"avg-psf({self.experiment_key}).tif",
+            self._default_save_path(f"avg-psf({self.experiment_key}).tif"),
             "TIF files (*.tif *.tiff)"
         )
         if not fname:

@@ -12,6 +12,7 @@
 - PSF analysis tool: new File → Simulate... command generates a synthetic 3-bead stack of known FWHM using the current system parameters and runs the analysis, as a quick no-file-needed demo/sanity check.
 - PSF analysis tool: TIFF stacks can now be loaded by dragging and dropping the file onto the window, instead of only via File → Open TIF....
 - PSF analysis tool now launches as a separate OS process when opened from the Utils menu, instead of running inside mesoSPIM_control's own process, so a long-running analysis can no longer block the Main window's GUI.
+- PSF analysis tool: Save stats/PNG/average-PSF dialogs (and File → Open TIF...) now default to the folder the current stack was loaded from, instead of the working directory.
 
 ## Release July 2026 [1.25.0]
 ### New Features ✨
