@@ -162,6 +162,22 @@ def keepBeads(im, window, centers, options):
     if n_excluded_edge > 0:
         print(f'keepBeads(): {n_excluded_edge} candidate(s) excluded - too close to a '
               f'stack edge for the current fitting window')
+
+    saturation_value = options.get("saturationValue")
+    if saturation_value is not None and len(centers_keep) > 0:
+        def window_is_saturated(c):
+            z0, z1 = c[0] - window[0] // 2, c[0] + window[0] // 2
+            y0, y1 = c[1] - window[1] // 2, c[1] + window[1] // 2
+            x0, x1 = c[2] - window[2] // 2, c[2] + window[2] // 2
+            return bool(np.any(im[z0:z1, y0:y1, x0:x1] >= saturation_value))
+
+        not_saturated = np.array([not window_is_saturated(c) for c in centers_keep])
+        n_excluded_sat = int(np.sum(~not_saturated))
+        if n_excluded_sat > 0:
+            print(f'keepBeads(): {n_excluded_sat} candidate(s) excluded - saturated '
+                  f'pixel(s) in the fitting window')
+        centers_keep = centers_keep[not_saturated]
+
     print(f'keepBeads() done: {len(centers_keep)} found')
 
     return centers_keep
@@ -365,7 +381,9 @@ class PSFMainWindow(QtWidgets.QMainWindow):
             "pxPerUmLat": 1.0/self.px_lateral_micron,
             "windowUm": [self.z_fit_window_um, self.min_bead_distance_um, self.min_bead_distance_um],
             "thresh": THRESHOLD,
+            "saturationValue": None,  # set in load_stack() from the file's integer dtype, if any
         }
+        self.saturation_value = None
 
         self._init_ui()
         self.setAcceptDrops(True)
@@ -715,17 +733,21 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.FOV_Y_um = im.shape[1] * self.px_lateral_micron
         self.FOV_X_um = im.shape[2] * self.px_lateral_micron
 
+        self.saturation_value = None
         if np.issubdtype(im.dtype, np.integer):
             sat_value = np.iinfo(im.dtype).max
             n_sat = int(np.sum(im == sat_value))
             if n_sat > 0:
+                self.saturation_value = sat_value
                 pct = 100.0 * n_sat / im.size
                 QtWidgets.QMessageBox.warning(
                     self, "Saturation warning",
                     f"{n_sat:,} pixels ({pct:.2f}%) are saturated "
                     f"(value = {sat_value}, dtype = {im.dtype}).\n"
-                    "PSF fits on saturated beads will be unreliable."
+                    "Beads with any saturated pixel in their fitting window will be "
+                    "excluded from the analysis automatically."
                 )
+        self.options["saturationValue"] = self.saturation_value
 
         self.im = im.astype(np.float32)
         self.filename = filename

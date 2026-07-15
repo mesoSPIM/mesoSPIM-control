@@ -162,6 +162,32 @@ class TestElongatedBeadRegression(unittest.TestCase):
         kept_clear = psf.keepBeads(im_clear, window, np.array([[11, 40, 40]]), options)
         self.assertEqual(len(kept_clear), 1, "bead with nonzero Z margin should be kept")
 
+    def test_saturated_bead_is_excluded(self):
+        """A bead with a saturated pixel (e.g. the max value of the original
+        uint16 file) anywhere in its fitting window must be excluded when
+        saturationValue is set, but kept when it isn't (unset/None)."""
+        shape = (25, 80, 100)
+        options = {
+            "pxPerUmAx": 1.0,
+            "pxPerUmLat": 1.0,
+            "windowUm": [10.0, 10.0, 10.0],
+            "thresh": 700,
+            "saturationValue": 65535,
+        }
+        centers = np.array([[12, 40, 30], [12, 40, 70]])
+
+        im = np.full(shape, 300.0, dtype=np.float32)
+        im[12, 40, 30] = 5000.0    # clean bead
+        im[12, 40, 70] = 65535.0  # saturated bead
+
+        kept = psf.keepBeads(im, [10, 10, 10], centers, options)
+        self.assertEqual(len(kept), 1, "saturated bead must be excluded")
+        np.testing.assert_array_equal(kept[0], centers[0])
+
+        options_no_filter = dict(options, saturationValue=None)
+        kept_unfiltered = psf.keepBeads(im, [10, 10, 10], centers, options_no_filter)
+        self.assertEqual(len(kept_unfiltered), 2, "both beads kept when saturationValue is None")
+
 
 if __name__ == "__main__":
     unittest.main()
