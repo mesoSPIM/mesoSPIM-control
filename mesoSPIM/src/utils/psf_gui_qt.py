@@ -205,10 +205,18 @@ def gauss(x, a, mu, sigma, b):
 
 def fit(yRaw, scale):
     y = yRaw - (yRaw[0] + yRaw[-1]) / 2
-    x = (np.arange(y.shape[0]) - y.shape[0] / 2.0)
+    n = y.shape[0]
+    x = (np.arange(n) - n / 2.0)
+
+    # Bound sigma to the profile's own extent (and amplitude to be positive) so a
+    # weak/noisy profile can't make curve_fit converge on a degenerate, very broad
+    # "fit" - without bounds, sigma (and thus FWHM) can run away to values far
+    # beyond the physical window, wildly inflating the std of FWHM across beads
+    # even though most individual fits are fine.
+    bounds = ([0, -n / 2, 1e-3, -np.inf], [np.inf, n / 2, n, np.inf])
 
     try:
-        popt, pcov = curve_fit(gauss, x, y, p0=[1, 0, 1, 0])
+        popt, pcov = curve_fit(gauss, x, y, p0=[1, 0, 1, 0], bounds=bounds)
         FWHM = 2.3548 * popt[2] / scale
         yFit = gauss(x, *popt)
     except Exception:

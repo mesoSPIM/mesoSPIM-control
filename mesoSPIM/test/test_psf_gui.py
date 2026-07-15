@@ -189,5 +189,38 @@ class TestElongatedBeadRegression(unittest.TestCase):
         self.assertEqual(len(kept_unfiltered), 2, "both beads kept when saturationValue is None")
 
 
+class TestFitBounds(unittest.TestCase):
+    """Regression test: curve_fit's Gaussian sigma used to be unbounded, so a bead
+    with a weak/noisy profile could occasionally converge on a degenerate, very
+    broad "fit" (or a negative sigma), producing a FWHM of hundreds/thousands of
+    um in a stack only ~100 um deep. This wildly inflated the std of FWHM across
+    beads (not robust to outliers) while the median stayed reasonable."""
+
+    def test_noisy_weak_profiles_never_exceed_bounded_fwhm(self):
+        rng = np.random.default_rng(42)
+        n = 30  # matches the default 30 um Z fit window at 1 um/px
+        x = np.arange(n)
+        max_allowed_fwhm = K * n  # curve_fit's sigma is bounded to (0, n)
+
+        checked_any = False
+        for _ in range(100):
+            amp = rng.uniform(0.1, 0.3)  # weak signal, comparable to noise below
+            true_sigma = rng.uniform(2, 4)
+            peak = amp * np.exp(-(x - 15) ** 2 / (2 * true_sigma ** 2))
+            background = 0.3 + rng.normal(0, 0.05) + rng.normal(0, 1) * 0.003 * x
+            noise = rng.normal(0, 0.25, n)
+            yRaw = peak + background + noise
+
+            _, _, _, fwhm = psf.fit(yRaw, scale=1.0)
+            if fwhm is not None:
+                checked_any = True
+                self.assertLessEqual(
+                    abs(fwhm), max_allowed_fwhm,
+                    "FWHM must stay within the fitting window's bounded extent"
+                )
+
+        self.assertTrue(checked_any, "expected at least one successful fit in this batch")
+
+
 if __name__ == "__main__":
     unittest.main()
