@@ -53,7 +53,12 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
                         'galvo_etl_task_line' : 'PXI1Slot4/ao0:3',
                         'galvo_etl_task_trigger_source' : '/PXI1Slot4/PFI0',
                         'laser_task_line' :  'PXI1Slot4/ao4:7',
-                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0'}
+                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0',
+                        # EXPERIMENTAL: 'stepped' (default) = arm/trigger/stop DAQ tasks per plane.
+                        # 'continuous' = single-launch continuous-regeneration for the whole stack
+                        # (removes ~50-100 ms/plane overhead; see PERFORMANCE_ANALYSIS.md sec 5b).
+                        # Requires ASI TTL stepping (asi_parameters['ttl_motion_enabled'] = True).
+                        'waveform_mode' : 'stepped'}
 
 '''
 Human interface device (Joystick)

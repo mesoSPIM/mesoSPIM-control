@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 '''National Instruments Imports'''
 import nidaqmx
-from nidaqmx.constants import AcquisitionType, TaskMode
+from nidaqmx.constants import AcquisitionType, TaskMode, RegenerationMode
 from nidaqmx.constants import LineGrouping, DigitalWidthUnits
 from nidaqmx.types import CtrTime
 
@@ -585,6 +585,133 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.master_trigger_task.close()
         logger.debug("All tasks closed")
 
+    # ------------------------------------------------------------------
+    # Continuous-regeneration mode (experimental)
+    #
+    # Instead of arming/triggering/waiting/stopping the DAQ tasks once per
+    # plane (the default "stepped" path via create_tasks/run_tasks/stop_tasks),
+    # this configures the whole stack once so the hardware repeats the per-plane
+    # pattern N times on its own:
+    #   * the bundled AO task runs in CONTINUOUS sample mode with regeneration,
+    #     so the single-sweep buffer auto-repeats every sweeptime;
+    #   * the camera trigger becomes a FINITE counter pulse train of N pulses;
+    #   * the stage trigger becomes a FINITE pulse train of N-1 pulses;
+    #   * one master-trigger pulse (launch_continuous) starts all of them locked.
+    # This keeps orthogonal-plane step-and-shoot (the stage still steps on TTL)
+    # while removing the per-plane driver overhead. See PERFORMANCE_ANALYSIS.md.
+    #
+    # NOTE: native retriggering is NOT used (the PXI-6733 is not an X-Series
+    # device and does not support it); this relies on continuous regeneration,
+    # which the 6733 does support.
+    # ------------------------------------------------------------------
+    @timed
+    def create_tasks_continuous(self, n_planes):
+        """Create DAQ tasks for a whole stack launched by a single master trigger.
+
+        Args:
+            n_planes (int): Number of planes (camera frames) in the stack.
+        """
+        ah = self.cfg.acquisition_hardware
+        self.calculate_samples()
+        samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
+        samples = self.samples
+        n_planes = int(n_planes)
+        plane_freq = 1.0 / sweeptime  # one plane (one sweep) per period
+
+        camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%', 'camera_delay_%'])
+        camera_duty = min(max(camera_pulse_percent * 0.01, 1e-3), 0.999)
+        camera_delay = camera_delay_percent * 0.01 * sweeptime
+
+        self.master_trigger_task = nidaqmx.Task()
+        self.camera_trigger_task = nidaqmx.Task()
+        use_stage_trigger = ('asi' in self.cfg.stage_parameters['stage_type'].lower()
+                             or self.cfg.stage_parameters['stage_type'].lower() == 'mixed')
+        if use_stage_trigger:
+            self.stage_trigger_task = nidaqmx.Task()
+
+        self.ao_cards = 1 if ah['galvo_etl_task_line'].split('/')[-2] == ah['laser_task_line'].split('/')[-2] else 2
+        logger.info(f"[continuous] Using {self.ao_cards} DAQmx card(s) for AO waveform generation, {n_planes} planes.")
+
+        if self.ao_cards == 1:
+            self.galvo_etl_laser_task = nidaqmx.Task()
+        else:
+            self.galvo_etl_task = nidaqmx.Task()
+            self.laser_task = nidaqmx.Task()
+
+        '''DO master trigger (single common start trigger for the whole stack)'''
+        self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
+                                                         line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+
+        '''Camera trigger: FINITE pulse train of exactly n_planes pulses at plane_freq'''
+        self.camera_trigger_task.co_channels.add_co_pulse_chan_freq(ah['camera_trigger_out_line'],
+                                                                    freq=plane_freq,
+                                                                    duty_cycle=camera_duty,
+                                                                    initial_delay=camera_delay)
+        self.camera_trigger_task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.FINITE,
+                                                            samps_per_chan=n_planes)
+        self.camera_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['camera_trigger_source'])
+
+        '''Stage TTL trigger: FINITE pulse train of n_planes-1 steps (no step after the last plane)'''
+        if use_stage_trigger:
+            assert hasattr(self.cfg, 'asi_parameters'), "Config file with an ASI stage must contain 'asi_parameters' dictionary"
+            trig_line = self.parent.read_config_parameter('stage_trigger_out_line', self.cfg.asi_parameters)
+            trig_source = self.parent.read_config_parameter('stage_trigger_source', self.cfg.asi_parameters)
+            stage_trigger_pulse_percent = self.parent.read_config_parameter('stage_trigger_pulse_%', self.cfg.asi_parameters)
+            stage_delay_percent = self.parent.read_config_parameter('stage_trigger_delay_%', self.cfg.asi_parameters)
+            stage_duty = min(max(stage_trigger_pulse_percent * 0.01, 1e-3), 0.999)
+            stage_delay = stage_delay_percent * 0.01 * sweeptime
+            n_steps = max(n_planes - 1, 1)
+            self.stage_trigger_task.co_channels.add_co_pulse_chan_freq(trig_line,
+                                                                       freq=plane_freq,
+                                                                       duty_cycle=stage_duty,
+                                                                       initial_delay=stage_delay)
+            self.stage_trigger_task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.FINITE,
+                                                               samps_per_chan=n_steps)
+            self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(trig_source)
+
+        '''AO task(s): CONTINUOUS sample mode with regeneration (single sweep buffer auto-repeats)'''
+        if self.ao_cards == 2:
+            self.galvo_etl_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'], min_val=-self.MAX_GALVO_ETL_VOLT, max_val=self.MAX_GALVO_ETL_VOLT)
+            self.galvo_etl_task.timing.cfg_samp_clk_timing(rate=samplerate,
+                                                           sample_mode=AcquisitionType.CONTINUOUS,
+                                                           samps_per_chan=samples)
+            self.galvo_etl_task.out_stream.regen_mode = RegenerationMode.ALLOW_REGENERATION
+            self.galvo_etl_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
+
+            self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'],
+                                                            min_val=-self.state['max_laser_voltage'],
+                                                            max_val=self.state['max_laser_voltage'])
+            self.laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
+                                                       sample_mode=AcquisitionType.CONTINUOUS,
+                                                       samps_per_chan=samples)
+            self.laser_task.out_stream.regen_mode = RegenerationMode.ALLOW_REGENERATION
+            self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
+        else:
+            self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
+                                                                      min_val=-self.MAX_GALVO_ETL_VOLT, max_val=self.MAX_GALVO_ETL_VOLT)
+            self.galvo_etl_laser_task.timing.cfg_samp_clk_timing(rate=samplerate,
+                                                                 sample_mode=AcquisitionType.CONTINUOUS,
+                                                                 samps_per_chan=samples)
+            self.galvo_etl_laser_task.out_stream.regen_mode = RegenerationMode.ALLOW_REGENERATION
+            self.galvo_etl_laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
+
+    def launch_continuous(self):
+        """Fire the single master trigger that launches the whole hardware-timed stack.
+
+        Call this after start_tasks() has armed all tasks AND after the shutters
+        are open and the laser is enabled, so the first plane is not dark.
+        """
+        logger.debug("[continuous] firing single master trigger for the whole stack")
+        self.master_trigger_task.write([False, True, True, True, True, True, False], auto_start=True)
+
+    def wait_for_stack_done(self, timeout=-1.0):
+        """Block until the finite camera pulse train has emitted all N pulses.
+
+        Args:
+            timeout (float): Seconds to wait; -1 waits indefinitely.
+        """
+        self.camera_trigger_task.wait_until_done(timeout=timeout)
+
 
 class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
     """Demo subclass of mesoSPIM_WaveFormGenerator class
@@ -626,3 +753,16 @@ class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
         """Demo: closes the tasks for triggering, analog and counter outputs. """
         logger.debug("Demo: close tasks")
         pass
+
+    def create_tasks_continuous(self, n_planes):
+        """Demo: no-op continuous task creation."""
+        logger.debug(f"Demo: create continuous tasks ({n_planes} planes)")
+        self.calculate_samples()
+
+    def launch_continuous(self):
+        """Demo: no-op continuous launch."""
+        logger.debug("Demo: launch continuous")
+
+    def wait_for_stack_done(self, timeout=-1.0):
+        """Demo: no-op wait."""
+        logger.debug("Demo: wait for stack done")
