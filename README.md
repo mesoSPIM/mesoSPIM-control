@@ -1,4 +1,3 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6109315.svg)](https://doi.org/10.5281/zenodo.6109315)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-312/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Static Badge](https://img.shields.io/badge/user_forum-image.sc-blue)](https://forum.image.sc/tag/mesospim)
@@ -59,6 +58,4 @@ More than 30 setups are operational [around the world](http://mesospim.org/setup
 
 ## How to cite
 
-Fabian F. Voigt, Nikita Vladimirov, Christian Schulze, Rob Campbell, & Fritjof Helmchen. (2022). *MesoSPIM control: An open-source acquisition software for light-sheet microscopy written in Python and Qt.* Zenodo. https://doi.org/10.5281/zenodo.6109315
-
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6109315.svg)](https://doi.org/10.5281/zenodo.6109315)
+Fabian F. Voigt, Nikita Vladimirov, Christian Schulze, Rob Campbell, & Fritjof Helmchen. (2022). *MesoSPIM control: An open-source acquisition software for light-sheet microscopy written in Python and Qt.* Zenodo. https://doi.org/10.5281/zenodo.6109315.
