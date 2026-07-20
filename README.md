@@ -54,7 +54,7 @@ More than 30 setups are operational [around the world](http://mesospim.org/setup
 
 - [image.sc forum](https://forum.image.sc/tag/mesospim) — questions and discussion
 - [YouTube channel](https://www.youtube.com/c/mesoSPIM) — tutorials and demos
-- [Mailing list](http://eepurl.com/hPBRhj) — announcements
+- [Mailing list](https://eepurl.com/hPBRhj) — announcements
 - [ZMB Dozuki guides](https://zmb.dozuki.com/c/Lightsheet_microscopy#Section_MesoSPIM) — start-up and acquisition walkthroughs
 
 ## How to cite

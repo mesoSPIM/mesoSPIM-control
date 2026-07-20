@@ -1,0 +1,45 @@
+# Line endings, decided in the repository rather than per-developer.
+#
+# Everything text is stored as LF in git and checked out as LF on every
+# platform, so a file has the same bytes for everyone. Exceptions below are
+# files that Windows tools genuinely need as CRLF.
+
+* text=auto eol=lf
+
+# --- Windows-only files that must stay CRLF -------------------------------
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+*.sln       text eol=crlf
+*.vcxproj   text eol=crlf
+*.vcxproj.* text eol=crlf
+
+# Plain-text notes read on Windows acquisition PCs, sometimes in Notepad
+*.txt       text eol=crlf
+
+# --- Binary: never touch, never diff as text ------------------------------
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.tif    binary
+*.tiff   binary
+*.dll    binary
+*.lib    binary
+*.exe    binary
+*.pyd    binary
+*.so     binary
+*.pth    binary
+*.pickle binary
+*.zip    binary
+*.suo    binary
+
+# Sphinx build artifacts under docs/_build
+*.doctree binary
+*.inv     binary
+
+# --- Language statistics --------------------------------------------------
+# Notebooks are examples and tests, not the codebase. Without this, GitHub
+# reports the project as majority Jupyter Notebook rather than Python.
+*.ipynb linguist-vendored
