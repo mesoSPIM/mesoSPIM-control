@@ -265,6 +265,17 @@ def _make_handler(acceptor, token):
             pass
 
         def do_POST(self):
+            # Drain any declared request body up front. Every rejection below (404/403/401/...)
+            # can return before the body would otherwise be read; leaving it unread while this
+            # HTTP/1.0-style connection then closes causes the OS (observed on Windows) to send a
+            # TCP RST instead of a clean close, discarding the response the client was just sent.
+            # Skip draining when the size is unknown or exceeds the cap so a hostile declared
+            # length cannot be used to make the server read an unbounded amount before rejecting.
+            lengths = self.headers.get_all("Content-Length", [])
+            body = b""
+            if len(lengths) == 1 and lengths[0].isdigit() and int(lengths[0]) <= config.MAX_MCP_BODY_BYTES:
+                body = self.rfile.read(int(lengths[0]))
+
             if self.path != "/mcp":
                 return self._json(404, {"error": "not found"})
             origins = self.headers.get_all("Origin", [])
@@ -278,13 +289,11 @@ def _make_handler(acceptor, token):
                 return self._json(401, {"error": "unauthorized"})
             if self.headers.get_all("Transfer-Encoding", []):
                 return self._json(400, {"error": "Transfer-Encoding unsupported"})
-            lengths = self.headers.get_all("Content-Length", [])
             if len(lengths) != 1 or not lengths[0].isdigit():
                 return self._json(400, {"error": "invalid Content-Length"})
             length = int(lengths[0])
             if length > config.MAX_MCP_BODY_BYTES:
                 return self._json(413, {"error": "body too large"})
-            body = self.rfile.read(length)
             if len(body) != length:
                 return self._json(400, {"error": "truncated body"})
             try:

@@ -239,4 +239,5 @@ def pytest_configure(config):
     """Register the explicit operator-gated live-test markers."""
     config.addinivalue_line("markers", "live_valid: safe live movement and restoration")
     config.addinivalue_line("markers", "live_demo_all: complete DemoStage command sweep")
+    config.addinivalue_line("markers", "live_real_all: complete real-hardware command sweep")
     config.addinivalue_line("markers", "live_adversarial: bounded live hostile-input and race tests")
