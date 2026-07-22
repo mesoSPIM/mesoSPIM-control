@@ -56,8 +56,18 @@ loaded.
 
 ## What has been verified
 
-- 357 offline tests covering the completion wrapper, tool construction, the worker's turn/interrupt
-  behaviour, and the Acceptor lifecycle.
+- `mesoSPIM/test/ai_assistant/` — 18 offline tests covering the completion wrapper, tool
+  construction, the worker's turn/error/interrupt behaviour, the Acceptor lifecycle, and the tab's
+  wiring, transport-busy refusal and single-flight input lock. They run without Qt or hardware,
+  reusing the Remote Control substitute:
+
+  ```
+  pytest mesoSPIM/test/remote_control mesoSPIM/test/ai_assistant \
+      --ignore=mesoSPIM/test/remote_control/test_real_pyqt_smoke.py \
+      --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
+  ```
+
+  245 passed, 10 skipped, in either collection order.
 - A 14-case behavioural suite (`evals/` in the contribution repository) driving the real dispatcher
   over a fake Core, scored on which hardware call landed and what state resulted rather than on
   wording. It covers plain verbs, unit conversion, reads, vocabulary refusals, out-of-limits
