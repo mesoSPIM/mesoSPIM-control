@@ -1,0 +1,721 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="API Reference" href="api/index.html"><link rel="prev" title="Contributing" href="contributing.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>Plugin System - mesoSPIM Control latest documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">mesoSPIM Control latest documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">mesoSPIM Control latest documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Supported Hardware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_formats.html">Output File Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="psf_analysis.html">Bead PSF Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_processors.html">Image Processing Plugins (beta)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timelapse.html">Time-lapse Acquisitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/plugins.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="plugin-system">
+<h1>Plugin System<a class="headerlink" href="#plugin-system" title="Link to this heading">¶</a></h1>
+<p>This page is the main developer guide for the mesoSPIM plugin system.
+It explains what plugin types exist today, how they are discovered, and
+how to build working plugins for image writing and image processing.</p>
+<p>If you only use mesoSPIM as an operator, the short sections in
+<a class="reference internal" href="user_guide.html"><span class="doc">User Guide</span></a> are usually enough. If you want to extend the software,
+start here.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>mesoSPIM currently supports two plugin families:</p>
+<ul class="simple">
+<li><p><strong>Image writer plugins</strong> create output files during acquisition.</p></li>
+<li><p><strong>Image processor plugins</strong> transform frames before they are displayed or
+written to disk.</p></li>
+</ul>
+<p>These plugin families live under <code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriters/</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/</span></code></p></li>
+</ul>
+<p>Although some comments in the source mention possible future plugin types
+such as camera or stage plugins, those are not part of the current plugin
+system.</p>
+</section>
+<section id="how-plugins-are-discovered">
+<h2>How Plugins Are Discovered<a class="headerlink" href="#how-plugins-are-discovered" title="Link to this heading">¶</a></h2>
+<p>Plugin discovery happens very early during application startup in
+<code class="docutils literal notranslate"><span class="pre">mesoSPIM/mesoSPIM_Control.py</span></code>. After the microscope configuration file is
+loaded, <code class="xref py py-class docutils literal notranslate"><span class="pre">mesoSPIM.src.plugins.manager.PluginRegistry</span></code> scans plugin
+locations and imports matching modules.</p>
+<section id="discovery-rules">
+<h3>Discovery rules<a class="headerlink" href="#discovery-rules" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Built-in plugin directories are defined in
+<code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/manager.py</span></code>.</p></li>
+<li><p>Additional plugin directories can be provided through
+<code class="docutils literal notranslate"><span class="pre">plugins['path_list']</span></code> in the microscope config file.</p></li>
+<li><p>The loader imports top-level <code class="docutils literal notranslate"><span class="pre">*.py</span></code> files and package directories that
+contain <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>.</p></li>
+<li><p>A module can register plugins explicitly through a
+<code class="docutils literal notranslate"><span class="pre">register_mesospim_plugins(registry)</span></code> function.</p></li>
+<li><p>If no explicit hook is provided, mesoSPIM scans the imported module for
+classes that look like image writers or image processors.</p></li>
+</ul>
+<p>In practice, registration is permissive. A class may be imported and
+registered successfully even if it is still missing methods that the UI or
+runtime will call later. For that reason, a plugin being discovered does not
+automatically mean it is fully usable.</p>
+</section>
+</section>
+<section id="plugin-locations">
+<h2>Plugin Locations<a class="headerlink" href="#plugin-locations" title="Link to this heading">¶</a></h2>
+<p>Built-in plugins live in the repository:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriters/</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/</span></code></p></li>
+</ul>
+<p>External plugins can live anywhere on disk as long as their parent directory
+is listed in the active config file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">plugins</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;path_list&#39;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s1">&#39;C:/mesospim_plugins&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s1">&#39;first_image_writer&#39;</span><span class="p">:</span> <span class="s1">&#39;OME_Zarr_Writer&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Keep these points in mind when authoring external plugins:</p>
+<ul class="simple">
+<li><p>Paths are resolved by the running process, so test them from the same launch
+location you use for mesoSPIM.</p></li>
+<li><p>The loader scans one directory level for modules and Python packages.</p></li>
+<li><p>Import-time side effects happen immediately when the module is loaded. Avoid
+expensive work at import time whenever possible.</p></li>
+<li><p>Some built-in plugins currently install optional dependencies during import.
+That works, but it is better for third-party plugins to fail clearly with a
+good error message than to surprise users during startup.</p></li>
+</ul>
+</section>
+<section id="image-writer-plugins">
+<h2>Image Writer Plugins<a class="headerlink" href="#image-writer-plugins" title="Link to this heading">¶</a></h2>
+<p>Image writer plugins are responsible for taking acquired frames and saving
+them in a particular format. Writers run in the image-writer thread and are
+selected per acquisition entry through the file-naming wizard.</p>
+<section id="where-writers-fit-in-the-pipeline">
+<h3>Where Writers Fit in the Pipeline<a class="headerlink" href="#where-writers-fit-in-the-pipeline" title="Link to this heading">¶</a></h3>
+<p>During acquisition, <code class="docutils literal notranslate"><span class="pre">mesoSPIM_ImageWriter</span></code> creates the selected writer,
+passes it a <code class="xref py py-class docutils literal notranslate"><span class="pre">WriteRequest</span></code>, then
+calls <code class="docutils literal notranslate"><span class="pre">write_frame()</span></code> for each frame and <code class="docutils literal notranslate"><span class="pre">finalize()</span></code> at the end of the
+acquisition.</p>
+<p>Core writer lifecycle:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">open(req)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">write_frame(data)</span></code> repeated for each image</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">finalize(finalize_image)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">abort()</span></code> if acquisition is interrupted</p></li>
+</ol>
+</section>
+<section id="required-writer-interface-in-practice">
+<h3>Required Writer Interface in Practice<a class="headerlink" href="#required-writer-interface-in-practice" title="Link to this heading">¶</a></h3>
+<p>The formal protocol is documented in
+<code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriterApi.py</span></code>, but the runtime expects a little
+more than the protocol currently declares.</p>
+<p>In practice, a working writer should provide:</p>
+<ul class="simple">
+<li><p>classmethods:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">api_version()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">capabilities()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">file_extensions()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">file_names()</span></code></p></li>
+</ul>
+</li>
+<li><p>instance methods:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">open(req)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">write_frame(data)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">finalize(finalize_image)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">abort()</span></code></p></li>
+</ul>
+</li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">file_names()</span></code> method is especially important to call out: it is used by
+the filename wizard and is effectively required even though it is not declared
+in the <code class="docutils literal notranslate"><span class="pre">ImageWriter</span></code> protocol.</p>
+</section>
+<section id="data-passed-to-writers">
+<h3>Data Passed to Writers<a class="headerlink" href="#data-passed-to-writers" title="Link to this heading">¶</a></h3>
+<p>The following helper dataclasses are defined in
+<code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriterApi.py</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">WriteRequest</span></code>: static information for the acquisition being opened,
+including destination path, array shape, axes, voxel size, acquisition
+metadata, and any writer-specific config values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WriteImage</span></code>: one frame plus its current z index and acquisition context.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FinalizeImage</span></code>: acquisition metadata passed when finishing the writer.</p></li>
+</ul>
+<p>Current runtime behavior worth knowing:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">shape</span></code> is currently passed as <code class="docutils literal notranslate"><span class="pre">(z,</span> <span class="pre">y,</span> <span class="pre">x)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dtype</span></code> is currently <code class="docutils literal notranslate"><span class="pre">'uint16'</span></code> for the normal acquisition path.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uri</span></code> is currently passed as a path-like string.</p></li>
+<li><p>Writer-specific config comes from a top-level config dictionary with the same
+name as the writer, for example <code class="docutils literal notranslate"><span class="pre">OME_Zarr_Writer</span> <span class="pre">=</span> <span class="pre">{...}</span></code>.</p></li>
+</ul>
+</section>
+<section id="metadata-and-side-effects">
+<h3>Metadata and Side Effects<a class="headerlink" href="#metadata-and-side-effects" title="Link to this heading">¶</a></h3>
+<p>Writers are also expected to expose metadata-related attributes used by the
+rest of the application:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">self.metadata_file</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">self.metadata_file_describes_this_path</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">self.MIP_path</span></code></p></li>
+</ul>
+<p>The helper <code class="docutils literal notranslate"><span class="pre">metadata_file_info()</span></code> in <code class="docutils literal notranslate"><span class="pre">ImageWriterApi.py</span></code> sets reasonable
+defaults for simple one-file-per-tile writers. More advanced writers often
+override it.</p>
+</section>
+<section id="minimal-writer-example">
+<h3>Minimal Writer Example<a class="headerlink" href="#minimal-writer-example" title="Link to this heading">¶</a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriters/TiffWriter.py</span></code> as the best minimal
+example. It shows the standard writer pattern:</p>
+<ul class="simple">
+<li><p>declare metadata such as name, extensions, and capabilities</p></li>
+<li><p>open resources in <code class="docutils literal notranslate"><span class="pre">open()</span></code></p></li>
+<li><p>write one frame at a time in <code class="docutils literal notranslate"><span class="pre">write_frame()</span></code></p></li>
+<li><p>close resources in <code class="docutils literal notranslate"><span class="pre">finalize()</span></code></p></li>
+</ul>
+<p>For debugging and for understanding the data flow, see
+<code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriters/ShamWriter.py</span></code>. It prints the
+<code class="docutils literal notranslate"><span class="pre">WriteRequest</span></code> and each frame received by the writer without doing real I/O.</p>
+</section>
+<section id="writer-configuration-from-the-config-file">
+<h3>Writer Configuration from the Config File<a class="headerlink" href="#writer-configuration-from-the-config-file" title="Link to this heading">¶</a></h3>
+<p>Writer-specific options are read from the active microscope config file by
+looking for a top-level dictionary named exactly after the selected writer.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">OME_Zarr_Writer</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;ome_version&#39;</span><span class="p">:</span> <span class="s1">&#39;0.5&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;generate_multiscales&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;compression&#39;</span><span class="p">:</span> <span class="s1">&#39;zstd&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;compression_level&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This mechanism is how built-in advanced writers such as
+<code class="docutils literal notranslate"><span class="pre">OME_Zarr_Writer</span></code> and <code class="docutils literal notranslate"><span class="pre">MP_OME_Zarr_Writer</span></code> receive chunking,
+compression, and multiscale settings.</p>
+</section>
+<section id="writer-authoring-checklist">
+<h3>Writer Authoring Checklist<a class="headerlink" href="#writer-authoring-checklist" title="Link to this heading">¶</a></h3>
+<p>Before considering a writer complete, verify that it:</p>
+<ul class="simple">
+<li><p>registers and appears in the file-naming wizard</p></li>
+<li><p>accepts the chosen file extension</p></li>
+<li><p>opens and writes a full acquisition in demo mode</p></li>
+<li><p>finalizes cleanly on success</p></li>
+<li><p>aborts cleanly when the user presses Stop</p></li>
+<li><p>produces metadata paths compatible with mesoSPIM metadata export</p></li>
+</ul>
+</section>
+</section>
+<section id="image-processor-plugins">
+<h2>Image Processor Plugins<a class="headerlink" href="#image-processor-plugins" title="Link to this heading">¶</a></h2>
+<p>Image processor plugins transform camera frames before display and before the
+same processed frames are passed onward for writing. In other words,
+processors affect both live viewing and saved output.</p>
+<section id="where-processors-fit-in-the-pipeline">
+<h3>Where Processors Fit in the Pipeline<a class="headerlink" href="#where-processors-fit-in-the-pipeline" title="Link to this heading">¶</a></h3>
+<p>Processors are applied inside the camera worker through the processor chain.
+The processor chain is configured in the processor-chain dialog and persisted
+to <code class="docutils literal notranslate"><span class="pre">processor_chain.json</span></code> next to the active config file.</p>
+<p>This means processor plugins are not selected through the microscope config
+file the way writers are. They are managed interactively in the GUI.</p>
+</section>
+<section id="required-processor-interface-in-practice">
+<h3>Required Processor Interface in Practice<a class="headerlink" href="#required-processor-interface-in-practice" title="Link to this heading">¶</a></h3>
+<p>The protocol lives in <code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessorApi.py</span></code>.
+A minimal working processor should provide:</p>
+<ul class="simple">
+<li><p>classmethods:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">api_version()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">description()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">capabilities()</span></code></p></li>
+</ul>
+</li>
+<li><p>instance methods:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">process_frame(image)</span></code></p></li>
+</ul>
+</li>
+</ul>
+<p>Optional but strongly recommended methods:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">configure(params)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_config()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reset()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parameter_descriptions()</span></code></p></li>
+</ul>
+<p>The processor chain currently always calls <code class="docutils literal notranslate"><span class="pre">process_frame()</span></code>. Built-in
+processors are expected to return writer-ready <code class="docutils literal notranslate"><span class="pre">uint16</span></code> arrays for the
+normal acquisition path, even if they do their internal math in floating
+point. Capability fields such as input dtype, output dtype, dimensionality,
+and in-place support should match that runtime behavior.</p>
+</section>
+<section id="parameter-editor-integration">
+<h3>Parameter Editor Integration<a class="headerlink" href="#parameter-editor-integration" title="Link to this heading">¶</a></h3>
+<p>If your processor exposes configuration values, implement both
+<code class="docutils literal notranslate"><span class="pre">get_config()</span></code> and <code class="docutils literal notranslate"><span class="pre">configure(params)</span></code>.</p>
+<p>For a good GUI editing experience, also implement
+<code class="docutils literal notranslate"><span class="pre">parameter_descriptions()</span></code>. The processor-chain window uses that metadata to
+choose the right widget and constraints for each parameter.</p>
+<p>Supported metadata keys include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">type</span></code>: <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code>, or <code class="docutils literal notranslate"><span class="pre">str</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">default</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min</span></code> and <code class="docutils literal notranslate"><span class="pre">max</span></code> for numeric values</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">step</span></code> for numeric widgets</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">decimals</span></code> for floating-point widgets</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">choices</span></code> for drop-down selections</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">description</span></code> for user-facing help text</p></li>
+</ul>
+<p>If <code class="docutils literal notranslate"><span class="pre">parameter_descriptions()</span></code> is omitted, mesoSPIM falls back to a more
+basic editor inferred from <code class="docutils literal notranslate"><span class="pre">get_config()</span></code>. That fallback is useful for
+compatibility, but explicit metadata is preferred.</p>
+</section>
+<section id="minimal-processor-example">
+<h3>Minimal Processor Example<a class="headerlink" href="#minimal-processor-example" title="Link to this heading">¶</a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/IdentityProcessor.py</span></code> as the best
+minimal processor example. It shows the smallest practical processor:</p>
+<ul class="simple">
+<li><p>declares a name and description</p></li>
+<li><p>advertises capabilities</p></li>
+<li><p>implements <code class="docutils literal notranslate"><span class="pre">process_frame()</span></code></p></li>
+</ul>
+</section>
+<section id="configurable-processor-example">
+<h3>Configurable Processor Example<a class="headerlink" href="#configurable-processor-example" title="Link to this heading">¶</a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/GaussianBlurProcessor.py</span></code> as the
+main template for configurable processors. It demonstrates:</p>
+<ul class="simple">
+<li><p>internal state set in <code class="docutils literal notranslate"><span class="pre">__init__</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">configure(params)</span></code> for applying changes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_config()</span></code> for persistence and UI reflection</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parameter_descriptions()</span></code> for a strong editor experience</p></li>
+</ul>
+<p>For a more stateful example, see
+<code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/BackgroundSubtractionProcessor.py</span></code>.
+For a heavier dependency and model-loading example, see
+<code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/NeuralDenoiseProcessor.py</span></code>.</p>
+</section>
+<section id="processor-authoring-checklist">
+<h3>Processor Authoring Checklist<a class="headerlink" href="#processor-authoring-checklist" title="Link to this heading">¶</a></h3>
+<p>Before considering a processor complete, verify that it:</p>
+<ul class="simple">
+<li><p>appears in the processor-chain dialog</p></li>
+<li><p>can be added, enabled, disabled, reordered, and removed</p></li>
+<li><p>works correctly in live view</p></li>
+<li><p>behaves acceptably during acquisition, not just in demo tests</p></li>
+<li><p>returns properly clipped and scaled <code class="docutils literal notranslate"><span class="pre">uint16</span></code> output without relying on the
+processor chain to coerce dtype</p></li>
+<li><p>persists and restores its settings through <code class="docutils literal notranslate"><span class="pre">processor_chain.json</span></code></p></li>
+<li><p>handles repeated reconfiguration cleanly</p></li>
+</ul>
+</section>
+</section>
+<section id="short-user-guide">
+<h2>Short User Guide<a class="headerlink" href="#short-user-guide" title="Link to this heading">¶</a></h2>
+<p>Most users do not need to know the plugin internals, but these behaviors are
+useful to understand:</p>
+<ul class="simple">
+<li><p><strong>Image writers</strong> are chosen in the file-naming wizard for each acquisition
+entry.</p></li>
+<li><p><strong>Image processors</strong> are configured in the processor-chain window, available
+from <strong>Plugins → Processor Chain</strong> in the main window menu bar. Processors
+affect both live display and acquired image data. See <a class="reference internal" href="image_processors.html"><span class="doc">Image Processing Plugins (beta)</span></a>
+for the built-in processors and a full walkthrough of that window.</p></li>
+</ul>
+</section>
+<section id="testing-plugins">
+<h2>Testing Plugins<a class="headerlink" href="#testing-plugins" title="Link to this heading">¶</a></h2>
+<p>Recommended validation workflow:</p>
+<ol class="arabic simple">
+<li><p>Start in demo mode so discovery, UI integration, and basic runtime behavior
+can be tested without hardware.</p></li>
+<li><p>For writers, run a short acquisition and verify output, metadata files, and
+abort behavior.</p></li>
+<li><p>For processors, test both live view and saved acquisitions.</p></li>
+<li><p>After demo validation, test on real hardware because timing and throughput
+issues often only appear there.</p></li>
+</ol>
+</section>
+<section id="common-gotchas">
+<h2>Common Gotchas<a class="headerlink" href="#common-gotchas" title="Link to this heading">¶</a></h2>
+<p>These implementation details are worth documenting explicitly for plugin
+authors:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">file_names()</span></code> is required in practice for image writers even though it is
+not declared in the current writer protocol.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">metadata_file_info</span></code> is described as a property in the API helper, but it
+is used like a method by the runtime and by several built-in writers.</p></li>
+<li><p>Plugin registration is permissive; discovery success is not the same as full
+runtime compatibility.</p></li>
+<li><p>Writer and processor modules should avoid surprising import-time work.</p></li>
+<li><p>Processor capability flags are informative today, not enforced.</p></li>
+<li><p>The current processor-chain UI is oriented around one entry per processor
+type, so test carefully if your workflow assumes duplicates.</p></li>
+</ul>
+</section>
+<section id="reference-files">
+<h2>Reference Files<a class="headerlink" href="#reference-files" title="Link to this heading">¶</a></h2>
+<p>Good source files to study while building plugins:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/manager.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriterApi.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessorApi.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriters/TiffWriter.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageWriters/ShamWriter.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/IdentityProcessor.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/plugins/ImageProcessors/GaussianBlurProcessor.py</span></code></p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="api/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">API Reference</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="contributing.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Contributing</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; mesoSPIM team
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Plugin System</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#how-plugins-are-discovered">How Plugins Are Discovered</a><ul>
+<li><a class="reference internal" href="#discovery-rules">Discovery rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#plugin-locations">Plugin Locations</a></li>
+<li><a class="reference internal" href="#image-writer-plugins">Image Writer Plugins</a><ul>
+<li><a class="reference internal" href="#where-writers-fit-in-the-pipeline">Where Writers Fit in the Pipeline</a></li>
+<li><a class="reference internal" href="#required-writer-interface-in-practice">Required Writer Interface in Practice</a></li>
+<li><a class="reference internal" href="#data-passed-to-writers">Data Passed to Writers</a></li>
+<li><a class="reference internal" href="#metadata-and-side-effects">Metadata and Side Effects</a></li>
+<li><a class="reference internal" href="#minimal-writer-example">Minimal Writer Example</a></li>
+<li><a class="reference internal" href="#writer-configuration-from-the-config-file">Writer Configuration from the Config File</a></li>
+<li><a class="reference internal" href="#writer-authoring-checklist">Writer Authoring Checklist</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#image-processor-plugins">Image Processor Plugins</a><ul>
+<li><a class="reference internal" href="#where-processors-fit-in-the-pipeline">Where Processors Fit in the Pipeline</a></li>
+<li><a class="reference internal" href="#required-processor-interface-in-practice">Required Processor Interface in Practice</a></li>
+<li><a class="reference internal" href="#parameter-editor-integration">Parameter Editor Integration</a></li>
+<li><a class="reference internal" href="#minimal-processor-example">Minimal Processor Example</a></li>
+<li><a class="reference internal" href="#configurable-processor-example">Configurable Processor Example</a></li>
+<li><a class="reference internal" href="#processor-authoring-checklist">Processor Authoring Checklist</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#short-user-guide">Short User Guide</a></li>
+<li><a class="reference internal" href="#testing-plugins">Testing Plugins</a></li>
+<li><a class="reference internal" href="#common-gotchas">Common Gotchas</a></li>
+<li><a class="reference internal" href="#reference-files">Reference Files</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=c6e86fd7"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    </body>
+</html>

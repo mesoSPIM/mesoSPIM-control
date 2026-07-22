@@ -1,0 +1,518 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Image Processing Plugins (beta)" href="image_processors.html"><link rel="prev" title="Output File Formats" href="file_formats.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>Bead PSF Analysis - mesoSPIM Control latest documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">mesoSPIM Control latest documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">mesoSPIM Control latest documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hardware.html">Supported Hardware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_formats.html">Output File Formats</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Bead PSF Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_processors.html">Image Processing Plugins (beta)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timelapse.html">Time-lapse Acquisitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/psf_analysis.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="bead-psf-analysis">
+<h1>Bead PSF Analysis<a class="headerlink" href="#bead-psf-analysis" title="Link to this heading">¶</a></h1>
+<p>The <strong>Bead PSF Analysis</strong> tool detects fluorescent beads in a 3D z-stack,
+fits a 1D Gaussian profile along each bead’s axial and lateral directions,
+and reports the resulting full-width-at-half-maximum (FWHM) — a common
+proxy for the microscope’s point spread function (PSF) — as histograms and
+as spatial maps across the field of view.</p>
+<p>It ships as a single, self-contained module
+(<code class="docutils literal notranslate"><span class="pre">mesoSPIM/src/utils/psf_gui_qt.py</span></code>) and can be launched either from inside
+mesoSPIM-control or as a standalone application.</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="_images/BeadPSFAnalysisGUI.png"><img alt="Bead PSF Analysis window" src="_images/BeadPSFAnalysisGUI.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Bead PSF Analysis window: system parameters and analysis controls (top),
+axial/lateral FWHM histograms (middle), and FWHM maps across the field of
+view, overlaid on the bead max-projection (bottom).</span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<section id="launching-the-tool">
+<h2>Launching the tool<a class="headerlink" href="#launching-the-tool" title="Link to this heading">¶</a></h2>
+<section id="from-mesospim-control">
+<h3>From mesoSPIM-control<a class="headerlink" href="#from-mesospim-control" title="Link to this heading">¶</a></h3>
+<p>Open <strong>Utils → PSF (beads) analysis from a stack</strong> in the Main window. A
+dialog lets you choose between:</p>
+<ul class="simple">
+<li><p><strong>Last acquired stack</strong> — re-reads the most recently completed
+acquisition’s TIFF file from disk and preloads it directly. Magnification
+is parsed from that acquisition’s zoom setting, and camera pixel size and
+Z-step are read from the active configuration and acquisition list, so the
+<strong>System Parameters</strong> fields are filled in automatically.</p></li>
+<li><p><strong>Browse for TIFF file…</strong> — opens the tool with no stack loaded; use its
+own <strong>File → Open TIF…</strong> to pick any z-stack. Magnification is prefilled
+from the microscope’s current live zoom setting; other parameters may need
+manual adjustment.</p></li>
+</ul>
+<p>Either way, mesoSPIM-control launches the tool as a <strong>separate OS process</strong>
+(<code class="docutils literal notranslate"><span class="pre">subprocess.Popen</span></code>, not an in-process window), so a long-running bead
+detection/fitting analysis can never block the Main window’s own GUI thread.</p>
+</section>
+<section id="as-a-standalone-application">
+<h3>As a standalone application<a class="headerlink" href="#as-a-standalone-application" title="Link to this heading">¶</a></h3>
+<p>The tool has no dependency on the rest of mesoSPIM-control and can be run
+directly, e.g. to analyze a bead stack acquired on a different system:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>mesoSPIM/src/utils/psf_gui_qt.py
+</pre></div>
+</div>
+<p>Then use <strong>File → Open TIF…</strong> (or drag and drop a file onto the window) to
+load a 3D TIFF stack. A stack can also be preloaded directly from the command
+line, along with the system parameters mesoSPIM-control passes when it
+launches the tool this way:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>mesoSPIM/src/utils/psf_gui_qt.py<span class="w"> </span>path/to/stack.tif<span class="w"> </span>--mag<span class="w"> </span><span class="m">20</span><span class="w"> </span>--pixel-pitch<span class="w"> </span><span class="m">4</span>.25<span class="w"> </span>--z-step<span class="w"> </span><span class="m">1</span>.0
+</pre></div>
+</div>
+</section>
+</section>
+<section id="system-parameters">
+<h2>System Parameters<a class="headerlink" href="#system-parameters" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Magnification</strong></p></td>
+<td><p>Effective system magnification.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Camera pixel pitch (µm)</strong></p></td>
+<td><p>Physical camera sensor pixel size. Combined with magnification, this
+gives the lateral pixel size used for FOV and FWHM calculations.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Z-step (µm)</strong></p></td>
+<td><p>Spacing between planes in the loaded stack, used for the axial FWHM
+calculation.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>All three fields are editable at any time; changing one immediately
+recalculates the field-of-view scale and refreshes existing plots.</p>
+</section>
+<section id="analysis-controls">
+<h2>Analysis controls<a class="headerlink" href="#analysis-controls" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Control</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Min intensity</strong></p></td>
+<td><p>Peak intensity threshold for bead detection: candidate beads below
+this value (after Gaussian smoothing) are ignored.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Min dist betw beads (µm)</strong></p></td>
+<td><p>Minimum allowed separation between detected beads, also used to size
+the fitting window around each bead. Beads closer than this to
+another bead, or to the image edge, are excluded.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Z min / Z max</strong></p></td>
+<td><p>Restricts the analysis to a sub-range of planes in the loaded stack.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Click <strong>Run analysis</strong> to detect beads and fit their PSF. The status label
+reports how many beads were found.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If very few or no beads are found, lower <strong>Min intensity</strong>; if beads
+merge into single detections, increase <strong>Min dist betw beads</strong>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Saturated pixels make the Gaussian fit unreliable. A warning dialog
+appears on load if the stack contains saturated pixels for its data type.</p>
+</div>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Histograms</strong> (top row) show the distribution of axial and lateral FWHM
+across all detected beads.</p></li>
+<li><p><strong>FWHM maps</strong> (bottom row) overlay each bead’s FWHM, as a colored dot at
+its field-of-view position, on the smoothed max-projection of the stack.
+Axial FWHM is shown on the left, lateral FWHM on the right.</p></li>
+</ul>
+<p>Use these maps to spot field-dependent aberrations (e.g. the PSF broadening
+towards the edges of the field of view) rather than just a single
+system-wide average.</p>
+</section>
+<section id="saving-results">
+<h2>Saving results<a class="headerlink" href="#saving-results" title="Link to this heading">¶</a></h2>
+<p>From the <strong>File</strong> menu:</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 35.0%" />
+<col style="width: 65.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Menu item</p></th>
+<th class="head"><p>Output</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Save stats as TXT…</strong></p></td>
+<td><p>Summary statistics (bead count, median/min/max axial and lateral
+FWHM).</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Save stats as CSV…</strong></p></td>
+<td><p>Per-bead table (position, max intensity, axial/lateral FWHM).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Save figure as PNG (300 DPI)…</strong></p></td>
+<td><p>The full histogram + FWHM-map figure, at a fixed 12×9 in canvas.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Save average PSF as TIF…</strong></p></td>
+<td><p>A peak-normalized, bead-centered sub-volume averaged across all
+detected beads (beads too close to the image edge are skipped) —
+useful as a single representative PSF, e.g. for deconvolution.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading">¶</a></h2>
+<p>This tool is meant for <strong>isolated fluorescent bead calibration stacks</strong>
+(e.g. sub-resolution bead samples used for PSF characterization), not for
+general specimen data — bead detection and single-Gaussian fitting assume
+sparse, well-separated point sources.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="image_processors.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Image Processing Plugins (beta)</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="file_formats.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Output File Formats</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; mesoSPIM team
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Bead PSF Analysis</a><ul>
+<li><a class="reference internal" href="#launching-the-tool">Launching the tool</a><ul>
+<li><a class="reference internal" href="#from-mesospim-control">From mesoSPIM-control</a></li>
+<li><a class="reference internal" href="#as-a-standalone-application">As a standalone application</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#system-parameters">System Parameters</a></li>
+<li><a class="reference internal" href="#analysis-controls">Analysis controls</a></li>
+<li><a class="reference internal" href="#results">Results</a></li>
+<li><a class="reference internal" href="#saving-results">Saving results</a></li>
+<li><a class="reference internal" href="#scope">Scope</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=c6e86fd7"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    </body>
+</html>
