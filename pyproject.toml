@@ -31,6 +31,11 @@ dependencies = [
     "matplotlib==3.9.2"
 ]
 
+[project.optional-dependencies]
+# The AI Assistant tab only. Imported lazily, so the application starts and every other feature
+# works without it; the tab reports the missing module when the operator sends a first message.
+ai-assistant = ["pydantic-ai==2.14.1"]
+
 [project.urls]
 "Homepage" = "http://mesospim.org"
 "Source code" = "https://github.com/mesoSPIM/mesoSPIM-control"

@@ -18,7 +18,10 @@ integration
 
 ## Requirements
 
-- `pydantic-ai` (`pip install pydantic-ai`)
+- `pydantic-ai`, declared as the optional extra `ai-assistant`: install with
+  `pip install -e ".[ai-assistant]"`, or `pip install pydantic-ai` on its own. It is imported
+  lazily, so the application starts and every other feature works without it; the tab reports the
+  missing module when the operator sends a first message.
 - An API key in the environment variable named by `mesoSPIM_AiAssistent_Config.KEY_ENV`
   (default `GEMINI_API_KEY`). No key is stored in the repository or in any config file.
 - The endpoint is configured in `mesoSPIM_AiAssistent_Config.py`. The default is a cloud Gemini
