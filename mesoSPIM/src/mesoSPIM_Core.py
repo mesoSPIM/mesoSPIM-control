@@ -102,6 +102,7 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self._remote_session = {"operation": None, "counter": 0}
         self._remote_control = None
+        self._assistant_acceptor = None
 
         ''' The signal-slot switchboard '''
         # Note the name duplication (shadowing)!!
@@ -1192,6 +1193,16 @@ class mesoSPIM_Core(QtCore.QObject):
     def stop_remote_control(self):
         from .mesoSPIM_RemoteControl_Servers import stop_for_core
         stop_for_core(self)
+
+    @QtCore.pyqtSlot()
+    def start_ai_assistant(self):
+        from .mesoSPIM_AiAssistent import start_assistant_for_core
+        start_assistant_for_core(self)
+
+    @QtCore.pyqtSlot()
+    def stop_ai_assistant(self):
+        from .mesoSPIM_AiAssistent import stop_assistant_for_core
+        stop_assistant_for_core(self)
 
     def lightsheet_alignment_mode(self):
         """Continuous live mode that alternates left/right shutters for dual-lightsheet co-alignment.
