@@ -100,6 +100,39 @@ Common workflow:
 8. Repeat for additional positions or channels.
 9. For a tiled (mosaic) acquisition, use the **Tiling Wizard** to populate the Acquisition Manager.
 
+Grouping rows
+~~~~~~~~~~~~~
+
+For lists with many rows, three toggle buttons collapse the table into logical groups so that
+related rows can be reviewed and edited together:
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Button
+     - Groups rows by
+   * - **Group by Laser**
+     - Illumination laser (channel).
+   * - **Group by Illumination**
+     - Illumination side (Left / Right).
+   * - **Group Selected**
+     - The currently selected rows, regardless of their settings.
+
+Each group is collapsed under a header showing the group key and row count. Editing a value on
+the visible row of a group applies that edit to every other row in the group. Click the same
+button again to ungroup.
+
+.. raw:: html
+
+   <video controls loop muted playsinline width="100%">
+     <source src="AcqManagerGrouping.mp4" type="video/mp4">
+     Your browser does not support embedded video.
+     <a href="AcqManagerGrouping.gif">View the animation as a GIF instead</a>.
+   </video>
+
+*Grouping Acquisition Manager rows by selection, laser, and illumination.*
+
 Acquisition modes
 ~~~~~~~~~~~~~~~~~
 
