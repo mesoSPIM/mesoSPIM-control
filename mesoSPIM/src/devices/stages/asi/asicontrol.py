@@ -47,9 +47,13 @@ class StageControlASI(QtCore.QObject):
         self.previous_command = ''
         self._position_failures = 0
         self._position_polling_disabled = False
+        # Must be set before the first read_position(): _send_command() logs
+        # current_z_slice on any response slower than 40 ms, so on a slow or
+        # unresponsive controller this raised AttributeError inside _send_command
+        # and masked the real connection error.
+        self.current_z_slice = 0
         if self.read_position() is None:
             raise ValueError('Could not connect to ASI stage')
-        self.current_z_slice = 0
 
     def close(self):
         '''Closes connection to the stage'''
