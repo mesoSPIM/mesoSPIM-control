@@ -703,12 +703,24 @@ class mesoSPIM_Core(QtCore.QObject):
         laser = self.state['laser']
         if laser_blanking:
             self.laserenabler.enable(laser)
-        self.waveformer.start_tasks()
-        self.waveformer.run_tasks()
-        if laser_blanking:
-            self.laserenabler.disable_all()
-        self.waveformer.stop_tasks()
-        self.waveformer.close_tasks()
+        try:
+            self.waveformer.start_tasks()
+            self.waveformer.run_tasks()
+        finally:
+            # Always release the DAQ tasks, even if start/run failed or crashed
+            # (e.g. a DAQmx driver-level error), so a stuck/reserved task on this
+            # frame can't corrupt the next create_tasks() call (cDAQ chassis
+            # arbitrate hardware-timed tasks and need a clean release).
+            if laser_blanking:
+                self.laserenabler.disable_all()
+            try:
+                self.waveformer.stop_tasks()
+            except Exception as e:
+                logger.error(f"snap_image(): stop_tasks() cleanup failed: {e}")
+            try:
+                self.waveformer.close_tasks()
+            except Exception as e:
+                logger.error(f"snap_image(): close_tasks() cleanup failed: {e}")
 
     def prepare_image_series(self, n_planes=None):
         '''Prepares an image series without waveform update.
@@ -766,23 +778,34 @@ class mesoSPIM_Core(QtCore.QObject):
         laser = self.state['laser']
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         self.laserenabler.enable(laser)
-        while self.stopflag is False:
-            ''' How to handle a possible shutter switch?'''
-            self.open_shutters()
-            ''' Needs update to use snap image in series '''
-            self.snap_image(laser_blanking)
-            self.sig_get_live_image.emit()
+        try:
+            while self.stopflag is False:
+                ''' How to handle a possible shutter switch?'''
+                self.open_shutters()
+                ''' Needs update to use snap image in series '''
+                self.snap_image(laser_blanking)
+                self.sig_get_live_image.emit()
 
-#            while self.pauseflag is True:
-#                time.sleep(0.1)
-#                QtWidgets.QApplication.processEvents()
+    #            while self.pauseflag is True:
+    #                time.sleep(0.1)
+    #                QtWidgets.QApplication.processEvents()
 
-            QtWidgets.QApplication.processEvents()
-
-        self.laserenabler.disable_all()
-        self.close_shutters()
-        self.sig_end_live.emit()
-        self.sig_finished.emit()
+                QtWidgets.QApplication.processEvents()
+        except Exception as e:
+            # A DAQ/driver-level failure here (e.g. a NI-DAQmx error inside
+            # snap_image/run_tasks) must not leave the GUI stuck in "Live":
+            # without this, the exception would unwind straight out of live()
+            # and skip everything below, including sig_finished, which is
+            # what re-enables the Start/Live/Stop buttons.
+            logger.error(f"live(): acquisition loop aborted by exception: {e}")
+            self.sig_warning.emit(f"Live mode stopped unexpectedly: {e}")
+        finally:
+            self.stopflag = True
+            self.state['state'] = 'idle'
+            self.laserenabler.disable_all()
+            self.close_shutters()
+            self.sig_end_live.emit()
+            self.sig_finished.emit()
 
     def start(self, row=None):
         """Entry point for running one selected acquisition or the full acquisition list.

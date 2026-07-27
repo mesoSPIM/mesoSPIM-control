@@ -541,17 +541,25 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         logger.debug("Master trigger started")
 
         '''Wait until everything is done - this is effectively a sleep function.'''
-        if self.ao_cards == 2:
-            self.galvo_etl_task.wait_until_done()
-            self.laser_task.wait_until_done() 
-        else:
-            self.galvo_etl_laser_task.wait_until_done()
-        logger.debug("AO tasks wait_until_done() finished")
-        self.camera_trigger_task.wait_until_done() 
-        logger.debug("camera_trigger_task.wait_until_done() finished")
-        if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
-            self.stage_trigger_task.wait_until_done()
-            logger.debug("stage_trigger_task.wait_until_done() finished")
+        try:
+            if self.ao_cards == 2:
+                self.galvo_etl_task.wait_until_done()
+                self.laser_task.wait_until_done()
+            else:
+                self.galvo_etl_laser_task.wait_until_done()
+            logger.debug("AO tasks wait_until_done() finished")
+            self.camera_trigger_task.wait_until_done()
+            logger.debug("camera_trigger_task.wait_until_done() finished")
+            if 'asi' in self.cfg.stage_parameters['stage_type'].lower() or self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
+                self.stage_trigger_task.wait_until_done()
+                logger.debug("stage_trigger_task.wait_until_done() finished")
+        except Exception as e:
+            # Identify which task failed before re-raising -- a driver-level
+            # DAQmx error here (e.g. access violation from a corrupted task
+            # handle) otherwise surfaces with no indication of which of the
+            # 3-4 tasks involved was the one that didn't complete.
+            logger.error(f"run_tasks(): wait_until_done() failed ({type(e).__name__}: {e})")
+            raise
 
     @timed
     def stop_tasks(self):
@@ -603,6 +611,18 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
     # NOTE: native retriggering is NOT used (the PXI-6733 is not an X-Series
     # device and does not support it); this relies on continuous regeneration,
     # which the 6733 does support.
+    #
+    # cDAQ (NI-9264) note: ALLOW_REGENERATION is a generic DAQmx AO stream
+    # property, not an X-Series-only feature, so it is expected to work here
+    # too -- but because the NI-9264's onboard FIFO (~128 samples for an
+    # 8-channel bundled task) is far smaller than a typical sweep waveform,
+    # regeneration is necessarily PC-buffered (streamed repeatedly from the
+    # host over USB/Ethernet) rather than a pure onboard loop. This is a
+    # supported DAQmx mode but has not yet been bench-validated on this rig.
+    # Every task below is also explicitly TASK_RESERVE'd when
+    # waveformgeneration == 'cDAQ', mirroring create_tasks() -- CompactDAQ
+    # chassis arbitrate concurrent hardware-timed tasks and require this
+    # reservation; the original continuous-mode commit omitted it here.
     # ------------------------------------------------------------------
     @timed
     def create_tasks_continuous(self, n_planes):
@@ -641,6 +661,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         '''DO master trigger (single common start trigger for the whole stack)'''
         self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
                                                          line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+        if self.cfg.waveformgeneration == 'cDAQ':
+            self.master_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+            logger.debug("cDAQ: [continuous] master_trigger_task reserved.")
 
         '''Camera trigger: FINITE pulse train of exactly n_planes pulses at plane_freq'''
         self.camera_trigger_task.co_channels.add_co_pulse_chan_freq(ah['camera_trigger_out_line'],
@@ -650,6 +673,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.camera_trigger_task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.FINITE,
                                                             samps_per_chan=n_planes)
         self.camera_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['camera_trigger_source'])
+        if self.cfg.waveformgeneration == 'cDAQ':
+            self.camera_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+            logger.debug("cDAQ: [continuous] camera_trigger_task reserved.")
 
         '''Stage TTL trigger: FINITE pulse train of n_planes-1 steps (no step after the last plane)'''
         if use_stage_trigger:
@@ -668,6 +694,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
             self.stage_trigger_task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.FINITE,
                                                                samps_per_chan=n_steps)
             self.stage_trigger_task.triggers.start_trigger.cfg_dig_edge_start_trig(trig_source)
+            if self.cfg.waveformgeneration == 'cDAQ':
+                self.stage_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+                logger.debug("cDAQ: [continuous] stage_trigger_task reserved.")
 
         '''AO task(s): CONTINUOUS sample mode with regeneration (single sweep buffer auto-repeats)'''
         if self.ao_cards == 2:
@@ -677,6 +706,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                            samps_per_chan=samples)
             self.galvo_etl_task.out_stream.regen_mode = RegenerationMode.ALLOW_REGENERATION
             self.galvo_etl_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
+            if self.cfg.waveformgeneration == 'cDAQ':
+                self.galvo_etl_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+                logger.debug("cDAQ: [continuous] galvo_etl_task reserved.")
 
             self.laser_task.ao_channels.add_ao_voltage_chan(ah['laser_task_line'],
                                                             min_val=-self.state['max_laser_voltage'],
@@ -686,6 +718,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                        samps_per_chan=samples)
             self.laser_task.out_stream.regen_mode = RegenerationMode.ALLOW_REGENERATION
             self.laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['laser_task_trigger_source'])
+            if self.cfg.waveformgeneration == 'cDAQ':
+                self.laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+                logger.debug("cDAQ: [continuous] laser_task reserved.")
         else:
             self.galvo_etl_laser_task.ao_channels.add_ao_voltage_chan(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
                                                                       min_val=-self.MAX_GALVO_ETL_VOLT, max_val=self.MAX_GALVO_ETL_VOLT)
@@ -694,6 +729,9 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                                  samps_per_chan=samples)
             self.galvo_etl_laser_task.out_stream.regen_mode = RegenerationMode.ALLOW_REGENERATION
             self.galvo_etl_laser_task.triggers.start_trigger.cfg_dig_edge_start_trig(ah['galvo_etl_task_trigger_source'])
+            if self.cfg.waveformgeneration == 'cDAQ':
+                self.galvo_etl_laser_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+                logger.debug("cDAQ: [continuous] galvo_etl_laser_task reserved.")
 
     def launch_continuous(self):
         """Fire the single master trigger that launches the whole hardware-timed stack.
