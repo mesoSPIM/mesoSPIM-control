@@ -284,17 +284,27 @@ class mesoSPIM_Core(QtCore.QObject):
         The Core thread stays responsive (processEvents is called in the loop)
         so that stop signals and GUI updates are still delivered.
 
+        The timeout applies to *lack of progress*, not to the total wait: at high
+        frame rates the writer legitimately needs minutes to flush a backlog the
+        camera produced in seconds, and returning early starts the next acquisition
+        while the previous one is still being written.
+
         Args:
-            timeout_s (float): Maximum time to wait in seconds before giving up.
+            timeout_s (float): Maximum time to wait without the queue shrinking.
         """
         deadline = time.time() + timeout_s
+        last_queued = len(self.frame_queue)
         while not (self._camera_end_done and self._writer_end_done):
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+            queued = len(self.frame_queue)
+            if queued < last_queued:  # writer is still draining, keep waiting
+                last_queued = queued
+                deadline = time.time() + timeout_s
             if time.time() > deadline:
                 logger.warning(
-                    '_wait_for_end_image_series timed out after %.1f s '
-                    '(camera_done=%s, writer_done=%s)',
-                    timeout_s, self._camera_end_done, self._writer_end_done)
+                    '_wait_for_end_image_series: no writer progress for %.1f s '
+                    '(camera_done=%s, writer_done=%s, %d frames still queued)',
+                    timeout_s, self._camera_end_done, self._writer_end_done, queued)
                 break
             time.sleep(0.01)
 
@@ -1254,6 +1264,8 @@ class mesoSPIM_Core(QtCore.QObject):
         self.laserenabler.enable(laser)  # stack-level blanking: enabled once for the whole stack
 
         base_count = self.image_count
+        bytes_per_frame = self.camera_worker.x_pixels * self.camera_worker.y_pixels * 2  # 16-bit
+        queue_warn_at = 128
         try:
             # Single hardware launch for the entire stack:
             self.waveformer.launch_continuous()
@@ -1263,7 +1275,10 @@ class mesoSPIM_Core(QtCore.QObject):
             while (self.camera_worker.cur_image < steps) and (not self.stopflag):
                 prev = self.camera_worker.cur_image
                 # Ask the camera thread to drain whatever frames the hardware has
-                # produced so far (getFrames() returns the whole backlog at once):
+                # produced so far. Note the Photometrics driver returns exactly ONE
+                # frame per call (mesoSPIM_Camera.get_images_in_series), so this is
+                # one round-trip per plane; measured on the bench it keeps up with a
+                # 73 ms sweep, but it leaves no headroom at shorter sweeptimes.
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
 
                 # Wait for the camera to make progress before re-emitting, so we
@@ -1277,6 +1292,15 @@ class mesoSPIM_Core(QtCore.QObject):
 
                 cur = self.camera_worker.cur_image
                 self.image_count = base_count + min(cur, steps)
+                # frame_queue is unbounded and the hardware is free-running, so if the
+                # writer cannot sustain the frame rate the backlog is held in RAM and
+                # grows without limit. Warn at doubling thresholds rather than per frame.
+                queued = len(self.frame_queue)
+                if queued >= queue_warn_at:
+                    queue_warn_at *= 2
+                    logger.warning(f"Image writer falling behind: {queued} frames queued "
+                                   f"(~{queued * bytes_per_frame / 2**30:.1f} GB in RAM). "
+                                   f"Lower the frame rate or use a faster writer.")
                 time_passed = time.time() - self.start_time
                 if self.image_count > 0 and self.image_count % 100 == 0:
                     self.state['current_framerate'] = self.image_count / time_passed
