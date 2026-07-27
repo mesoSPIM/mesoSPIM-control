@@ -677,18 +677,50 @@ class mesoSPIM_Core(QtCore.QObject):
         
         self.state['shutterstate'] = False
 
+    _WARNING_THROTTLE_S = 5.0
+    _last_warning_time = 0.0
+
+    def _cleanup_step(self, func, *args, **kwargs):
+        '''Run one teardown step; a failure here must not skip the steps after it.'''
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Cleanup step {getattr(func, '__name__', func)}() failed: {e}", exc_info=True)
+
+    def _report_mode_failure(self, where, exc):
+        '''Log an aborted imaging mode, warning the operator at most every _WARNING_THROTTLE_S.
+
+        Throttled because mesoSPIM_Optimizer calls snap() ~20x per sweep from the
+        GUI thread, where sig_warning is a direct, blocking modal dialog.
+        '''
+        logger.error(f"{where}: aborted by exception: {exc}", exc_info=True)
+        self.send_status_message_to_gui(f"{where} failed: {exc}")
+        now = time.monotonic()
+        if now - self._last_warning_time > self._WARNING_THROTTLE_S:
+            self._last_warning_time = now
+            self.sig_warning.emit(f"{where} stopped unexpectedly:\n{exc}")
+
     '''
     Sub-Imaging modes
     '''
     def snap(self, write_flag=True, laser_blanking=True):
         self.sig_prepare_live.emit()
-        self.open_shutters()
-        self.snap_image(laser_blanking)
-        self.sig_get_snap_image.emit(write_flag)
-        self.close_shutters()
-        self.sig_end_live.emit()
-        self.sig_finished.emit()
-        QtWidgets.QApplication.processEvents()
+        try:
+            self.open_shutters()
+            self.snap_image(laser_blanking)
+            # Inside the try: after a failure the camera got no trigger, so get_image()
+            # would block, and write_flag would save a stale copy of the previous frame.
+            self.sig_get_snap_image.emit(write_flag)
+        except Exception as e:
+            self._report_mode_failure('Snap', e)
+            # Failure path only: on success 'snap' must survive until CameraWindow
+            # .set_image() has picked its subsampling from state['state'].
+            self.state['state'] = 'idle'
+        finally:
+            self._cleanup_step(self.close_shutters)
+            self.sig_end_live.emit()
+            self.sig_finished.emit()
+            QtWidgets.QApplication.processEvents()
 
     @log_cpu_core
     def snap_image(self, laser_blanking=True):
@@ -699,28 +731,23 @@ class mesoSPIM_Core(QtCore.QObject):
         waveforms into the buffers of the NI cards.
         '''
         self.waveformer.create_tasks()
-        self.waveformer.write_waveforms_to_tasks()
-        laser = self.state['laser']
-        if laser_blanking:
-            self.laserenabler.enable(laser)
+        # The try opens here, not lower: from create_tasks() on, the tasks exist and
+        # (on cDAQ) are TASK_RESERVE'd, so a failure in write_waveforms_to_tasks() or
+        # laserenabler.enable() -- both of which can raise -- must still release them.
         try:
+            self.waveformer.write_waveforms_to_tasks()
+            laser = self.state['laser']
+            if laser_blanking:
+                self.laserenabler.enable(laser)
             self.waveformer.start_tasks()
             self.waveformer.run_tasks()
         finally:
-            # Always release the DAQ tasks, even if start/run failed or crashed
-            # (e.g. a DAQmx driver-level error), so a stuck/reserved task on this
-            # frame can't corrupt the next create_tasks() call (cDAQ chassis
-            # arbitrate hardware-timed tasks and need a clean release).
+            # Guarded individually: disable_all() opens its own DO task and can raise,
+            # which would otherwise skip the task release and poison the next frame.
             if laser_blanking:
-                self.laserenabler.disable_all()
-            try:
-                self.waveformer.stop_tasks()
-            except Exception as e:
-                logger.error(f"snap_image(): stop_tasks() cleanup failed: {e}")
-            try:
-                self.waveformer.close_tasks()
-            except Exception as e:
-                logger.error(f"snap_image(): close_tasks() cleanup failed: {e}")
+                self._cleanup_step(self.laserenabler.disable_all)
+            self._cleanup_step(self.waveformer.stop_tasks)
+            self._cleanup_step(self.waveformer.close_tasks)
 
     def prepare_image_series(self, n_planes=None):
         '''Prepares an image series without waveform update.
@@ -786,24 +813,20 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.snap_image(laser_blanking)
                 self.sig_get_live_image.emit()
 
-    #            while self.pauseflag is True:
-    #                time.sleep(0.1)
-    #                QtWidgets.QApplication.processEvents()
+#                while self.pauseflag is True:
+#                    time.sleep(0.1)
+#                    QtWidgets.QApplication.processEvents()
 
                 QtWidgets.QApplication.processEvents()
         except Exception as e:
-            # A DAQ/driver-level failure here (e.g. a NI-DAQmx error inside
-            # snap_image/run_tasks) must not leave the GUI stuck in "Live":
-            # without this, the exception would unwind straight out of live()
-            # and skip everything below, including sig_finished, which is
-            # what re-enables the Start/Live/Stop buttons.
-            logger.error(f"live(): acquisition loop aborted by exception: {e}")
-            self.sig_warning.emit(f"Live mode stopped unexpectedly: {e}")
+            # sig_finished below is the only thing that re-enables the GUI mode
+            # buttons, so it must be reached even when the DAQ dies mid-loop.
+            self._report_mode_failure('Live mode', e)
         finally:
             self.stopflag = True
             self.state['state'] = 'idle'
-            self.laserenabler.disable_all()
-            self.close_shutters()
+            self._cleanup_step(self.laserenabler.disable_all)
+            self._cleanup_step(self.close_shutters)
             self.sig_end_live.emit()
             self.sig_finished.emit()
 
@@ -1333,18 +1356,25 @@ class mesoSPIM_Core(QtCore.QObject):
         '''Switches shutters after each image to allow coalignment of both lightsheets'''
         self.stopflag = False
         self.sig_prepare_live.emit()
-        while self.stopflag is False:
-            for shutter in ('Left', 'Right'):
-                self.set_shutterconfig(shutter)
-                self.open_shutters()
-                self.snap_image()
-                self.sig_get_live_image.emit()
-                self.close_shutters()
-                time.sleep(0.1)
-            QtWidgets.QApplication.processEvents()
-
-        self.sig_end_live.emit()
-        self.sig_finished.emit()
+        try:
+            while self.stopflag is False:
+                for shutter in ('Left', 'Right'):
+                    self.set_shutterconfig(shutter)
+                    self.open_shutters()
+                    self.snap_image()
+                    self.sig_get_live_image.emit()
+                    self.close_shutters()
+                    time.sleep(0.1)
+                QtWidgets.QApplication.processEvents()
+        except Exception as e:
+            self._report_mode_failure('Lightsheet alignment mode', e)
+        finally:
+            self.stopflag = True
+            self.state['state'] = 'idle'  # stop() never ran on the failure path
+            self._cleanup_step(self.laserenabler.disable_all)
+            self._cleanup_step(self.close_shutters)
+            self.sig_end_live.emit()
+            self.sig_finished.emit()
 
     def visual_mode(self):
         """Continuous live mode with ETL amplitude set to zero for widefield-style illumination.
@@ -1355,31 +1385,38 @@ class mesoSPIM_Core(QtCore.QObject):
         """
         old_l_amp = self.state['etl_l_amplitude']
         old_r_amp = self.state['etl_r_amplitude']
-        self.sig_state_request.emit({'etl_l_amplitude' : 0})
-        self.sig_state_request.emit({'etl_r_amplitude' : 0})
-        time.sleep(0.05)
-
-        self.sig_prepare_live.emit()
-
         self.stopflag = False
+        # Zeroing inside the try: a failure between the two emits would otherwise
+        # leave one ETL zeroed with no matching restore.
+        try:
+            self.sig_state_request.emit({'etl_l_amplitude' : 0})
+            self.sig_state_request.emit({'etl_r_amplitude' : 0})
+            time.sleep(0.05)
 
-        self.open_shutters()
-        while self.stopflag is False:
-            ''' Needs update to use snap image in series '''
-            self.snap_image()
-            self.sig_get_live_image.emit()
-            QtWidgets.QApplication.processEvents()
+            self.sig_prepare_live.emit()
 
-            ''' How to handle a possible shutter switch?'''
             self.open_shutters()
+            while self.stopflag is False:
+                ''' Needs update to use snap image in series '''
+                self.snap_image()
+                self.sig_get_live_image.emit()
+                QtWidgets.QApplication.processEvents()
 
-        self.close_shutters()
-        self.sig_end_live.emit()
-
-        self.sig_finished.emit()
-
-        self.sig_state_request.emit({'etl_l_amplitude' : old_l_amp})
-        self.sig_state_request.emit({'etl_r_amplitude' : old_r_amp})
+                ''' How to handle a possible shutter switch?'''
+                self.open_shutters()
+        except Exception as e:
+            self._report_mode_failure('Visual mode', e)
+        finally:
+            self.stopflag = True
+            self.state['state'] = 'idle'
+            self._cleanup_step(self.laserenabler.disable_all)
+            self._cleanup_step(self.close_shutters)
+            # Restore before releasing the GUI: on the old path an exception left both
+            # amplitudes at 0 and the light sheet silently stopped sweeping thereafter.
+            self._cleanup_step(self.sig_state_request.emit, {'etl_l_amplitude' : old_l_amp})
+            self._cleanup_step(self.sig_state_request.emit, {'etl_r_amplitude' : old_r_amp})
+            self.sig_end_live.emit()
+            self.sig_finished.emit()
 
     def execute_galil_program(self):
         '''Little helper method to execute the program loaded onto the Galil stage:
