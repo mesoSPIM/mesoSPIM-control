@@ -1096,6 +1096,11 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
+        # The move above can take tens of seconds and pumps no events, so the GUI is
+        # frozen throughout it. Pump here so a Stop pressed during the move is seen
+        # (run_acquisition() acts on it); no early return, or close_acquisition()
+        # would run against an image series that was never opened.
+        QtWidgets.QApplication.processEvents()
         self.serial_worker.stage.report_position() # Last Position update before acquisition starts for proper tile view display, directly from the Core thread
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
@@ -1141,6 +1146,16 @@ class mesoSPIM_Core(QtCore.QObject):
             acq (Acquisition): Acquisition descriptor for the current volume.
             acq_list (AcquisitionList): Full list (provides tile/channel/rotation context).
         """
+        # Deliver a Stop queued during the (long, pump-free) prepare phase before any
+        # light is switched on. sig_state_request is a QueuedConnection and the Core
+        # thread's event loop is not running here, so without this pump the click is
+        # first seen by the drain loop -- i.e. ~1 ms AFTER launch_continuous() has
+        # already fired the entire hardware-timed stack. Returning is safe: the caller
+        # still runs close_acquisition(), which releases the armed DAQ tasks.
+        QtWidgets.QApplication.processEvents()
+        if self.stopflag:
+            logger.info('Acquisition aborted before launch (Stop pending).')
+            return
         if self.continuous_acq_mode:
             self._run_acquisition_continuous(acq, acq_list)
             return

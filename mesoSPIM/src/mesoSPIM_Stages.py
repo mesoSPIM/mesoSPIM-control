@@ -1916,7 +1916,8 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
                 else:
                     logger.error(f'Axis {axis} not in the axes list, check config file for ASI stages')
             command += '\r'
-            self.asi_stages._send_command(command.encode('ascii'))
+            with self._serial_lock:
+                self.asi_stages._send_command(command.encode('ascii'))
         else:
             print("INFO: 'speed' not found in config file, 'asi_parameters' dictionary, using default values.")
 
@@ -2085,7 +2086,17 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
 
     def enable_ttl_motion(self, boolean):
         if self.ttl_motion_enabled_during_acq:
-            self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
+            if self.ttl_motion_currently_enabled == boolean:
+                # Teardown asks for TTL-off from both stop() and close_acquisition().
+                # Re-sending costs one serial command per card, each of which can
+                # collide with the GUI thread's position polling.
+                logger.debug(f'TTL Motion already {boolean}, skipping redundant command')
+                return
+            # Lock: every other serial entry point in this class takes _serial_lock.
+            # Without it these commands interleave with the GUI thread's position
+            # polling on the same port and both replies get lost.
+            with self._serial_lock:
+                self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
             self.ttl_motion_currently_enabled = boolean
             logger.info('TTL Motion currently enabled: '+str(boolean))
             self.state['ttl_movement_enabled_during_acq'] = boolean
@@ -2460,7 +2471,11 @@ class mesoSPIM_Mixed_Stages(mesoSPIM_Stage):
 
     def enable_ttl_motion(self, boolean):
         if self.ttl_motion_enabled_during_acq:
-            self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
+            if self.ttl_motion_currently_enabled == boolean:
+                logger.debug(f'TTL Motion already {boolean}, skipping redundant command')
+                return
+            with self._serial_lock:  # see mesoSPIM_ASI_Stages.enable_ttl_motion()
+                self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
             self.ttl_motion_currently_enabled = boolean
             logger.info('TTL Motion currently enabled: ' + str(boolean))
             self.state['ttl_movement_enabled_during_acq'] = boolean

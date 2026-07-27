@@ -11,6 +11,11 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import logging
 logger = logging.getLogger(__name__)
 
+# Give up waiting for a stage move rather than blocking the serial port forever.
+WAIT_UNTIL_DONE_TIMEOUT_S = 30.0
+# Consecutive failed position reads before the poller stops issuing doomed 5 s reads.
+MAX_CONSECUTIVE_POSITION_FAILURES = 5
+
 
 class StageControlASI(QtCore.QObject):
     #sig_pause = QtCore.pyqtSignal(bool)
@@ -40,6 +45,8 @@ class StageControlASI(QtCore.QObject):
         self.position_dict = {axis : None for axis in self.axis_list} # create an empty position dict
         self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=5, xonxoff=False, stopbits=serial.STOPBITS_ONE)
         self.previous_command = ''
+        self._position_failures = 0
+        self._position_polling_disabled = False
         if self.read_position() is None:
             raise ValueError('Could not connect to ASI stage')
         self.current_z_slice = 0
@@ -105,29 +112,53 @@ class StageControlASI(QtCore.QObject):
         response = self._send_command(b'\\r')
         logger.info(f"ASI response to HALT command: {response}")
         
-    def wait_until_done(self):
-        '''Blocks if the stage is moving due to a serial command'''
+    def wait_until_done(self, timeout=WAIT_UNTIL_DONE_TIMEOUT_S):
+        '''Blocks while the stage is moving, giving up after `timeout` seconds.
 
-        '''If the stage returns 'B'as the first letter, it is busy, if it returns 'N', it is done.
+        The timeout matters: callers hold the stage-level _serial_lock across this
+        call, so an unresponsive controller here blocks every other user of the port
+        -- including the GUI thread's position polling -- indefinitely.
+
+        If the stage returns 'B' as the first letter, it is busy, if it returns 'N', it is done.
         Only if the stage returns 'N' twice, it is not busy.
         '''
         self.stage_busy = True
+        deadline = time.time() + timeout
         while self.stage_busy is True:
-            try: 
-                message1 = self._send_command(b'/\r')[0]
+            if time.time() > deadline:
+                logger.error(f"ASI stages: wait_until_done() gave up after {timeout} s; "
+                             f"the controller is not responding to status queries.")
+                return
+            try:
+                message1 = self._send_command(b'/\r')
                 time.sleep(0.05)
-                message2 = self._send_command(b'/\r')[0]
+                message2 = self._send_command(b'/\r')
                 time.sleep(0.05)
-                if message1 == 'N' and message2 == 'N':
+                # _send_command returns None on exception and '' on a read timeout;
+                # indexing either used to raise straight into a bare except and spin.
+                if message1 and message2 and message1[0] == 'N' and message2[0] == 'N':
                     self.stage_busy = False
-            except:
-                logger.error('ASI stages: Wait until done failed')
+            except Exception as e:
+                logger.error(f'ASI stages: Wait until done failed: {e}')
         
     def read_position(self):
         '''Reports position from the stages
         Returns:
             positions (dictionary): list of positions
         '''
+        # Back off once the controller has clearly stopped answering. This runs on the
+        # GUI thread on a 250 ms timer and each failed read costs the full serial
+        # timeout, so without a backoff a wedged controller freezes the whole GUI.
+        if self._position_failures >= MAX_CONSECUTIVE_POSITION_FAILURES:
+            if not self._position_polling_disabled:
+                self._position_polling_disabled = True
+                logger.error(f"ASI stages: {self._position_failures} consecutive position reads failed; "
+                             f"reporting the last known position until the controller answers again.")
+            # Probe occasionally so the stage can recover without restarting the app.
+            self._position_failures += 1
+            if self._position_failures % MAX_CONSECUTIVE_POSITION_FAILURES != 0:
+                return self.position_dict
+
         command_string = 'W ' + self.axes + '\r'
         position_string = self._send_command(command_string.encode('ascii'))
         # Create a list of the form "['7835', '-38704', '0', '0', '-367586']", first element is the ack ':A' and gets discarded
@@ -141,6 +172,7 @@ class StageControlASI(QtCore.QObject):
                         endcoder_conversion_list = list(self.encoder_conversion.values())
                         position_dict = {self.axes[i]: position_list[i]/endcoder_conversion_list[i] for i in range(self.num_axes)}
                         if position_dict is not None:
+                            self._note_position_success()
                             self.position_dict = position_dict
                             return position_dict
                     except:
@@ -148,12 +180,24 @@ class StageControlASI(QtCore.QObject):
                         # return last position dict
                         return self.position_dict
                 else:
-                    logger.error(f"Position list count {position_list} does not match the number of axes {self.num_axes}")
-            except: 
-                logger.error('Invalid position string: ' + str(position_string))
+                    self._note_position_failure(f"Position list count {position_list} does not match the number of axes {self.num_axes}")
+            except:
+                self._note_position_failure('Invalid position string: ' + str(position_string))
         else:
-            logger.error("Position string is empty")
+            self._note_position_failure("Position string is empty")
             return None
+
+    def _note_position_success(self):
+        if self._position_polling_disabled:
+            logger.info("ASI stages: position reads recovered.")
+        self._position_failures = 0
+        self._position_polling_disabled = False
+
+    def _note_position_failure(self, message):
+        '''Log a failed position read, staying quiet once the backoff has kicked in.'''
+        self._position_failures += 1
+        if not self._position_polling_disabled:
+            logger.error(message)
 
     def move_relative(self, motion_dict):
         '''Command for relative motion 
