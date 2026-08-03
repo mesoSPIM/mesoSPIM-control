@@ -402,6 +402,12 @@ async_finalize: default: True. Enables acquisition of the next tile to proceed i
 is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
 Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False
 to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating.
+
+    IMPORTANT: async_finalize applies to OME_Zarr_Writer (in-process) ONLY. The multiprocess
+    MP_OME_Zarr_Writer always closes synchronously and ignores this setting (it logs a warning
+    if you set it). It is also NOT a throughput knob for either writer: the pause between tiles
+    is the level-0 frame backlog draining to disk, which happens upstream of finalize. To
+    shorten that gap, look at compression / write_cache / ring_buffer_size instead.
 '''
 OME_Zarr_Writer = {
     'ome_version': '0.5', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
@@ -440,7 +446,7 @@ MP_OME_Zarr_Writer = {
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64, 64, 64),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-    'async_finalize': True,  # True, False
+    'async_finalize': True,  # IGNORED by the multiprocess writer -- it always closes synchronously.
 
     # BigStitcher Specific Options
     'write_big_stitcher_xml': True,  # True, False

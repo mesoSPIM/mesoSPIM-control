@@ -219,7 +219,18 @@ class OMEZarrWriterMP(ImageWriter):
             shards = req.writer_config_file_values.get('shards', shards)
             base_chunks = req.writer_config_file_values.get('base_chunks', base_chunks)
             target_chunks = req.writer_config_file_values.get('target_chunks', target_chunks)
+            # NOTE: 'async_finalize' is accepted for config compatibility with the
+            # in-process OmeZarrWriter, but it has no effect here -- the multiprocess
+            # writer always closes synchronously (async_close=False below). It is NOT a
+            # throughput knob: the inter-acquisition wait is the level-0 frame backlog
+            # draining, which is upstream of finalize either way.
             async_finalize = req.writer_config_file_values.get('async_finalize', async_finalize)
+            if 'async_finalize' in req.writer_config_file_values and not getattr(self, '_async_finalize_warned', False):
+                logger.warning("Config sets 'async_finalize': %s, but %s always closes synchronously "
+                               "-- this option has no effect and does not change throughput.",
+                               req.writer_config_file_values.get('async_finalize'),
+                               type(self).__name__)
+                self._async_finalize_warned = True
             write_big_stitcher_xml = req.writer_config_file_values.get('write_big_stitcher_xml', write_big_stitcher_xml)
             flip_xyz = req.writer_config_file_values.get('flip_xyz', flip_xyz)
             transpose_xy = req.writer_config_file_values.get('transpose_xy', transpose_xy)
@@ -353,7 +364,10 @@ class OMEZarrWriterMP(ImageWriter):
             compressor=compressor,
             shard_shape=shard_shape,
             flush_pad=FlushPad.DUPLICATE_LAST,
-            async_close=False, # Force sync close to ensure all data is written before proceeding, sync not compatible with Multiprocess
+            # Always sync: async close is not compatible with the multiprocess writer.
+            # The config's 'async_finalize' is deliberately NOT honoured here -- see the
+            # warning logged above when it is set.
+            async_close=False,
             translation=(acq['z_start'], acq['y_pos'], acq['x_pos']),
             ome_version=ome_version,
         )
