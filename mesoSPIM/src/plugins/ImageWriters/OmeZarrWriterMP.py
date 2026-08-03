@@ -429,11 +429,16 @@ class OMEZarrWriterMP(ImageWriter):
         acq = finalize_image.acq
         acq_list = finalize_image.acq_list
 
-        if self.xml_writer and acq == acq_list[-1]:
+        if acq == acq_list[-1]:
             # Before writing XML or returning at the very end of the experiment,
             # wait for all background writers and clean up their shared memory.
+            # NOT gated on self.xml_writer: that is only non-None for
+            # write_big_stitcher_xml with ome_version "0.4", so at 0.5 the child
+            # processes were never joined and their shared memory never unlinked,
+            # while the acquisition list reported "finished" with tiles still flushing.
             self._wait_for_background_writers()
 
+        if self.xml_writer and acq == acq_list[-1]:
             self.xml_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
             self.xml_writer.set_attribute_labels('illumination', tuple(acq_list.get_unique_attr_list('shutterconfig')))
             self.xml_writer.set_attribute_labels('angle', tuple(acq_list.get_unique_attr_list('rot')))
@@ -479,6 +484,9 @@ class OMEZarrWriterMP(ImageWriter):
 
     def _wait_for_background_writers(self):
         """Wait for all tile writer processes to finish and clean shared memory."""
+        if self._background_writers:
+            logger.info("Waiting for %d background writer process(es) to finish",
+                        len(self._background_writers))
         for proc, shm_name in self._background_writers:
             try:
                 proc.join()
