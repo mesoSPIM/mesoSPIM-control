@@ -284,90 +284,35 @@ class mesoSPIM_Core(QtCore.QObject):
         """Callback: ImageWriter has finished end_acquisition cleanup."""
         self._writer_end_done = True
 
-    def _wait_for_end_image_series(self, timeout_s=30.0, finalize_timeout_s=300.0):
+    def _wait_for_end_image_series(self, timeout_s=30.0):
         """Poll the event loop until Camera and ImageWriter both signal completion.
 
         This replaces the old BlockingQueuedConnection on sig_end_image_series.
         The Core thread stays responsive (processEvents is called in the loop)
         so that stop signals and GUI updates are still delivered.
 
-        The wait has two phases, because only the first one has an observable
-        progress signal:
-
-        * *Draining* (frames still queued): the writer is consuming the backlog and
-          `frame_queue` shrinks. `timeout_s` applies to a *lack* of shrinking, not to
-          the total wait -- at high frame rates the writer legitimately needs minutes
-          to flush a backlog the camera produced in seconds, and returning early
-          starts the next acquisition while the previous one is still being written.
-
-        * *Finalizing* (queue empty, writer not done): the backend is closing --
-          for the multiprocess OME-Zarr writer that means joining child processes
-          while they flush multiscales, which is silent and took ~29 s on the bench.
-          Nothing observable changes, so the no-progress timeout must NOT apply here:
-          it would log a spurious "no writer progress" warning and, worse, break out
-          of the wait with the writer still running. Bounded instead by
-          `finalize_timeout_s`, with an INFO heartbeat so the pause is visible.
+        The timeout applies to *lack of progress*, not to the total wait: at high
+        frame rates the writer legitimately needs minutes to flush a backlog the
+        camera produced in seconds, and returning early starts the next acquisition
+        while the previous one is still being written.
 
         Args:
-            timeout_s (float): Maximum time to wait without the queue shrinking,
-                while frames are still queued.
-            finalize_timeout_s (float): Maximum time to wait for the backend to close
-                once the queue is empty.
+            timeout_s (float): Maximum time to wait without the queue shrinking.
         """
         deadline = time.time() + timeout_s
         last_queued = len(self.frame_queue)
-        finalize_start = None   # set when we first observe the empty-queue phase
-        next_heartbeat = 0.0
         while not (self._camera_end_done and self._writer_end_done):
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
             queued = len(self.frame_queue)
-            now = time.time()
-
-            if queued == 0:
-                if finalize_start is None:
-                    finalize_start = now
-                    next_heartbeat = now + 10.0
-                    logger.info('_wait_for_end_image_series: queue drained, waiting for the '
-                                'image writer to finalize (this is normal and can take tens '
-                                'of seconds while multiscales are flushed)')
-                    self.sig_status_message.emit('Writing to disk: finalizing...')
-                elapsed = now - finalize_start
-                if now >= next_heartbeat:
-                    next_heartbeat = now + 10.0
-                    logger.info('_wait_for_end_image_series: still finalizing, %.0f s elapsed', elapsed)
-                    # Keep the status bar honest: the camera is done but data is still
-                    # being written, and the user must not read this as "finished".
-                    self.sig_status_message.emit(
-                        f'Writing to disk: finalizing... ({convert_seconds_to_string(elapsed)})')
-                if elapsed > finalize_timeout_s:
-                    logger.warning(
-                        '_wait_for_end_image_series: image writer did not finish finalizing '
-                        'within %.0f s (camera_done=%s, writer_done=%s); no longer blocking '
-                        'the acquisition loop here -- writing continues in the background '
-                        'and close_acquisition_list() waits for it before reporting done',
-                        finalize_timeout_s, self._camera_end_done, self._writer_end_done)
-                    break
-            else:
-                if finalize_start is not None:
-                    # Late frames arrived after the queue had drained (write_images() is
-                    # posted from the Camera thread and can land behind us -- see the
-                    # drain note in mesoSPIM_ImageWriter.end_acquisition). Restart the
-                    # draining phase cleanly: the old deadline expired during finalize
-                    # and would otherwise fire immediately.
-                    logger.info('_wait_for_end_image_series: %d late frame(s) queued after drain, '
-                                'resuming wait', queued)
-                    finalize_start = None
-                    last_queued = queued
-                    deadline = now + timeout_s
-                if queued < last_queued:  # writer is still draining, keep waiting
-                    last_queued = queued
-                    deadline = now + timeout_s
-                if now > deadline:
-                    logger.warning(
-                        '_wait_for_end_image_series: no writer progress for %.1f s '
-                        '(camera_done=%s, writer_done=%s, %d frames still queued)',
-                        timeout_s, self._camera_end_done, self._writer_end_done, queued)
-                    break
+            if queued < last_queued:  # writer is still draining, keep waiting
+                last_queued = queued
+                deadline = time.time() + timeout_s
+            if time.time() > deadline:
+                logger.warning(
+                    '_wait_for_end_image_series: no writer progress for %.1f s '
+                    '(camera_done=%s, writer_done=%s, %d frames still queued)',
+                    timeout_s, self._camera_end_done, self._writer_end_done, queued)
+                break
             time.sleep(0.01)
 
     @QtCore.pyqtSlot(dict)
