@@ -93,7 +93,8 @@ class mesoSPIM_StateSingleton(QObject):
                         'camera_display_acquisition_subsampling': 2,
                         'camera_binning':'1x1',
                         'camera_sensor_mode':'ASLM',
-                        'current_framerate':2.5,
+                        'current_framerate':2.5, # in-acquisition rate: frames/s inside a single stack
+                        'effective_framerate':2.5, # list-level throughput incl. stage moves, filter changes, writer waits
                         'predicted_acq_list_time':1,
                         'package_directory': '',
                         'galvo_amp_scale_w_zoom': False,

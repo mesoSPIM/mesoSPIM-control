@@ -205,7 +205,14 @@ class mesoSPIM_Core(QtCore.QObject):
         elif 'demo' in self.cfg.laser.lower():
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
+        ''' Seed both frame rates from the same config value. 'current_framerate' is the
+        in-acquisition rate (what the camera delivers inside one stack); 'effective_framerate'
+        is the list-level throughput including stage moves, filter changes and writer waits,
+        and is what the acquisition-time prediction must be based on. Before anything has been
+        measured we have only one estimate, so both start there -- but effective_framerate must
+        never be left at 0, or the predicted acquisition time diverges.'''
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
+        self.state['effective_framerate'] = self.cfg.startup['average_frame_rate']
         self.state['snap_folder'] = self.cfg.startup['snap_folder']
         self.state['camera_display_live_subsampling'] = self.cfg.startup['camera_display_live_subsampling']
         self.state['camera_display_acquisition_subsampling'] = self.cfg.startup['camera_display_acquisition_subsampling']
@@ -1220,9 +1227,21 @@ class mesoSPIM_Core(QtCore.QObject):
                 time_passed = time.time() - self.start_time
                 time_remaining = time_passed / self.image_count * (self.total_image_count - self.image_count)
 
-                ''' Every 100 images, update the frame rate'''
+                ''' Every 100 images, update both frame rates.
+                'current_framerate' is measured over THIS stack, not the list: self.start_time
+                is set once per acquisition list, so image_count/time_passed is a cumulative
+                average that includes stage moves, filter changes and the inter-acquisition
+                writer wait -- it reads several fps low on the 2nd and later stacks.
+                close_acquisition() already reports the per-stack rate; this keeps the live
+                value consistent with it.
+                'effective_framerate' keeps that list-level average on purpose: it is what the
+                acquisition-time prediction must use, since the gaps are real wall-clock time.'''
                 if self.image_count % 100 == 0:
-                    self.state['current_framerate'] = self.image_count / time_passed
+                    stack_elapsed = time.time() - self.image_acq_start_time
+                    if stack_elapsed > 0:
+                        self.state['current_framerate'] = (i + 1) / stack_elapsed
+                    if time_passed > 0:
+                        self.state['effective_framerate'] = self.image_count / time_passed
 
                 if (self.image_count % 5 == 0) or (self.image_count == self.total_image_count):
                     self.send_progress(self.acquisition_count,
@@ -1303,7 +1322,16 @@ class mesoSPIM_Core(QtCore.QObject):
                                    f"Lower the frame rate or use a faster writer.")
                 time_passed = time.time() - self.start_time
                 if self.image_count > 0 and self.image_count % 100 == 0:
-                    self.state['current_framerate'] = self.image_count / time_passed
+                    # In-acquisition rate: measured over THIS stack only, so it matches the
+                    # per-stack rate the camera logs and does not sag on the 2nd and later
+                    # stacks. The list-level average goes to 'effective_framerate', which is
+                    # what drives the acquisition-time prediction -- there the inter-stack
+                    # gaps are real wall-clock time and must be included.
+                    stack_elapsed = time.time() - self.image_acq_start_time
+                    if stack_elapsed > 0:
+                        self.state['current_framerate'] = cur / stack_elapsed
+                    if time_passed > 0:
+                        self.state['effective_framerate'] = self.image_count / time_passed
                 if (cur % 5 == 0) or (cur >= steps):
                     time_remaining = time_passed / max(self.image_count, 1) * (self.total_image_count - self.image_count)
                     self.send_progress(self.acquisition_count,
@@ -1365,6 +1393,12 @@ class mesoSPIM_Core(QtCore.QObject):
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
         self.state['current_framerate'] = acq.get_image_count() / (self.image_acq_end_time - self.image_acq_start_time)
+        ''' List-level throughput, gaps included -- the basis for the acquisition-time
+        prediction. Kept in step with the in-stack updates so the value does not jump
+        at stack boundaries.'''
+        list_elapsed = time.time() - self.start_time
+        if list_elapsed > 0 and self.image_count > 0:
+            self.state['effective_framerate'] = self.image_count / list_elapsed
         self.append_timing_info_to_metadata(acq)
         self.acquisition_count += 1
 
@@ -1512,6 +1546,7 @@ class mesoSPIM_Core(QtCore.QObject):
             write_line(file, 'Total time of taking images, s', str(round(self.image_acq_end_time - self.image_acq_start_time, 2)))
             write_line(file, 'Total time of stack acquisition, s', str(round(self.acq_end_time - self.acq_start_time, 2)))
             write_line(file, 'Frame rate during taking images, img/s:', str(round(self.state['current_framerate'], 2)))
+            write_line(file, 'Effective frame rate incl. inter-stack overhead, img/s:', str(round(self.state['effective_framerate'], 2)))
             write_line(file, '===================== END OF ACQUISITION ======================')
             write_line(file)
 

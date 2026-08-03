@@ -870,9 +870,9 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         Uses the Acquisition Manager's predicted per-timepoint acquisition time
         (state['predicted_acq_list_time'], from update_acquisition_time_prediction()),
-        which is itself based on state['current_framerate'] - seeded at startup from
-        cfg.startup['average_frame_rate'] and refined from real measurements once
-        acquisitions are running. '''
+        which is itself based on state['effective_framerate'] - the list-level throughput
+        including inter-stack gaps, seeded at startup from cfg.startup['average_frame_rate']
+        and refined from real measurements once acquisitions are running. '''
         total_time = self.state['predicted_acq_list_time']
         if not total_time or total_time <= 0:
             self.TimelapseEstimateLabel.setText(

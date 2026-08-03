@@ -333,10 +333,13 @@ class mesoSPIM_AcquisitionManagerWindow(QtWidgets.QWidget):
     def update_acquisition_time_prediction(self):
         """Compute and display the estimated total acquisition time in the GUI label.
 
-        Uses the current camera framerate from state and sums up the planned
-        Z-stack images across all rows in the acquisition model.
+        Uses state['effective_framerate'] -- the list-level throughput, which includes
+        stage moves, filter changes and the wait for the image writer to drain between
+        stacks. Deliberately NOT state['current_framerate']: that is the in-acquisition
+        rate the camera delivers inside one stack, and predicting from it would ignore
+        the inter-stack gaps and read optimistically low.
         """
-        framerate = self.state['current_framerate']
+        framerate = self.state['effective_framerate']
         total_time = self.state['acq_list'].get_acquisition_time(framerate)
         self.state['predicted_acq_list_time'] = total_time
         time_string = convert_seconds_to_string(total_time)
