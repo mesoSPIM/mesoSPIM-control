@@ -309,6 +309,21 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             acq_list = acq_list,
         )
         logger.info("end_acquisition() started")
+
+        ''' Drain any frames still in the queue BEFORE finalizing.
+        write_images() is posted from the Camera thread while this slot is posted from the
+        Core thread, so a late write_images() can land behind us in the writer event queue.
+        It would then find running_flag = False and silently drop its frames -- and because
+        frame_queue is only cleared in Core.stop(), those frames would be carried into the
+        NEXT acquisition and written into the wrong store. Draining must happen before
+        self.writer.finalize(); afterwards the backend is closed. '''
+        leftover = len(self.frame_queue)
+        if leftover:
+            logger.warning(f'end_acquisition: draining {leftover} leftover frames')
+            while len(self.frame_queue) > 0:
+                image = self.frame_queue.popleft().T[::-1]
+                self.image_to_disk(acq, acq_list, image)
+
         try:
             self.writer.finalize(finalize_imsge)
         except Exception as e:
