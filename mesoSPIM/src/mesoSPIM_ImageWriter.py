@@ -324,11 +324,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
                 image = self.frame_queue.popleft().T[::-1]
                 self.image_to_disk(acq, acq_list, image)
 
-        ''' finalize() can block for a long time -- for MP_OME_Zarr_Writer it joins the
-        background writer child processes on the last acquisition, which has taken many
-        minutes on the bench. Say so before blocking, so the status bar reflects that
-        data is still being written rather than going quiet. '''
-        self.parent.sig_status_message.emit('Writing to disk: finalizing image writer...')
         try:
             self.writer.finalize(finalize_imsge)
         except Exception as e:

@@ -255,14 +255,10 @@ class mesoSPIM_Core(QtCore.QObject):
         self.timelapse_tpoints = 0
         self.timelapse_interval_sec = 0
 
-        ''' Flags for non-blocking end-of-image-series synchronisation. Set to True when
-        the corresponding "done" signal is received, and explicitly cleared to False
-        immediately before each sig_end_image_series emit. They therefore start True:
-        False means "an end-of-series is outstanding", and _wait_for_writers_finished()
-        relies on that -- starting False would make it wait for a completion that was
-        never requested (e.g. Stop pressed before any acquisition ran). '''
-        self._camera_end_done = True
-        self._writer_end_done = True
+        # Flags for non-blocking end-of-image-series synchronisation.
+        # Set to True when the corresponding "done" signal is received.
+        self._camera_end_done = False
+        self._writer_end_done = False
 
     def __del__(self):
         '''Cleans the threads up after deletion, waits until the threads
@@ -373,50 +369,6 @@ class mesoSPIM_Core(QtCore.QObject):
                         timeout_s, self._camera_end_done, self._writer_end_done, queued)
                     break
             time.sleep(0.01)
-
-    def _wait_for_writers_finished(self, timeout_s=3600.0):
-        """Block responsively until the image writer has fully finished writing.
-
-        ``_wait_for_end_image_series()`` deliberately stops *blocking the acquisition
-        loop* after its finalize timeout, but that does not mean the data is on disk:
-        ``OMEZarrWriterMP.finalize()`` joins its background writer child processes on the
-        ImageWriter thread, which on 2026-08-03 kept running for a further ~9 minutes
-        after the Core had moved on. Reporting "Acquisition list closed" at that point is
-        wrong -- it tells the user the run is done while tens of GB are still flushing.
-
-        ``_writer_end_done`` is set from sig_end_acquisition_done, i.e. only once
-        ImageWriter.end_acquisition() -- and therefore _wait_for_background_writers() --
-        has returned, so it is the right thing to gate the final message on.
-
-        Args:
-            timeout_s (float): Give up waiting after this long and report the writer as
-                still running, rather than blocking the GUI forever.
-
-        Returns:
-            bool: True if the writer finished, False if we stopped waiting first.
-        """
-        if self._writer_end_done:
-            return True
-
-        t0 = time.time()
-        next_message = 0.0
-        logger.info('close_acquisition_list: camera done, waiting for the image writer to finish')
-        while not self._writer_end_done:
-            QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
-            elapsed = time.time() - t0
-            if elapsed >= next_message:
-                next_message = elapsed + 5.0
-                self.sig_status_message.emit(
-                    f'Acquisition done - still writing to disk... ({convert_seconds_to_string(elapsed)})')
-            if elapsed > timeout_s:
-                logger.error('Image writer still had not finished after %.0f s; releasing the GUI. '
-                             'Data is STILL being written -- do not close the application or start '
-                             'another acquisition until the writer processes have exited.', timeout_s)
-                return False
-            time.sleep(0.01)
-
-        logger.info('close_acquisition_list: image writer finished after %.1f s', time.time() - t0)
-        return True
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, dict):
@@ -1098,24 +1050,11 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_state_request.emit({'etl_r_offset' : acq_list[0]['etl_r_offset']})
             self.set_intensity(acq_list[0]['intensity'])
             time.sleep(0.1) # tiny sleep period to allow Main Window indicators to catch up
-            ''' Only now is the run really over. The camera stopped long ago, but the
-            image writer may still be flushing to disk on its own thread, so the status
-            bar must keep saying so instead of clearing to "closed" -- and sig_finished
-            (which re-enables the GUI, and with it the Start button) must not fire while
-            a writer is still holding the output files. '''
-            writers_done = self._wait_for_writers_finished()
             self.sig_finished.emit()
-            if writers_done:
-                self.send_status_message_to_gui('Acquisition list closed')
-            else:
-                self.send_status_message_to_gui('Acquisition list closed - WRITING STILL IN PROGRESS')
+            self.send_status_message_to_gui('Acquisition list closed')
         else:
-            writers_done = self._wait_for_writers_finished()
+            self.send_status_message_to_gui('Acquisition stopped')
             self.sig_finished.emit()
-            if writers_done:
-                self.send_status_message_to_gui('Acquisition stopped')
-            else:
-                self.send_status_message_to_gui('Acquisition stopped - WRITING STILL IN PROGRESS')
 
     def _move_absolute_responsive(self, sdict, timeout_s=120.0):
         """Move stages to an absolute position while keeping the Core event loop alive.
