@@ -397,6 +397,28 @@ class OMEZarrWriterMP(ImageWriter):
 
         self.metadata_file_info()
 
+    # Width of the column bands used by _copy_into_slot(). 256 measured fastest on the
+    # 5056x2960 frame; 64-512 all land within ~20% of it, so this is not a sharp optimum
+    # and needs no per-machine tuning.
+    _COPY_BAND_COLS = 256
+
+    @classmethod
+    def _copy_into_slot(cls, dst: np.ndarray, frame: np.ndarray) -> None:
+        """Copy a camera frame into a ring slot, banding the copy if it is strided.
+
+        Equivalent to ``np.copyto(dst, frame)`` in every case; only the traversal order
+        differs. Contiguous sources already copy at memcpy speed, so they take the plain
+        path.
+        """
+        if frame.flags['C_CONTIGUOUS']:
+            np.copyto(dst, frame)
+            return
+
+        ncols = dst.shape[-1]
+        for i in range(0, ncols, cls._COPY_BAND_COLS):
+            j = min(i + cls._COPY_BAND_COLS, ncols)
+            np.copyto(dst[..., i:j], frame[..., i:j])
+
     def write_frame(self, data: WriteImage):
         frame = data.image
 
@@ -409,9 +431,13 @@ class OMEZarrWriterMP(ImageWriter):
         # Get a free slot (blocks if all slots are in use -> back-pressure)
         slot = self._free_q.get()
 
-        # Copy the frame into shared memory
-        np.copyto(self._ring[slot], frame)
-        # self._ring[slot] = frame
+        # Copy the frame into shared memory.
+        # The caller (mesoSPIM_ImageWriter.write_images) passes image.T[::-1], a
+        # NON-contiguous view: a flat np.copyto() walks the source with a full-row stride
+        # and thrashes cache/TLB. Measured on the 5056x2960 Iris 15 frame with distinct
+        # cold source frames, as in production: 60.1 ms plain vs 9.4 ms banded. This runs
+        # on the acquisition thread, whose entire per-frame budget is 73.3 ms at 13.65 fps.
+        self._copy_into_slot(self._ring[slot], frame)
 
         # Tell writer process which slot to read
         self._work_q.put(slot)
