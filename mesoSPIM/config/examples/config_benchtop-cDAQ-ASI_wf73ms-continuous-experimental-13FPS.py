@@ -411,7 +411,7 @@ to make mesoSPSIM pause after each tile acquisition until the multiscale is fini
 '''
 OME_Zarr_Writer = {
     'ome_version': '0.5', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': False, #True, False. False: only the primary data is saved. True: multiscale data is generated. 
     'compression': 'zstd', # None, 'zstd', 'lz4'
     'compression_level': 5, # 1-9
     # Tuned for the 5056x2960 Iris 15 sensor -- see the note above MP_OME_Zarr_Writer.
@@ -429,7 +429,7 @@ OME_Zarr_Writer = {
 
 MP_OME_Zarr_Writer = {
     'ome_version': '0.5',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': False, # True, False. False: only the primary data is saved. True: multiscale data is generated. 
     'compression': None,  # None, 'zstd', 'lz4'
     'compression_level': 5,  # 1-9
     # Chunk/shard geometry for the 5056x2960 Iris 15 sensor at 1x1 binning.
@@ -559,5 +559,5 @@ startup = {
 'camera_display_temporal_subsampling': 10, # newly added for performance and stability boost
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
-'average_frame_rate': 6, # rough target carried over from the NI-PXI wf73ms example; UNVERIFIED on this cDAQ rig / in continuous mode -- measure and update after bench testing.
+'average_frame_rate': 11.6, # rough target carried over from the NI-PXI wf73ms example; UNVERIFIED on this cDAQ rig / in continuous mode -- measure and update after bench testing.
 }
