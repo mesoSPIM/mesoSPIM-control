@@ -449,15 +449,27 @@ MP_OME_Zarr_Writer = {
     #                   z-slab is stored as a 2x2 XY tiling with sliver files
     #                   (646 MB + 54 MB + 6 MB + 0.3 MB).  <-- what we had, do not use
     #
-    # base_chunks[0] MUST equal shards[0]. If the chunk is shallower than the shard (e.g.
-    # 32 vs 64) each flush writes only part of a shard, forcing zarr to read-modify-write
-    # the whole ~650 MB shard on the next flush. Matching them makes writes pure sequential
-    # appends. The cost is a chunk_z x full_plane pre-flush buffer in the child: 1.78 GB at
-    # z=64 (x2 for two channels), which is nothing on a 128 GB machine.
+    # base_chunks[0] MUST equal shards[0] -- this is the expensive one.
+    #
+    # The writer flushes a chunk_z-deep slab at a time. If the chunk is SHALLOWER than the
+    # shard (e.g. 32 vs 64) every shard gets written twice: the first flush fills half of
+    # it, and the second forces zarr to read the whole ~650 MB shard back, decompress it,
+    # merge, recompress and rewrite it. That is roughly 3x write amplification on every
+    # byte. Measured on 2026-08-03 with (32, 316, 296) against shards (64, ...): shards
+    # landed at ~651 MB per 60-90 s per child, ~17 MB/s aggregate, and the stack never
+    # finished writing (10/16 and 8/16 shards on disk when the run was abandoned).
+    #
+    # Matching them makes writes pure sequential appends. Match at 32 rather than 64:
+    # both avoid the read-modify-write, but the pre-flush buffer in the child is
+    # chunk_z x full_plane, so z=32 costs 0.89 GB per writer against 1.78 GB at z=64.
+    # The 64-deep variant was tried on 2026-08-03 and its 8 in-flight chunks
+    # (max_inflight_chunks, a COUNT not a byte budget) reached ~14 GB per child, 53 GB
+    # across two channels, which drove the machine into memory pressure and collapsed
+    # writer ingest from 11.5 to 1.7 planes/s. Keep z at 32.
     #
     # NB: recompute these divisors if binning or ROI changes.
-    # Only shards[0] is a real knob: 64 -> 16 files/stack of ~1.8 GB, 256 -> 4 of ~7.1 GB.
-    'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    # shards[0] and base_chunks[0] move together: 32 -> 32 files/stack of ~0.9 GB.
+    'shards': (32, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
     'base_chunks': (32, 316, 296),
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64, 64, 64),
