@@ -381,9 +381,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         time_passed_string = dict['time_passed_string']
         remaining_time_string = dict['remaining_time_string']
         fps = self.state['current_framerate']
+        ''' Two rates are shown: "curFPS" is the in-stack rate (what the camera delivers
+        inside one stack), "aveFPS" the list-level throughput including stage moves,
+        filter changes and writer waits -- the latter is always the lower of the two and
+        is what the remaining-time prediction is based on. '''
+        ave_fps = self.state['effective_framerate']
 
         self.AcquisitionProgressBar.setValue(int(cur_image/images_in_acq*100))
-        self.AcquisitionProgressBar.setFormat('%p% Image: '+ str(cur_image) + '/' + str(images_in_acq) + '  FPS: ' + '{:.1f}'.format(fps))
+        self.AcquisitionProgressBar.setFormat('%p% Image: '+ str(cur_image) + '/' + str(images_in_acq) +
+                                              '  curFPS: ' + '{:.1f}'.format(fps) +
+                                              '  aveFPS: ' + '{:.1f}'.format(ave_fps))
 
         if self.timelapse_in_progress:
             ''' Total Progress spans the whole timelapse: every time point contributes
