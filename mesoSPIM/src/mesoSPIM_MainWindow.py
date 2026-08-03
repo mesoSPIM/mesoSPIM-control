@@ -410,7 +410,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             total_time = self.state['predicted_acq_list_time']  # estimated duration of one time point's acquisition list
             interval_sec = self.get_timelapse_interval_sec()
             remaining_images_in_current_tp = max(tot_images - image_count, 0)
-            remaining_time_current_tp = remaining_images_in_current_tp / fps if fps > 0 else 0
+            ''' Divide by the list-level rate, not the in-stack one: the images still to
+            come in this time point span stack boundaries, so the stage moves, filter
+            changes and writer waits between them are real wall-clock time that the
+            in-stack rate excludes. '''
+            remaining_time_current_tp = remaining_images_in_current_tp / ave_fps if ave_fps > 0 else 0
             remaining_full_timepoints = max(total_tp - tp - 1, 0)
             timelapse_time_remaining = (remaining_time_current_tp
                                          + remaining_full_timepoints * (total_time + interval_sec))
