@@ -220,11 +220,18 @@ class mesoSPIM_Camera(QtCore.QObject):
     @log_cpu_core
     def snap_image(self, write_flag=True):
         """"Snap an image and display it"""
-        image = self.camera.get_image().T[::-1]
-        
+        ''' Process the RAW frame, then rotate -- the same order as
+        add_images_to_series(), which produces the saved data. Rotating first would
+        hand the processors a different orientation here than during an acquisition,
+        so an orientation-sensitive processor would make the preview disagree with
+        what ends up on disk. '''
+        image = self.camera.get_image()
+
         if self.processor_chain.is_enabled:
             image = self.processor_chain.process(image)
-        
+
+        image = image.T[::-1]
+
         self.frame_queue_display.append(image) # push the first image into the display queue
         logger.info(f"Image appended to display queue: len(frame_queue_display)={len(self.frame_queue_display)}")
         self.sig_camera_frame.emit() # signal the GUI to update the display
@@ -245,11 +252,14 @@ class mesoSPIM_Camera(QtCore.QObject):
     def get_live_image(self):
         images = self.camera.get_live_image()
         for image in images:
-            processed_image = image.T[::-1]
-            
+            # Process raw, then rotate -- matches add_images_to_series(); see snap_image().
+            processed_image = image
+
             if self.processor_chain.is_enabled:
                 processed_image = self.processor_chain.process(processed_image)
-            
+
+            processed_image = processed_image.T[::-1]
+
             self.frame_queue_display.append(processed_image) # push the first image into the display queue
             self.sig_camera_frame.emit() # signal the GUI to update the display
             self.live_image_count += 1
