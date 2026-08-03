@@ -440,37 +440,45 @@ MP_OME_Zarr_Writer = {
     # SAVED axes, so the divisors must be taken against 5056 (y) and 2960 (x), not the
     # other way round. Getting this backwards is silent and very expensive -- see below.
     #
-    # pick_shards_for_level() snaps the shard DOWN to a whole multiple of the chunk on
-    # each axis: k = min(desired, extent) // chunk; shard = k * chunk. So:
-    #   (64, 316, 296): 5056/316 = 16, 2960/296 = 10  -> shard (64, 5056, 2960) = FULL plane,
-    #                   one shard file per 64-z slab, 16 files/stack.  <-- correct
-    #   (32, 296, 316): 5056//296 = 17 -> 5032 (24 px short), 2960//316 = 9 -> 2844 (116 px
-    #                   short) -> shard (64, 5032, 2844) misses the plane edges, so every
-    #                   z-slab is stored as a 2x2 XY tiling with sliver files
-    #                   (646 MB + 54 MB + 6 MB + 0.3 MB).  <-- what we had, do not use
+    # SHARDING IS OFF ON PURPOSE. zarr v3's sharding codec assembles every inner chunk
+    # of a shard separately in Python, and that dominates everything else in the write
+    # path. Benchmarked 2026-08-03 on this machine, writing 32-plane slabs of this exact
+    # geometry to F: (shard = one full 32-plane slab), input MB/s:
     #
-    # base_chunks[0] MUST equal shards[0] -- this is the expensive one.
+    #   inner chunk        chunks/shard    MB/s
+    #   (32,  316,  296)        160         23.9   <-- what we were running
+    #   (32,  632,  592)         40         73.2
+    #   (32, 1264,  740)         16        122.2
+    #   (32, 1264, 1480)          8        162.4
+    #   (32, 2528, 1480)          4        190.1
+    #   (32, 2528, 2960)          2        220.5
+    #   (32, 5056, 2960)          1        249.7   <-- best possible WITH sharding
+    #   no sharding, (32, 1264, 1480)      322.6   <-- what we run now
+    #   no sharding, (32,  316,  296)      340.0   (but ~5000 files/stack)
     #
-    # The writer flushes a chunk_z-deep slab at a time. If the chunk is SHALLOWER than the
-    # shard (e.g. 32 vs 64) every shard gets written twice: the first flush fills half of
-    # it, and the second forces zarr to read the whole ~650 MB shard back, decompress it,
-    # merge, recompress and rewrite it. That is roughly 3x write amplification on every
-    # byte. Measured on 2026-08-03 with (32, 316, 296) against shards (64, ...): shards
-    # landed at ~651 MB per 60-90 s per child, ~17 MB/s aggregate, and the stack never
-    # finished writing (10/16 and 8/16 shards on disk when the run was abandoned).
+    # Compression is NOT the cost: the same case measures 162.1 vs 162.4 MB/s with and
+    # without a codec. Neither is the disk -- raw sequential writes to F: sustain
+    # 893 MB/s single / 1256 MB/s with two writers (fsync'd, incompressible data).
     #
-    # Matching them makes writes pure sequential appends. Match at 32 rather than 64:
-    # both avoid the read-modify-write, but the pre-flush buffer in the child is
-    # chunk_z x full_plane, so z=32 costs 0.89 GB per writer against 1.78 GB at z=64.
-    # The 64-deep variant was tried on 2026-08-03 and its 8 in-flight chunks
-    # (max_inflight_chunks, a COUNT not a byte budget) reached ~14 GB per child, 53 GB
-    # across two channels, which drove the machine into memory pressure and collapsed
-    # writer ingest from 11.5 to 1.7 planes/s. Keep z at 32.
+    # The camera demands 13.65 fps x 5056 x 2960 x 2 B = 390 MB/s sustained. No sharded
+    # configuration reaches that at any inner-chunk size, so sharding has to be off, not
+    # merely retuned. At 322.6 MB/s the shortfall is ~67 MB/s, i.e. ~4.9 GB accumulates
+    # over a 73 s stack and drains in ~15 s afterwards. For contrast the sharded
+    # (32,316,296) setting accumulated ~27 GB per stack and drained at 24 MB/s -- about
+    # 19 minutes, which is the "writing forever, RAM full" behaviour seen all day.
+    #
+    # base_chunks (32, 1264, 1480) divides the saved plane exactly: 5056/1264 = 4,
+    # 2960/1480 = 2, giving ~271 files per 1001-plane stack. Do not drop to
+    # (32, 316, 296) here: marginally faster (340 MB/s) but ~5000 files per stack.
+    #
+    # Keep base_chunks[0] at 32. It sets the child's pre-flush buffer (chunk_z x full
+    # plane = 0.89 GB); 64 doubles it to 1.78 GB, and with max_inflight_chunks=8 being a
+    # COUNT rather than a byte budget that reached ~14 GB per child and 53 GB across two
+    # channels on 2026-08-03, collapsing ingest from 11.5 to 1.7 planes/s.
     #
     # NB: recompute these divisors if binning or ROI changes.
-    # shards[0] and base_chunks[0] move together: 32 -> 32 files/stack of ~0.9 GB.
-    'shards': (32, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (32, 316, 296),
+    'shards': None,  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
+    'base_chunks': (32, 1264, 1480),
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64, 64, 64),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
