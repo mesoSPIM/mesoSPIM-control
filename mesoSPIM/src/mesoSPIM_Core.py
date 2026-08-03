@@ -1392,7 +1392,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
-        self.state['current_framerate'] = acq.get_image_count() / (self.image_acq_end_time - self.image_acq_start_time)
+        ''' Use the frames actually collected, not acq.get_image_count(): on an aborted
+        stack only a fraction of the planned planes were taken, and dividing the planned
+        count by the (short) elapsed time stores an absurdly high rate that the progress
+        bar then displays for the first 100 frames of the next run.'''
+        frames_acquired = min(self.camera_worker.cur_image, acq.get_image_count())
+        stack_elapsed = self.image_acq_end_time - self.image_acq_start_time
+        if frames_acquired > 0 and stack_elapsed > 0:
+            self.state['current_framerate'] = frames_acquired / stack_elapsed
         ''' List-level throughput, gaps included -- the basis for the acquisition-time
         prediction. Kept in step with the in-stack updates so the value does not jump
         at stack boundaries.'''
