@@ -432,17 +432,33 @@ MP_OME_Zarr_Writer = {
     'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': None,  # None, 'zstd', 'lz4'
     'compression_level': 5,  # 1-9
-    # Chunk/shard geometry tuned for the 5056x2960 Iris 15 sensor at 1x1 binning.
-    # 296 and 316 divide 2960 and 5056 exactly, so pick_shards_for_level() snaps the
-    # shard to the FULL plane (2960, 5056) instead of 2816 x 4864. With the old
-    # (256,256,256) the shard missed the plane edges and the level-0 stack was written
-    # as a 2x2 XY tiling with sliver shards -- 64 files instead of 16.
-    # base_chunks[0]=32 also halves the writer's pre-flush RAM buffer (1.78 -> 0.89 GB),
-    # since it allocates chunk_z x full_plane before the first flush.
+    # Chunk/shard geometry for the 5056x2960 Iris 15 sensor at 1x1 binning.
+    #
+    # IMPORTANT: the SAVED array is (z, 5056, 2960), i.e. y and x are SWAPPED relative to
+    # the camera frame -- the writer rotates every plane by 90 deg (OmeZarrWriterMP.open:
+    # Z_EST, Y, X = req.shape[0], req.shape[2], req.shape[1]). base_chunks is (z, y, x) in
+    # SAVED axes, so the divisors must be taken against 5056 (y) and 2960 (x), not the
+    # other way round. Getting this backwards is silent and very expensive -- see below.
+    #
+    # pick_shards_for_level() snaps the shard DOWN to a whole multiple of the chunk on
+    # each axis: k = min(desired, extent) // chunk; shard = k * chunk. So:
+    #   (64, 316, 296): 5056/316 = 16, 2960/296 = 10  -> shard (64, 5056, 2960) = FULL plane,
+    #                   one shard file per 64-z slab, 16 files/stack.  <-- correct
+    #   (32, 296, 316): 5056//296 = 17 -> 5032 (24 px short), 2960//316 = 9 -> 2844 (116 px
+    #                   short) -> shard (64, 5032, 2844) misses the plane edges, so every
+    #                   z-slab is stored as a 2x2 XY tiling with sliver files
+    #                   (646 MB + 54 MB + 6 MB + 0.3 MB).  <-- what we had, do not use
+    #
+    # base_chunks[0] MUST equal shards[0]. If the chunk is shallower than the shard (e.g.
+    # 32 vs 64) each flush writes only part of a shard, forcing zarr to read-modify-write
+    # the whole ~650 MB shard on the next flush. Matching them makes writes pure sequential
+    # appends. The cost is a chunk_z x full_plane pre-flush buffer in the child: 1.78 GB at
+    # z=64 (x2 for two channels), which is nothing on a 128 GB machine.
+    #
     # NB: recompute these divisors if binning or ROI changes.
     # Only shards[0] is a real knob: 64 -> 16 files/stack of ~1.8 GB, 256 -> 4 of ~7.1 GB.
     'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (32, 296, 316),
+    'base_chunks': (32, 316, 296),
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64, 64, 64),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
