@@ -511,11 +511,26 @@ MP_OME_Zarr_Writer = {
     # still queued, silently corrupting frames. The config comment's old "16 for
     # simulation mode" suggestion is unsafe for exactly this reason.
     #
-    # 384 = 10.7 GB per writer, a 128-frame safety margin, and ~8 GB less than 512 with
-    # two writers alive. Going lower (128 = 3.6 GB, which is all the ring actually needs
-    # now that the parent-side copy is banded and frame_queue peaks at 147/244) requires
-    # deriving ingest_queue_size from ring_buffer_size in the plugin first.
-    'ring_buffer_size': 384,  # Max number of images in shared memory ring buffer. MUST be > 256 (see above)
+    # SIZE THIS FOR MARGIN, NOT FOR THRIFT. A mesoSPIM workstation has >=128 GB, and the
+    # margin buys two distinct things:
+    #
+    #   1. Correctness headroom against the race above: (ring - 256) frames. At ~80 ms of
+    #      parent time per frame, 512 slots -> 256 frames -> roughly 20 s of _consume-thread
+    #      stall tolerated before frames can be overwritten in place.
+    #   2. Decoupling during a child stall. If the ring is full the parent blocks in
+    #      _free_q.get() and the backlog instead piles up in frame_queue as heap frames
+    #      that STILL have to be copied later (~80 ms each). Frames already handed to the
+    #      ring are past that cost, so a deeper ring lets the parent stay ahead through a
+    #      transient chunk-write stall rather than falling behind the camera.
+    #
+    # 512 = 14.3 GB per writer, 256-frame margin. Two writers overlapping = 28.5 GB, which
+    # is comfortable on 128 GB.
+    #
+    # For long tiled acquisitions the thing to watch is NOT this number but the number of
+    # writers alive at once: finalize() does not join, so if the writer falls behind, an
+    # N-tile list can hold N rings simultaneously. Bounding that concurrency is a plugin
+    # change; until it exists, keep an eye on RAM for lists with many tiles.
+    'ring_buffer_size': 512,  # Shared-memory ring slots, 28.5 MB each. MUST be > 256 (see above)
 
     # Write cache options. Write tile data to cache then move to acquisition folder
     # None acquires data direct to acquisition folder.
