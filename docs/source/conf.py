@@ -126,6 +126,9 @@ pygments_style = "sphinx"
 # --- HTML output -------------------------------------------------------------
 html_theme = "furo"
 html_static_path = ["_static"]
+# Video assets referenced via raw HTML <video> tags aren't picked up by the
+# image/figure machinery, so copy docs/videos to the output root explicitly.
+html_extra_path = ["../videos"]
 htmlhelp_basename = "mesoSPIMControldoc"
 
 # --- Extension settings ------------------------------------------------------
