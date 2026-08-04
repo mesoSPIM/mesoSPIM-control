@@ -500,22 +500,30 @@ MP_OME_Zarr_Writer = {
     # 2026-08-03 (log 20260803-173844): two writers alive concurrently for 117 s, i.e.
     # ~29 GB of ring reserved. An N-tile list can stack up N of them.
     #
-    # HARD LOWER BOUND: this MUST stay above the child's ingest queue size, which is
-    # hardcoded to 256 in OMEZarrWriterMP.open()'s writer_kwargs. The child hands a ring
-    # slot back as soon as it has ENQUEUED the frame, not once the data has been copied
-    # out (omezarr_writer_worker -> push_slice, which only puts a VIEW on a
-    # queue.Queue(maxsize=ingest_queue_size); the copy happens later on the _consume
-    # thread). Because _free_q is FIFO the parent must cycle through every other slot
-    # before reusing one, giving a margin of (ring_buffer_size - ingest_queue_size)
-    # frames. Set this at or below 256 and the parent can lap the ring while views are
-    # still queued, silently corrupting frames. The config comment's old "16 for
-    # simulation mode" suggestion is unsafe for exactly this reason.
+    # Set deliberately EQUAL to the child's ingest queue size, which is hardcoded to 256
+    # in OMEZarrWriterMP.open()'s writer_kwargs. 256 slots = 7.1 GB per writer (14.3 GB
+    # with two writers overlapping), against 14.3/28.5 GB at the previous 512.
     #
-    # 384 = 10.7 GB per writer, a 128-frame safety margin, and ~8 GB less than 512 with
-    # two writers alive. Going lower (128 = 3.6 GB, which is all the ring actually needs
-    # now that the parent-side copy is banded and frame_queue peaks at 147/244) requires
-    # deriving ingest_queue_size from ring_buffer_size in the plugin first.
-    'ring_buffer_size': 384,  # Max number of images in shared memory ring buffer. MUST be > 256 (see above)
+    # This leaves a ZERO safety margin, which is a deliberate trade -- read this before
+    # changing it. The child hands a ring slot back as soon as it has ENQUEUED the frame,
+    # not once the data has been copied out: omezarr_writer_worker calls push_slice(),
+    # which only puts a VIEW of the slot on a queue.Queue(maxsize=ingest_queue_size), and
+    # the copy happens later on the _consume thread. Because _free_q is FIFO the parent
+    # must cycle through every other slot before reusing one, so the margin is
+    # (ring_buffer_size - ingest_queue_size) frames -- here 0.
+    #
+    # Consequence: if the _consume thread ever stalls long enough for that queue to fill
+    # completely, all 256 slots are released with their views still pending and the next
+    # frame the parent writes lands on a slot that is still being read -> silently
+    # corrupted image data. At ~80 ms/frame from the parent, filling the queue takes a
+    # ~20 s consume-thread stall; the plausible cause is _submit_write_chunk() blocking
+    # on _inflight_sem while chunk writes back up.
+    #
+    # Going BELOW 256 is unambiguously unsafe (the ring laps the queue in normal
+    # operation). The old "16 for simulation mode (eg laptop)" suggestion was wrong.
+    # To make any value < 256 safe, derive ingest_queue_size from ring_buffer_size in the
+    # plugin (e.g. min(256, ring_buffer_size // 2)) so the invariant holds by construction.
+    'ring_buffer_size': 256,  # Shared-memory ring slots. Do NOT go below 256 (see above)
 
     # Write cache options. Write tile data to cache then move to acquisition folder
     # None acquires data direct to acquisition folder.
