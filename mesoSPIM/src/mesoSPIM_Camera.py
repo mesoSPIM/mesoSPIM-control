@@ -25,6 +25,11 @@ class mesoSPIM_Camera(QtCore.QObject):
     sig_camera_frame = QtCore.pyqtSignal()
     sig_snap_image_ready = QtCore.pyqtSignal()  # emitted after snap; image is in frame_queue_display
     sig_write_images = QtCore.pyqtSignal(Acquisition, AcquisitionList)
+    # Tells the ImageWriter to finalize the file. Emitted from the Camera thread (not the Core
+    # thread) so that Qt's per-sender-thread ordering guarantees it is delivered *after* the
+    # sig_write_images of the last plane -- otherwise the final frame is dropped, see
+    # end_image_series() below.
+    sig_end_acquisition = QtCore.pyqtSignal(Acquisition, AcquisitionList)
     sig_finished = QtCore.pyqtSignal()
     sig_end_image_series_done = QtCore.pyqtSignal()  # emitted after end_image_series cleanup is complete
     sig_update_gui_from_state = QtCore.pyqtSignal()
@@ -208,7 +213,13 @@ class mesoSPIM_Camera(QtCore.QObject):
         except Exception as e:
             logger.error(f'Camera: Image Series could not be closed: {e}')
 
-        #self.image_writer.end_acquisition(acq, acq_list)
+        if self.stopflag is False and self.cur_image != self.max_frame:
+            logger.error(f'Camera: acquired {self.cur_image} frames, expected {self.max_frame}')
+
+        # Tell the ImageWriter to finalize. This runs in the Camera thread, after the
+        # add_images_to_series() call of the last plane has already emitted sig_write_images,
+        # so the writer is guaranteed to see that frame before it closes the file.
+        self.sig_end_acquisition.emit(acq, acq_list)
 
         self.end_time = time.time()
         framerate = (self.cur_image + 1)/(self.end_time - self.start_time)

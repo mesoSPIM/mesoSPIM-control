@@ -138,11 +138,15 @@ class mesoSPIM_Core(QtCore.QObject):
         self.image_writer = mesoSPIM_ImageWriter(self, self.frame_queue)
         self.image_writer.moveToThread(self.image_writer_thread)
         self.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
-        self.sig_end_image_series.connect(self.image_writer.end_acquisition, type=QtCore.Qt.QueuedConnection)
         self.sig_stop_aquisition.connect(self.image_writer.abort_writing, type=QtCore.Qt.QueuedConnection)
         self.image_writer.sig_end_acquisition_done.connect(self._on_writer_end_acquisition_done, type=QtCore.Qt.QueuedConnection)
 
         self.camera_worker.sig_write_images.connect(self.image_writer.write_images, type=QtCore.Qt.QueuedConnection)
+        # end_acquisition must be triggered by the Camera thread, NOT by the Core thread. Qt only
+        # guarantees the delivery order of queued signals emitted by the *same* sender thread, so a
+        # Core-thread emit could overtake the sig_write_images of the last plane and close the file
+        # before that frame was written (frame then leaked into the next acquisition's file).
+        self.camera_worker.sig_end_acquisition.connect(self.image_writer.end_acquisition, type=QtCore.Qt.QueuedConnection)
 
         #self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
         self.serial_worker = mesoSPIM_Serial(self)

@@ -147,6 +147,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             acq (Acquisition): The current acquisition descriptor.
             acq_list (AcquisitionList): The full list being executed.
         """
+        # Any frame still sitting in the queue belongs to a previous acquisition and must never be
+        # written into this file. Under normal operation the queue is already empty here.
+        if len(self.frame_queue) > 0:
+            logger.error(f'{len(self.frame_queue)} stale frame(s) in the queue when preparing '
+                         f'{acq["filename"]}, discarding them')
+            self.frame_queue.clear()
+
         if acq == acq_list[0]:
             self.writer_name = acq['image_writer_plugin']
             self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
@@ -309,6 +316,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             acq_list = acq_list,
         )
         logger.info("end_acquisition() started")
+
+        # Flush any frames that arrived but were not written yet, before the file is closed.
+        if self.running_flag:
+            while len(self.frame_queue) > 0:
+                logger.debug(f'end_acquisition: flushing {len(self.frame_queue)} remaining frame(s)')
+                image = self.frame_queue.popleft().T[::-1]
+                self.image_to_disk(acq, acq_list, image)
+
+            if self.cur_image_counter != self.max_frame:
+                logger.error(f'ImageWriter: wrote {self.cur_image_counter} frames to '
+                             f'{self.path}, expected {self.max_frame}')
+
         try:
             self.writer.finalize(finalize_imsge)
         except Exception as e:
