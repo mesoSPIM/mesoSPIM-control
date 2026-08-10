@@ -429,7 +429,7 @@ OME_Zarr_Writer = {
 
 MP_OME_Zarr_Writer = {
     'ome_version': '0.5',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': False, # True, False. False: only the primary data is saved. True: multiscale data is generated. 
+    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated. 
     'compression': None,  # None, 'zstd', 'lz4'
     'compression_level': 5,  # 1-9
     # Chunk/shard geometry for the 5056x2960 Iris 15 sensor at 1x1 binning.
