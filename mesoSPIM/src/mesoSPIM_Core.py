@@ -271,17 +271,25 @@ class mesoSPIM_Core(QtCore.QObject):
         so that stop signals and GUI updates are still delivered.
 
         Args:
-            timeout_s (float): Maximum time to wait in seconds before giving up.
+            timeout_s (float): Number of seconds to wait before printing a warning
         """
+        total_time_elapsed = 0
+        start_time = time.time()
         deadline = time.time() + timeout_s
         while not (self._camera_end_done and self._writer_end_done):
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+
             if time.time() > deadline:
+                total_time_elapsed = round(time.time() - start_time, 2)
                 logger.warning(
-                    '_wait_for_end_image_series timed out after %.1f s '
+                    '_wait_for_end_image_series %.1f s warning'
                     '(camera_done=%s, writer_done=%s)',
-                    timeout_s, self._camera_end_done, self._writer_end_done)
-                break
+                    total_time_elapsed, self._camera_end_done, self._writer_end_done)
+
+                # Do NOT continue to the next acquisition while writer is busy.
+                # Reset the warning timer and continue waiting.
+                deadline = time.time() + timeout_s
+
             time.sleep(0.01)
 
     @QtCore.pyqtSlot(dict)
