@@ -310,16 +310,17 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         total_ms = (time.perf_counter() - total_start) * 1000
 
-        logger.info(
-            "image_to_disk breakdown: total=%.1f ms "
-            "status=%.1f ms metadata=%.1f ms "
-            "writer=%.1f ms MAX=%.1f ms",
-            total_ms,
-            status_ms,
-            metadata_ms,
-            writer_ms,
-            max_ms,
-        )
+        if total_ms > 20:
+            logger.info(
+                "image_to_disk breakdown: total=%.1f ms "
+                "status=%.1f ms metadata=%.1f ms "
+                "writer=%.1f ms MAX=%.1f ms",
+                total_ms,
+                status_ms,
+                metadata_ms,
+                writer_ms,
+                max_ms,
+            )
 
         logger.debug('image_to_disk() ended')
 
