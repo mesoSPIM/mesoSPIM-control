@@ -362,7 +362,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             while len(self.frame_queue) > 0:
                 logger.debug(f'end_acquisition: flushing {len(self.frame_queue)} remaining frame(s)')
-                image = self.frame_queue.popleft().T[::-1]
+                image = self.frame_queue.popleft() # Do not transpose so that downstream operations like max are more efficient
                 self.image_to_disk(acq, acq_list, image)
 
             if self.cur_image_counter != self.max_frame:
