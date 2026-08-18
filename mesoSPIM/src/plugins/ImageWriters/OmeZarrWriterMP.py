@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 import numpy as np
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
 import sys
+import time
 
 # Setup multiprocessing with 'spawn' method
 import multiprocessing as mp
@@ -392,15 +393,39 @@ class OMEZarrWriterMP(ImageWriter):
             f"Expected frame shape {self._frame_shape}, got {frame.shape}"
         )
 
+        total_start = time.perf_counter()
+
         # Get a free slot (blocks if all slots are in use -> back-pressure)
+        t0 = time.perf_counter()
         slot = self._free_q.get()
+        wait_ms = (time.perf_counter() - t0) * 1000
 
         # Copy the frame into shared memory
+        t0 = time.perf_counter()
         np.copyto(self._ring[slot], frame)
-        # self._ring[slot] = frame
+        copy_ms = (time.perf_counter() - t0) * 1000
 
         # Tell writer process which slot to read
+        t0 = time.perf_counter()
         self._work_q.put(slot)
+        put_ms = (time.perf_counter() - t0) * 1000
+
+        total_ms = (time.perf_counter() - total_start) * 1000
+
+        if total_ms > 20:
+            logger.info(
+                "MP handoff: total=%.1f ms "
+                "free_slot_wait=%.1f ms "
+                "copy=%.1f ms "
+                "queue_put=%.1f ms "
+                "C_contiguous=%s strides=%s",
+                total_ms,
+                wait_ms,
+                copy_ms,
+                put_ms,
+                frame.flags['C_CONTIGUOUS'],
+                frame.strides
+            )
 
     def finalize(self, finalize_image: FinalizeImage) -> None:
         # Tell this tile's writer process to finish
