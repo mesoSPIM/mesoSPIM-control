@@ -219,7 +219,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         # Place holder prior to image processing plugins
         if acq['processing'] == 'MAX':
             self.tiff_mip_writer = tifffile.TiffWriter(self.MIP_path, imagej=True)
-            self.mip_image = np.zeros((self.x_pixels, self.y_pixels), 'uint16')
+            self.mip_image = None
 
         self.cur_image_counter = 0
         self.abort_flag = False
@@ -237,7 +237,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             while len(self.frame_queue) > 0:
                 logger.debug('image queue length: ' + str(len(self.frame_queue)))
-                image = self.frame_queue.popleft().T[::-1]
+                image = self.frame_queue.popleft() # Do not transpose so that downstream operations like max are more efficient
                 self.image_to_disk(acq, acq_list, image)
         else:
             logger.debug('self.running_flag = False, no images written')
@@ -264,7 +264,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         )
 
         write = WriteImage(
-            image=image,
+            # Transform image before sending to writer, this can cause performance issues downstream
+            # if memory copies are required like with copies to the ring buffer for MP OME-Zarr writer
+            # Need to consider how to make this more efficient to increase MP Writer Performance
+            image=image.T[::-1],
             current_image_counter=self.cur_image_counter,
             tile_number=acq_list.get_tile_index(acq),
             laser=acq_list.find_value_index(acq['laser'], 'laser'),
@@ -290,6 +293,12 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         # MAX projection
         t0 = time.perf_counter()
         if acq['processing'] == 'MAX':
+            # Allocate RAM for MIP
+            if self.mip_image is None:
+                self.mip_image = np.zeros_like(image)
+
+            # Max is done on a non-transformed image to keep memory operations efficient
+            # Need to transform the final image right before saving
             np.maximum(
                 self.mip_image,
                 image,
@@ -313,47 +322,6 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         )
 
         logger.debug('image_to_disk() ended')
-
-    # @timed
-    # @log_cpu_core
-    # def image_to_disk(self, acq, acq_list, image):
-    #     """Write a single pre-transposed frame to the open writer backend.
-    #
-    #     Args:
-    #         acq (Acquisition): Active acquisition descriptor (provides zoom, z_step …).
-    #         acq_list (AcquisitionList): Full list (provides tile/channel/rotation indices).
-    #         image (np.ndarray): 2-D ``uint16`` array already transposed by the caller.
-    #     """
-    #     logger.debug('image_to_disk() started')
-    #     if self.cur_image_counter % 5 == 0:
-    #         self.parent.sig_status_message.emit('Writing to disk...')
-    #
-    #     xy_res = (1. / self.cfg.pixelsize[acq['zoom']], 1. / self.cfg.pixelsize[acq['zoom']])
-    #
-    #     write = WriteImage(
-    #         image = image,
-    #         current_image_counter = self.cur_image_counter,
-    #         tile_number=acq_list.get_tile_index(acq),
-    #         laser=acq_list.find_value_index(acq['laser'], 'laser'),
-    #         shutter=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
-    #         rot=acq_list.find_value_index(acq['rot'], 'rot'),
-    #         x_res=xy_res,
-    #         y_res=xy_res,
-    #         z_res=acq['z_step'],
-    #         unit='microns',
-    #         acq = acq,
-    #         acq_list = acq_list,
-    #     )
-    #
-    #     self.writer.write_frame(write)
-    #
-    #     # Place holder prior to image processing plugins
-    #     if acq['processing'] == 'MAX':
-    #         np.maximum(self.mip_image, image, out=self.mip_image)
-    #
-    #
-    #     self.cur_image_counter += 1
-    #     logger.debug('image_to_disk() ended')
 
     @QtCore.pyqtSlot()
     def abort_writing(self):
@@ -408,7 +376,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         # Place holder prior to image processing plugins
         if acq['processing'] == 'MAX':
             try:
-                self.tiff_mip_writer.write(self.mip_image)
+                self.tiff_mip_writer.write(self.mip_image.T[::-1]) # Transform image before saving
                 self.tiff_mip_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
