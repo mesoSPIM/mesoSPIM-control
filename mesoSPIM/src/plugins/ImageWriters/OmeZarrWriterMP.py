@@ -428,10 +428,14 @@ class OMEZarrWriterMP(ImageWriter):
             )
 
     def finalize(self, finalize_image: FinalizeImage) -> None:
+
+        logger.info("MP finalize: ENTER")
         # Tell this tile's writer process to finish
         if self._work_q is not None:
             try:
+                logger.info("MP finalize: sending work_q sentinel")
                 self._work_q.put(None)
+                logger.info("MP finalize: work_q sentinel sent")
             except Exception:
                 logger.exception("Failed to send shutdown to writer process")
 
@@ -450,14 +454,25 @@ class OMEZarrWriterMP(ImageWriter):
             self._shm = None
             self._ring = None
 
+        logger.info("MP finalize: parent shm closed")
+
         # BigStitcher XML logic still happens here, but:
         acq = finalize_image.acq
         acq_list = finalize_image.acq_list
 
+        logger.info(
+            "MP finalize: last_acq=%s xml_writer=%s background_writers=%d",
+            acq == acq_list[-1],
+            self.xml_writer is not None,
+            len(self._background_writers),
+        )
+
         if self.xml_writer and acq == acq_list[-1]:
             # Before writing XML or returning at the very end of the experiment,
             # wait for all background writers and clean up their shared memory.
+            logger.info("MP finalize: waiting for background writers")
             self._wait_for_background_writers()
+            logger.info("MP finalize: background writers FINISHED")
 
             self.xml_writer.set_attribute_labels('channel', tuple(acq_list.get_unique_attr_list('laser')))
             self.xml_writer.set_attribute_labels('illumination', tuple(acq_list.get_unique_attr_list('shutterconfig')))
@@ -503,12 +518,28 @@ class OMEZarrWriterMP(ImageWriter):
         self.MIP_path = path.with_name('MAX_' + path.name + '.tif').as_posix()
 
     def _wait_for_background_writers(self):
-        """Wait for all tile writer processes to finish and clean shared memory."""
-        for proc, shm_name in self._background_writers:
-            try:
-                proc.join()
-            except Exception:
-                logger.exception("Error joining writer process")
+        for i, (proc, shm_name) in enumerate(self._background_writers):
+            start = time.time()
+
+            while proc.is_alive():
+                proc.join(timeout=30)
+
+                if proc.is_alive():
+                    logger.warning(
+                        "OME-Zarr writer process %d still alive after %.1f s "
+                        "(pid=%s, exitcode=%s)",
+                        i,
+                        time.time() - start,
+                        proc.pid,
+                        proc.exitcode,
+                    )
+
+            logger.info(
+                "OME-Zarr writer process %d exited after %.1f s, exitcode=%s",
+                i,
+                time.time() - start,
+                proc.exitcode,
+            )
 
             # Now its shm can be safely unlinked
             try:
@@ -521,5 +552,28 @@ class OMEZarrWriterMP(ImageWriter):
             except Exception:
                 logger.exception("Error cleaning shared memory for %s", shm_name)
 
-        # clear the list so we don't double-join/unlink
+            # clear the list so we don't double-join/unlink
         self._background_writers.clear()
+
+
+    # def _wait_for_background_writers(self):
+    #     """Wait for all tile writer processes to finish and clean shared memory."""
+    #     for proc, shm_name in self._background_writers:
+    #         try:
+    #             proc.join()
+    #         except Exception:
+    #             logger.exception("Error joining writer process")
+    #
+    #         # Now its shm can be safely unlinked
+    #         try:
+    #             shm = shared_memory.SharedMemory(name=shm_name)
+    #             shm.close()
+    #             shm.unlink()
+    #         except FileNotFoundError:
+    #             # Already cleaned or never created
+    #             pass
+    #         except Exception:
+    #             logger.exception("Error cleaning shared memory for %s", shm_name)
+    #
+    #     # clear the list so we don't double-join/unlink
+    #     self._background_writers.clear()
