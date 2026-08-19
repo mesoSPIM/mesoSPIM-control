@@ -469,9 +469,9 @@ class Live3DPyramidWriter:
         return self.finalize_future
 
     def _finalize(self):
-        self.stop.set()
         self.q.put(None)
         self.worker.join()
+        self.stop.set()
 
         with self.lock:
             self._flush_pair_tails_all_the_way()
