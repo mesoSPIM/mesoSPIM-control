@@ -434,9 +434,12 @@ class Live3DPyramidWriter:
         print("Live3DPyramidWriter: finalized.")
 
     def close_sync(self):
-        self.stop.set()
+
+        # Sentinel comes after all previously queued images.
+        # Therefore, the consumer drains every image before exiting.
         self.q.put(None)
         self.worker.join()
+        self.stop.set()
 
         with self.lock:
             # flush odd Z-pair tails at levels >= 1
@@ -520,7 +523,7 @@ class Live3DPyramidWriter:
     def _consume(self):
         while True:
             item = self.q.get()
-            if item is None or self.stop.is_set():
+            if item is None:
                 break
             self._ingest_raw(item)
 
@@ -920,6 +923,11 @@ def omezarr_writer_worker(
     from datetime import datetime
 
     lower_priority()
+
+    # child returns free ring slots through this queue.
+    # Don't let the multiprocessing Queue feeder prevent
+    # this process from exiting after acquisition is finished.
+    free_q.cancel_join_thread()
 
     def get_name_write_cache_dir(acq_path) -> Path | None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
