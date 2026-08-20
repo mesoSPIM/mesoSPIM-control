@@ -554,26 +554,3 @@ class OMEZarrWriterMP(ImageWriter):
 
             # clear the list so we don't double-join/unlink
         self._background_writers.clear()
-
-
-    # def _wait_for_background_writers(self):
-    #     """Wait for all tile writer processes to finish and clean shared memory."""
-    #     for proc, shm_name in self._background_writers:
-    #         try:
-    #             proc.join()
-    #         except Exception:
-    #             logger.exception("Error joining writer process")
-    #
-    #         # Now its shm can be safely unlinked
-    #         try:
-    #             shm = shared_memory.SharedMemory(name=shm_name)
-    #             shm.close()
-    #             shm.unlink()
-    #         except FileNotFoundError:
-    #             # Already cleaned or never created
-    #             pass
-    #         except Exception:
-    #             logger.exception("Error cleaning shared memory for %s", shm_name)
-    #
-    #     # clear the list so we don't double-join/unlink
-    #     self._background_writers.clear()
