@@ -3,7 +3,8 @@ Plugin System
 
 This page is the main developer guide for the mesoSPIM plugin system.
 It explains what plugin types exist today, how they are discovered, and
-how to build working plugins for image writing and image processing.
+how to build working plugins for image writing, image processing, and filter
+wheel hardware.
 
 If you only use mesoSPIM as an operator, the short sections in
 :doc:`user_guide` are usually enough. If you want to extend the software,
@@ -12,16 +13,19 @@ start here.
 Overview
 --------
 
-mesoSPIM currently supports two plugin families:
+mesoSPIM currently supports three plugin families:
 
 * **Image writer plugins** create output files during acquisition.
 * **Image processor plugins** transform frames before they are displayed or
   written to disk.
+* **Filter wheel plugins** create hardware drivers selected by the microscope
+  configuration.
 
 These plugin families live under ``mesoSPIM/src/plugins/``:
 
 * ``mesoSPIM/src/plugins/ImageWriters/``
 * ``mesoSPIM/src/plugins/ImageProcessors/``
+* ``mesoSPIM/src/plugins/FilterWheels/``
 
 Although some comments in the source mention possible future plugin types
 such as camera or stage plugins, those are not part of the current plugin
@@ -47,7 +51,7 @@ Discovery rules
 * A module can register plugins explicitly through a
   ``register_mesospim_plugins(registry)`` function.
 * If no explicit hook is provided, mesoSPIM scans the imported module for
-  classes that look like image writers or image processors.
+  classes that match one of the three plugin interfaces.
 
 In practice, registration is permissive. A class may be imported and
 registered successfully even if it is still missing methods that the UI or
@@ -61,6 +65,7 @@ Built-in plugins live in the repository:
 
 * ``mesoSPIM/src/plugins/ImageWriters/``
 * ``mesoSPIM/src/plugins/ImageProcessors/``
+* ``mesoSPIM/src/plugins/FilterWheels/``
 
 External plugins can live anywhere on disk as long as their parent directory
 is listed in the active config file:
@@ -328,6 +333,88 @@ Before considering a processor complete, verify that it:
 * persists and restores its settings through ``processor_chain.json``
 * handles repeated reconfiguration cleanly
 
+Filter Wheel Plugins
+--------------------
+
+Filter wheel plugins provide a factory and a small runtime hardware driver.
+They are selected through ``filterwheel_parameters['filterwheel_type']`` in the
+active microscope config. The existing built-in types ``Demo``, ``Ludl``,
+``Dynamixel``, ``Sutter``, and ``ZWO`` keep using their legacy drivers. Only an
+otherwise unknown type name is resolved through the plugin registry.
+
+Factory and Driver Interfaces
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The protocols live in ``mesoSPIM/src/plugins/FilterWheelApi.py``. A plugin
+factory class must provide these classmethods:
+
+* ``api_version()``
+* ``name()``
+* ``description()``
+* ``required_parameters()``
+* ``create(filterwheel_parameters, filterdict)``
+
+``create()`` must return a driver that provides:
+
+* ``set_filter(filter_name, wait_until_done=False)``
+* ``close()``
+
+Validate the complete configuration before opening a serial or USB connection.
+``close()`` must be safe to call more than once because mesoSPIM performs
+best-effort cleanup during shutdown.
+
+LudlPlugin Example
+~~~~~~~~~~~~~~~~~~
+
+``LudlPlugin`` is the built-in proof-of-concept hardware plugin for Ludl
+MAC6000 single and dual filter wheels. It is separate from the legacy ``Ludl``
+driver and requires every operator-adjustable setting explicitly:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'LudlPlugin',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wait_until_done_delay': 0.2,
+   }
+
+   # Single wheel
+   filterdict = {
+       'Empty': 0,
+       'Green': 3,
+   }
+
+For a dual wheel, every position must be a two-integer tuple:
+
+.. code-block:: python
+
+   filterdict = {
+       'Empty': (0, 0),
+       'Green': (3, 1),
+   }
+
+The plugin validates all parameters and filter positions before opening the
+serial port. Positions must be integers from 0 through 9 and the configured
+wait delay must be greater than 0 and no more than 60 seconds. ``pyserial`` is
+imported only when ``LudlPlugin`` is selected, so importing this plugin module
+alone does not open or initialize the serial dependency.
+
+Filter Wheel Authoring Checklist
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before considering a filter wheel plugin complete, verify that it:
+
+* has a unique ``name()`` matching the config's ``filterwheel_type`` and does
+  not reuse the reserved legacy names ``Demo``, ``Ludl``, ``Dynamixel``,
+  ``Sutter``, or ``ZWO``
+* reports every mandatory config key from ``required_parameters()``
+* validates configuration before connecting to hardware
+* handles unknown filter names without sending a command
+* honors ``wait_until_done`` when synchronous movement is requested
+* closes connections idempotently
+* is tested with mocked I/O and then validated on the physical controller
+
 Short User Guide
 ----------------
 
@@ -340,6 +427,9 @@ useful to understand:
   from **Plugins → Processor Chain** in the main window menu bar. Processors
   affect both live display and acquired image data. See :doc:`image_processors`
   for the built-in processors and a full walkthrough of that window.
+* **Filter wheels** are selected by ``filterwheel_type`` in the microscope
+  config. Legacy names use the existing built-in drivers; plugin names resolve
+  through the plugin registry.
 
 Testing Plugins
 ---------------
@@ -351,7 +441,9 @@ Recommended validation workflow:
 2. For writers, run a short acquisition and verify output, metadata files, and
    abort behavior.
 3. For processors, test both live view and saved acquisitions.
-4. After demo validation, test on real hardware because timing and throughput
+4. For hardware plugins, mock device I/O first, then test connection, movement,
+   waiting, errors, and shutdown on the physical controller.
+5. After demo validation, test on real hardware because timing and throughput
    issues often only appear there.
 
 Common Gotchas
@@ -367,6 +459,8 @@ authors:
 * Plugin registration is permissive; discovery success is not the same as full
   runtime compatibility.
 * Writer and processor modules should avoid surprising import-time work.
+* Hardware plugin modules should import optional device libraries lazily so an
+  unused plugin cannot break application startup.
 * Processor capability flags are informative today, not enforced.
 * The current processor-chain UI is oriented around one entry per processor
   type, so test carefully if your workflow assumes duplicates.
@@ -379,7 +473,9 @@ Good source files to study while building plugins:
 * ``mesoSPIM/src/plugins/manager.py``
 * ``mesoSPIM/src/plugins/ImageWriterApi.py``
 * ``mesoSPIM/src/plugins/ImageProcessorApi.py``
+* ``mesoSPIM/src/plugins/FilterWheelApi.py``
 * ``mesoSPIM/src/plugins/ImageWriters/TiffWriter.py``
 * ``mesoSPIM/src/plugins/ImageWriters/ShamWriter.py``
 * ``mesoSPIM/src/plugins/ImageProcessors/IdentityProcessor.py``
 * ``mesoSPIM/src/plugins/ImageProcessors/GaussianBlurProcessor.py``
+* ``mesoSPIM/src/plugins/FilterWheels/LudlFilterWheelPlugin.py``

@@ -45,9 +45,9 @@ in the file-naming wizard.
         #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
     }
 
-``path_list`` adds extra directories that are scanned for both image-writer
-and image-processor plugins. Built-in plugins are always loaded from the
-repository's plugin directories.
+``path_list`` adds extra directories that are scanned for image-writer,
+image-processor, and filter-wheel plugins. Built-in plugins are always loaded
+from the repository's plugin directories.
 
 ``first_image_writer`` only affects the ordering in the file-naming wizard. It
 does not force a writer for all acquisitions.
@@ -71,7 +71,22 @@ Image processors are handled differently: they are configured in the
 processor-chain dialog and persisted to ``processor_chain.json`` next to the
 active microscope config file rather than through top-level config variables.
 
-See :doc:`plugins` for the full developer-facing plugin guide.
+Filter-wheel plugins are selected by setting a plugin's ``name()`` as
+``filterwheel_parameters['filterwheel_type']``. For example, the built-in
+``LudlPlugin`` requires explicit connection and wait settings:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'LudlPlugin',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wait_until_done_delay': 0.2,
+   }
+
+The established ``Demo``, ``Ludl``, ``Dynamixel``, ``Sutter``, and ``ZWO``
+names continue to select their existing built-in drivers. See
+:doc:`plugins` for the filter-wheel factory and runtime interfaces.
 
 ui_options
 ~~~~~~~~~~

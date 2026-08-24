@@ -14,6 +14,8 @@ from .devices.filter_wheels.mesoSPIM_FilterWheel import mesoSPIM_DemoFilterWheel
 from .devices.filter_wheels.mesoSPIM_FilterWheel import ZwoFilterWheel, SutterLambda10BFilterWheel
 from .mesoSPIM_Zoom import DynamixelZoom, DemoZoom, MitutoyoZoom
 from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_Stages, mesoSPIM_DemoStage, mesoSPIM_PI_rotz_and_Galil_xyf_Stages, mesoSPIM_Mixed_Stages
+from .plugins.FilterWheelApi import FilterWheel
+from .plugins.utils import get_filter_wheel_plugins, get_filter_wheel_plugin_class_from_name
 from .utils.utility_functions import log_cpu_core, timed
 
 logger = logging.getLogger(__name__)
@@ -57,6 +59,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.stage_limits_warning = False
 
         ''' Attaching the filterwheel '''
+        self._filterwheel_is_plugin = False
         if self.cfg.filterwheel_parameters['filterwheel_type'] == 'Ludl':
             self.filterwheel = LudlFilterWheel(self.cfg.filterwheel_parameters['COMport'],self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Dynamixel':
@@ -70,7 +73,30 @@ class mesoSPIM_Serial(QtCore.QObject):
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'ZWO':
             self.filterwheel = ZwoFilterWheel(self.cfg.filterdict, self)
         else:
-            raise ValueError(f"Filter wheel type unknown: {self.cfg.filterwheel_parameters['filterwheel_type']}")
+            filterwheel_type = self.cfg.filterwheel_parameters['filterwheel_type']
+            plugin_class = get_filter_wheel_plugin_class_from_name(filterwheel_type)
+            if plugin_class is None:
+                built_in_types = {'Demo', 'Dynamixel', 'Ludl', 'Sutter', 'ZWO'}
+                plugin_types = {plugin['name'] for plugin in get_filter_wheel_plugins()}
+                available_types = ', '.join(sorted(built_in_types | plugin_types))
+                raise ValueError(
+                    f"Filter wheel type unknown: {filterwheel_type}. "
+                    f"Available types: {available_types}"
+                )
+            logger.info(f"Initializing filter wheel plugin: {filterwheel_type}")
+            filterwheel = plugin_class.create(
+                self.cfg.filterwheel_parameters,
+                self.cfg.filterdict,
+            )
+            if not isinstance(filterwheel, FilterWheel):
+                close = getattr(filterwheel, 'close', None)
+                if callable(close):
+                    close()
+                raise TypeError(
+                    f"Filter wheel plugin {filterwheel_type} returned an invalid driver"
+                )
+            self.filterwheel = filterwheel
+            self._filterwheel_is_plugin = True
 
         ''' Attaching the zoom '''
         if self.cfg.zoom_parameters['zoom_type'] == 'Dynamixel':
@@ -130,6 +156,22 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
         self.parent.sig_center_sample.connect(self.sig_center_sample.emit)
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        """Release plugin filter-wheel resources during cleanup."""
+        try:
+            close = (
+                getattr(self.filterwheel, 'close', None)
+                if self._filterwheel_is_plugin
+                else None
+            )
+            if callable(close):
+                close()
+        except Exception:
+            logger.debug('Failed to close filter wheel during cleanup', exc_info=True)
 
     @QtCore.pyqtSlot(dict)
     def state_request_handler(self, sdict, wait_until_done=False):

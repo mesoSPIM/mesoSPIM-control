@@ -8,9 +8,14 @@ logger = logging.getLogger(__name__)
 import numpy as np
 import types
 from typing import Any, Dict, Iterable, Optional, Protocol, runtime_checkable, Tuple, List, Union
-from mesoSPIM.src.plugins.manager import MESOSPIM_PLUGIN_MODULE_PREFIX
+from mesoSPIM.src.plugins.manager import (
+    MESOSPIM_PLUGIN_MODULE_PREFIX,
+    get_registered_filter_wheel_plugins,
+)
 from mesoSPIM.src.plugins.ImageWriterApi import ImageWriter
 from mesoSPIM.src.plugins.ImageProcessorApi import ImageProcessor
+from mesoSPIM.src.plugins.FilterWheelApi import API_VERSION as FILTER_WHEEL_API_VERSION
+from mesoSPIM.src.plugins.FilterWheelApi import FilterWheelPlugin
 
 
 def count_domain_to_uint16(image: np.ndarray) -> np.ndarray:
@@ -183,6 +188,58 @@ def create_processor(name: str, params: dict = None):
     if params:
         processor.configure(params)
     return processor
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
+#                                      FilterWheel Plugin-specific utilities                                          #
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def list_filter_wheel_plugins():
+    '''Return a list of all registered filter-wheel plugin classes.'''
+    registered_plugins = get_registered_filter_wheel_plugins()
+    if registered_plugins is not None:
+        return list(registered_plugins.values())
+
+    classes = []
+    modules = list_all_registered_mesospim_plugin_modules(prefix=MESOSPIM_PLUGIN_MODULE_PREFIX)
+    for mod in modules:
+        for plugin in list_plugin_classes_of_type(mod, type=FilterWheelPlugin):
+            try:
+                compatible = (
+                    plugin.api_version().split(".")[0]
+                    == FILTER_WHEEL_API_VERSION.split(".")[0]
+                )
+            except (AttributeError, TypeError):
+                compatible = False
+            if compatible:
+                classes.append(plugin)
+    return classes
+
+
+def get_filter_wheel_plugins():
+    '''Return metadata and callable classes for all filter-wheel plugins.'''
+    return [
+        {
+            'name': plugin.name(),
+            'description': plugin.description(),
+            'required_parameters': plugin.required_parameters(),
+            'plugin_class': plugin,
+        }
+        for plugin in list_filter_wheel_plugins()
+    ]
+
+
+def get_filter_wheel_plugin_from_name(name: str):
+    '''Return filter-wheel plugin metadata for a registered name.'''
+    for plugin in get_filter_wheel_plugins():
+        if name == plugin['name']:
+            return plugin
+
+
+def get_filter_wheel_plugin_class_from_name(name: str):
+    '''Return the filter-wheel plugin factory class for a registered name.'''
+    plugin = get_filter_wheel_plugin_from_name(name)
+    return plugin['plugin_class'] if plugin is not None else None
 
 
 # ------------------------------------------------------------------------------------------------------------------- #

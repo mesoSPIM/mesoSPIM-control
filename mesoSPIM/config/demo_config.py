@@ -314,14 +314,20 @@ asi_parameters = {'COMport' : 'COM32',
 Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
+For the plugin-based LudlPlugin, COMport, baudrate, and wait_until_done_delay are required.
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel', 'ZWO'
+filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'LudlPlugin', 'Sutter', 'Dynamixel', 'ZWO'
                           'COMport' : 'COM3', # irrelevant for 'ZWO'
-                          'baudrate' : 115200, # relevant only for 'Dynamixel', 'Sutter'
+                          'baudrate' : 115200, # relevant only for 'Dynamixel', 'Sutter', 'LudlPlugin'
                           'servo_id' :  1, # relevant only for 'Dynamixel'
                           'wheel_speed': 3  # relevant only for 'Sutter'; valid range 0 (slowest) .. 7 (fastest)
                           }
+# To use the plugin-based Ludl driver instead:
+# filterwheel_parameters = {'filterwheel_type': 'LudlPlugin',
+#                           'COMport': 'COM3',
+#                           'baudrate': 9600,
+#                           'wait_until_done_delay': 0.2}
 '''
 filterdict contains filter labels and their positions. The valid positions are:
 For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
