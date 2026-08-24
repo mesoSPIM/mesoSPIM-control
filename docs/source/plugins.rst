@@ -400,6 +400,38 @@ wait delay must be greater than 0 and no more than 60 seconds. ``pyserial`` is
 imported only when ``LudlPlugin`` is selected, so importing this plugin module
 alone does not open or initialize the serial dependency.
 
+SutterPlugin Example
+~~~~~~~~~~~~~~~~~~~~
+
+``SutterPlugin`` provides the same controller protocol as the legacy
+``Sutter`` driver through the filter-wheel plugin API. It supports one Sutter
+Lambda 10 wheel and requires explicit connection, speed, and wait settings:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'SutterPlugin',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wheel_speed': 3,
+       'wait_until_done_delay': 0.5,
+   }
+
+   filterdict = {
+       'Empty': 0,
+       'Green': 4,
+   }
+
+Positions must be integers from 0 through 9. ``wheel_speed`` ranges from 0
+(fastest) through 7 (slowest); speed 0 should only be used with a supported
+4-position wheel, not a standard 10-position wheel. The wait delay must be
+greater than 0 and no more than 60 seconds. The baud rate must match the
+controller and is typically 9600. During initialization the plugin sends the
+controller's online command and requires the command echo followed by a
+carriage return. Movement responses are validated the same way; an incomplete
+or unexpected exchange faults and closes the driver so it cannot continue from
+an uncertain controller state.
+
 Filter Wheel Authoring Checklist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -479,3 +511,4 @@ Good source files to study while building plugins:
 * ``mesoSPIM/src/plugins/ImageProcessors/IdentityProcessor.py``
 * ``mesoSPIM/src/plugins/ImageProcessors/GaussianBlurProcessor.py``
 * ``mesoSPIM/src/plugins/FilterWheels/LudlFilterWheelPlugin.py``
+* ``mesoSPIM/src/plugins/FilterWheels/SutterFilterWheelPlugin.py``

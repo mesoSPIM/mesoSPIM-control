@@ -84,6 +84,21 @@ Filter-wheel plugins are selected by setting a plugin's ``name()`` as
        'wait_until_done_delay': 0.2,
    }
 
+The plugin-based Sutter Lambda 10 driver also requires wheel speed:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'SutterPlugin',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wheel_speed': 3,
+       'wait_until_done_delay': 0.5,
+   }
+
+The baud rate must match the controller's serial-interface configuration;
+Sutter Lambda 10 controllers typically use 9600.
+
 The established ``Demo``, ``Ludl``, ``Dynamixel``, ``Sutter``, and ``ZWO``
 names continue to select their existing built-in drivers. See
 :doc:`plugins` for the filter-wheel factory and runtime interfaces.

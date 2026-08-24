@@ -102,6 +102,9 @@ Filter wheels
    * - **Sutter Lambda 10**
      - ``'Sutter'``
      - 25 mm, 10 positions. Serial communication; configurable baud rate and wheel speed. Deprecated (used in early versions).
+   * - **Sutter Lambda 10 plugin**
+     - ``'SutterPlugin'``
+     - Plugin-based single-wheel driver. Requires explicit ``COMport``, ``baudrate``, ``wheel_speed``, and ``wait_until_done_delay`` settings. Validate on the physical controller before deployment.
    * - **ZWO EFW-MINI**
      - ``'ZWO'``
      - 31 mm, 5 positions (0–4). Compact, low-cost astronomy filter wheel with integrated USB controller. mesoSPIM Benchtop and v6. Requires ``pyzwoefw`` bindings.
@@ -197,9 +200,9 @@ Adding custom hardware
 -----------------------
 
 mesoSPIM-control supports filter-wheel hardware plugins. Their factory and
-runtime contracts are documented in :doc:`plugins`; use ``LudlPlugin`` as the
-reference implementation. Other device families still use the class hierarchy
-below. To add one of those device types:
+runtime contracts are documented in :doc:`plugins`; use ``LudlPlugin`` and
+``SutterPlugin`` as reference implementations. Other device families still use
+the class hierarchy below. To add one of those device types:
 
 1. Create a new ``.py`` file in the appropriate sub-folder of
    ``mesoSPIM/src/devices/``.
