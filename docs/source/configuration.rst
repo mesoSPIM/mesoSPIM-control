@@ -99,6 +99,22 @@ The plugin-based Sutter Lambda 10 driver also requires wheel speed:
 The baud rate must match the controller's serial-interface configuration;
 Sutter Lambda 10 controllers typically use 9600.
 
+FLI High Speed Filter Wheels use the configured position numbers directly:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'FLI',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wait_until_done_delay': 0.2,
+   }
+
+Set ``filterdict`` to the position numbering verified on the specific HS-625,
+HS-1025, or HS-1032 wheel. Those mappings define the available positions. The
+plugin sends positions directly without an indexing offset; position 0 is
+reserved for controller initialization.
+
 The established ``Demo``, ``Ludl``, ``Dynamixel``, ``Sutter``, and ``ZWO``
 names continue to select their existing built-in drivers. See
 :doc:`plugins` for the filter-wheel factory and runtime interfaces.

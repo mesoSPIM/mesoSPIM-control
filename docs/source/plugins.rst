@@ -432,6 +432,43 @@ carriage return. Movement responses are validated the same way; an incomplete
 or unexpected exchange faults and closes the driver so it cannot continue from
 an uncertain controller state.
 
+FLI Example
+~~~~~~~~~~~
+
+``FLI`` supports Finger Lakes Instrumentation High Speed Filter Wheels over
+RS-232, including the six-position HS-625 and ten-position HS-1025/HS-1032
+models. It uses the simple position command validated on a mesoSPIM instrument:
+
+.. code-block:: text
+
+   <position>\n
+
+Configure the serial connection and settling delay explicitly:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'FLI',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wait_until_done_delay': 0.2,
+   }
+
+   filterdict = {
+       'Empty': 1,
+       'Green': 2,
+       'Red': 3,
+   }
+
+The plugin sends each configured integer position directly, without converting
+position numbering. The configured ``filterdict`` determines which positions
+are available for the attached wheel. Command 0 is reserved by the controller
+for initialization and is not a selectable filter, so selectable mappings must
+use positions 1 through 10. The working serial framing is 8 data bits, no
+parity, two stop bits, and no flow control. The driver verifies writes but does
+not wait for a controller response, matching the previously working Ludl-class
+modification; ``wait_until_done`` uses the configured bounded delay instead.
+
 Filter Wheel Authoring Checklist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -512,3 +549,4 @@ Good source files to study while building plugins:
 * ``mesoSPIM/src/plugins/ImageProcessors/GaussianBlurProcessor.py``
 * ``mesoSPIM/src/plugins/FilterWheels/LudlFilterWheelPlugin.py``
 * ``mesoSPIM/src/plugins/FilterWheels/SutterFilterWheelPlugin.py``
+* ``mesoSPIM/src/plugins/FilterWheels/FLIFilterWheelPlugin.py``

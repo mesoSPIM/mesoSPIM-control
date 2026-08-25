@@ -335,10 +335,16 @@ filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'LudlPl
 #                           'baudrate': 9600,
 #                           'wheel_speed': 3,
 #                           'wait_until_done_delay': 0.5}
+# To use an FLI High Speed Filter Wheel instead:
+# filterwheel_parameters = {'filterwheel_type': 'FLI',
+#                           'COMport': 'COM3',
+#                           'baudrate': 9600,
+#                           'wait_until_done_delay': 0.01}
 '''
 filterdict contains filter labels and their positions. The valid positions are:
 For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
 For Sutter and SutterPlugin: 0, 1, 2, 3, .., 9, i.e. position ids (int)
+For FLI: configured integer positions 1 .. 10 are transmitted without conversion; 0 is reserved for initialization.
 For Dynamixel: servo encoder counts, e.g. 0 for 0 deg, 1024 for 45 deg (360 deg = 4096 counts, or 11.377 counts/deg). 
 Dynamixel encoder range in multi-turn mode: -28672 .. +28672 counts.
 For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
@@ -353,6 +359,14 @@ filterdict = {'Empty' : 0, # Every config should contain at least this entry
               '561LP' : 7,
               '594LP' : 8,
               'Empty-1' : 9} # Dictionary labels must be unique!
+
+# FLI positions are one-based. Example HS-625 mapping to use instead of the dictionary above:
+# filterdict = {'Empty': 1,
+#               'Filter-2': 2,
+#               'Filter-3': 3,
+#               'Filter-4': 4,
+#               'Filter-5': 5,
+#               'Filter-6': 6}
 
 '''
 Zoom configuration
