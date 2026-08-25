@@ -363,43 +363,6 @@ Validate the complete configuration before opening a serial or USB connection.
 ``close()`` must be safe to call more than once because mesoSPIM performs
 best-effort cleanup during shutdown.
 
-LudlPlugin Example
-~~~~~~~~~~~~~~~~~~
-
-``LudlPlugin`` is the built-in proof-of-concept hardware plugin for Ludl
-MAC6000 single and dual filter wheels. It is separate from the legacy ``Ludl``
-driver and requires every operator-adjustable setting explicitly:
-
-.. code-block:: python
-
-   filterwheel_parameters = {
-       'filterwheel_type': 'LudlPlugin',
-       'COMport': 'COM3',
-       'baudrate': 9600,
-       'wait_until_done_delay': 0.2,
-   }
-
-   # Single wheel
-   filterdict = {
-       'Empty': 0,
-       'Green': 3,
-   }
-
-For a dual wheel, every position must be a two-integer tuple:
-
-.. code-block:: python
-
-   filterdict = {
-       'Empty': (0, 0),
-       'Green': (3, 1),
-   }
-
-The plugin validates all parameters and filter positions before opening the
-serial port. Positions must be integers from 0 through 9 and the configured
-wait delay must be greater than 0 and no more than 60 seconds. ``pyserial`` is
-imported only when ``LudlPlugin`` is selected, so importing this plugin module
-alone does not open or initialize the serial dependency.
-
 SutterPlugin Example
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -412,7 +375,7 @@ Lambda 10 wheel and requires explicit connection, speed, and wait settings:
    filterwheel_parameters = {
        'filterwheel_type': 'SutterPlugin',
        'COMport': 'COM3',
-       'baudrate': 9600,
+       'baudrate': 128200,
        'wheel_speed': 3,
        'wait_until_done_delay': 0.5,
    }
@@ -467,6 +430,43 @@ must use positions 0 through 9. The working serial framing is 8 data bits, no
 parity, two stop bits, and no flow control. The driver verifies writes but does
 not wait for a controller response, matching the previously working Ludl-class
 modification; ``wait_until_done`` uses the configured bounded delay instead.
+
+LudlPlugin Example <NOT HARDWARE TESTED>
+~~~~~~~~~~~~~~~~~~
+
+``LudlPlugin`` is the built-in proof-of-concept hardware plugin for Ludl
+MAC6000 single and dual filter wheels. It is separate from the legacy ``Ludl``
+driver and requires every operator-adjustable setting explicitly:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'LudlPlugin',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wait_until_done_delay': 0.2,
+   }
+
+   # Single wheel
+   filterdict = {
+       'Empty': 0,
+       'Green': 3,
+   }
+
+For a dual wheel, every position must be a two-integer tuple:
+
+.. code-block:: python
+
+   filterdict = {
+       'Empty': (0, 0),
+       'Green': (3, 1),
+   }
+
+The plugin validates all parameters and filter positions before opening the
+serial port. Positions must be integers from 0 through 9 and the configured
+wait delay must be greater than 0 and no more than 60 seconds. ``pyserial`` is
+imported only when ``LudlPlugin`` is selected, so importing this plugin module
+alone does not open or initialize the serial dependency.
 
 Filter Wheel Authoring Checklist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
