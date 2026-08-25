@@ -332,14 +332,14 @@ filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'LudlPl
 # To use the plugin-based Sutter driver instead:
 # filterwheel_parameters = {'filterwheel_type': 'SutterPlugin',
 #                           'COMport': 'COM3',
-#                           'baudrate': 9600,
+#                           'baudrate': 128200,
 #                           'wheel_speed': 3,
 #                           'wait_until_done_delay': 0.5}
 # To use an FLI High Speed Filter Wheel instead:
 # filterwheel_parameters = {'filterwheel_type': 'FLI',
 #                           'COMport': 'COM3',
 #                           'baudrate': 9600,
-#                           'wait_until_done_delay': 0.01}
+#                           'wait_until_done_delay': 0.2}
 '''
 filterdict contains filter labels and their positions. The valid positions are:
 For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
@@ -359,14 +359,6 @@ filterdict = {'Empty' : 0, # Every config should contain at least this entry
               '561LP' : 7,
               '594LP' : 8,
               'Empty-1' : 9} # Dictionary labels must be unique!
-
-# FLI positions are zero-based. Example HS-625 mapping:
-# filterdict = {'Empty': 0,
-#               'Filter-2': 1,
-#               'Filter-3': 2,
-#               'Filter-4': 3,
-#               'Filter-5': 4,
-#               'Filter-6': 5}
 
 '''
 Zoom configuration
