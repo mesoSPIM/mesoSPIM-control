@@ -31,7 +31,7 @@ class TestFLIFilterWheelPlugin(unittest.TestCase):
     def create_wheel(self, filterdict=None):
         serial_module = FakeSerialModule()
         if filterdict is None:
-            filterdict = {"Empty": 1, "Green": 4, "Last": 10}
+            filterdict = {"Empty": 0, "Green": 4, "Last": 9}
         with patch.object(fli_module, "_load_serial_module", return_value=serial_module):
             wheel = fli_module.FLIFilterWheelPlugin.create(
                 VALID_PARAMETERS,
@@ -64,22 +64,21 @@ class TestFLIFilterWheelPlugin(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, missing_key):
                         fli_module.FLIFilterWheelPlugin.create(
                             parameters,
-                            {"Empty": 1},
+                            {"Empty": 0},
                         )
                 load_serial.assert_not_called()
 
     def test_invalid_configuration_fails_before_serial_connection(self):
         invalid_cases = (
-            (dict(VALID_PARAMETERS, COMport=""), {"Empty": 1}),
-            (dict(VALID_PARAMETERS, baudrate=0), {"Empty": 1}),
-            (dict(VALID_PARAMETERS, wait_until_done_delay=0), {"Empty": 1}),
-            (dict(VALID_PARAMETERS, wait_until_done_delay=float("nan")), {"Empty": 1}),
+            (dict(VALID_PARAMETERS, COMport=""), {"Empty": 0}),
+            (dict(VALID_PARAMETERS, baudrate=0), {"Empty": 0}),
+            (dict(VALID_PARAMETERS, wait_until_done_delay=0), {"Empty": 0}),
+            (dict(VALID_PARAMETERS, wait_until_done_delay=float("nan")), {"Empty": 0}),
             (VALID_PARAMETERS, {}),
             (VALID_PARAMETERS, {"Empty": True}),
             (VALID_PARAMETERS, {"Empty": -1}),
-            (VALID_PARAMETERS, {"Empty": 0}),
-            (VALID_PARAMETERS, {"Empty": 11}),
-            (VALID_PARAMETERS, {"Empty": (1, 2)}),
+            (VALID_PARAMETERS, {"Empty": 10}),
+            (VALID_PARAMETERS, {"Empty": (0, 1)}),
         )
         for parameters, filterdict in invalid_cases:
             with self.subTest(parameters=parameters, filterdict=filterdict):
@@ -117,9 +116,9 @@ class TestFLIFilterWheelPlugin(unittest.TestCase):
         self.assertEqual(
             serial_module.connection.write.call_args_list,
             [
-                unittest.mock.call(b"1\n"),
+                unittest.mock.call(b"0\n"),
                 unittest.mock.call(b"4\n"),
-                unittest.mock.call(b"10\n"),
+                unittest.mock.call(b"9\n"),
             ],
         )
         serial_module.connection.read.assert_not_called()

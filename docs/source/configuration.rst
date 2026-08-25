@@ -112,8 +112,8 @@ FLI High Speed Filter Wheels use the configured position numbers directly:
 
 Set ``filterdict`` to the position numbering verified on the specific HS-625,
 HS-1025, or HS-1032 wheel. Those mappings define the available positions. The
-plugin sends positions directly without an indexing offset; position 0 is
-reserved for controller initialization.
+plugin sends zero-based positions 0 through 9 directly without an indexing
+offset.
 
 The established ``Demo``, ``Ludl``, ``Dynamixel``, ``Sutter``, and ``ZWO``
 names continue to select their existing built-in drivers. See

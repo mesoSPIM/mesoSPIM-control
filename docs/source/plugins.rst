@@ -455,16 +455,15 @@ Configure the serial connection and settling delay explicitly:
    }
 
    filterdict = {
-       'Empty': 1,
-       'Green': 2,
-       'Red': 3,
+       'Empty': 0,
+       'Green': 1,
+       'Red': 2,
    }
 
 The plugin sends each configured integer position directly, without converting
 position numbering. The configured ``filterdict`` determines which positions
-are available for the attached wheel. Command 0 is reserved by the controller
-for initialization and is not a selectable filter, so selectable mappings must
-use positions 1 through 10. The working serial framing is 8 data bits, no
+are available for the attached wheel. FLI positions are zero-based, so mappings
+must use positions 0 through 9. The working serial framing is 8 data bits, no
 parity, two stop bits, and no flow control. The driver verifies writes but does
 not wait for a controller response, matching the previously working Ludl-class
 modification; ``wait_until_done`` uses the configured bounded delay instead.

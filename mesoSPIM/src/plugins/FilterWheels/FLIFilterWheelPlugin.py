@@ -115,11 +115,11 @@ class _FLIFilterWheel:
             valid_position = (
                 isinstance(position, int)
                 and not isinstance(position, bool)
-                and 1 <= position <= 10
+                and 0 <= position <= 9
             )
             if not valid_position:
                 raise ValueError(
-                    f"FLI filter {name!r} must map to an integer position from 1 to 10"
+                    f"FLI filter {name!r} must map to an integer position from 0 to 9"
                 )
 
     def _write_command(self, command: bytes) -> None:
