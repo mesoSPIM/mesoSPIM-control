@@ -2085,7 +2085,18 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
 
     def enable_ttl_motion(self, boolean):
         if self.ttl_motion_enabled_during_acq:
-            self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
+            if self.ttl_motion_currently_enabled == boolean:
+                # Teardown asks for TTL-off from both stop() and close_acquisition().
+                # Re-sending costs one serial command per card, each of which can
+                # collide with the GUI thread's position polling.
+                logger.debug(f'TTL Motion already {boolean}, skipping redundant command')
+                return
+            # Lock: every other serial entry point in this class takes _serial_lock.
+            # This method runs on the Core thread while pos_timer/report_position runs
+            # on the GUI thread; without the lock the two interleave on one port and
+            # both replies are lost, stalling Live-mode STOP for the full read timeout.
+            with self._serial_lock:
+                self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
             self.ttl_motion_currently_enabled = boolean
             logger.info('TTL Motion currently enabled: '+str(boolean))
             self.state['ttl_movement_enabled_during_acq'] = boolean
