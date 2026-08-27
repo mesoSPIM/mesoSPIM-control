@@ -107,7 +107,7 @@ camera_parameters = {'x_pixels' : 4608,
                      'y_pixel_size_in_microns' : 5.5,
                      'subsampling' : [1,2,4],
                      'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
+                     'sensor_mode' : 1,    # 12 for progressive (rolling shutter), 1 for AREA (standard)
                      'defect_correct_mode': 2,
                      'binning' : '1x1',
                      #'readout_speed' : 1, # not available for Orca Lightning
@@ -365,7 +365,7 @@ When setting up a new mesoSPIM, make sure that:
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
-'sweeptime' : 0.045, # manually adjusted for Orca Lightning camera, for 2x-20x magnification range.
+'sweeptime' : 0.020, # manually adjusted for Orca Lightning camera, for 2x-20x magnification range.
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-upgrade2023.csv',
 'filepath' : '/tmp/file.tif',
@@ -410,7 +410,7 @@ startup = {
 'laser_r_max_amplitude_%' : 100,
 'camera_delay_%' : 0,
 'camera_pulse_%' : 1,
-'camera_exposure_time':0.01,
+'camera_exposure_time':0.020,
 'camera_line_interval':50e-6, # max 200 µs for Orca Lightning, manually selected. Hamamatsu-specific parameter
 'camera_display_live_subsampling': 2,
 'camera_display_snap_subsampling': 2,
