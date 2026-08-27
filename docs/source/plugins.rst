@@ -375,7 +375,7 @@ Lambda 10 wheel and requires explicit connection, speed, and wait settings:
    filterwheel_parameters = {
        'filterwheel_type': 'SutterPlugin',
        'COMport': 'COM3',
-       'baudrate': 128200,
+       'baudrate': 9600,
        'wheel_speed': 3,
        'wait_until_done_delay': 0.5,
    }
