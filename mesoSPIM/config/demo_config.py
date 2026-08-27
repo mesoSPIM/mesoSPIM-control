@@ -314,17 +314,37 @@ asi_parameters = {'COMport' : 'COM32',
 Filterwheel configuration
 For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
+For the plugin-based LudlPlugin, COMport, baudrate, and wait_until_done_delay are required.
+For SutterPlugin, COMport, baudrate, wheel_speed, and wait_until_done_delay are required.
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
-filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'Sutter', 'Dynamixel', 'ZWO'
+filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'LudlPlugin', 'Sutter', 'SutterPlugin', 'Dynamixel', 'ZWO'
                           'COMport' : 'COM3', # irrelevant for 'ZWO'
-                          'baudrate' : 115200, # relevant only for 'Dynamixel', 'Sutter'
+                          'baudrate' : 115200, # device-specific; SutterPlugin typically uses 9600 (see example below)
                           'servo_id' :  1, # relevant only for 'Dynamixel'
-                          'wheel_speed': 3  # relevant only for 'Sutter'; valid range 0 (slowest) .. 7 (fastest)
+                          'wheel_speed': 3  # relevant only for 'Sutter', 'SutterPlugin'; 0 (fastest) .. 7 (slowest)
                           }
+# To use the plugin-based Ludl driver instead:
+# filterwheel_parameters = {'filterwheel_type': 'LudlPlugin',
+#                           'COMport': 'COM3',
+#                           'baudrate': 9600,
+#                           'wait_until_done_delay': 0.2}
+# To use the plugin-based Sutter driver instead:
+# filterwheel_parameters = {'filterwheel_type': 'SutterPlugin',
+#                           'COMport': 'COM3',
+#                           'baudrate': 128200,
+#                           'wheel_speed': 3,
+#                           'wait_until_done_delay': 0.5}
+# To use an FLI High Speed Filter Wheel instead:
+# filterwheel_parameters = {'filterwheel_type': 'FLI',
+#                           'COMport': 'COM3',
+#                           'baudrate': 9600,
+#                           'wait_until_done_delay': 0.2}
 '''
 filterdict contains filter labels and their positions. The valid positions are:
 For Ludl: 0, 1, 2, 3, .., 9, i.e. position ids (int)
+For Sutter and SutterPlugin: 0, 1, 2, 3, .., 9, i.e. position ids (int)
+For FLI: configured integer positions 0 .. 9 are transmitted without conversion.
 For Dynamixel: servo encoder counts, e.g. 0 for 0 deg, 1024 for 45 deg (360 deg = 4096 counts, or 11.377 counts/deg). 
 Dynamixel encoder range in multi-turn mode: -28672 .. +28672 counts.
 For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.

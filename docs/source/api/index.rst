@@ -62,10 +62,11 @@ Key architectural concepts
     calibration values.
 
 **Plugin system** (``src/plugins/``)
-    mesoSPIM currently supports two plugin families: image writers and image
-    processors. Writers extend acquisition output formats through
-    ``ImageWriterApi``. Processors extend the live and acquisition pipeline
-    through ``ImageProcessorApi`` and the processor chain. Both are discovered
+    mesoSPIM currently supports three plugin families: image writers, image
+    processors, and filter wheels. Writers extend acquisition output formats
+    through ``ImageWriterApi``. Processors extend the live and acquisition
+    pipeline through ``ImageProcessorApi`` and the processor chain. Filter-wheel
+    factories and drivers implement ``FilterWheelApi``. All three are discovered
     through ``PluginRegistry``.
 
     See :doc:`../plugins` for the author guide.
@@ -168,6 +169,17 @@ mesoSPIM_CameraWindow
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: mesoSPIM.src.mesoSPIM_CameraWindow
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Plugin APIs
+-----------
+
+FilterWheelApi
+~~~~~~~~~~~~~~
+
+.. automodule:: mesoSPIM.src.plugins.FilterWheelApi
    :members:
    :undoc-members:
    :show-inheritance:

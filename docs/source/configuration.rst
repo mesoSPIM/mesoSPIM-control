@@ -45,9 +45,9 @@ in the file-naming wizard.
         #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
     }
 
-``path_list`` adds extra directories that are scanned for both image-writer
-and image-processor plugins. Built-in plugins are always loaded from the
-repository's plugin directories.
+``path_list`` adds extra directories that are scanned for image-writer,
+image-processor, and filter-wheel plugins. Built-in plugins are always loaded
+from the repository's plugin directories.
 
 ``first_image_writer`` only affects the ordering in the file-naming wizard. It
 does not force a writer for all acquisitions.
@@ -71,7 +71,53 @@ Image processors are handled differently: they are configured in the
 processor-chain dialog and persisted to ``processor_chain.json`` next to the
 active microscope config file rather than through top-level config variables.
 
-See :doc:`plugins` for the full developer-facing plugin guide.
+Filter-wheel plugins are selected by setting a plugin's ``name()`` as
+``filterwheel_parameters['filterwheel_type']``. For example, the built-in
+``LudlPlugin`` requires explicit connection and wait settings:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'LudlPlugin',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wait_until_done_delay': 0.2,
+   }
+
+The plugin-based Sutter Lambda 10 driver also requires wheel speed:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'SutterPlugin',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wheel_speed': 3,
+       'wait_until_done_delay': 0.5,
+   }
+
+The baud rate must match the controller's serial-interface configuration;
+Sutter Lambda 10 controllers typically use 9600.
+
+FLI High Speed Filter Wheels use the configured position numbers directly:
+
+.. code-block:: python
+
+   filterwheel_parameters = {
+       'filterwheel_type': 'FLI',
+       'COMport': 'COM3',
+       'baudrate': 9600,
+       'wait_until_done_delay': 0.2,
+   }
+
+Set ``filterdict`` to the position numbering verified on the specific HS-625,
+HS-1025, or HS-1032 wheel. Those mappings define the available positions. The
+plugin sends zero-based positions 0 through 9 directly without an indexing
+offset.
+
+The established ``Demo``, ``Ludl``, ``Dynamixel``, ``Sutter``, and ``ZWO``
+names continue to select their existing built-in drivers. See
+:doc:`plugins` for the filter-wheel factory and runtime interfaces.
 
 ui_options
 ~~~~~~~~~~
