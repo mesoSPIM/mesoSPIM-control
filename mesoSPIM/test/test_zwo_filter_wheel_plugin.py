@@ -52,9 +52,7 @@ class TestZWOFilterWheelPlugin(unittest.TestCase):
         )
         self.assertNotIn("ZWOPlugin", registry.processors)
         self.assertNotIn("ZWOPlugin", registry._writers)
-        self.assertEqual(
-            plugin_class.required_parameters(), ("wait_until_done_delay",)
-        )
+        self.assertEqual(plugin_class.required_parameters(), ())
 
     def test_plugin_name_does_not_shadow_the_legacy_zwo_driver(self):
         self.assertNotEqual(zwo_module.ZWOFilterWheelPlugin.name(), "ZWO")
@@ -63,10 +61,29 @@ class TestZWOFilterWheelPlugin(unittest.TestCase):
             manager.RESERVED_FILTER_WHEEL_NAMES,
         )
 
-    def test_missing_required_parameters_fail_before_hardware_access(self):
+    def test_omitted_wait_until_done_delay_falls_back_to_the_default(self):
+        wheel, _ = self.create_wheel(parameters={})
+        self.addCleanup(wheel.close)
+
+        self.assertEqual(
+            wheel.wait_until_done_delay, zwo_module.DEFAULT_WAIT_UNTIL_DONE_DELAY
+        )
+
+    def test_default_delay_is_applied_when_waiting(self):
+        wheel, _ = self.create_wheel(parameters={})
+        self.addCleanup(wheel.close)
+
+        with patch.object(zwo_module.time, "sleep") as sleep:
+            wheel.set_filter("Green", wait_until_done=True)
+
+        sleep.assert_called_once_with(zwo_module.DEFAULT_WAIT_UNTIL_DONE_DELAY)
+
+    def test_invalid_delay_is_still_rejected_when_supplied(self):
         with patch.object(zwo_module, "_load_efw_module") as load_efw:
             with self.assertRaisesRegex(ValueError, "wait_until_done_delay"):
-                zwo_module.ZWOFilterWheelPlugin.create({}, {"Empty": 0})
+                zwo_module.ZWOFilterWheelPlugin.create(
+                    {"wait_until_done_delay": 0}, {"Empty": 0}
+                )
         load_efw.assert_not_called()
 
     def test_invalid_configuration_fails_before_hardware_access(self):
@@ -221,6 +238,9 @@ class TestZWOFilterWheelHardware(unittest.TestCase):
             self.wheel.set_filter("NotAFilter", wait_until_done=True)
 
     def test_oversized_filterdict_is_rejected_by_the_real_wheel(self):
+        # The EFW SDK is global: a second handle on the same wheel would close
+        # the device underneath the one opened in setUp. Release it first.
+        self.wheel.close()
         with self.assertRaisesRegex(ValueError, "slot count"):
             zwo_module.ZWOFilterWheelPlugin.create(
                 VALID_PARAMETERS, {"TooFar": self.n_slots}

@@ -8,18 +8,31 @@ import ctypes as c
 import sys
 from ctypes.util import find_library
 from time import sleep
-# Returned error code
-# _EFW_ERROR_CODE = {EFW_SUCCESS = 0,
-#                     EFW_ERROR_INVALID_INDEX,
-#                     EFW_ERROR_INVALID_ID,
-#                     EFW_ERROR_INVALID_VALUE,
-#                     EFW_ERROR_CLOSED, #not opened
-#                     EFW_ERROR_REMOVED, #failed to find the filter wheel, maybe the filter wheel has been removed
-#                     EFW_ERROR_MOVING,#filter wheel is moving
-#                     EFW_ERROR_GENERAL_ERROR,#other error
-#                     EFW_ERROR_CLOSED,
-#                     EFW_ERROR_END = -1
-#                     }
+# Returned error codes, as defined in EFW_filter.h:
+# typedef enum _EFW_ERROR_CODE{
+#     EFW_SUCCESS = 0,
+#     EFW_ERROR_INVALID_INDEX,   // 1
+#     EFW_ERROR_INVALID_ID,      // 2
+#     EFW_ERROR_INVALID_VALUE,   // 3
+#     EFW_ERROR_REMOVED,         // 4, failed to find the wheel, maybe it has been removed
+#     EFW_ERROR_MOVING,          // 5, filter wheel is moving
+#     EFW_ERROR_ERROR_STATE,     // 6, filter wheel is in error state
+#     EFW_ERROR_GENERAL_ERROR,   // 7, other error
+#     EFW_ERROR_NOT_SUPPORTED,   // 8
+#     EFW_ERROR_CLOSED,          // 9, device not opened
+#     EFW_ERROR_END = -1
+# }EFW_ERROR_CODE;
+EFW_SUCCESS = 0
+EFW_ERROR_INVALID_INDEX = 1
+EFW_ERROR_INVALID_ID = 2
+EFW_ERROR_INVALID_VALUE = 3
+EFW_ERROR_REMOVED = 4
+EFW_ERROR_MOVING = 5
+EFW_ERROR_ERROR_STATE = 6
+EFW_ERROR_GENERAL_ERROR = 7
+EFW_ERROR_NOT_SUPPORTED = 8
+EFW_ERROR_CLOSED = 9
+EFW_ERROR_END = -1
 
 class EFW_Error(Exception):
     """
@@ -38,17 +51,27 @@ class EFW_IOError(EFW_Error):
         self.error_code = error_code
 
 # Mapping of error numbers to exceptions. Zero is used for success
-efw_errors = [None,
-              EFW_IOError('Invalid index', 1),
-              EFW_IOError('Invalid ID', 2),
-              EFW_IOError('Invalid value', 3),
-              EFW_IOError('EFW closed', 4),
-              EFW_IOError('EFW removed', 5),
-              EFW_IOError('Moving', 6),
-              EFW_IOError('General error', 7),
-              EFW_IOError('Closed', 8),
-              EFW_IOError('End', 9)
-              ]
+efw_error_messages = {
+    EFW_ERROR_INVALID_INDEX: 'Invalid index',
+    EFW_ERROR_INVALID_ID: 'Invalid ID',
+    EFW_ERROR_INVALID_VALUE: 'Invalid value',
+    EFW_ERROR_REMOVED: 'EFW removed',
+    EFW_ERROR_MOVING: 'Moving',
+    EFW_ERROR_ERROR_STATE: 'EFW in error state',
+    EFW_ERROR_GENERAL_ERROR: 'General error',
+    EFW_ERROR_NOT_SUPPORTED: 'Not supported',
+    EFW_ERROR_CLOSED: 'EFW closed (device not opened)',
+    EFW_ERROR_END: 'End',
+    }
+
+
+def _check(r, verbose=False):
+    """Raise EFW_IOError if the SDK return code `r` signals an error."""
+    if r == EFW_SUCCESS:
+        return
+    if verbose:
+        print(r)
+    raise EFW_IOError(efw_error_messages.get(r, f'Unknown EFW error code {r}'), r)
 
 
 # Filter wheel information
@@ -113,23 +136,25 @@ def init(library_file):
     return efwlib
 
 
-class EFW(object): 
-    IDs = []
-    slotNums = {}
-    FiltersNames = {}
-    FiltersSlots = {}
-    calibrated = False
-
+class EFW(object):
     def __init__(self, library_file=None, verbose=True): #ok
         self.verbose = verbose
         self.dll = init(library_file)
+        # Per-instance state: these must not be shared between EFW objects,
+        # otherwise a second instance inherits stale IDs and slot counts.
+        self.IDs = []
+        self.slotNums = {}
+        self.FiltersNames = {}
+        self.FiltersSlots = {}
+        self.calibrated = {}
 
         self.Num = self.GetNum() #get number of wheels
         self.IDs = [self.GetID(n) for n in range(self.Num)] #get ids of wheels
         #open wheels and get slots number
-        for ID in self.IDs: 
+        for ID in self.IDs:
             self.Open(ID)
             self.slotNums[ID] = (self.GetProperty(ID)['slotNum'])
+            self.calibrated[ID] = False
             self.SetPosition(ID, 0)
             #self.SetDirection(ID, True)
 
@@ -138,44 +163,24 @@ class EFW(object):
 
     def GetID(self, num): #ok
         ID = c.c_short()
-        r = self.dll.EFWGetID(num, ID)
-        if r:
-            if self.verbose: 
-                print(r)
-            raise efw_errors[r]
+        _check(self.dll.EFWGetID(num, ID), self.verbose)
         return ID.value
 
     def Open(self, ID): #ok
-        r = self.dll.EFWOpen(ID)
-        if r:
-            if self.verbose: 
-                print(r)
-            raise efw_errors[r]
-    
+        _check(self.dll.EFWOpen(ID), self.verbose)
+
     def GetProperty(self, ID): #works once wheel is open
         props = _EFW_INFO()
-        r = self.dll.EFWGetProperty(ID, props)
-        if r:
-            if self.verbose: 
-                print(r)
-            raise efw_errors[r]
+        _check(self.dll.EFWGetProperty(ID, props), self.verbose)
         return props.get_dict()
 
     def GetPosition(self, ID): #ok
         slot = c.c_int()
-        r = self.dll.EFWGetPosition(ID, slot)
-        if r:
-            if self.verbose: 
-                print(r)
-            raise efw_errors[r]
+        _check(self.dll.EFWGetPosition(ID, slot), self.verbose)
         return slot.value
 
     def SetPosition(self, ID, slot, wait_until_done=True):
-        r = self.dll.EFWSetPosition(ID, slot)
-        if r:
-            if self.verbose:
-                print(r)
-            raise efw_errors[r]
+        _check(self.dll.EFWSetPosition(ID, slot), self.verbose)
         if wait_until_done:
             inPosition = False
             while not inPosition:
@@ -185,34 +190,35 @@ class EFW(object):
                     inPosition = True
     
     def SetDirection(self, ID, direction): #ok
-        r = self.dll.EFWSetDirection(ID, direction)
-        if r:
-            if self.verbose: 
-                print(r)
-            raise efw_errors[r]
-   
+        _check(self.dll.EFWSetDirection(ID, direction), self.verbose)
+
     def Calibrate(self, ID): #ok
-        #return to slot 0 
+        #return to slot 0
         self.SetPosition(ID, 0)
         pos_ref = self.GetPosition(ID)
-        r = self.dll.EFWCalibrate(ID)
-        if r:
-            if self.verbose: 
-                print(r)
-            raise efw_errors[r]
+        _check(self.dll.EFWCalibrate(ID), self.verbose)
         # wait until calibration is over
         sleep(25)
+        self.calibrated[ID] = True
 
-    def Close(self, ID): #ok// not always ok 
-        #return to slot 0 
-        self.SetPosition(ID, 0)
-        self.GetPosition(ID)
+    def Close(self, ID):
+        """Park the wheel at slot 0 and release the device handle.
+
+        Closing is idempotent: the SDK is global, so a wheel may already have
+        been closed by another handle on the same device. Parking is
+        best-effort, and an already-closed device is not an error.
+        """
+        try:
+            self.SetPosition(ID, 0)
+        except EFW_IOError as e:
+            if e.error_code == EFW_ERROR_CLOSED:
+                return  # already closed by someone else, nothing to release
+            if self.verbose:
+                print(f'EFW {ID}: could not park at slot 0 before closing: {e}')
         r = self.dll.EFWClose(ID)
-        if r:
-            if self.verbose: 
-                print(r)
-            raise efw_errors[r]
-    
+        if r != EFW_ERROR_CLOSED:
+            _check(r, self.verbose)
+
     def SetFiltersNames(self, ID, FiltersNames): 
         if len(FiltersNames) == self.slotNums[ID]:
             self.FiltersNames[ID] = FiltersNames

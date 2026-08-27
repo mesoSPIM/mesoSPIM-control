@@ -15,6 +15,11 @@ from mesoSPIM.src.plugins.FilterWheelApi import API_VERSION, FilterWheel
 
 logger = logging.getLogger(__name__)
 
+# Settle time applied after the SDK reports the wheel in position. Matches the
+# fixed 1 s sleep of the legacy ZwoFilterWheel driver, so configs that omit
+# 'wait_until_done_delay' behave as before.
+DEFAULT_WAIT_UNTIL_DONE_DELAY = 1.0
+
 
 def _load_efw_module():
     try:
@@ -49,7 +54,10 @@ class ZWOFilterWheelPlugin:
 
     @classmethod
     def required_parameters(cls) -> tuple[str, ...]:
-        return ("wait_until_done_delay",)
+        # The wheel is addressed over USB and needs no operator-supplied
+        # settings; 'wait_until_done_delay', 'wheel_index' and 'dll_path' are
+        # all optional and fall back to sensible defaults.
+        return ()
 
     @classmethod
     def create(
@@ -68,7 +76,11 @@ class _ZWOFilterWheel:
     ) -> None:
         self._validate_config(filterwheel_parameters, filterdict)
         self.filterdict = dict(filterdict)
-        self.wait_until_done_delay = float(filterwheel_parameters["wait_until_done_delay"])
+        self.wait_until_done_delay = float(
+            filterwheel_parameters.get(
+                "wait_until_done_delay", DEFAULT_WAIT_UNTIL_DONE_DELAY
+            )
+        )
         self._wheel_index = int(filterwheel_parameters.get("wheel_index", 0))
         self._faulted = False
         self._device = None
@@ -102,14 +114,11 @@ class _ZWOFilterWheel:
         filterwheel_parameters: Mapping[str, Any],
         filterdict: Mapping[str, Any],
     ) -> None:
-        required = ZWOFilterWheelPlugin.required_parameters()
-        missing = [key for key in required if key not in filterwheel_parameters]
-        if missing:
-            raise ValueError(
-                "Missing required ZWO filter wheel parameters: " + ", ".join(missing)
-            )
-
-        delay = filterwheel_parameters["wait_until_done_delay"]
+        # No required parameters; every key below is optional but must still be
+        # valid when the operator does supply it.
+        delay = filterwheel_parameters.get(
+            "wait_until_done_delay", DEFAULT_WAIT_UNTIL_DONE_DELAY
+        )
         valid_delay = (
             not isinstance(delay, bool)
             and isinstance(delay, Real)

@@ -316,7 +316,7 @@ For a DemoFilterWheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 For the plugin-based LudlPlugin, COMport, baudrate, and wait_until_done_delay are required.
 For SutterPlugin, COMport, baudrate, wheel_speed, and wait_until_done_delay are required.
-For ZWOPlugin, only wait_until_done_delay is required ('wheel_index' and 'dll_path' are optional).
+For ZWOPlugin, no parameters are required ('wait_until_done_delay', 'wheel_index' and 'dll_path' are optional).
 For a Dynamixel FilterWheel, valid baudrate and servoi_id are necessary. 
 '''
 filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'LudlPlugin', 'Sutter', 'SutterPlugin', 'Dynamixel', 'ZWO', 'ZWOPlugin'
@@ -338,7 +338,7 @@ filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'LudlPl
 #                           'wait_until_done_delay': 0.5}
 # To use the plugin-based ZWO EFW driver instead (no COMport, USB SDK):
 # filterwheel_parameters = {'filterwheel_type': 'ZWOPlugin',
-#                           'wait_until_done_delay': 1.0,
+#                           'wait_until_done_delay': 1.0,  # optional, defaults to 1.0 s
 #                           'wheel_index': 0,  # optional, for >1 connected EFW wheel
 #                           }
 # To use an FLI High Speed Filter Wheel instead:
