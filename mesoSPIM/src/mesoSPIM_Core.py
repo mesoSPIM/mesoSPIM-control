@@ -29,6 +29,7 @@ from .mesoSPIM_Camera import mesoSPIM_Camera
 
 from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
+from .utils.ni_daqmx import require_nidaqmx
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
@@ -94,6 +95,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.state = self.parent.state # mesoSPIM_StateSingleton class
         self.state['state'] = 'init'
+
+        ''' If the config file asks for NI hardware, fail here rather than half-way through
+        device setup, when the camera and image writer threads are already running. The NI
+        device classes guard themselves as well, this is only about failing before side effects. '''
+        ni_selected = [key for key in ('waveformgeneration', 'shutter', 'laser')
+                       if getattr(self.cfg, key, None) in ('NI', 'cDAQ')]
+        if ni_selected:
+            require_nidaqmx(f"NI hardware selected in the config file ({', '.join(ni_selected)})")
 
         self.frame_queue = deque([])
         self.frame_queue_display = deque([], maxlen=1)    

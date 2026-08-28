@@ -9,11 +9,9 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-'''National Instruments Imports'''
-import nidaqmx
-from nidaqmx.constants import AcquisitionType, TaskMode
-from nidaqmx.constants import LineGrouping, DigitalWidthUnits
-from nidaqmx.types import CtrTime
+'''National Instruments Imports (optional: demo mode runs without them)'''
+from .utils.ni_daqmx import nidaqmx, require_nidaqmx
+from .utils.ni_daqmx import AcquisitionType, TaskMode, LineGrouping
 
 '''mesoSPIM imports'''
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
@@ -29,9 +27,12 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     '''
     sig_update_gui_from_state = QtCore.pyqtSignal() # -> mesoSPIM_Core.sig_update_gui_from_state -> MainWindow.update_gui_from_state
+    requires_nidaqmx = True # the Demo subclass below sets this to False
 
     def __init__(self, parent):
         super().__init__()
+        if self.requires_nidaqmx:
+            require_nidaqmx('NI waveform generation')
         self.cfg = parent.cfg
         self.parent = parent # mesoSPIM_Core object
         self.state = self.parent.state # mesoSPIM_StateSingleton object
@@ -588,7 +589,11 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
 class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
     """Demo subclass of mesoSPIM_WaveFormGenerator class
+
+    Every method that touches a DAQmx task is overridden below, so this class
+    runs without the `nidaqmx` package and without the NI-DAQmx driver.
     """
+    requires_nidaqmx = False
 
     def __init__(self, parent):
         super().__init__(parent)

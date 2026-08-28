@@ -1,4 +1,8 @@
 ## Unreleased
+### Hardware Control & Support 🔧
+- Demo mode no longer requires the `nidaqmx` package: NI-DAQmx is imported through an optional shim, and `nidaqmx` has moved to an optional `ni` extra (`pip install -e ".[ni]"`). Both `requirements-*.txt` files still install it, so the documented install path is unchanged.
+- Configs selecting NI waveform generation, shutters or laser enable lines now fail at startup with a message naming the missing package or driver, instead of an import error or a `DaqNotFoundError` raised mid-acquisition.
+
 ### Bugfixes 🐛
 - PSF analysis tool: fixed bead detection finding 0 beads (or crashing) on beads elongated/wiggly in Z (e.g. stage-jitter artifacts): `keepBeads()` now keeps the brightest candidate among mutually-close peaks instead of discarding all of them, and 0 detected beads is reported in the UI instead of raising an uncaught error.
 - PSF analysis tool: beads sitting too close to a Z-stack edge for the configured fitting window are now excluded (previously a window that exactly touched the edge was silently accepted, giving an unreliable, baseline-biased axial fit).

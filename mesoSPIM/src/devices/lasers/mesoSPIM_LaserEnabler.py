@@ -2,8 +2,7 @@
 mesoSPIM Module for enabling single laser lines via NI-DAQmx
 """
 
-import nidaqmx
-from nidaqmx.constants import LineGrouping
+from ...utils.ni_daqmx import nidaqmx, require_nidaqmx, LineGrouping
 
 class mesoSPIM_LaserEnabler:
     ''' Class for interacting with the laser enable DO lines via NI-DAQmx
@@ -17,6 +16,7 @@ class mesoSPIM_LaserEnabler:
     '515 nm': 'PXI1Slot4/port0/line3'}
     '''
     def __init__(self, laserdict):
+        require_nidaqmx('NI laser enable line control')
         self.laserenablestate = 'None'
         self.laserdict = laserdict
 
