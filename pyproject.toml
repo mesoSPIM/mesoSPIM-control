@@ -18,7 +18,6 @@ dependencies = [
     "scipy==1.14.1",
     "PyQt5==5.15.11",
     "PyQt5-sip==12.15.0",
-    "nidaqmx==1.0.1",
     "indexed==1.3.0",
     "pipython==2.10.2.1",
     "pyserial==3.5",
@@ -30,6 +29,12 @@ dependencies = [
     "future==1.0.0",
     "matplotlib==3.9.2"
 ]
+
+[project.optional-dependencies]
+# NI-DAQmx is only needed by setups that drive National Instruments hardware, i.e. a config
+# file with 'waveformgeneration', 'shutter' or 'laser' set to 'NI' or 'cDAQ'. Demo mode and
+# the docs build run without it. The requirements-*.txt files still install it directly.
+ni = ["nidaqmx==1.0.1"]
 
 [project.urls]
 "Homepage" = "http://mesospim.org"

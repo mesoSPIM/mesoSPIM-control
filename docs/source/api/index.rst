@@ -222,6 +222,11 @@ Shutters
 Utilities
 ---------
 
+.. automodule:: mesoSPIM.src.utils.ni_daqmx
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: mesoSPIM.src.utils.acquisitions
    :members:
    :undoc-members:
