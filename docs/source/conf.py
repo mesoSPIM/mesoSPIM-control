@@ -95,7 +95,6 @@ autodoc_mock_imports = [
     "future",
     "matplotlib",
     "psutil",
-    "distutils",
     "dcamapi",               # Hamamatsu camera API
     "libgclib",              # Galil stage library
 ]
