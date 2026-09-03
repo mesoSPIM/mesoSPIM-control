@@ -12,7 +12,6 @@ import logging
 logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
-from distutils.version import StrictVersion
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core, timed
 from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
@@ -120,16 +119,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(file)
 
     def check_versions(self):
-        """Take care of API changes in different library versions"""
-        if StrictVersion(tifffile.__version__) < StrictVersion('2020.9.30'):
-            self.tiff_write = tifffile.TiffWriter.save
-            print(f"Warning: you are using outdated version of tifffile library {tifffile.__version__}. "
-                  f"Upgrade to Python 3.7 and pip-install the latest tifffile version.")
-        else:
-            self.tiff_write = tifffile.TiffWriter.write
-
-        tifffile.TiffWriter.write = self.tiff_write # rename the entire class method if necessary
-
+        """Warn about deprecated config options"""
         if hasattr(self.cfg, 'buffering'):
             msg = "Option 'buffering = {...}' in config file is deprecated from v.1.10.0 and will be ignored, \
  due to improved program performance. You can delete it from the config file."
