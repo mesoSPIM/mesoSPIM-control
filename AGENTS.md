@@ -28,13 +28,12 @@
 
 ## Environment Notes
 - Python target: `>=3.12` according to `pyproject.toml`.
-- Core runtime dependencies are listed in `requirements-conda-mamba.txt`, `requirements-clean-python.txt`, and `pyproject.toml`.
+- Core runtime dependencies are listed in `requirements-conda-mamba.txt` and `pyproject.toml`.
 - The app is typically run in a conda/mamba environment with PyQt5 and hardware libraries installed.
 - Some commands below fail in a bare environment if optional dependencies like `PyQt5`, `pytest`, or hardware drivers are missing.
 
 ## Install And Run
 - Create/install the main environment with `pip install -r requirements-conda-mamba.txt`.
-- Alternative lightweight dependency list: `pip install -r requirements-clean-python.txt`.
 - Launch demo mode from repo root with `python mesoSPIM/mesoSPIM_Control.py -D`.
 - Launch demo mode from `mesoSPIM/` with `python mesoSPIM_Control.py -D`.
 - Installed console script entry point: `mesospim-control`.
