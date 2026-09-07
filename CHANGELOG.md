@@ -11,6 +11,8 @@
 - PSF analysis tool: fixed the axial/lateral FWHM standard deviation sometimes being huge (100s of µm in a stack only ~100 µm deep) while the median stayed reasonable. `curve_fit`'s Gaussian sigma was unbounded, so a bead with a weak/noisy profile could occasionally converge on a degenerate, very broad "fit" (or even a negative sigma, giving a negative FWHM) that wildly skewed the std without affecting the (outlier-robust) median. Sigma is now bounded to the fitting window's own extent.
 - Fresh Python 3.12 installations no longer fail at startup with `ModuleNotFoundError: No module named 'distutils'`. `distutils` left the standard library in 3.12 and only resolved where setuptools' compatibility shim happened to be installed. The `tifffile` version check that imported it was dead on every supported `tifffile` version, and has been removed.
 - Removed `requirements-clean-python.txt` and the install instructions pointing at it. The file could never be installed: it listed standard-library module names as pip requirements, so pip aborted the run.
+- `pip install -e .` now installs `pandas`, `scikit-learn`, `zarr`, `psutil` and `typer`. `pyproject.toml` never declared them, so on a pip-based install the PSF analysis tool and the BigStitcher export script failed with `ModuleNotFoundError`, and `MP OME Zarr` was missing from the file format list.
+- `pyqtgraph` is now pinned to `==0.13.7` in `pyproject.toml`, matching `requirements-conda-mamba.txt`.
 
 ### GUI Improvements 🖥️
 - PSF analysis tool: axial (Z) fitting window is now a separate "Z fit window (µm)" control, independent of "Min dist betw beads (µm)", so it can be widened for beads with a broad/wiggly axial profile without also enlarging the lateral crop. Default increased 15→30 µm.
