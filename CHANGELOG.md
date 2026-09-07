@@ -1,6 +1,6 @@
 ## Unreleased
 ### Hardware Control & Support 🔧
-- Demo mode no longer requires the `nidaqmx` package: NI-DAQmx is imported through an optional shim, and `nidaqmx` has moved to an optional `ni` extra (`pip install -e ".[ni]"`). Both `requirements-*.txt` files still install it, so the documented install path is unchanged.
+- Demo mode no longer requires the `nidaqmx` package: NI-DAQmx is imported through an optional shim, and `nidaqmx` has moved to an optional `ni` extra (`pip install -e ".[ni]"`). `requirements-conda-mamba.txt` still installs it, so the documented install path is unchanged.
 - Configs selecting NI waveform generation, shutters or laser enable lines now fail at startup with a message naming the missing package or driver, instead of an import error or a `DaqNotFoundError` raised mid-acquisition.
 
 ### Bugfixes 🐛
@@ -10,6 +10,7 @@
 - PSF analysis tool now excludes beads with any saturated pixel (value at the numerical max of the file's dtype, e.g. 65535 for uint16) within their fitting window, instead of only warning about saturation stack-wide at load time and fitting them anyway.
 - PSF analysis tool: fixed the axial/lateral FWHM standard deviation sometimes being huge (100s of µm in a stack only ~100 µm deep) while the median stayed reasonable. `curve_fit`'s Gaussian sigma was unbounded, so a bead with a weak/noisy profile could occasionally converge on a degenerate, very broad "fit" (or even a negative sigma, giving a negative FWHM) that wildly skewed the std without affecting the (outlier-robust) median. Sigma is now bounded to the fitting window's own extent.
 - Fresh Python 3.12 installations no longer fail at startup with `ModuleNotFoundError: No module named 'distutils'`. `distutils` left the standard library in 3.12 and only resolved where setuptools' compatibility shim happened to be installed. The `tifffile` version check that imported it was dead on every supported `tifffile` version, and has been removed.
+- Removed `requirements-clean-python.txt` and the install instructions pointing at it. The file could never be installed: it listed standard-library module names as pip requirements, so pip aborted the run.
 
 ### GUI Improvements 🖥️
 - PSF analysis tool: axial (Z) fitting window is now a separate "Z fit window (µm)" control, independent of "Min dist betw beads (µm)", so it can be widened for beads with a broad/wiggly axial profile without also enlarging the lateral crop. Default increased 15→30 µm.
