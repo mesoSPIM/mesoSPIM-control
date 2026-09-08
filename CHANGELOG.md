@@ -11,6 +11,7 @@
 - Configs selecting NI waveform generation, shutters or laser enable lines now fail at startup with a message naming the missing package or driver, instead of an import error or a `DaqNotFoundError` raised mid-acquisition.
 
 ### Bugfixes 🐛
+- Converter: `asi_parameters['stage_assignment']` (and `encoder_conversion`, `speed`, `pi_parameters['stage_assignment']`) are written out verbatim when the shared hardware file lists the axes in another order. Their key order is the axis order of the `W` query sent to the controller, so silently adopting the shared file's order could swap axes in the GUI even though every axis was mapped identically.
 - ASI stages: the encoder conversion factor is now looked up by axis letter when reading positions, instead of pairing `encoder_conversion` with `stage_assignment` by dict order. A config that overrode only one of the two dicts (easy to do in the two-level format) could otherwise scale an axis with another axis' factor.
 - `f_objective_exchange` is `None` in `config/hardware/stages/TigerASI.py`, so the focus axis stays where it is during a zoom change unless a config sets an exchange position checked against that setup. `None` and a missing key are now treated the same everywhere.
 - PSF analysis tool: fixed bead detection finding 0 beads (or crashing) on beads elongated/wiggly in Z (e.g. stage-jitter artifacts): `keepBeads()` now keeps the brightest candidate among mutually-close peaks instead of discarding all of them, and 0 detected beads is reported in the UI instead of raising an uncaught error.

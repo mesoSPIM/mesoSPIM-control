@@ -45,6 +45,10 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'TigerASI' or 'MS2000ASI'
                     'theta_min' : -999,
                     }
 
+# The key ORDER of 'stage_assignment' is the axis order of the 'W' (where) query sent to the
+# controller, so it is part of the rig configuration, not cosmetic. If your controller reports
+# positions in a different axis order, list the axes here in that order (and keep
+# 'encoder_conversion' and 'speed' readable by using the same order there).
 asi_parameters = {'COMport' : 'COM6',
                   'baudrate' : 115200,
                   'stage_assignment': {'x':'X', 'f':'Y', 'z':'Z', 'theta':'T', 'y':'V'},

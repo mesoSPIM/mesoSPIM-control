@@ -45,6 +45,15 @@ IGNORED = ('include', 'config_format')  # loader plumbing, not configuration
 # so these are replaced as a whole instead of being merged key by key.
 LABEL_DICTS = ('filterdict', 'laserdict', 'zoomdict', 'pixelsize', 'binning_dict', 'shutterdict')
 
+# Dicts whose key ORDER is part of the configuration, not just their content. StageControlASI
+# builds its axis string from 'stage_assignment' in insertion order and sends it as the 'W'
+# (where) query, so a config that lists the axes in a different order talks to the controller
+# differently even when it maps every axis the same way. Such a dict is written out verbatim
+# instead of being merged away, so that a converted config keeps the order it was running with.
+ORDER_SIGNIFICANT = {'asi_parameters': ('stage_assignment', 'encoder_conversion', 'speed'),
+                     'pi_parameters': ('stage_assignment',)}
+
+
 # The setting that names the driver of each category: variable -> key inside it (None = the
 # variable itself). Used to recognise which shared file describes the same device.
 DRIVER_NAMES = {'camera': None, 'waveformgeneration': None, 'laser': None, 'shutter': None,
@@ -213,11 +222,20 @@ def _format(value):
     return pprint.pformat(value, width=100, sort_dicts=False)
 
 
+def _reordered(name, value, merged_value):
+    '''Order-significant sub-dicts of `value` that the shared files list in another order.'''
+    return {key for key in ORDER_SIGNIFICANT.get(name, ())
+            if isinstance(value.get(key), dict) and isinstance(merged_value.get(key), dict)
+            and list(value[key]) != list(merged_value[key])}
+
+
 def _overrides(legacy, merged):
     '''Python source lines that turn `merged` into `legacy`, plus notes about what was added.'''
     lines, notes = [], []
     for name, value in legacy.items():
-        if name in merged and merged[name] == value:
+        reordered = (_reordered(name, value, merged[name])
+                     if isinstance(value, dict) and isinstance(merged.get(name), dict) else set())
+        if name in merged and merged[name] == value and not reordered:
             continue
         if not (isinstance(value, dict) and isinstance(merged.get(name), dict)):
             lines.append(f'{name} = {_format(value)}')
@@ -229,8 +247,11 @@ def _overrides(legacy, merged):
             continue
         if extra:
             notes.append(f'{name} gains {extra} from the shared files')
+        for key in sorted(reordered):
+            notes.append(f'{name}[{key!r}] written out to keep the axis order of the old config, '
+                         f'which the shared file lists as {list(merged[name][key])}')
         differing = {key: sub for key, sub in value.items()
-                     if key not in merged[name] or merged[name][key] != sub}
+                     if key in reordered or key not in merged[name] or merged[name][key] != sub}
         lines.append(f'{name}.update({_format(differing)})')
     for name in sorted(set(merged) - set(legacy)):
         notes.append(f'{name} comes from the shared files, the old config had no such setting')

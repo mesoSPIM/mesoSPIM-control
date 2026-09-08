@@ -30,6 +30,9 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE zoom_parameters['servo_id'] dropped, the 'Demo' driver does not use it
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange', 'x_center_position', 'z_center_position'] from the shared files
+# NOTE asi_parameters['encoder_conversion'] written out to keep the axis order of the old config, which the shared file lists as ['X', 'Y', 'Z', 'T', 'V']
+# NOTE asi_parameters['speed'] written out to keep the axis order of the old config, which the shared file lists as ['X', 'Y', 'Z', 'T', 'V']
+# NOTE asi_parameters['stage_assignment'] written out to keep the axis order of the old config, which the shared file lists as ['x', 'f', 'z', 'theta', 'y']
 # NOTE zoomdict replaced as a whole, the shared file also offers ['1x', '4x Olympus', '5x Mitutoyo']
 # NOTE pixelsize replaced as a whole, the shared file also offers ['1x', '4x Olympus', '5x Mitutoyo']
 # NOTE startup gains ['camera_display_temporal_subsampling'] from the shared files
@@ -63,6 +66,9 @@ stage_parameters.update({'y_load_position': -45000,
  'f_min': -8500})
 
 asi_parameters.update({'COMport': 'COM23',
+ 'stage_assignment': {'y': 'V', 'z': 'Z', 'theta': 'T', 'x': 'X', 'f': 'Y'},
+ 'encoder_conversion': {'V': 10.0, 'Z': 10.0, 'T': 1000.0, 'X': 10.0, 'Y': 10.0},
+ 'speed': {'V': 3.0, 'Z': 3.0, 'T': 30.0, 'X': 3.0, 'Y': 3.0},
  'stage_trigger_source': '/cDAQ1Mod1/PFI4',
  'stage_trigger_out_line': '/cDAQ1Mod1/ctr2',
  'ttl_cards': (2, 3)})
