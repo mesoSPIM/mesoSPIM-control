@@ -21,11 +21,92 @@ for your own config file.
    ``my_scope_config.py``, and edit that copy.  Never commit credentials or
    personal paths to the main file.
 
+Two-level config files
+----------------------
+
+A config file can either define everything itself (the legacy single-file form,
+still fully supported) or be split in two levels:
+
+* **shared hardware files** in ``mesoSPIM/config/hardware/``, organised by
+  device category — ``cameras/``, ``DAQ/``, ``stages/``, ``lasers/``,
+  ``filterwheels/``, ``objectives/`` (zoom, named so for historical reasons),
+  ``galvos/``, ``ETLs/`` — plus plugin settings in
+  ``mesoSPIM/config/plugins/writers/`` and interface defaults in
+  ``mesoSPIM/config/UI/``.  These are shared and meant to be kept up to date
+  for everyone;
+* **your user file** in ``mesoSPIM/config/``, which picks the hardware of your
+  microscope with ``include()`` and overrides whatever is personal to you.
+
+.. code-block:: python
+
+   config_format = 2   # 2 = two-level config; absent or 1 = legacy single file
+
+   include('hardware/cameras/hamamatsu_orca_flash4.py',
+           'hardware/DAQ/NI_PXI6259_PXI6733.py',
+           'hardware/stages/PI_C884_xyzft.py',
+           'hardware/lasers/demo_lasers.py',
+           'hardware/filterwheels/demo_filterwheel.py',
+           'hardware/objectives/demo_zoom.py',
+           'hardware/galvos/demo_galvos.py',
+           'hardware/ETLs/demo_etl.py',
+           'plugins/writers/default_writers.py',
+           'UI/default_ui.py')
+
+   # everything below wins over the included files
+   camera_parameters['x_pixels'] = 2048
+   ui_options['dark_mode'] = False
+   startup.update({'folder': 'D:/my_data/', 'zoom': '1x'})
+
+Rules:
+
+* ``include()`` needs no import — it is provided by the config loader.  Paths are
+  relative to ``mesoSPIM/config/`` (absolute paths also work).
+* Anything assigned **after** the ``include()`` call wins; this is ordinary
+  Python assignment, no magic.
+* Dicts of the same name are **merged key-by-key**, later ``include()`` first,
+  so several hardware files each contribute their part of the ``startup`` dict.
+  Use ``startup.update({...})`` in your file to override single keys, or
+  ``startup = {...}`` to replace the dict entirely.
+* A hardware file may itself call ``include()``.
+* Files under ``hardware/``, ``plugins/`` and ``UI/`` never show up in the startup file
+  dialog — only ``mesoSPIM/config/*.py`` does.
+
+Your editor will flag ``include`` and ``startup`` as undefined in a two-level
+file; that is expected, both are supplied at load time.
+
+``mesoSPIM/config/demo_config.py`` is the reference two-level file and is what
+demo mode (``-D``) loads.
+
+Converting an old config file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Old single-file configs keep working, so there is no need to convert. If you do
+want the short form, run from the repository root::
+
+   python -m mesoSPIM.src.utils.convert_config mesoSPIM/config/my_old_config.py -o mesoSPIM/config/my_config.py
+
+The converter picks, for each hardware category, the file under
+``config/hardware/`` that fits your config best, and writes the remaining
+settings as overrides.  It then loads the old and the new file and compares them
+setting by setting; a conversion that would lose a setting is reported as
+``FAILED``.  Its report also lists
+
+* settings **dropped** because the software no longer reads them
+  (``camera_sensor_mode``, ``camera_parameters['binning']``, ...);
+* settings **added** by the shared files, which are newer than your config;
+* dicts of operator choices (``filterdict``, ``laserdict``, ``zoomdict``, ...)
+  that were kept as a whole, so that filters or lasers you do not have cannot
+  appear in the interface.
+
+Use ``--check`` to see all of that without writing anything.  Comments of the old
+file are not carried over, so read the result before taking it to the instrument.
+
 Config file structure
 ---------------------
 
 A config file is plain Python, so you can use arithmetic, imports, and
-comments freely.  The sections below describe every top-level variable.
+comments freely.  The sections below describe every top-level variable,
+whether it is defined in a single file or in a shared hardware file.
 
 plugins
 ~~~~~~~
@@ -221,7 +302,6 @@ camera
        'camera_id': 0,
        'sensor_mode': 12,         # 12 = progressive
        'defect_correct_mode': 2,
-       'binning': '1x1',
        'readout_speed': 1,
        'trigger_active': 1,
        'trigger_mode': 1,
@@ -231,7 +311,14 @@ camera
 
    binning_dict = {'1x1': (1, 1), '2x2': (2, 2), '4x4': (4, 4)}
 
-For Photometrics camera parameter examples, see ``demo_config.py``.
+.. note::
+
+   The binning in use is ``startup['camera_binning']``, not a
+   ``camera_parameters['binning']`` key. Older config files carry both; the
+   ``camera_parameters`` one is ignored and can be deleted.
+
+For Photometrics camera parameter examples, see
+``mesoSPIM/config/hardware/cameras/``.
 
 microscope_parameters
 ~~~~~~~~~~~~~~~~~~~~~
@@ -279,8 +366,8 @@ stages / zoom / ETL
 ~~~~~~~~~~~~~~~~~~~~
 
 For stage, zoom motor, and ETL (electrically tunable lens) configuration
-refer to the extensive comments and examples directly in ``demo_config.py``
-and the
+refer to the commented example files in ``mesoSPIM/config/hardware/stages/``,
+``objectives/`` and ``ETLs/``, and to the
 `mesoSPIM hardware wiki <https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file>`_.
 
 Mandatory dictionaries (v1.20+)
@@ -296,7 +383,8 @@ if the corresponding feature is not used:
    OME_Zarr_Writer = {}
    MP_OME_Zarr_Writer = {}
 
-Check the ``demo_config.py`` for the latest required keys.
+Check the files in ``mesoSPIM/config/hardware/`` and
+``mesoSPIM/config/plugins/writers/`` for the latest required keys.
 
 Switching between config files
 ------------------------------
@@ -309,5 +397,8 @@ Further reading
 ---------------
 
 * `mesoSPIM hardware wiki — configuration file <https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file>`_
-* ``mesoSPIM/config/demo_config.py`` — heavily commented reference config
+* ``mesoSPIM/config/demo_config.py`` — reference two-level config
+* ``mesoSPIM/config/hardware/`` — shared, commented hardware definitions
 * ``mesoSPIM/config/`` — additional real-world examples
+* ``mesoSPIM/config/examples/format1(legacy)/`` — single-file configs of real
+  instruments, kept for reference and as converter input

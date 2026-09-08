@@ -52,14 +52,15 @@ class mesoSPIM_Camera(QtCore.QObject):
         self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
         self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
 
-        self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
+        self.binning_string = self.cfg.startup.get('camera_binning', self.state['camera_binning']) # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
         self.y_binning = int(self.binning_string[2])
 
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
-        self.camera_line_interval = self.cfg.startup['camera_line_interval']
+        # 'camera_line_interval' is Hamamatsu-specific and optional in the config file
+        self.camera_line_interval = self.cfg.startup.get('camera_line_interval', self.state['camera_line_interval'])
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
         self.camera_display_live_subsampling = self.cfg.startup['camera_display_live_subsampling']
@@ -306,14 +307,15 @@ class mesoSPIM_GenericCamera(QtCore.QObject):
         self.x_pixel_size_in_microns = self.cfg.camera_parameters['x_pixel_size_in_microns']
         self.y_pixel_size_in_microns = self.cfg.camera_parameters['y_pixel_size_in_microns']
 
-        self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
+        self.binning_string = self.cfg.startup.get('camera_binning', self.state['camera_binning']) # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
         self.y_binning = int(self.binning_string[2])
 
         self.x_pixels = int(self.x_pixels / self.x_binning)
         self.y_pixels = int(self.y_pixels / self.y_binning)
 
-        self.camera_line_interval = self.cfg.startup['camera_line_interval']
+        # 'camera_line_interval' is Hamamatsu-specific and optional in the config file
+        self.camera_line_interval = self.cfg.startup.get('camera_line_interval', self.state['camera_line_interval'])
         self.camera_exposure_time = self.cfg.startup['camera_exposure_time']
 
     def open_camera(self):
@@ -431,7 +433,7 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
         self.hcam.setPropertyValue("sensor_mode", self.cfg.camera_parameters['sensor_mode'])
 
         self.hcam.setPropertyValue("defect_correct_mode", self.cfg.camera_parameters['defect_correct_mode'])
-        self.hcam.setPropertyValue("binning", self.cfg.camera_parameters['binning'])
+        self.hcam.setPropertyValue("binning", self.cfg.startup.get('camera_binning', self.state['camera_binning']))
         if 'readout_speed' in self.cfg.camera_parameters.keys():
             self.hcam.setPropertyValue("readout_speed", self.cfg.camera_parameters['readout_speed'])
         else:
@@ -470,14 +472,6 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def close_camera(self):
         self.hcam.shutdown()
-
-    def set_camera_sensor_mode(self, mode):
-        if mode == 'Area':
-            self.hcam.setPropertyValue("sensor_mode", 1)
-        elif mode == 'ASLM':
-            self.hcam.setPropertyValue("sensor_mode", 12)
-        else:
-            print('Camera mode not supported')
 
     def set_exposure_time(self, time):
         self.hcam.setPropertyValue("exposure_time", time)
@@ -572,7 +566,7 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         
         ''' Setting Binning parameters: '''
         '''
-        self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
+        self.binning_string = self.cfg.startup.get('camera_binning', self.state['camera_binning']) # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
         self.y_binning = int(self.binning_string[2])
         '''

@@ -92,7 +92,6 @@ class mesoSPIM_StateSingleton(QObject):
                         'camera_display_live_subsampling': 2,
                         'camera_display_acquisition_subsampling': 2,
                         'camera_binning':'1x1',
-                        'camera_sensor_mode':'ASLM',
                         'current_framerate':2.5,
                         'predicted_acq_list_time':1,
                         'package_directory': '',

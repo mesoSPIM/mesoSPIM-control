@@ -186,7 +186,7 @@ camera_parameters = {'x_pixels' : 4608,
                      'y_pixel_size_in_microns' : 5.5,
                      'subsampling' : [1,2,4],
                      'camera_id' : 0,
-                     'sensor_mode' : 12,    # 12 for progressive
+                     'sensor_mode' : 1,    # 1 for area mode, 12 for progressive (light-sheet mode)
                      'defect_correct_mode': 2,
                      'binning' : '1x1',
                      #'readout_speed' : 1, # not available for Orca Lightning
@@ -347,6 +347,7 @@ H5_BDV_Writer = {'subsamp': ((1, 1, 1),), #((1, 1, 1),) no subsamp, ((1, 1, 1), 
 		'transpose_xy': False # flip it if X-Y order in BigStitcher is incorrect
         }
                     
+
 '''
 OME.ZARR parameters
 This write generates ome.zarr specification multiscale data on the fly during acquisition.
@@ -380,12 +381,12 @@ to make mesoSPSIM pause after each tile acquisition until the multiscale is fini
 '''
 OME_Zarr_Writer = {
     'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': False, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd', # None, 'zstd', 'lz4', 'lz4hc', 'blosclz', 'snappy', 'zlib'
     'compression_level': 5, # 1-9
     'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (128,4608//4,2592//2), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-    'target_chunks': (128,4608//4,2592//2), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+    'base_chunks': (128,4608//4,2592//4), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (128,4608//16,2592//16), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
     'async_finalize': False, # True, False
     
     # BigStitcher Specific Options
@@ -393,17 +394,16 @@ OME_Zarr_Writer = {
     'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
     'transpose_xy': False, # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
     }
-    
-    
+
 MP_OME_Zarr_Writer = {
     'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': False, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd',  # None, 'zstd', 'lz4'
     'compression_level': 5,  # 1-9
     'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (128,4608//4,2592//2),
+    'base_chunks': (128, 4608//4,2592//4),
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-    'target_chunks': (256, 256, 256),
+    'target_chunks': (128, 4608//16,2592//16),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
     'async_finalize': True,  # True, False
 
@@ -419,7 +419,7 @@ MP_OME_Zarr_Writer = {
     # None acquires data direct to acquisition folder.
     'write_cache': None # None, 'e:/path/to/fast/ssd/write/cache'
 }
-
+    
 '''
 Rescale the galvo amplitude when zoom is changed
 For example, if 'galvo_l_amplitude' = 1 V at zoom '1x', it will ve 2 V at zoom '0.5x'
@@ -441,7 +441,7 @@ When setting up a new mesoSPIM, make sure that:
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
-'sweeptime' : 0.180, # manually adjusted for Orca Lightning camera, for 2x-20x magnification range.
+'sweeptime' : 0.250, # manually adjusted for Orca Lightning camera, for 2x-20x magnification range.
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-upgrade2023.csv',
 'filepath' : '/tmp/file.tif',
@@ -486,13 +486,13 @@ startup = {
 'laser_r_max_amplitude_%' : 100,
 'camera_delay_%' : 10,
 'camera_pulse_%' : 1,
-'camera_exposure_time':0.02,
-'camera_line_interval':200e-6, # max 200 µs for Orca Lightning, manually selected. Hamamatsu-specific parameter
+'camera_exposure_time':0.200,
+'camera_line_interval':200e-6, # max 200 µs for Orca Lightning, manually selected. Hamamatsu-specific parameter, 50 µs min.
 'camera_display_live_subsampling': 2,
 'camera_display_snap_subsampling': 2,
 'camera_display_acquisition_subsampling': 2,
 'camera_display_temporal_subsampling': 3, # affects overall performance! Default value 2. Increase to 4 or 5 if the CPUs are not powerful enough
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM', #Hamamatsu-specific parameter
-'average_frame_rate': 5.0,
+'average_frame_rate': 4.0,
 }

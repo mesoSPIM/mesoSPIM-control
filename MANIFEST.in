@@ -1,5 +1,8 @@
 # MANIFEST.in
 include mesoSPIM/config/demo_config.py
+graft mesoSPIM/config/hardware
+graft mesoSPIM/config/plugins
+graft mesoSPIM/config/UI
 exclude mesoSPIM/config/config*.py
 include mesoSPIM/config/etl_parameters/ETL-parameters.csv
 graft mesoSPIM/src/*

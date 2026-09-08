@@ -6,7 +6,7 @@ The core module of the mesoSPIM software
 
 __authors__ = "Fabian Voigt, Nikita Vladimirov, Alan Watson, and others"
 __license__ = "GPL v3"
-__version__ = "1.25.0"
+__version__ = "1.26.0"
 
 import time
 import logging
@@ -14,12 +14,12 @@ import argparse
 import glob
 import os
 import sys
-import importlib.util
 from PyQt5 import QtWidgets, QtCore
 import qdarkstyle
 package_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(
     package_directory))  # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
+from mesoSPIM.src.utils.config_loader import load_config_from_file
 from mesoSPIM.src.plugins.manager import PluginRegistry
 
 def load_config_UI(current_path):
@@ -41,17 +41,6 @@ def load_config_UI(current_path):
                                                 'No configuration file selected - shutting down!',
                                                 QtWidgets.QMessageBox.Ok)
         sys.exit()
-
-
-def load_config_from_file(path_to_config):
-    '''
-    Load a microscope configuration from a file using importlib
-    '''
-    spec = importlib.util.spec_from_file_location('module.name', path_to_config)
-    config = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(config)
-    print(f'Configuration file loaded: {path_to_config}')
-    return config
 
 
 def stage_referencing_check(cfg):

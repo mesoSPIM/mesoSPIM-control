@@ -43,7 +43,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         self.x_pixels = self.cfg.camera_parameters['x_pixels']
         self.y_pixels = self.cfg.camera_parameters['y_pixels']
 
-        self.binning_string = self.cfg.camera_parameters['binning'] # Should return a string in the form '2x4'
+        self.binning_string = self.cfg.startup.get('camera_binning', self.state['camera_binning']) # Should return a string in the form '2x4'
         self.x_binning = int(self.binning_string[0])
         self.y_binning = int(self.binning_string[2])
 

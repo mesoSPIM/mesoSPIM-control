@@ -10,7 +10,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.uic import loadUi
 
-from ..config.demo_config import plugins
 
 ''' Disabled taskbar button progress display due to problems with Anaconda default'''
 # if sys.platform == 'win32':
@@ -28,6 +27,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
+from .utils.config_loader import update_startup_in_source
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +217,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         """Checks missing blocks in config file and gives suggestions.
         Todo: all new config options
         """
+        logger.info(f"Config format: {getattr(self.cfg, 'config_format', 1)}") # 1: legacy single file, 2: two-level (include-based)
         gen_msg = "You are using outdated config file, check project github with the most recent template (demo_config.py):"
         if not hasattr(self.cfg, 'ui_options'):
             spec_msg = "\n - 'ui_options' is missing"
@@ -602,10 +603,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
         self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
         self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
-        # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.LiveSubSamplingComboBox,subsampling_list,'camera_display_live_subsampling', int_conversion = True)
         self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
-        # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
         self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
@@ -1257,24 +1256,16 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         with open(config_file, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        updated_keys, skipped_keys = [], []
-        for key, value in params.items():
-            # Match 'key' : value or "key" : value anywhere in the file;
-            # stops before a comma, newline, or inline comment.
-            pattern = r"(['\"]" + re.escape(key) + r"['\"]\s*:\s*)([^,\n#]+)"
-            new_content, count = re.subn(pattern, r'\g<1>' + repr(value), content)
-            if count > 0:
-                content = new_content
-                updated_keys.append(key)
-            else:
-                skipped_keys.append(key)
+        # Keys present in the file are substituted in place; keys that live in an
+        # included hardware file are appended as a startup.update() override block.
+        content, updated_keys, appended_keys = update_startup_in_source(content, params)
 
         with open(save_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
-        result_msg = f'Saved {len(updated_keys)} parameters to:\n{save_path}'
-        if skipped_keys:
-            result_msg += '\n\nNot found in startup dict (skipped):\n' + ', '.join(skipped_keys)
+        result_msg = f'Saved {len(updated_keys) + len(appended_keys)} parameters to:\n{save_path}'
+        if appended_keys:
+            result_msg += '\n\nAppended as startup.update() overrides:\n' + ', '.join(appended_keys)
         logger.info(f'Saved parameters to config file: {save_path}')
         QtWidgets.QMessageBox.information(self, 'Saved', result_msg)
 
