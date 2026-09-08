@@ -45,6 +45,14 @@ IGNORED = ('include', 'config_format')  # loader plumbing, not configuration
 # so these are replaced as a whole instead of being merged key by key.
 LABEL_DICTS = ('filterdict', 'laserdict', 'zoomdict', 'pixelsize', 'binning_dict', 'shutterdict')
 
+# Settings that only some drivers of a device read, where the driver is named by another
+# variable of the config. 'camera_line_interval' is pushed to the camera only by the Hamamatsu
+# class (mesoSPIM_Camera.py); every other camera reads it into a variable nothing uses, so a
+# config carrying it for a Photometrics or PCO camera only misleads its next reader.
+# (container, key, variable naming the driver, drivers that read the setting)
+DRIVER_ONLY = (('startup', 'camera_line_interval', 'camera', ('HamamatsuOrca',)),)
+
+
 # Dicts whose key ORDER is part of the configuration, not just their content. StageControlASI
 # builds its axis string from 'stage_assignment' in insertion order and sends it as the 'W'
 # (where) query, so a config that lists the axes in a different order talks to the controller
@@ -132,6 +140,7 @@ def _drop_obsolete(namespace):
                 name = f'{container}[{key!r}]' if container else key
                 dropped.append(f'{name} dropped, the software does not read it any more')
     dropped.extend(_drop_unused_connection_keys(namespace))
+    dropped.extend(_drop_driver_only(namespace))
     return dropped
 
 
@@ -153,6 +162,20 @@ def _drop_unused_connection_keys(namespace):
                 del target[key]
                 dropped.append(f'{container}[{key!r}] dropped, '
                                f"the '{driver}' driver does not use it")
+    return dropped
+
+
+def _drop_driver_only(namespace):
+    '''Remove settings only some drivers of a device read. Returns a note per dropped setting.'''
+    dropped = []
+    for container, key, driver_name, drivers in DRIVER_ONLY:
+        target = namespace if container == '' else namespace.get(container)
+        driver = namespace.get(driver_name)
+        if not isinstance(target, dict) or key not in target or driver is None or driver in drivers:
+            continue
+        del target[key]
+        dropped.append(f'{container}[{key!r}] dropped, '
+                       f"the '{driver}' {driver_name} does not use it")
     return dropped
 
 

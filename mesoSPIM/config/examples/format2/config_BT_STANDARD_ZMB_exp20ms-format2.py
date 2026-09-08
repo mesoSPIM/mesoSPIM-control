@@ -30,6 +30,7 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE zoom_parameters['COMport'] dropped, the 'Demo' driver does not use it
 # NOTE zoom_parameters['baudrate'] dropped, the 'Demo' driver does not use it
 # NOTE zoom_parameters['servo_id'] dropped, the 'Demo' driver does not use it
+# NOTE startup['camera_line_interval'] dropped, the 'Photometrics' camera does not use it
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange'] from the shared files
 # NOTE filterdict replaced as a whole, the shared file also offers ['535/22 Brightline', '595/31 Brightline']
@@ -90,5 +91,4 @@ startup.update({'state': 'init',
  'galvo_l_amplitude': 0.83,
  'galvo_l_phase': 0.4487989505128276,
  'galvo_r_amplitude': 0.83,
- 'galvo_r_phase': 0.4487989505128276,
- 'camera_line_interval': 7.5e-05})
+ 'galvo_r_phase': 0.4487989505128276})

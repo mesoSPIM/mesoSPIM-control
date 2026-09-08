@@ -29,6 +29,7 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE zoom_parameters['COMport'] dropped, the 'Demo' driver does not use it
 # NOTE zoom_parameters['baudrate'] dropped, the 'Demo' driver does not use it
 # NOTE zoom_parameters['servo_id'] dropped, the 'Demo' driver does not use it
+# NOTE startup['camera_line_interval'] dropped, the 'Photometrics' camera does not use it
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange', 'x_center_position', 'z_center_position'] from the shared files
 # NOTE asi_parameters['encoder_conversion'] written out to keep the axis order of the old config, which the shared file lists as ['X', 'Y', 'Z', 'T', 'V']
@@ -105,5 +106,4 @@ startup.update({'state': 'init',
  'galvo_r_offset': 0.06,
  'galvo_r_duty_cycle': 50,
  'galvo_r_phase': 0.45,
- 'camera_line_interval': 7.5e-05,
  'average_frame_rate': 2.5})
