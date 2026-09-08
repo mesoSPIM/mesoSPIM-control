@@ -62,6 +62,7 @@ async_finalize: default: True. Enables acquisition of the next tile to proceed i
 is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
 Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False
 to make mesoSPIM pause after each tile acquisition until the multiscale is finished generating.
+Applies to OME_Zarr_Writer only: the multiprocess writer always finalizes synchronously.
 '''
 OME_Zarr_Writer = {
     'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
@@ -89,7 +90,6 @@ MP_OME_Zarr_Writer = {
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64, 64, 64),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-    'async_finalize': True,  # True, False
 
     # BigStitcher Specific Options
     'write_big_stitcher_xml': True,  # True, False

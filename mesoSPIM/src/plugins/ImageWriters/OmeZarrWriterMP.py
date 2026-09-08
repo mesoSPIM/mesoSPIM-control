@@ -194,7 +194,6 @@ class OMEZarrWriterMP(ImageWriter):
         shards = (64, 6000, 6000)       # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
         base_chunks = (64, 256, 256)    # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
         target_chunks = (64, 64, 64)    # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-        async_finalize = True           # True, False
 
         # BigStitcher XML Options Defaults - for easy drag/drop import into BigStitcher
         write_big_stitcher_xml = True   # True, False
@@ -220,7 +219,6 @@ class OMEZarrWriterMP(ImageWriter):
             shards = req.writer_config_file_values.get('shards', shards)
             base_chunks = req.writer_config_file_values.get('base_chunks', base_chunks)
             target_chunks = req.writer_config_file_values.get('target_chunks', target_chunks)
-            async_finalize = req.writer_config_file_values.get('async_finalize', async_finalize)
             write_big_stitcher_xml = req.writer_config_file_values.get('write_big_stitcher_xml', write_big_stitcher_xml)
             flip_xyz = req.writer_config_file_values.get('flip_xyz', flip_xyz)
             transpose_xy = req.writer_config_file_values.get('transpose_xy', transpose_xy)

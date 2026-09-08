@@ -19,6 +19,7 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
 # NOTE startup['camera_display_snap_subsampling'] dropped, the software does not read it any more
 # NOTE startup['filepath'] dropped, the software does not read it any more
 # NOTE camera_parameters['binning'] dropped, the software does not read it any more
+# NOTE MP_OME_Zarr_Writer['async_finalize'] dropped, the software does not read it any more
 # NOTE filterwheel_parameters['COMport'] dropped, the 'ZWO' driver does not use it
 # NOTE filterwheel_parameters['baudrate'] dropped, the 'ZWO' driver does not use it
 # NOTE filterwheel_parameters['servo_id'] dropped, the 'ZWO' driver does not use it

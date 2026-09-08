@@ -69,6 +69,7 @@ OBSOLETE = {
     'startup': ('camera_sensor_mode', 'camera_display_snap_subsampling', 'filepath',
                 'stage_trigger_delay_%', 'stage_trigger_pulse_%'),  # the live ones are in asi_parameters
     'camera_parameters': ('binning',),  # superseded by startup['camera_binning']
+    'MP_OME_Zarr_Writer': ('async_finalize',),  # the multiprocess writer always closes synchronously
     'acquisition_hardware': ('stage_trigger_source', 'stage_trigger_out_line',
                              'stage_trigger_delay_%', 'stage_trigger_pulse_%'),
 }

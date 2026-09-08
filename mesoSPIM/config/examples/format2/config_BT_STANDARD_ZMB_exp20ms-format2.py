@@ -23,6 +23,7 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE startup['stage_trigger_delay_%'] dropped, the software does not read it any more
 # NOTE startup['stage_trigger_pulse_%'] dropped, the software does not read it any more
 # NOTE camera_parameters['binning'] dropped, the software does not read it any more
+# NOTE MP_OME_Zarr_Writer['async_finalize'] dropped, the software does not read it any more
 # NOTE filterwheel_parameters['COMport'] dropped, the 'ZWO' driver does not use it
 # NOTE filterwheel_parameters['baudrate'] dropped, the 'ZWO' driver does not use it
 # NOTE filterwheel_parameters['servo_id'] dropped, the 'ZWO' driver does not use it
