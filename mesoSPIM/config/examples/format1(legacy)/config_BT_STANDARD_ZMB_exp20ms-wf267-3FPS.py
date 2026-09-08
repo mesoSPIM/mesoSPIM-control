@@ -10,7 +10,7 @@ are listed as options, by any ImageWriter plugin can be
 '''
 plugins = {
     'path_list': [
-        "../src/plugins/ImageWriters",         # Ignored if it does not exits (use '/')
+        "../src/plugins",                  # Ignored if it does not exits (use '/')
         "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
     ],
     'first_image_writer': 'MP_OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'

@@ -40,8 +40,6 @@ include('hardware/cameras/photometrics_iris15.py',
 
 # --- settings of this microscope/user, overriding the files included above ---
 logging_level = 'DEBUG'
-plugins.update({'path_list': ['../src/plugins/ImageWriters', 'C:/a/different/plugin/location']})
-
 ui_options.update({'enable_loading_buttons': False,
  'flip_XYZFT_button_polarity': (True, True, False, False, False),
  'button_sleep_ms_xyzft': (300, 300, 300, 0, 0)})
