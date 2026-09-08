@@ -154,8 +154,11 @@ class StageControlASI(QtCore.QObject):
                 if len(position_list) == self.num_axes:
                     try:
                         position_list = [int(value) for value in position_list]
-                        endcoder_conversion_list = list(self.encoder_conversion.values())
-                        position_dict = {self.axes[i]: position_list[i]/endcoder_conversion_list[i] for i in range(self.num_axes)}
+                        # Look the factor up by axis letter: 'encoder_conversion' and
+                        # 'stage_assignment' are written in whatever order the config file
+                        # (or the shared hardware file it includes) happens to use.
+                        position_dict = {axis: position_list[i]/self.encoder_conversion[axis]
+                                         for i, axis in enumerate(self.axes)}
                         if position_dict is not None:
                             self.position_dict = position_dict
                             return position_dict

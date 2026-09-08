@@ -22,6 +22,12 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE startup['stage_trigger_delay_%'] dropped, the software does not read it any more
 # NOTE startup['stage_trigger_pulse_%'] dropped, the software does not read it any more
 # NOTE camera_parameters['binning'] dropped, the software does not read it any more
+# NOTE filterwheel_parameters['COMport'] dropped, the 'ZWOPlugin' driver does not use it
+# NOTE filterwheel_parameters['baudrate'] dropped, the 'ZWOPlugin' driver does not use it
+# NOTE filterwheel_parameters['servo_id'] dropped, the 'ZWOPlugin' driver does not use it
+# NOTE zoom_parameters['COMport'] dropped, the 'Demo' driver does not use it
+# NOTE zoom_parameters['baudrate'] dropped, the 'Demo' driver does not use it
+# NOTE zoom_parameters['servo_id'] dropped, the 'Demo' driver does not use it
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange', 'x_center_position', 'z_center_position'] from the shared files
 # NOTE zoomdict replaced as a whole, the shared file also offers ['1x', '4x Olympus', '5x Mitutoyo']
@@ -31,16 +37,20 @@ include('hardware/cameras/photometrics_iris15.py',
 # --- settings of this microscope/user, overriding the files included above ---
 logging_level = 'DEBUG'
 plugins = {'path_list': ['../src/plugins', 'C:/a/different/plugin/location'],
- 'first_image_writer': 'OME_Zarr_Writer'}
+ 'first_image_writer': 'MP_OME_Zarr_Writer'}
+
 ui_options.update({'flip_XYZFT_button_polarity': (True, True, False, False, False),
  'button_sleep_ms_xyzft': (0, 0, 0, 0, 0)})
+
 laser = 'cDAQ'
 laserdict.update({'405 nm': 'cDAQ1Mod2/port0/line1',
  '488 nm': 'cDAQ1Mod2/port0/line2',
  '561 nm': 'cDAQ1Mod2/port0/line3',
  '638 nm': 'cDAQ1Mod2/port0/line4'})
+
 shutter = 'cDAQ'
 shutterdict.update({'shutter_left': None, 'shutter_right': 'cDAQ1Mod2/port0/line0'})
+
 stage_parameters.update({'y_load_position': -45000,
  'y_unload_position': -75000,
  'x_max': 51000,
@@ -51,16 +61,22 @@ stage_parameters.update({'y_load_position': -45000,
  'z_min': -99000,
  'f_max': 99000,
  'f_min': -8500})
+
 asi_parameters.update({'COMport': 'COM23',
  'stage_trigger_source': '/cDAQ1Mod1/PFI4',
  'stage_trigger_out_line': '/cDAQ1Mod1/ctr2',
  'ttl_cards': (2, 3)})
-filterwheel_parameters.update({'COMport': 'COM31', 'baudrate': 115200, 'servo_id': 1})
-zoom_parameters.update({'servo_id': 1, 'COMport': 'COM9', 'baudrate': 115200})
+
+filterwheel_parameters.update({'filterwheel_type': 'ZWOPlugin'})
+
 zoomdict = {'2x': 4, '5x': 6, '7.5x': 7, '10x': 8, '20x': 9, '25x': 10}
+
 pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.5666666666666667, '10x': 0.425, '20x': 0.2125, '25x': 0.17}
+
 OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480), 'target_chunks': (64, 64, 64)})
+
 MP_OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480), 'target_chunks': (64, 64, 64), 'ring_buffer_size': 512})
+
 scale_galvo_amp_with_zoom = True
 startup.update({'state': 'init',
  'sweeptime': 0.267,

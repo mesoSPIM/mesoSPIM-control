@@ -93,6 +93,9 @@ setting by setting; a conversion that would lose a setting is reported as
 
 * settings **dropped** because the software no longer reads them
   (``camera_sensor_mode``, ``camera_parameters['binning']``, ...);
+* settings **dropped** because the configured driver ignores them, such as the
+  COM port and baud rate of a USB ``'ZWO'`` filter wheel or the servo id of a
+  ``'Demo'`` zoom - old configs often keep the port of the device they replaced;
 * settings **added** by the shared files, which are newer than your config;
 * dicts of operator choices (``filterdict``, ``laserdict``, ``zoomdict``, ...)
   that were kept as a whole, so that filters or lasers you do not have cannot

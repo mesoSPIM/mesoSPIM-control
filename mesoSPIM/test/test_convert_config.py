@@ -31,7 +31,11 @@ def test_demo_config_round_trip(tmp_path):
         'hardware/filterwheels/demo_filterwheel.py', 'hardware/objectives/demo_zoom.py',
         'hardware/galvos/demo_galvos.py', 'hardware/ETLs/demo_etl.py',
         'plugins/writers/default_writers.py', 'UI/default_ui.py']
-    assert notes == []
+    # The demo filterwheel and zoom files document a COM port and a servo id that the 'Demo'
+    # drivers never open; the converter drops them and says so. Nothing else is reported.
+    assert notes == [f"filterwheel_parameters[{key!r}] dropped, the 'Demo' driver does not use it"
+                     for key in ('COMport', 'baudrate', 'servo_id', 'wheel_speed')] +                     [f"zoom_parameters[{key!r}] dropped, the 'Demo' driver does not use it"
+                     for key in ('COMport', 'baudrate', 'servo_id')]
 
     target = MESOSPIM_DIR / 'config' / '_test_converted.py'  # inside config/ for include() paths
     try:

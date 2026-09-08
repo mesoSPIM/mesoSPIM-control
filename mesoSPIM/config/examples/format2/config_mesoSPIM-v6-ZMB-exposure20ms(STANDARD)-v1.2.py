@@ -19,6 +19,10 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
 # NOTE startup['camera_display_snap_subsampling'] dropped, the software does not read it any more
 # NOTE startup['filepath'] dropped, the software does not read it any more
 # NOTE camera_parameters['binning'] dropped, the software does not read it any more
+# NOTE filterwheel_parameters['COMport'] dropped, the 'ZWO' driver does not use it
+# NOTE filterwheel_parameters['baudrate'] dropped, the 'ZWO' driver does not use it
+# NOTE filterwheel_parameters['servo_id'] dropped, the 'ZWO' driver does not use it
+# NOTE zoom_parameters['servo_id'] dropped, the 'Mitu' driver does not use it
 # NOTE ui_options gains ['flip_auto_LR_illumination'] from the shared files
 # NOTE laserdict replaced as a whole, the shared file also offers ['638 nm']
 # NOTE filterdict replaced as a whole, the shared file also offers ['535/22 Brightline', '595/31 Brightline']
@@ -29,13 +33,16 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
 logging_level = 'INFO'
 plugins = {'path_list': ['../src/plugins', 'C:/a/different/plugin/location'],
  'first_image_writer': 'MP_OME_Zarr_Writer'}
+
 ui_options.update({'flip_XYZFT_button_polarity': (True, True, True, True, False),
  'button_sleep_ms_xyzft': (400, 0, 400, 0, 0),
  'window_pos': (400, 100)})
+
 laserdict = {'405 nm': 'PXI6733/port0/line2',
  '488 nm': 'PXI6733/port0/line3',
  '561 nm': 'PXI6733/port0/line4',
  '647 nm': 'PXI6733/port0/line5'}
+
 shutter = 'NI'
 shutteroptions = ('Left', 'Right', 'Both')
 stage_parameters.update({'startfocus': 48000,
@@ -50,15 +57,22 @@ stage_parameters.update({'startfocus': 48000,
  'f_max': 82000,
  'x_center_position': 24000,
  'z_center_position': 27000})
+
 pi_parameters.update({'stages': ('M-112K033', 'L-406.40DG10', 'M-112K033', 'M-116.DG', 'M-406.4PD', 'NOSTAGE'),
  'serialnum': '118015797'})
-filterwheel_parameters.update({'COMport': 'COM31', 'baudrate': 115200, 'servo_id': 1})
+
 filterdict = {'Empty': 0, '405-488-561-640-Quadrupleblock': 1, '520/35': 2, 'Empty-1': 3, '590/36': 4}
-zoom_parameters = {'zoom_type': 'Mitu', 'servo_id': 1, 'COMport': 'COM17', 'baudrate': 9600}
+
+zoom_parameters = {'zoom_type': 'Mitu', 'COMport': 'COM17', 'baudrate': 9600}
+
 zoomdict = {'2x': 'A', '5x': 'B', '7.5x': 'C', '10x': 'D', '20x_custom(t25)': 'E'}
+
 pixelsize = {'2x': 2.75, '5x': 1.1, '7.5x': 0.7333333333333333, '10x': 0.55, '20x_custom(t25)': 0.275}
+
 OME_Zarr_Writer.update({'base_chunks': (128, 1152, 648), 'target_chunks': (128, 288, 162)})
+
 MP_OME_Zarr_Writer.update({'base_chunks': (128, 1152, 648), 'target_chunks': (128, 288, 162), 'ring_buffer_size': 512})
+
 startup.update({'state': 'init',
  'ETL_cfg_file': 'config/etl_parameters/ETL-parameters-upgrade2023.csv',
  'folder': '/tmp/',

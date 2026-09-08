@@ -64,6 +64,34 @@ OBSOLETE = {
                              'stage_trigger_delay_%', 'stage_trigger_pulse_%'),
 }
 
+# Connection settings that only some drivers of a category read: a config written for one
+# device often keeps the COM port, baud rate or servo id of the device it replaced. Carrying
+# those over invites talking to the wrong port, so the converter keeps per driver only the keys
+# that driver actually reads (see mesoSPIM_Serial.py and src/plugins/FilterWheels/) and drops
+# the rest. A driver name that is not listed here keeps all of its settings.
+CONNECTION_KEYS = {'filterwheel_parameters': ('COMport', 'baudrate', 'servo_id', 'wheel_speed'),
+                   'zoom_parameters': ('COMport', 'baudrate', 'servo_id')}
+CONNECTION_USED = {
+    'filterwheel_parameters': {
+        'Demo': (),
+        'ZWO': (),  # USB
+        'ZWOPlugin': (),  # USB
+        'Ludl': ('COMport',),
+        'LudlPlugin': ('COMport', 'baudrate'),
+        'Dynamixel': ('COMport', 'baudrate', 'servo_id'),
+        'Sutter': ('COMport', 'baudrate', 'wheel_speed'),
+        'SutterPlugin': ('COMport', 'baudrate', 'wheel_speed'),
+        'FLI': ('COMport', 'baudrate'),
+    },
+    'zoom_parameters': {
+        'Demo': (),
+        'DemoZoom': (),
+        'Mitu': ('COMport', 'baudrate'),
+        'Mitutoyo': ('COMport', 'baudrate'),
+        'Dynamixel': ('COMport', 'baudrate', 'servo_id'),
+    },
+}
+
 
 def _namespace(module):
     '''Configuration variables of a loaded config module.'''
@@ -72,18 +100,17 @@ def _namespace(module):
             and not isinstance(value, types.ModuleType) and not callable(value)}
 
 
-def _load(path, dropped=None):
+def _load(path, notes=None):
     with contextlib.redirect_stdout(io.StringIO()):  # the loader prints one line per file
         namespace = _namespace(load_config_from_file(path))
-    if dropped is not None:
-        dropped.extend(_drop_obsolete(namespace))
-    else:
-        _drop_obsolete(namespace)
+    dropped = _drop_obsolete(namespace)
+    if notes is not None:
+        notes.extend(dropped)
     return namespace
 
 
 def _drop_obsolete(namespace):
-    '''Remove settings the application no longer reads. Returns what was dropped.'''
+    '''Remove settings the application no longer reads. Returns a note per dropped setting.'''
     dropped = []
     for container, keys in OBSOLETE.items():
         target = namespace if container == '' else namespace.get(container)
@@ -92,7 +119,30 @@ def _drop_obsolete(namespace):
         for key in keys:
             if key in target:
                 del target[key]
-                dropped.append(f'{container}[{key!r}]' if container else key)
+                name = f'{container}[{key!r}]' if container else key
+                dropped.append(f'{name} dropped, the software does not read it any more')
+    dropped.extend(_drop_unused_connection_keys(namespace))
+    return dropped
+
+
+def _drop_unused_connection_keys(namespace):
+    '''Remove COM port / baud rate / servo id settings the configured driver ignores.
+
+    Returns a note per dropped setting.
+    '''
+    dropped = []
+    for container, keys in CONNECTION_KEYS.items():
+        target = namespace.get(container)
+        if not isinstance(target, dict):
+            continue
+        driver = target.get(DRIVER_NAMES[container])
+        if driver not in CONNECTION_USED[container]:  # unknown driver: keep everything
+            continue
+        for key in keys:
+            if key in target and key not in CONNECTION_USED[container][driver]:
+                del target[key]
+                dropped.append(f'{container}[{key!r}] dropped, '
+                               f"the '{driver}' driver does not use it")
     return dropped
 
 
@@ -187,6 +237,18 @@ def _overrides(legacy, merged):
     return lines, notes
 
 
+def _spaced(lines):
+    '''Blank line after every dictionary block, so that the overrides stay readable.'''
+    spaced = []
+    for line in lines:
+        spaced.append(line)
+        if line.rstrip().endswith(('}', '})')):
+            spaced.append('')
+    while spaced and spaced[-1] == '':
+        spaced.pop()
+    return spaced
+
+
 def convert(source_path):
     '''Return (source text of the converted config, chosen includes, notes).'''
     dropped = []
@@ -194,7 +256,7 @@ def convert(source_path):
     includes = _pick_includes(legacy)
     merged = _merge(includes)
     lines, notes = _overrides(legacy, merged)
-    notes = [f'{name} dropped, the software does not read it any more' for name in dropped] + notes
+    notes = dropped + notes
 
     header = ["'''", f"mesoSPIM configuration file (two-level format), converted from",
               f"{os.path.basename(source_path)}.", '',
@@ -206,7 +268,7 @@ def convert(source_path):
     if notes:
         text += '\n' + '\n'.join(f'# NOTE {note}' for note in notes) + '\n'
     text += '\n# --- settings of this microscope/user, overriding the files included above ---\n'
-    text += '\n'.join(lines) + '\n'
+    text += '\n'.join(_spaced(lines)) + '\n'
     return text, includes, notes
 
 

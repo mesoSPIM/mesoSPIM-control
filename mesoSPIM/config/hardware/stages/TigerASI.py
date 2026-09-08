@@ -40,7 +40,7 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'TigerASI' or 'MS2000ASI'
                     'z_min' : -25000,
                     'f_max' : 98000,
                     'f_min' : 0,
-                    'f_objective_exchange': 2000, # DANGER ZONE: set up carefully to avoid collisions!
+                    'f_objective_exchange': None, # DANGER ZONE: None means 'stay in the current f-position'. Set a value only after checking it against your setup, to avoid collisions!
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }

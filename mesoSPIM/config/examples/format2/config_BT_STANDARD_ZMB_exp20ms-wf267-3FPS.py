@@ -23,6 +23,12 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE startup['stage_trigger_delay_%'] dropped, the software does not read it any more
 # NOTE startup['stage_trigger_pulse_%'] dropped, the software does not read it any more
 # NOTE camera_parameters['binning'] dropped, the software does not read it any more
+# NOTE filterwheel_parameters['COMport'] dropped, the 'ZWO' driver does not use it
+# NOTE filterwheel_parameters['baudrate'] dropped, the 'ZWO' driver does not use it
+# NOTE filterwheel_parameters['servo_id'] dropped, the 'ZWO' driver does not use it
+# NOTE zoom_parameters['COMport'] dropped, the 'Demo' driver does not use it
+# NOTE zoom_parameters['baudrate'] dropped, the 'Demo' driver does not use it
+# NOTE zoom_parameters['servo_id'] dropped, the 'Demo' driver does not use it
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange'] from the shared files
 # NOTE filterdict replaced as a whole, the shared file also offers ['535/22 Brightline', '595/31 Brightline']
@@ -34,12 +40,15 @@ include('hardware/cameras/photometrics_iris15.py',
 logging_level = 'DEBUG'
 plugins = {'path_list': ['../src/plugins/ImageWriters', 'C:/a/different/plugin/location'],
  'first_image_writer': 'MP_OME_Zarr_Writer'}
+
 ui_options.update({'enable_loading_buttons': False,
  'flip_XYZFT_button_polarity': (True, True, False, False, False),
  'button_sleep_ms_xyzft': (300, 300, 300, 0, 0)})
+
 laser = 'NI'
 shutter = 'NI'
 shutterdict.update({'shutter_left': '/PXI1Slot4/port0/line6', 'shutter_right': '/PXI1Slot4/port0/line1'})
+
 stage_parameters.update({'y_load_position': 10000,
  'y_unload_position': 0,
  'x_center_position': -3377,
@@ -51,17 +60,21 @@ stage_parameters.update({'y_load_position': 10000,
  'z_min': -55000,
  'f_max': 50000,
  'f_min': -55000})
-filterwheel_parameters.update({'COMport': 'COM31', 'baudrate': 115200, 'servo_id': 1})
+
 filterdict = {'Empty': 0,
  '405-488-561-640-Quadrupleblock': 1,
  '488LB RazorEdge': 2,
  '520/35 BrightLine': 3,
  '595/31 BrightLine': 4}
-zoom_parameters.update({'servo_id': 1, 'COMport': 'COM9', 'baudrate': 115200})
+
 zoomdict = {'2x': 4, '5x': 6, '7.5x': 7, '10x': 8, '20x': 9}
+
 pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.5666666666666667, '10x': 0.425, '20x': 0.2125}
+
 OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480), 'async_finalize': False})
+
 MP_OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480), 'ring_buffer_size': 512})
+
 startup.update({'state': 'init',
  'ETL_cfg_file': 'config/etl_parameters/ETL-parameters-benchtop.csv',
  'folder': 'F:/Test/',

@@ -496,7 +496,7 @@ class mesoSPIM_Core(QtCore.QObject):
         # Move to the objective exchange position if necessary
         f_pos_old = None
         self.parent.ZoomComboBox.setEnabled(False)
-        if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+        if self.cfg.stage_parameters.get('f_objective_exchange') is not None:
             self.sig_warning.emit('Please wait until the zoom change is complete')
             f_pos_old = self.state['position']['f_pos']
             logger.debug('f_pos_old: '+str(f_pos_old))

@@ -236,7 +236,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.state['galvo_amp_scale_w_zoom'] = self.cfg.scale_galvo_amp_with_zoom
         self.checkBoxScaleWZoom.setChecked(self.state['galvo_amp_scale_w_zoom'])
 
-        if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+        if self.cfg.stage_parameters.get('f_objective_exchange') is not None:
             msg = f"Objective exchange in f-position {self.cfg.stage_parameters['f_objective_exchange']} ('f_objective_exchange' in stage parameters of the config file)."
             if self.cfg.stage_parameters['f_min'] <= self.cfg.stage_parameters['f_objective_exchange'] <= self.cfg.stage_parameters['f_max']:
                 pass
