@@ -38,8 +38,7 @@ include('hardware/cameras/photometrics_iris15.py',
 
 # --- settings of this microscope/user, overriding the files included above ---
 logging_level = 'DEBUG'
-plugins = {'path_list': ['../src/plugins/ImageWriters', 'C:/a/different/plugin/location'],
- 'first_image_writer': 'MP_OME_Zarr_Writer'}
+plugins.update({'path_list': ['../src/plugins/ImageWriters', 'C:/a/different/plugin/location']})
 
 ui_options.update({'enable_loading_buttons': False,
  'flip_XYZFT_button_polarity': (True, True, False, False, False),

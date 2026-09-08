@@ -2,6 +2,21 @@
 ImageWriter plugin parameters. The variable name must match the writer plugin name().
 
 '''
+
+'''
+Options to control the behavior of plugins.
+"path_list": where mesoSPIM looks for plugins. Entries that do not exist are ignored, so add
+your own location in the user config rather than removing the built-in one.
+"first_image_writer": the writer offered first in the filenaming wizard. Any ImageWriter
+plugin name works, not only the built-in ones.
+'''
+plugins = {
+    'path_list': [
+        "../src/plugins",         # the plugins shipped with mesoSPIM (use '/')
+        "C:/a/different/plugin/location",  # Ignored if it does not exist (use '/')
+    ],
+    'first_image_writer': 'MP_OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+}
 '''
 H5_BDV_Writer plugin parameters, if this format is used for data saving (optional).
 Downsampling and compression slows down writing by 5x - 10x, use with caution.

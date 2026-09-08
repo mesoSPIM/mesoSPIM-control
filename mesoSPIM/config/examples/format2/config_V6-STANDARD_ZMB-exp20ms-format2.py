@@ -31,9 +31,6 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
 
 # --- settings of this microscope/user, overriding the files included above ---
 logging_level = 'INFO'
-plugins = {'path_list': ['../src/plugins', 'C:/a/different/plugin/location'],
- 'first_image_writer': 'MP_OME_Zarr_Writer'}
-
 ui_options.update({'flip_XYZFT_button_polarity': (True, True, True, True, False),
  'button_sleep_ms_xyzft': (400, 0, 400, 0, 0),
  'window_pos': (400, 100)})

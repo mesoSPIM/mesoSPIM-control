@@ -51,20 +51,6 @@ microscope_parameters = {
                         }
             }
 
-'''
-Options to control behavior of plugins
-"path_list": Optional: Enables arbitrary locations for mesoSPIM to find plugins
-"first_image_writer": Optional: Enables a favorite plugin to be at the top of the filenaming wizard.
-Builtin plugins are listed as options, but any ImageWriter plugin can be used.
-'''
-plugins = {
-    'path_list': [
-        "../src/plugins",         # Ignored if it does not exits (use '/')
-        "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
-    ],
-    'first_image_writer': 'MP_OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
-}
-
 logging_level = 'DEBUG' # 'DEBUG' for ultra-detailed, 'INFO' for general logging level
 
 '''
