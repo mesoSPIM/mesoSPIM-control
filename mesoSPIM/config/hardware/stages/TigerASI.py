@@ -17,7 +17,7 @@ the 2024/2025 benchtop standard, (2, 3) on the older V20 / CBI rigs.
 Set 'ttl_motion_enabled' to False to drive the stage without TTL triggering.
 
 The stage trigger lines must match the DAQ file you include: the values below
-pair with NI_benchtop_PXI1Slot4.py ('/PXI1Slot4/...'). With the cDAQ chassis
+pair with NI_benchtop_PXI6733.py ('/PXI1Slot4/...'). With the cDAQ chassis
 they are '/cDAQ1Mod1/PFI4' and '/cDAQ1Mod1/ctr2'; with the UCL PXIe-6738 card
 '/PXI1Slot2/PFI0' and '/PXI1Slot2/ctr1'.
 

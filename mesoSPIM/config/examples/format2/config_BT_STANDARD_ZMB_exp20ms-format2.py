@@ -7,9 +7,9 @@ assigned after the include() call overrides them. See config/hardware/README.md.
 '''
 config_format = 2
 include('hardware/cameras/photometrics_iris15.py',
-        'hardware/DAQ/NI_benchtop_PXI1Slot4.py',
+        'hardware/DAQ/NI_benchtop_PXI6733.py',
         'hardware/stages/TigerASI.py',
-        'hardware/lasers/production_lasers.py',
+        'hardware/lasers/benchtop_PXI6733_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
         'hardware/objectives/demo_zoom.py',
         'hardware/galvos/demo_galvos.py',
@@ -45,8 +45,6 @@ plugins.update({'path_list': ['../src/plugins/ImageWriters', 'C:/a/different/plu
 ui_options.update({'enable_loading_buttons': False,
  'flip_XYZFT_button_polarity': (True, True, False, False, False),
  'button_sleep_ms_xyzft': (300, 300, 300, 0, 0)})
-
-shutterdict.update({'shutter_left': '/PXI1Slot4/port0/line6', 'shutter_right': '/PXI1Slot4/port0/line1'})
 
 stage_parameters.update({'y_load_position': 10000,
  'y_unload_position': 0,

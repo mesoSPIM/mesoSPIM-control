@@ -6,6 +6,9 @@ https://github.com/mesoSPIM/benchtop-hardware/wiki/Electronics
 
 The PXI-6733 sits in a hybrid slot (#4, 5 or 6) of the PXIe-1073 chassis and
 has 8 analog outputs: ao0:3 for the galvos/ETLs, ao4:7 for the lasers.
+Pair it with hardware/lasers/benchtop_PXI6733_lasers.py, which puts the laser ENABLE and
+shutter lines on the same card.
+
 It is used with a BNC-2110 connector block. For 5-6 lasers, use the
 PXIe-6738 card and NI_benchtop_PXIe6738.py instead.
 

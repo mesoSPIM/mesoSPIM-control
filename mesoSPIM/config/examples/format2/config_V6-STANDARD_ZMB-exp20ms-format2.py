@@ -9,7 +9,7 @@ config_format = 2
 include('hardware/cameras/hamamatsu_orca_lightning.py',
         'hardware/DAQ/NI_PXI6259_PXI6733.py',
         'hardware/stages/PI_C884_xyzft.py',
-        'hardware/lasers/production_lasers.py',
+        'hardware/lasers/V5_PXI6733_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
         'hardware/galvos/demo_galvos.py',
         'plugins/writers/production_writers.py',

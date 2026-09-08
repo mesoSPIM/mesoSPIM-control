@@ -9,7 +9,7 @@ config_format = 2
 include('hardware/cameras/photometrics_iris15.py',
         'hardware/DAQ/cDAQ_benchtop.py',
         'hardware/stages/TigerASI.py',
-        'hardware/lasers/production_lasers.py',
+        'hardware/lasers/cDAQ_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
         'hardware/objectives/demo_zoom.py',
         'hardware/ETLs/demo_etl.py',
@@ -43,15 +43,6 @@ include('hardware/cameras/photometrics_iris15.py',
 logging_level = 'DEBUG'
 ui_options.update({'flip_XYZFT_button_polarity': (True, True, False, False, False),
  'button_sleep_ms_xyzft': (0, 0, 0, 0, 0)})
-
-laser = 'cDAQ'
-laserdict.update({'405 nm': 'cDAQ1Mod2/port0/line1',
- '488 nm': 'cDAQ1Mod2/port0/line2',
- '561 nm': 'cDAQ1Mod2/port0/line3',
- '638 nm': 'cDAQ1Mod2/port0/line4'})
-
-shutter = 'cDAQ'
-shutterdict.update({'shutter_left': None, 'shutter_right': 'cDAQ1Mod2/port0/line0'})
 
 stage_parameters.update({'y_load_position': -45000,
  'y_unload_position': -75000,

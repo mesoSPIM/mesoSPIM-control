@@ -23,6 +23,9 @@ ao0:5 for 6, ao0:7 for 8 - all of these are in use across the rig configs.
 
 If your master trigger comes straight off PFI0 instead of a digital output line,
 use NI_PXI6259_PXI6733_PFI0_direct.py instead.
+
+Pair it with hardware/lasers/V5_PXI6733_lasers.py: laser ENABLE lines on the PXI-6733,
+shutters on the PXI-6259.
 '''
 waveformgeneration = 'NI' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
 

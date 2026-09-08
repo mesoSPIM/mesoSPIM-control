@@ -1,8 +1,12 @@
 '''
-Laser and shutter configuration of a standard Benchtop mesoSPIM, driven by an NI card.
+Lasers and shutters of a standard Benchtop mesoSPIM: everything on the single NI PXI-6733
+card (named 'PXI1Slot4' in NI MAX), so pair this file with hardware/DAQ/NI_benchtop_PXI6733.py
+or NI_benchtop_PXIe6738.py.
 
-For a demo/simulation machine include hardware/lasers/demo_lasers.py instead: it is this
-file with the laser and shutter drivers switched to 'Demo'.
+The most common wiring in this repository (10 rig configs). The other laser files are:
+* V5_PXI6733_lasers.py - a V5/V6 mesoSPIM, lasers on 'PXI6733', shutters on 'PXI6259';
+* cDAQ_lasers.py - a CompactDAQ chassis;
+* demo_lasers.py - this file with the drivers switched to 'Demo'.
 
 Make sure that 'max_laser_voltage' is correct (5 V for Toptica MLEs, 10 V for Omicron SOLE).
 '''
@@ -37,8 +41,8 @@ If shutterswitch = False or missing:
 shutter = 'NI' # 'Demo', 'NI', or 'cDAQ'
 shutterswitch = False # see legend above
 shutteroptions = ('Left', 'Right') # Shutter options of the GUI
-shutterdict = {'shutter_left' : 'PXI6259/port0/line0', # left (general) shutter
-              'shutter_right' : 'PXI6259/port2/line0'} # flip mirror or right shutter, depending on physical configuration
+shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # left (general) shutter
+              'shutter_right' : '/PXI1Slot4/port0/line1'} # flip mirror or right shutter, depending on physical configuration
 
 startup = {
 'laser' : '488 nm',
