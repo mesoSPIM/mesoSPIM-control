@@ -45,6 +45,17 @@ IGNORED = ('include', 'config_format')  # loader plumbing, not configuration
 # so these are replaced as a whole instead of being merged key by key.
 LABEL_DICTS = ('filterdict', 'laserdict', 'zoomdict', 'pixelsize', 'binning_dict', 'shutterdict')
 
+# Float values that carry more digits than anyone typed are written with at most
+# SIGNIFICANT_DIGITS. Config files collect these from the GUI ('galvo_l_phase':
+# 0.4487989505128276) and from arithmetic ('7.5x': 0.5666666666666667); the extra digits are
+# noise and they make a converted file hard to read. A value that already fits in
+# TYPED_DIGITS is left alone, so a deliberate 'galvo_l_frequency': 199.195 is not shortened,
+# and the count is of significant digits rather than decimals so that a small value such as
+# 'camera_line_interval': 7.5e-05 keeps its precision.
+SIGNIFICANT_DIGITS = 5
+TYPED_DIGITS = 8
+
+
 # Settings that only some drivers of a device read, where the driver is named by another
 # variable of the config. 'camera_line_interval' is pushed to the camera only by the Hamamatsu
 # class (mesoSPIM_Camera.py); every other camera reads it into a variable nothing uses, so a
@@ -122,9 +133,41 @@ def _load(path, notes=None):
     with contextlib.redirect_stdout(io.StringIO()):  # the loader prints one line per file
         namespace = _namespace(load_config_from_file(path))
     dropped = _drop_obsolete(namespace)
+    dropped.extend(_round_floats(namespace))
     if notes is not None:
         notes.extend(dropped)
     return namespace
+
+
+def _rounded(value):
+    '''`value` with every float shortened to SIGNIFICANT_DIGITS, containers included.'''
+    if isinstance(value, bool) or not isinstance(value, (float, dict, list, tuple)):
+        return value
+    if isinstance(value, float):
+        if float(f'{value:.{TYPED_DIGITS}g}') == value:  # short enough to have been typed
+            return value
+        return float(f'{value:.{SIGNIFICANT_DIGITS}g}')
+    if isinstance(value, dict):
+        return {key: _rounded(sub) for key, sub in value.items()}
+    return type(value)(_rounded(sub) for sub in value)
+
+
+def _round_floats(namespace):
+    '''Shorten the floats of a loaded config in place. Returns a note per changed setting.'''
+    rounded = []
+    for name, value in namespace.items():
+        if isinstance(value, dict):
+            for key, sub in value.items():
+                short = _rounded(sub)
+                if short != sub:
+                    value[key] = short
+                    rounded.append(f'{name}[{key!r}] {sub!r} written as {short!r}')
+        else:
+            short = _rounded(value)
+            if short != value:
+                namespace[name] = short
+                rounded.append(f'{name} {value!r} written as {short!r}')
+    return rounded
 
 
 def _drop_obsolete(namespace):

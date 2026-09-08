@@ -31,6 +31,9 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE zoom_parameters['baudrate'] dropped, the 'Demo' driver does not use it
 # NOTE zoom_parameters['servo_id'] dropped, the 'Demo' driver does not use it
 # NOTE startup['camera_line_interval'] dropped, the 'Photometrics' camera does not use it
+# NOTE pixelsize['7.5x'] 0.5666666666666667 written as 0.56667
+# NOTE startup['galvo_l_phase'] 0.4487989505128276 written as 0.4488
+# NOTE startup['galvo_r_phase'] 0.4487989505128276 written as 0.4488
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange'] from the shared files
 # NOTE filterdict replaced as a whole, the shared file also offers ['535/22 Brightline', '595/31 Brightline']
@@ -64,7 +67,7 @@ filterdict = {'Empty': 0,
 
 zoomdict = {'2x': 4, '5x': 6, '7.5x': 7, '10x': 8, '20x': 9}
 
-pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.5666666666666667, '10x': 0.425, '20x': 0.2125}
+pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.56667, '10x': 0.425, '20x': 0.2125}
 
 OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480), 'async_finalize': False})
 
@@ -83,6 +86,6 @@ startup.update({'state': 'init',
  'etl_l_ramp_rising_%': 90,
  'etl_l_ramp_falling_%': 5,
  'galvo_l_amplitude': 0.83,
- 'galvo_l_phase': 0.4487989505128276,
+ 'galvo_l_phase': 0.4488,
  'galvo_r_amplitude': 0.83,
- 'galvo_r_phase': 0.4487989505128276})
+ 'galvo_r_phase': 0.4488})

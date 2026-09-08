@@ -30,6 +30,8 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE zoom_parameters['baudrate'] dropped, the 'Demo' driver does not use it
 # NOTE zoom_parameters['servo_id'] dropped, the 'Demo' driver does not use it
 # NOTE startup['camera_line_interval'] dropped, the 'Photometrics' camera does not use it
+# NOTE pixelsize['7.5x'] 0.5666666666666667 written as 0.56667
+# NOTE startup['galvo_l_offset'] -0.17999999999999994 written as -0.18
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange', 'x_center_position', 'z_center_position'] from the shared files
 # NOTE asi_parameters['encoder_conversion'] written out to keep the axis order of the old config, which the shared file lists as ['X', 'Y', 'Z', 'T', 'V']
@@ -67,7 +69,7 @@ filterwheel_parameters.update({'filterwheel_type': 'ZWOPlugin'})
 
 zoomdict = {'2x': 4, '5x': 6, '7.5x': 7, '10x': 8, '20x': 9, '25x': 10}
 
-pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.5666666666666667, '10x': 0.425, '20x': 0.2125, '25x': 0.17}
+pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.56667, '10x': 0.425, '20x': 0.2125, '25x': 0.17}
 
 OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480)})
 
@@ -89,7 +91,7 @@ startup.update({'state': 'init',
  'etl_l_ramp_falling_%': 5.0,
  'galvo_l_frequency': 99.9,
  'galvo_l_amplitude': 0.8,
- 'galvo_l_offset': -0.17999999999999994,
+ 'galvo_l_offset': -0.18,
  'galvo_l_duty_cycle': 50,
  'galvo_l_phase': 0.45,
  'galvo_r_frequency': 99.9,

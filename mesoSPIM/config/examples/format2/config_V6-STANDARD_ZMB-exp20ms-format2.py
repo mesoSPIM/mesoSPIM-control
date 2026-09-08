@@ -24,6 +24,9 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
 # NOTE filterwheel_parameters['baudrate'] dropped, the 'ZWO' driver does not use it
 # NOTE filterwheel_parameters['servo_id'] dropped, the 'ZWO' driver does not use it
 # NOTE zoom_parameters['servo_id'] dropped, the 'Mitu' driver does not use it
+# NOTE pixelsize['7.5x'] 0.7333333333333333 written as 0.73333
+# NOTE startup['galvo_l_phase'] 1.5707963267948966 written as 1.5708
+# NOTE startup['galvo_r_phase'] 1.5707963267948966 written as 1.5708
 # NOTE ui_options gains ['flip_auto_LR_illumination'] from the shared files
 # NOTE laserdict replaced as a whole, the shared file also offers ['638 nm']
 # NOTE filterdict replaced as a whole, the shared file also offers ['535/22 Brightline', '595/31 Brightline']
@@ -65,7 +68,7 @@ zoom_parameters = {'zoom_type': 'Mitu', 'COMport': 'COM17', 'baudrate': 9600}
 
 zoomdict = {'2x': 'A', '5x': 'B', '7.5x': 'C', '10x': 'D', '20x_custom(t25)': 'E'}
 
-pixelsize = {'2x': 2.75, '5x': 1.1, '7.5x': 0.7333333333333333, '10x': 0.55, '20x_custom(t25)': 0.275}
+pixelsize = {'2x': 2.75, '5x': 1.1, '7.5x': 0.73333, '10x': 0.55, '20x_custom(t25)': 0.275}
 
 OME_Zarr_Writer.update({'base_chunks': (128, 1152, 648), 'target_chunks': (128, 288, 162)})
 
