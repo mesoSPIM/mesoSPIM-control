@@ -76,9 +76,9 @@ zoomdict = {'2x': 4, '5x': 6, '7.5x': 7, '10x': 8, '20x': 9, '25x': 10}
 
 pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.5666666666666667, '10x': 0.425, '20x': 0.2125, '25x': 0.17}
 
-OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480), 'target_chunks': (64, 64, 64)})
+OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480)})
 
-MP_OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480), 'target_chunks': (64, 64, 64)})
+MP_OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480)})
 
 scale_galvo_amp_with_zoom = True
 startup.update({'state': 'init',
