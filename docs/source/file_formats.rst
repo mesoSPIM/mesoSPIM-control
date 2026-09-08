@@ -90,7 +90,7 @@ restrict which writers are available:
 
 See :doc:`configuration` for the full ``plugins`` config reference.
 The per-writer settings shipped with mesoSPIM live in
-``mesoSPIM/config/plugins/writers/default_writers.py``.
+``mesoSPIM/config/plugins/writers/production_writers.py`` (or ``demo_writers.py``).
 
 OME-Zarr (``OME_Zarr_Writer`` / ``MP_OME_Zarr_Writer``)
 ----------------------------------------------------------

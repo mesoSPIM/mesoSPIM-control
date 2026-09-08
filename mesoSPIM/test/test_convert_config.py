@@ -30,7 +30,7 @@ def test_demo_config_round_trip(tmp_path):
         'hardware/stages/demo_stage.py', 'hardware/lasers/demo_lasers.py',
         'hardware/filterwheels/demo_filterwheel.py', 'hardware/objectives/demo_zoom.py',
         'hardware/galvos/demo_galvos.py', 'hardware/ETLs/demo_etl.py',
-        'plugins/writers/default_writers.py', 'UI/default_ui.py']
+        'plugins/writers/demo_writers.py', 'UI/default_ui.py']
     # The demo filterwheel and zoom files document a COM port and a servo id that the 'Demo'
     # drivers never open; the converter drops them and says so. Nothing else is reported.
     assert notes == [f"filterwheel_parameters[{key!r}] dropped, the 'Demo' driver does not use it"

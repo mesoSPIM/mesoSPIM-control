@@ -12,7 +12,7 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
         'hardware/lasers/demo_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
         'hardware/galvos/demo_galvos.py',
-        'plugins/writers/default_writers.py',
+        'plugins/writers/production_writers.py',
         'UI/default_ui.py')
 
 # NOTE startup['camera_sensor_mode'] dropped, the software does not read it any more
@@ -68,7 +68,7 @@ pixelsize = {'2x': 2.75, '5x': 1.1, '7.5x': 0.7333333333333333, '10x': 0.55, '20
 
 OME_Zarr_Writer.update({'base_chunks': (128, 1152, 648), 'target_chunks': (128, 288, 162)})
 
-MP_OME_Zarr_Writer.update({'base_chunks': (128, 1152, 648), 'target_chunks': (128, 288, 162), 'ring_buffer_size': 512})
+MP_OME_Zarr_Writer.update({'base_chunks': (128, 1152, 648), 'target_chunks': (128, 288, 162)})
 
 startup.update({'state': 'init',
  'ETL_cfg_file': 'config/etl_parameters/ETL-parameters-upgrade2023.csv',

@@ -14,7 +14,7 @@ include('hardware/cameras/photometrics_iris15.py',
         'hardware/objectives/demo_zoom.py',
         'hardware/galvos/demo_galvos.py',
         'hardware/ETLs/demo_etl.py',
-        'plugins/writers/default_writers.py',
+        'plugins/writers/production_writers.py',
         'UI/default_ui.py')
 
 # NOTE startup['camera_sensor_mode'] dropped, the software does not read it any more
@@ -72,7 +72,7 @@ pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.5666666666666667, '10x': 0.425, 
 
 OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480), 'async_finalize': False})
 
-MP_OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480), 'ring_buffer_size': 512})
+MP_OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480)})
 
 startup.update({'state': 'init',
  'ETL_cfg_file': 'config/etl_parameters/ETL-parameters-benchtop.csv',

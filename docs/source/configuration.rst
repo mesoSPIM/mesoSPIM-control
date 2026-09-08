@@ -49,7 +49,7 @@ still fully supported) or be split in two levels:
            'hardware/objectives/demo_zoom.py',
            'hardware/galvos/demo_galvos.py',
            'hardware/ETLs/demo_etl.py',
-           'plugins/writers/default_writers.py',
+           'plugins/writers/demo_writers.py',
            'UI/default_ui.py')
 
    # everything below wins over the included files

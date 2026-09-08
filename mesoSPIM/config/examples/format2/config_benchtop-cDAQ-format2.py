@@ -13,7 +13,7 @@ include('hardware/cameras/photometrics_iris15.py',
         'hardware/filterwheels/ZWO_EFW.py',
         'hardware/objectives/demo_zoom.py',
         'hardware/ETLs/demo_etl.py',
-        'plugins/writers/default_writers.py',
+        'plugins/writers/production_writers.py',
         'UI/default_ui.py')
 
 # NOTE startup['camera_sensor_mode'] dropped, the software does not read it any more
@@ -78,7 +78,7 @@ pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.5666666666666667, '10x': 0.425, 
 
 OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480), 'target_chunks': (64, 64, 64)})
 
-MP_OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480), 'target_chunks': (64, 64, 64), 'ring_buffer_size': 512})
+MP_OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480), 'target_chunks': (64, 64, 64)})
 
 scale_galvo_amp_with_zoom = True
 startup.update({'state': 'init',

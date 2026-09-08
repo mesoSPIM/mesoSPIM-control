@@ -1,5 +1,9 @@
 '''
-ImageWriter plugin parameters. The variable name must match the writer plugin name().
+ImageWriter plugin parameters for a production instrument. The variable name must match
+the writer plugin name().
+
+For a demo/simulation machine include plugins/writers/demo_writers.py instead: it is this
+file with a smaller shared-memory ring buffer.
 
 '''
 
@@ -93,7 +97,8 @@ MP_OME_Zarr_Writer = {
     'transpose_xy': False,  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
 
     # Multiprocess options
-    'ring_buffer_size': 16,  # Max number of images in shared memory ring buffer, 16 for simulation mode (eg laptop), 512 for production mode (fast workstation)
+    'ring_buffer_size': 512,  # Max number of images in the shared memory ring buffer;
+    # 512 for a production workstation with fast IO, 16 for simulation (see demo_writers.py)
 
     # Write cache options. Write tile data to cache then move to acquisition folder
     # None acquires data direct to acquisition folder.
