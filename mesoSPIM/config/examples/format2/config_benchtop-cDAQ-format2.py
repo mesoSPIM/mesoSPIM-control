@@ -9,7 +9,7 @@ config_format = 2
 include('hardware/cameras/photometrics_iris15.py',
         'hardware/DAQ/cDAQ_benchtop.py',
         'hardware/stages/TigerASI.py',
-        'hardware/lasers/demo_lasers.py',
+        'hardware/lasers/production_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
         'hardware/objectives/demo_zoom.py',
         'hardware/ETLs/demo_etl.py',

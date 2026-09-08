@@ -9,7 +9,7 @@ config_format = 2
 include('hardware/cameras/hamamatsu_orca_lightning.py',
         'hardware/DAQ/NI_PXI6259_PXI6733.py',
         'hardware/stages/PI_C884_xyzft.py',
-        'hardware/lasers/demo_lasers.py',
+        'hardware/lasers/production_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
         'hardware/galvos/demo_galvos.py',
         'plugins/writers/production_writers.py',
@@ -36,12 +36,12 @@ ui_options.update({'flip_XYZFT_button_polarity': (True, True, True, True, False)
  'button_sleep_ms_xyzft': (400, 0, 400, 0, 0),
  'window_pos': (400, 100)})
 
+laser = 'Demo'
 laserdict = {'405 nm': 'PXI6733/port0/line2',
  '488 nm': 'PXI6733/port0/line3',
  '561 nm': 'PXI6733/port0/line4',
  '647 nm': 'PXI6733/port0/line5'}
 
-shutter = 'NI'
 shutteroptions = ('Left', 'Right', 'Both')
 stage_parameters.update({'startfocus': 48000,
  'y_load_position': 35000,

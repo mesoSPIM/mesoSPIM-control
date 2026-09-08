@@ -1,53 +1,10 @@
 '''
-Laser and shutter configuration.
+Laser and shutter configuration of a demo/simulation machine.
 
-Make sure that 'max_laser_voltage' is correct (5 V for Toptica MLEs, 10 V for Omicron SOLE).
+Identical to hardware/lasers/production_lasers.py (a standard Benchtop mesoSPIM) apart from the
+two driver flags, so that mesoSPIM runs without an NI card attached.
 '''
-laser = 'Demo' # 'Demo' or 'NI'
+include('hardware/lasers/production_lasers.py')
 
-''' The `laserdict` specifies laser labels of the GUI and their digital modulation channels.
-Keys are the laser designation that will be shown in the user interface
-Values are DO ports used for laser ENABLE digital signal.
-Critical: entries must be sorted in the increasing wavelength order: 405, 488, etc.
-'''
-laserdict = {'405 nm': 'PXI1Slot4/port0/line2',
-             '488 nm': 'PXI1Slot4/port0/line3',
-             '561 nm': 'PXI1Slot4/port0/line4',
-             '638 nm': 'PXI1Slot4/port0/line5',
-             }
-
-''' Laser blanking indicates whether the laser enable lines should be set to LOW between
-individual images or stacks. This is helpful to avoid laser bleedthrough between images caused by insufficient
-modulation depth of the analog input (even at 0V, some laser light is still emitted).
-'''
-laser_blanking = 'images' # if 'images', laser is off before and after every image; if 'stacks', before and after each stack.
-
-'''
-Shutter configuration
-If shutterswitch = True:
-    'shutter_left' is the general shutter
-    'shutter_right' is the left/right switch (Right==True)
-
-If shutterswitch = False or missing:
-    'shutter_left' and 'shutter_right' are two independent shutters.
-'''
-shutter = 'Demo' # 'Demo' or 'NI'
-shutterswitch = False # see legend above
-shutteroptions = ('Left', 'Right') # Shutter options of the GUI
-shutterdict = {'shutter_left' : 'PXI6259/port0/line0', # left (general) shutter
-              'shutter_right' : 'PXI6259/port2/line0'} # flip mirror or right shutter, depending on physical configuration
-
-startup = {
-'laser' : '488 nm',
-'max_laser_voltage' : 5, # 5 V for Toptica MLEs, 10 V for Omicron SOLE
-'intensity' : 10,
-'laser_interleaving' : False,
-'shutterstate' : False, # Is the shutter open or not?
-'shutterconfig' : 'Right', # Can be "Left", "Right", "Both", "Interleaved"
-'laser_l_delay_%' : 10,
-'laser_l_pulse_%' : 87,
-'laser_l_max_amplitude_%' : 100,
-'laser_r_delay_%' : 10,
-'laser_r_pulse_%' : 87,
-'laser_r_max_amplitude_%' : 100,
-}
+laser = 'Demo' # 'Demo', 'NI', or 'cDAQ'
+shutter = 'Demo' # 'Demo', 'NI', or 'cDAQ'
