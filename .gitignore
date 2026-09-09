@@ -20,7 +20,7 @@ mesoSPIM/config/etl_parameters/*
 mesoSPIM/config/*.py
 mesoSPIM/config/processor_chain.json
 !mesoSPIM/config/demo_config.py
-!mesoSPIM/config/demo_config_format1.py
+!mesoSPIM/config/demo_config_format1(legacy).py
 !mesoSPIM/config/*example*_config.py
 !mesoSPIM/config/examples/*.py
 mesoSPIM/config/examples_private/
