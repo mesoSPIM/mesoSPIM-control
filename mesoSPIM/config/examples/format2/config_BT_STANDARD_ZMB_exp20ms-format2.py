@@ -11,7 +11,7 @@ include('hardware/cameras/photometrics_iris15.py',
         'hardware/stages/TigerASI.py',
         'hardware/lasers/benchtop_PXI6733_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
-        'hardware/objectives/demo_zoom.py',
+        'hardware/objectives/benchtop_manual_objectives.py',
         'hardware/galvos/demo_galvos.py',
         'hardware/ETLs/demo_etl.py',
         'plugins/writers/production_writers.py',
@@ -37,8 +37,6 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE ui_options gains ['enable_f_zero_button', 'window_pos'] from the shared files
 # NOTE stage_parameters gains ['f_objective_exchange'] from the shared files
 # NOTE filterdict replaced as a whole, the shared file also offers ['535/22 Brightline', '595/31 Brightline']
-# NOTE zoomdict replaced as a whole, the shared file also offers ['1x', '4x Olympus', '5x Mitutoyo']
-# NOTE pixelsize replaced as a whole, the shared file also offers ['1x', '4x Olympus', '5x Mitutoyo']
 # NOTE startup gains ['camera_display_temporal_subsampling'] from the shared files
 
 # --- settings of this microscope/user, overriding the files included above ---
@@ -65,10 +63,6 @@ filterdict = {'Empty': 0,
  '520/35 BrightLine': 3,
  '595/31 BrightLine': 4}
 
-zoomdict = {'2x': 4, '5x': 6, '7.5x': 7, '10x': 8, '20x': 9}
-
-pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.56667, '10x': 0.425, '20x': 0.2125}
-
 OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480), 'async_finalize': False})
 
 MP_OME_Zarr_Writer.update({'base_chunks': (128, 1264, 1480), 'target_chunks': (128, 1264, 1480)})
@@ -79,8 +73,6 @@ startup.update({'state': 'init',
  'snap_folder': 'X:/',
  'file_prefix': '',
  'file_suffix': '000001',
- 'zoom': '5x',
- 'pixelsize': 0.85,
  'shutterconfig': 'Left',
  'etl_l_delay_%': 5,
  'etl_l_ramp_rising_%': 90,

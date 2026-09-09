@@ -11,6 +11,7 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
         'hardware/stages/PI_C884_xyzft.py',
         'hardware/lasers/V5_PXI6733_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
+        'hardware/objectives/Mitutoyo_revolver.py',
         'hardware/galvos/demo_galvos.py',
         'plugins/writers/production_writers.py',
         'UI/default_ui.py')
@@ -30,6 +31,8 @@ include('hardware/cameras/hamamatsu_orca_lightning.py',
 # NOTE ui_options gains ['flip_auto_LR_illumination'] from the shared files
 # NOTE laserdict replaced as a whole, the shared file also offers ['638 nm']
 # NOTE filterdict replaced as a whole, the shared file also offers ['535/22 Brightline', '595/31 Brightline']
+# NOTE zoomdict replaced as a whole, the shared file also offers ['20x']
+# NOTE pixelsize replaced as a whole, the shared file also offers ['20x']
 # NOTE laser_blanking comes from the shared files, the old config had no such setting
 # NOTE shutterswitch comes from the shared files, the old config had no such setting
 
@@ -64,8 +67,6 @@ pi_parameters.update({'stages': ('M-112K033', 'L-406.40DG10', 'M-112K033', 'M-11
 
 filterdict = {'Empty': 0, '405-488-561-640-Quadrupleblock': 1, '520/35': 2, 'Empty-1': 3, '590/36': 4}
 
-zoom_parameters = {'zoom_type': 'Mitu', 'COMport': 'COM17', 'baudrate': 9600}
-
 zoomdict = {'2x': 'A', '5x': 'B', '7.5x': 'C', '10x': 'D', '20x_custom(t25)': 'E'}
 
 pixelsize = {'2x': 2.75, '5x': 1.1, '7.5x': 0.73333, '10x': 0.55, '20x_custom(t25)': 0.275}
@@ -80,7 +81,6 @@ startup.update({'state': 'init',
  'snap_folder': 'D:/Data/mesoSPIM_snapped_images',
  'file_prefix': '',
  'file_suffix': '000001',
- 'zoom': '2x',
  'pixelsize': 5.5,
  'intensity': 15,
  'filter': '405-488-561-640-Quadrupleblock',

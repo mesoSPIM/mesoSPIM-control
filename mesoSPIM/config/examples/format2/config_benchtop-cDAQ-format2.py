@@ -11,7 +11,7 @@ include('hardware/cameras/photometrics_iris15.py',
         'hardware/stages/TigerASI.py',
         'hardware/lasers/cDAQ_lasers.py',
         'hardware/filterwheels/ZWO_EFW.py',
-        'hardware/objectives/demo_zoom.py',
+        'hardware/objectives/benchtop_manual_objectives.py',
         'hardware/ETLs/demo_etl.py',
         'plugins/writers/production_writers.py',
         'UI/default_ui.py')
@@ -37,8 +37,6 @@ include('hardware/cameras/photometrics_iris15.py',
 # NOTE asi_parameters['encoder_conversion'] written out to keep the axis order of the old config, which the shared file lists as ['X', 'Y', 'Z', 'T', 'V']
 # NOTE asi_parameters['speed'] written out to keep the axis order of the old config, which the shared file lists as ['X', 'Y', 'Z', 'T', 'V']
 # NOTE asi_parameters['stage_assignment'] written out to keep the axis order of the old config, which the shared file lists as ['x', 'f', 'z', 'theta', 'y']
-# NOTE zoomdict replaced as a whole, the shared file also offers ['1x', '4x Olympus', '5x Mitutoyo']
-# NOTE pixelsize replaced as a whole, the shared file also offers ['1x', '4x Olympus', '5x Mitutoyo']
 # NOTE startup gains ['camera_display_temporal_subsampling'] from the shared files
 
 # --- settings of this microscope/user, overriding the files included above ---
@@ -67,9 +65,9 @@ asi_parameters.update({'COMport': 'COM23',
 
 filterwheel_parameters.update({'filterwheel_type': 'ZWOPlugin'})
 
-zoomdict = {'2x': 4, '5x': 6, '7.5x': 7, '10x': 8, '20x': 9, '25x': 10}
+zoomdict.update({'25x': 10})
 
-pixelsize = {'2x': 2.125, '5x': 0.85, '7.5x': 0.56667, '10x': 0.425, '20x': 0.2125, '25x': 0.17}
+pixelsize.update({'25x': 0.17})
 
 OME_Zarr_Writer.update({'base_chunks': (32, 1264, 1480)})
 
@@ -83,8 +81,6 @@ startup.update({'state': 'init',
  'snap_folder': 'F:/Test/',
  'file_prefix': '',
  'file_suffix': '000001',
- 'zoom': '5x',
- 'pixelsize': 0.85,
  'shutterconfig': 'Left',
  'etl_l_delay_%': 5.0,
  'etl_l_ramp_rising_%': 90.0,

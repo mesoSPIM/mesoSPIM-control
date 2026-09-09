@@ -32,5 +32,5 @@ pixelsize = {
 
 startup = {
 'zoom' : '2x', # must exist in zoomdict above
-'pixelsize' : 1.0,
+'pixelsize' : 2.5, # must match pixelsize[startup['zoom']]
 }

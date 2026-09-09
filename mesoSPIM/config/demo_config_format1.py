@@ -451,7 +451,7 @@ startup = {
 'filter' : 'Empty', # must exist in filterdict above
 # --- hardware/objectives/demo_zoom.py ---
 'zoom' : '2x', # must exist in zoomdict above
-'pixelsize' : 1.0,
+'pixelsize' : 2.5, # must match pixelsize[startup['zoom']]
 # --- hardware/galvos/demo_galvos.py ---
 'galvo_l_frequency' : 99.9,
 'galvo_l_amplitude' : 2.5,
