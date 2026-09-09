@@ -22,6 +22,7 @@ sys.modules[_spec.name] = config_loader
 _spec.loader.exec_module(config_loader)
 load_config_from_file = config_loader.load_config_from_file
 update_startup_in_source = config_loader.update_startup_in_source
+check_zoom_and_pixelsize = config_loader.check_zoom_and_pixelsize
 
 
 def write(path, text):
@@ -145,6 +146,51 @@ def test_save_back_appends_then_substitutes_in_place():
     assert updated == ['sweeptime'] and appended == []
     assert twice.count('startup.update({') == 1
     assert '0.7' in twice and '0.5' not in twice
+
+
+CAMERA = {'x_pixel_size_in_microns': 5.0, 'y_pixel_size_in_microns': 5.0}
+ZOOMDICT = {'1x': 'A', '2x': 'B'}
+PIXELSIZE = {'1x': 5.0, '2x': 2.5}
+
+
+def test_zoom_check_accepts_a_consistent_config():
+    errors, warnings = check_zoom_and_pixelsize(ZOOMDICT, PIXELSIZE,
+                                                {'zoom': '2x', 'pixelsize': 2.5}, CAMERA)
+    assert errors == [] and warnings == []
+
+
+def test_zoom_check_rejects_a_zoom_without_a_pixel_size():
+    '''Otherwise pixelsize[zoom] raises a KeyError in the middle of an acquisition.'''
+    errors, _ = check_zoom_and_pixelsize({**ZOOMDICT, '4x': 'C'}, PIXELSIZE,
+                                         {'zoom': '2x', 'pixelsize': 2.5}, CAMERA)
+    assert len(errors) == 1 and "'4x'" in errors[0]
+
+
+def test_zoom_check_rejects_an_unknown_startup_zoom():
+    errors, _ = check_zoom_and_pixelsize(ZOOMDICT, PIXELSIZE,
+                                         {'zoom': '10x', 'pixelsize': 0.5}, CAMERA)
+    assert len(errors) == 1 and "startup['zoom']" in errors[0]
+
+
+def test_zoom_check_warns_on_a_startup_pair_that_does_not_match():
+    errors, warnings = check_zoom_and_pixelsize(ZOOMDICT, PIXELSIZE,
+                                                {'zoom': '2x', 'pixelsize': 5.0}, CAMERA)
+    assert errors == [] and len(warnings) == 1 and 'does not match' in warnings[0]
+
+
+def test_zoom_check_warns_when_the_table_belongs_to_another_camera():
+    # 5.5 um pixel pitch table (Orca Lightning) used with a 5.0 um camera
+    errors, warnings = check_zoom_and_pixelsize(ZOOMDICT, {'1x': 5.5, '2x': 2.75},
+                                                {'zoom': '2x', 'pixelsize': 2.75}, CAMERA)
+    assert errors == [] and len(warnings) == 2  # both entries are 10% off
+
+
+def test_zoom_check_warns_on_non_square_camera_pixels():
+    '''One pixel size per zoom position only describes a square pixel.'''
+    camera = {'x_pixel_size_in_microns': 5.0, 'y_pixel_size_in_microns': 6.5}
+    errors, warnings = check_zoom_and_pixelsize(ZOOMDICT, PIXELSIZE,
+                                                {'zoom': '2x', 'pixelsize': 2.5}, camera)
+    assert errors == [] and len(warnings) == 1 and 'not square' in warnings[0]
 
 
 def test_both_demo_config_formats_load_into_the_same_settings():

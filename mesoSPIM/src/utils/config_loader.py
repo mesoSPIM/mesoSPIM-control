@@ -68,6 +68,52 @@ def load_config_from_file(path_to_config, included=False):
     return config
 
 
+def check_zoom_and_pixelsize(zoomdict, pixelsize, startup, camera_parameters):
+    '''
+    Check that the zoom settings of a config file are consistent.
+
+    Returns (errors, warnings), both lists of messages. An error means the configuration
+    cannot work: mesoSPIM looks up pixelsize[zoom] for the metadata, the tile view and the
+    scale bar, so a zoom without a pixel size raises a KeyError in the middle of an
+    acquisition. A warning means a value looks wrong but the software runs.
+    '''
+    errors, warnings = [], []
+    only_in_one = set(zoomdict) ^ set(pixelsize)
+    if only_in_one:
+        errors.append(f"'zoomdict' and 'pixelsize' must have the same keys, but "
+                      f"{sorted(only_in_one)} appear only in one of them.")
+
+    zoom = startup.get('zoom')
+    if zoom not in zoomdict:
+        errors.append(f"startup['zoom'] = {zoom!r} is not one of the zoom positions "
+                      f"{sorted(zoomdict)}.")
+    elif zoom in pixelsize and startup.get('pixelsize') != pixelsize[zoom]:
+        warnings.append(f"startup['pixelsize'] = {startup.get('pixelsize')} um does not match "
+                        f"pixelsize[{zoom!r}] = {pixelsize[zoom]} um; using the latter. Write "
+                        f"'pixelsize': pixelsize[{zoom!r}] to keep the two in step.")
+
+    pitch = camera_parameters.get('x_pixel_size_in_microns')
+    pitch_y = camera_parameters.get('y_pixel_size_in_microns')
+    if pitch and pitch_y and pitch != pitch_y:
+        warnings.append(f"the camera pixels are not square: 'x_pixel_size_in_microns' = {pitch} um, "
+                        f"'y_pixel_size_in_microns' = {pitch_y} um. mesoSPIM stores a single pixel "
+                        f"size per zoom position, taken from the x value, so the y scale of the saved "
+                        f"data and of the tile view will be wrong.")
+
+    for label, value in pixelsize.items():
+        # Zoom labels are magnifications ('2x', '4x Olympus', '20x_custom(t25)'), so the pixel
+        # size should be the camera pixel pitch divided by that number.
+        magnification = re.match(r'([0-9.]+)x', str(label))
+        if not (pitch and magnification and value):
+            continue
+        expected = pitch / float(magnification.group(1))
+        if abs(value - expected) > 0.05 * value:
+            warnings.append(f"pixelsize[{label!r}] = {value} um, but the camera pixel pitch "
+                            f"{pitch} um / {magnification.group(1)} = {expected:.4g} um. Correct if "
+                            f"a relay lens adds magnification, wrong camera table otherwise.")
+    return errors, warnings
+
+
 def update_startup_in_source(content, params):
     '''
     Rewrite `startup` values in the text of a config file.

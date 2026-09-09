@@ -27,7 +27,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
-from .utils.config_loader import update_startup_in_source
+from .utils.config_loader import check_zoom_and_pixelsize, update_startup_in_source
 
 logger = logging.getLogger(__name__)
 
@@ -247,6 +247,20 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             msg = "Objective exchange in the current f-position. To set the safe f-position for objective exchange, add 'f_objective_exchange' to the stage parameters in the config file."
         logger.warning(msg)
         print(msg)
+
+        errors, warnings = check_zoom_and_pixelsize(self.cfg.zoomdict, self.cfg.pixelsize,
+                                                    self.cfg.startup, self.cfg.camera_parameters)
+        for msg in warnings:
+            msg = "WARNING: Config file: " + msg
+            logger.warning(msg)
+            print(msg)
+        if errors:
+            msg = "Config file: " + "\n".join(errors)
+            logger.error(msg)
+            raise ValueError(msg)
+        # pixelsize[zoom] is what every other part of the software uses, so the state starts there
+        # even when startup['pixelsize'] disagrees (warned about above).
+        self.state['pixelsize'] = self.cfg.pixelsize[self.cfg.startup['zoom']]
 
     def open_webcam_window(self):
         """Open USB webcam window using cam ID specified in config file."""
