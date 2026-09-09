@@ -7,6 +7,7 @@ Run from the mesoSPIM/ directory:  python -m pytest test/test_config_include.py 
 import importlib.util
 import pathlib
 import sys
+import types
 
 import pytest
 
@@ -69,6 +70,15 @@ def test_legacy_config_without_include_still_loads(tmp_path):
     assert cfg.camera == 'DemoCamera'
     assert cfg.startup == {'zoom': '1x'}
     assert getattr(cfg, 'config_format', 1) == 1
+
+
+def test_included_file_cannot_include_another(tmp_path):
+    '''Only the user file may include: chains of hardware files are hard to follow.'''
+    bottom = write(tmp_path / 'bottom.py', "camera = 'DemoCamera'\n")
+    middle = write(tmp_path / 'middle.py', f"include({str(bottom)!r})\n")
+    main = write(tmp_path / 'main.py', f"include({str(middle)!r})\n")
+    with pytest.raises(ValueError, match='only allowed in the user config file'):
+        load_config_from_file(main)
 
 
 def test_missing_include_raises(tmp_path):
@@ -135,6 +145,20 @@ def test_save_back_appends_then_substitutes_in_place():
     assert updated == ['sweeptime'] and appended == []
     assert twice.count('startup.update({') == 1
     assert '0.7' in twice and '0.5' not in twice
+
+
+def test_both_demo_config_formats_load_into_the_same_settings():
+    '''demo_config_format1.py is the single-file twin of demo_config.py: keep them in sync.'''
+    def settings(name):
+        cfg = load_config_from_file(MESOSPIM_DIR / 'config' / name)
+        return {key: value for key, value in vars(cfg).items()
+                if not key.startswith('__') and key not in ('include', 'config_format')
+                and not callable(value) and not isinstance(value, types.ModuleType)}
+
+    two_level, single_file = settings('demo_config.py'), settings('demo_config_format1.py')
+    differing = [key for key in set(two_level) | set(single_file)
+                 if two_level.get(key, '<absent>') != single_file.get(key, '<absent>')]
+    assert differing == []
 
 
 def test_demo_config_provides_everything_the_app_reads():

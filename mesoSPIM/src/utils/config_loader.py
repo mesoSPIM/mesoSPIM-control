@@ -16,6 +16,8 @@ Rules:
 * Dicts with the same name are merged key-by-key, so a partial `startup` dict
   can be contributed by several hardware files (later include wins per key).
 * A file that never calls include() behaves exactly as before.
+* Only the user file may include: an included file that calls include() raises,
+  so a config is never more than two levels deep.
 '''
 
 import importlib.util
@@ -28,14 +30,18 @@ package_directory = os.path.dirname(os.path.dirname(os.path.dirname(os.path.absp
 CONFIG_DIR = os.path.join(package_directory, 'config')
 
 
-def _make_include(target_dict):
+def _make_include(target_dict, included=False):
     '''Create the include() function bound to the namespace of one config module.'''
     def include(*rel_paths):
+        if included:
+            raise ValueError("include() is only allowed in the user config file. An included "
+                             "hardware file must not include another one: chains of config "
+                             "files are hard to follow. Repeat the few settings instead.")
         for rel in rel_paths:
             path = rel if os.path.isabs(rel) else os.path.join(CONFIG_DIR, rel)
             if not os.path.exists(path):
                 raise FileNotFoundError(f"Config include not found: {path} (from '{rel}')")
-            sub = load_config_from_file(path)
+            sub = load_config_from_file(path, included=True)
             for name, value in vars(sub).items():
                 if name.startswith('__') or name == 'include' or isinstance(value, types.ModuleType):
                     continue
@@ -47,13 +53,16 @@ def _make_include(target_dict):
     return include
 
 
-def load_config_from_file(path_to_config):
+def load_config_from_file(path_to_config, included=False):
     '''
-    Load a microscope configuration from a file using importlib
+    Load a microscope configuration from a file using importlib.
+
+    included=True marks a file pulled in by include(); such a file may not include further
+    files, so that a config is always at most two levels deep.
     '''
     spec = importlib.util.spec_from_file_location('module.name', path_to_config)
     config = importlib.util.module_from_spec(spec)
-    config.include = _make_include(config.__dict__)
+    config.include = _make_include(config.__dict__, included)
     spec.loader.exec_module(config)
     print(f'Configuration file loaded: {path_to_config}')
     return config

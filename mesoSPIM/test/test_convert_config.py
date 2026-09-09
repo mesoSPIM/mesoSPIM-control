@@ -31,16 +31,10 @@ def test_demo_config_round_trip(tmp_path):
         'hardware/filterwheels/demo_filterwheel.py', 'hardware/objectives/demo_zoom.py',
         'hardware/galvos/demo_galvos.py', 'hardware/ETLs/demo_etl.py',
         'plugins/writers/demo_writers.py', 'UI/default_ui.py']
-    # The demo filterwheel and zoom files document a COM port and a servo id that the 'Demo'
-    # drivers never open, and the demo galvos file computes its phase as np.pi/2; the converter
-    # drops the former and shortens the latter, saying so. Nothing else is reported.
-    assert notes == (
-        [f"filterwheel_parameters[{key!r}] dropped, the 'Demo' driver does not use it"
-         for key in ('COMport', 'baudrate', 'servo_id', 'wheel_speed')]
-        + [f"zoom_parameters[{key!r}] dropped, the 'Demo' driver does not use it"
-           for key in ('COMport', 'baudrate', 'servo_id')]
-        + [f"startup['galvo_{side}_phase'] 1.5707963267948966 written as 1.5708"
-           for side in 'lr'])
+    # The demo galvos file computes its phase as np.pi/2, which the converter writes shortened.
+    # Nothing else is reported: the demo config carries no setting the software does not read.
+    assert notes == [f"startup['galvo_{side}_phase'] 1.5707963267948966 written as 1.5708"
+                     for side in 'lr']
 
     target = MESOSPIM_DIR / 'config' / '_test_converted.py'  # inside config/ for include() paths
     try:

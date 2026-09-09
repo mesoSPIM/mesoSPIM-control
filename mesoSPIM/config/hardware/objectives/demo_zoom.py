@@ -1,14 +1,11 @@
 '''
 Zoom / objective configuration ('objectives' is the historical name for zoom).
 
-For 'Demo', 'servo_id', 'COMport' and 'baudrate' do not matter.
+For 'Demo', no connection settings are needed.
 For a 'Dynamixel' servo-driven zoom, 'servo_id', 'COMport' and 'baudrate' (default 1000000) must be specified.
 For 'Mitu' (Mitutoyo revolver), 'COMport' and 'baudrate' (default 9600) must be specified.
 '''
 zoom_parameters = {'zoom_type' : 'Demo', # 'Demo', 'Dynamixel', or 'Mitu'
-                   'COMport' : 'COM1',
-                   'baudrate' : 9600,
-                   'servo_id': 4, # only for 'Dynamixel'
                    }
 
 '''

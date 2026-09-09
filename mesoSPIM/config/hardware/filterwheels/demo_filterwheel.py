@@ -9,11 +9,7 @@ For ZWOPlugin, no parameters are required ('wait_until_done_delay', 'wheel_index
 For a Dynamixel FilterWheel, valid baudrate and servo_id are necessary.
 '''
 filterwheel_parameters = {'filterwheel_type' : 'Demo', # 'Demo', 'Ludl', 'LudlPlugin', 'Sutter', 'SutterPlugin', 'Dynamixel', 'ZWO', 'ZWOPlugin', 'FLI'
-                          'COMport' : 'COM3', # irrelevant for 'ZWO'
-                          'baudrate' : 115200, # device-specific; SutterPlugin typically uses 9600 (see example below)
-                          'servo_id' :  1, # relevant only for 'Dynamixel'
-                          'wheel_speed': 3  # relevant only for 'Sutter', 'SutterPlugin'; 0 (fastest) .. 7 (slowest)
-                          }
+                          } # the 'Demo' wheel needs no connection settings, see the examples below
 # To use the plugin-based Ludl driver instead:
 # filterwheel_parameters = {'filterwheel_type': 'LudlPlugin',
 #                           'COMport': 'COM3',

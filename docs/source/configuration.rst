@@ -67,7 +67,10 @@ Rules:
   so several hardware files each contribute their part of the ``startup`` dict.
   Use ``startup.update({...})`` in your file to override single keys, or
   ``startup = {...}`` to replace the dict entirely.
-* A hardware file may itself call ``include()``.
+* Only the user file may include.  An included file that calls ``include()``
+  raises a ``ValueError``, so a config is never more than two levels deep and you
+  never have to follow a chain of files to see what a setting is.  Two similar
+  hardware files repeat their content instead of chaining.
 * Files under ``hardware/``, ``plugins/`` and ``UI/`` never show up in the startup file
   dialog — only ``mesoSPIM/config/*.py`` does.
 
@@ -75,7 +78,9 @@ Your editor will flag ``include`` and ``startup`` as undefined in a two-level
 file; that is expected, both are supplied at load time.
 
 ``mesoSPIM/config/demo_config.py`` is the reference two-level file and is what
-demo mode (``-D``) loads.
+demo mode (``-D``) loads.  ``mesoSPIM/config/demo_config_format1.py`` is the very
+same demo microscope written as one legacy file, so the two formats can be
+compared side by side; both load into exactly the same settings.
 
 Converting an old config file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
