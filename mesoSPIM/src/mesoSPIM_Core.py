@@ -30,6 +30,7 @@ from .mesoSPIM_Camera import mesoSPIM_Camera
 from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
 from .utils.ni_daqmx import require_nidaqmx
+from .utils.config_loader import is_demo
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
@@ -185,7 +186,7 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Setting waveform generation up '''
         if self.cfg.waveformgeneration in ('NI', 'cDAQ'):
             self.waveformer = mesoSPIM_WaveFormGenerator(self)
-        elif self.cfg.waveformgeneration == 'DemoWaveFormGeneration':
+        elif is_demo(self.cfg.waveformgeneration): # 'Demo', 'DemoWaveFormGeneration', ...
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
 
         self.waveformer.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
@@ -202,7 +203,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if self.cfg.shutter in ('NI','cDAQ'):
             self.shutter_left = NI_Shutter(left_shutter_line) if left_shutter_line is not None else Demo_Shutter(left_shutter_line)
             self.shutter_right = NI_Shutter(right_shutter_line) if right_shutter_line is not None else Demo_Shutter(right_shutter_line)
-        elif self.cfg.shutter == 'Demo':
+        elif is_demo(self.cfg.shutter):
             self.shutter_left = Demo_Shutter(left_shutter_line)
             self.shutter_right = Demo_Shutter(right_shutter_line)
 
@@ -215,7 +216,7 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Setting the laser enabler up '''
         if self.cfg.laser in ('NI', 'cDAQ'):
             self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
-        elif 'demo' in self.cfg.laser.lower():
+        elif is_demo(self.cfg.laser):
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']

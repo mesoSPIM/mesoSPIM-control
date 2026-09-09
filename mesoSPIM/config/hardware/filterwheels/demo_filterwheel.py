@@ -1,7 +1,7 @@
 '''
 Filterwheel configuration.
 
-For a DemoFilterWheel, no COMport needs to be specified.
+For the 'Demo' wheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 For the plugin-based LudlPlugin, COMport, baudrate, and wait_until_done_delay are required.
 For SutterPlugin, COMport, baudrate, wheel_speed, and wait_until_done_delay are required.

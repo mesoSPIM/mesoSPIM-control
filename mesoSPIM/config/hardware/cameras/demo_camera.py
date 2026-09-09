@@ -1,7 +1,7 @@
 '''
 Camera configuration: demo camera (no hardware).
 
-For a DemoCamera, only the following options are necessary
+For the demo camera, only the following options are necessary
 (x_pixels and y_pixels can be chosen arbitrarily):
 
 camera_parameters = {'x_pixels' : 1024,
@@ -12,7 +12,7 @@ camera_parameters = {'x_pixels' : 1024,
 
 For real cameras, see the other files in this folder.
 '''
-camera = 'DemoCamera' # 
+camera = 'Demo' # 'Demo', 'HamamatsuOrca', 'Photometrics' or 'PCO'
 
 camera_parameters = {'x_pixels' : 5056,
                      'y_pixels' : 2960,

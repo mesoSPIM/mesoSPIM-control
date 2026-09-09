@@ -68,6 +68,17 @@ def load_config_from_file(path_to_config, included=False):
     return config
 
 
+def is_demo(driver_name):
+    '''
+    Does this config value ask for a simulated device?
+
+    Every driver name containing 'demo' selects the demo device, so 'Demo' works everywhere
+    and the older spellings of the config files keep working: 'DemoCamera',
+    'DemoWaveFormGeneration', 'DemoStage', 'DemoZoom', 'DemoFilterWheel'.
+    '''
+    return isinstance(driver_name, str) and 'demo' in driver_name.lower()
+
+
 def check_zoom_and_pixelsize(zoomdict, pixelsize, startup, camera_parameters):
     '''
     Check that the zoom settings of a config file are consistent.

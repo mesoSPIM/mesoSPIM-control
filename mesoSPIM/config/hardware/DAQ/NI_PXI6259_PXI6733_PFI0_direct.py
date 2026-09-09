@@ -18,7 +18,7 @@ here it is '/PXI6259/PFI0' used directly, instead of 'PXI6259/port0/line1'
 plus a physical wire to PFI0. Use this file only if your instrument is wired
 that way.
 '''
-waveformgeneration = 'NI' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
+waveformgeneration = 'NI' # 'Demo', 'NI' or 'cDAQ'
 
 acquisition_hardware = {'master_trigger_out_line' : '/PXI6259/PFI0', # Instead of 'PXI6259/port0/line1' + wire, use '/PXI6259/PFI0' directly
                         'camera_trigger_source' : '/PXI6259/PFI0',

@@ -35,7 +35,7 @@ Physical channels must be connected in certain order:
 (here 'PXI1Slot4/ao4:7' means '405 nm' connected to ao4, '488 nm' to ao5, etc.)
 Shrink or extend the range to the number of lasers you have.
 '''
-waveformgeneration = 'NI' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
+waveformgeneration = 'NI' # 'Demo', 'NI' or 'cDAQ'
 
 acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
                         'camera_trigger_source' : '/PXI1Slot4/PFI0',

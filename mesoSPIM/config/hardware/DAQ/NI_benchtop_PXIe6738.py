@@ -31,7 +31,7 @@ Physical connections:
 - galvos, ETL controllers to 'PXI1Slot2/ao0:3' terminals
 - laser analog modulation cables to 'PXI1Slot2/ao20:24' terminals
 '''
-waveformgeneration = 'NI' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
+waveformgeneration = 'NI' # 'Demo', 'NI' or 'cDAQ'
 
 acquisition_hardware = {'master_trigger_out_line' : '/PXI1Slot2/PFI0', # PFI0 used directly, see above
                         'camera_trigger_source' : '/PXI1Slot2/PFI0',

@@ -27,7 +27,7 @@ use NI_PXI6259_PXI6733_PFI0_direct.py instead.
 Pair it with hardware/lasers/V5_PXI6733_lasers.py: laser ENABLE lines on the PXI-6733,
 shutters on the PXI-6259.
 '''
-waveformgeneration = 'NI' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
+waveformgeneration = 'NI' # 'Demo', 'NI' or 'cDAQ'
 
 acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'camera_trigger_source' : '/PXI6259/PFI0',

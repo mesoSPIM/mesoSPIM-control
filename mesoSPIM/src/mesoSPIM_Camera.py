@@ -17,6 +17,7 @@ except:
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import log_cpu_core, timed
+from .utils.config_loader import is_demo
 from .mesoSPIM_ProcessorChain import ProcessorChain
 
 
@@ -90,7 +91,7 @@ class mesoSPIM_Camera(QtCore.QObject):
             self.camera = mesoSPIM_PhotometricsCamera(self)
         elif self.cfg.camera == 'PCO':
             self.camera = mesoSPIM_PCOCamera(self)
-        elif self.cfg.camera == 'DemoCamera':
+        elif is_demo(self.cfg.camera): # 'Demo', 'DemoCamera', ...
             self.camera = mesoSPIM_DemoCamera(self)
 
         self.camera.open_camera()

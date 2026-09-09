@@ -10,7 +10,7 @@ the PXI cards, 25 kHz instead of 100 kHz.
 The laser ENABLE lines and the shutter lines mentioned in the wiring notes
 (cDAQ1Mod2) are configured in hardware/lasers/cDAQ_lasers.py, not here.
 '''
-waveformgeneration = 'cDAQ' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
+waveformgeneration = 'cDAQ' # 'Demo', 'NI' or 'cDAQ'
 
 '''
 compactDAQ limitations:

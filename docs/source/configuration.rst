@@ -78,7 +78,7 @@ Your editor will flag ``include`` and ``startup`` as undefined in a two-level
 file; that is expected, both are supplied at load time.
 
 ``mesoSPIM/config/demo_config.py`` is the reference two-level file and is what
-demo mode (``-D``) loads.  ``mesoSPIM/config/demo_config_format1.py`` is the very
+demo mode (``-D``) loads.  ``mesoSPIM/config/demo_config_format1(legacy).py`` is the very
 same demo microscope written as one legacy file, so the two formats can be
 compared side by side; both load into exactly the same settings.
 

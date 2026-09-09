@@ -12,7 +12,7 @@ Rules:
 * only this file may include(): the included files never include each other, so
   there is never more than one level to follow;
 * old single-file configs (without include()) keep working unchanged.
-  demo_config_format1.py is this very configuration written as one such file.
+  demo_config_format1(legacy).py is this very configuration written as one such file.
 '''
 config_format = 2 # 2 = two-level config (include-based); absent or 1 = legacy single file
 

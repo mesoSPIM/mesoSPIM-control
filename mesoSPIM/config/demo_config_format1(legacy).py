@@ -13,7 +13,7 @@ nothing in it is shared with the other users of the same microscope.
 '''
 Camera configuration: demo camera (no hardware).
 
-For a DemoCamera, only the following options are necessary
+For the demo camera, only the following options are necessary
 (x_pixels and y_pixels can be chosen arbitrarily):
 
 camera_parameters = {'x_pixels' : 1024,
@@ -24,7 +24,7 @@ camera_parameters = {'x_pixels' : 1024,
 
 For real cameras, see the other files in this folder.
 '''
-camera = 'DemoCamera' # 
+camera = 'Demo' # 'Demo', 'HamamatsuOrca', 'Photometrics' or 'PCO'
 
 camera_parameters = {'x_pixels' : 5056,
                      'y_pixels' : 2960,
@@ -39,7 +39,7 @@ binning_dict = {'1x1': (1,1), '2x2':(2,2), '4x4':(4,4)}
 '''
 Waveform generation / DAQ: demo (no hardware).
 '''
-waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
+waveformgeneration = 'Demo' # 'Demo', 'NI' or 'cDAQ'
 
 acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'camera_trigger_source' : '/PXI6259/PFI0',
@@ -66,9 +66,9 @@ Legacy mixed stages: 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_
                      'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy'
 New flexible mixed stages: 'Mixed' (requires both asi_parameters and pi_parameters with
                      stage_assignment dicts)
-Demo mode: 'DemoStage'
+Demo mode: 'Demo'
 '''
-stage_parameters = {'stage_type' : 'DemoStage',
+stage_parameters = {'stage_type' : 'Demo',
                     'y_load_position': -6000,
                     'y_unload_position': 6000,
                     'x_center_position': 0, # x-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.
@@ -132,7 +132,7 @@ shutterdict = {'shutter_left' : '/PXI1Slot4/port0/line6', # left (general) shutt
 '''
 Filterwheel configuration.
 
-For a DemoFilterWheel, no COMport needs to be specified.
+For the 'Demo' wheel, no COMport needs to be specified.
 For a Ludl Filterwheel, a valid COMport is necessary. Ludl marking 10 = position 0.
 For the plugin-based LudlPlugin, COMport, baudrate, and wait_until_done_delay are required.
 For SutterPlugin, COMport, baudrate, wheel_speed, and wait_until_done_delay are required.

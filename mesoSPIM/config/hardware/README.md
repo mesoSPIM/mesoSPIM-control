@@ -9,7 +9,7 @@ that depend on that hardware.
 
 ```python
 # hardware/cameras/demo_camera.py
-camera = 'DemoCamera'
+camera = 'Demo'
 camera_parameters = {...}
 startup = {'camera_exposure_time': 0.02}   # partial, merged with the others
 ```
@@ -34,5 +34,5 @@ Writer/plugin configuration is not hardware and lives in `config/plugins/`;
 interface defaults live in `config/UI/`.
 
 See `config/demo_config.py` for a complete user-facing example
-(`config/demo_config_format1.py` is the same microscope as one legacy file), and
+(`config/demo_config_format1(legacy).py` is the same microscope as one legacy file), and
 `docs/source/configuration.rst` for the full description of every key.

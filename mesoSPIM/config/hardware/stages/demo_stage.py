@@ -14,9 +14,9 @@ Legacy mixed stages: 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_rot_and_Galil_
                      'PI_rotz_and_Galil_xyf', 'PI_rotzf_and_Galil_xy'
 New flexible mixed stages: 'Mixed' (requires both asi_parameters and pi_parameters with
                      stage_assignment dicts)
-Demo mode: 'DemoStage'
+Demo mode: 'Demo'
 '''
-stage_parameters = {'stage_type' : 'DemoStage',
+stage_parameters = {'stage_type' : 'Demo',
                     'y_load_position': -6000,
                     'y_unload_position': 6000,
                     'x_center_position': 0, # x-center position for the sample holder. Make sure the sample holder is actually centered at this position relative to the detection objective and light-sheet.

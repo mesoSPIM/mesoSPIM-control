@@ -1,7 +1,7 @@
 '''
 Waveform generation / DAQ: demo (no hardware).
 '''
-waveformgeneration = 'DemoWaveFormGeneration' # 'DemoWaveFormGeneration', 'NI' or 'cDAQ'
+waveformgeneration = 'Demo' # 'Demo', 'NI' or 'cDAQ'
 
 acquisition_hardware = {'master_trigger_out_line' : 'PXI6259/port0/line1',
                         'camera_trigger_source' : '/PXI6259/PFI0',

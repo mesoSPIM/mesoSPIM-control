@@ -23,6 +23,7 @@ _spec.loader.exec_module(config_loader)
 load_config_from_file = config_loader.load_config_from_file
 update_startup_in_source = config_loader.update_startup_in_source
 check_zoom_and_pixelsize = config_loader.check_zoom_and_pixelsize
+is_demo = config_loader.is_demo
 
 
 def write(path, text):
@@ -62,7 +63,7 @@ def test_same_named_dicts_merge_key_by_key(tmp_path):
 def test_relative_paths_resolve_against_config_dir(tmp_path):
     main = write(tmp_path / 'main.py', "include('hardware/cameras/demo_camera.py')\n")
     cfg = load_config_from_file(main)
-    assert cfg.camera == 'DemoCamera'
+    assert cfg.camera == 'Demo'
 
 
 def test_legacy_config_without_include_still_loads(tmp_path):
@@ -148,6 +149,22 @@ def test_save_back_appends_then_substitutes_in_place():
     assert '0.7' in twice and '0.5' not in twice
 
 
+def test_every_demo_spelling_selects_the_demo_device():
+    '''Config files write 'Demo' now, but the older long names must keep working.'''
+    assert all(map(is_demo, ('Demo', 'DemoCamera', 'DemoWaveFormGeneration', 'DemoStage',
+                             'DemoZoom', 'DemoFilterWheel', 'demo')))
+    assert not any(map(is_demo, ('NI', 'cDAQ', 'HamamatsuOrca', 'Photometrics', 'TigerASI',
+                                 'PI', 'Ludl', 'ZWO', 'Mitu', None, 0)))
+
+
+def test_demo_hardware_files_use_the_short_driver_name():
+    cfg = load_config_from_file(MESOSPIM_DIR / 'config' / 'demo_config.py')
+    assert cfg.camera == cfg.waveformgeneration == cfg.laser == cfg.shutter == 'Demo'
+    assert cfg.stage_parameters['stage_type'] == 'Demo'
+    assert cfg.filterwheel_parameters['filterwheel_type'] == 'Demo'
+    assert cfg.zoom_parameters['zoom_type'] == 'Demo'
+
+
 CAMERA = {'x_pixel_size_in_microns': 5.0, 'y_pixel_size_in_microns': 5.0}
 ZOOMDICT = {'1x': 'A', '2x': 'B'}
 PIXELSIZE = {'1x': 5.0, '2x': 2.5}
@@ -194,14 +211,14 @@ def test_zoom_check_warns_on_non_square_camera_pixels():
 
 
 def test_both_demo_config_formats_load_into_the_same_settings():
-    '''demo_config_format1.py is the single-file twin of demo_config.py: keep them in sync.'''
+    '''demo_config_format1(legacy).py is the single-file twin of demo_config.py: keep them in sync.'''
     def settings(name):
         cfg = load_config_from_file(MESOSPIM_DIR / 'config' / name)
         return {key: value for key, value in vars(cfg).items()
                 if not key.startswith('__') and key not in ('include', 'config_format')
                 and not callable(value) and not isinstance(value, types.ModuleType)}
 
-    two_level, single_file = settings('demo_config.py'), settings('demo_config_format1.py')
+    two_level, single_file = settings('demo_config.py'), settings('demo_config_format1(legacy).py')
     differing = [key for key in set(two_level) | set(single_file)
                  if two_level.get(key, '<absent>') != single_file.get(key, '<absent>')]
     assert differing == []

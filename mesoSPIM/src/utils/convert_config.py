@@ -29,9 +29,9 @@ import types
 
 if __package__ in (None, ''):  # allow running the file directly
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-    from mesoSPIM.src.utils.config_loader import CONFIG_DIR, load_config_from_file
+    from mesoSPIM.src.utils.config_loader import CONFIG_DIR, is_demo, load_config_from_file
 else:
-    from .config_loader import CONFIG_DIR, load_config_from_file
+    from .config_loader import CONFIG_DIR, is_demo, load_config_from_file
 
 # Categories in include() order: hardware first, then plugin/UI configuration.
 CATEGORIES = ['hardware/cameras', 'hardware/DAQ', 'hardware/stages', 'hardware/lasers',
@@ -198,6 +198,8 @@ def _drop_unused_connection_keys(namespace):
         if not isinstance(target, dict):
             continue
         driver = target.get(DRIVER_NAMES[container])
+        if is_demo(driver):  # 'Demo', 'DemoZoom', 'DemoFilterWheel', ...: simulated, opens nothing
+            driver = 'Demo'
         if driver not in CONNECTION_USED[container]:  # unknown driver: keep everything
             continue
         for key in keys:
@@ -237,7 +239,9 @@ def _identity(candidate, legacy):
         left = candidate[name] if key is None else candidate[name].get(key)
         right = legacy[name] if key is None else legacy[name].get(key)
         if left is not None and right is not None:
-            score += 1 if left == right else -1
+            # 'Demo', 'DemoCamera', 'DemoStage', ... all name the same simulated device
+            same = left == right or (is_demo(left) and is_demo(right))
+            score += 1 if same else -1
     return score
 
 
