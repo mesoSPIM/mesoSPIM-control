@@ -182,6 +182,10 @@ The Main window menu bar also has:
 * **Utils → PSF (beads) analysis from a stack** — launches the
   :doc:`Bead PSF Analysis <psf_analysis>` tool, preloaded with the most
   recently completed acquisition or a chosen TIFF file.
+* **Utils → Field curvature / chromatic shift from Z-stacks** — launches the
+  :doc:`Field Curvature & Chromatic Shift <field_curvature>` tool for
+  measuring field flatness and axial chromatic aberration from z-stacks of a
+  Ronchi grating.
 
 Running an acquisition
 ~~~~~~~~~~~~~~~~~~~~~~

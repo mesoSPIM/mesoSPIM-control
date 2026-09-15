@@ -83,6 +83,12 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Measure axial/lateral FWHM from a bead stack, standalone or from the Utils menu.
 
+   .. grid-item-card:: :octicon:`telescope` Field Curvature & Chromatic Shift
+      :link: field_curvature
+      :link-type: doc
+
+      Measure field flatness and axial chromatic shift from Ronchi-grating stacks.
+
    .. grid-item-card:: :octicon:`filter` Image Processing Plugins
       :link: image_processors
       :link-type: doc
@@ -115,6 +121,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    hardware
    file_formats
    psf_analysis
+   field_curvature
    image_processors
    timelapse
    changelog

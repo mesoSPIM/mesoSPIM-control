@@ -455,6 +455,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.menuUtils.addAction(self.actionPSF_Analysis)
         self.actionPSF_Analysis.triggered.connect(self.launch_psf_analysis_window)
 
+        # Add field curvature analysis menu item to Utils menu
+        self.actionField_Curvature = QtWidgets.QAction("Field curvature / chromatic shift from Z-stacks", self)
+        self.menuUtils.addAction(self.actionField_Curvature)
+        self.actionField_Curvature.triggered.connect(self.launch_field_curvature_window)
+
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
@@ -1032,25 +1037,48 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def _launch_psf_analysis_subprocess(self, filename, mag, pixel_pitch_micron, z_step_micron):
         """Start mesoSPIM/src/utils/psf_gui_qt.py as an independent process."""
-        script_path = os.path.join(os.path.dirname(__file__), 'utils', 'psf_gui_qt.py')
-        cmd = [sys.executable, script_path]
-        if filename:
-            cmd.append(filename)
-        if mag is not None:
-            cmd += ['--mag', str(mag)]
-        if pixel_pitch_micron is not None:
-            cmd += ['--pixel-pitch', str(pixel_pitch_micron)]
-        if z_step_micron is not None:
-            cmd += ['--z-step', str(z_step_micron)]
+        args = [filename] if filename else []
+        args += self._system_parameter_args(mag, pixel_pitch_micron, z_step_micron)
+        self._launch_utils_tool('psf_gui_qt.py', args, "PSF analysis")
 
-        if not hasattr(self, '_psf_analysis_processes'):
-            self._psf_analysis_processes = []
+    @QtCore.pyqtSlot()
+    def launch_field_curvature_window(self):
+        """
+        Launch the field curvature / chromatic shift tool as a separate OS process, for
+        the same reason as the PSF tool: the analysis streams through multi-GB stacks and
+        must not block mesoSPIM_control's GUI thread. The window opens with an empty
+        channel table (the user adds one stack per channel there), but with the system
+        parameters prefilled from the current zoom and camera settings.
+        """
+        mag = self._parse_zoom_magnification(self.state['zoom'])
+        pixel_pitch_micron = self.cfg.camera_parameters['x_pixel_size_in_microns']
+        args = self._system_parameter_args(mag, pixel_pitch_micron, None)
+        self._launch_utils_tool('field_curvature_gui_qt.py', args, "Field curvature analysis")
+
+    @staticmethod
+    def _system_parameter_args(mag, pixel_pitch_micron, z_step_micron):
+        """Command-line arguments shared by the utils GUI tools, skipping unknown values."""
+        args = []
+        if mag is not None:
+            args += ['--mag', str(mag)]
+        if pixel_pitch_micron is not None:
+            args += ['--pixel-pitch', str(pixel_pitch_micron)]
+        if z_step_micron is not None:
+            args += ['--z-step', str(z_step_micron)]
+        return args
+
+    def _launch_utils_tool(self, script_name, args, title):
+        """Start a mesoSPIM/src/utils/*.py GUI tool as an independent process."""
+        script_path = os.path.join(os.path.dirname(__file__), 'utils', script_name)
+
+        if not hasattr(self, '_utils_tool_processes'):
+            self._utils_tool_processes = []
         try:
-            proc = subprocess.Popen(cmd)
+            proc = subprocess.Popen([sys.executable, script_path] + args)
         except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "PSF analysis", f"Failed to launch PSF analysis tool:\n{e}")
+            QtWidgets.QMessageBox.critical(self, title, f"Failed to launch {title} tool:\n{e}")
             return
-        self._psf_analysis_processes.append(proc)
+        self._utils_tool_processes.append(proc)
 
     @staticmethod
     def _parse_zoom_magnification(zoom_string):
