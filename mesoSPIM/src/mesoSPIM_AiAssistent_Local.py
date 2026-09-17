@@ -128,8 +128,9 @@ class LocalModelServer:
         probe = http.client.HTTPConnection("127.0.0.1", self.port, timeout=0.2)
         try:
             probe.request("GET", "/v1/models")
-            probe.getresponse().read()
-            return True
+            response = probe.getresponse()
+            response.read()
+            return 200 <= response.status < 300         # 503 while loading is not ready
         except (OSError, http.client.HTTPException):  # not listening yet, or half-way up
             return False
         finally:

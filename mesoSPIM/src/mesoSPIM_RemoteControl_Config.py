@@ -65,8 +65,11 @@ CLIENT_TIMEOUT_SEC = 10.0
 TCP_AUTH_TIMEOUT_MS = 10_000
 TCP_PREAUTH_MAX_BYTES = 4096
 TCP_MAX_CLIENTS = 32
-# MCP: a request without an Authorization header has at most this much body read before the 401.
-MCP_UNAUTHENTICATED_DRAIN_BYTES = 64 * 1024
+# MCP: at most this many connections are served at once; a rejected request that presented a
+# password has at most this much body drained (briefly) so its response is not lost to a reset.
+MCP_MAX_CONNECTIONS = 32
+MCP_REJECTION_DRAIN_BYTES = 64 * 1024
+MCP_REJECTION_DRAIN_TIMEOUT_SEC = 1.0
 
 # Limit only the wait while a network request is being marshalled onto the Core thread.
 DISPATCH_TIMEOUT_SEC = 30.0
@@ -126,6 +129,17 @@ LIMITS_ENV_VAR = "MESOSPIM_RS_LIMITS"
 
 # --- vocabulary ---
 AXES = ("x", "y", "z", "f", "theta")
+
+# Core's own state machine, as the GUI drives it. In a LIVE state (a loop that only stop ends)
+# the commands in TAKES_OVER are refused, moves and settings pass as they do from the GUI. In an
+# ACQUIRING state every mutation is refused. Core leaves the STALE states behind after a snap or a
+# refused run; the Acceptor resets them to idle on the sig_finished that ends them.
+LIVE_STATES = ("live", "visual_mode", "lightsheet_alignment_mode")
+ACQUIRING_STATES = ("snap", "run_selected_acquisition", "run_acquisition_list",
+                    "preview_acquisition_with_z_update", "preview_acquisition_without_z_update", "running_script")
+STALE_STATES = ("snap", "run_selected_acquisition", "run_acquisition_list")
+TAKES_OVER = ("start_live", "start_visual_mode", "start_lightsheet_alignment_mode", "snap", "run_acquisition_list",
+              "run_selected_acquisition", "acquire_start", "preview_acquisition", "time_lapse_start")
 
 MODES = (
     "live",

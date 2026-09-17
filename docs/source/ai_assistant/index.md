@@ -125,7 +125,7 @@ loaded.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  378 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  390 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - End-to-end operation against the Windows DemoStage build.

@@ -13,13 +13,15 @@ coverage.
 from __future__ import annotations
 
 import json
+import socket
+import time
 import urllib.error
 import urllib.request
 
 import pytest
 
 from mesoSPIM.test.remote_control.live import test_adversarial as live_adversarial
-from mesoSPIM.test.remote_control.support.harness import Harness, TOKEN, last_frame
+from mesoSPIM.test.remote_control.support.harness import FakeConn, Harness, TOKEN, last_frame
 from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
 from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
@@ -616,16 +618,47 @@ def test_mcp_non_ascii_password_authenticates():
         local.stop()
 
 
-def test_mcp_does_not_drain_a_large_body_for_an_unauthenticated_request():
-    """Without an Authorization header a declared megabyte is not read before the 401, so a peer
-    without the password cannot make the server wait for bytes it never sends."""
-    declared = config.MAX_MCP_BODY_BYTES
-    status = _raw(b"{", auth=None, extra=[f"Content-Length: {declared}"], shutdown_write=True)
-    assert status == 401
+def test_mcp_reads_nothing_for_an_unauthenticated_request():
+    """Without an Authorization header no body is read before the 401, so a peer without the
+    password cannot hold a handler thread by declaring a body and never sending it."""
+    for declared in (config.MAX_MCP_BODY_BYTES, 1000):
+        started = time.monotonic()
+        status = _raw(b"", auth=None, extra=[f"Content-Length: {declared}"])   # nothing follows
+        assert status == 401 and time.monotonic() - started < 2.0, (declared, status)
     assert _h.core.calls() == []
 
 
-class _SocketConn(_h.tcp.conn.__class__):
+def test_mcp_rejection_drain_is_brief_for_a_wrong_password():
+    started = time.monotonic()
+    status, _ = _h.mcp.raw(["Origin: http://127.0.0.1", "Authorization: Bearer wrong", "Content-Length: 1000"],
+                           b"", timeout=3.0)                                      # the drain stalls
+    assert status == 401 and time.monotonic() - started < config.MCP_REJECTION_DRAIN_TIMEOUT_SEC + 1.0
+
+
+def test_mcp_holds_a_bounded_number_of_connections(monkeypatch):
+    """Beyond the cap a newcomer is closed at once instead of getting a handler thread, and a
+    slot freed by a client going away serves the next one."""
+    monkeypatch.setattr(config, "MCP_MAX_CONNECTIONS", 3)
+    local = Harness()                                              # its server reads the cap at start
+    held = []
+    try:
+        held = [socket.create_connection(("127.0.0.1", local.mcp.port), timeout=2.0) for _ in range(3)]
+        time.sleep(0.2)
+        extra = socket.create_connection(("127.0.0.1", local.mcp.port), timeout=2.0)
+        extra.settimeout(2.0)
+        assert extra.recv(16) == b""                               # closed by the server
+        extra.close()
+        held.pop().close()                                         # one client leaves
+        time.sleep(0.2)
+        reply = local.mcp.rpc("tools/call", "get_state", {})   # its slot serves the next
+        assert "result" in reply
+    finally:
+        for sock in held:
+            sock.close()
+        local.stop()
+
+
+class _SocketConn(FakeConn):
     """A fake socket with data waiting, for the adapter's readyRead path."""
 
     def __init__(self, data):
@@ -656,3 +689,22 @@ def test_tcp_unauthenticated_client_may_not_buffer_more_than_a_token():
 def test_tcp_adapter_refuses_to_start_without_a_token():
     with pytest.raises(ValueError):
         srv.TcpAdapter().start(_h.acceptor, "127.0.0.1", 0, "")
+
+
+def test_tcp_full_slots_evict_the_oldest_silent_client_not_the_newcomer():
+    adapter = _h.tcp.adapter
+    before = dict(adapter._clients)
+    silent = []
+    for _ in range(config.TCP_MAX_CLIENTS - len(before)):
+        conn = FakeConn()
+        assert adapter._admit(conn)
+        silent.append(conn)
+    newcomer = FakeConn()
+    assert adapter._admit(newcomer)                                # room made by evicting silent[0]
+    assert silent[0] not in adapter._clients and newcomer in adapter._clients
+    for conn in list(adapter._clients):                            # authenticate every slot
+        adapter._clients[conn]["authed"] = True
+    assert adapter._admit(FakeConn()) is False                     # only then is a newcomer refused
+    for conn in list(adapter._clients):
+        if conn not in before:
+            adapter._drop(conn)

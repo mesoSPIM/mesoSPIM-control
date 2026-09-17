@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 from mesoSPIM.test.remote_control.support.harness import Harness
 from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
 from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
@@ -109,43 +110,137 @@ def test_wrong_milestone_does_not_resolve_a_finished_op(h):
     assert dispatcher.operation_snapshot(h.core)["status"] == "completed"
 
 
-@pytest.mark.parametrize("busy_state", ["live", "snap", "run_acquisition_list"])
-def test_a_mode_started_from_the_gui_refuses_mutations_but_not_stop_or_reads(h, busy_state):
-    """Core's own state machine can be busy with no remote operation open: the operator pressed
-    Live or Run in the GUI. A remote mutation landing then would execute inside that loop."""
+class _Sig:
+    """A synchronous stand-in for a Core signal."""
+
+    def __init__(self):
+        self._slots = []
+
+    def connect(self, slot):
+        self._slots.append(slot)
+
+    def disconnect(self, slot):
+        self._slots.remove(slot)
+
+    def emit(self, *args):
+        for slot in list(self._slots):
+            slot(*args)
+
+
+class _SignallingCore(RecordingCore):
+    """RecordingCore with the signals the Acceptor listens to, and Core's own stop_time_lapse
+    behaviour: it emits sig_time_lapse_cancelled synchronously."""
+
+    def __init__(self):
+        super().__init__()
+        self.sig_finished = _Sig()
+        self.sig_warning = _Sig()
+        self.sig_time_lapse_cancelled = _Sig()
+        self.sig_time_lapse_finished = _Sig()
+
+    def stop_time_lapse(self, *args, **kwargs):
+        was_active = self.timelapse_active
+        super().stop_time_lapse(*args, **kwargs)
+        if was_active:
+            self.sig_time_lapse_cancelled.emit()
+
+
+@pytest.fixture
+def hs():
+    harness = Harness(core=_SignallingCore())
+    try:
+        yield harness
+    finally:
+        harness.stop()
+
+
+@pytest.mark.parametrize("busy_state", sorted(config.ACQUIRING_STATES))
+def test_a_gui_acquisition_or_snap_refuses_every_mutation_but_not_stop_or_reads(h, busy_state):
+    """Core's own state machine is busy with no remote operation open: the operator pressed Snap
+    or Run in the GUI. A mutation landing now would execute inside that loop."""
     h.core.state["state"] = busy_state
     for lane in ("mcp", "tcp"):
-        ok, refused = h.invoke(lane, "move_absolute", {"targets": {"x": 10}})
-        assert not ok and refused["code"] == "busy" and busy_state in refused["error"]
-        ok, refused = h.invoke(lane, "snap", {})
-        assert not ok and refused["code"] == "busy"
+        for name, args in (("move_absolute", {"targets": {"x": 10}}), ("snap", {}), ("set_intensity", {"intensity": 20})):
+            ok, refused = h.invoke(lane, name, args)
+            assert not ok and refused["code"] == "busy" and busy_state in refused["error"], (lane, name)
         ok, state = h.invoke(lane, "get_state", {})            # reads never wait
         assert ok and state["state"] == busy_state
-    assert all(name not in ("move_absolute", "snap") for name, *_ in h.core.calls())
+    assert all(name not in ("move_absolute", "snap", "set_intensity") for name, *_ in h.core.calls())
     ok, _ = h.invoke("tcp", "stop", {})                          # the emergency stop never waits
     assert ok
-    h.core.state["state"] = "idle"
+
+
+@pytest.mark.parametrize("live_state", sorted(config.LIVE_STATES))
+def test_a_gui_live_mode_refuses_only_what_would_take_over(h, live_state):
+    """Live from the GUI keeps moves and settings usable, as the GUI itself does; a snap, another
+    mode, an acquisition or a time lapse would take the loop over and is refused."""
+    h.core.state["state"] = live_state
+    for name in config.TAKES_OVER:
+        assert name in dispatcher.COMMANDS, name
+    for name, args in (("snap", {}), ("start_live", {}), ("run_acquisition_list", {}), ("time_lapse_start", {})):
+        ok, refused = h.invoke("mcp", name, args)
+        assert not ok and refused["code"] == "busy", (name, refused)
+    ok, done = h.invoke("mcp", "set_intensity", {"intensity": 20})   # an ACTION: done at once
+    assert ok and done["accepted"] is True
     ok, accepted = h.invoke("tcp", "move_absolute", {"targets": {"x": 10}})
     assert ok and accepted["accepted"] is True
 
 
-def test_a_refused_time_point_ends_the_time_lapse(h):
-    """Core refuses a time point in preflight with a warning and never starts it; the operation
-    would otherwise stay open for every remaining interval. The Acceptor stops the time lapse."""
-    operation = dispatcher._begin(h.core, "time_lapse_start", config.MILESTONE_TIMELAPSE)
-    h.core.timelapse_active = True
-    h.acceptor._on_warning("The following folders do not exist - stopping! /nowhere")
-    latest = dispatcher.operation_snapshot(h.core)
-    assert latest["id"] == operation["id"] and latest["status"] == "failed"
+def test_a_stale_gui_state_is_reset_when_its_sig_finished_arrives(hs):
+    """Core leaves 'snap' after a GUI snap and the run state after a refused GUI run. The
+    sig_finished that ends each resets the state, so remote work is not refused forever."""
+    core = hs.core
+    core.state["state"] = "snap"                                  # a GUI snap ran: state left behind
+    core.sig_finished.emit()
+    assert core.state["state"] == "idle"
+    core.state["state"] = "run_acquisition_list"                  # a GUI run refused in preflight
+    core.sig_warning.emit("The following folders do not exist - stopping! /nowhere")
+    core.sig_finished.emit()
+    assert core.state["state"] == "idle"
+    ok, accepted = hs.invoke("tcp", "move_absolute", {"targets": {"x": 10}})
+    assert ok and accepted["accepted"] is True
+
+
+def test_a_stale_snap_left_before_the_transport_started_is_cleared_at_start():
+    core = _SignallingCore()
+    core.state["state"] = "snap"
+    harness = Harness(core=core)
+    try:
+        assert core.state["state"] == "idle"
+        ok, accepted = harness.invoke("mcp", "set_intensity", {"intensity": 20})
+        assert ok and accepted["accepted"] is True
+    finally:
+        harness.stop()
+
+
+def test_a_refused_time_point_ends_the_time_lapse_in_the_production_order(hs):
+    """Upstream sets the run state, then start() refuses in preflight: sig_warning, sig_finished,
+    the state still set. The operation must fail (not complete, although stop_time_lapse emits the
+    cancel signal) and the time lapse must stop instead of idling through every interval."""
+    core = hs.core
+    operation = dispatcher._begin(core, "time_lapse_start", config.MILESTONE_TIMELAPSE)
+    core.timelapse_active = True
+    core.state["state"] = "run_acquisition_list"                  # MainWindow.run_timepoint did this
+    core.sig_warning.emit("The following folders do not exist - stopping! /nowhere")
+    latest = dispatcher.operation_snapshot(core)
+    assert latest["status"] == "processing"                       # nothing decided on the warning alone
+    core.sig_finished.emit()
+    latest = dispatcher.operation_snapshot(core)
+    assert latest["id"] == operation["id"] and latest["status"] == "failed", latest
     assert "refused a time point" in latest["error"] and "/nowhere" in latest["error"]
-    assert ("stop_time_lapse", (), {}) in h.core.calls() and h.core.timelapse_active is False
+    assert core.timelapse_active is False and core.state["state"] == "idle"
+    assert ("stop_time_lapse", (), {}) in core.calls()
 
 
-def test_a_warning_while_a_time_point_runs_is_only_recorded(h):
-    operation = dispatcher._begin(h.core, "time_lapse_start", config.MILESTONE_TIMELAPSE)
-    h.core.state["state"] = "run_acquisition_list"               # a point is under way
-    h.acceptor._on_warning("Please wait until the zoom change is complete")
-    latest = dispatcher.operation_snapshot(h.core)
+def test_a_time_point_that_completes_after_a_warning_keeps_the_time_lapse(hs):
+    core = hs.core
+    operation = dispatcher._begin(core, "time_lapse_start", config.MILESTONE_TIMELAPSE)
+    core.timelapse_active = True
+    core.state["state"] = "run_acquisition_list"
+    core.sig_warning.emit("Please wait until the zoom change is complete")
+    core.state["state"] = "idle"                                  # close_acquisition_list did this
+    core.sig_finished.emit()
+    latest = dispatcher.operation_snapshot(core)
     assert latest["id"] == operation["id"] and latest["status"] == "processing"
-    assert latest["warning"].startswith("Please wait")
-    assert all(name != "stop_time_lapse" for name, *_ in h.core.calls())
+    assert core.timelapse_active is True
+    assert all(name != "stop_time_lapse" for name, *_ in core.calls())

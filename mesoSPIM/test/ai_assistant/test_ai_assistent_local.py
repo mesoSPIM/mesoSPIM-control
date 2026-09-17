@@ -64,7 +64,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 class H(BaseHTTPRequestHandler):
     def do_GET(self):
         body = json.dumps({"data": [{"id": "fake"}]}).encode()
-        self.send_response(200); self.send_header("Content-Length", str(len(body))); self.end_headers()
+        self.send_response(int(sys.argv[2]) if len(sys.argv) > 2 else 200)
+        self.send_header("Content-Length", str(len(body))); self.end_headers()
         self.wfile.write(body)
     def log_message(self, *a): pass
 HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
@@ -101,6 +102,17 @@ def test_server_starts_becomes_ready_and_stops(tmp_path, monkeypatch):
         server.stop()
     assert server.ready() is False                                # stopped: nothing to talk to
     server.stop()                                                 # idempotent
+
+
+def test_server_still_loading_is_not_ready(tmp_path):
+    """llama.cpp answers 503 while the model loads; that is not ready."""
+    server = LocalModelServer(str(tmp_path / "m.gguf"),
+                              command=lambda p, port, projector: [sys.executable, "-c", _FAKE_SERVER, str(port), "503"])
+    server.start()
+    try:
+        assert _wait(server, timeout=1.5) is False
+    finally:
+        server.stop()
 
 
 def test_server_that_dies_is_reported_with_its_log(tmp_path):

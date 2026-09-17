@@ -24,6 +24,8 @@ import threading
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from . import mesoSPIM_RemoteControl_Config as config
+
 
 # --- Public errors and command definitions ---
 
@@ -441,11 +443,12 @@ def dispatch(core, cmd, args):
         if active is not None:
             raise BusyError(f"busy: {active['command']} ({active['id']}) is running")
         core_state = _core_state(core)
-        if core_state not in (None, "idle"):
-            # Live, snap or an acquisition started from the GUI: Core's own state machine is
-            # busy although no remote operation is. A mutation landing now would run inside
-            # that loop; only the emergency stop above may.
-            raise BusyError(f"busy: the instrument is in {core_state!r}, started from the GUI")
+        if core_state in config.ACQUIRING_STATES or (core_state in config.LIVE_STATES and cmd.name in config.TAKES_OVER):
+            # Started from the GUI: Core's own state machine is busy although no remote
+            # operation is. A mutation landing now would run inside that loop. Only the
+            # emergency stop above may; it also resets a state Core left behind.
+            raise BusyError(f"busy: the instrument is in {core_state!r} (started from the GUI); "
+                            "stop ends it, or resets it if nothing is running")
         operation = _begin(core, cmd.name, cmd.milestone, cmd.running_state)
 
     _schedule_mutation(core, cmd, args, operation)

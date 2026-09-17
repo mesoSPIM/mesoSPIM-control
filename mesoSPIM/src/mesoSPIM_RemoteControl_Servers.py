@@ -21,6 +21,7 @@ import hmac
 import json
 import logging
 import re
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -32,6 +33,7 @@ from . import mesoSPIM_RemoteControl_Config as config
 from . import mesoSPIM_RemoteControl_Commands  # noqa: F401
 from .mesoSPIM_RemoteControl_Dispatcher import (
     PROCESSING,
+    _core_state,
     run,
     complete,
     fail,
@@ -149,6 +151,9 @@ class Acceptor(QtCore.QObject):
         super().__init__(core)
         self._core = core
         self._closed = False
+        self._time_lapse_warning = None       # a warning during a time-lapse point, until its sig_finished
+        if _core_state(core) == "snap":       # a GUI snap is synchronous: this can only be its leftover
+            core.state["state"] = "idle"
         self._incoming.connect(self._execute, QtCore.Qt.QueuedConnection)
         self._connections = []
         self._connect_completion_signals()
@@ -216,28 +221,38 @@ class Acceptor(QtCore.QObject):
 
     def _connect_completion_signals(self):
         core = self._core
-        self._connect(getattr(core, "sig_finished", None), lambda: complete(core, config.MILESTONE_FINISHED))
+        self._connect(getattr(core, "sig_finished", None), self._on_finished)
         self._connect(getattr(core, "sig_time_lapse_finished", None), self._complete_time_lapse)
         self._connect(getattr(core, "sig_time_lapse_cancelled", None), self._complete_time_lapse)
         self._connect(getattr(core, "sig_warning", None), self._on_warning)
 
     def _on_warning(self, text):
-        """Keep the warning for clients. When Core refuses a time point in preflight (a missing
-        folder, an existing file, no disk) it emits this and never starts, and the time lapse would
-        idle through every remaining interval with the gate held: stop it and fail its operation."""
+        """Keep the warning for clients. During a time lapse it may be Core refusing a point in
+        preflight (a missing folder, an existing file, no disk): that shows on the sig_finished
+        that follows, and _on_finished acts on it."""
+        record_warning(self._core, text)
+        self._time_lapse_warning = text
+
+    def _on_finished(self):
+        """Core's sig_finished ends an acquisition, a snap, or a refused start. Complete the
+        operation waiting on it; end a time lapse whose point was refused; and reset the state
+        Core leaves behind after a GUI snap or a refused GUI run, so it does not read as busy."""
         core = self._core
-        record_warning(core, text)
-        operation = operation_snapshot(core)
-        refused = operation.get("command") == "time_lapse_start" and operation.get("status") == PROCESSING
-        try:
-            idle = core.state["state"] == "idle"          # a refused point never left idle
-        except (KeyError, TypeError, AttributeError):
-            idle = True
-        if refused and idle:
+        warning, self._time_lapse_warning = self._time_lapse_warning, None
+        latest = operation_snapshot(core)
+        if (warning and latest.get("command") == "time_lapse_start" and latest.get("status") == PROCESSING
+                and _core_state(core) in config.STALE_STATES):
+            # A refused point leaves the run state set; a finished one has gone back to idle. Fail
+            # first: stop_time_lapse emits sig_time_lapse_cancelled, which would else complete it.
+            fail(core, config.MILESTONE_TIMELAPSE, RuntimeError(f"Core refused a time point: {warning}"))
+            core.state["state"] = "idle"
             stop = getattr(core, "stop_time_lapse", None)
             if stop is not None:
                 stop()
-            fail(core, config.MILESTONE_TIMELAPSE, RuntimeError(f"Core refused a time point: {text}"))
+            return
+        complete(core, config.MILESTONE_FINISHED)
+        if operation_snapshot(core).get("status") != PROCESSING and _core_state(core) in config.STALE_STATES:
+            core.state["state"] = "idle"
 
     def _complete_time_lapse(self):
         if getattr(self._core, "timelapse_active", None) is not False:
@@ -302,44 +317,51 @@ def _make_handler(acceptor, token):
         def do_POST(self):
             try:
                 self._post()
+            except (socket.timeout, TimeoutError, ConnectionError) as error:
+                logger.warning("MCP client %s stalled: %s", self.client_address[0], error)
+                self._json(408, {"error": "request timeout"})
             except Exception:  # a malformed request is answered, never left to kill the thread
                 logger.exception("MCP request failed")
                 self._json(400, {"error": "bad request"})
 
+        def _reject(self, status, payload, declared, has_auth):
+            # Leaving a body unread while this HTTP/1.0-style connection closes makes the OS
+            # (observed on Windows) send a TCP RST instead of a clean close, discarding the
+            # response. Drain a small body, briefly, for a client that at least presented a
+            # password; a peer without one gets no read at all, so it cannot hold this thread.
+            if has_auth and declared is not None and declared <= config.MCP_REJECTION_DRAIN_BYTES:
+                self.connection.settimeout(config.MCP_REJECTION_DRAIN_TIMEOUT_SEC)
+                try:
+                    self.rfile.read(declared)
+                except (OSError, ValueError):
+                    pass
+            self._json(status, payload)
+
         def _post(self):
-            # Drain any declared request body up front. Every rejection below (404/403/401/...)
-            # can return before the body would otherwise be read; leaving it unread while this
-            # HTTP/1.0-style connection then closes causes the OS (observed on Windows) to send a
-            # TCP RST instead of a clean close, discarding the response the client was just sent.
-            # Skip draining when the size is unknown or exceeds the cap, and read only a little
-            # for a request that carries no Authorization at all, so a hostile declared length
-            # cannot make the server read a megabyte before rejecting.
             lengths = self.headers.get_all("Content-Length", [])
             auths = self.headers.get_all("Authorization", [])
             declared = int(lengths[0]) if len(lengths) == 1 and _CONTENT_LENGTH.fullmatch(lengths[0]) else None
-            drain_cap = config.MAX_MCP_BODY_BYTES if len(auths) == 1 else config.MCP_UNAUTHENTICATED_DRAIN_BYTES
-            body = b""
-            if declared is not None and declared <= drain_cap:
-                body = self.rfile.read(declared)
+            has_auth = len(auths) == 1
 
             if self.path != "/mcp":
-                return self._json(404, {"error": "not found"})
+                return self._reject(404, {"error": "not found"}, declared, has_auth)
             origins = self.headers.get_all("Origin", [])
             if len(origins) > 1 or (origins and origins[0] not in config.ALLOWED_ORIGINS):
-                return self._json(403, {"error": "origin not allowed"})
+                return self._reject(403, {"error": "origin not allowed"}, declared, has_auth)
             prefix = "Bearer "
-            header = auths[0] if len(auths) == 1 else ""
+            header = auths[0] if has_auth else ""
             supplied = header[len(prefix) :] if header.lower().startswith(prefix.lower()) else ""
             # Header text arrives decoded as latin-1; back to bytes it compares as the client sent
             # it, so a password with non-ASCII characters works and never raises.
             if not hmac.compare_digest(supplied.encode("latin-1", "replace"), token_bytes):
-                return self._json(401, {"error": "unauthorized"})
+                return self._reject(401, {"error": "unauthorized"}, declared, has_auth)
             if self.headers.get_all("Transfer-Encoding", []):
-                return self._json(400, {"error": "Transfer-Encoding unsupported"})
+                return self._reject(400, {"error": "Transfer-Encoding unsupported"}, declared, has_auth)
             if declared is None:
                 return self._json(400, {"error": "invalid Content-Length"})
             if declared > config.MAX_MCP_BODY_BYTES:
                 return self._json(413, {"error": "body too large"})
+            body = self.rfile.read(declared)          # authenticated: the body is wanted
             if len(body) != declared:
                 return self._json(400, {"error": "truncated body"})
             try:
@@ -424,6 +446,23 @@ class McpAdapter:
             # closes the Acceptor first, so a detached handler that later finishes cannot actuate.
             daemon_threads = True
             block_on_close = False
+            slots = threading.BoundedSemaphore(config.MCP_MAX_CONNECTIONS)   # one handler thread each
+
+            def process_request(self, request, client_address):
+                if not self.slots.acquire(blocking=False):
+                    self.shutdown_request(request)    # full: the newcomer is closed, not queued
+                    return
+                try:
+                    super().process_request(request, client_address)
+                except Exception:
+                    self.slots.release()
+                    raise
+
+            def process_request_thread(self, request, client_address):
+                try:
+                    super().process_request_thread(request, client_address)
+                finally:
+                    self.slots.release()
 
         self._server = Server((host, int(port)), _make_handler(acceptor, token))
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
@@ -474,16 +513,27 @@ class TcpAdapter:
     def _on_new_connection(self):
         while self._server.hasPendingConnections():
             conn = self._server.nextPendingConnection()
-            if len(self._clients) >= config.TCP_MAX_CLIENTS:
+            if not self._admit(conn):
                 conn.abort()
                 conn.deleteLater()
                 continue
-            self._clients[conn] = {"decoder": FrameDecoder(), "authed": False}
             conn.readyRead.connect(lambda c=conn: self._on_ready(c))
             conn.disconnected.connect(lambda c=conn: self._drop(c))
             QtCore.QTimer.singleShot(config.TCP_AUTH_TIMEOUT_MS, lambda c=conn: self._expire_unauthenticated(c))
             if conn.bytesAvailable():
                 self._on_ready(conn)
+
+    def _admit(self, conn):
+        """Register a new client. When all slots are taken, the oldest client that never sent
+        the token makes room, so peers without the password cannot lock the operator out; only
+        when every slot holds an authenticated client is the newcomer refused."""
+        if len(self._clients) >= config.TCP_MAX_CLIENTS:
+            silent = next((c for c, client in self._clients.items() if not client["authed"]), None)
+            if silent is None:
+                return False
+            self._drop(silent)
+        self._clients[conn] = {"decoder": FrameDecoder(), "authed": False}
+        return True
 
     def _expire_unauthenticated(self, conn):
         client = self._clients.get(conn)
