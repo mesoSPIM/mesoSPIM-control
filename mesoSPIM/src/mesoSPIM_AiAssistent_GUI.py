@@ -149,8 +149,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.interrupt.setFont(font)
         self.interrupt.setEnabled(False)
         self.interrupt.clicked.connect(self.on_interrupt)
+        self.new_button = QtWidgets.QPushButton("New", self)
+        self.new_button.setFont(font)
+        self.new_button.clicked.connect(self.on_new_conversation)
         row.addWidget(self.input, 1)
         row.addWidget(self.interrupt)
+        row.addWidget(self.new_button)
         layout.addLayout(row)
         layout.addSpacing(12)
 
@@ -447,6 +451,16 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._blocks.append(self._note_block("[interrupted]"))
         self._render()
 
+    def on_new_conversation(self):
+        """Clear the transcript and the model's memory of it; the endpoint stays."""
+        if not self.input.isEnabled():
+            return                                  # not while a turn runs
+        self._blocks = []
+        self._active = None
+        if self._worker is not None:
+            self._worker.reset()
+        self._render()
+
     # --- confirm-first commands ---
     def _show_confirmation(self, visible):
         for widget in (self.confirm_label, self.confirm_run, self.confirm_cancel):
@@ -470,7 +484,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.input.setEnabled(not running)
         self.interrupt.setEnabled(running)
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
-                       self.key, self.base_url, self.folder_button, self.connect_button):
+                       self.key, self.base_url, self.folder_button, self.connect_button, self.new_button):
             widget.setEnabled(not running)      # the endpoint changes only between turns
         if running:
             self._set_expanded(False)

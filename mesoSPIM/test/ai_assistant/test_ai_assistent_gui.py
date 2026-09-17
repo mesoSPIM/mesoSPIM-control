@@ -373,3 +373,17 @@ def test_confirmation_bar_is_hidden_until_asked_and_answers_the_gate():
     gui._answer_confirmation(False)
     assert answers == [True, False]
     assert "[cancelled unload_sample]" in gui.output.toPlainText()
+
+
+def test_new_conversation_clears_the_transcript_and_the_worker_between_turns():
+    gui = _gui()
+    resets = []
+    gui._worker = type("_W", (), {"reset": lambda self: resets.append(True)})()
+    gui._blocks.append(gui._user_block("old question"))
+    gui._render()
+    assert "old question" in gui.output.toPlainText()
+    gui.on_new_conversation()
+    assert resets == [True] and gui._blocks == [] and "old question" not in gui.output.toPlainText()
+    gui._set_running(True)
+    gui.on_new_conversation()                                       # ignored while a turn runs
+    assert resets == [True] and not gui.new_button.isEnabled()

@@ -35,9 +35,6 @@ _TERMINAL = {COMPLETED, FAILED}
 # what the model already has). get_manual is the whole command reference — large and static.
 _PROMPT_ONLY = {"get_manual"}
 
-# Each command's args go on the wire as-is; the hint documents the shape and accept() enforces it.
-_ARGS_SCHEMA = {"type": "object", "additionalProperties": True}
-
 
 def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config):
     """Run one command and return a finished result. For WAIT commands the return always
@@ -208,27 +205,26 @@ _LOOK_SCHEMA = {
 
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, gate=None):
     """One passthrough tool per command, minus the prompt-only ones (get_manual is already in the
-    system prompt). The tool list otherwise IS COMMANDS — never hand-maintained. Per-arg
-    correctness comes from each command's accept() validator, the same one every transport uses.
+    system prompt). The tool list otherwise IS COMMANDS — never hand-maintained.
 
-    The schema is an OPEN object rather than one inferred from the wrapper's signature. Inferring
-    it wrapped every command in an `args` envelope and set additionalProperties=false, so a model
-    emitting the correct wire call — move_absolute {"targets": {"x": 5000}} — was rejected by the
-    tool layer as `extra_forbidden` and never reached the dispatcher at all: every nested command
-    was unreachable. from_schema also skips pydantic's own validation, which keeps accept() the
-    single place a call can be refused instead of splitting rejection across two layers with two
-    different error vocabularies."""
+    Each tool publishes the command's own JSON schema (the one MCP tools/list serves), so the model
+    sees the argument names, types and ranges. from_schema skips pydantic's validation of the call,
+    which keeps accept() the single place a call can be refused, with one error vocabulary."""
     from pydantic_ai import Tool
     tools = [
         Tool.from_schema(_tool_fn(acceptor, name, cmd.kind, cancel, on_call, gate),
-                         name=name, description=cmd.hint or name, json_schema=_ARGS_SCHEMA)
+                         name=name, description=cmd.hint or name, json_schema=cmd.schema)
         for name, cmd in COMMANDS.items() if name not in _PROMPT_ONLY
     ]
     if endpoint is not None:
         def _look(question="", snap=True) -> str:
             if on_call is not None:
                 on_call("look", json.dumps({"question": question, "snap": snap}))
-            return json.dumps(look(acceptor, endpoint, question, snap, cancel, on_frame))
+            try:
+                return json.dumps(look(acceptor, endpoint, question, snap, cancel, on_frame))
+            except Exception as error:  # busy, shutting down: data for the model, like every tool
+                code, message = error_info(error)
+                return json.dumps({"error": {"code": code, "message": message}})
 
         tools.append(Tool.from_schema(
             _look, name="look", json_schema=_LOOK_SCHEMA,
@@ -249,14 +245,24 @@ def with_state(acceptor, text):
     return f"{text}\n\n<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>"
 
 
-def build_system_prompt(acceptor):
-    """System prompt = the auto-generated get_manual reference (always in sync with COMMANDS,
-    incl. the poll-get_progress contract) + a thin hand-written preamble (units, frames,
-    safety tone)."""
-    manual = acceptor.dispatch("get_manual", {})
-    manual_text = manual if isinstance(manual, str) else json.dumps(manual, indent=2)
+def build_system_prompt(acceptor=None):
+    """The hand-written preamble (units, frames, safety) plus one line per command. Argument shapes
+    come from the tool schemas, so the prompt does not repeat them."""
     preamble = (Path(__file__).parent / "assistant_manual.md").read_text(encoding="utf-8")
-    return preamble + "\n\n# Microscope command reference\n\n" + manual_text
+    lines = [f"- {cmd.name} ({cmd.kind}): {cmd.hint}" for cmd in COMMANDS.values() if cmd.name not in _PROMPT_ONLY]
+    return preamble + "\n\n# Commands\n\n" + "\n".join(lines)
+
+
+def trim_history(messages, max_turns):
+    """Keep the last `max_turns` operator turns. A turn starts at a request whose first part is
+    the operator's prompt, so a tool call is never separated from its result."""
+    starts = [
+        index for index, message in enumerate(messages)
+        if type(getattr(message, "parts", [None])[0]).__name__ == "UserPromptPart"
+    ]
+    if len(starts) <= max_turns:
+        return list(messages)
+    return list(messages[starts[-max_turns]:])
 
 
 @dataclass(frozen=True)
@@ -395,6 +401,10 @@ class AssistantWorker(QtCore.QObject):
         self._endpoint = endpoint
         self._agent = None
 
+    def reset(self):
+        """Forget the conversation (New conversation). Called between turns, like configure."""
+        self._history = []
+
     @QtCore.pyqtSlot(str)
     def run_turn(self, text):
         try:
@@ -406,7 +416,7 @@ class AssistantWorker(QtCore.QObject):
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.
             result = self._agent.run_sync(with_state(self._acceptor, text), message_history=self._history)
-            self._history = result.all_messages()
+            self._history = trim_history(result.all_messages(), config.MAX_HISTORY_TURNS)
             self.sig_reply.emit(result.output)
         except Exception as error:
             logger.exception("AI Assistant turn failed")

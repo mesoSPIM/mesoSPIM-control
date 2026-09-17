@@ -465,3 +465,73 @@ def test_interrupt_cancels_an_open_question():
     thread.join(5)
     stopper.join(5)
     assert results == [False]
+
+
+# --- schemas on the tools, the prompt, the history cap ---
+
+def test_tools_publish_each_commands_schema():
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
+    for tool in build_tools(FakeAcceptor(), threading.Event()):
+        assert tool.function_schema.json_schema == COMMANDS[tool.name].schema
+
+
+def test_a_scripted_model_can_call_every_tool_through_its_schema(monkeypatch):
+    """pydantic-ai's TestModel calls every tool once with arguments generated from the schema; a
+    schema the tool layer cannot serve, or a wrapper that rejects a well-formed call, shows up as a
+    retry prompt or an exception here."""
+    pytest.importorskip("pydantic_ai")
+    from pydantic_ai import Agent
+    from pydantic_ai.models.test import TestModel
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
+
+    monkeypatch.setattr(ai.config, "WAIT_CAP_S", 0.01)             # the fake core never completes a WAIT
+    monkeypatch.setattr(ai.config, "POLL_INTERVAL_S", 0.0)
+    acceptor = Acceptor(RecordingCore())
+    endpoint = Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u")
+    tools = build_tools(acceptor, threading.Event(), endpoint=endpoint)
+    result = Agent(TestModel(), tools=tools, instructions="test").run_sync("do everything")
+    parts = [p for m in result.all_messages() for p in m.parts]
+    called = {p.tool_name for p in parts if type(p).__name__ == "ToolCallPart"}
+    assert called == {t.name for t in tools}
+    assert not [p for p in parts if type(p).__name__ == "RetryPromptPart"]
+
+
+def test_system_prompt_is_the_preamble_plus_one_line_per_command():
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
+    prompt = ai.build_system_prompt()
+    assert prompt.startswith("You control a mesoSPIM")
+    for name, cmd in COMMANDS.items():
+        if name != "get_manual":
+            assert f"- {name} ({cmd.kind}): " in prompt
+    assert "get_manual" not in prompt.split("# Commands")[1]
+    assert len(prompt) < 12000                                      # the JSON manual was several times this
+
+
+def _turn(kind):
+    part = type(kind, (), {})()
+    return type("Msg", (), {"parts": [part]})()
+
+
+def test_trim_history_keeps_whole_recent_turns():
+    history = [_turn("UserPromptPart"), _turn("TextPart"), _turn("UserPromptPart"), _turn("ToolReturnPart"),
+               _turn("TextPart"), _turn("UserPromptPart"), _turn("TextPart")]
+    kept = ai.trim_history(history, 2)
+    assert kept == history[2:]                                      # starts at an operator prompt
+    assert ai.trim_history(history, 3) == history
+    assert ai.trim_history([], 5) == []
+
+
+def test_run_turn_caps_the_history(monkeypatch):
+    monkeypatch.setattr(ai.config, "MAX_HISTORY_TURNS", 1)
+    worker = AssistantWorker(FakeAcceptor())
+    long = [_turn("UserPromptPart"), _turn("TextPart"), _turn("UserPromptPart"), _turn("TextPart")]
+    result = FakeResult("ok")
+    result.all_messages = lambda: long
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: FakeAgent([result]))
+    worker.run_turn("hi")
+    assert worker._history == long[2:]
+    worker.reset()
+    assert worker._history == []

@@ -7,7 +7,7 @@ Be decisive
 - Do NOT call read commands (get_state, get_config, get_capabilities, get_limits, hello, …)
   speculatively. Read state only when the request actually depends on a current value you do not
   already have.
-- The full command reference is already provided below — never call get_manual.
+- The command list is below; each tool's schema gives the exact argument names, types and ranges.
 - Never repeat a call you have already made in this turn.
 
 On failure — stop, do not flail

@@ -86,7 +86,7 @@ The docs should also state plainly what leaves the machine: the system prompt em
 
 ### 7. MCP compatibility claims need qualifying (should fix or document)
 
-Status: fixed on this branch by the commit "Remote Control: publish MCP argument schemas and align the protocol version". The AI Assistant still hands its tools an open schema (its docstring explains why); switching it to the published schemas is a follow-up to validate against a live model.
+Status: fixed on this branch by the commit "Remote Control: publish MCP argument schemas and align the protocol version". The AI Assistant's tools now publish the same schemas; a scripted-model test drives every tool through them.
 
 Where: `mesoSPIM/src/mesoSPIM_RemoteControl_Config.py` line 21 (`MCP_PROTOCOL_VERSION = "2024-11-05"`); `mesoSPIM/src/mesoSPIM_RemoteControl_Servers.py` line 347 (`tools/list`).
 
@@ -132,7 +132,8 @@ and `mesoSPIM_AcquisitionManagerWindow.py` on upstream `master`.
    it follows the same `set_state("snap")` path as live and completes on `sig_finished`. It also
    needs a destination, because `snap_folder`, `file_prefix` and `file_suffix` are not settable
    remotely.
-2. **No image data.** Nothing returns a frame, a thumbnail, or the path of the last written snap.
+2. Status: fixed on this branch by `get_frame` (numbers and a bounded PNG) and the assistant's `look` side call.
+   **No image data.** Nothing returns a frame, a thumbnail, or the path of the last written snap.
    The architecture doc lists this as a known limit. For the AI Assistant it is the largest
    functional gap: the agent can act but cannot see the result.
 3. Status: fixed on this branch by the same commit.

@@ -56,4 +56,5 @@ CONFIRM_FIRST = (
 CONFIRM_TIMEOUT_S = 120
 
 POLL_INTERVAL_S = 0.15
+MAX_HISTORY_TURNS = 20  # older turns (and their tool results) are dropped from what the model sees
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress
