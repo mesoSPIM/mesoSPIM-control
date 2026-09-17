@@ -207,6 +207,35 @@ class QGridLayout(QtWidgets.QVBoxLayout):
         pass
 
 
+class QPlainTextEdit(QtWidgets.QWidget):
+    """The message box: text in, text out, plus the no-ops the tab calls on it."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._text = ""
+
+    def toPlainText(self):
+        return self._text
+
+    def setPlainText(self, text):
+        self._text = text
+
+    def clear(self):
+        self._text = ""
+
+    def setPlaceholderText(self, _text):
+        pass
+
+    def setTabChangesFocus(self, _flag):
+        pass
+
+    def setVerticalScrollBarPolicy(self, _policy):
+        pass
+
+    def setFixedHeight(self, _height):
+        pass
+
+
 class QSpinBox(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -238,6 +267,10 @@ class QFileDialog:
 QtWidgets.QRadioButton = QRadioButton
 QtWidgets.QToolButton = QToolButton
 QtWidgets.QSpinBox = QSpinBox
+QtWidgets.QPlainTextEdit = QPlainTextEdit
+for _enum, _value in (("ScrollBarAsNeeded", 0), ("Key_Return", 0x01000004), ("Key_Enter", 0x01000005), ("ShiftModifier", 0x02000000)):
+    if not hasattr(QtCore.Qt, _enum):
+        setattr(QtCore.Qt, _enum, _value)
 QtWidgets.QGridLayout = QGridLayout
 if not hasattr(QtWidgets.QWidget, "setFocus"):
     QtWidgets.QWidget.setFocus = lambda self: None

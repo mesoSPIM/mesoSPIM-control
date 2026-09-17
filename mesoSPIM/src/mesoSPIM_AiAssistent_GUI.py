@@ -44,6 +44,30 @@ def _md_to_html(markdown):
     return html[html.find(">", body) + 1:close].strip()
 
 
+class _Input(QtWidgets.QPlainTextEdit):
+    """A two-line message box. Enter sends; Shift+Enter starts a new line. Offers the QLineEdit
+    names the tab uses (text, setText, returnPressed) so the rest of the tab does not care."""
+
+    returnPressed = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTabChangesFocus(True)
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+
+    def text(self):
+        return self.toPlainText()
+
+    def setText(self, text):
+        self.setPlainText(text)
+
+    def keyPressEvent(self, event):
+        if event.key() in (QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter) and not event.modifiers() & QtCore.Qt.ShiftModifier:
+            self.returnPressed.emit()
+            return
+        super().keyPressEvent(event)
+
+
 class AiAssistentGUI(QtWidgets.QWidget):
     sig_run_turn = QtCore.pyqtSignal(str)
 
@@ -151,7 +175,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._show_confirmation(False)
 
         row = QtWidgets.QHBoxLayout()
-        self.input = QtWidgets.QLineEdit(self)
+        self.input = _Input(self)
         self.input.setPlaceholderText("Ask the microscope…")
         self.input.setObjectName("AiAssistentInput")
         self.input.setFont(font)
@@ -166,10 +190,17 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.new_button = QtWidgets.QPushButton("New session", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
+        # Right of the two-line input: Cancel request and New session side by side, the emergency
+        # stop underneath them, spanning both; the input is as tall as the two button rows.
+        buttons = QtWidgets.QGridLayout()
+        buttons.setHorizontalSpacing(6)
+        buttons.setVerticalSpacing(6)
+        buttons.addWidget(self.interrupt, 0, 0)
+        buttons.addWidget(self.new_button, 0, 1)
+        buttons.addWidget(self.stop_button, 1, 0, 1, 2)
         row.addWidget(self.input, 1)
-        row.addWidget(self.interrupt)
-        row.addWidget(self.new_button)
-        row.addWidget(self.stop_button)         # the emergency control, red, at the far right
+        row.addLayout(buttons)
+        self.input.setFixedHeight(2 * self.interrupt.sizeHint().height() + 6)
         layout.addLayout(row)
         layout.addSpacing(12)
 
@@ -203,8 +234,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
             widget.setFont(font)
             return widget
 
-        self.cloud_radio = QtWidgets.QRadioButton("Cloud", group)
-        self.local_radio = QtWidgets.QRadioButton("Local", group)
+        self.cloud_radio = QtWidgets.QRadioButton("Cloud AI", group)
+        self.local_radio = QtWidgets.QRadioButton("Local AI", group)
         self.provider = QtWidgets.QComboBox(group)
         self.provider.addItems(list(config.PROVIDERS))
         self.history_turns = QtWidgets.QSpinBox(group)
@@ -242,31 +273,35 @@ class AiAssistentGUI(QtWidgets.QWidget):
                        self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
 
-        # Columns: 0 mode | 1 label | 2 field | 3 label | 4 field. Row 0 is the model, row 1 the
-        # credential (or, in local mode, the folder button) and Connect with its status.
+        # The mode on its own line, then a grid: columns 0 label | 1 field | 2 label | 3 field.
+        # Row 0 is the model, row 1 the credential (or, in local mode, the folder button) and
+        # Connect with its status.
+        mode = QtWidgets.QHBoxLayout()
+        mode.addWidget(self.cloud_radio)
+        mode.addSpacing(16)
+        mode.addWidget(self.local_radio)
+        mode.addStretch(1)
+        rows.addLayout(mode)
         grid = QtWidgets.QGridLayout()
         grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(8)
-        grid.addWidget(self.cloud_radio, 0, 0)
-        grid.addWidget(self.local_radio, 1, 0)
-        grid.setColumnMinimumWidth(0, self.local_radio.sizeHint().width() + 12)
-        grid.addWidget(self._provider_label, 0, 1)
-        grid.addWidget(self.provider, 0, 2)
-        grid.addWidget(self._model_label, 0, 3)
-        grid.addWidget(self.model, 0, 4)
-        grid.addWidget(self._local_model_label, 0, 1)
-        grid.addWidget(self.local_model, 0, 2, 1, 3)
-        grid.addWidget(self.folder_button, 1, 1, 1, 2, QtCore.Qt.AlignLeft)
-        grid.addWidget(self._key_label, 1, 1)
-        grid.addWidget(self.key, 1, 2)
-        grid.addWidget(self._base_url_label, 1, 1)
-        grid.addWidget(self.base_url, 1, 2)
+        grid.addWidget(self._provider_label, 0, 0)
+        grid.addWidget(self.provider, 0, 1)
+        grid.addWidget(self._model_label, 0, 2)
+        grid.addWidget(self.model, 0, 3)
+        grid.addWidget(self._local_model_label, 0, 0)
+        grid.addWidget(self.local_model, 0, 1, 1, 3)
+        grid.addWidget(self.folder_button, 1, 0, 1, 2, QtCore.Qt.AlignLeft)
+        grid.addWidget(self._key_label, 1, 0)
+        grid.addWidget(self.key, 1, 1)
+        grid.addWidget(self._base_url_label, 1, 0)
+        grid.addWidget(self.base_url, 1, 1)
         connect = QtWidgets.QHBoxLayout()
         connect.addWidget(self.connect_button)
         connect.addWidget(self.setup_status, 1)
-        grid.addLayout(connect, 1, 3, 1, 2)
-        grid.setColumnStretch(2, 1)
-        grid.setColumnStretch(4, 2)
+        grid.addLayout(connect, 1, 2, 1, 2)
+        grid.setColumnStretch(1, 1)
+        grid.setColumnStretch(3, 2)
         rows.addLayout(grid)
 
         # Operator preferences, applied at once.
