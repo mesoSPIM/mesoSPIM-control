@@ -194,6 +194,7 @@ def test_a_gui_live_mode_refuses_only_what_would_take_over(h, live_state):
     for name, args in (("snap", {}), ("start_live", {}), ("run_acquisition_list", {}), ("time_lapse_start", {})):
         ok, refused = h.invoke("mcp", name, args)
         assert not ok and refused["code"] == "busy", (name, refused)
+        assert "operator" in refused["error"] and "stop_activity" not in refused["error"]   # no invitation to end it
     ok, done = h.invoke("mcp", "set_intensity", {"intensity": 20})   # an ACTION: done at once
     assert ok and done["accepted"] is True
     ok, accepted = h.invoke("tcp", "move_absolute", {"targets": {"x": 10}})

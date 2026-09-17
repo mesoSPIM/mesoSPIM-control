@@ -225,6 +225,38 @@ def offered_commands(profile=None):
             if name not in _PROMPT_ONLY and (allowed is None or name in allowed)]
 
 
+def _row_arguments(schema):
+    """The argument names under which a command takes acquisition rows: a list or a single row."""
+    properties = schema.get("properties", {})
+    return [name for name in ("acquisitions", "acquisition") if name in properties]
+
+
+def _rows_without(schema, keys):
+    """A copy of a schema whose acquisition rows (a list, or a single one) no longer offer `keys`."""
+    schema = json.loads(json.dumps(schema))
+    for name in _row_arguments(schema):
+        holder = schema["properties"][name]
+        row = holder.get("items", holder)
+        for key in keys:
+            row.get("properties", {}).pop(key, None)
+    return schema
+
+
+def _refuse_row_keys(fn, name, keys):
+    """Refuse, as data, an acquisition row that carries any of `keys`; then call through."""
+    def _call(**args) -> str:
+        rows = list(args.get("acquisitions") or [])
+        if isinstance(args.get("acquisition"), dict):
+            rows.append(args["acquisition"])
+        found = sorted({key for row in rows if isinstance(row, dict) for key in row if key in keys})
+        if found:
+            return json.dumps({"error": {"code": "validation",
+                                         "message": f"{name}: {', '.join(found)} are not part of this tool set; "
+                                                    "a row takes the current settings for them"}})
+        return fn(**args)
+    return _call
+
+
 def _narrowed(cmd, keys):
     """A copy of the command's schema offering only `keys`, and a check for a call to it."""
     schema = dict(cmd.schema)
@@ -246,7 +278,8 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
     which keeps accept() the single place a call can be refused, with one error vocabulary. In the
     Regular profile a straddling command is offered with a narrowed schema and refuses the rest."""
     from pydantic_ai import Tool
-    narrow = config.REGULAR_ARGS if (profile or config.DEFAULT_TOOL_PROFILE) == "Regular" else {}
+    regular = (profile or config.DEFAULT_TOOL_PROFILE) == "Regular"
+    narrow = config.REGULAR_ARGS if regular else {}
     tools = []
     for cmd in offered_commands(profile):
         fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate)
@@ -255,6 +288,9 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
             keys = narrow[cmd.name]
             schema = _narrowed(cmd, keys)
             fn = _only_keys(fn, cmd.name, keys)
+        if regular and _row_arguments(schema):
+            schema = _rows_without(schema, config.REGULAR_ROW_HIDDEN)
+            fn = _refuse_row_keys(fn, cmd.name, config.REGULAR_ROW_HIDDEN)
         tools.append(Tool.from_schema(fn, name=cmd.name, description=cmd.hint or cmd.name, json_schema=schema))
     if endpoint is not None:
         eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see

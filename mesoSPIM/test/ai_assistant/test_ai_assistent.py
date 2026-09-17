@@ -689,3 +689,23 @@ def test_every_preset_builds_its_model_with_the_installed_sdks():
     for provider in ai.config.PROVIDERS:
         endpoint = Endpoint.from_preset(provider, "", api_key="placeholder", base_url="http://127.0.0.1:1/v1")
         assert ai.build_model(endpoint) is not None, provider
+
+
+def test_regular_keeps_the_etl_out_of_acquisition_rows_too():
+    """A row carries the machine's ETL settings, so without this the Regular set could set them
+    through set_acquisition_list; the schema hides the keys and a row carrying one is refused."""
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    acc = FakeAcceptor()
+    regular = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["set_acquisition_list"]
+    rows = regular.function_schema.json_schema["properties"]["acquisitions"]["items"]["properties"]
+    assert not any(key.startswith("etl_") for key in rows) and "z_step" in rows
+    out = json.loads(regular.function(acquisitions=[{"z_start": 0, "z_end": 0, "z_step": 1, "etl_l_amplitude": 1.5}]))
+    assert out["error"]["code"] == "validation" and "etl_l_amplitude" in out["error"]["message"]
+    assert acc.calls == []
+    single = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["acquire_start"]
+    assert "etl_l_amplitude" not in single.function_schema.json_schema["properties"]["acquisition"]["properties"]
+    out = json.loads(single.function(acquisition={"etl_l_amplitude": 1.5}))
+    assert out["error"]["code"] == "validation" and acc.calls == []
+    full = {t.name: t for t in build_tools(acc, threading.Event(), profile="Full")}["set_acquisition_list"]
+    assert "etl_l_amplitude" in full.function_schema.json_schema["properties"]["acquisitions"]["items"]["properties"]

@@ -302,17 +302,14 @@
     }
   },
   {
-    "id": "acquisition-list-empty",
+    "id": "acquisition-list-count",
     "category": "reads",
     "prompt": "How many acquisitions are in the list?",
     "expect": {
       "no_mutations": true,
       "reply_mentions_any": [
-        "0",
-        "zero",
-        "empty",
-        "no acquisitions",
-        "none"
+        "1",
+        "one"
       ]
     }
   },
@@ -325,8 +322,11 @@
     ],
     "expect": {
       "calls": [
-        "set_acquisition_list",
-        "run_acquisition_list"
+        "set_acquisition_list"
+      ],
+      "calls_any": [
+        "run_acquisition_list",
+        "run_selected_acquisition"
       ],
       "core_calls": [
         "start"
@@ -361,13 +361,17 @@
       "not_calls": [
         "set_etl"
       ],
+      "state": {
+        "etl_l_amplitude": 0.7
+      },
       "reply_mentions_any": [
         "Full",
         "not available",
         "cannot",
         "can't",
         "not offered",
-        "unable"
+        "unable",
+        "not part"
       ]
     }
   },

@@ -43,6 +43,7 @@ FINISH_AT_ONCE = (rc_config.MILESTONE_FINISHED, rc_config.MILESTONE_TIMELAPSE, r
 STATE_PATHS = ("state", "position.x_pos", "position.y_pos", "position.z_pos", "position.f_pos", "position.theta_pos",
                "laser", "intensity", "filter", "zoom", "shutterconfig")
 WAIT_CAP_S = 2.0   # a WAIT that no simulated signal ends (live) returns "still_running" after this
+RETRY_WAIT_S = 20.0   # a provider error is mostly a per-minute rate limit: wait it out before retrying
 
 
 def load_cases(path=CASES_FILE):
@@ -54,12 +55,32 @@ def prompts_of(case):
 
 
 class SimulatedInstrument(RecordingCore):
-    """The fake Core of the offline tests, with a time lapse that is over as soon as it starts, so
-    the instrument is free again for the next prompt."""
+    """The fake Core of the offline tests, with settings that show in its state as on the
+    instrument, and a time lapse that is over as soon as it starts, so the instrument is free again
+    for the next prompt."""
 
     def run_time_lapse(self, *args, **kwargs):
         super().run_time_lapse(*args, **kwargs)
         self.timelapse_active = False
+
+    def _setting(self, key, method, value, *args, **kwargs):
+        getattr(super(), method)(value, *args, **kwargs)
+        self.state[key] = value
+
+    def set_laser(self, value, *args, **kwargs):
+        self._setting("laser", "set_laser", value, *args, **kwargs)
+
+    def set_intensity(self, value, *args, **kwargs):
+        self._setting("intensity", "set_intensity", value, *args, **kwargs)
+
+    def set_filter(self, value, *args, **kwargs):
+        self._setting("filter", "set_filter", value, *args, **kwargs)
+
+    def set_zoom(self, value, *args, **kwargs):
+        self._setting("zoom", "set_zoom", value, *args, **kwargs)
+
+    def set_shutterconfig(self, value, *args, **kwargs):
+        self._setting("shutterconfig", "set_shutterconfig", value, *args, **kwargs)
 
 
 class SimulatedAcceptor(servers.Acceptor):
@@ -92,8 +113,28 @@ def _state_snapshot(core, extra=()):
     return out
 
 
-def run_case(case, model, endpoint, profile=None):
-    """Run one case through a fresh agent on a fresh simulated instrument. Returns the trace."""
+def run_case(case, model, endpoint, profile=None, retries=2, retry_wait=None):
+    """Run one case through a fresh agent on a fresh simulated instrument. Returns the trace. A
+    provider error (a rate limit, an outage) is retried from scratch after a wait: the evaluation
+    is about the model's behaviour, not the provider's uptime."""
+    trace = _run_once(case, model, endpoint, profile)
+    attempts = 1
+    while trace["error"] and attempts <= retries:
+        time.sleep(RETRY_WAIT_S if retry_wait is None else retry_wait)
+        trace = _run_once(case, model, endpoint, profile)
+        attempts += 1
+    trace["attempts"] = attempts
+    return trace
+
+
+def _describe(problem):
+    """The error with the provider's own messages, when an exception group hides them."""
+    parts = [ai.describe_error(problem)]
+    parts += [str(sub)[:300] for sub in getattr(problem, "exceptions", [])]
+    return " | ".join(parts)
+
+
+def _run_once(case, model, endpoint, profile):
     core = SimulatedInstrument()
     for key, value in (case.get("setup") or {}).items():
         core.state[key] = value
@@ -114,7 +155,7 @@ def run_case(case, model, endpoint, profile=None):
             tools.extend(ai.turn_trace(result.new_messages()))
             replies.append(result.output)
     except Exception as problem:
-        error = ai.describe_error(problem)
+        error = _describe(problem)
     finally:
         ai.config.WAIT_CAP_S, ai.config.POLL_INTERVAL_S = saved
         acceptor.close()

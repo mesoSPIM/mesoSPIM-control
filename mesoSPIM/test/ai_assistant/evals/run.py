@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from mesoSPIM.test.ai_assistant.evals import harness
@@ -29,6 +30,7 @@ def main(argv=None):
     parser.add_argument("--cases", default=str(harness.CASES_FILE))
     parser.add_argument("--out", default="assistant-evals.jsonl")
     parser.add_argument("--rescore", default="", help="score these recorded traces instead of running")
+    parser.add_argument("--pause", type=float, default=2.0, help="seconds between cases, for per-minute rate limits")
     arguments = parser.parse_args(argv)
 
     cases = harness.load_cases(arguments.cases)
@@ -51,7 +53,9 @@ def main(argv=None):
         model = ai.build_model(endpoint)
         results = []
         with open(arguments.out, "a", encoding="utf-8") as sink:
-            for case in cases:
+            for index, case in enumerate(cases):
+                if index:
+                    time.sleep(arguments.pause)
                 trace = harness.run_case(case, model, endpoint, arguments.profile)
                 failures = harness.score(case, trace)
                 trace["failures"] = failures

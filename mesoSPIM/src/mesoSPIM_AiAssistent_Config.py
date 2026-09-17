@@ -71,6 +71,8 @@ TOOL_PROFILES = {
 }
 # In Regular, a command that straddles both worlds is offered with these arguments only.
 REGULAR_ARGS = {"set_camera": ("camera_exposure_time",)}
+# ... and acquisition rows may not carry the machine's ETL settings: a row takes the current ones.
+REGULAR_ROW_HIDDEN = ("etl_l_amplitude", "etl_l_offset", "etl_r_amplitude", "etl_r_offset")
 DEFAULT_TOOL_PROFILE = "Regular"
 TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope config: "Regular" or "Full"
 

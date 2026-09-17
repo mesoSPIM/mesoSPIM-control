@@ -95,3 +95,23 @@ def test_profiles_change_what_the_model_may_call():
     assert harness.score(case("regular-hides-the-machine"), harness.run_case(case("regular-hides-the-machine"), honest, SCRIPTED)) == []
     insistent = harness.run_case(case("regular-hides-the-machine"), scripted((("set_etl", {"etl_l_amplitude": 1.5}), "Set."), "Set."), SCRIPTED)
     assert "set_etl" not in insistent["core_calls"]                 # the tool is not there to call
+
+
+def test_settings_show_in_the_simulated_state():
+    model = scripted((("set_laser", {"laser": "561 nm"}), "Switched."))
+    trace = harness.run_case(case("laser"), model, SCRIPTED)
+    assert harness.score(case("laser"), trace) == [] and trace["state"]["laser"] == "561 nm"
+
+
+def test_a_provider_error_is_retried_once():
+    from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
+    attempts = []
+
+    def flaky(messages, info):
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise RuntimeError("503 from the provider")
+        return ModelResponse(parts=[TextPart("What can I do for you?")])
+    trace = harness.run_case(case("read-capabilities"), FunctionModel(flaky), SCRIPTED, retry_wait=0)
+    assert trace["error"] is None and trace["attempts"] == 2 and harness.score(case("read-capabilities"), trace) == []

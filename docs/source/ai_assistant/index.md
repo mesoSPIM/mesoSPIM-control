@@ -68,7 +68,8 @@ default) is for a user setting up a sample on a configured microscope: reads, st
 moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live, and the
 acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and camera timing,
 the ETL calibration files, the alignment modes and the generic setting call. In Regular the other
-commands are not offered to the model at all, so it cannot be talked into them. The start-up
+commands are not offered to the model at all, so it cannot be talked into them, and an
+acquisition row may not carry the ETL settings either (it takes the current ones). The start-up
 choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or
 "Full"). TCP and MCP always serve every command; this is the assistant only. **Memory** is how
 many of the operator's messages, with their answers, the model remembers. **Downsample image to** is the size of the frame handed to the
@@ -157,7 +158,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  405 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  408 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.
