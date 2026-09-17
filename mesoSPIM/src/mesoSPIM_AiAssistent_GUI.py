@@ -202,7 +202,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         row.addLayout(buttons)
         self.input.setFixedHeight(2 * self.interrupt.sizeHint().height() + 6)
         layout.addLayout(row)
-        layout.addSpacing(12)
+        layout.addSpacing(24)
 
         self.setup_toggle = QtWidgets.QToolButton(self)
         self.setup_toggle.setObjectName("AiAssistentSetupToggle")
