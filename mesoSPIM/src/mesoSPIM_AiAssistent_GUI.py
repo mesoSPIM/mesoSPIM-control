@@ -108,7 +108,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _build_ui(self):
         # Only the padding: qdarkstyle's buttons hug their text, and every other property cascades.
         self.setStyleSheet("QPushButton, QToolButton { padding: 3px 12px; }"
-                           "QPushButton#AiAssistentStopButton { color: #e08a8a; }")
+                           "QPushButton#AiAssistentStopButton { color: #ff4d4d; font-weight: bold; }")
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
