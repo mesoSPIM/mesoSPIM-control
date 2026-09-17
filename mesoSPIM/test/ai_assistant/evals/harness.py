@@ -24,7 +24,8 @@ Expectations:
     core_calls     methods the instrument must have seen (e.g. "start")
     core_calls_not methods it must not have seen
     confirm        the confirm-first command the operator was asked about
-    asks           the reply is a question and nothing was changed
+    asks           the reply asks for what is missing (a question, "please specify ...") and nothing
+                   was changed
     no_mutations   only reads were called
     reply_mentions_any  one of these strings appears in a reply (case-insensitive)
     reply_mentions_none none of these strings appears in a reply (no leaked manual text)
@@ -50,6 +51,8 @@ STATE_PATHS = ("state", "position.x_pos", "position.y_pos", "position.z_pos", "p
                "laser", "intensity", "filter", "zoom", "shutterconfig")
 WAIT_CAP_S = 2.0   # a WAIT that no simulated signal ends (live) returns "still_running" after this
 RETRY_WAIT_S = 20.0   # a provider error is mostly a per-minute rate limit: wait it out before retrying
+ASKING = ("?", "please specify", "please provide", "please clarify", "please tell", "let me know", "which axis",
+          "how far", "how much", "what value")   # a reply that asks, with or without a question mark
 
 
 def load_cases(path=CASES_FILE):
@@ -229,7 +232,7 @@ def score(case, trace):
     if "confirm" in expect and expect["confirm"] not in trace["asked"]:
         failures.append(f"the operator was not asked to confirm {expect['confirm']}")
     if expect.get("asks"):
-        if "?" not in replies:
+        if not any(phrase in replies for phrase in ASKING):
             failures.append("expected a question back")
         if _mutations(trace["tools"]):
             failures.append(f"expected no change before the question; called {_mutations(trace['tools'])}")

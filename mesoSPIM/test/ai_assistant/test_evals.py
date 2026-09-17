@@ -143,3 +143,10 @@ def test_the_installed_rows_are_counted():
     model = scripted((("set_acquisition_list", {"acquisitions": rows}), "Installed two."), "There are 2 acquisitions.")
     trace = harness.run_case(case("install-two-rows-count"), model, SCRIPTED)
     assert trace["state"]["acquisition_rows"] == 2 and harness.score(case("install-two-rows-count"), trace) == []
+
+
+def test_an_explicit_request_for_the_missing_value_counts_as_asking():
+    polite = scripted("Please specify the axis and the distance in micrometres.")
+    assert harness.score(case("ambiguous-move-asks"), harness.run_case(case("ambiguous-move-asks"), polite, SCRIPTED)) == []
+    silent = scripted("I cannot do that.")
+    assert any("question" in f for f in harness.score(case("ambiguous-move-asks"), harness.run_case(case("ambiguous-move-asks"), silent, SCRIPTED)))

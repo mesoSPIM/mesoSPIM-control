@@ -40,7 +40,10 @@ field. OpenAI-style also asks for the server's base URL, and there the key is op
 wants none, a gateway or a hosted API wants its token. The key is kept in memory for this mesoSPIM
 session only and is never written to the repository, the microscope config, or a log. An empty
 field falls back to the provider's environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`,
-`ANTHROPIC_API_KEY`), so a key exported before starting mesoSPIM keeps working.
+`ANTHROPIC_API_KEY`), so a key exported before starting mesoSPIM keeps working. Any model the
+provider serves under that key works by name: under Gemini, for example, `gemini-3.6-flash` or the
+open-weight `gemma-4-31b-it`, which the evaluation below has driven the tools with (slower, and
+looser on ambiguous requests until the manual spelled the rule out).
 
 **Language model, Local AI.** One **Model** dropdown lists the `.gguf` files in the models folder
 (`~/mesoSPIM/models`, or the `ai_assistant_models_folder` attribute of the microscope config;

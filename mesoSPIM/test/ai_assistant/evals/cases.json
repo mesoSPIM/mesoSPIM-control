@@ -1237,5 +1237,21 @@
         "laser": "561 nm"
       }
     }
+  },
+  {
+    "id": "ambiguous-axis-asks",
+    "category": "ambiguity",
+    "prompt": "Move z.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "ambiguous-amount-asks",
+    "category": "ambiguity",
+    "prompt": "Move z up a little.",
+    "expect": {
+      "asks": true
+    }
   }
 ]
