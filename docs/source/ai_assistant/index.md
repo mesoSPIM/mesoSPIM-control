@@ -21,7 +21,7 @@ integration
   `pip install -e ".[ai-assistant]"`, or `pip install pydantic-ai` on its own. It is imported
   lazily, so the application starts and every other feature works without it; the tab reports the
   missing module when the operator sends a first message.
-- An API key for the chosen provider, or a local OpenAI-compatible server.
+- An API key for the chosen provider, or a local OpenAI-compatible.
 
 ## Setting it up
 
@@ -29,7 +29,7 @@ The tab opens as a chat. The line under the input box, **Set up AI assistant**, 
 setup rows, and opens by itself when something needs the operator: nothing configured yet, a
 missing key, or a local model that failed to start. Once the assistant is ready it folds back.
 
-**Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or an OpenAI-compatible server such as
+**Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or an OpenAI-compatible such as
 Ollama or vLLM already running somewhere, given by its base URL), keep or edit the prefilled model
 name, and type the API key into the masked field. The key is kept in memory for this mesoSPIM
 session only and is never written to the repository, the microscope config, or a log. An empty
@@ -40,7 +40,7 @@ field falls back to the provider's environment variable (`GEMINI_API_KEY`, `OPEN
 or the `ai_assistant_models_folder` attribute of the microscope config; **Models folder…** points
 it elsewhere for the session). Download a file from Hugging Face, drop it in, choose it, Connect.
 Nothing leaves the machine and no key is needed. Behind Connect, mesoSPIM serves the file itself
-with llama.cpp's OpenAI-compatible server (`pip install llama-cpp-python`, or the
+with llama.cpp's OpenAI-compatible (`pip install llama-cpp-python`, or the
 `ai-assistant-local` extra) as a child process on a loopback port; the status reads "starting…"
 while the model loads, then "ready on 127.0.0.1:<port>". Switching models, going back to Cloud, or
 closing mesoSPIM stops the child. A server that fails to start is reported with the path of its

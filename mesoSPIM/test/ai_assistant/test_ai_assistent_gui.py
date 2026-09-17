@@ -119,13 +119,13 @@ def test_setup_row_prefills_the_default_provider():
     assert gui.provider.currentText() == "Gemini"
     assert gui.model.text() == "gemini-3.5-flash-lite"
     assert gui.key.isVisible() and not gui.base_url.isVisible()
-    assert gui.setup_status.text() == "not connected"
+    assert gui.connect_button.text() == "Connect"
 
 
 def test_choosing_a_local_provider_swaps_the_key_for_a_base_url():
     gui = _gui()
-    gui.provider.setCurrentText("OpenAI-compatible server")
-    gui.provider.currentTextChanged.emit("OpenAI-compatible server")
+    gui.provider.setCurrentText("OpenAI-compatible")
+    gui.provider.currentTextChanged.emit("OpenAI-compatible")
     assert gui.model.text() == "gemma4:31b"
     assert gui.base_url.text() == "http://localhost:11434/v1"
     assert gui.base_url.isVisible() and not gui.key.isVisible()
@@ -159,7 +159,7 @@ def test_connect_with_a_key_configures_the_worker(monkeypatch):
     gui.on_connect()
     (endpoint,) = configured
     assert (endpoint.provider, endpoint.kind, endpoint.api_key) == ("Anthropic", "anthropic", "sk-test")
-    assert gui.setup_status.text() == "ready"
+    assert gui.connect_button.text() == "Connected"
 
 
 def test_first_message_connects_with_the_typed_key(monkeypatch):
@@ -258,7 +258,7 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
     gui.on_connect()
     (server,) = _SERVERS
     assert server.started and server.model_path == str(tmp_path / "qwen3.5-8b-q4.gguf")
-    assert gui.setup_status.text() == "starting…"
+    assert gui.connect_button.text() == "Starting…"
     assert gui._endpoint is None
     scheduled.pop()()                                          # first poll: still loading
     assert gui._endpoint is None and len(scheduled) == 1
@@ -266,7 +266,7 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
     endpoint = gui._worker.endpoint
     assert (endpoint.kind, endpoint.model, endpoint.base_url) == ("openai-compatible", "qwen3.5-8b-q4", server.base_url)
     assert endpoint.api_key == "" and not endpoint.needs_key
-    assert gui.setup_status.text() == "ready on 127.0.0.1:4242"
+    assert gui.connect_button.text() == "Connected"
     assert scheduled == []
 
 
@@ -278,7 +278,7 @@ def test_local_server_failure_is_reported_and_cleaned_up(tmp_path, monkeypatch):
     scheduled.pop()()
     (server,) = _SERVERS
     assert server.stopped and gui._local_server is None
-    assert gui.setup_status.text() == "not connected"
+    assert gui.connect_button.text() == "Connect"
     assert "exited with code 3" in gui.output.toPlainText()
 
 
@@ -301,7 +301,6 @@ def test_empty_models_folder_is_explained(tmp_path, monkeypatch):
         (tmp_path / name).unlink()
     gui.local_radio.setChecked(True)
     assert gui.local_model.items() == [] and not gui.local_model.isEnabled()
-    assert str(tmp_path) in gui.setup_status.text()
     gui.on_connect()
     assert "Put a model file" in gui.output.toPlainText()
 
@@ -355,17 +354,17 @@ def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui.on_connect()
     assert not gui.setup_group.isVisible()
     assert gui.setup_toggle.text() == "Set up AI assistant"
-    assert gui.setup_status.text() == "ready"
+    assert gui.connect_button.text() == "Connected"
 
 
 def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     gui.local_radio.setChecked(True)
     gui.on_connect()
-    assert gui.setup_status.text() == "starting…"
+    assert gui.connect_button.text() == "Starting…"
     scheduled.pop()(); scheduled.pop()()
     assert not gui.setup_group.isVisible()
-    assert gui.setup_status.text() == "ready on 127.0.0.1:4242"
+    assert gui.connect_button.text() == "Connected"
     assert gui.setup_toggle.text() == "Set up AI assistant"
 
 

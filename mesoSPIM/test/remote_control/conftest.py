@@ -175,6 +175,12 @@ def _install_fake_pyqt5():
             return self._text
 
     class QPushButton(QWidget):
+        def setText(self, text):
+            self._text = text
+
+        def text(self):
+            return getattr(self, "_text", "")
+
         def __init__(self, *_args, **_kwargs):
             super().__init__()
             self.clicked = _Signal()

@@ -26,7 +26,7 @@ PROVIDERS = {
     },
     "OpenAI": {"kind": "openai", "model": "gpt-5-mini", "key_env": "OPENAI_API_KEY", "vision": True},
     "Anthropic": {"kind": "anthropic", "model": "claude-sonnet-5", "key_env": "ANTHROPIC_API_KEY", "vision": True},
-    "OpenAI-compatible server": {
+    "OpenAI-compatible": {
         "kind": "openai-compatible",
         "model": "gemma4:31b",  # ~20 GB VRAM; mis-shapes nested args on smaller models
         "base_url": "http://localhost:11434/v1",  # e.g. an Ollama or vLLM already running somewhere

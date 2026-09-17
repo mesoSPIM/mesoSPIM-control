@@ -248,7 +248,7 @@ def test_endpoint_without_any_key_is_detectable(monkeypatch):
 
 
 def test_local_endpoint_needs_a_base_url_not_a_key():
-    endpoint = Endpoint.from_preset("OpenAI-compatible server", base_url="http://box:8000/v1")
+    endpoint = Endpoint.from_preset("OpenAI-compatible", base_url="http://box:8000/v1")
     assert not endpoint.needs_key
     assert endpoint.base_url == "http://box:8000/v1"
 
@@ -275,7 +275,7 @@ def test_configure_rebuilds_the_agent_on_the_next_turn_and_keeps_history(monkeyp
 
 def test_endpoint_vision_comes_from_the_preset():
     assert Endpoint.from_preset("Gemini", api_key="k").vision is True
-    assert Endpoint.from_preset("OpenAI-compatible server").vision is False
+    assert Endpoint.from_preset("OpenAI-compatible").vision is False
     assert Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u").vision is False
 
 

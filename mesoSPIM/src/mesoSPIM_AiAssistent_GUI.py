@@ -216,6 +216,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         layout.addWidget(self.setup_toggle)
         self.setup_group = self._build_setup(font)
         layout.addWidget(self.setup_group)
+        self._set_connect_state("idle")
         self._set_expanded(False)
 
     def _build_setup(self, font):
@@ -261,49 +262,43 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.base_url = QtWidgets.QLineEdit("", group)
         self.folder_button = QtWidgets.QPushButton("Models folder…", group)
         self.connect_button = QtWidgets.QPushButton("Connect", group)
-        self.setup_status = QtWidgets.QLabel(group)
-        self.setup_status.setText("not connected")
-        self.setup_status.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
+        self.connect_button.setObjectName("AiAssistentConnectButton")
         self._provider_label = label("Provider")
         self._model_label = label("Model")
         self._local_model_label = label("Model")
         self._key_label = label("API key")
         self._base_url_label = label("Base URL")
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
-                       self.key, self.base_url, self.folder_button, self.connect_button, self.setup_status,
+                       self.key, self.base_url, self.folder_button, self.connect_button,
                        self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
 
-        # The mode on its own line, then a grid: columns 0 label | 1 field | 2 label | 3 field.
-        # Row 0 is the model, row 1 the credential (or, in local mode, the folder button) and
-        # Connect with its status.
+        # The mode on its own line, then everything for the endpoint on one line: Cloud shows
+        # provider, model and key (or base URL); Local shows the model file and the folder button;
+        # both end with Connect and the status.
         mode = QtWidgets.QHBoxLayout()
-        mode.addWidget(self.cloud_radio)
-        mode.addSpacing(16)
         mode.addWidget(self.local_radio)
+        mode.addSpacing(16)
+        mode.addWidget(self.cloud_radio)
         mode.addStretch(1)
         rows.addLayout(mode)
-        grid = QtWidgets.QGridLayout()
-        grid.setHorizontalSpacing(8)
-        grid.setVerticalSpacing(8)
-        grid.addWidget(self._provider_label, 0, 0)
-        grid.addWidget(self.provider, 0, 1)
-        grid.addWidget(self._model_label, 0, 2)
-        grid.addWidget(self.model, 0, 3)
-        grid.addWidget(self._local_model_label, 0, 0)
-        grid.addWidget(self.local_model, 0, 1, 1, 3)
-        grid.addWidget(self.folder_button, 1, 0, 1, 2, QtCore.Qt.AlignLeft)
-        grid.addWidget(self._key_label, 1, 0)
-        grid.addWidget(self.key, 1, 1)
-        grid.addWidget(self._base_url_label, 1, 0)
-        grid.addWidget(self.base_url, 1, 1)
-        connect = QtWidgets.QHBoxLayout()
-        connect.addWidget(self.connect_button)
-        connect.addWidget(self.setup_status, 1)
-        grid.addLayout(connect, 1, 2, 1, 2)
-        grid.setColumnStretch(1, 1)
-        grid.setColumnStretch(3, 2)
-        rows.addLayout(grid)
+        self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
+        self.model.setMinimumWidth(170)
+        line = QtWidgets.QHBoxLayout()
+        line.setSpacing(8)
+        line.addWidget(self._provider_label)
+        line.addWidget(self.provider)
+        line.addWidget(self._model_label)
+        line.addWidget(self.model, 1)
+        line.addWidget(self._local_model_label)
+        line.addWidget(self.local_model, 3)
+        line.addWidget(self.folder_button)
+        line.addWidget(self._key_label)
+        line.addWidget(self.key, 2)
+        line.addWidget(self._base_url_label)
+        line.addWidget(self.base_url, 3)
+        line.addWidget(self.connect_button)
+        rows.addLayout(line)
 
         # Operator preferences, applied at once.
         options = QtWidgets.QHBoxLayout()
@@ -336,6 +331,14 @@ class AiAssistentGUI(QtWidgets.QWidget):
         return group
 
     # --- the footer ---
+    def _set_connect_state(self, state, detail=""):
+        """The Connect button shows the state: Connect, Starting…, or a green Connected. `detail`
+        goes in its tooltip (the local server's address, for instance)."""
+        text = {"idle": "Connect", "starting": "Starting…", "ready": "Connected"}[state]
+        self.connect_button.setText(text)
+        self.connect_button.setToolTip(detail)
+        self.connect_button.setStyleSheet("color: #4cd964; font-weight: bold;" if state == "ready" else "")
+
     def _set_expanded(self, expanded):
         self.setup_group.setVisible(bool(expanded))
         self.setup_toggle.setChecked(bool(expanded))
@@ -383,8 +386,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         if current in names:
             self.local_model.setCurrentText(current)
         self.local_model.setEnabled(bool(names))
-        if not names and self._endpoint is None:
-            self.setup_status.setText(f"no {'/'.join(config.MODEL_SUFFIXES)} files in {self._models_folder}")
 
     def on_choose_folder(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Models folder", self._models_folder)
@@ -431,7 +432,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._local_server = server
         self._endpoint = None
         self._started_at = time.monotonic()
-        self.setup_status.setText("starting…")
+        self._set_connect_state("starting", server.model)
         self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_server)
         return False
 
@@ -446,7 +447,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
             return
         if ready:
             self._use(Endpoint(provider="Local", kind="openai-compatible", model=server.model, base_url=server.base_url),
-                      status=f"ready on 127.0.0.1:{server.port}")
+                      detail=f"{server.model} on 127.0.0.1:{server.port}")
         elif time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
             self._local_failed(f"{server.model} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; see {server.log_path}")
         else:
@@ -455,13 +456,13 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _local_failed(self, message):
         self._stop_local_server()
         self._endpoint = None
-        self.setup_status.setText("not connected")
+        self._set_connect_state("idle")
         self._note(message)
 
-    def _use(self, endpoint, status=None):
+    def _use(self, endpoint, detail=None):
         self._worker.configure(endpoint, self._vision_endpoint(), self.tools_profile.currentText())
         self._endpoint = endpoint
-        self.setup_status.setText(status or "ready")
+        self._set_connect_state("ready", detail or f"{endpoint.provider}, {endpoint.model}")
         self._set_expanded(False)
 
     def _vision_endpoint(self):

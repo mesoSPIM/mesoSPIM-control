@@ -274,6 +274,12 @@ for _enum, _value in (("ScrollBarAsNeeded", 0), ("Key_Return", 0x01000004), ("Ke
 QtWidgets.QGridLayout = QGridLayout
 if not hasattr(QtWidgets.QWidget, "setMinimumHeight"):
     QtWidgets.QWidget.setMinimumHeight = lambda self, _h: None
+    QtWidgets.QWidget.setMinimumWidth = lambda self, _w: None
+if not hasattr(QtWidgets.QComboBox, "setSizeAdjustPolicy"):
+    QtWidgets.QComboBox.setSizeAdjustPolicy = lambda self, _p: None
+    QtWidgets.QComboBox.AdjustToContents = 0
+if not hasattr(QtWidgets.QWidget, "setToolTip"):
+    QtWidgets.QWidget.setToolTip = lambda self, _t: None
 if not hasattr(QtWidgets.QWidget, "setFocus"):
     QtWidgets.QWidget.setFocus = lambda self: None
 if not hasattr(QtWidgets.QWidget, "setStyleSheet"):

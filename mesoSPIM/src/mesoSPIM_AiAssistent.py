@@ -359,7 +359,7 @@ def _build_one(endpoint, model_id):
         from pydantic_ai.providers.anthropic import AnthropicProvider
 
         return AnthropicModel(model_id, provider=AnthropicProvider(api_key=endpoint.api_key))
-    # "openai" and any OpenAI-compatible server; a local server needs no key.
+    # "openai" and any OpenAI-compatible; a local server needs no key.
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
 
