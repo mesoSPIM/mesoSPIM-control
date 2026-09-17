@@ -317,7 +317,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.model.setMinimumWidth(186)                           # fits the preset model names
         self.key.setMinimumWidth(130)
         self.base_url.setMinimumWidth(200)                        # fits the preset address
-        self.connect_button.setMinimumWidth(130)                  # "Connected" in bold, no jump
+        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
         second = max(w.sizeHint().width() for w in (self._provider_label, self._base_url_label, self._key_label))
         for column, width in ((0, first.sizeHint().width()), (1, 144), (2, second),
                               (3, self.provider.sizeHint().width()), (4, vision_label.sizeHint().width())):
