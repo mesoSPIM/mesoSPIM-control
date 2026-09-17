@@ -28,15 +28,17 @@ integration
 The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to two
 boxes, **Preferences** and **Model**, and opens by itself when something needs the operator:
 nothing configured yet, a missing key, or a local model that failed to start. Once the assistant
-is ready it folds back. The Model box has a Local AI line and a Cloud AI line; the radio in front
-chooses, and the other line is greyed.
+is ready it folds back. The Model box is one line led by a **Local AI / Cloud AI** dropdown; the
+fields after it follow the choice.
 
-**Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style** for any server that speaks
-the OpenAI API, such as an Ollama or vLLM already running somewhere, given by its base URL), keep
-or edit the prefilled model name, and type the API key into the masked field. The key is kept in memory for this mesoSPIM
-session only and is never written to the repository, the microscope config, or a log. An empty
-field falls back to the provider's environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`,
-`ANTHROPIC_API_KEY`), so a key exported before starting mesoSPIM keeps working.
+**Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style** for any server that
+speaks the OpenAI API, such as an Ollama or vLLM already running somewhere, or a hosted gateway),
+keep or edit the prefilled model name, and type the API key into the masked field. OpenAI-style
+also asks for the server's base URL, and there the key is optional: Ollama wants none, a gateway
+or a hosted API wants its token. The key is kept in memory for this mesoSPIM session only and is
+never written to the repository, the microscope config, or a log. An empty field falls back to
+the provider's environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`), so
+a key exported before starting mesoSPIM keeps working.
 
 **Local.** One **Model** dropdown lists the `.gguf` files in the models folder (`~/mesoSPIM/models`,
 or the `ai_assistant_models_folder` attribute of the microscope config; **Models folder…** points

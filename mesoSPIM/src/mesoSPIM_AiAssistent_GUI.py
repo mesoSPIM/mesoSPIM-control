@@ -28,6 +28,9 @@ from . import mesoSPIM_AiAssistent_Config as config
 from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint, vision_endpoint_for
 from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder
 
+LOCAL_MODE = "Local AI"
+CLOUD_MODE = "Cloud AI"
+
 _BUBBLE = "#2b3b47"      # the operator's own turns only — the answers stay on the tab background
 _DIM = "#9aa7b0"         # tool-call and note text
 
@@ -223,9 +226,10 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _build_setup(self, font):
         """Two titled boxes, like the Remote Control tab's setup group: Preferences on one line,
-        and Model with a Local AI line (a dropdown of model files; how a file is served is decided
-        behind Connect) and a Cloud AI line (provider, model, API key or base URL), each led by
-        its radio; the line not chosen is greyed, not hidden, so nothing moves."""
+        and Model on two, led by a Local AI / Cloud AI dropdown whose choice decides the fields:
+        a dropdown of model files and the folder button (how a file is served is decided behind
+        Connect), or provider and model, then the API key and, for an OpenAI-style server, its
+        base URL. Connect sits at the bottom right in every case."""
         setup = QtWidgets.QWidget(self)
         column = QtWidgets.QVBoxLayout(setup)
         column.setContentsMargins(0, 10, 0, 0)                     # air under the toggle; folds with the boxes
@@ -255,8 +259,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         preferences, options = box("Preferences")
         group, grid = box("Model")
 
-        self.cloud_radio = QtWidgets.QRadioButton("Cloud AI", group)
-        self.local_radio = QtWidgets.QRadioButton("Local AI", group)
+        self.mode = QtWidgets.QComboBox(group)
+        self.mode.addItems([LOCAL_MODE, CLOUD_MODE])
         self.provider = QtWidgets.QComboBox(group)
         self.provider.addItems(list(config.PROVIDERS))
         self.history_turns = QtWidgets.QSpinBox(preferences)
@@ -287,7 +291,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._local_model_label = label("Model", group)
         self._key_label = label("API key", group)
         self._base_url_label = label("Base URL", group)
-        for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
+        for widget in (self.mode, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button,
                        self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
@@ -302,41 +306,40 @@ class AiAssistentGUI(QtWidgets.QWidget):
         options.addWidget(label("Frame", preferences), 0, 6)
         options.addWidget(self.frame_size, 0, 7)
         options.setColumnStretch(8, 1)
-        # Model: the two lines share their columns, Connect at the bottom right. The last field
-        # (the key or the base URL, and the model file above it) takes the leftover width.
+        # Model: the first line is the mode and what names the model, the second the key (and
+        # the base URL, which pushes the key to the right: _on_provider_changed) and Connect.
+        # Columns 4 and 6 take the leftover width, so the model, the file, the URL and the key
+        # all grow with the window.
         self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
         self.model.setMinimumWidth(186)                           # fits the preset model names
-        self.model.setMaximumWidth(200)
-        self.key.setMinimumWidth(150)
+        self.key.setMinimumWidth(130)
         self.base_url.setMinimumWidth(200)                        # fits the preset address
-        self.connect_button.setMinimumWidth(106)                  # "Connected" in bold, no jump
-        grid.addWidget(self.local_radio, 0, 0)
+        self.connect_button.setMinimumWidth(130)                  # "Connected" in bold, no jump
+        grid.addWidget(self.mode, 0, 0)
         grid.addWidget(self._local_model_label, 0, 1)
         grid.addWidget(self.local_model, 0, 2, 1, 5)
-        grid.addWidget(self.folder_button, 0, 7)
-        grid.addWidget(self.cloud_radio, 1, 0)
-        grid.addWidget(self._provider_label, 1, 1)
-        grid.addWidget(self.provider, 1, 2)
-        grid.addWidget(self._model_label, 1, 3)
-        grid.addWidget(self.model, 1, 4)
-        grid.addWidget(self._key_label, 1, 5)
-        grid.addWidget(self.key, 1, 6)
-        grid.addWidget(self._base_url_label, 1, 5)
-        grid.addWidget(self.base_url, 1, 6)
+        grid.addWidget(self.folder_button, 1, 6, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        grid.addWidget(self._provider_label, 0, 1)
+        grid.addWidget(self.provider, 0, 2)
+        grid.addWidget(self._model_label, 0, 3)
+        grid.addWidget(self.model, 0, 4, 1, 3)
+        grid.addWidget(self._base_url_label, 1, 1)
+        grid.addWidget(self.base_url, 1, 2, 1, 3)
         grid.addWidget(self.connect_button, 1, 7)
+        grid.setColumnStretch(4, 1)
         grid.setColumnStretch(6, 1)
+        self._model_grid = grid
         self.tools_profile.currentTextChanged.connect(self._apply_profile)
         self.history_turns.valueChanged.connect(self._apply_options)
         self.frame_size.valueChanged.connect(self._apply_options)
 
-        self.cloud_radio.toggled.connect(self._on_mode_changed)
-        self.local_radio.toggled.connect(self._on_mode_changed)
+        self.mode.currentTextChanged.connect(self._on_mode_changed)
         self.provider.currentTextChanged.connect(self._on_provider_changed)
         self.folder_button.clicked.connect(self.on_choose_folder)
         self.connect_button.clicked.connect(self.on_connect)
         self.provider.setCurrentText(config.DEFAULT_PROVIDER)
         self._on_provider_changed(config.DEFAULT_PROVIDER)
-        self.cloud_radio.setChecked(True)
+        self.mode.setCurrentText(CLOUD_MODE)
         self._on_mode_changed()
         return setup
 
@@ -356,32 +359,47 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- setup row state ---
     def _local_mode(self):
-        return self.local_radio.isChecked()
+        return self.mode.currentText() == LOCAL_MODE
 
     def _on_mode_changed(self, *_):
-        """Grey the line that is not chosen; the local list is rescanned when its line wakes."""
+        """Show the fields for the mode chosen, and hand the leftover width to the one that can
+        use it. The local list is rescanned when it appears."""
         local = self._local_mode()
-        for widget in (self._provider_label, self.provider, self._model_label, self.model,
-                       self._key_label, self.key, self._base_url_label, self.base_url):
-            widget.setEnabled(not local)
+        server = not local and config.PROVIDERS[self.provider.currentText()]["kind"] == "openai-compatible"
         for widget in (self._local_model_label, self.local_model, self.folder_button):
-            widget.setEnabled(local)
+            widget.setVisible(local)
+        for widget in (self._provider_label, self.provider, self._model_label, self.model,
+                       self._key_label, self.key):
+            widget.setVisible(not local)
+        for widget in (self._base_url_label, self.base_url):
+            widget.setVisible(server)
         if local:
             self._scan_models()
 
     def _on_provider_changed(self, name):
-        """Prefill the preset and show the field the provider needs: a key, or a base URL."""
+        """Prefill the preset. An OpenAI-style server also shows its base URL, and its key is
+        optional: Ollama wants none, a gateway or a hosted API wants one."""
         preset = config.PROVIDERS[name]
-        server = preset["kind"] == "openai-compatible"
         self.model.setText(preset["model"])
         self.base_url.setText(preset.get("base_url", ""))
         key_env = preset.get("key_env")
         in_env = bool(key_env and os.environ.get(key_env))
-        self.key.setPlaceholderText(f"using {key_env} from the environment" if in_env else f"{name} API key")
-        for widget in (self._key_label, self.key):
-            widget.setVisible(not server)
-        for widget in (self._base_url_label, self.base_url):
-            widget.setVisible(server)
+        if preset["kind"] == "openai-compatible":
+            placeholder = "optional"
+        else:
+            placeholder = f"using {key_env} from the environment" if in_env else f"{name} API key"
+        self.key.setPlaceholderText(placeholder)
+        # The key takes the whole second line, or the end of it after the base URL.
+        grid = self._model_grid
+        grid.removeWidget(self._key_label)
+        grid.removeWidget(self.key)
+        if preset["kind"] == "openai-compatible":
+            grid.addWidget(self._key_label, 1, 5)
+            grid.addWidget(self.key, 1, 6)
+        else:
+            grid.addWidget(self._key_label, 1, 1)
+            grid.addWidget(self.key, 1, 2, 1, 5)
+        self._on_mode_changed()
 
     def _scan_models(self):
         """Fill the local dropdown from the models folder; say so when it holds nothing."""
@@ -599,14 +617,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _set_running(self, running):
         self.input.setEnabled(not running)
-        for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
+        for widget in (self.mode, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button, self.new_button,
                        self.vision_provider, self.tools_profile):
             widget.setEnabled(not running)      # the endpoint and tool set change only between turns
         if running:
             self._set_expanded(False)
-        else:
-            self._on_mode_changed()             # the line not chosen goes grey again
         self.status.setText("mesoSPIM is working…" if running else "")
         self.status.setVisible(running)
         if not running:

@@ -90,7 +90,8 @@ for _layout in (QtWidgets.QVBoxLayout, QtWidgets.QHBoxLayout, QtWidgets.QFormLay
     if not hasattr(_layout, "addLayout"):
         _layout.addLayout = lambda self, *a, **k: None
 if not hasattr(QtWidgets.QLineEdit, "setPlaceholderText"):
-    QtWidgets.QLineEdit.setPlaceholderText = lambda self, _text: None
+    QtWidgets.QLineEdit.setPlaceholderText = lambda self, text: setattr(self, "_placeholder", text)
+    QtWidgets.QLineEdit.placeholderText = lambda self: getattr(self, "_placeholder", "")
 if not hasattr(QtWidgets.QLineEdit, "clear"):
     QtWidgets.QLineEdit.clear = lambda self: self.setText("")
 if not hasattr(QtWidgets.QWidget, "setVisible"):
@@ -204,6 +205,9 @@ class QGridLayout(QtWidgets.QVBoxLayout):
         pass
 
     def setColumnMinimumWidth(self, _column, _width):
+        pass
+
+    def removeWidget(self, _widget):
         pass
 
 

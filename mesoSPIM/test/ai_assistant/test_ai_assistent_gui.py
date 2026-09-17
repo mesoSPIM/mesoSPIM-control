@@ -122,13 +122,14 @@ def test_setup_row_prefills_the_default_provider():
     assert gui.connect_button.text() == "Connect"
 
 
-def test_choosing_a_local_provider_swaps_the_key_for_a_base_url():
+def test_an_openai_style_server_adds_a_base_url_and_keeps_an_optional_key():
     gui = _gui()
     gui.provider.setCurrentText("OpenAI-style")
     gui.provider.currentTextChanged.emit("OpenAI-style")
     assert gui.model.text() == "gemma4:31b"
     assert gui.base_url.text() == "http://localhost:11434/v1"
-    assert gui.base_url.isVisible() and not gui.key.isVisible()
+    assert gui.base_url.isVisible() and gui.key.isVisible()
+    assert gui.key.placeholderText() == "optional"
 
 
 def test_connect_without_a_key_explains_and_does_not_start(monkeypatch):
@@ -242,20 +243,25 @@ def _local_gui(tmp_path, monkeypatch, server_factory=_FakeServer):
     return gui, scheduled
 
 
-def test_local_mode_lists_model_files_and_greys_the_cloud_line(tmp_path, monkeypatch):
+def _choose_mode(gui, mode):
+    gui.mode.setCurrentText(mode)
+    gui.mode.currentTextChanged.emit(mode)
+
+
+def test_local_mode_lists_model_files_and_swaps_the_cloud_fields(tmp_path, monkeypatch):
     gui, _ = _local_gui(tmp_path, monkeypatch)
-    assert gui.provider.isEnabled() and not gui.local_model.isEnabled()
-    gui.local_radio.setChecked(True)
+    assert gui.provider.isVisible() and not gui.local_model.isVisible()
+    _choose_mode(gui, "Local AI")
     assert gui.local_model.items() == ["gemma-4-12b-q4.gguf", "qwen3.5-8b-q4.gguf"]
-    assert gui.local_model.isEnabled() and gui.folder_button.isEnabled()
-    assert not gui.key.isEnabled() and not gui.provider.isEnabled() and not gui.model.isEnabled()
-    gui.cloud_radio.setChecked(True)
-    assert gui.provider.isEnabled() and not gui.local_model.isEnabled()
+    assert gui.local_model.isVisible() and gui.folder_button.isVisible()
+    assert not gui.key.isVisible() and not gui.provider.isVisible() and not gui.model.isVisible()
+    _choose_mode(gui, "Cloud AI")
+    assert gui.provider.isVisible() and not gui.local_model.isVisible()
 
 
 def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
-    gui.local_radio.setChecked(True)
+    _choose_mode(gui, "Local AI")
     gui.local_model.setCurrentText("qwen3.5-8b-q4.gguf")
     gui.on_connect()
     (server,) = _SERVERS
@@ -275,7 +281,7 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
 def test_local_server_failure_is_reported_and_cleaned_up(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch,
                                 server_factory=lambda path: _FakeServer(path, error="exited with code 3"))
-    gui.local_radio.setChecked(True)
+    _choose_mode(gui, "Local AI")
     gui.on_connect()
     scheduled.pop()()
     (server,) = _SERVERS
@@ -286,12 +292,12 @@ def test_local_server_failure_is_reported_and_cleaned_up(tmp_path, monkeypatch):
 
 def test_switching_models_or_going_cloud_stops_the_previous_server(tmp_path, monkeypatch):
     gui, _ = _local_gui(tmp_path, monkeypatch)
-    gui.local_radio.setChecked(True)
+    _choose_mode(gui, "Local AI")
     gui.on_connect()
     first = _SERVERS[-1]
     gui.on_connect()                                           # a second Connect replaces the child
     assert first.stopped and len(_SERVERS) == 2
-    gui.cloud_radio.setChecked(True)
+    _choose_mode(gui, "Cloud AI")
     gui.key.setText("k")
     gui.on_connect()
     assert _SERVERS[-1].stopped and gui._local_server is None
@@ -301,7 +307,7 @@ def test_empty_models_folder_is_explained(tmp_path, monkeypatch):
     gui, _ = _local_gui(tmp_path, monkeypatch)
     for name in ("qwen3.5-8b-q4.gguf", "gemma-4-12b-q4.gguf"):
         (tmp_path / name).unlink()
-    gui.local_radio.setChecked(True)
+    _choose_mode(gui, "Local AI")
     assert gui.local_model.items() == [] and not gui.local_model.isEnabled()
     gui.on_connect()
     assert "Put a model file" in gui.output.toPlainText()
@@ -312,7 +318,7 @@ def test_choosing_a_folder_rescans(tmp_path, monkeypatch):
     other = tmp_path / "other"
     other.mkdir()
     (other / "phi.gguf").write_bytes(b"")
-    gui.local_radio.setChecked(True)
+    _choose_mode(gui, "Local AI")
     QtWidgets.QFileDialog.chosen = str(other)
     gui.on_choose_folder()
     QtWidgets.QFileDialog.chosen = ""
@@ -361,7 +367,7 @@ def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
 
 def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
-    gui.local_radio.setChecked(True)
+    _choose_mode(gui, "Local AI")
     gui.on_connect()
     assert gui.connect_button.text() == "Starting…"
     scheduled.pop()(); scheduled.pop()()
