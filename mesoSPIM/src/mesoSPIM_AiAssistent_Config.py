@@ -46,16 +46,10 @@ LOOK_IMAGE_SIZE = 1024
 SAME_AS_MODEL = "same as model"
 
 # Commands the tab asks the operator about before they run (Run / Cancel), whatever the model was
-# told. They move the sample or start a long run. An unanswered question counts as Cancel.
-CONFIRM_FIRST = (
-    "load_sample",
-    "unload_sample",
-    "run_acquisition_list",
-    "run_selected_acquisition",
-    "preview_acquisition",
-    "time_lapse_start",
-)
-CONFIRM_TIMEOUT_S = 120
+# told: the stage moves that cross the full range and can collide faster than anyone can react.
+# Long runs are not gated in code; the model summarises and asks only when something looks off
+# (see assistant_manual.md), and Stop microscope ends them.
+CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition")
 
 POLL_INTERVAL_S = 0.15
 MAX_HISTORY_TURNS = 20  # older turns (and their tool results) are dropped from what the model sees

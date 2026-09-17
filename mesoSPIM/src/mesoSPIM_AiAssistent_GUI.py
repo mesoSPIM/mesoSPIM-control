@@ -101,7 +101,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _apply_options(self, *_):
         if self._worker is not None:
-            self._worker.gate.timeout = self.confirm_wait.value()
             self._worker.max_history_turns = self.history_turns.value()
             self._worker.look_image_size = self.frame_size.value()
 
@@ -204,10 +203,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.local_radio = QtWidgets.QRadioButton("Local", group)
         self.provider = QtWidgets.QComboBox(group)
         self.provider.addItems(list(config.PROVIDERS))
-        self.confirm_wait = QtWidgets.QSpinBox(group)
-        self.confirm_wait.setRange(10, 3600)
-        self.confirm_wait.setValue(config.CONFIRM_TIMEOUT_S)
-        self.confirm_wait.setSuffix(" s")
         self.history_turns = QtWidgets.QSpinBox(group)
         self.history_turns.setRange(1, 200)
         self.history_turns.setValue(config.MAX_HISTORY_TURNS)
@@ -234,7 +229,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._base_url_label = label("Base URL")
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button, self.setup_status,
-                       self.confirm_wait, self.history_turns, self.vision_provider, self.frame_size):
+                       self.history_turns, self.vision_provider, self.frame_size):
             widget.setFont(font)
 
         # Columns: 0 mode | 1 label | 2 field | 3 label | 4 field. Row 0 is the model, row 1 the
@@ -264,12 +259,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         grid.setColumnStretch(4, 2)
         rows.addLayout(grid)
 
-        # Operator preferences, applied at once: how long Run / Cancel waits for an answer, and
-        # how many turns the model remembers.
+        # Operator preferences, applied at once.
         options = QtWidgets.QHBoxLayout()
-        options.addWidget(label("Confirmation timeout"))
-        options.addWidget(self.confirm_wait)
-        options.addSpacing(16)
         options.addWidget(label("Remember last"))
         options.addWidget(self.history_turns)
         options.addWidget(label("turns"))
@@ -283,7 +274,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         vision.addWidget(self.frame_size)
         vision.addStretch(1)
         rows.addLayout(vision)
-        self.confirm_wait.valueChanged.connect(self._apply_options)
         self.history_turns.valueChanged.connect(self._apply_options)
         self.frame_size.valueChanged.connect(self._apply_options)
 

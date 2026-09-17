@@ -47,9 +47,8 @@ closing mesoSPIM stops the child. A server that fails to start is reported with 
 log. Use a GPU build of llama-cpp-python for anything above a few billion parameters; the 4B to 12B
 instruction models are the realistic range on a microscope PC.
 
-Two more rows hold preferences that apply at once: the confirmation timeout (how long the Run /
-Cancel question for a gated command waits before it counts as Cancel), how many turns the model remembers, and the **Vision
-model**: "same as model" lets the main model read frames when it can; a cloud provider here reads
+Two more rows hold preferences that apply at once: how many turns the model remembers, and the
+**Vision model**: "same as model" lets the main model read frames when it can; a cloud provider here reads
 frames on its behalf (keyed from that provider's environment variable), which gives a local
 text-only model eyes. The frame size sent to the vision model (longer side, 1024 px by default)
 sits next to it: smaller is cheaper and faster, and enough for "is it centred" or "is it
@@ -74,11 +73,12 @@ interrupts the assistant with it.
 These are known and deliberate; read them before using the tab on an instrument with a sample
 loaded.
 
-- **Six commands are gated by the operator, in code.** `load_sample`, `unload_sample`,
-  `run_acquisition_list`, `run_selected_acquisition`, `preview_acquisition` and `time_lapse_start`
-  do not execute until the operator presses **Run** in the bar that appears above the input; Cancel,
-  Cancel, or silence for the configured wait (two minutes by default) count as Cancel, and the
-  model is told the operator refused. This holds whatever the model was told or talked into.
+- **Three stage moves are gated by the operator, in code.** `load_sample`, `unload_sample` and
+  `preview_acquisition` cross the stage's range and can collide faster than anyone reacts, so they
+  do not execute until the operator presses **Run** in the bar above the input; Cancel there,
+  Cancel request or Stop microscope refuse, and the model is told so. Starting a run is not gated:
+  the model is instructed to summarise and ask only when the state shows something off (empty
+  list, missing folder, short disk, pending warning) and Stop microscope ends a run at any time. This holds whatever the model was told or talked into.
 - **The model call has no timeout.** `WAIT_CAP_S` bounds the microscope leg only. If the endpoint
   stalls — a burst over a tokens-per-minute quota is the usual cause — the turn blocks until the
   HTTP layer gives up, and Cancel gates tool dispatch but cannot abort a request already in

@@ -99,12 +99,12 @@ def _configured_options(acceptor):
 
 class ConfirmationGate:
     """The operator's Run / Cancel for a confirm-first command, asked from the worker thread and
-    answered from the GUI thread. One question at a time; no answer within the timeout is Cancel.
-    This is a gate in code: the model cannot talk its way past it."""
+    answered from the GUI thread. One question at a time. The question waits as long as it takes:
+    nothing is pending at the provider or on the instrument meanwhile, and Cancel request and
+    Stop microscope answer it too. This is a gate in code: the model cannot talk its way past it."""
 
-    def __init__(self, on_ask, timeout=None):
+    def __init__(self, on_ask):
         self._on_ask = on_ask
-        self.timeout = config.CONFIRM_TIMEOUT_S if timeout is None else timeout  # seconds; the tab sets it
         self._answered = threading.Event()
         self._answer = False
 
@@ -112,7 +112,7 @@ class ConfirmationGate:
         self._answered.clear()
         self._answer = False
         self._on_ask(name, json.dumps(args or {}))
-        self._answered.wait(self.timeout)
+        self._answered.wait()
         return self._answer
 
     def answer(self, allowed):
@@ -410,7 +410,7 @@ class AssistantWorker(QtCore.QObject):
         self._history = []
         self.cancel = threading.Event()
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit)
-        self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these two
+        self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
         self.look_image_size = config.LOOK_IMAGE_SIZE
 
     def configure(self, endpoint, vision_endpoint=None):

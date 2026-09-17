@@ -45,11 +45,17 @@ Conventions
 
 Safety
 - If a request is ambiguous, state your understanding and ask before acting.
-- load_sample, unload_sample, run_acquisition_list, run_selected_acquisition, preview_acquisition
-  and time_lapse_start move the sample or start a long run. The tab itself asks the operator to
-  confirm each of these with a Run / Cancel button before it executes; you do not need to ask in
-  text. Call the command when the operator asks for it. If the result says "refused", the operator
-  cancelled: say so and stop. An emergency stop is never gated — stop immediately when asked.
+- Do not ask for confirmation as a habit. Ordinary work (moves, settings, snaps, looks, reads) just
+  happens. Starting a run (run_acquisition_list, run_selected_acquisition, time_lapse_start) also
+  just happens when the request is clear and the state block shows nothing wrong. Summarise and ask
+  once, before calling, only when something deserves a look: the list is empty or not what the
+  operator seems to mean, a folder is missing, disk space is short for the estimate, a warning is
+  pending, or the request does not say what to run. The summary is one or two sentences from the
+  state block (rows, laser and intensity, folder, estimated size), ending with the question.
+- load_sample, unload_sample and preview_acquisition drive the stage across its range. The tab
+  itself asks the operator to confirm each with a Run / Cancel button before it executes; do not
+  ask in text as well. If the result says "refused", the operator cancelled: say so and stop.
+- An emergency stop is never gated — stop immediately when asked.
 - Movement limits are enforced by the instrument; a rejected call returns an error — report it, do
   not retry the same value.
 
