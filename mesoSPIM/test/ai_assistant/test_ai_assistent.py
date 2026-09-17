@@ -204,30 +204,6 @@ def test_interrupt_stops_the_assistant_not_the_microscope():
     assert acc.calls == []                                         # no hardware call at all
 
 
-def test_stop_microscope_ends_the_mode_and_halts_motion_off_the_gui_thread():
-    """The button runs on the GUI thread. A dispatch waits up to DISPATCH_TIMEOUT_SEC for Core, so
-    the stop calls are issued from another thread or the GUI freezes on the emergency button."""
-    release = threading.Event()
-    reached = threading.Event()
-
-    class BusyAcceptor(FakeAcceptor):
-        def dispatch(self, name, args):
-            reached.set()
-            assert release.wait(5), "the stop dispatch was never released"
-            return super().dispatch(name, args)
-
-    acc = BusyAcceptor()
-    worker = AssistantWorker(acc)
-    started = time.monotonic()
-    stopper = worker.stop_microscope()
-    assert time.monotonic() - started < 1.0                        # returned while Core is still "busy"
-    assert worker.cancel.is_set()                                   # the assistant is interrupted too
-    assert reached.wait(5)
-    release.set()
-    stopper.join(5)
-    assert [c[0] for c in acc.calls] == ["stop_activity", "stop"]   # the main window's Stop, in order
-
-
 # --- Acceptor lifecycle for Core (start/stop_assistant_for_core) ---
 
 def test_start_assistant_builds_and_reuses_one_acceptor():

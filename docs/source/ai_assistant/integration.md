@@ -92,8 +92,8 @@ Core-owned Acceptor.
 
 - The Acceptor is acquired lazily on the first message, not at startup; until then the Remote Control
   transports stay usable.
-- One turn runs at a time — the input disables while the agent works (single-flight); Cancel gates
-  further dispatches; Stop microscope also stops the instrument.
+- One turn runs at a time — the input disables while the agent works (single-flight); Cancel request gates
+  further dispatches; Stop microscope now stops the instrument the main window's way.
 - Every mutating tool blocks until the microscope actually finishes, so the agent sees completed
   actions, not `processing`; a long acquisition past the wait cap returns `still_running`.
 - A rate-limited or unavailable Gemini primary rolls over to its fallback model within the turn;

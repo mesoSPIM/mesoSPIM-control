@@ -501,21 +501,3 @@ class AssistantWorker(QtCore.QObject):
         self.cancel.set()
         self.gate.answer(False)
 
-    def stop_microscope(self):
-        """The emergency stop, and the assistant with it: end a running mode (live, an
-        acquisition) with stop_activity and halt stage motion with stop, the same two calls the
-        main window's Stop button makes. Dispatched from a helper thread, since a dispatch waits
-        up to DISPATCH_TIMEOUT_SEC for Core and the GUI thread must not; returned so a caller can
-        join it."""
-        self.interrupt()
-
-        def issue_stop():
-            for name in ("stop_activity", "stop"):
-                try:
-                    self._acceptor.dispatch(name, {})
-                except Exception:
-                    pass
-
-        stopper = threading.Thread(target=issue_stop, name="ai-assistant-stop", daemon=True)
-        stopper.start()
-        return stopper

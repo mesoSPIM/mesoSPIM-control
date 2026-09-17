@@ -71,9 +71,11 @@ live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 Open the **AI Assistant** tab and type. Commands the agent runs stream live above each answer, so
 the operator sees exactly which named calls were issued. **Cancel request** stops the assistant: no
 further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the
-model's next reply; what the assistant already started keeps running. **Stop microscope** stops
-the instrument the way the main window's Stop does (it ends a running mode and halts motion) and
-interrupts the assistant with it.
+model's next reply; what the assistant already started keeps running. **Stop microscope now** is
+the main window's Stop: the same queued signals to Core (state idle aborts the running mode, the
+time lapse is cancelled) plus the stage stop, sent straight from the tab with nothing of the
+assistant in between, so it is as immediate as the button on the main window and works before the
+assistant has ever connected. It cancels the assistant as well.
 
 ## Limitations
 

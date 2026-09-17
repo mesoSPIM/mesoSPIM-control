@@ -42,12 +42,33 @@ class _FakeCore:
         self._assistant_acceptor = None
 
 
+class _Signal:
+    """A bound signal stand-in: connect stores slots, emit calls them."""
+
+    def __init__(self):
+        self._slots = []
+
+    def connect(self, slot, *_a, **_k):
+        self._slots.append(slot)
+
+    def emit(self, *args):
+        for slot in list(self._slots):
+            slot(*args)
+
+
 class _FakeParent:
+    """MainWindow as the tab sees it, including the Stop button's method and the stage stop."""
+
     def __init__(self, core):
         self.TabWidget = _FakeTabWidget()
         self.remote_control = object()
         self.TabWidget.addTab(self.remote_control, "Remote Control")
         self.core = core
+        self.stops = 0
+        self.sig_stop_movement = _Signal()
+
+    def stop_acquisition_and_timelapse(self):
+        self.stops += 1
 
 
 def _collect(signal):
@@ -427,17 +448,20 @@ def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
     assert "OPENAI_API_KEY" in gui.output.toPlainText()
 
 
-def test_stop_microscope_button_is_always_available_and_stops_through_the_worker():
+def test_stop_microscope_now_goes_the_main_windows_way_and_cancels_the_assistant():
     gui = _gui()
+    window = gui.main_window
+    halted = _collect(window.sig_stop_movement)
     assert gui.stop_button.isEnabled()
-    gui.on_stop_microscope()                                        # no worker yet: nothing to stop, no crash
-    stopped = []
-    gui._worker = type("_W", (), {"stop_microscope": lambda self: stopped.append(True) or None})()
+    gui.on_stop_microscope()                                        # before any assistant: still stops
+    assert window.stops == 1 and len(halted) == 1
+    cancelled = []
+    gui._worker = type("_W", (), {"interrupt": lambda self: cancelled.append(True)})()
     gui._set_running(True)
-    assert gui.stop_button.isEnabled() and not gui.new_button.isEnabled()
+    assert gui.stop_button.isEnabled()
     gui.on_stop_microscope()
-    assert stopped == [True]
-    assert "[stop microscope]" in gui.output.toPlainText()
+    assert window.stops == 2 and len(halted) == 2 and cancelled == [True]
+    assert "[stop microscope now]" in gui.output.toPlainText()
 
 
 def test_cancel_request_is_always_clickable_and_idle_between_turns():

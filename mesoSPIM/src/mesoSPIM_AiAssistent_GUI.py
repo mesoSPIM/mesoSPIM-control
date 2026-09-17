@@ -186,7 +186,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.stop_button = QtWidgets.QPushButton("Stop microscope now", self)
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
-        self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: an emergency stop
+        self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: the emergency stop
         self.new_button = QtWidgets.QPushButton("New session", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
@@ -548,12 +548,16 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._render()
 
     def on_stop_microscope(self):
-        """Stop the instrument through the assistant's own gate, and the assistant with it. Without
-        a worker there is nothing the assistant started; the main window's Stop covers the rest."""
+        """The emergency stop, exactly as the main window's Stop button does it and just as fast:
+        from the GUI thread, the same queued signals to Core (state idle aborts the running mode,
+        the time lapse is cancelled) plus the stage stop, with no assistant thread or dispatcher
+        in between. Works before the assistant has ever connected. The assistant is cancelled too."""
         if self._worker is not None:
-            self._worker.stop_microscope()
+            self._worker.interrupt()
+        self.main_window.stop_acquisition_and_timelapse()
+        self.main_window.sig_stop_movement.emit()
         self._show_confirmation(False)
-        self._blocks.append(self._note_block("[stop microscope]"))
+        self._blocks.append(self._note_block("[stop microscope now]"))
         self._render()
 
     def on_new_conversation(self):
