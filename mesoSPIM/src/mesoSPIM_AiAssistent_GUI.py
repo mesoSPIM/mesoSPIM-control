@@ -155,8 +155,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.input.returnPressed.connect(self.on_submit)
         self.interrupt = QtWidgets.QPushButton("Cancel request", self)
         self.interrupt.setFont(font)
-        self.interrupt.setEnabled(False)
-        self.interrupt.clicked.connect(self.on_interrupt)
+        self.interrupt.clicked.connect(self.on_interrupt)   # always clickable; a no-op between turns
         self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
@@ -504,6 +503,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.sig_run_turn.emit(text)
 
     def on_interrupt(self):
+        if self.input.isEnabled():
+            return                                  # nothing is running
         if self._worker is not None:
             self._worker.interrupt()
         self._show_confirmation(False)
@@ -550,7 +551,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _set_running(self, running):
         self.input.setEnabled(not running)
-        self.interrupt.setEnabled(running)
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button, self.new_button,
                        self.vision_provider):

@@ -440,3 +440,16 @@ def test_stop_microscope_button_is_always_available_and_stops_through_the_worker
     gui.on_stop_microscope()
     assert stopped == [True]
     assert "[stop microscope]" in gui.output.toPlainText()
+
+
+def test_cancel_request_is_always_clickable_and_idle_between_turns():
+    gui = _gui()
+    assert gui.interrupt.isEnabled()
+    gui.on_interrupt()                                              # idle: nothing happens
+    assert "[cancelled]" not in gui.output.toPlainText()
+    interrupted = []
+    gui._worker = type("_W", (), {"interrupt": lambda self: interrupted.append(True)})()
+    gui._set_running(True)
+    assert gui.interrupt.isEnabled()
+    gui.on_interrupt()
+    assert interrupted == [True] and "[cancelled]" in gui.output.toPlainText()
