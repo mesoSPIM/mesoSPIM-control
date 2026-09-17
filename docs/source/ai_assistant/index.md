@@ -47,8 +47,15 @@ closing mesoSPIM stops the child. A server that fails to start is reported with 
 log. Use a GPU build of llama-cpp-python for anything above a few billion parameters; the 4B to 12B
 instruction models are the realistic range on a microscope PC.
 
-Two more rows hold preferences that apply at once: how many turns the model remembers, and the
-**Vision model**: "same as model" lets the main model read frames when it can; a cloud provider here reads
+Two more rows hold preferences that apply at once. **Tools** chooses what the assistant may do:
+*Acquire* (the default) is for a user setting up a sample on a configured microscope: reads, stage
+and sample moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live,
+and the acquisition and time lapse commands. *Configure* adds the machine: ETL, galvo, laser and
+camera timing, the ETL calibration files, the alignment modes and the generic setting call. In
+Acquire the other commands are not offered to the model at all, so it cannot be talked into them.
+The start-up choice can be fixed per microscope with the config attribute `ai_assistant_tools`.
+TCP and MCP always serve every command; this is the assistant only. Then: how many turns the model
+remembers, and the **Vision model**: "same as model" lets the main model read frames when it can; a cloud provider here reads
 frames on its behalf (keyed from that provider's environment variable), which gives a local
 text-only model eyes. The frame size sent to the vision model (longer side, 1024 px by default)
 sits next to it: smaller is cheaper and faster, and enough for "is it centred" or "is it

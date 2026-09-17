@@ -97,6 +97,17 @@ def _configured_options(acceptor):
     return reply if isinstance(reply, dict) else None
 
 
+def _only_keys(fn, name, keys):
+    """Refuse, as data, any argument outside `keys`; then call through."""
+    def _call(**args) -> str:
+        extra = sorted(set(args) - set(keys))
+        if extra:
+            return json.dumps({"error": {"code": "validation",
+                                         "message": f"{name} offers only {', '.join(keys)} in this profile; not {', '.join(extra)}"}})
+        return fn(**args)
+    return _call
+
+
 class ConfirmationGate:
     """The operator's Run / Cancel for a confirm-first command, asked from the worker thread and
     answered from the GUI thread. One question at a time. The question waits as long as it takes:
@@ -212,20 +223,45 @@ _LOOK_SCHEMA = {
 }
 
 
+def offered_commands(profile=None):
+    """The commands the assistant offers under a tool profile, in registry order. A profile whose
+    set is None offers everything. The prompt-only commands are never tools."""
+    allowed = config.TOOL_PROFILES[profile or config.DEFAULT_TOOL_PROFILE]
+    return [cmd for name, cmd in COMMANDS.items()
+            if name not in _PROMPT_ONLY and (allowed is None or name in allowed)]
+
+
+def _narrowed(cmd, keys):
+    """A copy of the command's schema offering only `keys`, and a check for a call to it."""
+    schema = dict(cmd.schema)
+    schema["properties"] = {k: v for k, v in cmd.schema["properties"].items() if k in keys}
+    required = [k for k in cmd.schema.get("required", []) if k in keys]
+    schema.pop("required", None)
+    if required:
+        schema["required"] = required
+    return schema
+
+
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, gate=None, vision_endpoint=None,
-                image_size=None):
-    """One passthrough tool per command, minus the prompt-only ones (get_manual is already in the
-    system prompt). The tool list otherwise IS COMMANDS — never hand-maintained.
+                image_size=None, profile=None):
+    """One passthrough tool per offered command (see offered_commands). The tool list is derived
+    from COMMANDS and the profile — never hand-maintained.
 
     Each tool publishes the command's own JSON schema (the one MCP tools/list serves), so the model
     sees the argument names, types and ranges. from_schema skips pydantic's validation of the call,
-    which keeps accept() the single place a call can be refused, with one error vocabulary."""
+    which keeps accept() the single place a call can be refused, with one error vocabulary. In the
+    Acquire profile a straddling command is offered with a narrowed schema and refuses the rest."""
     from pydantic_ai import Tool
-    tools = [
-        Tool.from_schema(_tool_fn(acceptor, name, cmd.kind, cancel, on_call, gate),
-                         name=name, description=cmd.hint or name, json_schema=cmd.schema)
-        for name, cmd in COMMANDS.items() if name not in _PROMPT_ONLY
-    ]
+    narrow = config.ACQUIRE_ARGS if (profile or config.DEFAULT_TOOL_PROFILE) == "Acquire" else {}
+    tools = []
+    for cmd in offered_commands(profile):
+        fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate)
+        schema = cmd.schema
+        if cmd.name in narrow:
+            keys = narrow[cmd.name]
+            schema = _narrowed(cmd, keys)
+            fn = _only_keys(fn, cmd.name, keys)
+        tools.append(Tool.from_schema(fn, name=cmd.name, description=cmd.hint or cmd.name, json_schema=schema))
     if endpoint is not None:
         eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see
 
@@ -258,11 +294,11 @@ def with_state(acceptor, text):
     return f"{text}\n\n<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>"
 
 
-def build_system_prompt(acceptor=None):
-    """The hand-written preamble (units, frames, safety) plus one line per command. Argument shapes
-    come from the tool schemas, so the prompt does not repeat them."""
+def build_system_prompt(acceptor=None, profile=None):
+    """The hand-written preamble (units, frames, safety) plus one line per offered command.
+    Argument shapes come from the tool schemas, so the prompt does not repeat them."""
     preamble = (Path(__file__).parent / "assistant_manual.md").read_text(encoding="utf-8")
-    lines = [f"- {cmd.name} ({cmd.kind}): {cmd.hint}" for cmd in COMMANDS.values() if cmd.name not in _PROMPT_ONLY]
+    lines = [f"- {cmd.name} ({cmd.kind}): {cmd.hint}" for cmd in offered_commands(profile)]
     return preamble + "\n\n# Commands\n\n" + "\n".join(lines)
 
 
@@ -343,7 +379,7 @@ def build_model(endpoint):
 
 
 def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None, gate=None,
-                vision_endpoint=None, image_size=None):
+                vision_endpoint=None, image_size=None, profile=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -352,9 +388,9 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
         model = build_model(endpoint or Endpoint.from_preset(config.DEFAULT_PROVIDER))
     # instructions (not system_prompt): applied fresh each run, not accumulated into the
     # message history we carry across turns.
-    return Agent(model, instructions=build_system_prompt(acceptor),
+    return Agent(model, instructions=build_system_prompt(profile=profile),
                  tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
-                                   vision_endpoint=vision_endpoint, image_size=image_size))
+                                   vision_endpoint=vision_endpoint, image_size=image_size, profile=profile))
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---
@@ -406,6 +442,7 @@ class AssistantWorker(QtCore.QObject):
         self._acceptor = acceptor
         self._endpoint = None  # set by configure() before the first turn
         self._vision_endpoint = None
+        self._profile = config.DEFAULT_TOOL_PROFILE
         self._agent = None
         self._history = []
         self.cancel = threading.Event()
@@ -413,11 +450,17 @@ class AssistantWorker(QtCore.QObject):
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
         self.look_image_size = config.LOOK_IMAGE_SIZE
 
-    def configure(self, endpoint, vision_endpoint=None):
-        """Use another endpoint (and reader for frames) from the next turn on; the transcript
-        history is kept. Called from the GUI thread only between turns."""
+    def configure(self, endpoint, vision_endpoint=None, profile=None):
+        """Use another endpoint (and reader for frames, and tool profile) from the next turn on;
+        the transcript history is kept. Called from the GUI thread only between turns."""
         self._endpoint = endpoint
         self._vision_endpoint = vision_endpoint
+        self._profile = profile or config.DEFAULT_TOOL_PROFILE
+        self._agent = None
+
+    def set_profile(self, profile):
+        """Switch tool sets between turns; the agent is rebuilt with the next message."""
+        self._profile = profile
         self._agent = None
 
     def reset(self):
@@ -432,7 +475,7 @@ class AssistantWorker(QtCore.QObject):
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
                                           endpoint=self._endpoint, on_frame=self.sig_frame.emit, gate=self.gate,
                                           vision_endpoint=self._vision_endpoint,
-                                          image_size=lambda: self.look_image_size)
+                                          image_size=lambda: self.look_image_size, profile=self._profile)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.

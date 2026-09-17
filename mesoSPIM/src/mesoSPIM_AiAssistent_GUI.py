@@ -99,6 +99,10 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._thread.start()
         return True
 
+    def _apply_profile(self, *_):
+        if self._worker is not None:
+            self._worker.set_profile(self.tools_profile.currentText())
+
     def _apply_options(self, *_):
         if self._worker is not None:
             self._worker.max_history_turns = self.history_turns.value()
@@ -212,6 +216,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.frame_size.setSuffix(" px")
         self.vision_provider = QtWidgets.QComboBox(group)
         self.vision_provider.addItems([config.SAME_AS_MODEL] + [n for n, p in config.PROVIDERS.items() if p.get("vision")])
+        self.tools_profile = QtWidgets.QComboBox(group)
+        self.tools_profile.addItems(list(config.TOOL_PROFILES))
+        cfg = getattr(self.core, "cfg", None)
+        start = getattr(cfg, config.TOOLS_CONFIG_KEY, None)
+        self.tools_profile.setCurrentText(start if start in config.TOOL_PROFILES else config.DEFAULT_TOOL_PROFILE)
         self.model = QtWidgets.QLineEdit("", group)
         self.local_model = QtWidgets.QComboBox(group)
         self.key = QtWidgets.QLineEdit("", group)
@@ -229,7 +238,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._base_url_label = label("Base URL")
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button, self.setup_status,
-                       self.history_turns, self.vision_provider, self.frame_size):
+                       self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
 
         # Columns: 0 mode | 1 label | 2 field | 3 label | 4 field. Row 0 is the model, row 1 the
@@ -261,11 +270,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
         # Operator preferences, applied at once.
         options = QtWidgets.QHBoxLayout()
+        options.addWidget(label("Tools"))
+        options.addWidget(self.tools_profile)
+        options.addSpacing(16)
         options.addWidget(label("Remember last"))
         options.addWidget(self.history_turns)
         options.addWidget(label("turns"))
         options.addStretch(1)
         rows.addLayout(options)
+        self.tools_profile.currentTextChanged.connect(self._apply_profile)
         vision = QtWidgets.QHBoxLayout()
         vision.addWidget(label("Vision model"))
         vision.addWidget(self.vision_provider)
@@ -412,7 +425,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._note(message)
 
     def _use(self, endpoint, status=None):
-        self._worker.configure(endpoint, self._vision_endpoint())
+        self._worker.configure(endpoint, self._vision_endpoint(), self.tools_profile.currentText())
         self._endpoint = endpoint
         self.setup_status.setText(status or "ready")
         self._set_expanded(False)
@@ -543,8 +556,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.input.setEnabled(not running)
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button, self.new_button,
-                       self.vision_provider):
-            widget.setEnabled(not running)      # the endpoint changes only between turns
+                       self.vision_provider, self.tools_profile):
+            widget.setEnabled(not running)      # the endpoint and tool set change only between turns
         if running:
             self._set_expanded(False)
         self.status.setText("mesoSPIM is working…" if running else "")

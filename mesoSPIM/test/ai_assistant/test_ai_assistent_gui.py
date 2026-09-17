@@ -78,7 +78,7 @@ def test_submit_single_flight_disables_input(monkeypatch):
     gui = AiAssistentGUI(_FakeParent(_FakeCore(acceptor=object())))
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)   # pretend ready; no real thread
     monkeypatch.setenv("GEMINI_API_KEY", "k")
-    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None: None})()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None, profile=None: None})()
     sent = _collect(gui.sig_run_turn)
     gui.input.setText("hello")
     gui.on_submit()
@@ -127,7 +127,7 @@ def test_connect_with_a_key_configures_the_worker(monkeypatch):
     configured = []
 
     class _Worker:
-        def configure(self, endpoint, vision=None):
+        def configure(self, endpoint, vision=None, profile=None):
             configured.append(endpoint)
 
     gui._worker = _Worker()
@@ -146,7 +146,7 @@ def test_first_message_connects_with_the_typed_key(monkeypatch):
     configured = []
 
     class _Worker:
-        def configure(self, endpoint, vision=None):
+        def configure(self, endpoint, vision=None, profile=None):
             configured.append(endpoint)
 
     gui._worker = _Worker()
@@ -212,7 +212,7 @@ def _local_gui(tmp_path, monkeypatch, server_factory=_FakeServer):
     core = _FakeCore(acceptor=object())
     core.cfg = types.SimpleNamespace(ai_assistant_models_folder=str(tmp_path))
     gui = AiAssistentGUI(_FakeParent(core))
-    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None: setattr(self, "endpoint", endpoint)})()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None, profile=None: setattr(self, "endpoint", endpoint)})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     monkeypatch.setattr(gui_module, "LocalModelServer", server_factory)
     scheduled = []
@@ -327,7 +327,7 @@ def test_a_problem_opens_the_footer(monkeypatch):
 
 def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui = _gui()
-    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None: None})()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None, profile=None: None})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.setup_toggle.setChecked(True)
     gui.key.setText("g-key")
@@ -403,7 +403,7 @@ def test_vision_model_choice_reaches_the_worker(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "g")
     gui = _gui()
     configured = []
-    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None: configured.append((endpoint, vision))})()
+    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append((endpoint, vision))})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.provider.setCurrentText("Anthropic")
     gui.provider.currentTextChanged.emit("Anthropic")
@@ -418,7 +418,7 @@ def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     gui = _gui()
     configured = []
-    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None: configured.append(vision)})()
+    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append(vision)})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.key.setText("k")
     gui.vision_provider.setCurrentText("OpenAI")
@@ -451,3 +451,21 @@ def test_cancel_request_is_always_clickable_and_idle_between_turns():
     assert gui.interrupt.isEnabled()
     gui.on_interrupt()
     assert interrupted == [True] and "[cancelled]" in gui.output.toPlainText()
+
+
+def test_tools_choice_defaults_to_acquire_reaches_the_worker_and_follows_the_config(monkeypatch):
+    gui = _gui()
+    assert gui.tools_profile.currentText() == "Acquire"
+    configured, switched = [], []
+    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append(profile),
+                                  "set_profile": lambda self, profile: switched.append(profile)})()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    gui.key.setText("k")
+    gui.on_connect()
+    assert configured == ["Acquire"]
+    gui.tools_profile.setCurrentText("Configure")
+    gui.tools_profile.currentTextChanged.emit("Configure")
+    assert switched == ["Configure"]
+    core = _FakeCore(acceptor=object())
+    core.cfg = types.SimpleNamespace(ai_assistant_tools="Configure")
+    assert AiAssistentGUI(_FakeParent(core)).tools_profile.currentText() == "Configure"

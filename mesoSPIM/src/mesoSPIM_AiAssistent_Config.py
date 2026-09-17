@@ -45,6 +45,37 @@ LOOK_IMAGE_SIZE = 1024
 # The "Vision model" choice that means: the main model reads frames itself (if it can).
 SAME_AS_MODEL = "same as model"
 
+# Which commands the assistant offers the model. "Acquire" is for a user setting up a sample on a
+# configured microscope: everything about the sample and the session, nothing about the machine.
+# "Configure" is everything. TCP and MCP always serve every command; this is the assistant only.
+# A command not in the set is not offered at all, so the model never sees it. The microscope
+# config may choose the start-up profile with the attribute named in TOOLS_CONFIG_KEY.
+TOOL_PROFILES = {
+    "Acquire": {
+        # reads
+        "hello", "ping", "get_state", "get_position", "get_state_all", "get_config", "get_info",
+        "get_limits", "get_capabilities", "get_progress", "get_snapshot", "get_frame",
+        "get_acquisition_list", "stat_files", "get_disk_space", "check_motion_limits",
+        # sample and stage
+        "move_absolute", "move_relative", "load_sample", "unload_sample", "center_sample", "zero", "unzero",
+        # optics for the session (set_camera: the exposure time only, see ACQUIRE_ARGS)
+        "set_laser", "set_intensity", "set_filter", "set_zoom", "set_shutterconfig",
+        "open_shutters", "close_shutters", "set_camera",
+        # seeing
+        "snap", "start_live", "stop_activity", "stop",
+        # acquiring
+        "set_acquisition_list", "run_acquisition_list", "run_selected_acquisition",
+        "preview_acquisition", "acquire_start", "acquire_finish", "time_lapse_start", "time_lapse_stop",
+        # recovery
+        "clear_stuck_operation",
+    },
+    "Configure": None,  # every command
+}
+# In Acquire, a command that straddles both worlds is offered with these arguments only.
+ACQUIRE_ARGS = {"set_camera": ("camera_exposure_time",)}
+DEFAULT_TOOL_PROFILE = "Acquire"
+TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope config: "Acquire" or "Configure"
+
 # Commands the tab asks the operator about before they run (Run / Cancel), whatever the model was
 # told: the stage moves that cross the full range and can collide faster than anyone can react.
 # Long runs are not gated in code; the model summarises and asks only when something looks off
