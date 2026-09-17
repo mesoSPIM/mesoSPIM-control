@@ -51,7 +51,7 @@ from mesoSPIM.test.remote_control.support.live_session import wait_until as _wai
 
 pytestmark = pytest.mark.live_real_all
 
-TOTAL = len(VALID_CASES)  # 53
+TOTAL = len(VALID_CASES)  # 54
 OPERATIONAL = len(OPERATIONAL_COMMANDS)  # 37
 
 _CONFIRM_TOKEN = "I_UNDERSTAND_THIS_MOVES_REAL_HARDWARE"

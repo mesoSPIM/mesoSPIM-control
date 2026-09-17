@@ -33,7 +33,7 @@ one-operation rule, and produces the public reply.
 ```text
 mesoSPIM_RemoteControl_Config.py     constants, defaults, and shared names
 mesoSPIM_RemoteControl_Dispatcher.py operation state, dispatch, JSON, and errors
-mesoSPIM_RemoteControl_Commands.py   validation, limits, and 53 commands
+mesoSPIM_RemoteControl_Commands.py   validation, limits, and 54 commands
 mesoSPIM_RemoteControl_Servers.py    Core-thread routing, TCP, MCP, startup, and shutdown
 mesoSPIM_RemoteControl_GUI.py        operator controls and acquisition-table bridge
 ```
@@ -289,6 +289,8 @@ can call hardware. MainWindow waits for this sequence before continuing applicat
    (`initialize`, `tools/list`, `tools/call`), not the complete lifecycle or newer Streamable HTTP
    revisions.
 4. The API reports acquisition metadata and progress, not image pixels.
-5. Warning dialogs remain mesoSPIM dialogs; Remote Control does not dismiss them.
+5. Warning dialogs remain mesoSPIM dialogs; Remote Control does not dismiss them. The warning
+   text is also recorded on the active operation (`operation.warning`, and in the failure
+   reason of a refused acquisition) and in `get_info.warnings`, so a client learns why.
 6. Remote Control does not provide a filesystem sandbox. Its authenticated file-related commands
    intentionally use the same host access as the local mesoSPIM operator.

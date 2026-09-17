@@ -38,6 +38,7 @@ VALID_CASES = {
     "start_live": {},
     "start_visual_mode": {},
     "start_lightsheet_alignment_mode": {},
+    "snap": {"prefix": "remote"},
     "load_sample": {},
     "unload_sample": {},
     "center_sample": {},
@@ -104,6 +105,7 @@ EXPECTED_CORE_CALL = {
     "start_live": "set_state",
     "start_visual_mode": "set_state",
     "start_lightsheet_alignment_mode": "set_state",
+    "snap": "snap",
     "load_sample": "move_absolute",
     "unload_sample": "move_absolute",
     "center_sample": "move_absolute",
@@ -142,8 +144,8 @@ OPERATIONAL_COMMANDS = set(EXPECTED_CORE_CALL) | {
     "stop_activity",
 }
 
-assert len(VALID_CASES) == 53
-assert len(OPERATIONAL_COMMANDS) == 37
+assert len(VALID_CASES) == 54
+assert len(OPERATIONAL_COMMANDS) == 38
 
 # A universal negative case for every exact command name. Command-specific wrong types, unsafe
 # values, malformed envelopes, boundary breaches and races live in the adversarial suites; this

@@ -3,7 +3,7 @@
 This module contains all remotely callable commands and the rules that protect their inputs. It
 resolves effective hardware limits, builds read-only status documents, validates acquisition data,
 and maps accepted mutations to the existing mesoSPIM Core API. Importing the module registers all
-53 commands with the transport-independent dispatcher.
+54 commands with the transport-independent dispatcher.
 
 Every ordinary mutation is asynchronous. A call is validated and admitted first, then its accepted
 operation is returned before Core, hardware, or GUI work starts. Short actions complete when their
@@ -21,8 +21,10 @@ Maintainer (2026):
     thomdehoog@gmail.com
 """
 
+import glob
 import math
 import os
+import time
 
 from . import mesoSPIM_RemoteControl_Config as config
 from .mesoSPIM_RemoteControl_Dispatcher import (
@@ -31,6 +33,7 @@ from .mesoSPIM_RemoteControl_Dispatcher import (
     fail,
     request_stop,
     operation_snapshot,
+    recent_warnings,
     jsonable,
     strict_json_loads,
     clear_if_core_idle,
@@ -691,7 +694,7 @@ def _info_document(core):
         "last_acquisition_path": getattr(writer, "path", None),
         "etl_config_path": state(core, "ETL_cfg_file"),
         "operation": operation_snapshot(core),
-        "warnings": [],
+        "warnings": recent_warnings(core),
     }
 
 
@@ -1515,6 +1518,94 @@ command(
 )
 
 
+# --- Snap ---
+def _accept_snap(core, args):
+    only(args, ("folder", "prefix"))
+    folder = text(args, "folder", required=False)
+    if folder is not None and not os.path.isdir(folder):
+        raise ValidationError(f"folder {folder!r} is not an existing directory on the microscope PC")
+    prefix = text(args, "prefix", required=False, default="remote")
+    if not prefix or os.path.basename(prefix) != prefix:
+        raise ValidationError("prefix must be a plain filename prefix without path separators")
+    return {"folder": folder, "prefix": prefix}
+
+
+def _run_snap(core, args):
+    """Capture one frame and save it as the GUI Snap button does, minus the prefix dialog.
+
+    ``Core.snap(write_flag=False)`` runs the exposure and puts the frame in the display queue. The
+    GUI path would then open a modal prefix dialog on the microscope PC, which a remote client
+    cannot answer, so this command saves the frame itself through the same image writer. The frame
+    arrives from the camera thread, so the queue is cleared first and polled until it holds the
+    new frame.
+    """
+    from PyQt5 import QtCore
+
+    single_shot = getattr(core, "_remote_control_single_shot", QtCore.QTimer.singleShot)
+    folder, prefix = args["folder"], args["prefix"]
+    operation_id = schedule_current(core)
+    deadline = time.monotonic() + config.SNAP_TIMEOUT_SEC
+
+    def capture():
+        if not claim_scheduled(core, operation_id):
+            return
+        try:
+            if folder is not None:
+                core.state["snap_folder"] = folder
+            core.frame_queue_display.clear()
+            core.state["state"] = "snap"
+            try:
+                core.snap(write_flag=False)
+            finally:
+                core.state["state"] = "idle"
+        except Exception as error:
+            fail(core, config.MILESTONE_SNAP, error)
+            return
+        single_shot(config.SNAP_POLL_INTERVAL_MS, save)
+
+    def save():
+        operation = _session(core).get("operation")
+        if operation is None or operation.get("id") != operation_id or operation.get("status") != "processing":
+            return
+        if not core.frame_queue_display:
+            if time.monotonic() < deadline:
+                single_shot(config.SNAP_POLL_INTERVAL_MS, save)
+            else:
+                fail(core, config.MILESTONE_SNAP, RuntimeError("no frame arrived from the camera"))
+            return
+        try:
+            operation["result"] = {"path": _write_snap(core, core.frame_queue_display[0], prefix)}
+        except Exception as error:
+            fail(core, config.MILESTONE_SNAP, error)
+            return
+        complete(core, config.MILESTONE_SNAP)
+
+    single_shot(0, capture)
+    return {"scheduled": True, "prefix": prefix}
+
+
+def _write_snap(core, image, prefix):
+    """Save through mesoSPIM's own snap writer and return the file it created."""
+    pattern = os.path.join(state(core, "snap_folder"), f"{prefix}_*.tif")
+    before = set(glob.glob(pattern))
+    core.image_writer.write_snap_image(image, prefix=prefix)
+    written = set(glob.glob(pattern)) - before
+    if not written:
+        raise RuntimeError(f"the image writer saved nothing matching {pattern!r}")
+    return max(written)
+
+
+command(
+    "snap",
+    WAIT,
+    _run_snap,
+    accept=_accept_snap,
+    milestone=config.MILESTONE_SNAP,
+    hint="in: {folder?, prefix?}. out: {scheduled, prefix}; get_progress result gives {path}. "
+    "saves one frame as the GUI Snap does, without its prefix dialog",
+)
+
+
 # --- Configured sample positions ---
 def _preset_targets(core, mapping, required_message):
     """Build absolute targets from cfg-defined preset positions, each checked against the effective
@@ -1686,10 +1777,14 @@ def _enter_and_start(core, run_state, row):
         if operation_snapshot(core).get("stop_requested"):
             complete(core, config.MILESTONE_FINISHED)
         else:
+            # Core states the reason through sig_warning (a GUI dialog); the Acceptor records it
+            # on this operation so the client learns why instead of a bare "rejected".
+            warning = operation_snapshot(core).get("warning")
+            reason = f": {warning}" if warning else ""
             fail(
                 core,
                 config.MILESTONE_FINISHED,
-                RuntimeError("Core rejected the acquisition during preflight"),
+                RuntimeError(f"Core rejected the acquisition during preflight{reason}"),
             )
 
 

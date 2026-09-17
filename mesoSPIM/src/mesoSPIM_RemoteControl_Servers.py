@@ -34,6 +34,7 @@ from .mesoSPIM_RemoteControl_Dispatcher import (
     complete,
     precheck,
     operation_snapshot,
+    record_warning,
     COMMANDS,
     strict_json_loads,
     parse_call,
@@ -211,6 +212,7 @@ class Acceptor(QtCore.QObject):
         self._connect(getattr(core, "sig_finished", None), lambda: complete(core, config.MILESTONE_FINISHED))
         self._connect(getattr(core, "sig_time_lapse_finished", None), self._complete_time_lapse)
         self._connect(getattr(core, "sig_time_lapse_cancelled", None), self._complete_time_lapse)
+        self._connect(getattr(core, "sig_warning", None), lambda text: record_warning(core, text))
 
     def _complete_time_lapse(self):
         if getattr(self._core, "timelapse_active", None) is not False:

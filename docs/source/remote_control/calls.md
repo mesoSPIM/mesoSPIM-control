@@ -1,6 +1,6 @@
 # Remote Control call list
 
-TCP and MCP provide the same 53 calls. The call names and behavior are identical on both
+TCP and MCP provide the same 54 calls. The call names and behavior are identical on both
 transports.
 
 Before changing the microscope, call `get_manual` and `get_limits`. Ordinary changes return an
@@ -71,6 +71,7 @@ For connection details, arguments, polling, and errors, see the
 | `start_live` | Start live mode. |
 | `start_visual_mode` | Start visual mode. |
 | `start_lightsheet_alignment_mode` | Start light-sheet alignment mode. |
+| `snap` | Capture one frame and save it to the snap folder; the operation result gives the path. |
 | `load_sample` | Move to the configured sample-load position. |
 | `unload_sample` | Move to the configured sample-unload position. |
 | `center_sample` | Move to the configured sample-center position. |

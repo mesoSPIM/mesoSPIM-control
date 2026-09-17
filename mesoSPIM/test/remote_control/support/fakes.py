@@ -7,7 +7,10 @@ lock-protected call log, so race tests can inspect exactly which Core methods we
 
 from __future__ import annotations
 
+import os
+import tempfile
 import threading
+from collections import deque
 
 from mesoSPIM.test.remote_control.support.fake_state import FakeState
 
@@ -91,6 +94,19 @@ class _SerialWorker:
         self._core._apply_move(moves, "_abs")
 
 
+class _ImageWriter:
+    """Writes an empty timestamped .tif the way production's write_snap_image names it."""
+
+    def __init__(self, core):
+        self._core = core
+
+    def write_snap_image(self, image, prefix=""):
+        self._core._record("write_snap_image", image, prefix=prefix)
+        name = (prefix + "_" if prefix else "") + "20260917-120000.tif"
+        with open(os.path.join(self._core.state["snap_folder"], name), "wb"):
+            pass
+
+
 class RecordingCore:
     """Production state contract; records every Core call/emit under a lock so the concurrent HTTP
     worker threads and the test thread share one inspectable log."""
@@ -100,6 +116,8 @@ class RecordingCore:
         self._lock = threading.Lock()
         self._build()
         self.serial_worker = _SerialWorker(self)
+        self.image_writer = _ImageWriter(self)
+        self.frame_queue_display = deque([], maxlen=1)
 
     def _build(self):
         self.state = FakeState(
@@ -115,6 +133,7 @@ class RecordingCore:
             shutterconfig="Left",
             ETL_cfg_file="etl.csv",
             acq_list=[{}],
+            snap_folder=tempfile.mkdtemp(prefix="mesospim_snap_"),
         )
         self.timelapse_active = False
         self._remote_session = {"operation": None, "counter": 0}
@@ -195,6 +214,12 @@ class RecordingCore:
         # Production's synchronous start() returns only after it has left the run state. The
         # completion signal is deliberately omitted so transport tests can inspect the WAIT reply.
         self.state["state"] = "idle"
+
+    def snap(self, write_flag=True):
+        # The camera thread fills the display queue asynchronously in production; the fake fills
+        # it before returning so the offline Qt shim's inline poll finds the frame at once.
+        self._record("snap", write_flag=write_flag)
+        self.frame_queue_display.append("frame")
 
     def preview_acquisition(self, *args, **kwargs):
         self._record("preview_acquisition", *args, **kwargs)

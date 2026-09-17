@@ -122,7 +122,8 @@ and `mesoSPIM_AcquisitionManagerWindow.py` on upstream `master`.
 
 ### Gaps, most consequential first
 
-1. **No snap.** `Core.snap` exists and the GUI Snap button uses it, but there is no remote
+1. Status: fixed on this branch by the commit "Remote Control: add snap and report Core warnings to the client".
+   **No snap.** `Core.snap` exists and the GUI Snap button uses it, but there is no remote
    command; `test_registry_is_the_documented_53_calls` asserts it stays out. Adding one is small:
    it follows the same `set_state("snap")` path as live and completes on `sig_finished`. It also
    needs a destination, because `snap_folder`, `file_prefix` and `file_suffix` are not settable
@@ -130,7 +131,8 @@ and `mesoSPIM_AcquisitionManagerWindow.py` on upstream `master`.
 2. **No image data.** Nothing returns a frame, a thumbnail, or the path of the last written snap.
    The architecture doc lists this as a known limit. For the AI Assistant it is the largest
    functional gap: the agent can act but cannot see the result.
-3. **Core warnings never reach the client.** Preflight refusals (file exists, folder missing, disk
+3. Status: fixed on this branch by the same commit.
+   **Core warnings never reach the client.** Preflight refusals (file exists, folder missing, disk
    space, outside limits) go through `sig_warning` to a GUI dialog only. The remote operation
    fails with the generic text "Core rejected the acquisition during preflight", and `get_info`
    always returns an empty `warnings` list. The Acceptor could connect `sig_warning` and attach the

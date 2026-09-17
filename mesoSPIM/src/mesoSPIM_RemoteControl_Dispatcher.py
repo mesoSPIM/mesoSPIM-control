@@ -225,6 +225,32 @@ def fail(core, milestone, error):
             operation["error"] = str(error)
 
 
+MAX_WARNINGS = 20
+
+
+def record_warning(core, message):
+    """Keep a Core operator warning (``sig_warning``) where a remote client can see it: on the
+    active operation, and in a short session history that ``get_info`` reports. Core otherwise
+    shows these only in a GUI dialog, so a preflight refusal would reach the client as a bare
+    "rejected" with no reason."""
+    with _GATE:
+        session = _read_session(core)
+        if session is None:
+            return
+        operation = _active(core)
+        text = str(message)
+        if operation is not None:
+            operation["warning"] = text
+        history = session.setdefault("warnings", [])
+        history.append({"operation": operation["id"] if operation else None, "message": text})
+        del history[:-MAX_WARNINGS]
+
+
+def recent_warnings(core):
+    session = _read_session(core)
+    return list(session.get("warnings", [])) if session else []
+
+
 def clear_if_core_idle(core):
     """Recover a WAIT only when independent Core state proves it is no longer active."""
     with _GATE:
@@ -277,6 +303,7 @@ _PUBLIC_OP_KEYS = (
     "observed",
     "stop_requested",
     "result",
+    "warning",
     "error",
 )
 
@@ -328,7 +355,12 @@ def _record_mutation_result(core, operation_id, kind, result):
         if operation is None or operation["id"] != operation_id:
             return
 
-        operation["result"] = jsonable(result)
+        # A deferred callback (a snap's saved path) may have stored its own result already;
+        # keep both, and let the callback's keys win, whatever order the timers ran in.
+        stored, result = operation.get("result"), jsonable(result)
+        if isinstance(stored, dict) and isinstance(result, dict):
+            result = {**result, **stored}
+        operation["result"] = result
         if kind == ACTION and operation["status"] == PROCESSING:
             operation["status"] = COMPLETED
 

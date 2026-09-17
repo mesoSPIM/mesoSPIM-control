@@ -15,6 +15,7 @@ from mesoSPIM.test.remote_control.support.contracts import (
 READ, ACTION, WAIT, EMERGENCY = dispatcher.READ, dispatcher.ACTION, dispatcher.WAIT, dispatcher.EMERGENCY
 _SPECIAL = {"set_acquisition_list", "acquire_finish"}  # neither contract table; ordinary ACTIONs
 _INLINE_FAKE_TIMER = {
+    "snap",
     "move_absolute",
     "move_relative",
     "load_sample",
@@ -22,11 +23,11 @@ _INLINE_FAKE_TIMER = {
     "center_sample",
 }
 
-# The RecordingCore records these three as calls (EXPECTED_CORE_CALL needs the record) but they are
+# The RecordingCore records these as calls (EXPECTED_CORE_CALL needs the record) but they are
 # non-actuating READS. Every other recorded call moves hardware, so filtering them out lets the
 # matrix assert the expected call is the ONLY actuation — catching a handler that also fires a stray,
 # safety-relevant Core call on the happy path.
-_NON_MUTATING_RECORDED = {"get_free_disk_space", "get_required_disk_space", "check_motion_limits"}
+_NON_MUTATING_RECORDED = {"get_free_disk_space", "get_required_disk_space", "check_motion_limits", "write_snap_image"}
 
 _harness = Harness()
 
@@ -85,8 +86,8 @@ def test_command_over_both_lanes(transport, name):
 
 
 def test_contract_tables_partition_the_vocabulary():
-    """Completeness guard: the three buckets exactly cover the 53 commands, once each."""
+    """Completeness guard: the three buckets exactly cover the 54 commands, once each."""
     classified = set(EXPECTED_CORE_CALL) | READ_ONLY_WITHOUT_CORE_CALL | _SPECIAL
     assert classified == set(VALID_CASES)
     assert set(VALID_CASES) == set(dispatcher.COMMANDS)
-    assert len(VALID_CASES) == 53
+    assert len(VALID_CASES) == 54

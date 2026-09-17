@@ -1,5 +1,6 @@
 """Check the public Remote Control vocabulary and its fail-closed entry points."""
 
+import os
 import re
 from pathlib import Path
 
@@ -15,13 +16,12 @@ from mesoSPIM.test.remote_control.support.contracts import VALID_CASES
 from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 
 
-def test_registry_is_the_documented_53_calls():
-    assert len(dispatcher.COMMANDS) == 53
+def test_registry_is_the_documented_54_calls():
+    assert len(dispatcher.COMMANDS) == 54
     assert set(dispatcher.COMMANDS) == set(VALID_CASES)
     assert "execute_stage_program" not in dispatcher.COMMANDS
     assert "procedure" not in dispatcher.COMMANDS
     assert "set_mode" not in dispatcher.COMMANDS
-    assert "snap" not in dispatcher.COMMANDS
 
 
 def test_published_call_list_matches_the_registry():
@@ -29,7 +29,7 @@ def test_published_call_list_matches_the_registry():
     text = (repository / "docs" / "source" / "remote_control" / "calls.md").read_text()
     documented = re.findall(r"^\| `([a-z_]+)` \|", text, re.MULTILINE)
 
-    assert len(documented) == len(set(documented)) == 53
+    assert len(documented) == len(set(documented)) == 54
     assert set(documented) == set(dispatcher.COMMANDS)
 
 
@@ -236,3 +236,94 @@ def test_startup_self_test_fails_if_the_zeroed_frame_is_ignored(monkeypatch):
     ok, report = commands.self_test(RecordingCore())
     assert ok is False
     assert any(line.startswith("FAIL") and "zeroed-frame" in line for line in report)
+
+
+# --- snap: one saved frame, without the GUI prefix dialog ---
+
+
+def test_snap_saves_one_frame_and_reports_its_path(tmp_path):
+    core = RecordingCore()
+    reply = dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+    assert reply["accepted"] is True
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "completed", operation
+    path = operation["result"]["path"]
+    assert os.path.isfile(path) and os.path.dirname(path) == str(tmp_path)
+    assert os.path.basename(path).startswith("remote_")
+    # Captured through Core's own snap, with the GUI save path (prefix dialog) switched off.
+    ((_, _, kwargs),) = [c for c in core.calls() if c[0] == "snap"]
+    assert kwargs == {"write_flag": False}
+    assert core.state["state"] == "idle"
+    assert core.state["snap_folder"] == str(tmp_path)
+
+
+def test_snap_defaults_to_the_configured_snap_folder():
+    core = RecordingCore()
+    dispatcher.run(core, "snap", {})
+    path = dispatcher.operation_snapshot(core)["result"]["path"]
+    assert os.path.dirname(path) == core.state["snap_folder"]
+
+
+def test_snap_refuses_a_missing_folder_or_a_path_like_prefix(tmp_path):
+    core = RecordingCore()
+    with pytest.raises(dispatcher.ValidationError):
+        dispatcher.run(core, "snap", {"folder": str(tmp_path / "missing")})
+    with pytest.raises(dispatcher.ValidationError):
+        dispatcher.run(core, "snap", {"prefix": "../escape"})
+    assert core.calls() == []
+
+
+def test_snap_fails_when_no_frame_arrives(monkeypatch):
+    monkeypatch.setattr(config, "SNAP_TIMEOUT_SEC", 0.0)
+    core = RecordingCore()
+    core.snap = lambda write_flag=True: core._record("snap", write_flag=write_flag)  # camera silent
+    dispatcher.run(core, "snap", {})
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "failed" and "no frame" in operation["error"]
+    assert core.state["state"] == "idle"
+
+
+# --- Core warnings reach the client ---
+
+
+class _RefusingCore(RecordingCore):
+    """Core.start refusing in preflight: it warns, emits sig_finished, and keeps the run state."""
+
+    def start(self, *args, **kwargs):
+        self._record("start", *args, **kwargs)
+        self.sig_warning.emit("The following files already exist - stopping! x.raw")
+        self.sig_finished.emit()
+
+
+def test_acceptor_records_core_warnings_for_get_info():
+    core = RecordingCore()
+    acceptor = servers.Acceptor(core)
+    try:
+        core.sig_warning.emit("Snap folder not found")
+    finally:
+        acceptor.stop()
+    warnings = dispatcher.run(core, "get_info", {})["warnings"]
+    assert warnings == [{"operation": None, "message": "Snap folder not found"}]
+
+
+def test_preflight_refusal_reports_the_reason():
+    core = _RefusingCore()
+    acceptor = servers.Acceptor(core)
+    try:
+        dispatcher.run(core, "run_acquisition_list", {})
+    finally:
+        acceptor.stop()
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "failed"
+    assert operation["warning"] == "The following files already exist - stopping! x.raw"
+    assert "files already exist" in operation["error"]
+    assert dispatcher.run(core, "get_info", {})["warnings"][-1]["operation"] == operation["id"]
+
+
+def test_warning_history_is_bounded():
+    core = RecordingCore()
+    for i in range(dispatcher.MAX_WARNINGS + 5):
+        dispatcher.record_warning(core, f"w{i}")
+    history = dispatcher.recent_warnings(core)
+    assert len(history) == dispatcher.MAX_WARNINGS
+    assert history[-1]["message"] == f"w{dispatcher.MAX_WARNINGS + 4}"

@@ -2,7 +2,7 @@
 transport (MCP or TCP, chosen by MESOSPIM_LIVE_DEMO_TRANSPORT; a session hosts one transport).
 
 Excluded from normal CI; refuses to run unless the operator explicitly opts in and the remote
-configuration reports a DemoStage. Exercises all 53 allowlisted commands: every operational
+configuration reports a DemoStage. Exercises all 54 allowlisted commands: every operational
 mutation and every read/query command. Reads counts from contracts, never hardcodes them.
 """
 
@@ -33,7 +33,7 @@ from mesoSPIM.test.remote_control.support.live_session import wait_until as _wai
 
 pytestmark = pytest.mark.live_demo_all
 
-TOTAL = len(VALID_CASES)  # 53
+TOTAL = len(VALID_CASES)  # 54
 OPERATIONAL = len(OPERATIONAL_COMMANDS)  # 37
 
 
@@ -155,6 +155,7 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
             "get_disk_space": {"acquisitions": [acquisition]},
             "check_motion_limits": {"acquisitions": [acquisition]},
             "time_lapse_start": {"timepoints": 1, "interval_sec": 0},
+            "snap": {"folder": str(temp_folder), "prefix": "remote"},
         }
     )
 

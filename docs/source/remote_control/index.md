@@ -1,6 +1,6 @@
 # Remote Control
 
-TCP and MCP expose the same 53 commands. They use the same names, arguments, limits, operation
+TCP and MCP expose the same 54 commands. They use the same names, arguments, limits, operation
 state, and error codes. The operator chooses one transport in the Remote Control tab; both cannot
 run together.
 
@@ -174,7 +174,7 @@ Both transports return the same code and a readable message.
 
 ## Calls
 
-The concise [Remote Control call list](calls.md) names all 53 calls and explains
+The concise [Remote Control call list](calls.md) names all 54 calls and explains
 their purpose. For exact arguments, call `get_manual` against the running microscope. Its command
 hints are generated from the same registry used by TCP and MCP, so they cannot drift from the
 installed implementation.

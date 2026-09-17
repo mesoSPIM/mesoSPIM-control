@@ -98,11 +98,16 @@ MILESTONE_FINISHED = "finished"
 MILESTONE_TIMELAPSE = "time_lapse"
 MILESTONE_PREVIEW = "preview_returned_idle"
 MILESTONE_POSITION = "position_reached"
+MILESTONE_SNAP = "snap_saved"
 
 # Stage moves are issued without blocking the Core thread. A short Qt timer checks mesoSPIM's
 # normal position readback until every requested axis is within tolerance. Linear axes use um;
 # theta uses degrees.
 POSITION_POLL_INTERVAL_MS = 50
+
+# A snap frame arrives from the camera thread; poll the display queue for it with a bound.
+SNAP_POLL_INTERVAL_MS = 50
+SNAP_TIMEOUT_SEC = 30.0
 POSITION_TOLERANCE = {"x": 1.0, "y": 1.0, "z": 1.0, "f": 1.0, "theta": 1.0}
 
 # --- environment variable names (the reading lives in Commands) ---
