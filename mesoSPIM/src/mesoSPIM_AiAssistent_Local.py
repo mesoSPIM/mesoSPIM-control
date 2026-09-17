@@ -20,7 +20,6 @@ import socket
 import subprocess
 import sys
 import tempfile
-import urllib.request
 
 from . import mesoSPIM_AiAssistent_Config as config
 
@@ -124,11 +123,17 @@ class LocalModelServer:
             raise RuntimeError(
                 f"the model server exited with code {self._process.returncode}; see {self.log_path}"
             )
+        # A direct connection: urllib would send a loopback probe through an HTTP proxy from the
+        # environment. Short, since the poll runs on the GUI thread.
+        probe = http.client.HTTPConnection("127.0.0.1", self.port, timeout=0.2)
         try:
-            with urllib.request.urlopen(self.base_url + "/models", timeout=0.5):
-                return True
+            probe.request("GET", "/v1/models")
+            probe.getresponse().read()
+            return True
         except (OSError, http.client.HTTPException):  # not listening yet, or half-way up
             return False
+        finally:
+            probe.close()
 
     def stop(self):
         """Stop a running child and drop its log; a child that died on its own keeps the log,

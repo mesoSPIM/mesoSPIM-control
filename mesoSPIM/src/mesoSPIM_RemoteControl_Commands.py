@@ -876,7 +876,7 @@ def _run_get_capabilities(core, args):
         "commands": list(COMMANDS),
         "axes": list(config.AXES),
         "position_keys": {axis: f"{axis}_pos" for axis in config.AXES},
-        "modes": list(config.MODES),
+        "core_states": list(config.MODES),  # what get_state may report; nothing sets a state directly
         "settable_state_keys": list(config.SETTABLE_STATE_KEYS),
         "setting_groups": {name: list(keys) for name, keys in config.SETTING_GROUPS.items()},
         "acquisition_fields": list(config.ACQUISITION_FIELDS),

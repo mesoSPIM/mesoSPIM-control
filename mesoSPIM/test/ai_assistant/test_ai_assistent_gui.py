@@ -95,6 +95,16 @@ def test_submit_refused_when_transport_busy():
     assert "Stop the Remote Control transport" in gui.output.toPlainText()
 
 
+def test_a_failed_self_test_is_reported_with_its_reason():
+    core = _FakeCore(acceptor=None)
+    core._assistant_refusal = "AI Assistant self-test failed: no effective motion limit for axis/axes: x"
+    gui = AiAssistentGUI(_FakeParent(core))
+    gui.input.setText("hello")
+    gui.on_submit()
+    assert "no effective motion limit" in gui.output.toPlainText()
+    assert "Stop the Remote Control transport" not in gui.output.toPlainText()
+
+
 def test_submit_single_flight_disables_input(monkeypatch):
     gui = AiAssistentGUI(_FakeParent(_FakeCore(acceptor=object())))
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)   # pretend ready; no real thread

@@ -20,7 +20,9 @@ The default address is `127.0.0.1:42000`. TCP messages use this frame format:
 
 Send the password as the first frame. The server replies `OK` or `AUTH-FAILED`. After that, send one
 JSON command per frame. A successful reply begins with `__MESOSPIM_OK__`; an error begins with
-`error: [code]`.
+`error: [code]`. A client that has not sent its password within ten seconds, or sends more than
+a few kilobytes before doing so, is disconnected; at most 32 clients are held at once. Over MCP a
+request without an `Authorization` header is answered 401 before any large body is read.
 
 ### MCP
 

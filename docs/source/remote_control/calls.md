@@ -22,7 +22,7 @@ For connection details, arguments, polling, and errors, see the
 | `get_config` | Read configured lasers, filters, zooms, axes, and camera size. |
 | `get_info` | Read detailed microscope and Remote Control information. |
 | `get_limits` | Read the limits currently enforced by Remote Control. |
-| `get_capabilities` | Read the available calls, axes, modes, and fields. |
+| `get_capabilities` | Read the available calls, axes, the states Core can report, and fields. |
 | `get_manual` | Read the built-in usage guide and generated command list. |
 | `get_snapshot` | One compact readout of the whole microscope: state, position, optics, camera, list, disk, warnings. |
 | `get_frame` | The last displayed frame as numbers (exposure, focus, signal position) and a small PNG. |

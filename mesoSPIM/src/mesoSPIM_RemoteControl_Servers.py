@@ -20,6 +20,7 @@ Maintainer (2026):
 import hmac
 import json
 import logging
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -30,8 +31,10 @@ from . import mesoSPIM_RemoteControl_Config as config
 # Importing Commands fills the dispatcher registry before either server accepts requests.
 from . import mesoSPIM_RemoteControl_Commands  # noqa: F401
 from .mesoSPIM_RemoteControl_Dispatcher import (
+    PROCESSING,
     run,
     complete,
+    fail,
     precheck,
     operation_snapshot,
     record_warning,
@@ -104,6 +107,10 @@ class FrameDecoder:
 
     def feed(self, data):
         self._buf += bytes(data)
+
+    @property
+    def pending(self):
+        return len(self._buf)
 
     def frames(self):
         while True:
@@ -212,7 +219,25 @@ class Acceptor(QtCore.QObject):
         self._connect(getattr(core, "sig_finished", None), lambda: complete(core, config.MILESTONE_FINISHED))
         self._connect(getattr(core, "sig_time_lapse_finished", None), self._complete_time_lapse)
         self._connect(getattr(core, "sig_time_lapse_cancelled", None), self._complete_time_lapse)
-        self._connect(getattr(core, "sig_warning", None), lambda text: record_warning(core, text))
+        self._connect(getattr(core, "sig_warning", None), self._on_warning)
+
+    def _on_warning(self, text):
+        """Keep the warning for clients. When Core refuses a time point in preflight (a missing
+        folder, an existing file, no disk) it emits this and never starts, and the time lapse would
+        idle through every remaining interval with the gate held: stop it and fail its operation."""
+        core = self._core
+        record_warning(core, text)
+        operation = operation_snapshot(core)
+        refused = operation.get("command") == "time_lapse_start" and operation.get("status") == PROCESSING
+        try:
+            idle = core.state["state"] == "idle"          # a refused point never left idle
+        except (KeyError, TypeError, AttributeError):
+            idle = True
+        if refused and idle:
+            stop = getattr(core, "stop_time_lapse", None)
+            if stop is not None:
+                stop()
+            fail(core, config.MILESTONE_TIMELAPSE, RuntimeError(f"Core refused a time point: {text}"))
 
     def _complete_time_lapse(self):
         if getattr(self._core, "timelapse_active", None) is not False:
@@ -242,7 +267,11 @@ class Acceptor(QtCore.QObject):
 
 
 # --- In-process MCP server ---
+_CONTENT_LENGTH = re.compile(r"[0-9]{1,10}")
+
+
 def _make_handler(acceptor, token):
+    token_bytes = token.encode(config.ENCODING)
     class Handler(BaseHTTPRequestHandler):
         server_version = config.MCP_SERVER_BANNER
 
@@ -271,36 +300,47 @@ def _make_handler(acceptor, token):
             self._json(405, {"error": "method not allowed; POST JSON-RPC to /mcp"})
 
         def do_POST(self):
+            try:
+                self._post()
+            except Exception:  # a malformed request is answered, never left to kill the thread
+                logger.exception("MCP request failed")
+                self._json(400, {"error": "bad request"})
+
+        def _post(self):
             # Drain any declared request body up front. Every rejection below (404/403/401/...)
             # can return before the body would otherwise be read; leaving it unread while this
             # HTTP/1.0-style connection then closes causes the OS (observed on Windows) to send a
             # TCP RST instead of a clean close, discarding the response the client was just sent.
-            # Skip draining when the size is unknown or exceeds the cap so a hostile declared
-            # length cannot be used to make the server read an unbounded amount before rejecting.
+            # Skip draining when the size is unknown or exceeds the cap, and read only a little
+            # for a request that carries no Authorization at all, so a hostile declared length
+            # cannot make the server read a megabyte before rejecting.
             lengths = self.headers.get_all("Content-Length", [])
+            auths = self.headers.get_all("Authorization", [])
+            declared = int(lengths[0]) if len(lengths) == 1 and _CONTENT_LENGTH.fullmatch(lengths[0]) else None
+            drain_cap = config.MAX_MCP_BODY_BYTES if len(auths) == 1 else config.MCP_UNAUTHENTICATED_DRAIN_BYTES
             body = b""
-            if len(lengths) == 1 and lengths[0].isdigit() and int(lengths[0]) <= config.MAX_MCP_BODY_BYTES:
-                body = self.rfile.read(int(lengths[0]))
+            if declared is not None and declared <= drain_cap:
+                body = self.rfile.read(declared)
 
             if self.path != "/mcp":
                 return self._json(404, {"error": "not found"})
             origins = self.headers.get_all("Origin", [])
             if len(origins) > 1 or (origins and origins[0] not in config.ALLOWED_ORIGINS):
                 return self._json(403, {"error": "origin not allowed"})
-            auths = self.headers.get_all("Authorization", [])
             prefix = "Bearer "
             header = auths[0] if len(auths) == 1 else ""
             supplied = header[len(prefix) :] if header.lower().startswith(prefix.lower()) else ""
-            if not hmac.compare_digest(supplied, token):
+            # Header text arrives decoded as latin-1; back to bytes it compares as the client sent
+            # it, so a password with non-ASCII characters works and never raises.
+            if not hmac.compare_digest(supplied.encode("latin-1", "replace"), token_bytes):
                 return self._json(401, {"error": "unauthorized"})
             if self.headers.get_all("Transfer-Encoding", []):
                 return self._json(400, {"error": "Transfer-Encoding unsupported"})
-            if len(lengths) != 1 or not lengths[0].isdigit():
+            if declared is None:
                 return self._json(400, {"error": "invalid Content-Length"})
-            length = int(lengths[0])
-            if length > config.MAX_MCP_BODY_BYTES:
+            if declared > config.MAX_MCP_BODY_BYTES:
                 return self._json(413, {"error": "body too large"})
-            if len(body) != length:
+            if len(body) != declared:
                 return self._json(400, {"error": "truncated body"})
             try:
                 msg = strict_json_loads(body.decode(config.ENCODING))
@@ -399,14 +439,32 @@ class McpAdapter:
 
 
 # --- Length-framed TCP server ---
+def _listen_address(host):
+    """The address to bind for the configured host. QHostAddress does not resolve names: given
+    "localhost" it is null, and QTcpServer.listen takes a null address as every interface."""
+    loopback = {
+        "localhost": QtNetwork.QHostAddress.LocalHost,
+        "127.0.0.1": QtNetwork.QHostAddress.LocalHost,
+        "::1": QtNetwork.QHostAddress.LocalHostIPv6,
+    }
+    if host in loopback:
+        return QtNetwork.QHostAddress(loopback[host])
+    address = QtNetwork.QHostAddress(host)
+    if address.isNull():
+        raise RuntimeError(f"cannot listen on {host!r}: not an IP address")
+    return address
+
+
 class TcpAdapter:
     name = "tcp"
 
     def start(self, acceptor, host, port, token):
+        if not token:
+            raise ValueError("a token is required; the TCP transport never serves unauthenticated clients")
         self._acceptor = acceptor
-        self._token = token or None
+        self._token = token
         self._server = QtNetwork.QTcpServer(acceptor)
-        if not self._server.listen(QtNetwork.QHostAddress(host), int(port)):
+        if not self._server.listen(_listen_address(host), int(port)):
             raise RuntimeError(f"cannot listen on {host}:{port}: {self._server.errorString()}")
         self._port = int(self._server.serverPort())
         self._clients = {}
@@ -416,11 +474,21 @@ class TcpAdapter:
     def _on_new_connection(self):
         while self._server.hasPendingConnections():
             conn = self._server.nextPendingConnection()
-            self._clients[conn] = {"decoder": FrameDecoder(), "authed": not self._token}
+            if len(self._clients) >= config.TCP_MAX_CLIENTS:
+                conn.abort()
+                conn.deleteLater()
+                continue
+            self._clients[conn] = {"decoder": FrameDecoder(), "authed": False}
             conn.readyRead.connect(lambda c=conn: self._on_ready(c))
             conn.disconnected.connect(lambda c=conn: self._drop(c))
+            QtCore.QTimer.singleShot(config.TCP_AUTH_TIMEOUT_MS, lambda c=conn: self._expire_unauthenticated(c))
             if conn.bytesAvailable():
                 self._on_ready(conn)
+
+    def _expire_unauthenticated(self, conn):
+        client = self._clients.get(conn)
+        if client is not None and not client["authed"]:
+            self._drop(conn)
 
     def _on_ready(self, conn):
         client = self._clients.get(conn)
@@ -428,7 +496,12 @@ class TcpAdapter:
             return
         try:
             while conn in self._clients and conn.bytesAvailable():
-                client["decoder"].feed(bytes(conn.readAll()))
+                chunk = bytes(conn.readAll())
+                if not client["authed"] and client["decoder"].pending + len(chunk) > config.TCP_PREAUTH_MAX_BYTES:
+                    self._send(conn, "AUTH-FAILED")   # a token frame is small; this is not one
+                    self._drop(conn)
+                    return
+                client["decoder"].feed(chunk)
                 for payload in client["decoder"].frames():
                     self._handle(conn, payload.decode(config.ENCODING, "replace"))
                     if conn not in self._clients:

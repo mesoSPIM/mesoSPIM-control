@@ -73,7 +73,9 @@ reply has been created.
    transport refuses to start while the assistant's acceptor exists.
 2. The selected transport name must be TCP or MCP.
 3. A password is required.
-4. The public default password is allowed only on loopback.
+4. The public default password is allowed only on loopback. `localhost` and `127.0.0.1` bind the
+   loopback interface itself; a name that is not an IP address is refused rather than resolved to
+   every interface.
 5. The loaded configuration must provide a usable limit for every stage axis.
 6. `self_test` must prove, against a simulated Core, that valid values pass and invalid values are
    rejected.
@@ -282,8 +284,9 @@ can call hardware. MainWindow waits for this sequence before continuing applicat
 
 ## Known limits
 
-1. The one-operation rule coordinates remote clients, not local GUI actions. The operator must not
-   start conflicting GUI work during remote control.
+1. The one-operation rule coordinates remote clients. A mutation is also refused while Core's own
+   state is not idle (live, snap or an acquisition started from the GUI), but the reverse is not
+   guarded: the operator must not start GUI work while a remote operation is running.
 2. `get_progress` reports only the latest operation. Clients must retain and compare its ID.
 3. The MCP endpoint is Streamable HTTP (revision `2025-03-26`, `2025-06-18` accepted) in its
    POST-only form. It implements `initialize`, `ping`, `tools/list` and `tools/call`, not the

@@ -44,6 +44,8 @@ The PyQt profile runs two scripts outside pytest's fake-Qt environment. The firs
 Remote Control widgets and checks signal, timer, and shutdown behavior without opening a port. The
 second opens temporary loopback TCP and MCP listeners against a fake Core and verifies that:
 
+- `localhost` binds the loopback interface, an empty password or a hostname never binds, and a
+  connected client that sends no password is dropped after the authentication timeout;
 - a mutation returns its accepted operation before Core work starts;
 - reads remain available while the operation is processing;
 - stage completion is reported only after position readback reaches the target;

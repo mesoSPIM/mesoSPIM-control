@@ -144,6 +144,8 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
                 on_call(name, json.dumps(args or {}))
             except Exception:
                 pass
+        if cancel.is_set():
+            return json.dumps({"status": "cancelled"})                   # never ask after Cancel
         if gate is not None and name in config.CONFIRM_FIRST and not gate.ask(name, args):
             return json.dumps({"error": {"code": "refused", "message": f"the operator did not confirm {name}"}})
         try:
@@ -391,17 +393,21 @@ def start_assistant_for_core(core):
     QObject takes its thread affinity from the Core thread. Fail-closed like a transport (same limit
     self-test) and refuses while a TCP/MCP transport is running, so the assistant does not start a
     second controller behind the operator's back. Returns the acceptor, or None on refusal /
-    self-test failure (the tab reads the attribute and reports it)."""
+    self-test failure, with the reason in ``core._assistant_refusal`` for the tab to show."""
     if getattr(core, "_remote_control", None) is not None:
         core._assistant_acceptor = None
+        core._assistant_refusal = "Stop the Remote Control transport to use the AI Assistant."
         return None
     if getattr(core, "_assistant_acceptor", None) is None:
         ok, report = self_test(core)
         if not ok:
-            logger.error("AI Assistant self-test failed: %s", "; ".join(report))
+            reason = "AI Assistant self-test failed: " + "; ".join(report)
+            logger.error(reason)
             core._assistant_acceptor = None
+            core._assistant_refusal = reason
             return None
         core._assistant_acceptor = Acceptor(core)
+    core._assistant_refusal = None
     return core._assistant_acceptor
 
 

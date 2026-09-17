@@ -89,7 +89,7 @@ class McpLane:
         sock = socket.create_connection(("127.0.0.1", self.port), timeout=timeout)
         sock.settimeout(timeout)
         lines = [b"POST /mcp HTTP/1.1", b"Host: 127.0.0.1", b"Connection: close"]
-        lines.extend(h.encode("ascii") for h in headers)
+        lines.extend(h if isinstance(h, bytes) else h.encode("ascii") for h in headers)
         sock.sendall(b"\r\n".join(lines) + b"\r\n\r\n" + body)
         if shutdown_write:
             sock.shutdown(socket.SHUT_WR)
@@ -120,7 +120,7 @@ class TcpLane:
     def start(self, acceptor, token=TOKEN):
         self.adapter = srv.TcpAdapter()
         self.adapter._acceptor = acceptor
-        self.adapter._token = token or None
+        self.adapter._token = token
         self.adapter._clients = {}
         self.token = token
         self.conn = self.new_conn()

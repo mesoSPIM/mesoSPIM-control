@@ -505,7 +505,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         """Apply the three boxes. Returns True when the assistant can take a message now; False
         after a note, or while a local model is still loading (the Connect button says so)."""
         if not self._ensure_worker():
-            self._note("Stop the Remote Control transport to use the AI Assistant.")
+            self._note(getattr(self.core, "_assistant_refusal", None)
+                       or "Stop the Remote Control transport to use the AI Assistant.")
             return False
         self._needs_operator = False
         plan = self._plan()

@@ -220,6 +220,19 @@ def test_start_assistant_refused_while_transport_runs():
     core._remote_control = object()                           # a transport holds the session
     assert start_assistant_for_core(core) is None
     assert core._assistant_acceptor is None
+    assert "Stop the Remote Control transport" in core._assistant_refusal
+
+
+def test_start_assistant_names_a_failed_self_test(monkeypatch):
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Commands as commands
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Config as rc_config
+    # Regress the zeroed-frame limit check, as the commands suite does, so the self-test refuses.
+    monkeypatch.setattr(commands, "axis_offsets", lambda core: {axis: 0.0 for axis in rc_config.AXES})
+    core = RecordingCore()
+    core._remote_control = None
+    assert start_assistant_for_core(core) is None
+    assert core._assistant_acceptor is None
+    assert core._assistant_refusal.startswith("AI Assistant self-test failed") and "zeroed-frame" in core._assistant_refusal
 
 
 def test_stop_assistant_releases_the_acceptor():
@@ -417,6 +430,17 @@ def test_confirm_first_tool_is_refused_when_the_operator_cancels():
     out = json.loads(fn())
     assert out["error"]["code"] == "refused" and "unload_sample" in out["error"]["message"]
     assert acc.calls == []                                          # never dispatched
+
+
+def test_confirm_first_tool_is_not_asked_after_cancel():
+    acc = FakeAcceptor()
+    asked = []
+    gate = ai.ConfirmationGate(on_ask=lambda name, args: asked.append(name))
+    cancel = threading.Event()
+    cancel.set()
+    fn = ai._tool_fn(acc, "load_sample", WAIT, cancel, gate=gate)
+    assert json.loads(fn()) == {"status": "cancelled"}
+    assert asked == [] and acc.calls == []                           # no Run / Cancel bar, no dispatch
 
 
 def test_confirm_first_tool_runs_after_run():

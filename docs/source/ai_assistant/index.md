@@ -125,13 +125,9 @@ loaded.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  365 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  378 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
-- A 14-case behavioural suite (`evals/` in the contribution repository) driving the real dispatcher
-  over a fake Core, scored on which hardware call landed and what state resulted rather than on
-  wording. It covers plain verbs, unit conversion, reads, vocabulary refusals, out-of-limits
-  refusal, ambiguity, and prompt injection.
 - End-to-end operation against the Windows DemoStage build.
 
 Not yet verified on real hardware.

@@ -19,7 +19,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 try:
-    from PyQt5 import QtCore
+    from PyQt5 import QtCore, QtNetwork
 except ModuleNotFoundError as error:
     raise SystemExit("real_pyqt_transport_smoke.py requires PyQt5") from error
 
@@ -210,10 +210,52 @@ def exercise_async_action(call, core):
     }
 
 
+def exercise_bind_rules(app):
+    """What a LAN peer sees: "localhost" binds loopback only, an empty token or a hostname never
+    binds, and a socket that sends no token is dropped after the auth timeout."""
+    core = Core()
+    acceptor = Acceptor(core)
+    adapter = TcpAdapter()
+    adapter.start(acceptor, "localhost", 0, TOKEN)
+    try:
+        bound = adapter._server.serverAddress()
+        assert bound.isLoopback(), bound.toString()
+    finally:
+        adapter.stop()
+        acceptor.stop()
+    for host, token, error in (("127.0.0.1", "", ValueError), ("not-an-address", TOKEN, RuntimeError)):
+        acceptor = Acceptor(Core())
+        try:
+            TcpAdapter().start(acceptor, host, 0, token)
+        except error:
+            pass
+        else:
+            raise AssertionError(f"bound with host={host!r} token={token!r}")
+        finally:
+            acceptor.stop()
+    config.TCP_AUTH_TIMEOUT_MS = 200
+    core = Core()
+    acceptor = Acceptor(core)
+    adapter = TcpAdapter()
+    port = adapter.start(acceptor, "127.0.0.1", 0, TOKEN)
+    try:
+        silent = QtNetwork.QTcpSocket()
+        silent.connectToHost("127.0.0.1", port)
+        process_until(app, lambda: silent.state() == QtNetwork.QAbstractSocket.ConnectedState)
+        process_until(app, lambda: len(adapter._clients) == 1)
+        process_until(app, lambda: silent.state() == QtNetwork.QAbstractSocket.UnconnectedState, timeout=3.0)
+        assert adapter._clients == {}, "the silent client was not dropped"
+    finally:
+        adapter.stop()
+        acceptor.stop()
+    print("REAL PYQT TCP BIND RULES PASS: localhost is loopback, no token or hostname refused, silent client dropped")
+
+
 def main():
     app = QtCore.QCoreApplication.instance() or QtCore.QCoreApplication([])
     startup_ok, startup_report = self_test(Core())
     assert startup_ok, startup_report
+    exercise_bind_rules(app)
     for label, adapter_type, caller in (
         ("MCP", McpAdapter, mcp_call),
         ("TCP", TcpAdapter, tcp_call),

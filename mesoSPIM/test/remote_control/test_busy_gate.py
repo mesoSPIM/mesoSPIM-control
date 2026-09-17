@@ -107,3 +107,45 @@ def test_wrong_milestone_does_not_resolve_a_finished_op(h):
     h.core.state["state"] = "idle"
     dispatcher.complete(h.core, config.MILESTONE_FINISHED)
     assert dispatcher.operation_snapshot(h.core)["status"] == "completed"
+
+
+@pytest.mark.parametrize("busy_state", ["live", "snap", "run_acquisition_list"])
+def test_a_mode_started_from_the_gui_refuses_mutations_but_not_stop_or_reads(h, busy_state):
+    """Core's own state machine can be busy with no remote operation open: the operator pressed
+    Live or Run in the GUI. A remote mutation landing then would execute inside that loop."""
+    h.core.state["state"] = busy_state
+    for lane in ("mcp", "tcp"):
+        ok, refused = h.invoke(lane, "move_absolute", {"targets": {"x": 10}})
+        assert not ok and refused["code"] == "busy" and busy_state in refused["error"]
+        ok, refused = h.invoke(lane, "snap", {})
+        assert not ok and refused["code"] == "busy"
+        ok, state = h.invoke(lane, "get_state", {})            # reads never wait
+        assert ok and state["state"] == busy_state
+    assert all(name not in ("move_absolute", "snap") for name, *_ in h.core.calls())
+    ok, _ = h.invoke("tcp", "stop", {})                          # the emergency stop never waits
+    assert ok
+    h.core.state["state"] = "idle"
+    ok, accepted = h.invoke("tcp", "move_absolute", {"targets": {"x": 10}})
+    assert ok and accepted["accepted"] is True
+
+
+def test_a_refused_time_point_ends_the_time_lapse(h):
+    """Core refuses a time point in preflight with a warning and never starts it; the operation
+    would otherwise stay open for every remaining interval. The Acceptor stops the time lapse."""
+    operation = dispatcher._begin(h.core, "time_lapse_start", config.MILESTONE_TIMELAPSE)
+    h.core.timelapse_active = True
+    h.acceptor._on_warning("The following folders do not exist - stopping! /nowhere")
+    latest = dispatcher.operation_snapshot(h.core)
+    assert latest["id"] == operation["id"] and latest["status"] == "failed"
+    assert "refused a time point" in latest["error"] and "/nowhere" in latest["error"]
+    assert ("stop_time_lapse", (), {}) in h.core.calls() and h.core.timelapse_active is False
+
+
+def test_a_warning_while_a_time_point_runs_is_only_recorded(h):
+    operation = dispatcher._begin(h.core, "time_lapse_start", config.MILESTONE_TIMELAPSE)
+    h.core.state["state"] = "run_acquisition_list"               # a point is under way
+    h.acceptor._on_warning("Please wait until the zoom change is complete")
+    latest = dispatcher.operation_snapshot(h.core)
+    assert latest["id"] == operation["id"] and latest["status"] == "processing"
+    assert latest["warning"].startswith("Please wait")
+    assert all(name != "stop_time_lapse" for name, *_ in h.core.calls())

@@ -89,15 +89,17 @@ Tab label: `"AI Assistant"` · Class: `AiAssistentGUI`.
    Model from `mesoSPIM_AiAssistent_Config.py`. System prompt = `get_manual` output + thin
    preamble. Built lazily on first submit, reused (keeps history), no connect step.
 
-4. **Worker** — runs `agent.run(user_text)` off the GUI/Core threads via the shared Acceptor.
-   **Single-flight**: one turn at a time (input disabled while running), so no concurrent
-   runs corrupt the Agent's history. Emits `sig_reply`, `sig_tool`, `sig_result`,
-   `sig_error`, `sig_done`. Supports **cancel** (interrupt the turn; on shutdown,
-   request-cancel + bounded join — never block the GUI on a cloud call).
+4. **Worker** — runs `agent.run_sync(user_text)` on its own thread, off the GUI and Core
+   threads, via the shared Acceptor. **Single-flight**: one turn at a time (input disabled while
+   running), so no concurrent runs corrupt the Agent's history. Emits `sig_reply`, `sig_tool`,
+   `sig_frame`, `sig_confirm`, `sig_error`, `sig_done`. Supports **cancel** (the turn is
+   interrupted at its next tool call; on shutdown the thread gets a bounded join and, if still
+   inside a model call, is set free rather than destroyed, so the GUI never blocks on a cloud
+   call).
 
-5. **GUI (`AiAssistentGUI`)** — output `QPlainTextEdit` (agent text + tool calls + results),
-   input `QLineEdit` (Enter submits; disabled during a turn), and a small **interrupt**
-   control (cancels the turn and fires `stop`). No config row, no Start/Stop.
+5. **GUI (`AiAssistentGUI`)** — a `QTextEdit` transcript (agent text, tool calls, frames),
+   a two-line input (Enter or Send submits, Shift+Enter a new line; disabled during a turn),
+   Cancel, Clear all and Stop microscope, and the collapsible setup footer.
 
 ## Acceptor ownership
 The assistant needs a live `Acceptor` — the Core-thread bridge **and** the WAIT

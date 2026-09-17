@@ -60,6 +60,13 @@ MAX_ACQUISITION_PLANES = 1_000_000
 
 # --- timeouts (seconds) ---
 CLIENT_TIMEOUT_SEC = 10.0
+# TCP: a client has this long to send its token, may buffer this much before it has, and at most
+# this many clients are held at once, so unauthenticated peers cannot park memory or sockets.
+TCP_AUTH_TIMEOUT_MS = 10_000
+TCP_PREAUTH_MAX_BYTES = 4096
+TCP_MAX_CLIENTS = 32
+# MCP: a request without an Authorization header has at most this much body read before the 401.
+MCP_UNAUTHENTICATED_DRAIN_BYTES = 64 * 1024
 
 # Limit only the wait while a network request is being marshalled onto the Core thread.
 DISPATCH_TIMEOUT_SEC = 30.0

@@ -574,3 +574,85 @@ def test_unknown_state_key_is_validation_over_mcp():
 def test_corpus_is_bounded():
     assert REQUEST_TIMEOUT <= 0.6
     assert config.MAX_MCP_BODY_BYTES <= 1 << 20
+
+
+# ============================ hostile headers and pre-auth resource use ============================
+
+
+_CALL = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                    "params": {"name": "get_state", "arguments": {}}}).encode()
+
+
+def test_mcp_malformed_headers_are_answered_not_crashed():
+    """Each of these once raised inside the handler thread: no response, a traceback on stderr."""
+    cases = [
+        (b"Content-Length: \xb2", 400),                    # latin-1 superscript two: isdigit() said yes
+        (("Content-Length: " + "9" * 5000).encode(), 400),  # int() refuses > 4300 digits
+        (b"Authorization: Bearer \xe9", 401),              # non-ASCII token: str compare raised
+    ]
+    for header, expected in cases:
+        extra = [header] if header.startswith(b"Content-Length") else [f"Content-Length: {len(_CALL)}", header]
+        auth = None if header.startswith(b"Authorization") else f"Bearer {TOKEN}"
+        status = _raw(_CALL, auth=auth, extra=extra, shutdown_write=True)
+        assert status == expected, (header, status)
+    status, reply = _jsonrpc(_h.mcp.port, json.loads(_CALL))    # the server is still serving
+    assert status == 200 and reply["id"] == 1
+
+
+def test_mcp_non_ascii_password_authenticates():
+    """Headers arrive latin-1 decoded; the comparison is done in bytes, so an operator password
+    with an accent works instead of closing every connection."""
+    password = "mésoSPIM-2026"
+    local = Harness(token=password)
+    try:
+        header = b"Authorization: Bearer " + password.encode("utf-8")
+        status, response = local.mcp.raw([f"Content-Length: {len(_CALL)}", "Content-Type: application/json",
+                                          "Origin: http://127.0.0.1", header], _CALL, timeout=REQUEST_TIMEOUT)
+        assert status == 200, response
+        status, _ = local.mcp.raw([f"Content-Length: {len(_CALL)}", "Origin: http://127.0.0.1",
+                                   "Authorization: Bearer mesoSPIM-2026"], _CALL, timeout=REQUEST_TIMEOUT)
+        assert status == 401
+    finally:
+        local.stop()
+
+
+def test_mcp_does_not_drain_a_large_body_for_an_unauthenticated_request():
+    """Without an Authorization header a declared megabyte is not read before the 401, so a peer
+    without the password cannot make the server wait for bytes it never sends."""
+    declared = config.MAX_MCP_BODY_BYTES
+    status = _raw(b"{", auth=None, extra=[f"Content-Length: {declared}"], shutdown_write=True)
+    assert status == 401
+    assert _h.core.calls() == []
+
+
+class _SocketConn(_h.tcp.conn.__class__):
+    """A fake socket with data waiting, for the adapter's readyRead path."""
+
+    def __init__(self, data):
+        super().__init__()
+        self._data = data
+
+    def bytesAvailable(self):
+        return len(self._data)
+
+    def readAll(self):
+        data, self._data = self._data, b""
+        return data
+
+
+def test_tcp_unauthenticated_client_may_not_buffer_more_than_a_token():
+    adapter = _h.tcp.adapter
+    conn = _SocketConn(b"1048576\n" + b"x" * (config.TCP_PREAUTH_MAX_BYTES + 1))
+    adapter._clients[conn] = {"decoder": srv.FrameDecoder(), "authed": False}
+    adapter._on_ready(conn)
+    assert conn not in adapter._clients and last_frame(conn) == "AUTH-FAILED"
+    small = _SocketConn(srv.frame(TOKEN))                      # the token itself, framed, is fine
+    adapter._clients[small] = {"decoder": srv.FrameDecoder(), "authed": False}
+    adapter._on_ready(small)
+    assert adapter._clients[small]["authed"] and last_frame(small) == "OK"
+    assert _h.core.calls() == []
+
+
+def test_tcp_adapter_refuses_to_start_without_a_token():
+    with pytest.raises(ValueError):
+        srv.TcpAdapter().start(_h.acceptor, "127.0.0.1", 0, "")

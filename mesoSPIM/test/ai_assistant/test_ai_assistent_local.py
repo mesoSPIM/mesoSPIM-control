@@ -84,7 +84,9 @@ def _wait(server, timeout=10):
     return False
 
 
-def test_server_starts_becomes_ready_and_stops(tmp_path):
+def test_server_starts_becomes_ready_and_stops(tmp_path, monkeypatch):
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9")        # a lab proxy must not catch a loopback probe
+    monkeypatch.setenv("http_proxy", "http://127.0.0.1:9")
     model = tmp_path / "tiny-model.gguf"
     model.write_bytes(b"")
     server = LocalModelServer(str(model), command=_fake_command)
