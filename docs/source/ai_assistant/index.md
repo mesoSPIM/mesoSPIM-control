@@ -47,8 +47,8 @@ closing mesoSPIM stops the child. A server that fails to start is reported with 
 log. Use a GPU build of llama-cpp-python for anything above a few billion parameters; the 4B to 12B
 instruction models are the realistic range on a microscope PC.
 
-A third row holds preferences that apply at once: how long the Run / Cancel question for a gated
-command waits before it counts as Cancel, how many turns the model remembers, and the **Vision
+Two more rows hold preferences that apply at once: the confirmation timeout (how long the Run /
+Cancel question for a gated command waits before it counts as Cancel), how many turns the model remembers, and the **Vision
 model**: "same as model" lets the main model read frames when it can; a cloud provider here reads
 frames on its behalf (keyed from that provider's environment variable), which gives a local
 text-only model eyes. The frame size sent to the vision model (longer side, 1024 px by default)

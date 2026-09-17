@@ -262,7 +262,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         # Operator preferences, applied at once: how long Run / Cancel waits for an answer, and
         # how many turns the model remembers.
         options = QtWidgets.QHBoxLayout()
-        options.addWidget(label("Wait for Run / Cancel"))
+        options.addWidget(label("Confirmation timeout"))
         options.addWidget(self.confirm_wait)
         options.addSpacing(16)
         options.addWidget(label("Remember last"))
