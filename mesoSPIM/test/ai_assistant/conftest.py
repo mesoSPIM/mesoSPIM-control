@@ -208,6 +208,20 @@ class QToolButton(QtWidgets.QWidget):
         pass
 
 
+class QGridLayout(QtWidgets.QVBoxLayout):
+    def setHorizontalSpacing(self, _v):
+        pass
+
+    def setVerticalSpacing(self, _v):
+        pass
+
+    def setColumnStretch(self, _column, _stretch):
+        pass
+
+    def setColumnMinimumWidth(self, _column, _width):
+        pass
+
+
 class QFileDialog:
     chosen = ""  # a test sets the folder the dialog "returns"
 
@@ -218,6 +232,17 @@ class QFileDialog:
 
 QtWidgets.QRadioButton = QRadioButton
 QtWidgets.QToolButton = QToolButton
+QtWidgets.QGridLayout = QGridLayout
+if not hasattr(QtWidgets.QWidget, "setStyleSheet"):
+    QtWidgets.QWidget.setStyleSheet = lambda self, _sheet: None
+if not hasattr(QtWidgets.QWidget, "sizeHint"):
+    QtWidgets.QWidget.sizeHint = lambda self: types.SimpleNamespace(width=lambda: 80, height=lambda: 24)
+if not hasattr(QtWidgets.QWidget, "setSizePolicy"):
+    QtWidgets.QWidget.setSizePolicy = lambda self, *_a: None
+    QtWidgets.QSizePolicy = types.SimpleNamespace(Ignored=0, Preferred=1)
+for _enum, _value in (("AlignLeft", 1),):
+    if not hasattr(QtCore.Qt, _enum):
+        setattr(QtCore.Qt, _enum, _value)
 QtWidgets.QFileDialog = QFileDialog
 for _enum, _value in (("RightArrow", 4), ("DownArrow", 2), ("ToolButtonTextBesideIcon", 2)):
     if not hasattr(QtCore.Qt, _enum):

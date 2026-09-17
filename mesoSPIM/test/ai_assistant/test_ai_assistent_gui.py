@@ -138,7 +138,7 @@ def test_connect_with_a_key_configures_the_worker(monkeypatch):
     gui.on_connect()
     (endpoint,) = configured
     assert (endpoint.provider, endpoint.kind, endpoint.api_key) == ("Anthropic", "anthropic", "sk-test")
-    assert gui.setup_status.text() == "ready: Anthropic, claude-sonnet-5"
+    assert gui.setup_status.text() == "ready"
 
 
 def test_first_message_connects_with_the_typed_key(monkeypatch):
@@ -237,7 +237,7 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
     gui.on_connect()
     (server,) = _SERVERS
     assert server.started and server.model_path == str(tmp_path / "qwen3.5-8b-q4.gguf")
-    assert gui.setup_status.text() == "starting qwen3.5-8b-q4…"
+    assert gui.setup_status.text() == "starting…"
     assert gui._endpoint is None
     scheduled.pop()()                                          # first poll: still loading
     assert gui._endpoint is None and len(scheduled) == 1
@@ -245,7 +245,7 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
     endpoint = gui._worker.endpoint
     assert (endpoint.kind, endpoint.model, endpoint.base_url) == ("openai-compatible", "qwen3.5-8b-q4", server.base_url)
     assert endpoint.api_key == "" and not endpoint.needs_key
-    assert gui.setup_status.text() == "ready: qwen3.5-8b-q4 (llama.cpp on 127.0.0.1:4242)"
+    assert gui.setup_status.text() == "ready on 127.0.0.1:4242"
     assert scheduled == []
 
 
@@ -334,15 +334,15 @@ def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui.on_connect()
     assert not gui.expanded()
     assert gui.setup_toggle.text() == "Set up AI assistant"
-    assert gui.setup_status.text() == "ready: Gemini, gemini-3.5-flash-lite"
+    assert gui.setup_status.text() == "ready"
 
 
 def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     gui.local_radio.setChecked(True)
     gui.on_connect()
-    assert gui.setup_status.text() == "starting gemma-4-12b-q4…"
+    assert gui.setup_status.text() == "starting…"
     scheduled.pop()(); scheduled.pop()()
     assert not gui.expanded()
-    assert gui.setup_status.text() == "ready: gemma-4-12b-q4 (llama.cpp on 127.0.0.1:4242)"
+    assert gui.setup_status.text() == "ready on 127.0.0.1:4242"
     assert gui.setup_toggle.text() == "Set up AI assistant"
