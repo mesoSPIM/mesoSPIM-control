@@ -424,7 +424,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         # Three pairs on one line, the leftover width after them.
         tool_set_label = _field_label("Tool set", preferences, font, gap=0)
         memory_label = _field_label("Memory", preferences, font)
-        image_label = _field_label("Downsample image to", preferences, font)
+        image_label = _field_label("Downsample image to", preferences, font, gap=3 * PAIR_GAP)  # set apart
         options.addWidget(tool_set_label, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(memory_label, 0, 2)
