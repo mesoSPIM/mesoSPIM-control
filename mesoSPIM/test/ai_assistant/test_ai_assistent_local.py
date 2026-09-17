@@ -19,9 +19,9 @@ def test_models_folder_prefers_the_microscope_config():
 
 
 def test_list_models_shows_only_model_files_sorted(tmp_path):
-    for name in ("b-model.gguf", "A-Model.GGUF", "notes.txt", "weights.bin"):
+    for name in ("b-model.gguf", "A-Model.GGUF", "notes.txt", "weights.bin", "b-model-mmproj-f16.gguf"):
         (tmp_path / name).write_bytes(b"")
-    assert list_models(str(tmp_path)) == ["A-Model.GGUF", "b-model.gguf"]
+    assert list_models(str(tmp_path)) == ["A-Model.GGUF", "b-model.gguf"]   # a projector is not a model
     assert list_models(str(tmp_path / "missing")) == []
 
 

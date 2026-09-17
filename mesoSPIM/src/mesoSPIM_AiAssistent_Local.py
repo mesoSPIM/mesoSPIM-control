@@ -34,7 +34,10 @@ def list_models(folder):
     """Model files in the folder by name; a missing folder lists nothing."""
     if not os.path.isdir(folder):
         return []
-    return sorted(name for name in os.listdir(folder) if name.lower().endswith(config.MODEL_SUFFIXES))
+    return sorted(
+        name for name in os.listdir(folder)
+        if name.lower().endswith(config.MODEL_SUFFIXES) and "mmproj" not in name.lower()  # a projector, not a model
+    )
 
 
 def server_command(model_path, port):

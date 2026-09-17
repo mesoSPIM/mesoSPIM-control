@@ -218,6 +218,8 @@ class QFileDialog:
 QtWidgets.QRadioButton = QRadioButton
 QtWidgets.QToolButton = QToolButton
 QtWidgets.QGridLayout = QGridLayout
+if not hasattr(QtWidgets.QWidget, "setFocus"):
+    QtWidgets.QWidget.setFocus = lambda self: None
 if not hasattr(QtWidgets.QWidget, "setStyleSheet"):
     QtWidgets.QWidget.setStyleSheet = lambda self, _sheet: None
 if not hasattr(QtWidgets.QWidget, "sizeHint"):

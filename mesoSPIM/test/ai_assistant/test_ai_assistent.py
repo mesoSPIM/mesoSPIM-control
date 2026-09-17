@@ -104,6 +104,7 @@ class FakeAgent:
 
     def run_sync(self, text, message_history=None):
         self.runs += 1
+        self.last_prompt = text
         if self._errors:
             error = self._errors.pop(0)
             if error is not None:
@@ -296,3 +297,112 @@ def test_configure_rebuilds_the_agent_on_the_next_turn_and_keeps_history(monkeyp
     worker.run_turn("second")
     assert [e.provider for e in built] == ["OpenAI", "Anthropic"]
     assert worker._history                                          # the transcript survived the switch
+
+
+# --- the state block, and looking through a side call ---
+
+def test_endpoint_vision_comes_from_the_preset():
+    assert Endpoint.from_preset("Gemini", api_key="k").vision is True
+    assert Endpoint.from_preset("OpenAI-compatible server").vision is False
+    assert Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u").vision is False
+
+
+def test_with_state_appends_the_snapshot_or_nothing():
+    class _Acc:
+        def dispatch(self, name, args):
+            assert name == "get_snapshot"
+            return {"state": "idle", "position": {"x": 1.0}}
+
+    text = ai.with_state(_Acc(), "move x by 5")
+    assert text.startswith("move x by 5\n\n<microscope_state>\n")
+    assert '"position": {"x": 1.0}' in text and text.endswith("</microscope_state>")
+
+    class _Broken:
+        def dispatch(self, name, args):
+            raise RuntimeError("no")
+
+    assert ai.with_state(_Broken(), "hello") == "hello"
+
+
+def test_run_turn_sends_the_state_block(monkeypatch):
+    worker = AssistantWorker(FakeAcceptor())
+    agent = FakeAgent([FakeResult("ok")])
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: agent)
+    worker.run_turn("where is the stage?")
+    assert agent.last_prompt.startswith("where is the stage?\n\n<microscope_state>")
+
+
+def _real_acceptor():
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
+    core = RecordingCore()
+    return Acceptor(core), core
+
+
+def test_look_gives_a_text_only_model_the_numbers_and_no_image():
+    acceptor, core = _real_acceptor()
+    shown = []
+    endpoint = Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u")
+    result = ai.look(acceptor, endpoint, "is it in focus?", True, threading.Event(), on_frame=shown.append)
+    assert result["available"] and "answer" not in result and "cannot see" in result["note"]
+    assert result["stats"]["shape"] == [64, 96] and result["stats"]["bright_fraction"] > 0
+    assert shown == []                                              # nothing was rendered for nobody
+    assert [c[0] for c in core.calls() if c[0] == "snap"] == ["snap"]
+
+
+def test_look_asks_the_vision_model_in_a_side_call(monkeypatch):
+    acceptor, _ = _real_acceptor()
+    asked, shown = [], []
+    monkeypatch.setattr(ai, "vision_answer", lambda endpoint, image, question, stats: asked.append((question, image["format"])) or "sample centred")
+    endpoint = Endpoint.from_preset("Gemini", api_key="k")
+    result = ai.look(acceptor, endpoint, "is the sample centred?", True, threading.Event(), on_frame=shown.append)
+    assert result["answer"] == "sample centred"
+    assert asked == [("is the sample centred?", "png")]
+    assert len(shown) == 1 and shown[0]                             # the operator sees the same frame
+
+
+def test_look_reuses_the_last_frame_when_asked(monkeypatch):
+    acceptor, core = _real_acceptor()
+    endpoint = Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u")
+    assert ai.look(acceptor, endpoint, "q", False, threading.Event())["available"] is False
+    ai.look(acceptor, endpoint, "q", True, threading.Event())
+    ai.look(acceptor, endpoint, "q", False, threading.Event())
+    assert [c[0] for c in core.calls() if c[0] == "snap"] == ["snap"]   # one snap for two looks
+
+
+def test_vision_error_does_not_lose_the_numbers(monkeypatch):
+    acceptor, _ = _real_acceptor()
+    monkeypatch.setattr(ai, "vision_answer", lambda *a: (_ for _ in ()).throw(TimeoutError()))
+    result = ai.look(acceptor, Endpoint.from_preset("Gemini", api_key="k"), "q", True, threading.Event())
+    assert result["vision_error"] == "TimeoutError" and result["stats"]
+
+
+def test_vision_answer_is_one_stateless_call_with_the_image(monkeypatch):
+    pytest.importorskip("pydantic_ai")
+    from pydantic_ai.messages import BinaryContent, ModelResponse, TextPart, UserPromptPart
+    from pydantic_ai.models.function import FunctionModel
+
+    seen = {}
+
+    def model_function(messages, info):
+        seen["messages"] = len(messages)
+        prompt = next(p for p in messages[-1].parts if isinstance(p, UserPromptPart))
+        seen["text"] = prompt.content[0]
+        seen["image"] = any(isinstance(c, BinaryContent) and c.media_type == "image/png" for c in prompt.content)
+        return ModelResponse(parts=[TextPart("looks fine")])
+
+    monkeypatch.setattr(ai, "build_model", lambda endpoint: FunctionModel(model_function))
+    import base64
+    image = {"format": "png", "base64": base64.b64encode(b"\x89PNG fake").decode()}
+    answer = ai.vision_answer(Endpoint.from_preset("Gemini", api_key="k"), image, "in focus?", {"focus_measure": 0.5})
+    assert answer == "looks fine"
+    assert seen["messages"] == 1 and seen["image"] is True         # no history, the frame attached
+    assert seen["text"].startswith("in focus?") and "focus_measure" in seen["text"]
+
+
+def test_build_tools_adds_look_only_with_an_endpoint():
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    without = {t.name for t in build_tools(FakeAcceptor(), threading.Event())}
+    with_endpoint = {t.name for t in build_tools(FakeAcceptor(), threading.Event(), endpoint=Endpoint.from_preset("Gemini", api_key="k"))}
+    assert "look" not in without and "look" in with_endpoint
+    assert with_endpoint - without == {"look"}

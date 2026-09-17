@@ -12,6 +12,7 @@ Maintainer (2026):
     thomdehoog@gmail.com
 """
 
+# vision: the model can be shown a camera frame; the `look` tool sends it one in a side call.
 # kind: which Pydantic AI model class is built. "openai-compatible" is any server speaking the
 # OpenAI chat API (Ollama >= 0.22, vLLM, LM Studio) and needs a base URL instead of a key. Local
 # model files served by mesoSPIM itself use that same kind behind the scenes.
@@ -21,9 +22,10 @@ PROVIDERS = {
         "model": "gemini-3.5-flash-lite",  # 250K input tokens/min free tier, native tool calling
         "fallback_model": "gemini-3.1-flash-lite",  # rolls over on rate limit; its own quota
         "key_env": "GEMINI_API_KEY",
+        "vision": True,
     },
-    "OpenAI": {"kind": "openai", "model": "gpt-5-mini", "key_env": "OPENAI_API_KEY"},
-    "Anthropic": {"kind": "anthropic", "model": "claude-sonnet-5", "key_env": "ANTHROPIC_API_KEY"},
+    "OpenAI": {"kind": "openai", "model": "gpt-5-mini", "key_env": "OPENAI_API_KEY", "vision": True},
+    "Anthropic": {"kind": "anthropic", "model": "claude-sonnet-5", "key_env": "ANTHROPIC_API_KEY", "vision": True},
     "OpenAI-compatible server": {
         "kind": "openai-compatible",
         "model": "gemma4:31b",  # ~20 GB VRAM; mis-shapes nested args on smaller models
@@ -37,6 +39,9 @@ MODELS_FOLDER_CONFIG_KEY = "ai_assistant_models_folder"  # optional attribute of
 MODEL_SUFFIXES = (".gguf",)
 LOCAL_SERVER_POLL_MS = 500
 LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow disk
+
+# The frame handed to a vision model: longer side in pixels.
+LOOK_IMAGE_SIZE = 1024
 
 POLL_INTERVAL_S = 0.15
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress

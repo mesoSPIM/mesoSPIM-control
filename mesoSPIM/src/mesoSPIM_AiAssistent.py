@@ -126,7 +126,62 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None):
     return _call
 
 
-def build_tools(acceptor, cancel, on_call=None):
+def look(acceptor, endpoint, question, snap, cancel, on_frame=None):
+    """Take a frame and describe it. The numbers come from get_frame and reach the main model
+    always. The picture itself goes to a vision model in a separate single-shot call with the
+    question, and only that answer comes back — the main conversation never carries images, so a
+    text-only main model can still look, and a frame from three turns ago cannot mislead later."""
+    if snap:
+        done = dispatch_and_wait(acceptor, "snap", {"prefix": "assistant"}, WAIT, cancel)
+        if done.get("status") != COMPLETED:
+            return {"error": {"code": "execution", "message": f"snap did not complete: {done}"}}
+    frame = acceptor.dispatch("get_frame", {"include_image": endpoint.vision, "max_size": config.LOOK_IMAGE_SIZE})
+    if not frame.get("available"):
+        return {"available": False, "note": "no frame yet; take a snap first"}
+    result = {"available": True, "stats": frame["stats"]}
+    image = frame.get("image")
+    if image is not None and on_frame is not None:
+        on_frame(image["base64"])
+    if image is None:
+        result["note"] = "this model cannot see images; decide from the numbers"
+    elif question:
+        try:
+            result["answer"] = vision_answer(endpoint, image, question, frame["stats"])
+        except Exception as error:
+            result["vision_error"] = describe_error(error)
+    return result
+
+
+def vision_answer(endpoint, image, question, stats):
+    """One stateless request to the vision model: the frame, the question, the numbers."""
+    import base64
+
+    from pydantic_ai import Agent, BinaryContent
+
+    agent = Agent(
+        build_model(endpoint),
+        instructions="You are looking at one frame from a light-sheet microscope camera, contrast-stretched "
+                     "to 8 bit for display. Answer the operator's question about it in a few sentences. "
+                     "The numbers were computed from the full-depth frame and are more reliable than the "
+                     "display for exposure questions.",
+    )
+    prompt = [f"{question}\n\nFrame numbers: {json.dumps(stats)}",
+              BinaryContent(data=base64.b64decode(image["base64"]), media_type="image/png")]
+    return agent.run_sync(prompt).output
+
+
+_LOOK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "question": {"type": "string", "description": "what to check in the image"},
+        "snap": {"type": "boolean", "description": "take a new frame first (default true); false reuses the last one"},
+    },
+    "required": ["question"],
+    "additionalProperties": False,
+}
+
+
+def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None):
     """One passthrough tool per command, minus the prompt-only ones (get_manual is already in the
     system prompt). The tool list otherwise IS COMMANDS — never hand-maintained. Per-arg
     correctness comes from each command's accept() validator, the same one every transport uses.
@@ -139,11 +194,34 @@ def build_tools(acceptor, cancel, on_call=None):
     single place a call can be refused instead of splitting rejection across two layers with two
     different error vocabularies."""
     from pydantic_ai import Tool
-    return [
+    tools = [
         Tool.from_schema(_tool_fn(acceptor, name, cmd.kind, cancel, on_call),
                          name=name, description=cmd.hint or name, json_schema=_ARGS_SCHEMA)
         for name, cmd in COMMANDS.items() if name not in _PROMPT_ONLY
     ]
+    if endpoint is not None:
+        def _look(question="", snap=True) -> str:
+            if on_call is not None:
+                on_call("look", json.dumps({"question": question, "snap": snap}))
+            return json.dumps(look(acceptor, endpoint, question, snap, cancel, on_frame))
+
+        tools.append(Tool.from_schema(
+            _look, name="look", json_schema=_LOOK_SCHEMA,
+            description="Take a snap (or reuse the last frame with snap=false) and describe it: numbers about "
+                        "exposure, focus and where the signal is, plus, when the model can see, an answer to "
+                        "`question` about the image. Use it to check the sample, the field of view or the exposure.",
+        ))
+    return tools
+
+
+def with_state(acceptor, text):
+    """The operator's message followed by the current microscope readout, as data the model can
+    rely on instead of calling reads first. Sent without the block if the readout fails."""
+    try:
+        snapshot = acceptor.dispatch("get_snapshot", {})
+    except Exception:
+        return text
+    return f"{text}\n\n<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>"
 
 
 def build_system_prompt(acceptor):
@@ -166,6 +244,7 @@ class Endpoint:
     api_key: str = ""
     base_url: str = ""
     fallback_model: str = ""
+    vision: bool = False  # may be shown a camera frame (the `look` side call)
 
     @classmethod
     def from_preset(cls, provider, model="", api_key="", base_url=""):
@@ -181,6 +260,7 @@ class Endpoint:
             api_key=key,
             base_url=base_url.strip() or preset.get("base_url", ""),
             fallback_model=preset.get("fallback_model", ""),
+            vision=bool(preset.get("vision", False)),
         )
 
     @property
@@ -218,7 +298,7 @@ def build_model(endpoint):
     return FallbackModel(primary, _build_one(endpoint, endpoint.fallback_model))
 
 
-def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None):
+def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -228,7 +308,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None):
     # instructions (not system_prompt): applied fresh each run, not accumulated into the
     # message history we carry across turns.
     return Agent(model, instructions=build_system_prompt(acceptor),
-                 tools=build_tools(acceptor, cancel, on_call))
+                 tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame))
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---
@@ -270,6 +350,7 @@ class AssistantWorker(QtCore.QObject):
 
     sig_reply = QtCore.pyqtSignal(str)
     sig_tool = QtCore.pyqtSignal(str, str)   # tool name, args-json
+    sig_frame = QtCore.pyqtSignal(str)       # base64 PNG the `look` tool showed the vision model
     sig_error = QtCore.pyqtSignal(str)
     sig_done = QtCore.pyqtSignal()
 
@@ -293,11 +374,11 @@ class AssistantWorker(QtCore.QObject):
             self.cancel.clear()
             if self._agent is None:
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
-                                          endpoint=self._endpoint)
+                                          endpoint=self._endpoint, on_frame=self.sig_frame.emit)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.
-            result = self._agent.run_sync(text, message_history=self._history)
+            result = self._agent.run_sync(with_state(self._acceptor, text), message_history=self._history)
             self._history = result.all_messages()
             self.sig_reply.emit(result.output)
         except Exception as error:

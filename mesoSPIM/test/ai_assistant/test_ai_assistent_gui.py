@@ -346,3 +346,12 @@ def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     assert not gui.setup_group.isVisible()
     assert gui.setup_status.text() == "ready on 127.0.0.1:4242"
     assert gui.setup_toggle.text() == "Set up AI assistant"
+
+
+def test_frames_from_look_are_shown_in_the_turn(monkeypatch):
+    gui = _gui()
+    gui._active = {"tools": [("look", "{}")], "reply": None, "error": None}
+    gui._on_frame("QUJD")
+    assert '<img src="data:image/png;base64,QUJD"' in gui.output.toPlainText()
+    gui._on_done()
+    assert '<img src="data:image/png;base64,QUJD"' in gui.output.toPlainText()   # kept in the finished block

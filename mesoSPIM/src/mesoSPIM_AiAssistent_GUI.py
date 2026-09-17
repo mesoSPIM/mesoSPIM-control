@@ -91,6 +91,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.sig_run_turn.connect(self._worker.run_turn, QtCore.Qt.QueuedConnection)
         self._worker.sig_reply.connect(self._on_reply)
         self._worker.sig_tool.connect(self._on_tool)
+        self._worker.sig_frame.connect(self._on_frame)
         self._worker.sig_error.connect(self._on_error)
         self._worker.sig_done.connect(self._on_done)
         self._thread.start()
@@ -384,6 +385,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         for name, args in active["tools"]:
             parts.append(f'<div style="color:{_DIM};">&#8250; {_htmllib.escape(name)}'
                          f'({_htmllib.escape(args)})</div>')
+        for png in active.get("frames", ()):
+            # what the vision model was shown, so the operator sees it too
+            parts.append(f'<div><img src="data:image/png;base64,{png}" width="320"></div>')
         if active["error"] is not None:
             parts.append(f'<div style="color:#e08a8a;"><b>&#9888; error</b> — '
                          f'{_htmllib.escape(active["error"])}</div>')
@@ -445,6 +449,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _on_tool(self, name, args):
         if self._active is not None:
             self._active["tools"].append((name, args))
+            self._render()
+
+    def _on_frame(self, png):
+        if self._active is not None:
+            self._active.setdefault("frames", []).append(png)
             self._render()
 
     def _on_error(self, message):
