@@ -297,37 +297,46 @@ class AiAssistentGUI(QtWidgets.QWidget):
             widget.setFont(font)
 
         # Preferences: four pairs on one line, the leftover width after them.
-        options.addWidget(label("Tool set", preferences, gap=0), 0, 0)
+        first = label("Tool set", preferences, gap=0)
+        vision_label = label("Vision model", preferences)
+        options.addWidget(first, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(label("Memory", preferences), 0, 2)
         options.addWidget(self.history_turns, 0, 3)
-        options.addWidget(label("Vision model", preferences), 0, 4)
+        options.addWidget(vision_label, 0, 4)
         options.addWidget(self.vision_provider, 0, 5)
         options.addWidget(label("Frame", preferences), 0, 6)
         options.addWidget(self.frame_size, 0, 7)
         options.setColumnStretch(8, 1)
-        # Model: the first line is the mode and what names the model, the second the key (and
+        # Model: the first line is the type and what names the model, the second the key (and
         # the base URL, which pushes the key to the right: _on_provider_changed) and Connect.
-        # Columns 4 and 6 take the leftover width, so the model, the file, the URL and the key
-        # all grow with the window.
+        # Columns 5 and 7 take the leftover width, so the model, the file, the URL and the key
+        # all grow with the window. The first columns are as wide as in Preferences, so the two
+        # boxes line up: Type under Tool set, Provider under Memory, Model under Vision model.
         self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
         self.model.setMinimumWidth(186)                           # fits the preset model names
         self.key.setMinimumWidth(130)
         self.base_url.setMinimumWidth(200)                        # fits the preset address
         self.connect_button.setMinimumWidth(130)                  # "Connected" in bold, no jump
-        grid.addWidget(self.mode, 0, 0)
-        grid.addWidget(self._local_model_label, 0, 1)
-        grid.addWidget(self.local_model, 0, 2, 1, 5)
-        grid.addWidget(self.folder_button, 1, 6, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        grid.addWidget(self._provider_label, 0, 1)
-        grid.addWidget(self.provider, 0, 2)
-        grid.addWidget(self._model_label, 0, 3)
-        grid.addWidget(self.model, 0, 4, 1, 3)
-        grid.addWidget(self._base_url_label, 1, 1)
-        grid.addWidget(self.base_url, 1, 2, 1, 3)
-        grid.addWidget(self.connect_button, 1, 7)
-        grid.setColumnStretch(4, 1)
-        grid.setColumnStretch(6, 1)
+        second = max(w.sizeHint().width() for w in (self._provider_label, self._base_url_label, self._key_label))
+        for column, width in ((0, first.sizeHint().width()), (1, 144), (2, second),
+                              (3, self.provider.sizeHint().width()), (4, vision_label.sizeHint().width())):
+            options.setColumnMinimumWidth(column, width)
+            grid.setColumnMinimumWidth(column, width)
+        grid.addWidget(label("Type", group, gap=0), 0, 0)
+        grid.addWidget(self.mode, 0, 1)
+        grid.addWidget(self._local_model_label, 0, 2)
+        grid.addWidget(self.local_model, 0, 3, 1, 5)
+        grid.addWidget(self.folder_button, 1, 7, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        grid.addWidget(self._provider_label, 0, 2)
+        grid.addWidget(self.provider, 0, 3)
+        grid.addWidget(self._model_label, 0, 4)
+        grid.addWidget(self.model, 0, 5, 1, 3)
+        grid.addWidget(self._base_url_label, 1, 2)
+        grid.addWidget(self.base_url, 1, 3, 1, 3)
+        grid.addWidget(self.connect_button, 1, 8)
+        grid.setColumnStretch(5, 1)
+        grid.setColumnStretch(7, 1)
         self._model_grid = grid
         self.tools_profile.currentTextChanged.connect(self._apply_profile)
         self.history_turns.valueChanged.connect(self._apply_options)
@@ -394,11 +403,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
         grid.removeWidget(self._key_label)
         grid.removeWidget(self.key)
         if preset["kind"] == "openai-compatible":
-            grid.addWidget(self._key_label, 1, 5)
-            grid.addWidget(self.key, 1, 6)
+            grid.addWidget(self._key_label, 1, 6)
+            grid.addWidget(self.key, 1, 7)
         else:
-            grid.addWidget(self._key_label, 1, 1)
-            grid.addWidget(self.key, 1, 2, 1, 5)
+            grid.addWidget(self._key_label, 1, 2)
+            grid.addWidget(self.key, 1, 3, 1, 5)
         self._on_mode_changed()
 
     def _scan_models(self):
