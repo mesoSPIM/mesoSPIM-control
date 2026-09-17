@@ -4,7 +4,7 @@ A ``.gguf`` file chosen in the tab is served by llama.cpp's OpenAI-compatible se
 ``llama_cpp.server`` module of the ``llama-cpp-python`` package) as a child process bound to
 loopback. The assistant then talks to it through the same OpenAI-compatible endpoint it uses for
 any other server, so nothing in the agent depends on the runtime. The child lives while that
-endpoint is in use: switching models or closing the tab stops it.
+endpoint is in use: connecting again or closing mesoSPIM stops it.
 
 Maintainer (2026):
     Thom de Hoog
@@ -13,6 +13,8 @@ Maintainer (2026):
     thomdehoog@gmail.com
 """
 
+import atexit
+import http.client
 import os
 import socket
 import subprocess
@@ -41,23 +43,20 @@ def list_models(folder):
 
 
 def projector_for(folder, model_name):
-    """The projector file (``mmproj``) that lets a local model see, for a vision model: the one
-    in the folder whose name shares the longest start with the model file's, or the only one
-    there. None when the folder has none, or several and none match."""
+    """The projector file (``mmproj``) that lets a local model see: one in the folder whose name
+    carries the model's family, the first two dash-separated parts of the file name ("gemma-4",
+    "qwen3.5-8b"). Of several, the longest shared start with the model's name wins. None when none
+    matches: a projector of another family makes the server fail or see nonsense."""
     if not os.path.isdir(folder):
         return None
+    stem = model_name.lower().rsplit(".", 1)[0]
+    family = "-".join(stem.split("-")[:2])
     candidates = [name for name in os.listdir(folder)
-                  if name.lower().endswith(config.MODEL_SUFFIXES) and "mmproj" in name.lower()]
-
-    def shared(name):
-        stem = name.lower().replace("mmproj-", "").replace("-mmproj", "")
-        return len(os.path.commonprefix([model_name.lower(), stem]))
-
+                  if name.lower().endswith(config.MODEL_SUFFIXES) and "mmproj" in name.lower()
+                  and family in name.lower()]
     if not candidates:
         return None
-    best = max(candidates, key=shared)
-    if len(candidates) > 1 and shared(best) == 0:
-        return None
+    best = max(candidates, key=lambda name: len(os.path.commonprefix([stem, name.lower().replace("mmproj-", "")])))
     return os.path.join(folder, best)
 
 
@@ -110,7 +109,12 @@ class LocalModelServer:
         argv = self._command(self.model_path, self.port, self.projector)  # raises before anything is spawned
         handle, self.log_path = tempfile.mkstemp(prefix="mesospim-model-server-", suffix=".log")
         with os.fdopen(handle, "wb") as log:  # the child inherits the descriptor; ours can close
-            self._process = subprocess.Popen(argv, stdout=log, stderr=subprocess.STDOUT)
+            try:
+                self._process = subprocess.Popen(argv, stdout=log, stderr=subprocess.STDOUT)
+            except OSError:
+                os.unlink(self.log_path)
+                raise
+        atexit.register(self.stop)            # no orphaned child if mesoSPIM ends without shutdown()
 
     def ready(self):
         """True once the server answers. Raises when the child has already exited."""
@@ -123,10 +127,12 @@ class LocalModelServer:
         try:
             with urllib.request.urlopen(self.base_url + "/models", timeout=0.5):
                 return True
-        except OSError:
+        except (OSError, http.client.HTTPException):  # not listening yet, or half-way up
             return False
 
     def stop(self):
+        """Stop a running child and drop its log; a child that died on its own keeps the log,
+        since the failure message names it."""
         process, self._process = self._process, None
         if process is None or process.poll() is not None:
             return
@@ -136,3 +142,5 @@ class LocalModelServer:
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait()
+        if self.log_path and os.path.exists(self.log_path):
+            os.unlink(self.log_path)

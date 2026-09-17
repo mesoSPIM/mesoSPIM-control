@@ -36,6 +36,7 @@ CLOUD_MODE = "Cloud AI"
 SAME_AS_LANGUAGE = "Same as language model"
 LOCAL_PROVIDER = "Local"        # the provider name of a model file served by mesoSPIM itself
 PAIR_GAP = 14                   # px before an inner label, more than the 8 between it and its field
+_ORPHANED_THREADS = []          # worker threads still in a model call at exit; kept so Qt never destroys a running one
 
 _BUBBLE = "#2b3b47"      # the operator's own turns only — the answers stay on the tab background
 _DIM = "#9aa7b0"         # tool-call and note text
@@ -151,13 +152,12 @@ class ModelPicker(QtWidgets.QGroupBox):
         grid.setColumnStretch(5, 1)
         grid.setColumnStretch(7, 1)
 
+        self.provider.setCurrentText(config.DEFAULT_PROVIDER)
+        self.mode.setCurrentText(same_as or CLOUD_MODE)
         self.mode.currentTextChanged.connect(self._on_mode_changed)
         self.provider.currentTextChanged.connect(self._on_provider_changed)
         self.folder_button.clicked.connect(on_folder)
-        self.provider.setCurrentText(config.DEFAULT_PROVIDER)
-        self._on_provider_changed(config.DEFAULT_PROVIDER)
-        self.mode.setCurrentText(same_as or CLOUD_MODE)
-        self._on_mode_changed()
+        self._on_provider_changed(config.DEFAULT_PROVIDER)     # prefills, then shows the mode's fields
 
     @property
     def same(self):
@@ -230,9 +230,13 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.core = parent.core
         self.setObjectName("AiAssistentTabWidget")
         self._worker = None
-        self._endpoint = None                   # the language model, set by Connect or the first message
+        self._thread = None
+        self._state = "idle"                    # idle, starting (a local model loads), ready; the Connect button shows it
         self._endpoints = {}                    # "language" and, when it is its own, "vision"
         self._servers = {}                      # by the same names: children serving local files
+        self._started_at = 0.0
+        self._needs_operator = False            # a note asked for something: keep the footer open
+        self._pending_confirmation = None
         self._models_folder = models_folder(getattr(self.core, "cfg", None))
         self._single_shot = QtCore.QTimer.singleShot   # injectable for tests
         self._blocks = []                       # finalized message HTML, oldest first
@@ -347,9 +351,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
         self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: the emergency stop
-        self.new_button = QtWidgets.QPushButton("Clear all", self)
-        self.new_button.setFont(font)
-        self.new_button.clicked.connect(self.on_new_conversation)
+        self.clear_button = QtWidgets.QPushButton("Clear all", self)
+        self.clear_button.setFont(font)
+        self.clear_button.clicked.connect(self.on_clear_all)
         # Right of the two-line input: Send as tall as both rows, then the emergency stop on top,
         # spanning both, with Cancel and Clear all side by side under it; the input is as tall as the
         # two button rows.
@@ -359,7 +363,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         buttons.addWidget(self.send_button, 0, 0, 2, 1)
         buttons.addWidget(self.stop_button, 0, 1, 1, 2)
         buttons.addWidget(self.interrupt, 1, 1)
-        buttons.addWidget(self.new_button, 1, 2)
+        buttons.addWidget(self.clear_button, 1, 2)
         row.addWidget(self.input, 1)
         row.addLayout(buttons)
         two_rows = 2 * self.interrupt.sizeHint().height() + 6
@@ -474,6 +478,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         """The Connect button shows the state: Connect, Starting…, or a green Connected. `detail`
         goes in its tooltip (the local server's address, for instance)."""
         text = {"idle": "Connect", "starting": "Starting…", "ready": "Connected"}[state]
+        self._state = state
         self.connect_button.setText(text)
         self.connect_button.setToolTip(detail)
         self.connect_button.setStyleSheet("color: #4cd964; font-weight: bold;" if state == "ready" else "")
@@ -502,6 +507,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         if not self._ensure_worker():
             self._note("Stop the Remote Control transport to use the AI Assistant.")
             return False
+        self._needs_operator = False
         plan = self._plan()
         if plan is None:
             return False
@@ -526,7 +532,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
                 self._servers[role] = server
         if self._servers:
             servers = self._servers
-            self._endpoint = None
             self._started_at = time.monotonic()
             self._set_connect_state("starting", ", ".join(sorted({s.model for s in servers.values()})))
             self._single_shot(config.LOCAL_SERVER_POLL_MS, lambda: self._poll_local_servers(servers))
@@ -547,7 +552,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
                 if not name:
                     self._note(f"Put a model file ({', '.join(config.MODEL_SUFFIXES)}) in {self._models_folder} first.")
                     return None
-                projector = projector_for(self._models_folder, name)   # the language model sees too, given one
+                # A projector gives the file eyes: the vision model must have one; the language
+                # model takes one only when it is the vision model too.
+                projector = projector_for(self._models_folder, name) if role == "vision" or self.vision.same else None
                 if role == "vision" and projector is None:
                     self._note(f"{name} needs its projector file (mmproj…) beside it in {self._models_folder} to see.")
                     return None
@@ -572,19 +579,19 @@ class AiAssistentGUI(QtWidgets.QWidget):
         an earlier Connect finds its servers replaced and stops."""
         if servers is not self._servers:
             return
-        for server in servers.values():
-            try:
-                ready = server.ready()
-            except RuntimeError as error:  # the child exited
-                self._local_failed(str(error))
-                return
-            if not ready:
-                if time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
-                    self._local_failed(f"{server.model} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; "
-                                       f"see {server.log_path}")
-                else:
-                    self._single_shot(config.LOCAL_SERVER_POLL_MS, lambda: self._poll_local_servers(servers))
-                return
+        try:
+            waiting = [server for server in set(servers.values()) if not server.ready()]
+        except Exception as error:  # a child exited, or the probe failed in an unforeseen way
+            self._local_failed(str(error))
+            return
+        if waiting:
+            if time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
+                names = ", ".join(server.model for server in waiting)
+                logs = ", ".join(server.log_path for server in waiting)
+                self._local_failed(f"{names} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; see {logs}")
+            else:
+                self._single_shot(config.LOCAL_SERVER_POLL_MS, lambda: self._poll_local_servers(servers))
+            return
         for role, server in servers.items():
             self._endpoints[role] = Endpoint(provider=LOCAL_PROVIDER, kind="openai-compatible", model=server.model,
                                              base_url=server.base_url, vision=server.projector is not None)
@@ -592,7 +599,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _local_failed(self, message):
         self._stop_local_servers()
-        self._endpoint = None
         self._set_connect_state("idle")
         self._note(message)
 
@@ -600,21 +606,23 @@ class AiAssistentGUI(QtWidgets.QWidget):
         """Hand the endpoints to the worker; the Connect button turns green and says which."""
         language, vision = self._endpoints["language"], self._endpoints.get("vision")
         self._worker.configure(language, vision, self.tools_profile.currentText())
-        self._endpoint = language
         detail = _describe(language) + (f"; vision: {_describe(vision)}" if vision else "")
         self._set_connect_state("ready", detail)
-        self._set_expanded(False)
+        if not self._needs_operator:            # a note on the way here stays in view
+            self._set_expanded(False)
 
     def _stop_local_servers(self):
         servers, self._servers = self._servers, {}
         for server in servers.values():
             server.stop()
 
-    def _note(self, text):
-        """A note in the transcript about the setup; the footer opens so the fix is in view."""
+    def _note(self, text, needs_operator=True):
+        """A note in the transcript about the setup; the footer opens so the fix is in view and
+        stays open through the Connect that follows."""
         self._blocks.append(self._note_block(text))
         self._render()
         self._set_expanded(True)
+        self._needs_operator = self._needs_operator or needs_operator
 
     # --- transcript rendering ---
     def _user_block(self, text):
@@ -662,11 +670,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
         text = self.input.text().strip()
         if not text or not self.input.isEnabled():
             return
-        if self._endpoint is None and not self._connect():   # a first message connects as typed
+        if self._state == "starting":
+            self._note("The local model is still loading; the Connect button says when it is ready.",
+                       needs_operator=False)
+            return
+        if self._state != "ready" and not self._connect():   # a first message connects as typed
             return
         self.input.clear()
         self._blocks.append(self._user_block(text))
-        self._active = {"tools": [], "reply": None, "error": None}   # mesoSPIM header appears at once
+        self._active = {"tools": [], "reply": None, "error": None}
         self._set_running(True)
         self._render()
         self.sig_run_turn.emit(text)
@@ -690,11 +702,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.main_window.stop_acquisition_and_timelapse()
         self.main_window.sig_stop_movement.emit()
         self._show_confirmation(False)
-        self._blocks.append(self._note_block("[stop microscope now]"))
+        self._blocks.append(self._note_block("[stop microscope]"))
         self._render()
 
-    def on_new_conversation(self):
-        """Clear all: clear the transcript and the model's memory of it; the endpoint stays."""
+    def on_clear_all(self):
+        """Clear the transcript and the model's memory of it; the models stay connected."""
         if not self.input.isEnabled():
             return                                  # not while a turn runs
         self._blocks = []
@@ -714,7 +726,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._show_confirmation(True)
 
     def _answer_confirmation(self, allowed):
-        name = getattr(self, "_pending_confirmation", None)
+        name = self._pending_confirmation
         self._show_confirmation(False)
         if self._worker is not None:
             self._worker.gate.answer(allowed)
@@ -724,7 +736,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _set_running(self, running):
         self.input.setEnabled(not running)
-        for widget in (self.send_button, self.language, self.vision, self.connect_button, self.new_button,
+        for widget in (self.send_button, self.language, self.vision, self.connect_button, self.clear_button,
                        self.tools_profile):
             widget.setEnabled(not running)      # the models and the tool set change only between turns
         if running:
@@ -769,5 +781,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         if self._worker is not None:
             self._worker.interrupt()
             self._thread.quit()
-            self._thread.wait(3000)
+            if not self._thread.wait(3000):     # still inside a model call: let it be, never qFatal
+                self._thread.setParent(None)
+                _ORPHANED_THREADS.append(self._thread)
             self._call_on_core("stop_ai_assistant")

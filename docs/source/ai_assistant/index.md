@@ -22,6 +22,7 @@ integration
   lazily, so the application starts and every other feature works without it; the tab reports the
   missing module when the operator sends a first message.
 - An API key for the chosen provider, or any server that speaks the OpenAI API (Ollama, vLLM, LM Studio).
+- For a local model file, `llama-cpp-python`: the extra `ai-assistant-local` installs both.
 
 ## Setting it up
 
@@ -112,10 +113,11 @@ loaded.
 
 ## What has been verified
 
-- `mesoSPIM/test/ai_assistant/` — 18 offline tests covering the completion wrapper, tool
-  construction, the worker's turn/error/interrupt behaviour, the Acceptor lifecycle, and the tab's
-  wiring, transport-busy refusal and single-flight input lock. They run without Qt or hardware,
-  reusing the Remote Control substitute:
+- `mesoSPIM/test/ai_assistant/` — offline tests for the worker (completion wrapper, tools, turn,
+  error and interrupt behaviour, the Acceptor lifecycle), the local model server and the tab
+  (wiring, transport-busy refusal, the single-flight input lock, the setup boxes, local servers
+  and their projectors). They run without Qt or hardware, reusing the Remote Control substitute,
+  together with the Remote Control offline suites:
 
   ```
   pytest mesoSPIM/test/remote_control mesoSPIM/test/ai_assistant \
@@ -123,7 +125,9 @@ loaded.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  245 passed, 10 skipped, in either collection order.
+  365 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  scripts, among them one that builds the tab offscreen and checks the setup layout and the input
+  keys.
 - A 14-case behavioural suite (`evals/` in the contribution repository) driving the real dispatcher
   over a fake Core, scored on which hardware call landed and what state resulted rather than on
   wording. It covers plain verbs, unit conversion, reads, vocabulary refusals, out-of-limits

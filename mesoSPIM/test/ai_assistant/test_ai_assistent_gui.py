@@ -137,10 +137,10 @@ def test_connect_without_a_key_explains_and_does_not_start(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     gui = _gui()
     configured = []
-    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint: configured.append(endpoint)})()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append(endpoint)})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.on_connect()
-    assert configured == [] and gui._endpoint is None         # nothing configured
+    assert configured == [] and gui._state == "idle"          # nothing configured
     assert "Enter an API key for Gemini" in gui.output.toPlainText()
     assert "GEMINI_API_KEY" in gui.output.toPlainText()
 
@@ -298,9 +298,9 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
     (server,) = _SERVERS
     assert server.started and server.model_path == str(tmp_path / "qwen3.5-8b-q4.gguf")
     assert gui.connect_button.text() == "Starting…"
-    assert gui._endpoint is None
+    assert gui._state == "starting"
     scheduled.pop()()                                          # first poll: still loading
-    assert gui._endpoint is None and len(scheduled) == 1
+    assert gui._state == "starting" and len(scheduled) == 1
     scheduled.pop()()                                          # second poll: ready
     endpoint = gui._worker.endpoint
     assert (endpoint.kind, endpoint.model, endpoint.base_url) == ("openai-compatible", "qwen3.5-8b-q4", server.base_url)
@@ -434,18 +434,18 @@ def test_confirmation_bar_is_hidden_until_asked_and_answers_the_gate():
     assert "[cancelled unload_sample]" in gui.output.toPlainText()
 
 
-def test_new_conversation_clears_the_transcript_and_the_worker_between_turns():
+def test_clear_all_clears_the_transcript_and_the_worker_between_turns():
     gui = _gui()
     resets = []
     gui._worker = type("_W", (), {"reset": lambda self: resets.append(True)})()
     gui._blocks.append(gui._user_block("old question"))
     gui._render()
     assert "old question" in gui.output.toPlainText()
-    gui.on_new_conversation()
+    gui.on_clear_all()
     assert resets == [True] and gui._blocks == [] and "old question" not in gui.output.toPlainText()
     gui._set_running(True)
-    gui.on_new_conversation()                                       # ignored while a turn runs
-    assert resets == [True] and not gui.new_button.isEnabled()
+    gui.on_clear_all()                                       # ignored while a turn runs
+    assert resets == [True] and not gui.clear_button.isEnabled()
 
 
 def test_options_row_sets_the_worker_at_once():
@@ -499,6 +499,8 @@ def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
     gui.on_connect()
     assert configured == [None]
     assert "OPENAI_API_KEY" in gui.output.toPlainText()
+    assert gui.setup_group.isVisible()                          # the note stays in view although connected
+    assert gui.connect_button.text() == "Connected"
 
 
 def test_local_vision_model_is_served_with_its_projector(tmp_path, monkeypatch):
@@ -554,9 +556,87 @@ def test_a_second_connect_while_loading_leaves_one_live_poll(tmp_path, monkeypat
     gui.on_connect()                                           # replaces the child before it answered
     assert _SERVERS[0].stopped and len(scheduled) == 1
     stale()                                                    # the old chain finds its servers gone
-    assert len(scheduled) == 1 and gui._endpoint is None
+    assert len(scheduled) == 1 and gui._state == "starting"
     scheduled.pop()(); scheduled.pop()()
     assert gui.connect_button.text() == "Connected" and scheduled == []
+
+
+def test_language_model_takes_no_projector_when_vision_is_its_own(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    (tmp_path / "mmproj-qwen3.5-8b-f16.gguf").write_bytes(b"")
+    (tmp_path / "mmproj-gemma-4-12b-f16.gguf").write_bytes(b"")
+    _choose_mode(gui, "Local AI")
+    gui.language.local_model.setCurrentText("qwen3.5-8b-q4.gguf")
+    _choose_mode(gui, "Local AI", gui.vision)
+    gui.vision.local_model.setCurrentText("gemma-4-12b-q4.gguf")
+    gui.on_connect()
+    by_path = {s.model_path.rsplit("/", 1)[-1]: s for s in _SERVERS}
+    assert by_path["qwen3.5-8b-q4.gguf"].projector is None       # text only; the other one sees
+    assert by_path["gemma-4-12b-q4.gguf"].projector == str(tmp_path / "mmproj-gemma-4-12b-f16.gguf")
+    scheduled.pop()()                                          # neither ready yet: one poll rescheduled
+    assert len(scheduled) == 1 and gui._state == "starting"
+    scheduled.pop()()
+    language, vision = gui._endpoints["language"], gui._endpoints["vision"]
+    assert (language.vision, vision.vision) == (False, True) and (language.model, vision.model) == ("qwen3.5-8b-q4", "gemma-4-12b-q4")
+    assert gui.connect_button.text() == "Connected"
+
+
+def test_a_message_while_a_local_model_loads_waits_instead_of_restarting_it(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    _choose_mode(gui, "Local AI")
+    gui.on_connect()
+    sent = _collect(gui.sig_run_turn)
+    gui.input.setText("centre the sample")
+    gui.on_submit()
+    assert len(_SERVERS) == 1 and not _SERVERS[0].stopped and sent == []
+    assert "still loading" in gui.output.toPlainText() and gui.input.text() == "centre the sample"
+    scheduled.pop()(); scheduled.pop()()
+    assert not gui.setup_group.isVisible()                      # that note was no ask: the footer folds
+    gui.on_submit()
+    assert sent == ["centre the sample"]
+
+
+def test_a_local_model_that_never_answers_is_given_up_with_its_log(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch, server_factory=lambda path, projector=None: _FakeServer(path, ready_after=99))
+    monkeypatch.setattr(gui_module.config, "LOCAL_SERVER_TIMEOUT_S", 0)
+    _choose_mode(gui, "Local AI")
+    gui.on_connect()
+    scheduled.pop()()
+    assert _SERVERS[0].stopped and gui._servers == {} and gui.connect_button.text() == "Connect"
+    assert "did not answer" in gui.output.toPlainText() and "/tmp/fake.log" in gui.output.toPlainText()
+
+
+def test_a_server_that_cannot_start_is_reported_at_the_tab(tmp_path, monkeypatch):
+    class _NoRuntime(_FakeServer):
+        def start(self):
+            raise RuntimeError("llama-cpp-python is not installed: pip install llama-cpp-python")
+
+    gui, scheduled = _local_gui(tmp_path, monkeypatch, server_factory=_NoRuntime)
+    _choose_mode(gui, "Local AI")
+    assert gui.on_connect() is None and scheduled == []
+    assert gui._servers == {} and gui.connect_button.text() == "Connect"
+    assert "pip install llama-cpp-python" in gui.output.toPlainText()
+
+
+def test_a_refused_plan_leaves_a_live_local_model_connected(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    _choose_mode(gui, "Local AI")
+    gui.on_connect()
+    scheduled.pop()(); scheduled.pop()()
+    (server,) = _SERVERS
+    _choose_mode(gui, "Local AI", gui.vision)                  # no projector in the folder: refused
+    gui.on_connect()
+    assert not server.stopped and gui._servers == {"language": server}
+    assert gui.connect_button.text() == "Connected" and "projector file" in gui.output.toPlainText()
+
+
+def test_shutdown_stops_local_servers(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    _choose_mode(gui, "Local AI")
+    gui.on_connect()
+    gui._worker = None                                         # nothing else to stop in this test
+    gui.shutdown()
+    assert _SERVERS[0].stopped and gui._servers == {}
 
 
 def test_local_vision_model_without_a_projector_is_refused(tmp_path, monkeypatch):
@@ -568,7 +648,7 @@ def test_local_vision_model_without_a_projector_is_refused(tmp_path, monkeypatch
     assert "projector file" in gui.output.toPlainText()
 
 
-def test_stop_microscope_now_goes_the_main_windows_way_and_cancels_the_assistant():
+def test_stop_microscope_goes_the_main_windows_way_and_cancels_the_assistant():
     gui = _gui()
     window = gui.main_window
     halted = _collect(window.sig_stop_movement)
@@ -581,10 +661,10 @@ def test_stop_microscope_now_goes_the_main_windows_way_and_cancels_the_assistant
     assert gui.stop_button.isEnabled()
     gui.on_stop_microscope()
     assert window.stops == 2 and len(halted) == 2 and cancelled == [True]
-    assert "[stop microscope now]" in gui.output.toPlainText()
+    assert "[stop microscope]" in gui.output.toPlainText()
 
 
-def test_cancel_request_is_always_clickable_and_idle_between_turns():
+def test_cancel_is_always_clickable_and_idle_between_turns():
     gui = _gui()
     assert gui.interrupt.isEnabled()
     gui.on_interrupt()                                              # idle: nothing happens

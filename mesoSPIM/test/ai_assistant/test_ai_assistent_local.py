@@ -45,15 +45,17 @@ def test_server_command_serves_the_file_on_loopback(monkeypatch):
     assert with_eyes[with_eyes.index("--clip_model_path") + 1] == "/models/mmproj-qwen-8b.gguf"
 
 
-def test_projector_for_matches_by_name_or_takes_the_only_one(tmp_path):
+def test_projector_for_wants_the_models_family_in_the_name(tmp_path):
     assert projector_for(str(tmp_path / "missing"), "gemma-4-12b-q4.gguf") is None
     assert projector_for(str(tmp_path), "gemma-4-12b-q4.gguf") is None                 # nothing there
     (tmp_path / "mmproj-qwen3.5-8b-f16.gguf").write_bytes(b"")
-    assert projector_for(str(tmp_path), "gemma-4-12b-q4.gguf") == str(tmp_path / "mmproj-qwen3.5-8b-f16.gguf")  # the only one
+    assert projector_for(str(tmp_path), "gemma-4-12b-q4.gguf") is None                 # another family, even alone
     (tmp_path / "gemma-4-12b-mmproj-f16.gguf").write_bytes(b"")
+    (tmp_path / "mmproj-gemma-4-27b-f16.gguf").write_bytes(b"")
     assert projector_for(str(tmp_path), "gemma-4-12b-q4.gguf") == str(tmp_path / "gemma-4-12b-mmproj-f16.gguf")
+    assert projector_for(str(tmp_path), "gemma-4-27b-q8.gguf") == str(tmp_path / "mmproj-gemma-4-27b-f16.gguf")
     assert projector_for(str(tmp_path), "qwen3.5-8b-q4.gguf") == str(tmp_path / "mmproj-qwen3.5-8b-f16.gguf")
-    assert projector_for(str(tmp_path), "phi-4-q4.gguf") is None                        # several, none match
+    assert projector_for(str(tmp_path), "phi-4-q4.gguf") is None
 
 
 _FAKE_SERVER = """

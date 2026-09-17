@@ -118,44 +118,6 @@ class _Signal:
             slot(*args)
 
 
-def _lazy_signal(attribute):
-    """The stub widgets have no metaclass machinery, so each signal is created on first access."""
-    def getter(self):
-        if not hasattr(self, attribute):
-            setattr(self, attribute, _Signal())
-        return getattr(self, attribute)
-    return property(getter)
-
-
-_RADIO_GROUPS = {}  # parent id -> radios, so setChecked(True) unchecks the siblings
-
-
-class QRadioButton(QtWidgets.QWidget):
-    """Two of these share one 'checked' choice in production; here each just holds its own flag
-    and setChecked drives the `toggled` signal the tab listens to."""
-
-    def __init__(self, text="", parent=None):
-        super().__init__(parent)
-        self._text = text
-        self._checked = False
-        self.toggled = _Signal()
-        _RADIO_GROUPS.setdefault(id(parent), []).append(self)
-
-    def setChecked(self, checked):
-        changed = self._checked != bool(checked)
-        self._checked = bool(checked)
-        if changed:
-            self.toggled.emit(self._checked)
-        if self._checked:
-            for sibling in _RADIO_GROUPS.get(id(self._parent), []):
-                if sibling is not self:
-                    sibling.setChecked(False)
-
-
-    def isChecked(self):
-        return self._checked
-
-
 class QToolButton(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -251,9 +213,6 @@ class QSpinBox(QtWidgets.QWidget):
     def setRange(self, low, high):
         self._range = (low, high)
 
-    def setSuffix(self, _suffix):
-        pass
-
     def setValue(self, value):
         self._value = int(value)
         self.valueChanged.emit(self._value)
@@ -270,7 +229,6 @@ class QFileDialog:
         return QFileDialog.chosen
 
 
-QtWidgets.QRadioButton = QRadioButton
 QtWidgets.QToolButton = QToolButton
 QtWidgets.QSpinBox = QSpinBox
 QtWidgets.QPlainTextEdit = QPlainTextEdit
@@ -296,9 +254,6 @@ if not hasattr(QtWidgets.QWidget, "setStyleSheet"):
     QtWidgets.QWidget.setStyleSheet = lambda self, _sheet: None
 if not hasattr(QtWidgets.QWidget, "sizeHint"):
     QtWidgets.QWidget.sizeHint = lambda self: types.SimpleNamespace(width=lambda: 80, height=lambda: 24)
-if not hasattr(QtWidgets.QWidget, "setSizePolicy"):
-    QtWidgets.QWidget.setSizePolicy = lambda self, *_a: None
-    QtWidgets.QSizePolicy = types.SimpleNamespace(Ignored=0, Preferred=1)
 for _enum, _value in (("AlignLeft", 1), ("AlignRight", 2), ("AlignVCenter", 128)):
     if not hasattr(QtCore.Qt, _enum):
         setattr(QtCore.Qt, _enum, _value)
@@ -313,10 +268,6 @@ for _layout in (QtWidgets.QVBoxLayout, QtWidgets.QHBoxLayout, QtWidgets.QFormLay
     if not hasattr(_layout, "addSpacing"):
         _layout.addSpacing = lambda self, *a, **k: None
 
-# Only returnPressed is missing: QPushButton already assigns `clicked` per instance in its own
-# __init__, and a class-level property here would shadow that assignment and break it.
-if not hasattr(QtWidgets.QLineEdit, "returnPressed"):
-    QtWidgets.QLineEdit.returnPressed = _lazy_signal("_signal_returnPressed")
 
 _qtgui = types.ModuleType("PyQt5.QtGui")
 _qtgui.QTextDocument = QTextDocument
