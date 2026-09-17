@@ -16,7 +16,7 @@ reuses its `Acceptor`, dispatcher, and completion signals.
   threads.
 - `mesoSPIM_AiAssistent_Local.py` — the models-folder scan and the llama.cpp server child that
   serves a local `.gguf` file on loopback.
-- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Interrupt, Stop microscope, and
+- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Cancel, Stop microscope, and
   the collapsible setup footer.
 - `assistant_manual.md` — a thin preamble (units, frames, safety tone); `get_manual` supplies the
   full, always-in-sync command reference.
@@ -92,7 +92,7 @@ Core-owned Acceptor.
 
 - The Acceptor is acquired lazily on the first message, not at startup; until then the Remote Control
   transports stay usable.
-- One turn runs at a time — the input disables while the agent works (single-flight); Interrupt gates
+- One turn runs at a time — the input disables while the agent works (single-flight); Cancel gates
   further dispatches; Stop microscope also stops the instrument.
 - Every mutating tool blocks until the microscope actually finishes, so the agent sees completed
   actions, not `processing`; a long acquisition past the wait cap returns `still_running`.

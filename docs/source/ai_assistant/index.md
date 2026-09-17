@@ -63,7 +63,7 @@ live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 ## Using it
 
 Open the **AI Assistant** tab and type. Commands the agent runs stream live above each answer, so
-the operator sees exactly which named calls were issued. **Interrupt** stops the assistant: no
+the operator sees exactly which named calls were issued. **Cancel** stops the assistant: no
 further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the
 model's next reply; what the assistant already started keeps running. **Stop microscope** stops
 the instrument the way the main window's Stop does (it ends a running mode and halts motion) and
@@ -77,11 +77,11 @@ loaded.
 - **Six commands are gated by the operator, in code.** `load_sample`, `unload_sample`,
   `run_acquisition_list`, `run_selected_acquisition`, `preview_acquisition` and `time_lapse_start`
   do not execute until the operator presses **Run** in the bar that appears above the input; Cancel,
-  Interrupt, or silence for the configured wait (two minutes by default) count as Cancel, and the
+  Cancel, or silence for the configured wait (two minutes by default) count as Cancel, and the
   model is told the operator refused. This holds whatever the model was told or talked into.
 - **The model call has no timeout.** `WAIT_CAP_S` bounds the microscope leg only. If the endpoint
   stalls — a burst over a tokens-per-minute quota is the usual cause — the turn blocks until the
-  HTTP layer gives up, and Interrupt gates tool dispatch but cannot abort a request already in
+  HTTP layer gives up, and Cancel gates tool dispatch but cannot abort a request already in
   flight.
 - **A commanded move smaller than `POSITION_TOLERANCE` completes without verifying motion.**
   Arrival is tested as `abs(observed - target) > tolerance`, so with the default 1.0 µm a 1 µm move

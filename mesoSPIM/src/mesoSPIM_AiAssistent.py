@@ -451,9 +451,9 @@ class AssistantWorker(QtCore.QObject):
         self.sig_tool.emit(name, args)
 
     def interrupt(self):
-        """Stop the assistant, not the microscope: every further tool call in this turn returns
-        'cancelled' (dispatch_and_wait checks the flag), an open Run / Cancel question is answered
-        Cancel, and the turn ends when the model next replies. Whatever the assistant already
+        """The Cancel button: stop the assistant, not the microscope. Every further tool call in
+        this turn returns 'cancelled' (dispatch_and_wait checks the flag), an open Run / Cancel
+        question is answered Cancel, and the turn ends when the model next replies. Whatever the assistant already
         started keeps running; stopping the instrument is stop_microscope, a separate decision."""
         self.cancel.set()
         self.gate.answer(False)
