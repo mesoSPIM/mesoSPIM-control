@@ -104,7 +104,9 @@ def _only_keys(fn, name, keys):
         extra = sorted(set(args) - set(keys))
         if extra:
             return json.dumps({"error": {"code": "validation",
-                                         "message": f"{name} offers only {', '.join(keys)} in this profile; not {', '.join(extra)}"}})
+                                         "message": f"{name} offers only {', '.join(keys)} in the Regular tool set; "
+                                                    f"{', '.join(extra)} needs the Full tool set (the operator's choice "
+                                                    "in the setup box)"}})
         return fn(**args)
     return _call
 
@@ -225,6 +227,13 @@ def offered_commands(profile=None):
             if name not in _PROMPT_ONLY and (allowed is None or name in allowed)]
 
 
+def hidden_commands(profile=None):
+    """The command names a tool profile withholds, in registry order: what the model is told it
+    does not have, so it says so instead of standing another command in for it."""
+    offered = {cmd.name for cmd in offered_commands(profile)}
+    return [name for name in COMMANDS if name not in offered and name not in _PROMPT_ONLY]
+
+
 def _row_arguments(schema):
     """The argument names under which a command takes acquisition rows: a list or a single row."""
     properties = schema.get("properties", {})
@@ -251,8 +260,9 @@ def _refuse_row_keys(fn, name, keys):
         found = sorted({key for row in rows if isinstance(row, dict) for key in row if key in keys})
         if found:
             return json.dumps({"error": {"code": "validation",
-                                         "message": f"{name}: {', '.join(found)} are not part of this tool set; "
-                                                    "a row takes the current settings for them"}})
+                                         "message": f"{name}: {', '.join(found)} are not part of the Regular tool set; "
+                                                    "a row takes the current settings for them, and the Full tool set "
+                                                    "(the operator's choice in the setup box) offers them"}})
         return fn(**args)
     return _call
 
@@ -366,7 +376,15 @@ def build_system_prompt(acceptor=None, profile=None):
     Argument shapes come from the tool schemas, so the prompt does not repeat them."""
     preamble = (Path(__file__).parent / "assistant_manual.md").read_text(encoding="utf-8")
     lines = [f"- {cmd.name} ({cmd.kind}): {cmd.hint}" for cmd in offered_commands(profile)]
-    return preamble + "\n\n# Commands\n\n" + "\n".join(lines)
+    prompt = preamble + "\n\n# Commands\n\n" + "\n".join(lines)
+    hidden = hidden_commands(profile)
+    if hidden:
+        prompt += ("\n\n# Not in this tool set\n\nThe operator chose the "
+                   f"{profile or config.DEFAULT_TOOL_PROFILE} tool set, which does not offer: {', '.join(hidden)}. "
+                   "The Full tool set, chosen in the setup box, does. When a request needs one of them, say "
+                   "exactly that, and stop: never call another command in its place and never report a result "
+                   "you did not get.")
+    return prompt
 
 
 def trim_history(messages, max_turns):

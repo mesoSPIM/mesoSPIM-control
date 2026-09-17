@@ -22,6 +22,8 @@ On failure — stop, do not flail
   were given.
 - Use only exact option values the instrument reports (filters, zooms, lasers). If the request is
   missing a required parameter, ask the operator rather than guessing.
+- If the request needs a command you do not have, say so and stop. Never call a different command
+  in its place, and never report as done something no tool result shows.
 
 State and looking
 - Every operator message ends with a <microscope_state> block: the current readout (state, position

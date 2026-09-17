@@ -15,7 +15,7 @@ import pytest
 from mesoSPIM.src import mesoSPIM_AiAssistent as ai
 from mesoSPIM.src.mesoSPIM_AiAssistent import (
     AssistantWorker, Endpoint, dispatch_and_wait, start_assistant_for_core, stop_assistant_for_core)
-from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import READ, WAIT, COMPLETED
+from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS, READ, WAIT, COMPLETED
 from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 
 
@@ -80,7 +80,6 @@ def test_wait_returns_still_running_past_cap():
 def test_build_tools_covers_commands_except_prompt_only():
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools, _PROMPT_ONLY
-    from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
     tools = build_tools(FakeAcceptor(), threading.Event(), profile="Full")
     names = {t.name for t in tools}
     assert len(tools) == len(COMMANDS) - len(_PROMPT_ONLY)
@@ -625,10 +624,15 @@ def test_regular_tools_and_prompt_are_filtered_and_set_camera_is_narrowed():
     assert acc.calls == []
     json.loads(narrowed.function(camera_exposure_time=0.05))
     assert acc.calls[0] == ("set_camera", {"camera_exposure_time": 0.05})
+    assert "Full tool set" in refused["error"]["message"]          # the way out is named, for the operator
     prompt = ai.build_system_prompt(profile="Regular")
     assert "- set_zoom (" in prompt and "- set_etl (" not in prompt
+    hidden = prompt.split("# Not in this tool set")[1]              # named, so the model says so instead of improvising
+    assert "self_test" in hidden and "set_etl" in hidden and "get_manual" not in hidden
+    assert ai.hidden_commands("Regular") == [n for n in COMMANDS if n not in ai.config.TOOL_PROFILES["Regular"] and n != "get_manual"]
     full = {t.name for t in build_tools(FakeAcceptor(), threading.Event(), profile="Full")}
     assert "set_etl" in full and "- set_etl (" in ai.build_system_prompt(profile="Full")
+    assert ai.hidden_commands("Full") == [] and "# Not in this tool set" not in ai.build_system_prompt(profile="Full")
 
 
 def test_worker_rebuilds_the_agent_for_a_new_profile(monkeypatch):

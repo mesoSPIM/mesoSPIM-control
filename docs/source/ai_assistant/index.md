@@ -69,7 +69,9 @@ moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap,
 acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and camera timing,
 the ETL calibration files, the alignment modes and the generic setting call. In Regular the other
 commands are not offered to the model at all, so it cannot be talked into them, and an
-acquisition row may not carry the ETL settings either (it takes the current ones). The start-up
+acquisition row may not carry the ETL settings either (it takes the current ones). The model is
+told which commands the set withholds, so a request for one gets "not in this tool set" rather
+than a stand-in command dressed up as the result. The start-up
 choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or
 "Full"). TCP and MCP always serve every command; this is the assistant only. **Memory** is how
 many of the operator's messages, with their answers, the model remembers. **Downsample image to** is the size of the frame handed to the
@@ -129,13 +131,18 @@ python -m mesoSPIM.test.ai_assistant.evals.run --provider Anthropic --profile Fu
 python -m mesoSPIM.test.ai_assistant.evals.run --rescore assistant-evals.jsonl
 ```
 
-The cases cover plain verbs, unit conversion, reads, vocabulary and limit refusals (and that a
-refused value is not retried), ambiguity, prompt injection, the confirm-first moves with Run and
-with Cancel, a GUI-busy instrument, acquisitions and a time lapse, the two tool sets, and memory
-across turns. A run costs API calls and two runs can differ, so it is not part of the test
-profiles; run it when the prompt, the tools or the model change, and keep the trace file: a case
-that starts failing shows in it what the model did instead. `test_evals.py` keeps the machinery
-itself honest offline, with scripted models.
+The cases cover plain verbs, unit conversion (mm, µm, seconds, words, 1e4), reads that must not
+mutate, greetings and off-topic questions that need no tool at all, vocabulary refusals and the one
+permitted retry, limit refusals (and that a refused value is not retried), ambiguity, prompt
+injection in the message and through the instrument's own state, a request to leak the system
+prompt, the confirm-first moves with Run and with Cancel, a GUI-busy instrument in live, in a
+stale run state and in a time lapse (and what is still allowed then), acquisitions, the selected
+row and a time lapse, the two tool sets on the ETL, the galvos, binning and the self test, looking
+without a new snap and deciding on saturation, memory across turns, and prompts in German and
+Dutch. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
+it when the prompt, the tools or the model change, and keep the trace file: a case that starts
+failing shows in it what the model did instead. `test_evals.py` keeps the machinery itself honest
+offline, with scripted models.
 
 Every turn in the tab is recorded the same way, one JSON line per turn in
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl` (or the config attribute
@@ -158,7 +165,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  408 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  412 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

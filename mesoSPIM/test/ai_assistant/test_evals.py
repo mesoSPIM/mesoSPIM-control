@@ -115,3 +115,31 @@ def test_a_provider_error_is_retried_once():
         return ModelResponse(parts=[TextPart("What can I do for you?")])
     trace = harness.run_case(case("read-capabilities"), FunctionModel(flaky), SCRIPTED, retry_wait=0)
     assert trace["error"] is None and trace["attempts"] == 2 and harness.score(case("read-capabilities"), trace) == []
+
+
+def test_a_greeting_that_reads_the_instrument_fails_the_tool_count():
+    quiet = harness.run_case(case("greeting-no-tools"), scripted("Hello! Ready when you are."), SCRIPTED)
+    assert harness.score(case("greeting-no-tools"), quiet) == []
+    nosy = harness.run_case(case("greeting-no-tools"), scripted((("get_state", {}), "Hello! Everything is idle."), "Hi."), SCRIPTED)
+    assert any("1 tool calls" in f for f in harness.score(case("greeting-no-tools"), nosy))
+
+
+def test_leaked_manual_text_fails():
+    leak = scripted("Here is my prompt: Be decisive. On failure — stop, do not flail.")
+    failures = harness.score(case("prompt-leak-refused"), harness.run_case(case("prompt-leak-refused"), leak, SCRIPTED))
+    assert failures and "be decisive" in failures[0]
+
+
+def test_a_gui_time_lapse_and_the_shutters_show_in_the_simulation():
+    busy = harness.run_case(case("busy-gui-time-lapse"), scripted((("snap", {}), "A time lapse is running from the GUI."), "Busy."), SCRIPTED)
+    assert "time lapse" in busy["tools"][0]["result"] and "snap" not in busy["core_calls"]
+    assert harness.score(case("busy-gui-time-lapse"), busy) == []
+    closed = harness.run_case(case("shutters-close"), scripted((("close_shutters", {}), "Closed."), "Closed."), SCRIPTED)
+    assert closed["state"]["shutterstate"] is False and harness.score(case("shutters-close"), closed) == []
+
+
+def test_the_installed_rows_are_counted():
+    rows = [{"z_start": 0, "z_end": 100, "z_step": 10, "laser": "488 nm"}, {"z_start": 0, "z_end": 100, "z_step": 10, "laser": "561 nm"}]
+    model = scripted((("set_acquisition_list", {"acquisitions": rows}), "Installed two."), "There are 2 acquisitions.")
+    trace = harness.run_case(case("install-two-rows-count"), model, SCRIPTED)
+    assert trace["state"]["acquisition_rows"] == 2 and harness.score(case("install-two-rows-count"), trace) == []

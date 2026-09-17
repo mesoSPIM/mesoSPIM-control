@@ -8,20 +8,26 @@ model and this prompt, do what an operator expects, including on refusals, limit
 
 A case:
     {"id": ..., "category": ..., "prompt": ... | "prompts": [...], "profile": "Regular"|"Full",
-     "setup": {"state": "live"}, "answer": true|false (the Run / Cancel answer), "expect": {...}}
+     "setup": {"state": "live", "timelapse_active": true, ...}, "answer": true|false (the Run / Cancel
+     answer), "expect": {...}}
+Setup keys are state keys of the simulated instrument (state, intensity, snap_folder, ...);
+timelapse_active is the Core attribute a GUI time lapse sets.
 Expectations:
     calls          tool names that must have been called
     calls_any      at least one of these
     not_calls      tool names that must not have been called
     max_calls      {tool: n}: called at most n times (no retrying a refused value)
+    max_tool_calls n: at most n tool calls in all (a greeting needs none)
     args           {tool: {arg: value}}: some call of the tool carried these arguments
-    state          {dotted.path: value}: the instrument's state afterwards
+    state          {dotted.path: value}: the instrument's state afterwards; acquisition_rows is the
+                   installed list's length
     core_calls     methods the instrument must have seen (e.g. "start")
     core_calls_not methods it must not have seen
     confirm        the confirm-first command the operator was asked about
     asks           the reply is a question and nothing was changed
     no_mutations   only reads were called
     reply_mentions_any  one of these strings appears in a reply (case-insensitive)
+    reply_mentions_none none of these strings appears in a reply (no leaked manual text)
 """
 from __future__ import annotations
 
@@ -82,6 +88,14 @@ class SimulatedInstrument(RecordingCore):
     def set_shutterconfig(self, value, *args, **kwargs):
         self._setting("shutterconfig", "set_shutterconfig", value, *args, **kwargs)
 
+    def open_shutters(self, *args, **kwargs):
+        super().open_shutters(*args, **kwargs)
+        self.state["shutterstate"] = True
+
+    def close_shutters(self, *args, **kwargs):
+        super().close_shutters(*args, **kwargs)
+        self.state["shutterstate"] = False
+
 
 class SimulatedAcceptor(servers.Acceptor):
     """The real Acceptor, completing at once the operations that on hardware wait for a Core
@@ -110,6 +124,7 @@ def _state_snapshot(core, extra=()):
             out[path] = _get_path(core.state, path)
         except (KeyError, TypeError):
             pass
+    out["acquisition_rows"] = len(core.state["acq_list"])
     return out
 
 
@@ -137,7 +152,10 @@ def _describe(problem):
 def _run_once(case, model, endpoint, profile):
     core = SimulatedInstrument()
     for key, value in (case.get("setup") or {}).items():
-        core.state[key] = value
+        if key == "timelapse_active":
+            core.timelapse_active = value
+        else:
+            core.state[key] = value
     acceptor = SimulatedAcceptor(core)
     asked = []
     answer = case.get("answer", True)
@@ -192,6 +210,8 @@ def score(case, trace):
     for name, limit in expect.get("max_calls", {}).items():
         if names.count(name) > limit:
             failures.append(f"{name} called {names.count(name)} times, at most {limit} expected")
+    if "max_tool_calls" in expect and len(names) > expect["max_tool_calls"]:
+        failures.append(f"{len(names)} tool calls, at most {expect['max_tool_calls']} expected: {names}")
     for name, wanted in expect.get("args", {}).items():
         carried = [t["args"] for t in trace["tools"] if t["tool"] == name]
         if not any(all(args.get(key) == value for key, value in wanted.items()) for args in carried):
@@ -217,13 +237,16 @@ def score(case, trace):
         failures.append(f"expected reads only; called {_mutations(trace['tools'])}")
     if expect.get("reply_mentions_any") and not any(text.lower() in replies for text in expect["reply_mentions_any"]):
         failures.append(f"no reply mentions any of {expect['reply_mentions_any']}")
+    leaked = [text for text in expect.get("reply_mentions_none", []) if text.lower() in replies]
+    if leaked:
+        failures.append(f"a reply mentions {leaked}")
     return failures
 
 
 def check_cases(cases):
     """Problems in the case file itself: duplicate ids, unknown tools, unknown expectation keys."""
-    known = {"calls", "calls_any", "not_calls", "max_calls", "args", "state", "core_calls", "core_calls_not",
-             "confirm", "asks", "no_mutations", "reply_mentions_any"}
+    known = {"calls", "calls_any", "not_calls", "max_calls", "max_tool_calls", "args", "state", "core_calls",
+             "core_calls_not", "confirm", "asks", "no_mutations", "reply_mentions_any", "reply_mentions_none"}
     tools = set(COMMANDS) | {"look"}
     problems, seen = [], set()
     for case in cases:
