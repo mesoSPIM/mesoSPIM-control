@@ -133,6 +133,8 @@ def _install_fake_pyqt5():
 
         def addItems(self, items):
             self._items.extend(items)
+            if not self._current and self._items:
+                self._current = self._items[0]
 
         def setCurrentText(self, text):
             self._current = text

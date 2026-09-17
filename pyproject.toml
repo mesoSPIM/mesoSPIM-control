@@ -35,6 +35,9 @@ dependencies = [
 # The AI Assistant tab only. Imported lazily, so the application starts and every other feature
 # works without it; the tab reports the missing module when the operator sends a first message.
 ai-assistant = ["pydantic-ai==2.14.1"]
+# Serving a local .gguf model from the AI Assistant tab; use a GPU wheel from the llama-cpp-python
+# release page for anything beyond a few billion parameters.
+ai-assistant-local = ["pydantic-ai==2.14.1", "llama-cpp-python>=0.3"]
 
 [project.urls]
 "Homepage" = "http://mesospim.org"

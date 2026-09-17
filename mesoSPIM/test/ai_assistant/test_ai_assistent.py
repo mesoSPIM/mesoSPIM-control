@@ -275,7 +275,7 @@ def test_endpoint_without_any_key_is_detectable(monkeypatch):
 
 
 def test_local_endpoint_needs_a_base_url_not_a_key():
-    endpoint = Endpoint.from_preset("OpenAI-compatible (local)", base_url="http://box:8000/v1")
+    endpoint = Endpoint.from_preset("OpenAI-compatible server", base_url="http://box:8000/v1")
     assert not endpoint.needs_key
     assert endpoint.base_url == "http://box:8000/v1"
     assert "http://box:8000/v1" in endpoint.describe()

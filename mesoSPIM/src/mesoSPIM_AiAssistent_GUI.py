@@ -15,11 +15,13 @@ Maintainer (2026):
 
 import html as _htmllib
 import os
+import time
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import mesoSPIM_AiAssistent_Config as config
 from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint
+from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder
 
 _BUBBLE = "#2b3b47"      # the operator's own turns only — the answers stay on the tab background
 _DIM = "#9aa7b0"         # tool-call and note text
@@ -47,6 +49,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setObjectName("AiAssistentTabWidget")
         self._worker = None
         self._endpoint = None   # set by Connect; a first message connects with the current fields
+        self._local_server = None                                  # the child serving a local model
+        self._models_folder = models_folder(getattr(self.core, "cfg", None))
+        self._single_shot = QtCore.QTimer.singleShot               # injectable for tests
         self._blocks = []       # finalized message HTML, oldest first
         self._active = None     # in-progress mesoSPIM turn: {"tools": [...], "reply": str, "error": str}
         self._build_ui()
@@ -124,8 +129,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         layout.addLayout(row)
 
     def _build_setup(self, font):
-        """The endpoint row, styled like the Remote Control tab's setup group: provider and model on
-        one line, the key (or base URL for a local server) with Connect and a status on the next."""
+        """The endpoint rows, styled like the Remote Control tab's setup group. Cloud: provider,
+        model and API key. Local: one model dropdown filled from the models folder; how the file
+        is served is decided behind Connect."""
         group = QtWidgets.QGroupBox("Assistant setup", self)
         group.setObjectName("AiAssistentSetupGroupBox")
         group.setFont(font)
@@ -133,81 +139,191 @@ class AiAssistentGUI(QtWidgets.QWidget):
         rows.setContentsMargins(10, 30, 10, 10)
         rows.setSpacing(8)
 
+        def label(text):
+            widget = QtWidgets.QLabel(group)
+            widget.setText(text)
+            widget.setFont(font)
+            return widget
+
+        self.cloud_radio = QtWidgets.QRadioButton("Cloud", group)
+        self.local_radio = QtWidgets.QRadioButton("Local", group)
         self.provider = QtWidgets.QComboBox(group)
         self.provider.addItems(list(config.PROVIDERS))
         self.model = QtWidgets.QLineEdit("", group)
+        self.local_model = QtWidgets.QComboBox(group)
         self.key = QtWidgets.QLineEdit("", group)
         self.key.setEchoMode(QtWidgets.QLineEdit.Password)        # a credential, never a caption
         self.base_url = QtWidgets.QLineEdit("", group)
+        self.folder_button = QtWidgets.QPushButton("Models folder…", group)
         self.connect_button = QtWidgets.QPushButton("Connect", group)
         self.setup_status = QtWidgets.QLabel(group)
         self.setup_status.setText("not connected")
-        self._key_label = QtWidgets.QLabel("API key", group)
-        self._base_url_label = QtWidgets.QLabel("Base URL", group)
-        for widget in (self.provider, self.model, self.key, self.base_url, self.connect_button,
-                       self.setup_status, self._key_label, self._base_url_label):
+        self._provider_label = label("Provider")
+        self._model_label = label("Model")
+        self._key_label = label("API key")
+        self._base_url_label = label("Base URL")
+        for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
+                       self.key, self.base_url, self.folder_button, self.connect_button, self.setup_status):
             widget.setFont(font)
 
         first = QtWidgets.QHBoxLayout()
-        provider_label = QtWidgets.QLabel("Provider", group)
-        model_label = QtWidgets.QLabel("Model", group)
-        provider_label.setFont(font)
-        model_label.setFont(font)
-        first.addWidget(provider_label)
+        first.addWidget(self.cloud_radio)
+        first.addWidget(self.local_radio)
+        first.addSpacing(16)
+        first.addWidget(self._provider_label)
         first.addWidget(self.provider, 1)
-        first.addWidget(model_label)
+        first.addWidget(self._model_label)
         first.addWidget(self.model, 2)
+        first.addWidget(self.local_model, 3)
         second = QtWidgets.QHBoxLayout()
         second.addWidget(self._key_label)
         second.addWidget(self.key, 2)
         second.addWidget(self._base_url_label)
         second.addWidget(self.base_url, 2)
+        second.addWidget(self.folder_button)
         second.addWidget(self.connect_button)
         second.addWidget(self.setup_status, 1)
         rows.addLayout(first)
         rows.addLayout(second)
 
+        self.cloud_radio.toggled.connect(self._on_mode_changed)
+        self.local_radio.toggled.connect(self._on_mode_changed)
         self.provider.currentTextChanged.connect(self._on_provider_changed)
+        self.folder_button.clicked.connect(self.on_choose_folder)
         self.connect_button.clicked.connect(self.on_connect)
         self.provider.setCurrentText(config.DEFAULT_PROVIDER)
         self._on_provider_changed(config.DEFAULT_PROVIDER)
+        self.cloud_radio.setChecked(True)
+        self._on_mode_changed()
         return group
+
+    # --- setup row state ---
+    def _local_mode(self):
+        return self.local_radio.isChecked()
+
+    def _on_mode_changed(self, *_):
+        local = self._local_mode()
+        for widget in (self._provider_label, self.provider, self.model):
+            widget.setVisible(not local)
+        for widget in (self.local_model, self.folder_button):
+            widget.setVisible(local)
+        if local:
+            for widget in (self._key_label, self.key, self._base_url_label, self.base_url):
+                widget.setVisible(False)
+            self._scan_models()
+        else:
+            self._on_provider_changed(self.provider.currentText())
 
     def _on_provider_changed(self, name):
         """Prefill the preset and show the field the provider needs: a key, or a base URL."""
         preset = config.PROVIDERS[name]
-        local = preset["kind"] == "openai-compatible"
+        server = preset["kind"] == "openai-compatible"
         self.model.setText(preset["model"])
         self.base_url.setText(preset.get("base_url", ""))
         key_env = preset.get("key_env")
         in_env = bool(key_env and os.environ.get(key_env))
         self.key.setPlaceholderText(f"using {key_env} from the environment" if in_env else f"{name} API key")
+        if self._local_mode():
+            return
         for widget in (self._key_label, self.key):
-            widget.setVisible(not local)
+            widget.setVisible(not server)
         for widget in (self._base_url_label, self.base_url):
-            widget.setVisible(local)
+            widget.setVisible(server)
 
+    def _scan_models(self):
+        """Fill the local dropdown from the models folder; say so when it holds nothing."""
+        current = self.local_model.currentText()
+        names = list_models(self._models_folder)
+        self.local_model.clear()
+        self.local_model.addItems(names)
+        if current in names:
+            self.local_model.setCurrentText(current)
+        self.local_model.setEnabled(bool(names))
+        if not names and self._endpoint is None:
+            self.setup_status.setText(f"no {'/'.join(config.MODEL_SUFFIXES)} files in {self._models_folder}")
+
+    def on_choose_folder(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Models folder", self._models_folder)
+        if path:
+            self._models_folder = path
+            self._scan_models()
+
+    # --- connecting ---
     def on_connect(self):
         if self._connect():
             self._render()
 
     def _connect(self):
-        """Apply the setup row: build the endpoint, acquire the Acceptor, hand the endpoint to the
-        worker for its next turn. Returns False (with a note in the transcript) when it cannot."""
-        endpoint = Endpoint.from_preset(
-            self.provider.currentText(), self.model.text(), self.key.text(), self.base_url.text()
-        )
+        """Apply the setup row. Returns True when the assistant can take a message now. A local
+        model returns False while its server is still loading; the status shows the progress."""
         if not self._ensure_worker():
             self._note("Stop the Remote Control transport to use the AI Assistant.")
             return False
+        return self._connect_local() if self._local_mode() else self._connect_cloud()
+
+    def _connect_cloud(self):
+        endpoint = Endpoint.from_preset(
+            self.provider.currentText(), self.model.text(), self.key.text(), self.base_url.text()
+        )
         if endpoint.needs_key and not endpoint.api_key:
             key_env = config.PROVIDERS[endpoint.provider].get("key_env")
             self._note(f"Enter an API key for {endpoint.provider}, or set {key_env} before starting mesoSPIM.")
             return False
+        self._stop_local_server()
+        self._use(endpoint)
+        return True
+
+    def _connect_local(self):
+        name = self.local_model.currentText()
+        if not name:
+            self._note(f"Put a model file ({', '.join(config.MODEL_SUFFIXES)}) in {self._models_folder} first.")
+            return False
+        self._stop_local_server()
+        server = LocalModelServer(os.path.join(self._models_folder, name))
+        try:
+            server.start()
+        except (RuntimeError, OSError) as error:  # missing runtime, or the child could not spawn
+            self._note(str(error))
+            return False
+        self._local_server = server
+        self._endpoint = None
+        self._started_at = time.monotonic()
+        self.setup_status.setText(f"starting {server.model}…")
+        self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_server)
+        return False
+
+    def _poll_local_server(self):
+        server = self._local_server
+        if server is None:
+            return
+        try:
+            ready = server.ready()
+        except RuntimeError as error:  # the child exited
+            self._local_failed(str(error))
+            return
+        if ready:
+            self._use(Endpoint(provider="Local", kind="openai-compatible", model=server.model, base_url=server.base_url),
+                      status=f"ready: {server.model} (llama.cpp on 127.0.0.1:{server.port})")
+            self._render()
+        elif time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
+            self._local_failed(f"{server.model} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; see {server.log_path}")
+        else:
+            self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_server)
+
+    def _local_failed(self, message):
+        self._stop_local_server()
+        self.setup_status.setText("not connected")
+        self._note(message)
+
+    def _use(self, endpoint, status=None):
         self._worker.configure(endpoint)
         self._endpoint = endpoint
-        self.setup_status.setText(f"ready: {endpoint.describe()}")
-        return True
+        self.setup_status.setText(status or f"ready: {endpoint.describe()}")
+
+    def _stop_local_server(self):
+        server, self._local_server = self._local_server, None
+        if server is not None:
+            server.stop()
 
     def _note(self, text):
         self._blocks.append(self._note_block(text))
@@ -274,7 +390,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _set_running(self, running):
         self.input.setEnabled(not running)
         self.interrupt.setEnabled(running)
-        for widget in (self.provider, self.model, self.key, self.base_url, self.connect_button):
+        for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
+                       self.key, self.base_url, self.folder_button, self.connect_button):
             widget.setEnabled(not running)                        # the endpoint changes only between turns
         self.status.setText("mesoSPIM is working…" if running else "")
         if not running:
@@ -304,7 +421,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def shutdown(self):
         """Called by MainWindow on app exit: stop the agent, join with a bound so the GUI
-        never hangs on an in-flight model call, and release the Core-owned Acceptor."""
+        never hangs on an in-flight model call, release the Core-owned Acceptor, and stop a
+        local model server."""
+        self._stop_local_server()
         if self._worker is not None:
             stopper = self._worker.interrupt()
             self._thread.quit()

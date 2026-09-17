@@ -42,6 +42,25 @@ The **Assistant setup** row at the top of the tab chooses the endpoint:
 The endpoint can be changed at any time between turns; the transcript is kept. The presets live in
 `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
+### Local models
+
+Choose **Local** instead of Cloud and the row shows one **Model** dropdown listing the `.gguf`
+files in the models folder (`~/mesoSPIM/models`, or the `ai_assistant_models_folder` attribute of
+the microscope config; **Models folder…** points it elsewhere for the session). Download a file
+from Hugging Face, drop it in, choose it, Connect. Nothing leaves the machine and no key is needed.
+
+Behind Connect, mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server
+(`pip install llama-cpp-python`, or the `ai-assistant-local` extra) as a child process on a
+loopback port, and the assistant talks to it like any other OpenAI-compatible server. The status
+shows "starting …" while the model loads, then "ready: <model> (llama.cpp on 127.0.0.1:<port>)".
+Switching models, going back to Cloud, or closing mesoSPIM stops the child. A server that fails
+to start is reported with the path of its log. Use a GPU build of llama-cpp-python for anything
+above a few billion parameters; the 4B to 12B instruction models are the realistic range on a
+microscope PC.
+
+An OpenAI-compatible server that is already running somewhere (Ollama, vLLM, LM Studio) is chosen
+under Cloud as "OpenAI-compatible server" with its base URL.
+
 ## Using it
 
 Open the **AI Assistant** tab and type. Commands the agent runs stream live above each answer, so

@@ -3,6 +3,11 @@
 The real QThread / worker hand-off is a real-PyQt concern (the smoke layer); here we test the
 tab wiring, the transport-busy refusal, and the single-flight input lock in isolation.
 """
+import types
+
+from PyQt5 import QtWidgets
+
+from mesoSPIM.src import mesoSPIM_AiAssistent_GUI as gui_module
 from mesoSPIM.src.mesoSPIM_AiAssistent_GUI import AiAssistentGUI
 
 
@@ -98,8 +103,8 @@ def test_setup_row_prefills_the_default_provider():
 
 def test_choosing_a_local_provider_swaps_the_key_for_a_base_url():
     gui = _gui()
-    gui.provider.setCurrentText("OpenAI-compatible (local)")
-    gui.provider.currentTextChanged.emit("OpenAI-compatible (local)")
+    gui.provider.setCurrentText("OpenAI-compatible server")
+    gui.provider.currentTextChanged.emit("OpenAI-compatible server")
     assert gui.model.text() == "gemma4:31b"
     assert gui.base_url.text() == "http://localhost:11434/v1"
     assert gui.base_url.isVisible() and not gui.key.isVisible()
@@ -164,3 +169,130 @@ def test_submit_without_key_or_environment_does_not_send(monkeypatch):
     gui.on_submit()
     assert sent == []
     assert gui.input.text() == "hello"                        # kept, so the operator can connect and resend
+
+
+# --- local mode: one model dropdown, the serving decided behind Connect ---
+
+_SERVERS = []  # every _FakeServer built, so a test can inspect the ones the tab started
+
+
+class _FakeServer:
+    """A LocalModelServer stand-in: ready after `ready_after` polls, or dies with `error`."""
+
+    def __init__(self, model_path, ready_after=2, error=None):
+        self.model_path = model_path
+        self.model = model_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        self.port = 4242
+        self.base_url = "http://127.0.0.1:4242/v1"
+        self.log_path = "/tmp/fake.log"
+        self.polls = 0
+        self.started = False
+        self.stopped = False
+        self._ready_after = ready_after
+        self._error = error
+        _SERVERS.append(self)
+
+    def start(self):
+        self.started = True
+
+    def ready(self):
+        self.polls += 1
+        if self._error:
+            raise RuntimeError(self._error)
+        return self.polls >= self._ready_after
+
+    def stop(self):
+        self.stopped = True
+
+
+def _local_gui(tmp_path, monkeypatch, server_factory=_FakeServer):
+    (tmp_path / "qwen3.5-8b-q4.gguf").write_bytes(b"")
+    (tmp_path / "gemma-4-12b-q4.gguf").write_bytes(b"")
+    (tmp_path / "readme.txt").write_bytes(b"")
+    core = _FakeCore(acceptor=object())
+    core.cfg = types.SimpleNamespace(ai_assistant_models_folder=str(tmp_path))
+    gui = AiAssistentGUI(_FakeParent(core))
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint: setattr(self, "endpoint", endpoint)})()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    monkeypatch.setattr(gui_module, "LocalModelServer", server_factory)
+    scheduled = []
+    gui._single_shot = lambda ms, fn: scheduled.append(fn)   # the test drives the polls
+    _SERVERS.clear()
+    return gui, scheduled
+
+
+def test_local_mode_lists_model_files_and_hides_the_key(tmp_path, monkeypatch):
+    gui, _ = _local_gui(tmp_path, monkeypatch)
+    assert gui.provider.isVisible() and not gui.local_model.isVisible()
+    gui.local_radio.setChecked(True)
+    assert gui.local_model.items() == ["gemma-4-12b-q4.gguf", "qwen3.5-8b-q4.gguf"]
+    assert gui.local_model.isVisible() and gui.folder_button.isVisible()
+    assert not gui.key.isVisible() and not gui.provider.isVisible() and not gui.model.isVisible()
+
+
+def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    gui.local_radio.setChecked(True)
+    gui.local_model.setCurrentText("qwen3.5-8b-q4.gguf")
+    gui.on_connect()
+    (server,) = _SERVERS
+    assert server.started and server.model_path == str(tmp_path / "qwen3.5-8b-q4.gguf")
+    assert gui.setup_status.text() == "starting qwen3.5-8b-q4…"
+    assert gui._endpoint is None
+    scheduled.pop()()                                          # first poll: still loading
+    assert gui._endpoint is None and len(scheduled) == 1
+    scheduled.pop()()                                          # second poll: ready
+    endpoint = gui._worker.endpoint
+    assert (endpoint.kind, endpoint.model, endpoint.base_url) == ("openai-compatible", "qwen3.5-8b-q4", server.base_url)
+    assert endpoint.api_key == "" and not endpoint.needs_key
+    assert gui.setup_status.text() == "ready: qwen3.5-8b-q4 (llama.cpp on 127.0.0.1:4242)"
+    assert scheduled == []
+
+
+def test_local_server_failure_is_reported_and_cleaned_up(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch,
+                                server_factory=lambda path: _FakeServer(path, error="exited with code 3"))
+    gui.local_radio.setChecked(True)
+    gui.on_connect()
+    scheduled.pop()()
+    (server,) = _SERVERS
+    assert server.stopped and gui._local_server is None
+    assert gui.setup_status.text() == "not connected"
+    assert "exited with code 3" in gui.output.toPlainText()
+
+
+def test_switching_models_or_going_cloud_stops_the_previous_server(tmp_path, monkeypatch):
+    gui, _ = _local_gui(tmp_path, monkeypatch)
+    gui.local_radio.setChecked(True)
+    gui.on_connect()
+    first = _SERVERS[-1]
+    gui.on_connect()                                           # a second Connect replaces the child
+    assert first.stopped and len(_SERVERS) == 2
+    gui.cloud_radio.setChecked(True)
+    gui.key.setText("k")
+    gui.on_connect()
+    assert _SERVERS[-1].stopped and gui._local_server is None
+
+
+def test_empty_models_folder_is_explained(tmp_path, monkeypatch):
+    gui, _ = _local_gui(tmp_path, monkeypatch)
+    for name in ("qwen3.5-8b-q4.gguf", "gemma-4-12b-q4.gguf"):
+        (tmp_path / name).unlink()
+    gui.local_radio.setChecked(True)
+    assert gui.local_model.items() == [] and not gui.local_model.isEnabled()
+    assert str(tmp_path) in gui.setup_status.text()
+    gui.on_connect()
+    assert "Put a model file" in gui.output.toPlainText()
+
+
+def test_choosing_a_folder_rescans(tmp_path, monkeypatch):
+    gui, _ = _local_gui(tmp_path, monkeypatch)
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "phi.gguf").write_bytes(b"")
+    gui.local_radio.setChecked(True)
+    QtWidgets.QFileDialog.chosen = str(other)
+    gui.on_choose_folder()
+    QtWidgets.QFileDialog.chosen = ""
+    assert gui._models_folder == str(other)
+    assert gui.local_model.items() == ["phi.gguf"]
