@@ -47,7 +47,7 @@ closing mesoSPIM stops the child. A server that fails to start is reported with 
 log. Use a GPU build of llama-cpp-python for anything above a few billion parameters; the 4B to 12B
 instruction models are the realistic range on a microscope PC.
 
-Two more rows hold preferences that apply at once. **Tool set** chooses what the assistant may do:
+A third row holds preferences that apply at once. **Tool set** chooses what the assistant may do:
 *Regular* (the default) is for a user setting up a sample on a configured microscope: reads, stage
 and sample moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live,
 and the acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and
