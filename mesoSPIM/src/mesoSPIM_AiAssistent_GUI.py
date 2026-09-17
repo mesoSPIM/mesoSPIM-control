@@ -3,7 +3,7 @@
 The transcript is plain on the tab's own background — no bubbles and no speaker labels, so weight
 alone separates the voices: your question is bold, the answer is not. Each answer streams the
 commands it runs above it, then the final Markdown. Enter or Send submits; the input disables
-during a turn (single-flight); Cancel request stops the assistant, Stop microscope stops the
+during a turn (single-flight); Cancel stops the assistant, Stop microscope stops the
 instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
@@ -340,17 +340,17 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.send_button = QtWidgets.QPushButton("Send", self)
         self.send_button.setFont(font)
         self.send_button.clicked.connect(self.on_submit)       # the same as Enter, for the mouse
-        self.interrupt = QtWidgets.QPushButton("Cancel request", self)
+        self.interrupt = QtWidgets.QPushButton("Cancel", self)
         self.interrupt.setFont(font)
         self.interrupt.clicked.connect(self.on_interrupt)   # always clickable; a no-op between turns
-        self.stop_button = QtWidgets.QPushButton("Stop microscope now", self)
+        self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
         self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: the emergency stop
-        self.new_button = QtWidgets.QPushButton("New session", self)
+        self.new_button = QtWidgets.QPushButton("Clear", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
-        # Right of the two-line input: Send as tall as both rows, then Cancel request and New
+        # Right of the two-line input: Send as tall as both rows, then Cancel and Clear
         # session side by side with the emergency stop underneath them, spanning both; the input
         # is as tall as the two button rows.
         buttons = QtWidgets.QGridLayout()
@@ -694,7 +694,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._render()
 
     def on_new_conversation(self):
-        """New session: clear the transcript and the model's memory of it; the endpoint stays."""
+        """Clear: clear the transcript and the model's memory of it; the endpoint stays."""
         if not self.input.isEnabled():
             return                                  # not while a turn runs
         self._blocks = []

@@ -82,9 +82,9 @@ The presets live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 Open the **AI Assistant** tab and type. Enter or **Send** submits; Shift+Enter starts a new line,
 as in an editor. Commands the agent runs stream live above each answer, so
-the operator sees exactly which named calls were issued. **Cancel request** stops the assistant: no
+the operator sees exactly which named calls were issued. **Cancel** stops the assistant: no
 further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the
-model's next reply; what the assistant already started keeps running. **Stop microscope now** is
+model's next reply; what the assistant already started keeps running. **Stop microscope** is
 the main window's Stop: the same queued signals to Core (state idle aborts the running mode, the
 time lapse is cancelled) plus the stage stop, sent straight from the tab with nothing of the
 assistant in between, so it is as immediate as the button on the main window and works before the
@@ -98,7 +98,7 @@ loaded.
 - **Three stage moves are gated by the operator, in code.** `load_sample`, `unload_sample` and
   `preview_acquisition` cross the stage's range and can collide faster than anyone reacts, so they
   do not execute until the operator presses **Run** in the bar above the input; Cancel there,
-  Cancel request or Stop microscope refuse, and the model is told so. Starting a run is not gated:
+  Cancel or Stop microscope refuse, and the model is told so. Starting a run is not gated:
   the model is instructed to summarise and ask only when the state shows something off (empty
   list, missing folder, short disk, pending warning) and Stop microscope ends a run at any time. This holds whatever the model was told or talked into.
 - **The model call has no timeout.** `WAIT_CAP_S` bounds the microscope leg only. If the endpoint

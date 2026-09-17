@@ -111,7 +111,7 @@ def _only_keys(fn, name, keys):
 class ConfirmationGate:
     """The operator's Run / Cancel for a confirm-first command, asked from the worker thread and
     answered from the GUI thread. One question at a time. The question waits as long as it takes:
-    nothing is pending at the provider or on the instrument meanwhile, and Cancel request and
+    nothing is pending at the provider or on the instrument meanwhile, and Cancel and
     Stop microscope answer it too. This is a gate in code: the model cannot talk its way past it."""
 
     def __init__(self, on_ask):
@@ -455,7 +455,7 @@ class AssistantWorker(QtCore.QObject):
         self._agent = None
 
     def reset(self):
-        """Forget the conversation (New session). Called between turns, like configure."""
+        """Forget the conversation (Clear). Called between turns, like configure."""
         self._history = []
 
     @QtCore.pyqtSlot(str)
