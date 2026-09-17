@@ -183,7 +183,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.interrupt = QtWidgets.QPushButton("Cancel request", self)
         self.interrupt.setFont(font)
         self.interrupt.clicked.connect(self.on_interrupt)   # always clickable; a no-op between turns
-        self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
+        self.stop_button = QtWidgets.QPushButton("Stop microscope now", self)
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
         self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: an emergency stop
