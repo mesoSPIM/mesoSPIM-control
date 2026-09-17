@@ -6,10 +6,10 @@ commands it runs above it, then the final Markdown. Enter submits; the input dis
 (single-flight); Cancel request stops the assistant, Stop microscope stops the instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
-The endpoint setup sits under the input box as a collapsible footer: one line ("Set up AI
-assistant") that expands to the setup rows. It opens itself when something needs the operator
-(nothing configured, a missing key, a server that failed) and folds back once the assistant is
-ready, so a first-time user sees a chat, not a configuration form.
+The setup sits under the input box as a collapsible footer: one line ("Set up AI assistant")
+that expands to two boxes, Preferences and Model. It opens itself when something needs the
+operator (nothing configured, a missing key, a server that failed) and folds back once the
+assistant is ready, so a first-time user sees a chat, not a configuration form.
 
 Maintainer (2026):
     Thom de Hoog
@@ -266,47 +266,51 @@ class AiAssistentGUI(QtWidgets.QWidget):
             return cell
 
         preferences, options = box("Preferences")
-        group, grid = box("Model")
-
-        self.mode = QtWidgets.QComboBox(group)
-        self.mode.addItems([LOCAL_MODE, CLOUD_MODE])
-        self.provider = QtWidgets.QComboBox(group)
-        self.provider.addItems(list(config.PROVIDERS))
-        self.history_turns = QtWidgets.QSpinBox(preferences)
-        self.history_turns.setRange(1, 200)
-        self.history_turns.setValue(config.MAX_HISTORY_TURNS)
-        self.frame_size = QtWidgets.QSpinBox(preferences)
-        self.frame_size.setRange(256, 4096)
-        self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
-        self.vision_provider = QtWidgets.QComboBox(preferences)
-        self.vision_provider.addItems([config.SAME_AS_MODEL] + [n for n, p in config.PROVIDERS.items() if p.get("vision")])
         self.tools_profile = QtWidgets.QComboBox(preferences)
         self.tools_profile.addItems(list(config.TOOL_PROFILES))
         cfg = getattr(self.core, "cfg", None)
         start = getattr(cfg, config.TOOLS_CONFIG_KEY, None)
         self.tools_profile.setCurrentText(start if start in config.TOOL_PROFILES else config.DEFAULT_TOOL_PROFILE)
-        self.model = QtWidgets.QLineEdit("", group)
+        self.history_turns = QtWidgets.QSpinBox(preferences)
+        self.history_turns.setRange(1, 200)
+        self.history_turns.setValue(config.MAX_HISTORY_TURNS)
+        self.vision_provider = QtWidgets.QComboBox(preferences)
+        self.vision_provider.addItems([config.SAME_AS_MODEL] + [n for n, p in config.PROVIDERS.items() if p.get("vision")])
+        self.frame_size = QtWidgets.QSpinBox(preferences)
+        self.frame_size.setRange(256, 4096)
+        self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
+
+        group, grid = box("Model")
+        self.mode = QtWidgets.QComboBox(group)
+        self.mode.addItems([LOCAL_MODE, CLOUD_MODE])
         self.local_model = QtWidgets.QComboBox(group)
+        self.folder_button = QtWidgets.QPushButton("Models folder…", group)
+        self.provider = QtWidgets.QComboBox(group)
+        self.provider.addItems(list(config.PROVIDERS))
+        self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
+        self.model = QtWidgets.QLineEdit("", group)
+        self.model.setMinimumWidth(186)                           # fits the preset model names
         self.key = QtWidgets.QLineEdit("", group)
         self.key.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.key.setMinimumWidth(130)
         self.base_url = QtWidgets.QLineEdit("", group)
-        self.folder_button = QtWidgets.QPushButton("Models folder…", group)
+        self.base_url.setMinimumWidth(200)                        # fits the preset address
         self.connect_button = QtWidgets.QPushButton("Connect", group)
-        self.connect_button.setObjectName("AiAssistentConnectButton")
+        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
+        self._local_model_label = label("Model", group)
         self._provider_label = label("Provider", group)
         self._model_label = label("Model", group)
-        self._local_model_label = label("Model", group)
         self._key_label = label("API key", group)
         self._base_url_label = label("Base URL", group)
-        for widget in (self.mode, self.provider, self.model, self.local_model,
-                       self.key, self.base_url, self.folder_button, self.connect_button,
-                       self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
+        for widget in (self.tools_profile, self.history_turns, self.vision_provider, self.frame_size,
+                       self.mode, self.local_model, self.folder_button, self.provider, self.model,
+                       self.key, self.base_url, self.connect_button):
             widget.setFont(font)
 
         # Preferences: four pairs on one line, the leftover width after them.
-        first = label("Tool set", preferences, gap=0)
+        tool_set_label = label("Tool set", preferences, gap=0)
         vision_label = label("Vision model", preferences)
-        options.addWidget(first, 0, 0)
+        options.addWidget(tool_set_label, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(label("Memory", preferences), 0, 2)
         options.addLayout(with_unit(self.history_turns, "turns"), 0, 3)
@@ -320,13 +324,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         # Columns 5 and 7 take the leftover width, so the model, the file, the URL and the key
         # all grow with the window. The first columns are as wide as in Preferences, so the two
         # boxes line up: Type under Tool set, Provider under Memory, Model under Vision model.
-        self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
-        self.model.setMinimumWidth(186)                           # fits the preset model names
-        self.key.setMinimumWidth(130)
-        self.base_url.setMinimumWidth(200)                        # fits the preset address
-        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
-        second = max(w.sizeHint().width() for w in (self._provider_label, self._base_url_label, self._key_label))
-        for column, width in ((0, first.sizeHint().width()), (1, 144), (2, second),
+        widest = max(w.sizeHint().width() for w in (self._provider_label, self._base_url_label, self._key_label))
+        for column, width in ((0, tool_set_label.sizeHint().width()), (1, 144), (2, widest),
                               (3, self.provider.sizeHint().width()), (4, vision_label.sizeHint().width())):
             options.setColumnMinimumWidth(column, width)
             grid.setColumnMinimumWidth(column, width)
@@ -334,7 +333,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         grid.addWidget(self.mode, 0, 1)
         grid.addWidget(self._local_model_label, 0, 2)
         grid.addWidget(self.local_model, 0, 3, 1, 5)
-        grid.addWidget(self.folder_button, 1, 7, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        grid.addWidget(self.folder_button, 1, 7, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)  # by Connect
         grid.addWidget(self._provider_label, 0, 2)
         grid.addWidget(self.provider, 0, 3)
         grid.addWidget(self._model_label, 0, 4)
@@ -373,13 +372,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setup_toggle.setChecked(bool(expanded))
         self.setup_toggle.setArrowType(QtCore.Qt.DownArrow if expanded else QtCore.Qt.RightArrow)
 
-    # --- setup row state ---
+    # --- setup state ---
     def _local_mode(self):
         return self.mode.currentText() == LOCAL_MODE
 
     def _on_mode_changed(self, *_):
-        """Show the fields for the mode chosen, and hand the leftover width to the one that can
-        use it. The local list is rescanned when it appears."""
+        """Show the fields for the type chosen; the local list is rescanned when it appears."""
         local = self._local_mode()
         server = not local and config.PROVIDERS[self.provider.currentText()]["kind"] == "openai-compatible"
         for widget in (self._local_model_label, self.local_model, self.folder_button):

@@ -163,6 +163,28 @@ def test_connect_with_a_key_configures_the_worker(monkeypatch):
     assert gui.connect_button.text() == "Connected"
 
 
+def test_openai_style_connects_without_a_key_and_passes_one_through(monkeypatch):
+    gui = _gui()
+    configured = []
+
+    class _Worker:
+        def configure(self, endpoint, vision=None, profile=None):
+            configured.append(endpoint)
+
+    gui._worker = _Worker()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    gui.provider.setCurrentText("OpenAI-style")
+    gui.provider.currentTextChanged.emit("OpenAI-style")
+    gui.base_url.setText("http://box:8000/v1")
+    gui.on_connect()                                       # an Ollama-like server: no key
+    gui.key.setText("gw-token")
+    gui.on_connect()                                       # a gateway: the token goes through
+    without, with_key = configured
+    assert (without.kind, without.base_url, without.api_key) == ("openai-compatible", "http://box:8000/v1", "")
+    assert with_key.api_key == "gw-token"
+    assert gui.connect_button.text() == "Connected"
+
+
 def test_first_message_connects_with_the_typed_key(monkeypatch):
     gui = _gui()
     configured = []

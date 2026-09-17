@@ -28,8 +28,8 @@ integration
 The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to two
 boxes, **Preferences** and **Model**, and opens by itself when something needs the operator:
 nothing configured yet, a missing key, or a local model that failed to start. Once the assistant
-is ready it folds back. The Model box is one line led by a **Local AI / Cloud AI** dropdown; the
-fields after it follow the choice.
+is ready it folds back. The Model box starts with a **Type** dropdown, Local AI or Cloud AI; the
+fields after it follow the choice, and Connect sits at its bottom right.
 
 **Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style** for any server that
 speaks the OpenAI API, such as an Ollama or vLLM already running somewhere, or a hosted gateway),

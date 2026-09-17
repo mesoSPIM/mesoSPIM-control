@@ -17,6 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from mesoSPIM.test.remote_control import conftest as _rc_conftest    # noqa: F401,E402 (installs it)
 
+collect_ignore = ["test_real_pyqt_assistant_smoke.py"]  # a script for real PyQt; run.py pyqt runs it
+
 from PyQt5 import QtCore, QtWidgets                                  # noqa: E402 (the substitute)
 
 
@@ -279,8 +281,6 @@ QtWidgets.QGridLayout = QGridLayout
 if not hasattr(QtWidgets.QWidget, "setMinimumHeight"):
     QtWidgets.QWidget.setMinimumHeight = lambda self, _h: None
     QtWidgets.QWidget.setMinimumWidth = lambda self, _w: None
-    QtWidgets.QWidget.setMaximumWidth = lambda self, _w: None
-    QtWidgets.QWidget.setFixedWidth = lambda self, _w: None
     QtWidgets.QWidget.setContentsMargins = lambda self, *_a: None
     QtWidgets.QWidget.setAlignment = lambda self, _a: None
 if not hasattr(QtWidgets.QComboBox, "setSizeAdjustPolicy"):

@@ -37,7 +37,8 @@ def _offline():
 
 
 def _pyqt():
-    for script in (TESTS / "test_real_pyqt_smoke.py", TESTS / "test_real_pyqt_transport_smoke.py"):
+    assistant = TESTS.parent / "ai_assistant" / "test_real_pyqt_assistant_smoke.py"
+    for script in (TESTS / "test_real_pyqt_smoke.py", TESTS / "test_real_pyqt_transport_smoke.py", assistant):
         result = subprocess.call([sys.executable, str(script)], cwd=REPOSITORY, env=os.environ.copy())
         if result:
             return result
