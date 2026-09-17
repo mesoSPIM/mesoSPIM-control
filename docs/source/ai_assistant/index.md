@@ -52,13 +52,14 @@ with the path of its log. Use a GPU build of llama-cpp-python for anything above
 parameters; the 4B to 12B instruction models are the realistic range on a microscope PC.
 
 **Vision model.** The model that reads camera frames when the assistant looks. *Same as language
-model* (the default) lets the language model read frames itself when it can; a text-only local
-model then decides from the numbers alone. Choosing Cloud AI or Local AI here gives it eyes: the
+model* (the default) lets the language model read frames itself when it can: the cloud models
+can, and a local file can when its projector file (`mmproj-…gguf`) sits beside it in the models
+folder, since mesoSPIM serves the two together; a local file without one decides from the numbers
+alone. Choosing Cloud AI or Local AI here gives a text-only language model eyes of its own: the
 same fields as above, and the frame goes to this model in a separate call with the question, so
-the conversation itself never carries images. A local vision model needs its projector file
-(`mmproj-…gguf`) in the models folder beside the model file; mesoSPIM picks the one whose name
-matches and serves the two together. Whether a given local file can see depends on
-llama-cpp-python supporting that model family's projector.
+the conversation itself never carries images. A local vision model must have its projector file;
+choosing the same file in both boxes serves it once. Whether a given local file can see depends
+on llama-cpp-python supporting that model family's projector.
 
 **Preferences** apply at once. **Tool set** chooses what the assistant may do: *Regular* (the
 default) is for a user setting up a sample on a configured microscope: reads, stage and sample

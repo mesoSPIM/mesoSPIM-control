@@ -499,11 +499,16 @@ class AiAssistentGUI(QtWidgets.QWidget):
             return False
         self._stop_local_servers()
         self._endpoints = {}
-        for role, choice in plan.items():
+        for role in ("vision", "language"):     # vision first: its server, with the projector, can serve both
+            choice = plan[role]
             if isinstance(choice, Endpoint):
                 self._endpoints[role] = choice
             elif choice is not None:
                 path, projector = choice
+                twin = next((s for s in self._servers.values() if s.model_path == path), None)
+                if twin is not None:            # the same file in both boxes: one server
+                    self._servers[role] = twin
+                    continue
                 server = LocalModelServer(path, projector=projector)
                 try:
                     server.start()
@@ -512,10 +517,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
                     return False
                 self._servers[role] = server
         if self._servers:
+            servers = self._servers
             self._endpoint = None
             self._started_at = time.monotonic()
-            self._set_connect_state("starting", ", ".join(server.model for server in self._servers.values()))
-            self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_servers)
+            self._set_connect_state("starting", ", ".join(sorted({s.model for s in servers.values()})))
+            self._single_shot(config.LOCAL_SERVER_POLL_MS, lambda: self._poll_local_servers(servers))
             return False
         self._use()
         return True
@@ -533,7 +539,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
                 if not name:
                     self._note(f"Put a model file ({', '.join(config.MODEL_SUFFIXES)}) in {self._models_folder} first.")
                     return None
-                projector = projector_for(self._models_folder, name) if role == "vision" else None
+                projector = projector_for(self._models_folder, name)   # the language model sees too, given one
                 if role == "vision" and projector is None:
                     self._note(f"{name} needs its projector file (mmproj…) beside it in {self._models_folder} to see.")
                     return None
@@ -553,8 +559,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
                 plan[role] = endpoint
         return plan
 
-    def _poll_local_servers(self):
-        for server in self._servers.values():
+    def _poll_local_servers(self, servers):
+        """Poll the servers of one Connect until all answer, then use them. A poll left over from
+        an earlier Connect finds its servers replaced and stops."""
+        if servers is not self._servers:
+            return
+        for server in servers.values():
             try:
                 ready = server.ready()
             except RuntimeError as error:  # the child exited
@@ -565,11 +575,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
                     self._local_failed(f"{server.model} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; "
                                        f"see {server.log_path}")
                 else:
-                    self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_servers)
+                    self._single_shot(config.LOCAL_SERVER_POLL_MS, lambda: self._poll_local_servers(servers))
                 return
-        for role, server in self._servers.items():
+        for role, server in servers.items():
             self._endpoints[role] = Endpoint(provider=LOCAL_PROVIDER, kind="openai-compatible", model=server.model,
-                                             base_url=server.base_url, vision=role == "vision")
+                                             base_url=server.base_url, vision=server.projector is not None)
         self._use()
 
     def _local_failed(self, message):

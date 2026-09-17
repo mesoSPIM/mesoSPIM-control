@@ -518,6 +518,46 @@ def test_local_vision_model_is_served_with_its_projector(tmp_path, monkeypatch):
     assert gui.connect_button.text() == "Connected"
 
 
+def test_local_language_model_sees_when_its_projector_is_beside_it(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    (tmp_path / "mmproj-qwen3.5-8b-f16.gguf").write_bytes(b"")
+    _choose_mode(gui, "Local AI")
+    gui.language.local_model.setCurrentText("qwen3.5-8b-q4.gguf")
+    gui.on_connect()                                           # vision stays "Same as language model"
+    (server,) = _SERVERS
+    assert server.projector == str(tmp_path / "mmproj-qwen3.5-8b-f16.gguf")
+    scheduled.pop()(); scheduled.pop()()
+    assert gui._worker.endpoint.vision is True and "vision" not in gui._endpoints
+
+
+def test_the_same_file_in_both_boxes_is_served_once(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    (tmp_path / "mmproj-gemma-4-12b-f16.gguf").write_bytes(b"")
+    _choose_mode(gui, "Local AI")
+    gui.language.local_model.setCurrentText("gemma-4-12b-q4.gguf")
+    _choose_mode(gui, "Local AI", gui.vision)
+    gui.vision.local_model.setCurrentText("gemma-4-12b-q4.gguf")
+    gui.on_connect()
+    (server,) = _SERVERS                                       # one child for both roles
+    assert gui._servers["language"] is gui._servers["vision"] is server
+    scheduled.pop()(); scheduled.pop()()
+    assert gui._endpoints["language"].base_url == gui._endpoints["vision"].base_url == server.base_url
+    assert gui.connect_button.text() == "Connected"
+
+
+def test_a_second_connect_while_loading_leaves_one_live_poll(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    _choose_mode(gui, "Local AI")
+    gui.on_connect()
+    stale = scheduled.pop()
+    gui.on_connect()                                           # replaces the child before it answered
+    assert _SERVERS[0].stopped and len(scheduled) == 1
+    stale()                                                    # the old chain finds its servers gone
+    assert len(scheduled) == 1 and gui._endpoint is None
+    scheduled.pop()(); scheduled.pop()()
+    assert gui.connect_button.text() == "Connected" and scheduled == []
+
+
 def test_local_vision_model_without_a_projector_is_refused(tmp_path, monkeypatch):
     gui, _ = _local_gui(tmp_path, monkeypatch)
     gui.language.key.setText("k")
