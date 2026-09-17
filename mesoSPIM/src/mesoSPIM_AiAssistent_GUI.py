@@ -292,8 +292,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
                        self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
 
-        # Preferences: four pairs on one line; the leftover width sits before Frame, so its field
-        # ends at the right edge like Connect below.
+        # Preferences: four pairs on one line, the leftover width after them.
         options.addWidget(label("Tool set", preferences, gap=0), 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(label("Memory", preferences), 0, 2)
@@ -302,7 +301,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         options.addWidget(self.vision_provider, 0, 5)
         options.addWidget(label("Frame", preferences), 0, 6)
         options.addWidget(self.frame_size, 0, 7)
-        options.setColumnStretch(6, 1)
+        options.setColumnStretch(8, 1)
         # Model: the two lines share their columns, Connect at the bottom right. The last field
         # (the key or the base URL, and the model file above it) takes the leftover width.
         self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
