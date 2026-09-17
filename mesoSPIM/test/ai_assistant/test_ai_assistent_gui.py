@@ -355,3 +355,21 @@ def test_frames_from_look_are_shown_in_the_turn(monkeypatch):
     assert '<img src="data:image/png;base64,QUJD"' in gui.output.toPlainText()
     gui._on_done()
     assert '<img src="data:image/png;base64,QUJD"' in gui.output.toPlainText()   # kept in the finished block
+
+
+# --- the Run / Cancel bar ---
+
+def test_confirmation_bar_is_hidden_until_asked_and_answers_the_gate():
+    gui = _gui()
+    answers = []
+    gui._worker = type("_W", (), {"gate": type("_G", (), {"answer": lambda self, ok: answers.append(ok)})()})()
+    assert not gui.confirm_run.isVisible()
+    gui._on_confirm("run_acquisition_list", "{}")
+    assert gui.confirm_run.isVisible() and "run_acquisition_list" in gui.confirm_label.text()
+    gui._answer_confirmation(True)
+    assert answers == [True] and not gui.confirm_run.isVisible()
+    assert "[confirmed run_acquisition_list]" in gui.output.toPlainText()
+    gui._on_confirm("unload_sample", "{}")
+    gui._answer_confirmation(False)
+    assert answers == [True, False]
+    assert "[cancelled unload_sample]" in gui.output.toPlainText()

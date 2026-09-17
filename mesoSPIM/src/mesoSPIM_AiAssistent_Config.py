@@ -43,5 +43,17 @@ LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow 
 # The frame handed to a vision model: longer side in pixels.
 LOOK_IMAGE_SIZE = 1024
 
+# Commands the tab asks the operator about before they run (Run / Cancel), whatever the model was
+# told. They move the sample or start a long run. An unanswered question counts as Cancel.
+CONFIRM_FIRST = (
+    "load_sample",
+    "unload_sample",
+    "run_acquisition_list",
+    "run_selected_acquisition",
+    "preview_acquisition",
+    "time_lapse_start",
+)
+CONFIRM_TIMEOUT_S = 120
+
 POLL_INTERVAL_S = 0.15
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress

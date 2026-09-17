@@ -406,3 +406,62 @@ def test_build_tools_adds_look_only_with_an_endpoint():
     with_endpoint = {t.name for t in build_tools(FakeAcceptor(), threading.Event(), endpoint=Endpoint.from_preset("Gemini", api_key="k"))}
     assert "look" not in without and "look" in with_endpoint
     assert with_endpoint - without == {"look"}
+
+
+# --- the confirmation gate ---
+
+def test_gate_waits_for_the_operator_and_returns_the_answer():
+    asked = []
+    gate = ai.ConfirmationGate(on_ask=lambda name, args: asked.append((name, args)), timeout=5)
+    results = []
+    thread = threading.Thread(target=lambda: results.append(gate.ask("load_sample", {})))
+    thread.start()
+    deadline = time.monotonic() + 5
+    while not asked and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert asked == [("load_sample", "{}")]
+    assert not results                                              # still waiting
+    gate.answer(True)
+    thread.join(5)
+    assert results == [True]
+
+
+def test_gate_times_out_as_cancel():
+    gate = ai.ConfirmationGate(on_ask=lambda name, args: None, timeout=0.05)
+    assert gate.ask("run_acquisition_list", {}) is False
+
+
+def test_confirm_first_tool_is_refused_without_the_operator():
+    acc = FakeAcceptor()
+    gate = ai.ConfirmationGate(on_ask=lambda name, args: None, timeout=0.01)
+    fn = ai._tool_fn(acc, "run_acquisition_list", WAIT, threading.Event(), gate=gate)
+    out = json.loads(fn())
+    assert out["error"]["code"] == "refused" and "run_acquisition_list" in out["error"]["message"]
+    assert acc.calls == []                                          # never dispatched
+
+
+def test_confirm_first_tool_runs_after_run(monkeypatch):
+    acc = FakeAcceptor(flip_after=1)
+    gate = ai.ConfirmationGate(on_ask=lambda name, args: gate.answer(True), timeout=1)
+    fn = ai._tool_fn(acc, "load_sample", WAIT, threading.Event(), gate=gate)
+    out = json.loads(fn())
+    assert out["status"] == COMPLETED and acc.calls[0] == ("load_sample", {})
+
+
+def test_ordinary_tools_do_not_ask():
+    acc = FakeAcceptor()
+    gate = ai.ConfirmationGate(on_ask=lambda name, args: pytest.fail("asked for a read"), timeout=1)
+    ai._tool_fn(acc, "get_state", READ, threading.Event(), gate=gate)()
+    assert acc.calls == [("get_state", {})]
+
+
+def test_interrupt_cancels_an_open_question():
+    worker = AssistantWorker(FakeAcceptor())
+    results = []
+    thread = threading.Thread(target=lambda: results.append(worker.gate.ask("unload_sample", {})))
+    thread.start()
+    time.sleep(0.05)
+    stopper = worker.interrupt()
+    thread.join(5)
+    stopper.join(5)
+    assert results == [False]

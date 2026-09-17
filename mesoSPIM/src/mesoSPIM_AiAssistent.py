@@ -100,12 +100,35 @@ def _configured_options(acceptor):
     return reply if isinstance(reply, dict) else None
 
 
-def _tool_fn(acceptor, name, kind, cancel, on_call=None):
+class ConfirmationGate:
+    """The operator's Run / Cancel for a confirm-first command, asked from the worker thread and
+    answered from the GUI thread. One question at a time; no answer within the timeout is Cancel.
+    This is a gate in code: the model cannot talk its way past it."""
+
+    def __init__(self, on_ask, timeout=None):
+        self._on_ask = on_ask
+        self._timeout = config.CONFIRM_TIMEOUT_S if timeout is None else timeout
+        self._answered = threading.Event()
+        self._answer = False
+
+    def ask(self, name, args):
+        self._answered.clear()
+        self._answer = False
+        self._on_ask(name, json.dumps(args or {}))
+        self._answered.wait(self._timeout)
+        return self._answer
+
+    def answer(self, allowed):
+        self._answer = bool(allowed)
+        self._answered.set()
+
+
+def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
     """One passthrough tool body, closing over the command it dispatches. The keyword arguments
     ARE the command's wire args, so `move_absolute(targets={"x": 5000})` dispatches verbatim.
     `on_call` (if given) is invoked the moment the command fires, so the GUI can stream the
     activity live. Dispatch errors (out-of-range, busy) are returned to the model as data so it
-    can self-correct, not raised."""
+    can self-correct, not raised. A confirm-first command first asks the operator through `gate`."""
     def _call(**args) -> str:
         """See the tool description (the command's hint)."""
         if on_call is not None:
@@ -113,6 +136,8 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None):
                 on_call(name, json.dumps(args or {}))
             except Exception:
                 pass
+        if gate is not None and name in config.CONFIRM_FIRST and not gate.ask(name, args):
+            return json.dumps({"error": {"code": "refused", "message": f"the operator did not confirm {name}"}})
         try:
             return json.dumps(dispatch_and_wait(acceptor, name, args, kind, cancel))
         except Exception as error:
@@ -181,7 +206,7 @@ _LOOK_SCHEMA = {
 }
 
 
-def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None):
+def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, gate=None):
     """One passthrough tool per command, minus the prompt-only ones (get_manual is already in the
     system prompt). The tool list otherwise IS COMMANDS — never hand-maintained. Per-arg
     correctness comes from each command's accept() validator, the same one every transport uses.
@@ -195,7 +220,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None):
     different error vocabularies."""
     from pydantic_ai import Tool
     tools = [
-        Tool.from_schema(_tool_fn(acceptor, name, cmd.kind, cancel, on_call),
+        Tool.from_schema(_tool_fn(acceptor, name, cmd.kind, cancel, on_call, gate),
                          name=name, description=cmd.hint or name, json_schema=_ARGS_SCHEMA)
         for name, cmd in COMMANDS.items() if name not in _PROMPT_ONLY
     ]
@@ -298,7 +323,7 @@ def build_model(endpoint):
     return FallbackModel(primary, _build_one(endpoint, endpoint.fallback_model))
 
 
-def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None):
+def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None, gate=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -308,7 +333,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
     # instructions (not system_prompt): applied fresh each run, not accumulated into the
     # message history we carry across turns.
     return Agent(model, instructions=build_system_prompt(acceptor),
-                 tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame))
+                 tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate))
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---
@@ -351,6 +376,7 @@ class AssistantWorker(QtCore.QObject):
     sig_reply = QtCore.pyqtSignal(str)
     sig_tool = QtCore.pyqtSignal(str, str)   # tool name, args-json
     sig_frame = QtCore.pyqtSignal(str)       # base64 PNG the `look` tool showed the vision model
+    sig_confirm = QtCore.pyqtSignal(str, str)  # a confirm-first command waits for Run / Cancel
     sig_error = QtCore.pyqtSignal(str)
     sig_done = QtCore.pyqtSignal()
 
@@ -361,6 +387,7 @@ class AssistantWorker(QtCore.QObject):
         self._agent = None
         self._history = []
         self.cancel = threading.Event()
+        self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit)
 
     def configure(self, endpoint):
         """Use another endpoint from the next turn on; the transcript history is kept. Called from
@@ -374,7 +401,7 @@ class AssistantWorker(QtCore.QObject):
             self.cancel.clear()
             if self._agent is None:
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
-                                          endpoint=self._endpoint, on_frame=self.sig_frame.emit)
+                                          endpoint=self._endpoint, on_frame=self.sig_frame.emit, gate=self.gate)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.
@@ -403,6 +430,7 @@ class AssistantWorker(QtCore.QObject):
         stop to have been issued (tests, shutdown) can join it.
         """
         self.cancel.set()
+        self.gate.answer(False)  # a question still open is Cancel
 
         def issue_stop():
             try:

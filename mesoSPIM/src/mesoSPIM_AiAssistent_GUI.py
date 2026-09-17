@@ -92,6 +92,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._worker.sig_reply.connect(self._on_reply)
         self._worker.sig_tool.connect(self._on_tool)
         self._worker.sig_frame.connect(self._on_frame)
+        self._worker.sig_confirm.connect(self._on_confirm)
         self._worker.sig_error.connect(self._on_error)
         self._worker.sig_done.connect(self._on_done)
         self._thread.start()
@@ -120,6 +121,23 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.status.setFont(font)
         self.status.setVisible(False)                             # shown only while a turn runs
         layout.addWidget(self.status)
+
+        # The confirm-first bar: hidden until the assistant wants to run a command the operator
+        # must approve; Run or Cancel answers the worker's gate.
+        confirm = QtWidgets.QHBoxLayout()
+        self.confirm_label = QtWidgets.QLabel(self)
+        self.confirm_label.setFont(font)
+        self.confirm_run = QtWidgets.QPushButton("Run", self)
+        self.confirm_cancel = QtWidgets.QPushButton("Cancel", self)
+        for widget in (self.confirm_run, self.confirm_cancel):
+            widget.setFont(font)
+        self.confirm_run.clicked.connect(lambda: self._answer_confirmation(True))
+        self.confirm_cancel.clicked.connect(lambda: self._answer_confirmation(False))
+        confirm.addWidget(self.confirm_label, 1)
+        confirm.addWidget(self.confirm_run)
+        confirm.addWidget(self.confirm_cancel)
+        layout.addLayout(confirm)
+        self._show_confirmation(False)
 
         row = QtWidgets.QHBoxLayout()
         self.input = QtWidgets.QLineEdit(self)
@@ -425,7 +443,27 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def on_interrupt(self):
         if self._worker is not None:
             self._worker.interrupt()
+        self._show_confirmation(False)
         self._blocks.append(self._note_block("[interrupted]"))
+        self._render()
+
+    # --- confirm-first commands ---
+    def _show_confirmation(self, visible):
+        for widget in (self.confirm_label, self.confirm_run, self.confirm_cancel):
+            widget.setVisible(visible)
+
+    def _on_confirm(self, name, args):
+        self._pending_confirmation = name
+        self.confirm_label.setText(f"The assistant wants to run {name} {args}. Run it?")
+        self._show_confirmation(True)
+
+    def _answer_confirmation(self, allowed):
+        name = getattr(self, "_pending_confirmation", None)
+        self._show_confirmation(False)
+        if self._worker is not None:
+            self._worker.gate.answer(allowed)
+        verdict = "confirmed" if allowed else "cancelled"
+        self._blocks.append(self._note_block(f"[{verdict} {name}]"))
         self._render()
 
     def _set_running(self, running):
