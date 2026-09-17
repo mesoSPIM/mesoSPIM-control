@@ -2,8 +2,9 @@
 
 The transcript is plain on the tab's own background — no bubbles and no speaker labels, so weight
 alone separates the voices: your question is bold, the answer is not. Each answer streams the
-commands it runs above it, then the final Markdown. Enter submits; the input disables during a turn
-(single-flight); Cancel request stops the assistant, Stop microscope stops the instrument. The Acceptor is acquired lazily on first use —
+commands it runs above it, then the final Markdown. Enter or Send submits; the input disables
+during a turn (single-flight); Cancel request stops the assistant, Stop microscope stops the
+instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
 The setup sits under the input box as a collapsible footer: one line ("Set up AI assistant")
@@ -336,6 +337,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.input.setObjectName("AiAssistentInput")
         self.input.setFont(font)
         self.input.returnPressed.connect(self.on_submit)
+        self.send_button = QtWidgets.QPushButton("Send", self)
+        self.send_button.setFont(font)
+        self.send_button.clicked.connect(self.on_submit)       # the same as Enter, for the mouse
         self.interrupt = QtWidgets.QPushButton("Cancel request", self)
         self.interrupt.setFont(font)
         self.interrupt.clicked.connect(self.on_interrupt)   # always clickable; a no-op between turns
@@ -346,14 +350,16 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.new_button = QtWidgets.QPushButton("New session", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
-        # Right of the two-line input: Cancel request and New session side by side, the emergency
-        # stop underneath them, spanning both; the input is as tall as the two button rows.
+        # Right of the two-line input: Send as tall as both rows, then Cancel request and New
+        # session side by side with the emergency stop underneath them, spanning both; the input
+        # is as tall as the two button rows.
         buttons = QtWidgets.QGridLayout()
         buttons.setHorizontalSpacing(6)
         buttons.setVerticalSpacing(6)
-        buttons.addWidget(self.interrupt, 0, 0)
-        buttons.addWidget(self.new_button, 0, 1)
-        buttons.addWidget(self.stop_button, 1, 0, 1, 2)
+        buttons.addWidget(self.send_button, 0, 0, 2, 1)
+        buttons.addWidget(self.interrupt, 0, 1)
+        buttons.addWidget(self.new_button, 0, 2)
+        buttons.addWidget(self.stop_button, 1, 1, 1, 2)
         row.addWidget(self.input, 1)
         row.addLayout(buttons)
         self.input.setFixedHeight(2 * self.interrupt.sizeHint().height() + 6)
@@ -716,7 +722,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _set_running(self, running):
         self.input.setEnabled(not running)
-        for widget in (self.language, self.vision, self.connect_button, self.new_button, self.tools_profile):
+        for widget in (self.send_button, self.language, self.vision, self.connect_button, self.new_button,
+                       self.tools_profile):
             widget.setEnabled(not running)      # the models and the tool set change only between turns
         if running:
             self._set_expanded(False)

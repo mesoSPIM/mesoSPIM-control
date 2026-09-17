@@ -80,7 +80,8 @@ The presets live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 
-Open the **AI Assistant** tab and type. Commands the agent runs stream live above each answer, so
+Open the **AI Assistant** tab and type. Enter or **Send** submits; Shift+Enter starts a new line,
+as in an editor. Commands the agent runs stream live above each answer, so
 the operator sees exactly which named calls were issued. **Cancel request** stops the assistant: no
 further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the
 model's next reply; what the assistant already started keeps running. **Stop microscope now** is
