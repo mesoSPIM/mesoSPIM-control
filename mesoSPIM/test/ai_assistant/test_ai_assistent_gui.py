@@ -303,7 +303,7 @@ def test_choosing_a_folder_rescans(tmp_path, monkeypatch):
 def test_setup_starts_collapsed_with_an_inviting_summary():
     gui = _gui()
     assert not gui.expanded()
-    assert gui.setup_toggle.text() == "Set up the assistant: choose a model"
+    assert gui.setup_toggle.text() == "Set up AI assistant"
     assert gui.setup_toggle.arrowType() == QtCore.Qt.RightArrow
 
 

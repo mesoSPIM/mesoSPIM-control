@@ -6,8 +6,8 @@ commands it runs above it, then the final Markdown. Enter submits; the input dis
 (single-flight); Interrupt halts a runaway agent. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
-The endpoint setup sits under the input box as a collapsible footer: one summary line ("Model:
-… · ready") that expands to the setup rows. It opens itself when something needs the operator
+The endpoint setup sits under the input box as a collapsible footer: one line ("Set up AI
+assistant", or "Model: … · ready") that expands to the setup rows. It opens itself when something needs the operator
 (nothing configured, a missing key, a server that failed) and folds back once the assistant is
 ready, so a first-time user sees a chat, not a configuration form.
 
@@ -115,6 +115,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.status = QtWidgets.QLabel("", self)
         self.status.setObjectName("AiAssistentStatus")
         self.status.setFont(font)
+        self.status.setVisible(False)                             # shown only while a turn runs
         layout.addWidget(self.status)
 
         row = QtWidgets.QHBoxLayout()
@@ -130,6 +131,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         row.addWidget(self.input, 1)
         row.addWidget(self.interrupt)
         layout.addLayout(row)
+        layout.addSpacing(12)                                     # the footer is its own thing
 
         self.setup_toggle = QtWidgets.QToolButton(self)
         self.setup_toggle.setObjectName("AiAssistentSetupToggle")
@@ -228,7 +230,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         elif self._local_server is not None:
             text = f"Model: {self._local_server.model} (local, llama.cpp)  ·  starting…"
         else:
-            text = "Set up the assistant: choose a model"
+            text = "Set up AI assistant"
         self.setup_toggle.setText(text)
 
     def expanded(self):
@@ -438,6 +440,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         if running:
             self._set_expanded(False)
         self.status.setText("mesoSPIM is working…" if running else "")
+        self.status.setVisible(running)
         if not running:
             self.input.setFocus()
 
