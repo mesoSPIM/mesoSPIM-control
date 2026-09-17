@@ -86,7 +86,11 @@ order:
 1. Is the command name supported?
 2. Is the argument object valid?
 3. Are types, options, and numeric ranges valid?
-4. Are movement targets within the active limits?
+4. Are movement targets within the active limits? Targets and acquisition positions arrive in
+   the user-visible frame, which the GUI (or the remote `zero` command) may have shifted so that
+   some physical position reads 0. The limits are physical, so every target is moved back into the
+   stage frame with the active offset (`position` minus `position_absolute`, both from the same
+   readback) before it is compared. `get_limits` reports the offsets under `enforced.axis_offsets`.
 5. Is another mutation already running?
 6. Reserve an operation ID and schedule the command.
 
@@ -243,10 +247,13 @@ non-idle Core, and unconfirmed movement.
 ## Acquisition-list ownership
 
 Time-lapse code reads the visible GUI acquisition model as well as Core state. A remote list must
-therefore update both places with the same validated object. The tab owns a Qt bridge from Core to
-the GUI thread and waits for the table replacement to finish. That bridge runs after the accepted
-reply; clients observe its success or failure by polling the operation. This prevents old GUI rows
-from overwriting a remote list later without making TCP or MCP wait for the GUI update.
+therefore update both places with the same validated object. The tab owns a queued Qt bridge from
+Core to the GUI thread: Core installs the list in its own state, hands the same object to the GUI
+thread, and carries on. The bridge is deliberately not blocking. The GUI thread blocks on Core for
+Stop and for the AI Assistant's acceptor, so a Core thread that waited for the GUI in the same
+moment would deadlock the application. The bridge runs after the accepted reply; clients observe
+its success or failure by polling the operation. This prevents old GUI rows from overwriting a
+remote list later without making TCP or MCP wait for the GUI update.
 
 `acquire_start` temporarily installs one supplied row and saves the operator's previous list.
 `acquire_finish` restores that exact object, including `planes` metadata.

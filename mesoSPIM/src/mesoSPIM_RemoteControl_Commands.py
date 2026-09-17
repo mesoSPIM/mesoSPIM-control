@@ -67,6 +67,36 @@ def position(core, absolute=False):
     return {axis: pos.get(axis, pos.get(axis + "_pos")) for axis in config.AXES}
 
 
+def axis_offsets(core):
+    """The per-axis shift between the user-visible frame and the physical stage frame.
+
+    The GUI "zero" buttons (and the remote ``zero`` command) make the current physical position
+    read as 0 by adding an offset to every readback. ``stage_parameters`` limits, and therefore the
+    stage drivers' own checks, are in the PHYSICAL frame, so a user-frame target must be shifted
+    back before it is compared. Both readbacks come from one ``report_position`` call, so their
+    difference is exactly the active offset: user = physical + offset. An axis whose absolute
+    readback is unavailable (a core that has not reported yet, or a hardware-free fake) has no
+    known offset and is checked as-is, which matches an unzeroed stage.
+    """
+    user = position(core)
+    physical = position(core, absolute=True)
+    offsets = {}
+    for axis in config.AXES:
+        here, there = user.get(axis), physical.get(axis)
+        if (
+            isinstance(here, (int, float))
+            and isinstance(there, (int, float))
+            and not isinstance(here, bool)
+            and not isinstance(there, bool)
+            and math.isfinite(here)
+            and math.isfinite(there)
+        ):
+            offsets[axis] = float(here) - float(there)
+        else:
+            offsets[axis] = 0.0
+    return offsets
+
+
 def defer_position_move(core, targets, action, absolute=False):
     """Issue a stage move without blocking Core, then complete it from position readback.
 
@@ -458,24 +488,32 @@ def effective_limits(core):
     return limits
 
 
-def check_absolute(limits, axis, value):
+def check_absolute(limits, axis, value, offset=0.0):
+    """Refuse a user-frame target whose PHYSICAL position leaves the envelope. `offset` is the
+    active zeroing shift for the axis (see axis_offsets); the limits are physical."""
     bound = limits.get(axis)
-    if bound is not None and not (bound[0] <= value <= bound[1]):
+    if bound is None:
+        return
+    physical = value - offset
+    if not (bound[0] <= physical <= bound[1]):
+        frame = f" (stage position {physical} after the current zero offset {offset})" if offset else ""
         raise ValidationError(
-            f"{axis}={value} is outside the allowed range [{bound[0]}, {bound[1]}] "
+            f"{axis}={value}{frame} is outside the allowed range [{bound[0]}, {bound[1]}] "
             f"(units: um for x/y/z/f, deg for theta; see get_limits)"
         )
 
 
-def check_relative(limits, axis, current, delta):
+def check_relative(limits, axis, current, delta, offset=0.0):
     bound = limits.get(axis)
     if bound is None:
         return
     current = _finite(current, f"current {axis} position")
     target = current + delta
-    if not (bound[0] <= target <= bound[1]):
+    physical = target - offset
+    if not (bound[0] <= physical <= bound[1]):
+        frame = f" (stage position {physical} after the current zero offset {offset})" if offset else ""
         raise ValidationError(
-            f"{axis} would reach {target}, outside the allowed range "
+            f"{axis} would reach {target}{frame}, outside the allowed range "
             f"[{bound[0]}, {bound[1]}] (current {current} + delta {delta}; see get_limits)"
         )
 
@@ -522,9 +560,10 @@ def check_acquisition(core, acquisition, label="acquisition"):
         check_setting(core, key, value)
 
     limits = effective_limits(core)
+    offsets = axis_offsets(core)
     for field, axis in config.ACQUISITION_AXIS_FIELDS.items():
         if field in acquisition:
-            check_absolute(limits, axis, _finite(acquisition[field], f"{label}.{field}"))
+            check_absolute(limits, axis, _finite(acquisition[field], f"{label}.{field}"), offsets[axis])
     if "z_step" in acquisition:
         step = _finite(acquisition["z_step"], f"{label}.z_step")
         if step <= 0:
@@ -573,6 +612,7 @@ def revalidate_installed_limits(core, indices=None):
     specific rows (run_selected_acquisition runs only one)."""
     installed = state(core, "acq_list", []) or []
     limits = effective_limits(core)
+    offsets = axis_offsets(core)
     chosen = range(len(installed)) if indices is None else indices
     for i in chosen:
         if not (0 <= i < len(installed)):
@@ -587,10 +627,12 @@ def revalidate_installed_limits(core, indices=None):
             # and refused (fail closed), not skipped, so it cannot reach Core unchecked.
             value = _finite(fields[field], f"installed acquisitions[{i}].{field}")
             bound = limits.get(axis)
-            if bound is not None and not (bound[0] <= value <= bound[1]):
+            physical = value - offsets[axis]
+            if bound is not None and not (bound[0] <= physical <= bound[1]):
                 raise ValidationError(
-                    f"installed acquisitions[{i}].{field}={value} is outside the allowed range "
-                    f"[{bound[0]}, {bound[1]}]; re-install the list within the current limits"
+                    f"installed acquisitions[{i}].{field}={value} (stage position {physical}) is "
+                    f"outside the allowed range [{bound[0]}, {bound[1]}]; re-install the list "
+                    f"within the current limits"
                 )
 
 
@@ -662,6 +704,10 @@ def _limits_document(core):
         "startup": jsonable(getattr(cfg, "startup", {})),
         "enforced": {
             "axes": {ax: (list(axes[ax]) if ax in axes else None) for ax in config.AXES},
+            # The axis envelope is in the physical stage frame. A move target is user-frame:
+            # physical = target - axis_offsets[axis]. All offsets are 0 unless an axis is zeroed.
+            "axes_frame": "stage",
+            "axis_offsets": axis_offsets(core),
             "parameters": _param_constraints(core),
         },
     }
@@ -1019,8 +1065,9 @@ def _accept_move_absolute(core, args):
     only(args, ("targets",))
     targets = axis_map(args, "targets")
     limits = effective_limits(core)
+    offsets = axis_offsets(core)
     for axis, value in targets.items():
-        check_absolute(limits, axis, value)
+        check_absolute(limits, axis, value, offsets[axis])
     return {"targets": targets}
 
 
@@ -1045,10 +1092,11 @@ def _accept_move_relative(core, args):
     only(args, ("deltas",))
     deltas = axis_map(args, "deltas")
     limits = effective_limits(core)
+    offsets = axis_offsets(core)
     here = position(core)
     targets = {}
     for axis, delta in deltas.items():
-        check_relative(limits, axis, here.get(axis), delta)
+        check_relative(limits, axis, here.get(axis), delta, offsets[axis])
         targets[axis] = here[axis] + delta
     return {"deltas": deltas, "targets": targets}
 
@@ -1602,7 +1650,8 @@ def _run_set_acquisition_list(core, args):
         core.state["selected_row"] = args["selected_row"]
     # Upstream time lapse renames files through the GUI AcquisitionModel. Keep that model and Core's
     # state on the same AcquisitionList, or its first dataChanged signal restores the stale GUI rows.
-    # RemoteControlGUI supplies a blocking Core->GUI bridge; headless/unit cores intentionally do not.
+    # RemoteControlGUI supplies a queued Core->GUI bridge (never blocking: Core must not wait on the
+    # GUI thread, which may itself be waiting on Core); headless/unit cores intentionally do not.
     bridge = getattr(core, "_remote_control_acquisition_list_signal", None)
     if bridge is not None:
         bridge.emit(acquisitions, args.get("selected_row"))
@@ -1837,7 +1886,11 @@ class SimCore:
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.state = {"state": "idle", "position": {f"{a}_pos": 0.0 for a in config.AXES}}
+        self.state = {
+            "state": "idle",
+            "position": {f"{a}_pos": 0.0 for a in config.AXES},
+            "position_absolute": {f"{a}_pos": 0.0 for a in config.AXES},
+        }
         self._remote_session = {"operation": None, "counter": 0}
         # Startup calls self_test before returning to Qt's event loop. Simulated timer work must
         # therefore run inline; only this hardware-free Core provides the override.
@@ -1849,7 +1902,11 @@ class SimCore:
             raise AssertionError("SimCore stage moves must remain asynchronous")
         self.moves.append(targets)
         for key, value in targets.items():
-            self.state["position"][key.replace("_abs", "_pos")] = float(value)
+            axis = key.replace("_abs", "")
+            offset = self.state["position"][f"{axis}_pos"] - self.state["position_absolute"][f"{axis}_pos"]
+            # Like the stage drivers: the user-frame target lands at physical = target - offset.
+            self.state["position"][f"{axis}_pos"] = float(value)
+            self.state["position_absolute"][f"{axis}_pos"] = float(value) - offset
 
     def set_intensity(self, value, wait_until_done=False, **_):
         if wait_until_done:
@@ -1895,6 +1952,20 @@ def self_test(source):
         expected += 1
         note(not accepts("move_absolute", {"targets": {axis: high + 1}}), f"over-max {axis} refused")
         note(not accepts("move_absolute", {"targets": {axis: low - 1}}), f"under-min {axis} refused")
+    # A zeroed axis reads 0 while the stage sits at its physical maximum. A user-frame target of
+    # +1 would then drive past the limit; the check must see the physical position, not the reading.
+    axis, (low, high) = next(iter(limits.items()))
+    sim.state["position"][f"{axis}_pos"] = 0.0
+    sim.state["position_absolute"][f"{axis}_pos"] = high
+    note(accepts("move_absolute", {"targets": {axis: 0}}), f"zeroed-frame {axis}=0 (stage {high}) accepted")
+    expected += 1
+    note(not accepts("move_absolute", {"targets": {axis: 1}}), f"zeroed-frame over-max {axis} refused")
+    note(
+        not accepts("move_relative", {"deltas": {axis: 1}}),
+        f"zeroed-frame relative over-max {axis} refused",
+    )
+    sim.state["position"][f"{axis}_pos"] = 0.0
+    sim.state["position_absolute"][f"{axis}_pos"] = 0.0
     note(not accepts("set_intensity", {"intensity": 250}), "over-range intensity refused")
     note(not accepts("move_absolute", {"targets": {"nope": 0}}), "unknown axis refused")
     note(not accepts("__import__", {}), "unknown command refused")
