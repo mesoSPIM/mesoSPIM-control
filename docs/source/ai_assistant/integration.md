@@ -5,38 +5,37 @@ adds a chat tab that lets an operator drive the microscope in natural language: 
 turns the Remote Control commands into tools and dispatches them through the **same** `Acceptor`,
 so every action obeys the existing validation, movement limits, and one-mutation gate.
 
-Integrate Remote Control first ([`INTEGRATION.md`](INTEGRATION.md)); the Assistant reuses its
-`Acceptor`, dispatcher, and completion signals.
+Integrate Remote Control first ([architecture](../remote_control/architecture.md)); the Assistant
+reuses its `Acceptor`, dispatcher, and completion signals.
 
 ## 1. New files (all self-contained, in `mesoSPIM/src/`)
 
-- `mesoSPIM_AiAssistent_Config.py` — the one endpoint (provider, model, key env var) and timing.
-- `mesoSPIM_AiAssistent.py` — the tool builder, the completion wrapper (`dispatch_and_wait`), and
-  the `AssistantWorker` that runs each turn off the GUI/Core threads.
-- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab (transcript + input line + Interrupt).
+- `mesoSPIM_AiAssistent_Config.py` — provider presets, local-model settings, and timing.
+- `mesoSPIM_AiAssistent.py` — the `Endpoint` chosen in the tab, the tool builder, the completion
+  wrapper (`dispatch_and_wait`), and the `AssistantWorker` that runs each turn off the GUI/Core
+  threads.
+- `mesoSPIM_AiAssistent_Local.py` — the models-folder scan and the llama.cpp server child that
+  serves a local `.gguf` file on loopback.
+- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Interrupt, and
+  the collapsible setup footer.
 - `assistant_manual.md` — a thin preamble (units, frames, safety tone); `get_manual` supplies the
   full, always-in-sync command reference.
 
-Dependency: `pydantic-ai` (imported lazily, only when a turn actually runs).
+Dependencies: `pydantic-ai` (imported lazily, only when a turn runs); `llama-cpp-python` only for
+local models (the `ai-assistant-local` extra).
 
-## 2. Acceptor lifecycle — in `mesoSPIM_AiAssistent.py` (no Remote Control file changes)
+## 2. Acceptor lifecycle — in `mesoSPIM_AiAssistent.py`
 
-The Assistant is **purely additive**: the five `mesoSPIM_RemoteControl_*` modules stay byte-identical
-to their shipped patch (CI enforces this). The two lifecycle functions therefore live in the new
-`mesoSPIM_AiAssistent.py`, reusing the RC `Acceptor` and `self_test`:
+The two lifecycle functions reuse the Remote Control `Acceptor` and `self_test`:
 
 ```python
 def start_assistant_for_core(core): ...   # self-test, then Acceptor(core); None if a transport runs
 def stop_assistant_for_core(core): ...    # acceptor.stop(); drop the handle
 ```
 
-Exclusion is one-way: `start_assistant_for_core` refuses while a TCP/MCP transport is running, so the
-Assistant never starts a second controller behind the operator's back. The reverse guardrail — a
-transport refusing to start while the Assistant is active — is intentionally left out of v1 because
-it would require editing the frozen `start_for_core`, and running two Acceptors is in fact safe: the
-completion transitions (`complete`/`fail`) are idempotent through the one gate, so nothing
-double-completes. Add the reverse check (three lines at the top of `start_for_core`) when the RC
-modules are next regenerated, if simultaneous control should be forbidden outright.
+Exclusion holds both ways: `start_assistant_for_core` refuses while a TCP/MCP transport runs, and
+`start_for_core` in `mesoSPIM_RemoteControl_Servers.py` refuses while the Assistant's acceptor
+exists. That refusal is the only Remote Control edit the Assistant needed.
 
 ## 3. `mesoSPIM_Core.py` — one attribute and two delegate slots
 
@@ -97,12 +96,14 @@ Core-owned Acceptor.
   further dispatches and stops the hardware.
 - Every mutating tool blocks until the microscope actually finishes, so the agent sees completed
   actions, not `processing`; a long acquisition past the wait cap returns `still_running`.
-- Transient free-tier model errors (503 / 429) are retried with a short backoff.
+- A rate-limited or unavailable Gemini primary rolls over to its fallback model within the turn;
+  there is no whole-turn retry, which would re-run every tool call the first attempt made.
 - Tool arguments pass straight to the dispatcher, which validates shape and limits before hardware.
 
 ## 6. Verification
 
-The offline suites (`tests/test_ai_assistent.py`, `tests/test_ai_assistent_gui.py`) test the
-completion wrapper, the tool builder, the worker turn/retry/interrupt, and the tab's transport-busy
-refusal and single-flight lock, all under the Qt-free shim. Real-thread hand-off and a live turn on
-the DemoStage are the operator-gated bench checks (see the checklist in `ai_assistant/`).
+The offline suites in `mesoSPIM/test/ai_assistant/` test the completion wrapper, the tool builder,
+the endpoint, the worker turn and interrupt, the local server child (with a stand-in process), and
+the tab: setup footer, Cloud and Local modes, transport-busy refusal and the single-flight lock,
+all under the Qt-free substitute. Real-thread hand-off and a live turn on the DemoStage are the
+operator-gated bench checks.

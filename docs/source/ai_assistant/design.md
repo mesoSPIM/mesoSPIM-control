@@ -1,5 +1,8 @@
 # AI Assistant — Minimal Design
 
+*The design note written before the build. The [manual](index.md) and
+[integration notes](integration.md) describe what shipped.*
+
 *Reviewed against the dispatcher / servers / GUI code; the review's findings are incorporated below.*
 
 ## Goal

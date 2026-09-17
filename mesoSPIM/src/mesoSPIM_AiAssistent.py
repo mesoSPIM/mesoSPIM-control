@@ -187,10 +187,6 @@ class Endpoint:
     def needs_key(self):
         return self.kind != "openai-compatible"
 
-    def describe(self):
-        where = f" at {self.base_url}" if self.base_url else ""
-        return f"{self.provider}, {self.model}{where}"
-
 
 def _build_one(endpoint, model_id):
     if endpoint.kind == "google":
@@ -236,8 +232,6 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None):
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---
-# Kept in this new module so the five Remote Control modules stay byte-identical to their shipped
-# patch; the assistant is purely additive and reuses the shared Acceptor/dispatcher.
 def start_assistant_for_core(core):
     """Build the in-process Acceptor the AI Assistant dispatches through, on the Core thread, and
     store it on ``core._assistant_acceptor``. Called from Core's start_ai_assistant slot, so the
@@ -279,10 +273,10 @@ class AssistantWorker(QtCore.QObject):
     sig_error = QtCore.pyqtSignal(str)
     sig_done = QtCore.pyqtSignal()
 
-    def __init__(self, acceptor, endpoint=None):
+    def __init__(self, acceptor):
         super().__init__()
         self._acceptor = acceptor
-        self._endpoint = endpoint
+        self._endpoint = None  # set by configure() before the first turn
         self._agent = None
         self._history = []
         self.cancel = threading.Event()

@@ -278,7 +278,6 @@ def test_local_endpoint_needs_a_base_url_not_a_key():
     endpoint = Endpoint.from_preset("OpenAI-compatible server", base_url="http://box:8000/v1")
     assert not endpoint.needs_key
     assert endpoint.base_url == "http://box:8000/v1"
-    assert "http://box:8000/v1" in endpoint.describe()
 
 
 def test_configure_rebuilds_the_agent_on_the_next_turn_and_keeps_history(monkeypatch):
@@ -289,7 +288,8 @@ def test_configure_rebuilds_the_agent_on_the_next_turn_and_keeps_history(monkeyp
         return FakeAgent([FakeResult("one"), FakeResult("two")])
 
     monkeypatch.setattr(ai, "build_agent", fake_build)
-    worker = AssistantWorker(FakeAcceptor(), Endpoint.from_preset("OpenAI", api_key="k1"))
+    worker = AssistantWorker(FakeAcceptor())
+    worker.configure(Endpoint.from_preset("OpenAI", api_key="k1"))
     worker.run_turn("first")
     other = Endpoint.from_preset("Anthropic", api_key="k2")
     worker.configure(other)

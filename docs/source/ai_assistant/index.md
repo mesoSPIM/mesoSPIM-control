@@ -12,7 +12,6 @@ This builds on [Remote Control](../remote_control/index.md); read that first.
 :maxdepth: 1
 
 design
-implementation
 integration
 ```
 
@@ -26,40 +25,32 @@ integration
 
 ## Setting it up
 
-The **Assistant setup** row at the top of the tab chooses the endpoint:
+The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to the
+setup rows, and opens by itself when something needs the operator: nothing configured yet, a
+missing key, or a local model that failed to start. Once the assistant is ready it folds back.
 
-1. **Provider**: Gemini, OpenAI, Anthropic, or "OpenAI-compatible (local)" for Ollama, vLLM or
-   LM Studio. Choosing one prefills the model name, which can be edited.
-2. **API key**: typed into the masked field. It is kept in memory for this mesoSPIM session only
-   and is never written to the repository, the microscope config, or a log. If the field is left
-   empty, the provider's environment variable is used (`GEMINI_API_KEY`, `OPENAI_API_KEY`,
-   `ANTHROPIC_API_KEY`), so a key exported before starting mesoSPIM keeps working. A local server
-   shows a **Base URL** field instead and needs no key.
-3. **Connect** applies the row; the status reads "ready: Gemini, gemini-3.5-flash-lite". Sending a
-   first message without pressing Connect applies the row as typed. Building the endpoint does not
-   contact the provider, so a wrong key shows up as an error on the first message.
+**Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or an OpenAI-compatible server such as
+Ollama or vLLM already running somewhere, given by its base URL), keep or edit the prefilled model
+name, and type the API key into the masked field. The key is kept in memory for this mesoSPIM
+session only and is never written to the repository, the microscope config, or a log. An empty
+field falls back to the provider's environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`), so a key exported before starting mesoSPIM keeps working.
 
-The endpoint can be changed at any time between turns; the transcript is kept. The presets live in
-`mesoSPIM_AiAssistent_Config.py` as defaults only.
+**Local.** One **Model** dropdown lists the `.gguf` files in the models folder (`~/mesoSPIM/models`,
+or the `ai_assistant_models_folder` attribute of the microscope config; **Models folder…** points
+it elsewhere for the session). Download a file from Hugging Face, drop it in, choose it, Connect.
+Nothing leaves the machine and no key is needed. Behind Connect, mesoSPIM serves the file itself
+with llama.cpp's OpenAI-compatible server (`pip install llama-cpp-python`, or the
+`ai-assistant-local` extra) as a child process on a loopback port; the status reads "starting…"
+while the model loads, then "ready on 127.0.0.1:<port>". Switching models, going back to Cloud, or
+closing mesoSPIM stops the child. A server that fails to start is reported with the path of its
+log. Use a GPU build of llama-cpp-python for anything above a few billion parameters; the 4B to 12B
+instruction models are the realistic range on a microscope PC.
 
-### Local models
-
-Choose **Local** instead of Cloud and the row shows one **Model** dropdown listing the `.gguf`
-files in the models folder (`~/mesoSPIM/models`, or the `ai_assistant_models_folder` attribute of
-the microscope config; **Models folder…** points it elsewhere for the session). Download a file
-from Hugging Face, drop it in, choose it, Connect. Nothing leaves the machine and no key is needed.
-
-Behind Connect, mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server
-(`pip install llama-cpp-python`, or the `ai-assistant-local` extra) as a child process on a
-loopback port, and the assistant talks to it like any other OpenAI-compatible server. The status
-shows "starting …" while the model loads, then "ready: <model> (llama.cpp on 127.0.0.1:<port>)".
-Switching models, going back to Cloud, or closing mesoSPIM stops the child. A server that fails
-to start is reported with the path of its log. Use a GPU build of llama-cpp-python for anything
-above a few billion parameters; the 4B to 12B instruction models are the realistic range on a
-microscope PC.
-
-An OpenAI-compatible server that is already running somewhere (Ollama, vLLM, LM Studio) is chosen
-under Cloud as "OpenAI-compatible server" with its base URL.
+**Connect** applies the rows; a first message sent without pressing it applies them as typed.
+Building a cloud endpoint does not contact the provider, so a wrong key shows up as an error on the
+first message. The endpoint can be changed between turns and the transcript is kept. The presets
+live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 

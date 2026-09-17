@@ -302,7 +302,7 @@ def test_choosing_a_folder_rescans(tmp_path, monkeypatch):
 
 def test_setup_starts_collapsed_with_an_inviting_summary():
     gui = _gui()
-    assert not gui.expanded()
+    assert not gui.setup_group.isVisible()
     assert gui.setup_toggle.text() == "Set up AI assistant"
     assert gui.setup_toggle.arrowType() == QtCore.Qt.RightArrow
 
@@ -310,9 +310,9 @@ def test_setup_starts_collapsed_with_an_inviting_summary():
 def test_toggle_expands_and_collapses():
     gui = _gui()
     gui.setup_toggle.setChecked(True)
-    assert gui.expanded() and gui.setup_toggle.arrowType() == QtCore.Qt.DownArrow
+    assert gui.setup_group.isVisible() and gui.setup_toggle.arrowType() == QtCore.Qt.DownArrow
     gui.setup_toggle.setChecked(False)
-    assert not gui.expanded()
+    assert not gui.setup_group.isVisible()
 
 
 def test_a_problem_opens_the_footer(monkeypatch):
@@ -321,7 +321,7 @@ def test_a_problem_opens_the_footer(monkeypatch):
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.input.setText("hello")
     gui.on_submit()                                            # nothing configured, no key
-    assert gui.expanded()
+    assert gui.setup_group.isVisible()
     assert "Enter an API key" in gui.output.toPlainText()
 
 
@@ -332,7 +332,7 @@ def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui.setup_toggle.setChecked(True)
     gui.key.setText("g-key")
     gui.on_connect()
-    assert not gui.expanded()
+    assert not gui.setup_group.isVisible()
     assert gui.setup_toggle.text() == "Set up AI assistant"
     assert gui.setup_status.text() == "ready"
 
@@ -343,6 +343,6 @@ def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     gui.on_connect()
     assert gui.setup_status.text() == "starting…"
     scheduled.pop()(); scheduled.pop()()
-    assert not gui.expanded()
+    assert not gui.setup_group.isVisible()
     assert gui.setup_status.text() == "ready on 127.0.0.1:4242"
     assert gui.setup_toggle.text() == "Set up AI assistant"

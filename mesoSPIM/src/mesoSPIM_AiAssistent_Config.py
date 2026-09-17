@@ -1,10 +1,9 @@
 """Endpoint presets and timing for the AI Assistant.
 
-The tab's "Assistant setup" row offers these providers; choosing one prefills the model (and base
-URL for a local server), and the operator types the API key into the tab. The key lives in memory
-for the session only. It is never written to this file, to the microscope config, or to a log.
-When the key field is left empty the environment variable named here is used, so a key exported
-before starting mesoSPIM keeps working.
+The tab's setup footer offers these providers; choosing one prefills the model (and base URL for
+a server), and the operator types the API key into the tab. The key lives in memory for the
+session only, never in this file, the microscope config, or a log. An empty key field falls back
+to the environment variable named here.
 
 Maintainer (2026):
     Thom de Hoog

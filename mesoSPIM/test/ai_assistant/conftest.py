@@ -20,14 +20,6 @@ from mesoSPIM.test.remote_control import conftest as _rc_conftest    # noqa: F40
 from PyQt5 import QtCore, QtWidgets                                  # noqa: E402 (the substitute)
 
 
-class _ScrollBar:
-    def setValue(self, _value):
-        pass
-
-    def maximum(self):
-        return 0
-
-
 class QTextEdit(QtWidgets.QWidget):
     """The AI Assistant transcript. Records the last rendered body so a test can assert on it."""
 
@@ -36,7 +28,6 @@ class QTextEdit(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._markdown = ""
-        self._bar = _ScrollBar()
 
     def setReadOnly(self, _flag):
         pass
@@ -53,14 +44,8 @@ class QTextEdit(QtWidgets.QWidget):
     def setHtml(self, text):
         self._markdown = text
 
-    def toMarkdown(self):
-        return self._markdown
-
     def toPlainText(self):
         return self._markdown
-
-    def verticalScrollBar(self):
-        return self._bar
 
     def textCursor(self):
         class _Cursor:
@@ -249,7 +234,6 @@ for _enum, _value in (("RightArrow", 4), ("DownArrow", 2), ("ToolButtonTextBesid
         setattr(QtCore.Qt, _enum, _value)
 if not hasattr(QtWidgets.QComboBox, "clear"):
     QtWidgets.QComboBox.clear = lambda self: (self._items.clear(), setattr(self, "_current", ""))
-    QtWidgets.QComboBox.count = lambda self: len(self._items)
     QtWidgets.QComboBox.items = lambda self: list(self._items)
 for _layout in (QtWidgets.QVBoxLayout, QtWidgets.QHBoxLayout, QtWidgets.QFormLayout):
     if not hasattr(_layout, "addSpacing"):

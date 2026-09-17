@@ -53,12 +53,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.core = parent.core
         self.setObjectName("AiAssistentTabWidget")
         self._worker = None
-        self._endpoint = None   # set by Connect; a first message connects with the current fields
-        self._local_server = None                                  # the child serving a local model
+        self._endpoint = None                   # set by Connect, or by the first message
+        self._local_server = None               # the child process serving a local model
         self._models_folder = models_folder(getattr(self.core, "cfg", None))
-        self._single_shot = QtCore.QTimer.singleShot               # injectable for tests
-        self._blocks = []       # finalized message HTML, oldest first
-        self._active = None     # in-progress mesoSPIM turn: {"tools": [...], "reply": str, "error": str}
+        self._single_shot = QtCore.QTimer.singleShot   # injectable for tests
+        self._blocks = []                       # finalized message HTML, oldest first
+        self._active = None                     # the running turn: {"tools", "reply", "error"}
         self._build_ui()
         index = parent.TabWidget.indexOf(parent.remote_control)   # RemoteControlGUI instance
         if index >= 0:
@@ -133,7 +133,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         row.addWidget(self.input, 1)
         row.addWidget(self.interrupt)
         layout.addLayout(row)
-        layout.addSpacing(12)                                     # the footer is its own thing
+        layout.addSpacing(12)
 
         self.setup_toggle = QtWidgets.QToolButton(self)
         self.setup_toggle.setObjectName("AiAssistentSetupToggle")
@@ -172,7 +172,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.model = QtWidgets.QLineEdit("", group)
         self.local_model = QtWidgets.QComboBox(group)
         self.key = QtWidgets.QLineEdit("", group)
-        self.key.setEchoMode(QtWidgets.QLineEdit.Password)        # a credential, never a caption
+        self.key.setEchoMode(QtWidgets.QLineEdit.Password)
         self.base_url = QtWidgets.QLineEdit("", group)
         self.folder_button = QtWidgets.QPushButton("Models folder…", group)
         self.connect_button = QtWidgets.QPushButton("Connect", group)
@@ -228,14 +228,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- the footer ---
     def _set_expanded(self, expanded):
-        """Show or hide the setup rows. The toggle line never changes; the status label inside
-        the rows says which model is in use."""
         self.setup_group.setVisible(bool(expanded))
         self.setup_toggle.setChecked(bool(expanded))
         self.setup_toggle.setArrowType(QtCore.Qt.DownArrow if expanded else QtCore.Qt.RightArrow)
-
-    def expanded(self):
-        return self.setup_group.isVisible()
 
     # --- setup row state ---
     def _local_mode(self):
@@ -290,8 +285,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- connecting ---
     def on_connect(self):
-        if self._connect():
-            self._render()
+        self._connect()
 
     def _connect(self):
         """Apply the setup row. Returns True when the assistant can take a message now. A local
@@ -344,7 +338,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         if ready:
             self._use(Endpoint(provider="Local", kind="openai-compatible", model=server.model, base_url=server.base_url),
                       status=f"ready on 127.0.0.1:{server.port}")
-            self._render()
         elif time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
             self._local_failed(f"{server.model} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; see {server.log_path}")
         else:
@@ -436,7 +429,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.interrupt.setEnabled(running)
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button):
-            widget.setEnabled(not running)                        # the endpoint changes only between turns
+            widget.setEnabled(not running)      # the endpoint changes only between turns
         if running:
             self._set_expanded(False)
         self.status.setText("mesoSPIM is working…" if running else "")
