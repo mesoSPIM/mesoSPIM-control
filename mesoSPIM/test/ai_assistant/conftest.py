@@ -168,6 +168,46 @@ class QRadioButton(QtWidgets.QWidget):
         return self._checked
 
 
+class QToolButton(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._text = ""
+        self._checked = False
+        self._arrow = None
+        self.clicked = _Signal()
+        self.toggled = _Signal()
+
+    def setCheckable(self, _flag):
+        pass
+
+    def setChecked(self, checked):
+        changed = self._checked != bool(checked)
+        self._checked = bool(checked)
+        if changed:
+            self.toggled.emit(self._checked)
+
+    def isChecked(self):
+        return self._checked
+
+    def setText(self, text):
+        self._text = text
+
+    def text(self):
+        return self._text
+
+    def setArrowType(self, arrow):
+        self._arrow = arrow
+
+    def arrowType(self):
+        return self._arrow
+
+    def setToolButtonStyle(self, _style):
+        pass
+
+    def setAutoRaise(self, _flag):
+        pass
+
+
 class QFileDialog:
     chosen = ""  # a test sets the folder the dialog "returns"
 
@@ -177,7 +217,11 @@ class QFileDialog:
 
 
 QtWidgets.QRadioButton = QRadioButton
+QtWidgets.QToolButton = QToolButton
 QtWidgets.QFileDialog = QFileDialog
+for _enum, _value in (("RightArrow", 4), ("DownArrow", 2), ("ToolButtonTextBesideIcon", 2)):
+    if not hasattr(QtCore.Qt, _enum):
+        setattr(QtCore.Qt, _enum, _value)
 if not hasattr(QtWidgets.QComboBox, "clear"):
     QtWidgets.QComboBox.clear = lambda self: (self._items.clear(), setattr(self, "_current", ""))
     QtWidgets.QComboBox.count = lambda self: len(self._items)

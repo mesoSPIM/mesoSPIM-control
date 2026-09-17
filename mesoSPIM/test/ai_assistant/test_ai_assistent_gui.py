@@ -5,7 +5,7 @@ tab wiring, the transport-busy refusal, and the single-flight input lock in isol
 """
 import types
 
-from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 from mesoSPIM.src import mesoSPIM_AiAssistent_GUI as gui_module
 from mesoSPIM.src.mesoSPIM_AiAssistent_GUI import AiAssistentGUI
@@ -296,3 +296,51 @@ def test_choosing_a_folder_rescans(tmp_path, monkeypatch):
     QtWidgets.QFileDialog.chosen = ""
     assert gui._models_folder == str(other)
     assert gui.local_model.items() == ["phi.gguf"]
+
+
+# --- the collapsible footer ---
+
+def test_setup_starts_collapsed_with_an_inviting_summary():
+    gui = _gui()
+    assert not gui.expanded()
+    assert gui.setup_toggle.text() == "Set up the assistant: choose a model"
+    assert gui.setup_toggle.arrowType() == QtCore.Qt.RightArrow
+
+
+def test_toggle_expands_and_collapses():
+    gui = _gui()
+    gui.setup_toggle.setChecked(True)
+    assert gui.expanded() and gui.setup_toggle.arrowType() == QtCore.Qt.DownArrow
+    gui.setup_toggle.setChecked(False)
+    assert not gui.expanded()
+
+
+def test_a_problem_opens_the_footer(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    gui = _gui()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    gui.input.setText("hello")
+    gui.on_submit()                                            # nothing configured, no key
+    assert gui.expanded()
+    assert "Enter an API key" in gui.output.toPlainText()
+
+
+def test_ready_folds_the_footer_and_names_the_model(monkeypatch):
+    gui = _gui()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint: None})()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    gui.setup_toggle.setChecked(True)
+    gui.key.setText("g-key")
+    gui.on_connect()
+    assert not gui.expanded()
+    assert gui.setup_toggle.text() == "Model: gemini-3.5-flash-lite (Gemini)  ·  ready"
+
+
+def test_local_summary_names_the_runtime(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    gui.local_radio.setChecked(True)
+    gui.on_connect()
+    assert gui.setup_toggle.text() == "Model: gemma-4-12b-q4 (local, llama.cpp)  ·  starting…"
+    scheduled.pop()(); scheduled.pop()()
+    assert not gui.expanded()
+    assert gui.setup_toggle.text() == "Model: gemma-4-12b-q4 (local, llama.cpp)  ·  ready"
