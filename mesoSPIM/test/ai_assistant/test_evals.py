@@ -1,0 +1,97 @@
+"""The evaluation machinery itself, offline: the case file is sound, a scripted model that does
+what a case expects passes, one that does not fails, and the simulated instrument frees the gate."""
+import pytest
+
+from mesoSPIM.src.mesoSPIM_AiAssistent import Endpoint
+from mesoSPIM.test.ai_assistant.evals import harness
+
+pytest.importorskip("pydantic_ai")
+
+SCRIPTED = Endpoint(provider="Scripted", kind="openai-compatible", model="m")
+
+
+def scripted(*turns):
+    """A FunctionModel that plays fixed responses: each turn is a list of tool calls (name, args)
+    followed by a reply text, or just a reply text."""
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+    from pydantic_ai.models.function import FunctionModel
+    steps = []
+    for turn in turns:
+        calls, reply = (turn[:-1], turn[-1]) if isinstance(turn, tuple) else ((), turn)
+        for name, args in calls:
+            steps.append(ModelResponse(parts=[ToolCallPart(tool_name=name, args=args)]))
+        steps.append(ModelResponse(parts=[TextPart(reply)]))
+    replies = iter(steps)
+
+    def model_function(messages, info):
+        return next(replies)
+    return FunctionModel(model_function)
+
+
+def case(case_id):
+    return next(c for c in harness.load_cases() if c["id"] == case_id)
+
+
+def test_the_case_file_is_sound():
+    cases = harness.load_cases()
+    assert harness.check_cases(cases) == []
+    assert len(cases) >= 25 and len({c["category"] for c in cases}) >= 8
+
+
+def test_a_model_that_does_what_the_case_expects_passes():
+    model = scripted((("move_relative", {"deltas": {"x": -100}}), "Moved x by -100 µm."))
+    trace = harness.run_case(case("move-relative-mm"), model, SCRIPTED)
+    assert harness.score(case("move-relative-mm"), trace) == []
+    assert trace["tools"][0]["tool"] == "move_relative" and "completed" in trace["tools"][0]["result"]
+    assert trace["state"]["position.x_pos"] == 24899.0 and trace["error"] is None
+
+
+def test_a_model_that_does_not_fails_with_reasons():
+    trace = harness.run_case(case("move-relative-mm"), scripted("Sure, done."), SCRIPTED)
+    failures = harness.score(case("move-relative-mm"), trace)
+    assert any("move_relative" in f for f in failures) and any("position.x_pos" in f for f in failures)
+
+
+def test_asking_back_passes_only_without_a_change():
+    asks = scripted("Which axis, and how far?")
+    assert harness.score(case("ambiguous-move-asks"), harness.run_case(case("ambiguous-move-asks"), asks, SCRIPTED)) == []
+    moves = scripted((("move_relative", {"deltas": {"x": 1}}), "Moved a bit?"))
+    failures = harness.score(case("ambiguous-move-asks"), harness.run_case(case("ambiguous-move-asks"), moves, SCRIPTED))
+    assert any("no change" in f for f in failures)
+
+
+def test_the_confirmation_answer_is_scripted_per_case():
+    def loads():
+        return scripted((("load_sample", {}), "Loaded."))            # a script plays once
+    declined = harness.run_case(case("load-sample-declined"), loads(), SCRIPTED)
+    assert declined["asked"] == ["load_sample"] and declined["state"]["position.y_pos"] == 0.0
+    assert "refused" in declined["tools"][0]["result"]
+    confirmed = harness.run_case(case("load-sample-confirmed"), loads(), SCRIPTED)
+    assert confirmed["state"]["position.y_pos"] == 1000.0
+    assert harness.score(case("load-sample-confirmed"), confirmed) == []
+
+
+def test_the_simulated_instrument_finishes_an_acquisition_at_once():
+    model = scripted(
+        (("set_acquisition_list", {"acquisitions": [{"z_start": 0, "z_end": 100, "z_step": 10}], "selected_row": 0}), "Installed."),
+        (("run_acquisition_list", {}), "Done."),
+    )
+    trace = harness.run_case(case("install-and-run"), model, SCRIPTED)
+    assert harness.score(case("install-and-run"), trace) == [], trace["tools"]
+    assert "completed" in trace["tools"][1]["result"]
+
+
+def test_a_gui_started_live_is_reported_busy():
+    model = scripted((("snap", {}), "The instrument is busy: live is running."))
+    trace = harness.run_case(case("busy-gui-live"), model, SCRIPTED)
+    assert "busy" in trace["tools"][0]["result"] and harness.score(case("busy-gui-live"), trace) == []
+
+
+def test_profiles_change_what_the_model_may_call():
+    model = scripted((("set_etl", {"etl_l_amplitude": 1.5}), "Set."))
+    full = harness.run_case(case("full-offers-the-machine"), model, SCRIPTED)
+    assert harness.score(case("full-offers-the-machine"), full) == []
+    honest = scripted("The ETL is not available in the Regular tool set; switch to Full for that.")
+    assert harness.score(case("regular-hides-the-machine"), harness.run_case(case("regular-hides-the-machine"), honest, SCRIPTED)) == []
+    insistent = harness.run_case(case("regular-hides-the-machine"), scripted((("set_etl", {"etl_l_amplitude": 1.5}), "Set."), "Set."), SCRIPTED)
+    assert "set_etl" not in insistent["core_calls"]                 # the tool is not there to call

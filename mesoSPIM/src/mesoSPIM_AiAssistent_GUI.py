@@ -28,7 +28,7 @@ import time
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import mesoSPIM_AiAssistent_Config as config
-from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint
+from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint, traces_folder
 from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder, projector_for
 
 LOCAL_MODE = "Local AI"
@@ -278,6 +278,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._worker.sig_error.connect(self._on_error)
         self._worker.sig_done.connect(self._on_done)
         self._apply_options()
+        self._worker.trace_folder = traces_folder(getattr(self.core, "cfg", None))
         self._thread.start()
         return True
 

@@ -5,7 +5,9 @@ retry, tool-surfacing, and interrupt behaviour with a fake agent — no live mod
 Real-thread ordering is left to the real-PyQt smoke test, matching the Remote Control split.
 """
 import json
+import os
 import threading
+import types
 import time
 
 import pytest
@@ -94,6 +96,9 @@ class FakeResult:
 
     def all_messages(self):
         return ["history"]
+
+    def new_messages(self):
+        return []
 
 
 class FakeAgent:
@@ -636,3 +641,42 @@ def test_worker_rebuilds_the_agent_for_a_new_profile(monkeypatch):
     worker.set_profile("Full")
     worker.run_turn("c")
     assert built == ["Regular", "Full"]
+
+
+# --- traces ---
+
+def test_turn_trace_pairs_calls_with_their_results_and_hides_image_bytes():
+    pytest.importorskip("pydantic_ai")
+    from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
+    call = ToolCallPart(tool_name="look", args={"question": "centred?"})
+    messages = [ModelResponse(parts=[call]),
+                ModelRequest(parts=[ToolReturnPart(tool_name="look", tool_call_id=call.tool_call_id,
+                                                   content=json.dumps({"stats": {"mean": 3}, "image": {"base64": "A" * 5000}}))]),
+                ModelResponse(parts=[TextPart("centred")])]
+    (entry,) = ai.turn_trace(messages)
+    assert entry["tool"] == "look" and entry["args"] == {"question": "centred?"}
+    assert '"base64": "<5000 chars>"' in entry["result"] and len(entry["result"]) <= ai.config.TRACE_RESULT_CHARS
+
+
+def test_worker_records_every_turn(tmp_path, monkeypatch):
+    pytest.importorskip("pydantic_ai")
+    from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
+    monkeypatch.setattr(ai, "build_model", lambda endpoint: FunctionModel(lambda messages, info: ModelResponse(parts=[TextPart("hello back")])))
+    worker = AssistantWorker(FakeAcceptor())
+    worker.configure(Endpoint.from_preset("Gemini", api_key="k"))
+    worker.trace_folder = str(tmp_path)
+    worker.run_turn("hello")
+    (path,) = list(tmp_path.iterdir())
+    (line,) = path.read_text(encoding="utf-8").splitlines()
+    record = json.loads(line)
+    assert record["prompt"] == "hello" and record["reply"] == "hello back" and record["tools"] == []
+    assert record["provider"] == "Gemini" and record["profile"] == "Regular" and record["error"] is None
+    worker.trace_folder = None                                      # off: nothing more is written
+    worker.run_turn("again")
+    assert len(path.read_text(encoding="utf-8").splitlines()) == 1
+
+
+def test_traces_folder_follows_the_config():
+    assert ai.traces_folder(None).endswith(os.path.join("mesoSPIM", "assistant_traces"))
+    assert ai.traces_folder(types.SimpleNamespace(ai_assistant_traces_folder="/elsewhere")) == "/elsewhere"

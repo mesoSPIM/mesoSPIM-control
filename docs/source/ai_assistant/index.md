@@ -111,6 +111,37 @@ loaded.
   from the current position is "already reached" on the first poll and is reported as a successful
   arrival.
 
+## Evaluating the assistant
+
+The code tests prove the tools, the gate and the tab. Whether the *model* does what an operator
+expects is a separate question, answered by a behavioural evaluation: a fixed set of scenario
+prompts in `mesoSPIM/test/ai_assistant/evals/cases.json`, each with what must happen (which tools
+are called, with what, what the instrument's state is afterwards, whether the operator was asked
+to confirm, whether the reply asks back instead of guessing, what the reply must mention). The
+runner drives the real agent, tools and dispatcher against the simulated instrument of the test
+suite, records every run as a trace and scores it:
+
+```
+python -m mesoSPIM.test.ai_assistant.evals.run --provider Gemini            # GEMINI_API_KEY set
+python -m mesoSPIM.test.ai_assistant.evals.run --provider Anthropic --profile Full --only laser,snap
+python -m mesoSPIM.test.ai_assistant.evals.run --rescore assistant-evals.jsonl
+```
+
+The cases cover plain verbs, unit conversion, reads, vocabulary and limit refusals (and that a
+refused value is not retried), ambiguity, prompt injection, the confirm-first moves with Run and
+with Cancel, a GUI-busy instrument, acquisitions and a time lapse, the two tool sets, and memory
+across turns. A run costs API calls and two runs can differ, so it is not part of the test
+profiles; run it when the prompt, the tools or the model change, and keep the trace file: a case
+that starts failing shows in it what the model did instead. `test_evals.py` keeps the machinery
+itself honest offline, with scripted models.
+
+Every turn in the tab is recorded the same way, one JSON line per turn in
+`~/mesoSPIM/assistant_traces/assistant-<date>.jsonl` (or the config attribute
+`ai_assistant_traces_folder`): the prompt, each tool call with its arguments and result, the reply
+or the error, and the time taken. Frames are recorded by their size, not their pixels. When
+something went wrong at the microscope, that file says what the assistant was told and what it
+did.
+
 ## What has been verified
 
 - `mesoSPIM/test/ai_assistant/` — offline tests for the worker (completion wrapper, tools, turn,
@@ -125,9 +156,10 @@ loaded.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  393 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  404 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
+- The behavioural evaluation above, run by hand against a model; its traces are the record.
 - End-to-end operation against the Windows DemoStage build.
 
 Not yet verified on real hardware.

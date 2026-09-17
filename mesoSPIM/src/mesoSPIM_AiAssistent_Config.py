@@ -81,5 +81,10 @@ TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope 
 CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition")
 
 POLL_INTERVAL_S = 0.15
+# Every turn is appended to a JSONL file in this folder (a config attribute may point elsewhere):
+# the prompt, each tool call with its arguments and result, the reply. Results are cut to this
+# many characters and an image's base64 is replaced by its size.
+TRACES_FOLDER_CONFIG_KEY = "ai_assistant_traces_folder"
+TRACE_RESULT_CHARS = 2000
 MAX_HISTORY_TURNS = 20  # older turns (and their tool results) are dropped from what the model sees
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress

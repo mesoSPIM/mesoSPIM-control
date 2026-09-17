@@ -13,6 +13,7 @@ Maintainer (2026):
 """
 
 import json
+import re
 import logging
 import os
 import threading
@@ -277,6 +278,43 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
     return tools
 
 
+def traces_folder(cfg):
+    """Where turns are recorded: the microscope config's ``ai_assistant_traces_folder`` when
+    set, else ``~/mesoSPIM/assistant_traces``."""
+    configured = getattr(cfg, config.TRACES_FOLDER_CONFIG_KEY, None)
+    return configured or os.path.join(os.path.expanduser("~"), "mesoSPIM", "assistant_traces")
+
+
+def _brief(content):
+    """A tool result for the record: text, an image's base64 replaced by its size, cut short."""
+    text = content if isinstance(content, str) else json.dumps(content, default=str)
+    text = re.sub(r'"base64": ?"([^"]*)"', lambda m: f'"base64": "<{len(m.group(1))} chars>"', text)
+    return text[:config.TRACE_RESULT_CHARS]
+
+
+def turn_trace(messages):
+    """The tool calls of one turn, in order, each with its arguments and what it returned, read
+    from the messages pydantic-ai exchanged with the model."""
+    calls, returns, order = {}, {}, []
+    for message in messages:
+        for part in getattr(message, "parts", []):
+            kind = type(part).__name__
+            if kind == "ToolCallPart":
+                calls[part.tool_call_id] = {"tool": part.tool_name, "args": part.args_as_dict()}
+                order.append(part.tool_call_id)
+            elif kind == "ToolReturnPart":
+                returns[part.tool_call_id] = _brief(part.content)
+    return [dict(calls[call_id], result=returns.get(call_id)) for call_id in order]
+
+
+def write_trace(folder, record):
+    """Append one turn to today's JSONL file in the folder."""
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, time.strftime("assistant-%Y-%m-%d.jsonl"))
+    with open(path, "a", encoding="utf-8") as sink:
+        sink.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+
+
 def with_state(acceptor, text):
     """The operator's message followed by the current microscope readout, as data the model can
     rely on instead of calling reads first. Sent without the block if the readout fails."""
@@ -446,6 +484,7 @@ class AssistantWorker(QtCore.QObject):
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit)
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
         self.look_image_size = config.LOOK_IMAGE_SIZE
+        self.trace_folder = None                           # set by the tab: every turn is recorded there
 
     def configure(self, endpoint, vision_endpoint=None, profile=None):
         """Use another endpoint (and reader for frames, and tool profile) from the next turn on;
@@ -466,6 +505,7 @@ class AssistantWorker(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def run_turn(self, text):
+        started = time.monotonic()
         try:
             self.cancel.clear()
             if self._agent is None:
@@ -478,12 +518,36 @@ class AssistantWorker(QtCore.QObject):
             # every tool call the first attempt already made.
             result = self._agent.run_sync(with_state(self._acceptor, text), message_history=self._history)
             self._history = trim_history(result.all_messages(), self.max_history_turns)
+            self._record(text, result.new_messages(), started, reply=result.output)
             self.sig_reply.emit(result.output)
         except Exception as error:
             logger.exception("AI Assistant turn failed")
+            self._record(text, [], started, error=describe_error(error))
             self.sig_error.emit(describe_error(error))
         finally:
             self.sig_done.emit()
+
+    def _record(self, prompt, messages, started, reply=None, error=None):
+        """One line per turn in the traces folder, so what the assistant did can be read back
+        later. Recording never fails a turn."""
+        if not self.trace_folder:
+            return
+        endpoint = self._endpoint
+        record = {
+            "time": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "provider": endpoint.provider if endpoint else None,
+            "model": endpoint.model if endpoint else None,
+            "profile": self._profile,
+            "prompt": prompt,
+            "tools": turn_trace(messages),
+            "reply": reply,
+            "error": error,
+            "seconds": round(time.monotonic() - started, 2),
+        }
+        try:
+            write_trace(self.trace_folder, record)
+        except OSError as problem:
+            logger.warning("could not record the assistant turn in %s: %s", self.trace_folder, problem)
 
     def _emit_tool(self, name, args):
         """Called at the tool boundary (worker thread) as each command fires; the queued signal
