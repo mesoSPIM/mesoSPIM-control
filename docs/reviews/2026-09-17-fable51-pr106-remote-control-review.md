@@ -57,6 +57,8 @@ Fix: make the bridge a plain `QueuedConnection` (Core already installs the list 
 
 ### 3. Transport/assistant mutual exclusion is one-directional (should fix)
 
+Status: fixed on this branch by the commit "Remote Control: refuse a transport while the AI Assistant holds the session".
+
 Where: `mesoSPIM/src/mesoSPIM_AiAssistent.py`, `start_assistant_for_core` (line 195) refuses while `core._remote_control` is set. `mesoSPIM/src/mesoSPIM_RemoteControl_Servers.py`, `start_for_core` (line 538) does not refuse while `core._assistant_acceptor` exists.
 
 The docs state the two are mutually exclusive. Today an operator can use the assistant, then start TCP or MCP, and both controllers are live. They share `core._remote_session`, so the gate still serialises mutations, but the assistant's blocking wait can then observe an operation created by a network client. Add the symmetric check in `start_for_core`.

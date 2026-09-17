@@ -537,6 +537,14 @@ def stop_for_core(core):
 
 def start_for_core(core, mode, host, port, token):
     """Replace Core's single transport and report the result through its existing Qt signal."""
+    # The AI Assistant and a network transport are mutually exclusive: one controller holds the
+    # session. start_assistant_for_core refuses while a transport runs; this is the other direction.
+    if getattr(core, "_assistant_acceptor", None) is not None:
+        message = "the AI Assistant holds the session; stop it (or restart mesoSPIM) before starting a transport"
+        logger.warning("Remote control refused to start: %s", message)
+        core.sig_remote_control_started.emit(False, message)
+        return
+
     # A session owns TCP or MCP, never both.
     stop_for_core(core)
 

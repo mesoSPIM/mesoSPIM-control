@@ -96,6 +96,19 @@ def test_missing_limits_fail_closed_before_binding():
         servers.start(core, "MCP", "127.0.0.1", 0, "secret")
 
 
+def test_transport_is_refused_while_the_ai_assistant_holds_the_session():
+    """The mirror of test_start_assistant_refused_while_transport_runs: one controller per session."""
+    core = RecordingCore()
+    core._remote_control = None
+    core._assistant_acceptor = object()
+    servers.start_for_core(core, "TCP", "127.0.0.1", 0, "secret")
+    assert core._remote_control is None
+    reports = [args for name, args, _ in core.calls() if name == "sig_remote_control_started"]
+    assert len(reports) == 1
+    ok, message = reports[0]
+    assert ok is False and "AI Assistant" in message
+
+
 def test_default_password_is_refused_outside_loopback():
     with pytest.raises(ValueError):
         servers.start(object(), "MCP", "0.0.0.0", 0, config.DEFAULT_TOKEN)

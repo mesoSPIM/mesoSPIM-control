@@ -68,13 +68,16 @@ reply has been created.
 
 `servers.start(core, mode, host, port, token)` checks everything before opening a port:
 
-1. The selected transport name must be TCP or MCP.
-2. A password is required.
-3. The public default password is allowed only on loopback.
-4. The loaded configuration must provide a usable limit for every stage axis.
-5. `self_test` must prove, against a simulated Core, that valid values pass and invalid values are
+1. The AI Assistant must not hold the session. The assistant and a transport are mutually
+   exclusive in both directions: the assistant refuses to start while a transport runs, and a
+   transport refuses to start while the assistant's acceptor exists.
+2. The selected transport name must be TCP or MCP.
+3. A password is required.
+4. The public default password is allowed only on loopback.
+5. The loaded configuration must provide a usable limit for every stage axis.
+6. `self_test` must prove, against a simulated Core, that valid values pass and invalid values are
    rejected.
-6. Only then are request routing and the selected listener created.
+7. Only then are request routing and the selected listener created.
 
 If a check fails, startup reports the error to the tab and no port is opened.
 
