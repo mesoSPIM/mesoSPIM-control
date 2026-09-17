@@ -270,7 +270,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
         # Operator preferences, applied at once.
         options = QtWidgets.QHBoxLayout()
-        options.addWidget(label("Tools"))
+        options.addWidget(label("Tool set"))
         options.addWidget(self.tools_profile)
         options.addSpacing(16)
         options.addWidget(label("Remember last"))

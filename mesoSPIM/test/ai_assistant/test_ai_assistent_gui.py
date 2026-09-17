@@ -453,19 +453,19 @@ def test_cancel_request_is_always_clickable_and_idle_between_turns():
     assert interrupted == [True] and "[cancelled]" in gui.output.toPlainText()
 
 
-def test_tools_choice_defaults_to_acquire_reaches_the_worker_and_follows_the_config(monkeypatch):
+def test_tools_choice_defaults_to_regular_reaches_the_worker_and_follows_the_config(monkeypatch):
     gui = _gui()
-    assert gui.tools_profile.currentText() == "Acquire"
+    assert gui.tools_profile.currentText() == "Regular"
     configured, switched = [], []
     gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append(profile),
                                   "set_profile": lambda self, profile: switched.append(profile)})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.key.setText("k")
     gui.on_connect()
-    assert configured == ["Acquire"]
-    gui.tools_profile.setCurrentText("Configure")
-    gui.tools_profile.currentTextChanged.emit("Configure")
-    assert switched == ["Configure"]
+    assert configured == ["Regular"]
+    gui.tools_profile.setCurrentText("Full")
+    gui.tools_profile.currentTextChanged.emit("Full")
+    assert switched == ["Full"]
     core = _FakeCore(acceptor=object())
-    core.cfg = types.SimpleNamespace(ai_assistant_tools="Configure")
-    assert AiAssistentGUI(_FakeParent(core)).tools_profile.currentText() == "Configure"
+    core.cfg = types.SimpleNamespace(ai_assistant_tools="Full")
+    assert AiAssistentGUI(_FakeParent(core)).tools_profile.currentText() == "Full"

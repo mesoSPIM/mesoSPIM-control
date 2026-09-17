@@ -79,7 +79,7 @@ def test_build_tools_covers_commands_except_prompt_only():
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools, _PROMPT_ONLY
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
-    tools = build_tools(FakeAcceptor(), threading.Event(), profile="Configure")
+    tools = build_tools(FakeAcceptor(), threading.Event(), profile="Full")
     names = {t.name for t in tools}
     assert len(tools) == len(COMMANDS) - len(_PROMPT_ONLY)
     assert "get_manual" not in names                            # in the system prompt, not a tool
@@ -477,7 +477,7 @@ def test_tools_publish_each_commands_schema():
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
-    for tool in build_tools(FakeAcceptor(), threading.Event(), profile="Configure"):
+    for tool in build_tools(FakeAcceptor(), threading.Event(), profile="Full"):
         assert tool.function_schema.json_schema == COMMANDS[tool.name].schema
 
 
@@ -495,7 +495,7 @@ def test_a_scripted_model_can_call_every_tool_through_its_schema(monkeypatch):
     monkeypatch.setattr(ai.config, "POLL_INTERVAL_S", 0.0)
     acceptor = Acceptor(RecordingCore())
     endpoint = Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u")
-    tools = build_tools(acceptor, threading.Event(), endpoint=endpoint, profile="Configure")
+    tools = build_tools(acceptor, threading.Event(), endpoint=endpoint, profile="Full")
     result = Agent(TestModel(), tools=tools, instructions="test").run_sync("do everything")
     parts = [p for m in result.all_messages() for p in m.parts]
     called = {p.tool_name for p in parts if type(p).__name__ == "ToolCallPart"}
@@ -505,7 +505,7 @@ def test_a_scripted_model_can_call_every_tool_through_its_schema(monkeypatch):
 
 def test_system_prompt_is_the_preamble_plus_one_line_per_command():
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
-    prompt = ai.build_system_prompt(profile="Configure")          # every command
+    prompt = ai.build_system_prompt(profile="Full")          # every command
     assert prompt.startswith("You control a mesoSPIM")
     for name, cmd in COMMANDS.items():
         if name != "get_manual":
@@ -602,36 +602,36 @@ def test_look_uses_the_live_frame_size(monkeypatch):
 
 # --- tool profiles: Acquire for a facility user, Configure for the machine ---
 
-def test_acquire_profile_offers_the_session_not_the_machine():
+def test_regular_profile_offers_the_session_not_the_machine():
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
-    acquire = {c.name for c in ai.offered_commands("Acquire")}
-    everything = {c.name for c in ai.offered_commands("Configure")}
+    regular = {c.name for c in ai.offered_commands("Regular")}
+    everything = {c.name for c in ai.offered_commands("Full")}
     assert everything == set(COMMANDS) - {"get_manual"}
-    assert acquire < everything
-    assert {"move_absolute", "set_laser", "set_zoom", "snap", "run_acquisition_list", "load_sample", "stop"} <= acquire
+    assert regular < everything
+    assert {"move_absolute", "set_laser", "set_zoom", "snap", "run_acquisition_list", "load_sample", "stop"} <= regular
     machine = {"set_etl", "set_galvo", "set_laser_timing", "set_state", "reload_etl_config", "update_etl_from_laser",
                "update_etl_from_zoom", "save_etl_config", "start_lightsheet_alignment_mode", "start_visual_mode", "self_test"}
-    assert machine <= everything - acquire
-    assert all(name in COMMANDS for name in ai.config.TOOL_PROFILES["Acquire"])   # no stale names
+    assert machine <= everything - regular
+    assert all(name in COMMANDS for name in ai.config.TOOL_PROFILES["Regular"])   # no stale names
 
 
-def test_acquire_tools_and_prompt_are_filtered_and_set_camera_is_narrowed():
+def test_regular_tools_and_prompt_are_filtered_and_set_camera_is_narrowed():
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
-    tools = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Acquire")}
+    tools = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
     assert "set_etl" not in tools and "set_camera" in tools
     assert list(tools["set_camera"].function_schema.json_schema["properties"]) == ["camera_exposure_time"]
     acc = FakeAcceptor(flip_after=1)
-    narrowed = {t.name: t for t in build_tools(acc, threading.Event(), profile="Acquire")}["set_camera"]
+    narrowed = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["set_camera"]
     refused = json.loads(narrowed.function(camera_binning="2x2"))
     assert refused["error"]["code"] == "validation" and "camera_binning" in refused["error"]["message"]
     assert acc.calls == []
     json.loads(narrowed.function(camera_exposure_time=0.05))
     assert acc.calls[0] == ("set_camera", {"camera_exposure_time": 0.05})
-    prompt = ai.build_system_prompt(profile="Acquire")
+    prompt = ai.build_system_prompt(profile="Regular")
     assert "- set_zoom (" in prompt and "- set_etl (" not in prompt
-    full = {t.name for t in build_tools(FakeAcceptor(), threading.Event(), profile="Configure")}
-    assert "set_etl" in full and "- set_etl (" in ai.build_system_prompt(profile="Configure")
+    full = {t.name for t in build_tools(FakeAcceptor(), threading.Event(), profile="Full")}
+    assert "set_etl" in full and "- set_etl (" in ai.build_system_prompt(profile="Full")
 
 
 def test_worker_rebuilds_the_agent_for_a_new_profile(monkeypatch):
@@ -641,6 +641,6 @@ def test_worker_rebuilds_the_agent_for_a_new_profile(monkeypatch):
     worker.configure(Endpoint.from_preset("OpenAI", api_key="k"))
     worker.run_turn("a")
     worker.run_turn("b")                                            # same agent, no rebuild
-    worker.set_profile("Configure")
+    worker.set_profile("Full")
     worker.run_turn("c")
-    assert built == ["Acquire", "Configure"]
+    assert built == ["Regular", "Full"]

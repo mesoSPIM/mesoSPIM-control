@@ -250,9 +250,9 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
     Each tool publishes the command's own JSON schema (the one MCP tools/list serves), so the model
     sees the argument names, types and ranges. from_schema skips pydantic's validation of the call,
     which keeps accept() the single place a call can be refused, with one error vocabulary. In the
-    Acquire profile a straddling command is offered with a narrowed schema and refuses the rest."""
+    Regular profile a straddling command is offered with a narrowed schema and refuses the rest."""
     from pydantic_ai import Tool
-    narrow = config.ACQUIRE_ARGS if (profile or config.DEFAULT_TOOL_PROFILE) == "Acquire" else {}
+    narrow = config.REGULAR_ARGS if (profile or config.DEFAULT_TOOL_PROFILE) == "Regular" else {}
     tools = []
     for cmd in offered_commands(profile):
         fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate)
