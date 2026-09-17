@@ -164,8 +164,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.new_button = QtWidgets.QPushButton("New session", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
-        row.addWidget(self.stop_button)         # the emergency control first, by itself
         row.addWidget(self.input, 1)
+        row.addWidget(self.stop_button)         # the emergency control leads the three buttons
         row.addWidget(self.interrupt)
         row.addWidget(self.new_button)
         layout.addLayout(row)
