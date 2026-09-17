@@ -25,9 +25,11 @@ integration
 
 ## Setting it up
 
-The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to the
-setup rows, and opens by itself when something needs the operator: nothing configured yet, a
-missing key, or a local model that failed to start. Once the assistant is ready it folds back.
+The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to two
+boxes, **Preferences** and **Model**, and opens by itself when something needs the operator:
+nothing configured yet, a missing key, or a local model that failed to start. Once the assistant
+is ready it folds back. The Model box has a Local AI line and a Cloud AI line; the radio in front
+chooses, and the other line is greyed.
 
 **Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style** for any server that speaks
 the OpenAI API, such as an Ollama or vLLM already running somewhere, given by its base URL), keep

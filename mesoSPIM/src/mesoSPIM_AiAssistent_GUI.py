@@ -133,9 +133,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
             self._worker.look_image_size = self.frame_size.value()
 
     def _build_ui(self):
-        # Only the padding: qdarkstyle's buttons hug their text, and every other property cascades.
+        # Only the padding: qdarkstyle's buttons hug their text, its labels carry 7 px a side that
+        # the setup grids do not want, and every other property cascades.
         self.setStyleSheet("QPushButton, QToolButton { padding: 3px 12px; }"
-                           "QPushButton#AiAssistentStopButton { color: #ff4d4d; font-weight: bold; }")
+                           "QPushButton#AiAssistentStopButton { color: #ff4d4d; font-weight: bold; }"
+                           "QGroupBox QLabel { padding: 0px; }")
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
@@ -220,38 +222,54 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._set_expanded(False)
 
     def _build_setup(self, font):
-        """The endpoint rows, styled like the Remote Control tab's setup group. Cloud: provider,
-        model and API key. Local: one model dropdown filled from the models folder; how the file
-        is served is decided behind Connect."""
-        group = QtWidgets.QGroupBox(self)
-        group.setObjectName("AiAssistentSetupGroupBox")
-        group.setFont(font)
-        grid = QtWidgets.QGridLayout(group)
-        grid.setContentsMargins(12, 12, 12, 12)
-        grid.setHorizontalSpacing(8)
-        grid.setVerticalSpacing(12)
+        """Two titled boxes, like the Remote Control tab's setup group: Preferences on one line,
+        and Model with a Local AI line (a dropdown of model files; how a file is served is decided
+        behind Connect) and a Cloud AI line (provider, model, API key or base URL), each led by
+        its radio; the line not chosen is greyed, not hidden, so nothing moves."""
+        setup = QtWidgets.QWidget(self)
+        column = QtWidgets.QVBoxLayout(setup)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(8)
+        pair_gap = 14  # px before an inner label, more than the 8 between it and its field
 
-        def label(text):
+        def box(title):
+            group = QtWidgets.QGroupBox(title, setup)
+            group.setFont(font)
+            grid = QtWidgets.QGridLayout(group)
+            grid.setContentsMargins(12, 12, 12, 12)
+            grid.setHorizontalSpacing(8)
+            grid.setVerticalSpacing(10)
+            column.addWidget(group)
+            return group, grid
+
+        def label(text, group, gap=pair_gap):
+            """A field's label: right against its field, with room before it so each
+            label-and-field pair reads as one."""
             widget = QtWidgets.QLabel(group)
             widget.setText(text)
             widget.setFont(font)
+            widget.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+            widget.setContentsMargins(gap, 0, 0, 0)
             return widget
+
+        preferences, options = box("Preferences")
+        group, grid = box("Model")
 
         self.cloud_radio = QtWidgets.QRadioButton("Cloud AI", group)
         self.local_radio = QtWidgets.QRadioButton("Local AI", group)
         self.provider = QtWidgets.QComboBox(group)
         self.provider.addItems(list(config.PROVIDERS))
-        self.history_turns = QtWidgets.QSpinBox(group)
+        self.history_turns = QtWidgets.QSpinBox(preferences)
         self.history_turns.setRange(1, 200)
         self.history_turns.setValue(config.MAX_HISTORY_TURNS)
         self.history_turns.setSuffix(" turns")
-        self.frame_size = QtWidgets.QSpinBox(group)
+        self.frame_size = QtWidgets.QSpinBox(preferences)
         self.frame_size.setRange(256, 4096)
         self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
         self.frame_size.setSuffix(" px")
-        self.vision_provider = QtWidgets.QComboBox(group)
+        self.vision_provider = QtWidgets.QComboBox(preferences)
         self.vision_provider.addItems([config.SAME_AS_MODEL] + [n for n, p in config.PROVIDERS.items() if p.get("vision")])
-        self.tools_profile = QtWidgets.QComboBox(group)
+        self.tools_profile = QtWidgets.QComboBox(preferences)
         self.tools_profile.addItems(list(config.TOOL_PROFILES))
         cfg = getattr(self.core, "cfg", None)
         start = getattr(cfg, config.TOOLS_CONFIG_KEY, None)
@@ -264,52 +282,49 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.folder_button = QtWidgets.QPushButton("Models folder…", group)
         self.connect_button = QtWidgets.QPushButton("Connect", group)
         self.connect_button.setObjectName("AiAssistentConnectButton")
-        self._provider_label = label("Provider")
-        self._model_label = label("Model")
-        self._local_model_label = label("Model")
-        self._key_label = label("API key")
-        self._base_url_label = label("Base URL")
+        self._provider_label = label("Provider", group)
+        self._model_label = label("Model", group)
+        self._local_model_label = label("Model", group)
+        self._key_label = label("API key", group)
+        self._base_url_label = label("Base URL", group)
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
                        self.key, self.base_url, self.folder_button, self.connect_button,
                        self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
 
-        # The mode on top, then one grid for the preferences line and the endpoint line, which
-        # share their columns: labels left-aligned before their fields, Connect at the bottom right.
-        # Column 6 is the gap that takes the leftover width; Base URL and the local model file
-        # grow into it. The column widths are the grid's own, so switching modes moves nothing.
-        left = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        # Preferences: four pairs on one line; the leftover width sits before Frame, so its field
+        # ends at the right edge like Connect below.
+        options.addWidget(label("Tool set", preferences, gap=0), 0, 0)
+        options.addWidget(self.tools_profile, 0, 1)
+        options.addWidget(label("Memory", preferences), 0, 2)
+        options.addWidget(self.history_turns, 0, 3)
+        options.addWidget(label("Vision model", preferences), 0, 4)
+        options.addWidget(self.vision_provider, 0, 5)
+        options.addWidget(label("Frame", preferences), 0, 6)
+        options.addWidget(self.frame_size, 0, 7)
+        options.setColumnStretch(6, 1)
+        # Model: the two lines share their columns, Connect at the bottom right. The last field
+        # (the key or the base URL, and the model file above it) takes the leftover width.
         self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
-        grid.setColumnMinimumWidth(1, self.provider.sizeHint().width())
-        grid.setColumnMinimumWidth(3, 200)                        # fits the preset model names
-        self.key.setMaximumWidth(160)                             # masked anyway
-        self.connect_button.setMinimumWidth(120)                  # "Connected" in bold, no jump
-        mode = QtWidgets.QHBoxLayout()
-        mode.addWidget(self.local_radio)
-        mode.addSpacing(16)
-        mode.addWidget(self.cloud_radio)
-        mode.addStretch(1)
-        grid.addLayout(mode, 0, 0, 1, 8)
-        grid.addWidget(label("Tool set"), 1, 0, left)
-        grid.addWidget(self.tools_profile, 1, 1)
-        grid.addWidget(label("Memory"), 1, 2, left)
-        grid.addWidget(self.history_turns, 1, 3, left)
-        grid.addWidget(label("Vision model"), 1, 4, left)
-        grid.addWidget(self.vision_provider, 1, 5)
-        grid.addWidget(label("Frame"), 1, 6, left)
-        grid.addWidget(self.frame_size, 1, 7)
-        grid.addWidget(self._provider_label, 2, 0, left)
-        grid.addWidget(self.provider, 2, 1)
-        grid.addWidget(self._model_label, 2, 2, left)
-        grid.addWidget(self.model, 2, 3)
-        grid.addWidget(self._key_label, 2, 4, left)
-        grid.addWidget(self.key, 2, 5)
-        grid.addWidget(self._base_url_label, 2, 4, left)
-        grid.addWidget(self.base_url, 2, 5, 1, 2)
-        grid.addWidget(self._local_model_label, 2, 0, left)
-        grid.addWidget(self.local_model, 2, 1, 1, 4)
-        grid.addWidget(self.folder_button, 2, 5, 1, 2, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        grid.addWidget(self.connect_button, 2, 7)
+        self.model.setMinimumWidth(186)                           # fits the preset model names
+        self.model.setMaximumWidth(200)
+        self.key.setMinimumWidth(150)
+        self.base_url.setMinimumWidth(200)                        # fits the preset address
+        self.connect_button.setMinimumWidth(106)                  # "Connected" in bold, no jump
+        grid.addWidget(self.local_radio, 0, 0)
+        grid.addWidget(self._local_model_label, 0, 1)
+        grid.addWidget(self.local_model, 0, 2, 1, 5)
+        grid.addWidget(self.folder_button, 0, 7)
+        grid.addWidget(self.cloud_radio, 1, 0)
+        grid.addWidget(self._provider_label, 1, 1)
+        grid.addWidget(self.provider, 1, 2)
+        grid.addWidget(self._model_label, 1, 3)
+        grid.addWidget(self.model, 1, 4)
+        grid.addWidget(self._key_label, 1, 5)
+        grid.addWidget(self.key, 1, 6)
+        grid.addWidget(self._base_url_label, 1, 5)
+        grid.addWidget(self.base_url, 1, 6)
+        grid.addWidget(self.connect_button, 1, 7)
         grid.setColumnStretch(6, 1)
         self.tools_profile.currentTextChanged.connect(self._apply_profile)
         self.history_turns.valueChanged.connect(self._apply_options)
@@ -324,7 +339,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._on_provider_changed(config.DEFAULT_PROVIDER)
         self.cloud_radio.setChecked(True)
         self._on_mode_changed()
-        return group
+        return setup
 
     # --- the footer ---
     def _set_connect_state(self, state, detail=""):
@@ -345,17 +360,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
         return self.local_radio.isChecked()
 
     def _on_mode_changed(self, *_):
+        """Grey the line that is not chosen; the local list is rescanned when its line wakes."""
         local = self._local_mode()
-        for widget in (self._provider_label, self.provider, self.model, self._model_label):
-            widget.setVisible(not local)
-        for widget in (self.local_model, self.folder_button, self._local_model_label):
-            widget.setVisible(local)
+        for widget in (self._provider_label, self.provider, self._model_label, self.model,
+                       self._key_label, self.key, self._base_url_label, self.base_url):
+            widget.setEnabled(not local)
+        for widget in (self._local_model_label, self.local_model, self.folder_button):
+            widget.setEnabled(local)
         if local:
-            for widget in (self._key_label, self.key, self._base_url_label, self.base_url):
-                widget.setVisible(False)
             self._scan_models()
-        else:
-            self._on_provider_changed(self.provider.currentText())
 
     def _on_provider_changed(self, name):
         """Prefill the preset and show the field the provider needs: a key, or a base URL."""
@@ -366,8 +379,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         key_env = preset.get("key_env")
         in_env = bool(key_env and os.environ.get(key_env))
         self.key.setPlaceholderText(f"using {key_env} from the environment" if in_env else f"{name} API key")
-        if self._local_mode():
-            return
         for widget in (self._key_label, self.key):
             widget.setVisible(not server)
         for widget in (self._base_url_label, self.base_url):
@@ -595,6 +606,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
             widget.setEnabled(not running)      # the endpoint and tool set change only between turns
         if running:
             self._set_expanded(False)
+        else:
+            self._on_mode_changed()             # the line not chosen goes grey again
         self.status.setText("mesoSPIM is working…" if running else "")
         self.status.setVisible(running)
         if not running:

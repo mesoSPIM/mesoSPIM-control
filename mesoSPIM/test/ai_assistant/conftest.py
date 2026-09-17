@@ -276,6 +276,9 @@ if not hasattr(QtWidgets.QWidget, "setMinimumHeight"):
     QtWidgets.QWidget.setMinimumHeight = lambda self, _h: None
     QtWidgets.QWidget.setMinimumWidth = lambda self, _w: None
     QtWidgets.QWidget.setMaximumWidth = lambda self, _w: None
+    QtWidgets.QWidget.setFixedWidth = lambda self, _w: None
+    QtWidgets.QWidget.setContentsMargins = lambda self, *_a: None
+    QtWidgets.QWidget.setAlignment = lambda self, _a: None
 if not hasattr(QtWidgets.QComboBox, "setSizeAdjustPolicy"):
     QtWidgets.QComboBox.setSizeAdjustPolicy = lambda self, _p: None
     QtWidgets.QComboBox.AdjustToContents = 0

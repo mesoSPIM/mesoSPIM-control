@@ -242,13 +242,15 @@ def _local_gui(tmp_path, monkeypatch, server_factory=_FakeServer):
     return gui, scheduled
 
 
-def test_local_mode_lists_model_files_and_hides_the_key(tmp_path, monkeypatch):
+def test_local_mode_lists_model_files_and_greys_the_cloud_line(tmp_path, monkeypatch):
     gui, _ = _local_gui(tmp_path, monkeypatch)
-    assert gui.provider.isVisible() and not gui.local_model.isVisible()
+    assert gui.provider.isEnabled() and not gui.local_model.isEnabled()
     gui.local_radio.setChecked(True)
     assert gui.local_model.items() == ["gemma-4-12b-q4.gguf", "qwen3.5-8b-q4.gguf"]
-    assert gui.local_model.isVisible() and gui.folder_button.isVisible()
-    assert not gui.key.isVisible() and not gui.provider.isVisible() and not gui.model.isVisible()
+    assert gui.local_model.isEnabled() and gui.folder_button.isEnabled()
+    assert not gui.key.isEnabled() and not gui.provider.isEnabled() and not gui.model.isEnabled()
+    gui.cloud_radio.setChecked(True)
+    assert gui.provider.isEnabled() and not gui.local_model.isEnabled()
 
 
 def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, monkeypatch):
