@@ -680,3 +680,12 @@ def test_worker_records_every_turn(tmp_path, monkeypatch):
 def test_traces_folder_follows_the_config():
     assert ai.traces_folder(None).endswith(os.path.join("mesoSPIM", "assistant_traces"))
     assert ai.traces_folder(types.SimpleNamespace(ai_assistant_traces_folder="/elsewhere")) == "/elsewhere"
+
+
+def test_every_preset_builds_its_model_with_the_installed_sdks():
+    """Catches an SDK that pydantic-ai can no longer drive (the anthropic 1.x client library
+    switch) before an operator meets it at Connect. No request is made."""
+    pytest.importorskip("pydantic_ai")
+    for provider in ai.config.PROVIDERS:
+        endpoint = Endpoint.from_preset(provider, "", api_key="placeholder", base_url="http://127.0.0.1:1/v1")
+        assert ai.build_model(endpoint) is not None, provider

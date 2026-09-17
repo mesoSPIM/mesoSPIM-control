@@ -18,9 +18,10 @@ integration
 ## Requirements
 
 - `pydantic-ai`, declared as the optional extra `ai-assistant`: install with
-  `pip install -e ".[ai-assistant]"`, or `pip install pydantic-ai` on its own. It is imported
-  lazily, so the application starts and every other feature works without it; the tab reports the
-  missing module when the operator sends a first message.
+  `pip install -e ".[ai-assistant]"`. The extra also keeps the `anthropic` SDK below 1.0, whose
+  newer client library pydantic-ai 2.14 cannot drive. It is imported lazily, so the application
+  starts and every other feature works without it; the tab reports the missing module when the
+  operator sends a first message.
 - An API key for the chosen provider, or any server that speaks the OpenAI API (Ollama, vLLM, LM Studio).
 - For a local model file, `llama-cpp-python`: the extra `ai-assistant-local` installs both.
 
@@ -156,7 +157,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  404 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  405 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.
