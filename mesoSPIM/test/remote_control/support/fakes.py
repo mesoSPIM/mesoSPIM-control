@@ -12,6 +12,8 @@ import tempfile
 import threading
 from collections import deque
 
+import numpy as np
+
 from mesoSPIM.test.remote_control.support.fake_state import FakeState
 
 
@@ -219,7 +221,9 @@ class RecordingCore:
         # The camera thread fills the display queue asynchronously in production; the fake fills
         # it before returning so the offline Qt shim's inline poll finds the frame at once.
         self._record("snap", write_flag=write_flag)
-        self.frame_queue_display.append("frame")
+        frame = np.zeros((64, 96), dtype=np.uint16)
+        frame[20:40, 30:60] = 4000  # a bright rectangle off-centre, like a sample in the field
+        self.frame_queue_display.append(frame)
 
     def preview_acquisition(self, *args, **kwargs):
         self._record("preview_acquisition", *args, **kwargs)

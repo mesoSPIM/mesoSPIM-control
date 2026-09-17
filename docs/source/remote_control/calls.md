@@ -1,6 +1,6 @@
 # Remote Control call list
 
-TCP and MCP provide the same 54 calls. The call names and behavior are identical on both
+TCP and MCP provide the same 56 calls. The call names and behavior are identical on both
 transports.
 
 Before changing the microscope, call `get_manual` and `get_limits`. Ordinary changes return an
@@ -24,6 +24,8 @@ For connection details, arguments, polling, and errors, see the
 | `get_limits` | Read the limits currently enforced by Remote Control. |
 | `get_capabilities` | Read the available calls, axes, modes, and fields. |
 | `get_manual` | Read the built-in usage guide and generated command list. |
+| `get_snapshot` | One compact readout of the whole microscope: state, position, optics, camera, list, disk, warnings. |
+| `get_frame` | The last displayed frame as numbers (exposure, focus, signal position) and a small PNG. |
 | `get_progress` | Read acquisition progress and the latest operation. |
 | `self_test` | Check configured limits without moving hardware. |
 | `get_acquisition_list` | Read the current acquisition list. |

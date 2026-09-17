@@ -86,8 +86,8 @@ def test_command_over_both_lanes(transport, name):
 
 
 def test_contract_tables_partition_the_vocabulary():
-    """Completeness guard: the three buckets exactly cover the 54 commands, once each."""
+    """Completeness guard: the three buckets exactly cover the 56 commands, once each."""
     classified = set(EXPECTED_CORE_CALL) | READ_ONLY_WITHOUT_CORE_CALL | _SPECIAL
     assert classified == set(VALID_CASES)
     assert set(VALID_CASES) == set(dispatcher.COMMANDS)
-    assert len(VALID_CASES) == 54
+    assert len(VALID_CASES) == 56

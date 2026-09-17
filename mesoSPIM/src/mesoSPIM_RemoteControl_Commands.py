@@ -3,7 +3,7 @@
 This module contains all remotely callable commands and the rules that protect their inputs. It
 resolves effective hardware limits, builds read-only status documents, validates acquisition data,
 and maps accepted mutations to the existing mesoSPIM Core API. Importing the module registers all
-54 commands with the transport-independent dispatcher.
+56 commands with the transport-independent dispatcher.
 
 Every ordinary mutation is asynchronous. A call is validated and admitted first, then its accepted
 operation is returned before Core, hardware, or GUI work starts. Short actions complete when their
@@ -1001,6 +1001,107 @@ command(
 )
 
 
+def _snapshot_document(core):
+    """One compact readout of the microscope for a client (or a model) that needs to know where
+    things stand before deciding: state, position in both frames, optics, camera, ETL, the
+    installed acquisition list, disk, time lapse, the last operation and warnings, the frame."""
+    session = _session(core)
+    offsets = axis_offsets(core)
+    acq_list = state(core, "acq_list", []) or []
+    rows = [dict(row) for row in acq_list if isinstance(row, dict)]
+    acquisition = {
+        "rows": len(rows),
+        "selected_row": state(core, "selected_row"),
+        "folders": sorted({row["folder"] for row in rows if row.get("folder")}),
+        "filenames": [row.get("filename") for row in rows],
+    }
+    disk = None
+    if rows:
+        try:
+            disk = {
+                "free_bytes": int(core.get_free_disk_space(acq_list)),
+                "required_bytes": int(core.get_required_disk_space(acq_list)),
+            }
+        except Exception as error:  # a read must not fail because of one estimate
+            disk = {"error": str(error)}
+    frame = getattr(core, "frame_queue_display", None)
+    return {
+        "state": state(core, "state"),
+        "operation": operation_snapshot(core),
+        "warnings": recent_warnings(core)[-5:],
+        "position": position(core),
+        "position_stage": position(core, absolute=True),
+        "zeroed_axes": [axis for axis, offset in offsets.items() if offset],
+        "limits": {axis: list(bounds) for axis, bounds in effective_limits(core).items()},
+        "optics": {key: state(core, key) for key in ("laser", "intensity", "filter", "zoom", "shutterconfig", "shutterstate")},
+        "camera": {
+            "exposure_time_s": state(core, "camera_exposure_time"),
+            "binning": state(core, "camera_binning"),
+            "pixels": list(_camera_pixels(core)),
+            "pixel_size_um": state(core, "pixelsize"),
+        },
+        "etl": {key: state(core, key) for key in ("etl_l_amplitude", "etl_l_offset", "etl_r_amplitude", "etl_r_offset")},
+        "acquisition_list": acquisition,
+        "disk": disk,
+        "time_lapse": {
+            "active": getattr(core, "timelapse_active", None),
+            "timepoint": getattr(core, "time_counter", None),
+            "timepoints": getattr(core, "timelapse_tpoints", None),
+            "interval_sec": getattr(core, "timelapse_interval_sec", None),
+        },
+        "snap_folder": state(core, "snap_folder"),
+        "last_snap": session.get("last_snap"),
+        "frame_available": bool(frame),
+    }
+
+
+def _run_get_snapshot(core, args):
+    return _snapshot_document(core)
+
+
+command(
+    "get_snapshot",
+    READ,
+    _run_get_snapshot,
+    accept=no_args,
+    hint="in: none. out: one compact readout of the whole microscope: state, position (user and "
+    "stage frame), optics, camera, ETL, acquisition list, disk, time lapse, warnings, frame",
+)
+
+
+def _accept_get_frame(core, args):
+    only(args, ("max_size", "include_image"))
+    return {
+        "max_size": integer(args, "max_size", minimum=64, maximum=4096, required=False, default=1024),
+        "include_image": flag(args, "include_image", True),
+    }
+
+
+def _run_get_frame(core, args):
+    """The last frame mesoSPIM displayed, as numbers and (optionally) a small PNG."""
+    from .mesoSPIM_RemoteControl_Frame import describe_frame
+
+    queue = getattr(core, "frame_queue_display", None)
+    if not queue:
+        return {"available": False}
+    return describe_frame(queue[0], max_size=args["max_size"], include_image=args["include_image"])
+
+
+command(
+    "get_frame",
+    READ,
+    _run_get_frame,
+    accept=_accept_get_frame,
+    schema=_schema({
+        "max_size": {"type": "integer", "minimum": 64, "maximum": 4096, "description": "longer side of the PNG, default 1024"},
+        "include_image": {**_BOOLEAN, "description": "false for the numbers only"},
+    }),
+    hint="in: {max_size?, include_image?}. out: {available, stats{shape, min, max, percentiles, "
+    "background, saturated_fraction, bright_fraction, signal_centroid, focus_measure}, image{png base64}}. "
+    "the last displayed frame (after snap or live)",
+)
+
+
 def _run_self_test(core, args):
     ok, report = self_test(core)
     return {"ok": ok, "report": report}
@@ -1641,7 +1742,9 @@ def _run_snap(core, args):
                 fail(core, config.MILESTONE_SNAP, RuntimeError("no frame arrived from the camera"))
             return
         try:
-            operation["result"] = {"path": _write_snap(core, core.frame_queue_display[0], prefix)}
+            path = _write_snap(core, core.frame_queue_display[0], prefix)
+            operation["result"] = {"path": path}
+            _session(core)["last_snap"] = path
         except Exception as error:
             fail(core, config.MILESTONE_SNAP, error)
             return

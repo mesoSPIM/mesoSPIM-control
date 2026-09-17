@@ -16,8 +16,8 @@ from mesoSPIM.test.remote_control.support.contracts import VALID_CASES
 from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 
 
-def test_registry_is_the_documented_54_calls():
-    assert len(dispatcher.COMMANDS) == 54
+def test_registry_is_the_documented_56_calls():
+    assert len(dispatcher.COMMANDS) == 56
     assert set(dispatcher.COMMANDS) == set(VALID_CASES)
     assert "execute_stage_program" not in dispatcher.COMMANDS
     assert "procedure" not in dispatcher.COMMANDS
@@ -29,7 +29,7 @@ def test_published_call_list_matches_the_registry():
     text = (repository / "docs" / "source" / "remote_control" / "calls.md").read_text()
     documented = re.findall(r"^\| `([a-z_]+)` \|", text, re.MULTILINE)
 
-    assert len(documented) == len(set(documented)) == 54
+    assert len(documented) == len(set(documented)) == 56
     assert set(documented) == set(dispatcher.COMMANDS)
 
 

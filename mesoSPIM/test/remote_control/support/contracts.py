@@ -12,6 +12,8 @@ VALID_CASES = {
     "get_capabilities": {},
     "get_manual": {},
     "get_progress": {},
+    "get_snapshot": {},
+    "get_frame": {"max_size": 256},
     "self_test": {},
     "move_absolute": {"targets": {"x": 100}},
     "move_relative": {"deltas": {"x": -1}},
@@ -132,6 +134,8 @@ READ_ONLY_WITHOUT_CORE_CALL = {
     "get_capabilities",
     "get_manual",
     "get_progress",
+    "get_snapshot",
+    "get_frame",
     "self_test",
     "get_acquisition_list",
     "stat_files",
@@ -144,7 +148,7 @@ OPERATIONAL_COMMANDS = set(EXPECTED_CORE_CALL) | {
     "stop_activity",
 }
 
-assert len(VALID_CASES) == 54
+assert len(VALID_CASES) == 56
 assert len(OPERATIONAL_COMMANDS) == 38
 
 # A universal negative case for every exact command name. Command-specific wrong types, unsafe

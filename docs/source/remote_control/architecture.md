@@ -33,7 +33,7 @@ one-operation rule, and produces the public reply.
 ```text
 mesoSPIM_RemoteControl_Config.py     constants, defaults, and shared names
 mesoSPIM_RemoteControl_Dispatcher.py operation state, dispatch, JSON, and errors
-mesoSPIM_RemoteControl_Commands.py   validation, limits, and 54 commands
+mesoSPIM_RemoteControl_Commands.py   validation, limits, and 56 commands
 mesoSPIM_RemoteControl_Servers.py    Core-thread routing, TCP, MCP, startup, and shutdown
 mesoSPIM_RemoteControl_GUI.py        operator controls and acquisition-table bridge
 ```

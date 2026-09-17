@@ -28,7 +28,7 @@ The runner only selects and orders tests. It never starts or stops mesoSPIM, MCP
 
 The offline profile uses an in-memory Core and a small PyQt substitute. It verifies:
 
-- the complete 54-call registry over TCP and MCP;
+- the complete 56-call registry over TCP and MCP;
 - accepted, rejected, completed, failed, stopping, and busy replies;
 - argument types, configured options, numeric ranges, and stage limits;
 - strict JSON, TCP framing, MCP authentication, origins, paths, and body limits;
