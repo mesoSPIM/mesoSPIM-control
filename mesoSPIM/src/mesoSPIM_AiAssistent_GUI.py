@@ -149,6 +149,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.output.setFont(font)
         self.output.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)          # wrap; no horizontal bar
         self.output.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)   # scrollbar from the start
+        self.output.setMinimumHeight(480)                          # the transcript is the tab; it takes all spare height too
         layout.addWidget(self.output, 1)
 
         self.status = QtWidgets.QLabel("", self)

@@ -272,6 +272,8 @@ for _enum, _value in (("ScrollBarAsNeeded", 0), ("Key_Return", 0x01000004), ("Ke
     if not hasattr(QtCore.Qt, _enum):
         setattr(QtCore.Qt, _enum, _value)
 QtWidgets.QGridLayout = QGridLayout
+if not hasattr(QtWidgets.QWidget, "setMinimumHeight"):
+    QtWidgets.QWidget.setMinimumHeight = lambda self, _h: None
 if not hasattr(QtWidgets.QWidget, "setFocus"):
     QtWidgets.QWidget.setFocus = lambda self: None
 if not hasattr(QtWidgets.QWidget, "setStyleSheet"):
