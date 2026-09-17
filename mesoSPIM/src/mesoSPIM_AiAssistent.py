@@ -455,7 +455,7 @@ class AssistantWorker(QtCore.QObject):
         self._agent = None
 
     def reset(self):
-        """Forget the conversation (Clear). Called between turns, like configure."""
+        """Forget the conversation (Clear all). Called between turns, like configure."""
         self._history = []
 
     @QtCore.pyqtSlot(str)

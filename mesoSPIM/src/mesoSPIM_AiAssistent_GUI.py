@@ -347,11 +347,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
         self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: the emergency stop
-        self.new_button = QtWidgets.QPushButton("Clear", self)
+        self.new_button = QtWidgets.QPushButton("Clear all", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
         # Right of the two-line input: Send as tall as both rows, then the emergency stop on top,
-        # spanning both, with Cancel and Clear side by side under it; the input is as tall as the
+        # spanning both, with Cancel and Clear all side by side under it; the input is as tall as the
         # two button rows.
         buttons = QtWidgets.QGridLayout()
         buttons.setHorizontalSpacing(6)
@@ -694,7 +694,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._render()
 
     def on_new_conversation(self):
-        """Clear: clear the transcript and the model's memory of it; the endpoint stays."""
+        """Clear all: clear the transcript and the model's memory of it; the endpoint stays."""
         if not self.input.isEnabled():
             return                                  # not while a turn runs
         self._blocks = []
