@@ -42,6 +42,8 @@ LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow 
 
 # The frame handed to a vision model: longer side in pixels.
 LOOK_IMAGE_SIZE = 1024
+# The "Vision model" choice that means: the main model reads frames itself (if it can).
+SAME_AS_MODEL = "same as model"
 
 # Commands the tab asks the operator about before they run (Run / Cancel), whatever the model was
 # told. They move the sample or start a long run. An unanswered question counts as Cancel.

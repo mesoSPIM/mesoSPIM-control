@@ -25,7 +25,7 @@ import time
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import mesoSPIM_AiAssistent_Config as config
-from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint
+from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint, vision_endpoint_for
 from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder
 
 _BUBBLE = "#2b3b47"      # the operator's own turns only — the answers stay on the tab background
@@ -95,8 +95,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._worker.sig_confirm.connect(self._on_confirm)
         self._worker.sig_error.connect(self._on_error)
         self._worker.sig_done.connect(self._on_done)
+        self._apply_options()
         self._thread.start()
         return True
+
+    def _apply_options(self, *_):
+        if self._worker is not None:
+            self._worker.gate.timeout = self.confirm_wait.value()
+            self._worker.max_history_turns = self.history_turns.value()
+            self._worker.look_image_size = self.frame_size.value()
 
     def _build_ui(self):
         # Only the padding: qdarkstyle's buttons hug their text, and every other property cascades.
@@ -192,6 +199,19 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.local_radio = QtWidgets.QRadioButton("Local", group)
         self.provider = QtWidgets.QComboBox(group)
         self.provider.addItems(list(config.PROVIDERS))
+        self.confirm_wait = QtWidgets.QSpinBox(group)
+        self.confirm_wait.setRange(10, 3600)
+        self.confirm_wait.setValue(config.CONFIRM_TIMEOUT_S)
+        self.confirm_wait.setSuffix(" s")
+        self.history_turns = QtWidgets.QSpinBox(group)
+        self.history_turns.setRange(1, 200)
+        self.history_turns.setValue(config.MAX_HISTORY_TURNS)
+        self.frame_size = QtWidgets.QSpinBox(group)
+        self.frame_size.setRange(256, 4096)
+        self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
+        self.frame_size.setSuffix(" px")
+        self.vision_provider = QtWidgets.QComboBox(group)
+        self.vision_provider.addItems([config.SAME_AS_MODEL] + [n for n, p in config.PROVIDERS.items() if p.get("vision")])
         self.model = QtWidgets.QLineEdit("", group)
         self.local_model = QtWidgets.QComboBox(group)
         self.key = QtWidgets.QLineEdit("", group)
@@ -208,7 +228,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._key_label = label("API key")
         self._base_url_label = label("Base URL")
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
-                       self.key, self.base_url, self.folder_button, self.connect_button, self.setup_status):
+                       self.key, self.base_url, self.folder_button, self.connect_button, self.setup_status,
+                       self.confirm_wait, self.history_turns, self.vision_provider, self.frame_size):
             widget.setFont(font)
 
         # Columns: 0 mode | 1 label | 2 field | 3 label | 4 field. Row 0 is the model, row 1 the
@@ -237,6 +258,26 @@ class AiAssistentGUI(QtWidgets.QWidget):
         grid.setColumnStretch(2, 1)
         grid.setColumnStretch(4, 2)
         rows.addLayout(grid)
+
+        # Operator preferences, applied at once: how long Run / Cancel waits for an answer, and
+        # how many turns the model remembers.
+        options = QtWidgets.QHBoxLayout()
+        options.addWidget(label("Wait for Run / Cancel"))
+        options.addWidget(self.confirm_wait)
+        options.addSpacing(16)
+        options.addWidget(label("Remember last"))
+        options.addWidget(self.history_turns)
+        options.addWidget(label("turns"))
+        options.addSpacing(16)
+        options.addWidget(label("Vision model"))
+        options.addWidget(self.vision_provider)
+        options.addWidget(label("frames at"))
+        options.addWidget(self.frame_size)
+        options.addStretch(1)
+        rows.addLayout(options)
+        self.confirm_wait.valueChanged.connect(self._apply_options)
+        self.history_turns.valueChanged.connect(self._apply_options)
+        self.frame_size.valueChanged.connect(self._apply_options)
 
         self.cloud_radio.toggled.connect(self._on_mode_changed)
         self.local_radio.toggled.connect(self._on_mode_changed)
@@ -373,10 +414,19 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._note(message)
 
     def _use(self, endpoint, status=None):
-        self._worker.configure(endpoint)
+        self._worker.configure(endpoint, self._vision_endpoint())
         self._endpoint = endpoint
         self.setup_status.setText(status or "ready")
         self._set_expanded(False)
+
+    def _vision_endpoint(self):
+        """The dedicated frame reader chosen in the options row, or None for the main model."""
+        chosen = self.vision_provider.currentText()
+        reader = vision_endpoint_for(chosen)
+        if chosen != config.SAME_AS_MODEL and reader is None:
+            key_env = config.PROVIDERS[chosen].get("key_env")
+            self._note(f"Vision model {chosen} needs {key_env} in the environment; the main model will read frames if it can.")
+        return reader
 
     def _stop_local_server(self):
         server, self._local_server = self._local_server, None
@@ -484,7 +534,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.input.setEnabled(not running)
         self.interrupt.setEnabled(running)
         for widget in (self.cloud_radio, self.local_radio, self.provider, self.model, self.local_model,
-                       self.key, self.base_url, self.folder_button, self.connect_button, self.new_button):
+                       self.key, self.base_url, self.folder_button, self.connect_button, self.new_button,
+                       self.vision_provider):
             widget.setEnabled(not running)      # the endpoint changes only between turns
         if running:
             self._set_expanded(False)

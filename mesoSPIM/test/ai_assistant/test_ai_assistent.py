@@ -535,3 +535,64 @@ def test_run_turn_caps_the_history(monkeypatch):
     assert worker._history == long[2:]
     worker.reset()
     assert worker._history == []
+
+
+def test_worker_uses_its_own_history_cap_and_gate_timeout(monkeypatch):
+    worker = AssistantWorker(FakeAcceptor())
+    worker.max_history_turns = 1
+    long = [_turn("UserPromptPart"), _turn("TextPart"), _turn("UserPromptPart"), _turn("TextPart")]
+    result = FakeResult("ok")
+    result.all_messages = lambda: long
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: FakeAgent([result]))
+    worker.run_turn("hi")
+    assert worker._history == long[2:]
+    worker.gate.timeout = 0.01
+    assert worker.gate.ask("load_sample", {}) is False              # times out at the new value
+
+
+def test_a_dedicated_vision_model_reads_the_frame_for_a_text_only_main_model(monkeypatch):
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
+    monkeypatch.setenv("GEMINI_API_KEY", "g")
+    used = []
+    monkeypatch.setattr(ai, "vision_answer", lambda endpoint, image, question, stats: used.append(endpoint.provider) or "centred")
+    local = Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u")
+    tools = build_tools(Acceptor(RecordingCore()), threading.Event(), endpoint=local,
+                        vision_endpoint=ai.vision_endpoint_for("Gemini"))
+    look_tool = next(t for t in tools if t.name == "look")
+    out = json.loads(look_tool.function(question="centred?"))
+    assert out["answer"] == "centred" and used == ["Gemini"]
+
+
+def test_vision_endpoint_for(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert ai.vision_endpoint_for(ai.config.SAME_AS_MODEL) is None
+    assert ai.vision_endpoint_for("Anthropic").provider == "Anthropic"
+    assert ai.vision_endpoint_for("OpenAI") is None                 # no key: the tab explains
+
+
+def test_look_uses_the_live_frame_size(monkeypatch):
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
+    sizes = []
+    acceptor = Acceptor(RecordingCore())
+    real = acceptor.dispatch
+
+    def spy(name, args):
+        if name == "get_frame":
+            sizes.append(args["max_size"])
+        return real(name, args)
+
+    acceptor.dispatch = spy
+    size = {"px": 300}
+    tools = build_tools(acceptor, threading.Event(), endpoint=Endpoint.from_preset("Gemini", api_key="k"),
+                        image_size=lambda: size["px"])
+    monkeypatch.setattr(ai, "vision_answer", lambda *a: "ok")
+    look_tool = next(t for t in tools if t.name == "look")
+    look_tool.function(question="q")
+    size["px"] = 600
+    look_tool.function(question="q", snap=False)
+    assert sizes == [300, 600]

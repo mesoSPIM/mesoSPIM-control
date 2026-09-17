@@ -78,7 +78,7 @@ def test_submit_single_flight_disables_input(monkeypatch):
     gui = AiAssistentGUI(_FakeParent(_FakeCore(acceptor=object())))
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)   # pretend ready; no real thread
     monkeypatch.setenv("GEMINI_API_KEY", "k")
-    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint: None})()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None: None})()
     sent = _collect(gui.sig_run_turn)
     gui.input.setText("hello")
     gui.on_submit()
@@ -127,7 +127,7 @@ def test_connect_with_a_key_configures_the_worker(monkeypatch):
     configured = []
 
     class _Worker:
-        def configure(self, endpoint):
+        def configure(self, endpoint, vision=None):
             configured.append(endpoint)
 
     gui._worker = _Worker()
@@ -146,7 +146,7 @@ def test_first_message_connects_with_the_typed_key(monkeypatch):
     configured = []
 
     class _Worker:
-        def configure(self, endpoint):
+        def configure(self, endpoint, vision=None):
             configured.append(endpoint)
 
     gui._worker = _Worker()
@@ -212,7 +212,7 @@ def _local_gui(tmp_path, monkeypatch, server_factory=_FakeServer):
     core = _FakeCore(acceptor=object())
     core.cfg = types.SimpleNamespace(ai_assistant_models_folder=str(tmp_path))
     gui = AiAssistentGUI(_FakeParent(core))
-    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint: setattr(self, "endpoint", endpoint)})()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None: setattr(self, "endpoint", endpoint)})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     monkeypatch.setattr(gui_module, "LocalModelServer", server_factory)
     scheduled = []
@@ -327,7 +327,7 @@ def test_a_problem_opens_the_footer(monkeypatch):
 
 def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui = _gui()
-    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint: None})()
+    gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None: None})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.setup_toggle.setChecked(True)
     gui.key.setText("g-key")
@@ -387,3 +387,43 @@ def test_new_conversation_clears_the_transcript_and_the_worker_between_turns():
     gui._set_running(True)
     gui.on_new_conversation()                                       # ignored while a turn runs
     assert resets == [True] and not gui.new_button.isEnabled()
+
+
+def test_options_row_sets_the_worker_at_once():
+    gui = _gui()
+    gate = type("_G", (), {"timeout": 120})()
+    gui._worker = type("_W", (), {"gate": gate, "max_history_turns": 20, "look_image_size": 1024})()
+    gui._apply_options()                                            # what _ensure_worker does on start
+    assert gate.timeout == 120 and gui._worker.max_history_turns == 20 and gui._worker.look_image_size == 1024
+    gui.confirm_wait.setValue(600)
+    gui.history_turns.setValue(5)
+    gui.frame_size.setValue(512)
+    assert gate.timeout == 600 and gui._worker.max_history_turns == 5 and gui._worker.look_image_size == 512
+
+
+def test_vision_model_choice_reaches_the_worker(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "g")
+    gui = _gui()
+    configured = []
+    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None: configured.append((endpoint, vision))})()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    gui.provider.setCurrentText("Anthropic")
+    gui.provider.currentTextChanged.emit("Anthropic")
+    gui.key.setText("sk")
+    gui.vision_provider.setCurrentText("Gemini")
+    gui.on_connect()
+    (endpoint, vision), = configured
+    assert endpoint.provider == "Anthropic" and vision.provider == "Gemini" and vision.api_key == "g"
+
+
+def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    gui = _gui()
+    configured = []
+    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None: configured.append(vision)})()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    gui.key.setText("k")
+    gui.vision_provider.setCurrentText("OpenAI")
+    gui.on_connect()
+    assert configured == [None]
+    assert "OPENAI_API_KEY" in gui.output.toPlainText()

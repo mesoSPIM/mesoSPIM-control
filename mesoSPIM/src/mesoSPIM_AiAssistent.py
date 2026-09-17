@@ -104,7 +104,7 @@ class ConfirmationGate:
 
     def __init__(self, on_ask, timeout=None):
         self._on_ask = on_ask
-        self._timeout = config.CONFIRM_TIMEOUT_S if timeout is None else timeout
+        self.timeout = config.CONFIRM_TIMEOUT_S if timeout is None else timeout  # seconds; the tab sets it
         self._answered = threading.Event()
         self._answer = False
 
@@ -112,7 +112,7 @@ class ConfirmationGate:
         self._answered.clear()
         self._answer = False
         self._on_ask(name, json.dumps(args or {}))
-        self._answered.wait(self._timeout)
+        self._answered.wait(self.timeout)
         return self._answer
 
     def answer(self, allowed):
@@ -148,7 +148,16 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
     return _call
 
 
-def look(acceptor, endpoint, question, snap, cancel, on_frame=None):
+def vision_endpoint_for(provider):
+    """The cloud preset used only to read frames, keyed from its environment variable. None when
+    the provider has no key available (the tab says so) or when the main model should be used."""
+    if not provider or provider == config.SAME_AS_MODEL:
+        return None
+    endpoint = Endpoint.from_preset(provider)
+    return endpoint if endpoint.api_key else None
+
+
+def look(acceptor, endpoint, question, snap, cancel, on_frame=None, image_size=None):
     """Take a frame and describe it. The numbers come from get_frame and reach the main model
     always. The picture itself goes to a vision model in a separate single-shot call with the
     question, and only that answer comes back — the main conversation never carries images, so a
@@ -157,7 +166,7 @@ def look(acceptor, endpoint, question, snap, cancel, on_frame=None):
         done = dispatch_and_wait(acceptor, "snap", {"prefix": "assistant"}, WAIT, cancel)
         if done.get("status") != COMPLETED:
             return {"error": {"code": "execution", "message": f"snap did not complete: {done}"}}
-    frame = acceptor.dispatch("get_frame", {"include_image": endpoint.vision, "max_size": config.LOOK_IMAGE_SIZE})
+    frame = acceptor.dispatch("get_frame", {"include_image": endpoint.vision, "max_size": image_size or config.LOOK_IMAGE_SIZE})
     if not frame.get("available"):
         return {"available": False, "note": "no frame yet; take a snap first"}
     result = {"available": True, "stats": frame["stats"]}
@@ -203,7 +212,8 @@ _LOOK_SCHEMA = {
 }
 
 
-def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, gate=None):
+def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, gate=None, vision_endpoint=None,
+                image_size=None):
     """One passthrough tool per command, minus the prompt-only ones (get_manual is already in the
     system prompt). The tool list otherwise IS COMMANDS — never hand-maintained.
 
@@ -217,11 +227,14 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
         for name, cmd in COMMANDS.items() if name not in _PROMPT_ONLY
     ]
     if endpoint is not None:
+        eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see
+
         def _look(question="", snap=True) -> str:
             if on_call is not None:
                 on_call("look", json.dumps({"question": question, "snap": snap}))
+            size = image_size() if callable(image_size) else image_size  # a callable reads a live setting
             try:
-                return json.dumps(look(acceptor, endpoint, question, snap, cancel, on_frame))
+                return json.dumps(look(acceptor, eyes, question, snap, cancel, on_frame, size))
             except Exception as error:  # busy, shutting down: data for the model, like every tool
                 code, message = error_info(error)
                 return json.dumps({"error": {"code": code, "message": message}})
@@ -329,7 +342,8 @@ def build_model(endpoint):
     return FallbackModel(primary, _build_one(endpoint, endpoint.fallback_model))
 
 
-def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None, gate=None):
+def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None, gate=None,
+                vision_endpoint=None, image_size=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -339,7 +353,8 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
     # instructions (not system_prompt): applied fresh each run, not accumulated into the
     # message history we carry across turns.
     return Agent(model, instructions=build_system_prompt(acceptor),
-                 tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate))
+                 tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
+                                   vision_endpoint=vision_endpoint, image_size=image_size))
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---
@@ -390,15 +405,19 @@ class AssistantWorker(QtCore.QObject):
         super().__init__()
         self._acceptor = acceptor
         self._endpoint = None  # set by configure() before the first turn
+        self._vision_endpoint = None
         self._agent = None
         self._history = []
         self.cancel = threading.Event()
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit)
+        self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these two
+        self.look_image_size = config.LOOK_IMAGE_SIZE
 
-    def configure(self, endpoint):
-        """Use another endpoint from the next turn on; the transcript history is kept. Called from
-        the GUI thread only between turns (the tab disables setup while a turn runs)."""
+    def configure(self, endpoint, vision_endpoint=None):
+        """Use another endpoint (and reader for frames) from the next turn on; the transcript
+        history is kept. Called from the GUI thread only between turns."""
         self._endpoint = endpoint
+        self._vision_endpoint = vision_endpoint
         self._agent = None
 
     def reset(self):
@@ -411,12 +430,14 @@ class AssistantWorker(QtCore.QObject):
             self.cancel.clear()
             if self._agent is None:
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
-                                          endpoint=self._endpoint, on_frame=self.sig_frame.emit, gate=self.gate)
+                                          endpoint=self._endpoint, on_frame=self.sig_frame.emit, gate=self.gate,
+                                          vision_endpoint=self._vision_endpoint,
+                                          image_size=lambda: self.look_image_size)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.
             result = self._agent.run_sync(with_state(self._acceptor, text), message_history=self._history)
-            self._history = trim_history(result.all_messages(), config.MAX_HISTORY_TURNS)
+            self._history = trim_history(result.all_messages(), self.max_history_turns)
             self.sig_reply.emit(result.output)
         except Exception as error:
             logger.exception("AI Assistant turn failed")

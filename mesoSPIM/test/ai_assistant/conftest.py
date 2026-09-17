@@ -207,6 +207,26 @@ class QGridLayout(QtWidgets.QVBoxLayout):
         pass
 
 
+class QSpinBox(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._value = 0
+        self.valueChanged = _Signal()
+
+    def setRange(self, low, high):
+        self._range = (low, high)
+
+    def setSuffix(self, _suffix):
+        pass
+
+    def setValue(self, value):
+        self._value = int(value)
+        self.valueChanged.emit(self._value)
+
+    def value(self):
+        return self._value
+
+
 class QFileDialog:
     chosen = ""  # a test sets the folder the dialog "returns"
 
@@ -217,6 +237,7 @@ class QFileDialog:
 
 QtWidgets.QRadioButton = QRadioButton
 QtWidgets.QToolButton = QToolButton
+QtWidgets.QSpinBox = QSpinBox
 QtWidgets.QGridLayout = QGridLayout
 if not hasattr(QtWidgets.QWidget, "setFocus"):
     QtWidgets.QWidget.setFocus = lambda self: None
