@@ -274,8 +274,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
                        self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
 
-        # One grid, so the preferences line and the endpoint line share their columns: labels
-        # left-aligned before their fields, Connect at the bottom right under the last field.
+        # The mode on top, then one grid for the preferences line and the endpoint line, which
+        # share their columns: labels left-aligned before their fields, Connect at the bottom right.
         # Column 6 is the gap that takes the leftover width; Base URL and the local model file
         # grow into it. The column widths are the grid's own, so switching modes moves nothing.
         left = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
@@ -284,20 +284,20 @@ class AiAssistentGUI(QtWidgets.QWidget):
         grid.setColumnMinimumWidth(3, 200)                        # fits the preset model names
         self.key.setMaximumWidth(160)                             # masked anyway
         self.connect_button.setMinimumWidth(120)                  # "Connected" in bold, no jump
-        grid.addWidget(label("Tool set"), 0, 0, left)
-        grid.addWidget(self.tools_profile, 0, 1)
-        grid.addWidget(label("Memory"), 0, 2, left)
-        grid.addWidget(self.history_turns, 0, 3, left)
-        grid.addWidget(label("Vision model"), 0, 4, left)
-        grid.addWidget(self.vision_provider, 0, 5)
-        grid.addWidget(label("Frame"), 0, 6, left)
-        grid.addWidget(self.frame_size, 0, 7)
         mode = QtWidgets.QHBoxLayout()
         mode.addWidget(self.local_radio)
         mode.addSpacing(16)
         mode.addWidget(self.cloud_radio)
         mode.addStretch(1)
-        grid.addLayout(mode, 1, 0, 1, 8)
+        grid.addLayout(mode, 0, 0, 1, 8)
+        grid.addWidget(label("Tool set"), 1, 0, left)
+        grid.addWidget(self.tools_profile, 1, 1)
+        grid.addWidget(label("Memory"), 1, 2, left)
+        grid.addWidget(self.history_turns, 1, 3, left)
+        grid.addWidget(label("Vision model"), 1, 4, left)
+        grid.addWidget(self.vision_provider, 1, 5)
+        grid.addWidget(label("Frame"), 1, 6, left)
+        grid.addWidget(self.frame_size, 1, 7)
         grid.addWidget(self._provider_label, 2, 0, left)
         grid.addWidget(self.provider, 2, 1)
         grid.addWidget(self._model_label, 2, 2, left)
