@@ -505,7 +505,7 @@ def test_a_scripted_model_can_call_every_tool_through_its_schema(monkeypatch):
 
 def test_system_prompt_is_the_preamble_plus_one_line_per_command():
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
-    prompt = ai.build_system_prompt()
+    prompt = ai.build_system_prompt(profile="Configure")          # every command
     assert prompt.startswith("You control a mesoSPIM")
     for name, cmd in COMMANDS.items():
         if name != "get_manual":
