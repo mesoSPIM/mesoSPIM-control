@@ -289,7 +289,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _build_ui(self):
         # Only the padding: qdarkstyle's buttons hug their text, its labels carry 7 px a side that
         # the setup grids do not want, and every other property cascades.
-        self.setStyleSheet("QPushButton, QToolButton { padding: 3px 12px; }"
+        self.setStyleSheet("QPushButton, QToolButton { padding: 3px 9px; }"
                            "QPushButton#AiAssistentStopButton { color: #ff4d4d; font-weight: bold; }"
                            "QGroupBox QLabel { padding: 0px; }")
         layout = QtWidgets.QVBoxLayout(self)
