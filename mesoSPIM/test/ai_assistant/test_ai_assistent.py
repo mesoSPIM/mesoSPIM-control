@@ -600,7 +600,7 @@ def test_look_uses_the_live_frame_size(monkeypatch):
     assert sizes == [300, 600]
 
 
-# --- tool profiles: Acquire for a facility user, Configure for the machine ---
+# --- tool sets: Regular for a facility user, Full for the machine ---
 
 def test_regular_profile_offers_the_session_not_the_machine():
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS

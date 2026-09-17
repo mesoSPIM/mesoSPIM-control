@@ -52,7 +52,7 @@ Two more rows hold preferences that apply at once. **Tool set** chooses what the
 and sample moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live,
 and the acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and
 camera timing, the ETL calibration files, the alignment modes and the generic setting call. In
-Acquire the other commands are not offered to the model at all, so it cannot be talked into them.
+Regular the other commands are not offered to the model at all, so it cannot be talked into them.
 The start-up choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or "Full").
 TCP and MCP always serve every command; this is the assistant only. Then: how many turns the model
 remembers, and the **Vision model**: "same as model" lets the main model read frames when it can; a cloud provider here reads
