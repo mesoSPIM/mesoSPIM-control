@@ -69,7 +69,7 @@ the ETL calibration files, the alignment modes and the generic setting call. In 
 commands are not offered to the model at all, so it cannot be talked into them. The start-up
 choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or
 "Full"). TCP and MCP always serve every command; this is the assistant only. **Memory** is how
-many turns the model remembers. **Downsample image to** is the size of the frame handed to the
+many of the operator's messages, with their answers, the model remembers. **Downsample image to** is the size of the frame handed to the
 vision model (longer side, 1024 px by default): smaller is cheaper and faster, and enough for "is
 it centred" or "is it saturated"; the numbers always come from the full frame.
 

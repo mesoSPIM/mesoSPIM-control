@@ -428,7 +428,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         options.addWidget(tool_set_label, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(memory_label, 0, 2)
-        options.addLayout(with_unit(self.history_turns, "turns"), 0, 3)
+        options.addLayout(with_unit(self.history_turns, "messages"), 0, 3)   # yours: one per turn
         options.addWidget(image_label, 0, 4)
         options.addLayout(with_unit(self.frame_size, "px"), 0, 5)
         options.setColumnStretch(6, 1)
