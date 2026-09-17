@@ -1,7 +1,8 @@
 """Real-PyQt smoke test for the AI Assistant tab's layout: builds the tab offscreen, never a
 worker, a model or a server. Checks what the fake-Qt unit tests cannot: that the setup grid
 re-places the key without duplicating it, shows the right fields per type and preset in both
-model boxes, lines the boxes up, and stays within the main window's width."""
+model boxes, lines the boxes up, stays within the main window's width, and that Enter sends
+while Shift+Enter starts a new line."""
 from __future__ import annotations
 
 import os
@@ -14,7 +15,7 @@ os.environ.pop("GEMINI_API_KEY", None)
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 try:
-    from PyQt5 import QtCore, QtWidgets
+    from PyQt5 import QtCore, QtTest, QtWidgets
 except ModuleNotFoundError as error:
     raise SystemExit("test_real_pyqt_assistant_smoke.py requires PyQt5") from error
 
@@ -123,6 +124,20 @@ def main():
     for name, width in (("cloud", width_cloud), ("local", width_local)):
         assert width <= MAIN_WINDOW_WIDTH + SLACK, f"{name} setup needs {width} px"
     assert width_server <= MAIN_WINDOW_WIDTH + 2 * SLACK, f"OpenAI-style setup needs {width_server} px"
+
+    # The input box: Enter sends, Shift+Enter starts a new line, as editors do. Only the key
+    # handling is under test, so the tab's own submit slot is detached first.
+    sent = []
+    tab.input.returnPressed.disconnect(tab.on_submit)
+    tab.input.returnPressed.connect(lambda: sent.append(tab.input.text()))
+    tab.input.setFocus()
+    QtTest.QTest.keyClicks(tab.input, "centre the sample")
+    QtTest.QTest.keyClick(tab.input, QtCore.Qt.Key_Return, QtCore.Qt.ShiftModifier)
+    QtTest.QTest.keyClicks(tab.input, "then snap")
+    assert sent == [] and tab.input.text() == "centre the sample\nthen snap"
+    QtTest.QTest.keyClick(tab.input, QtCore.Qt.Key_Return)
+    assert sent == ["centre the sample\nthen snap"]
+    tab.input.setText("")
 
     # The Connect button never changes size between its states.
     tab._set_connect_state("idle")
