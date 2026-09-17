@@ -159,15 +159,6 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
     return _call
 
 
-def vision_endpoint_for(provider):
-    """The cloud preset used only to read frames, keyed from its environment variable. None when
-    the provider has no key available (the tab says so) or when the main model should be used."""
-    if not provider or provider == config.SAME_AS_MODEL:
-        return None
-    endpoint = Endpoint.from_preset(provider)
-    return endpoint if endpoint.api_key else None
-
-
 def look(acceptor, endpoint, question, snap, cancel, on_frame=None, image_size=None):
     """Take a frame and describe it. The numbers come from get_frame and reach the main model
     always. The picture itself goes to a vision model in a separate single-shot call with the

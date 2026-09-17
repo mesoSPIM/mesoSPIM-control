@@ -1,7 +1,7 @@
 """Real-PyQt smoke test for the AI Assistant tab's layout: builds the tab offscreen, never a
 worker, a model or a server. Checks what the fake-Qt unit tests cannot: that the setup grid
-re-places the key without duplicating it, shows the right fields per type and preset, and stays
-within the main window's width."""
+re-places the key without duplicating it, shows the right fields per type and preset in both
+model boxes, lines the boxes up, and stays within the main window's width."""
 from __future__ import annotations
 
 import os
@@ -18,11 +18,11 @@ try:
 except ModuleNotFoundError as error:
     raise SystemExit("test_real_pyqt_assistant_smoke.py requires PyQt5") from error
 
-from mesoSPIM.src.mesoSPIM_AiAssistent_GUI import CLOUD_MODE, LOCAL_MODE, AiAssistentGUI
+from mesoSPIM.src.mesoSPIM_AiAssistent_GUI import CLOUD_MODE, LOCAL_MODE, SAME_AS_LANGUAGE, AiAssistentGUI
 from mesoSPIM.src.mesoSPIM_RemoteControl_GUI import RemoteControlGUI
 
 MAIN_WINDOW_WIDTH = 964  # the designed width of mesoSPIM_MainWindow.ui
-SLACK = 60               # the OpenAI-style line may run a little past it
+SLACK = 80               # the boxes may run a little past it; the window is wider in practice
 
 
 class Core(QtCore.QObject):
@@ -66,42 +66,59 @@ def main():
     tab.setup_toggle.setChecked(True)
     window.show()
     app.processEvents()
-    grid = tab._model_grid
+    language, vision = tab.language, tab.vision
+    grid = language.grid
 
     # Cloud, a key-only provider: the key spans the second line, no base URL.
-    tab.mode.setCurrentText(CLOUD_MODE)
-    tab.provider.setCurrentText("Anthropic")
+    language.mode.setCurrentText(CLOUD_MODE)
+    language.provider.setCurrentText("Anthropic")
     app.processEvents()
-    assert tab.key.isVisible() and not tab.base_url.isVisible() and not tab.local_model.isVisible()
-    assert cell_of(grid, tab.key) == (1, 3, 5), cell_of(grid, tab.key)
-    assert items_for(grid, tab.key) == 1 and items_for(grid, tab._key_label) == 1
-    assert cell_of(grid, tab.connect_button)[:2] == (1, 8)
+    assert language.key.isVisible() and not language.base_url.isVisible() and not language.local_model.isVisible()
+    assert cell_of(grid, language.key) == (1, 3, 6), cell_of(grid, language.key)
+    assert items_for(grid, language.key) == 1 and items_for(grid, language.key_label) == 1
     width_cloud = tab.minimumSizeHint().width()
 
     # OpenAI-style: the base URL takes the start of the line and the key moves after it, once.
-    tab.provider.setCurrentText("OpenAI-style")
+    language.provider.setCurrentText("OpenAI-style")
     app.processEvents()
-    assert tab.base_url.isVisible() and tab.key.isVisible()
-    assert cell_of(grid, tab.base_url) == (1, 3, 3) and cell_of(grid, tab.key) == (1, 7, 1)
-    assert items_for(grid, tab.key) == 1 and items_for(grid, tab._key_label) == 1
-    assert tab.key.placeholderText() == "optional"
+    assert language.base_url.isVisible() and language.key.isVisible()
+    assert cell_of(grid, language.base_url) == (1, 3, 3) and cell_of(grid, language.key) == (1, 7, 2)
+    assert items_for(grid, language.key) == 1 and items_for(grid, language.key_label) == 1
+    assert language.key.placeholderText() == "optional"
     width_server = tab.minimumSizeHint().width()
 
     # Back and forth leaves exactly one key item and the same width as before.
-    tab.provider.setCurrentText("Gemini")
-    tab.provider.setCurrentText("OpenAI-style")
-    tab.provider.setCurrentText("Anthropic")
+    language.provider.setCurrentText("Gemini")
+    language.provider.setCurrentText("OpenAI-style")
+    language.provider.setCurrentText("Anthropic")
     app.processEvents()
-    assert items_for(grid, tab.key) == 1 and cell_of(grid, tab.key) == (1, 3, 5)
+    assert items_for(grid, language.key) == 1 and cell_of(grid, language.key) == (1, 3, 6)
     assert tab.minimumSizeHint().width() == width_cloud
 
-    # Local: the file dropdown and the folder button, the cloud fields gone, Connect still last.
-    tab.mode.setCurrentText(LOCAL_MODE)
+    # Local: the file dropdown and the folder button, the cloud fields gone.
+    language.mode.setCurrentText(LOCAL_MODE)
     app.processEvents()
-    assert tab.local_model.isVisible() and tab.folder_button.isVisible()
-    assert not any(w.isVisible() for w in (tab.provider, tab.model, tab.key, tab.base_url))
-    assert cell_of(grid, tab.folder_button)[:2] == (1, 7) and cell_of(grid, tab.connect_button)[:2] == (1, 8)
+    assert language.local_model.isVisible() and language.folder_button.isVisible()
+    assert not any(w.isVisible() for w in (language.provider, language.model, language.key, language.base_url))
     width_local = tab.minimumSizeHint().width()
+
+    # The vision box defers to the language model until told otherwise, then offers the same.
+    assert vision.same and vision.mode.currentText() == SAME_AS_LANGUAGE
+    assert not any(w.isVisible() for w in (vision.provider, vision.model, vision.key, vision.local_model))
+    same_height = vision.sizeHint().height()
+    vision.mode.setCurrentText(CLOUD_MODE)
+    app.processEvents()
+    assert vision.provider.isVisible() and vision.key.isVisible() and vision.sizeHint().height() > same_height
+    vision.mode.setCurrentText(LOCAL_MODE)
+    app.processEvents()
+    assert vision.local_model.isVisible() and not vision.provider.isVisible()
+
+    # The boxes line up: same first columns; Connect ends where the boxes end.
+    for column in range(5):
+        assert language.grid.cellRect(0, column).width() == vision.grid.cellRect(0, column).width()
+    assert language.mapToParent(language.grid.cellRect(0, 1).topLeft()).x() == \
+        vision.mapToParent(vision.grid.cellRect(0, 1).topLeft()).x()
+    assert tab.connect_button.geometry().right() == language.geometry().right()
 
     for name, width in (("cloud", width_cloud), ("local", width_local)):
         assert width <= MAIN_WINDOW_WIDTH + SLACK, f"{name} setup needs {width} px"

@@ -40,14 +40,36 @@ def list_models(folder):
     )
 
 
-def server_command(model_path, port):
-    """The child process serving ``model_path`` on ``port``. Raises with the install hint when the
-    runtime is missing, so the tab can say what to do instead of failing later."""
+def projector_for(folder, model_name):
+    """The projector file (``mmproj``) that lets a local model see, for a vision model: the one
+    in the folder whose name shares the longest start with the model file's, or the only one
+    there. None when the folder has none, or several and none match."""
+    if not os.path.isdir(folder):
+        return None
+    candidates = [name for name in os.listdir(folder)
+                  if name.lower().endswith(config.MODEL_SUFFIXES) and "mmproj" in name.lower()]
+
+    def shared(name):
+        stem = name.lower().replace("mmproj-", "").replace("-mmproj", "")
+        return len(os.path.commonprefix([model_name.lower(), stem]))
+
+    if not candidates:
+        return None
+    best = max(candidates, key=shared)
+    if len(candidates) > 1 and shared(best) == 0:
+        return None
+    return os.path.join(folder, best)
+
+
+def server_command(model_path, port, projector=None):
+    """The child process serving ``model_path`` on ``port``, with its projector file when it is
+    to see images. Raises with the install hint when the runtime is missing, so the tab can say
+    what to do instead of failing later."""
     try:
         import llama_cpp  # noqa: F401
     except ImportError:
         raise RuntimeError("llama-cpp-python is not installed: pip install llama-cpp-python")
-    return [
+    argv = [
         sys.executable, "-m", "llama_cpp.server",
         "--model", model_path,
         "--model_alias", model_name(model_path),
@@ -55,6 +77,9 @@ def server_command(model_path, port):
         "--port", str(port),
         "--n_gpu_layers", "-1",  # offload everything the GPU can take; CPU-only builds ignore it
     ]
+    if projector:
+        argv += ["--clip_model_path", projector]
+    return argv
 
 
 def model_name(model_path):
@@ -71,8 +96,9 @@ class LocalModelServer:
     """One server child for one model file. ``start()`` returns at once; poll ``ready()`` until the
     model has loaded (a large file takes tens of seconds), then use ``base_url`` and ``model``."""
 
-    def __init__(self, model_path, command=server_command):
+    def __init__(self, model_path, command=server_command, projector=None):
         self.model_path = model_path
+        self.projector = projector
         self.model = model_name(model_path)
         self.port = _free_port()
         self.base_url = f"http://127.0.0.1:{self.port}/v1"
@@ -81,7 +107,7 @@ class LocalModelServer:
         self._process = None
 
     def start(self):
-        argv = self._command(self.model_path, self.port)  # raises before anything is spawned
+        argv = self._command(self.model_path, self.port, self.projector)  # raises before anything is spawned
         handle, self.log_path = tempfile.mkstemp(prefix="mesospim-model-server-", suffix=".log")
         with os.fdopen(handle, "wb") as log:  # the child inherits the descriptor; ours can close
             self._process = subprocess.Popen(argv, stdout=log, stderr=subprocess.STDOUT)

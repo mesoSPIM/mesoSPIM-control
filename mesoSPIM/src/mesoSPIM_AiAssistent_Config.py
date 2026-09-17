@@ -42,8 +42,6 @@ LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow 
 
 # The frame handed to a vision model: longer side in pixels.
 LOOK_IMAGE_SIZE = 1024
-# The "Vision model" choice that means: the main model reads frames itself (if it can).
-SAME_AS_MODEL = "same as model"
 
 # Which commands the assistant offers the model. "Regular" is for a user setting up a sample on a
 # configured microscope: everything about the sample and the session, nothing about the machine.

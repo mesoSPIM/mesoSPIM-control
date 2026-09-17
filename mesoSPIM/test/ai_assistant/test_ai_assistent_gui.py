@@ -116,20 +116,20 @@ def _gui():
 
 def test_setup_row_prefills_the_default_provider():
     gui = _gui()
-    assert gui.provider.currentText() == "Gemini"
-    assert gui.model.text() == "gemini-3.5-flash-lite"
-    assert gui.key.isVisible() and not gui.base_url.isVisible()
+    assert gui.language.provider.currentText() == "Gemini"
+    assert gui.language.model.text() == "gemini-3.5-flash-lite"
+    assert gui.language.key.isVisible() and not gui.language.base_url.isVisible()
     assert gui.connect_button.text() == "Connect"
 
 
 def test_an_openai_style_server_adds_a_base_url_and_keeps_an_optional_key():
     gui = _gui()
-    gui.provider.setCurrentText("OpenAI-style")
-    gui.provider.currentTextChanged.emit("OpenAI-style")
-    assert gui.model.text() == "gemma4:31b"
-    assert gui.base_url.text() == "http://localhost:11434/v1"
-    assert gui.base_url.isVisible() and gui.key.isVisible()
-    assert gui.key.placeholderText() == "optional"
+    gui.language.provider.setCurrentText("OpenAI-style")
+    gui.language.provider.currentTextChanged.emit("OpenAI-style")
+    assert gui.language.model.text() == "gemma4:31b"
+    assert gui.language.base_url.text() == "http://localhost:11434/v1"
+    assert gui.language.base_url.isVisible() and gui.language.key.isVisible()
+    assert gui.language.key.placeholderText() == "optional"
 
 
 def test_connect_without_a_key_explains_and_does_not_start(monkeypatch):
@@ -154,9 +154,9 @@ def test_connect_with_a_key_configures_the_worker(monkeypatch):
 
     gui._worker = _Worker()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
-    gui.provider.setCurrentText("Anthropic")
-    gui.provider.currentTextChanged.emit("Anthropic")
-    gui.key.setText("sk-test")
+    gui.language.provider.setCurrentText("Anthropic")
+    gui.language.provider.currentTextChanged.emit("Anthropic")
+    gui.language.key.setText("sk-test")
     gui.on_connect()
     (endpoint,) = configured
     assert (endpoint.provider, endpoint.kind, endpoint.api_key) == ("Anthropic", "anthropic", "sk-test")
@@ -173,11 +173,11 @@ def test_openai_style_connects_without_a_key_and_passes_one_through(monkeypatch)
 
     gui._worker = _Worker()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
-    gui.provider.setCurrentText("OpenAI-style")
-    gui.provider.currentTextChanged.emit("OpenAI-style")
-    gui.base_url.setText("http://box:8000/v1")
+    gui.language.provider.setCurrentText("OpenAI-style")
+    gui.language.provider.currentTextChanged.emit("OpenAI-style")
+    gui.language.base_url.setText("http://box:8000/v1")
     gui.on_connect()                                       # an Ollama-like server: no key
-    gui.key.setText("gw-token")
+    gui.language.key.setText("gw-token")
     gui.on_connect()                                       # a gateway: the token goes through
     without, with_key = configured
     assert (without.kind, without.base_url, without.api_key) == ("openai-compatible", "http://box:8000/v1", "")
@@ -195,7 +195,7 @@ def test_first_message_connects_with_the_typed_key(monkeypatch):
 
     gui._worker = _Worker()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
-    gui.key.setText("g-key")
+    gui.language.key.setText("g-key")
     sent = _collect(gui.sig_run_turn)
     gui.input.setText("hello")
     gui.on_submit()
@@ -223,8 +223,9 @@ _SERVERS = []  # every _FakeServer built, so a test can inspect the ones the tab
 class _FakeServer:
     """A LocalModelServer stand-in: ready after `ready_after` polls, or dies with `error`."""
 
-    def __init__(self, model_path, ready_after=2, error=None):
+    def __init__(self, model_path, ready_after=2, error=None, projector=None):
         self.model_path = model_path
+        self.projector = projector
         self.model = model_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
         self.port = 4242
         self.base_url = "http://127.0.0.1:4242/v1"
@@ -257,6 +258,7 @@ def _local_gui(tmp_path, monkeypatch, server_factory=_FakeServer):
     core.cfg = types.SimpleNamespace(ai_assistant_models_folder=str(tmp_path))
     gui = AiAssistentGUI(_FakeParent(core))
     gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None, profile=None: setattr(self, "endpoint", endpoint)})()
+    monkeypatch.setenv("GEMINI_API_KEY", "g")                      # the default cloud language model connects
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     monkeypatch.setattr(gui_module, "LocalModelServer", server_factory)
     scheduled = []
@@ -265,26 +267,32 @@ def _local_gui(tmp_path, monkeypatch, server_factory=_FakeServer):
     return gui, scheduled
 
 
-def _choose_mode(gui, mode):
-    gui.mode.setCurrentText(mode)
-    gui.mode.currentTextChanged.emit(mode)
+def _choose_mode(gui, mode, picker=None):
+    picker = picker or gui.language
+    picker.mode.setCurrentText(mode)
+    picker.mode.currentTextChanged.emit(mode)
+
+
+def _choose_provider(picker, name):
+    picker.provider.setCurrentText(name)
+    picker.provider.currentTextChanged.emit(name)
 
 
 def test_local_mode_lists_model_files_and_swaps_the_cloud_fields(tmp_path, monkeypatch):
     gui, _ = _local_gui(tmp_path, monkeypatch)
-    assert gui.provider.isVisible() and not gui.local_model.isVisible()
+    assert gui.language.provider.isVisible() and not gui.language.local_model.isVisible()
     _choose_mode(gui, "Local AI")
-    assert gui.local_model.items() == ["gemma-4-12b-q4.gguf", "qwen3.5-8b-q4.gguf"]
-    assert gui.local_model.isVisible() and gui.folder_button.isVisible()
-    assert not gui.key.isVisible() and not gui.provider.isVisible() and not gui.model.isVisible()
+    assert gui.language.local_model.items() == ["gemma-4-12b-q4.gguf", "qwen3.5-8b-q4.gguf"]
+    assert gui.language.local_model.isVisible() and gui.language.folder_button.isVisible()
+    assert not gui.language.key.isVisible() and not gui.language.provider.isVisible() and not gui.language.model.isVisible()
     _choose_mode(gui, "Cloud AI")
-    assert gui.provider.isVisible() and not gui.local_model.isVisible()
+    assert gui.language.provider.isVisible() and not gui.language.local_model.isVisible()
 
 
 def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     _choose_mode(gui, "Local AI")
-    gui.local_model.setCurrentText("qwen3.5-8b-q4.gguf")
+    gui.language.local_model.setCurrentText("qwen3.5-8b-q4.gguf")
     gui.on_connect()
     (server,) = _SERVERS
     assert server.started and server.model_path == str(tmp_path / "qwen3.5-8b-q4.gguf")
@@ -302,12 +310,12 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
 
 def test_local_server_failure_is_reported_and_cleaned_up(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch,
-                                server_factory=lambda path: _FakeServer(path, error="exited with code 3"))
+                                server_factory=lambda path, projector=None: _FakeServer(path, error="exited with code 3"))
     _choose_mode(gui, "Local AI")
     gui.on_connect()
     scheduled.pop()()
     (server,) = _SERVERS
-    assert server.stopped and gui._local_server is None
+    assert server.stopped and gui._servers == {}
     assert gui.connect_button.text() == "Connect"
     assert "exited with code 3" in gui.output.toPlainText()
 
@@ -320,9 +328,9 @@ def test_switching_models_or_going_cloud_stops_the_previous_server(tmp_path, mon
     gui.on_connect()                                           # a second Connect replaces the child
     assert first.stopped and len(_SERVERS) == 2
     _choose_mode(gui, "Cloud AI")
-    gui.key.setText("k")
+    gui.language.key.setText("k")
     gui.on_connect()
-    assert _SERVERS[-1].stopped and gui._local_server is None
+    assert _SERVERS[-1].stopped and gui._servers == {}
 
 
 def test_empty_models_folder_is_explained(tmp_path, monkeypatch):
@@ -330,7 +338,7 @@ def test_empty_models_folder_is_explained(tmp_path, monkeypatch):
     for name in ("qwen3.5-8b-q4.gguf", "gemma-4-12b-q4.gguf"):
         (tmp_path / name).unlink()
     _choose_mode(gui, "Local AI")
-    assert gui.local_model.items() == [] and not gui.local_model.isEnabled()
+    assert gui.language.local_model.items() == [] and not gui.language.local_model.isEnabled()
     gui.on_connect()
     assert "Put a model file" in gui.output.toPlainText()
 
@@ -345,7 +353,7 @@ def test_choosing_a_folder_rescans(tmp_path, monkeypatch):
     gui.on_choose_folder()
     QtWidgets.QFileDialog.chosen = ""
     assert gui._models_folder == str(other)
-    assert gui.local_model.items() == ["phi.gguf"]
+    assert gui.language.local_model.items() == ["phi.gguf"]
 
 
 # --- the collapsible footer ---
@@ -380,7 +388,7 @@ def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui._worker = type("_Worker", (), {"configure": lambda self, endpoint, vision=None, profile=None: None})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
     gui.setup_toggle.setChecked(True)
-    gui.key.setText("g-key")
+    gui.language.key.setText("g-key")
     gui.on_connect()
     assert not gui.setup_group.isVisible()
     assert gui.setup_toggle.text() == "Set up AI assistant"
@@ -449,19 +457,33 @@ def test_options_row_sets_the_worker_at_once():
     assert gui._worker.max_history_turns == 5 and gui._worker.look_image_size == 512
 
 
-def test_vision_model_choice_reaches_the_worker(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "g")
+def test_vision_box_defers_to_the_language_model_by_default(monkeypatch):
+    gui = _gui()
+    configured = []
+    gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append(vision)})()
+    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+    assert gui.vision.mode.currentText() == "Same as language model" and gui.vision.same
+    assert not gui.vision.provider.isVisible() and not gui.vision.local_model.isVisible()
+    gui.language.key.setText("k")
+    gui.on_connect()
+    assert configured == [None]
+
+
+def test_cloud_vision_model_reaches_the_worker_able_to_see(monkeypatch):
     gui = _gui()
     configured = []
     gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append((endpoint, vision))})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
-    gui.provider.setCurrentText("Anthropic")
-    gui.provider.currentTextChanged.emit("Anthropic")
-    gui.key.setText("sk")
-    gui.vision_provider.setCurrentText("Gemini")
+    _choose_provider(gui.language, "Anthropic")
+    gui.language.key.setText("sk")
+    _choose_mode(gui, "Cloud AI", gui.vision)
+    _choose_provider(gui.vision, "OpenAI-style")               # a vLLM with eyes: the preset alone says no
+    gui.vision.base_url.setText("http://eyes:8000/v1")
     gui.on_connect()
     (endpoint, vision), = configured
-    assert endpoint.provider == "Anthropic" and vision.provider == "Gemini" and vision.api_key == "g"
+    assert endpoint.provider == "Anthropic"
+    assert (vision.kind, vision.base_url, vision.vision) == ("openai-compatible", "http://eyes:8000/v1", True)
+    assert "vision:" in gui.connect_button.toolTip()
 
 
 def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
@@ -470,11 +492,39 @@ def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
     configured = []
     gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append(vision)})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
-    gui.key.setText("k")
-    gui.vision_provider.setCurrentText("OpenAI")
+    gui.language.key.setText("k")
+    _choose_mode(gui, "Cloud AI", gui.vision)
+    _choose_provider(gui.vision, "OpenAI")
     gui.on_connect()
     assert configured == [None]
     assert "OPENAI_API_KEY" in gui.output.toPlainText()
+
+
+def test_local_vision_model_is_served_with_its_projector(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    (tmp_path / "mmproj-gemma-4-12b-f16.gguf").write_bytes(b"")
+    gui.language.key.setText("k")
+    _choose_mode(gui, "Local AI", gui.vision)
+    assert gui.vision.local_model.items() == ["gemma-4-12b-q4.gguf", "qwen3.5-8b-q4.gguf"]  # not the projector
+    gui.vision.local_model.setCurrentText("gemma-4-12b-q4.gguf")
+    gui.on_connect()
+    (server,) = _SERVERS
+    assert server.projector == str(tmp_path / "mmproj-gemma-4-12b-f16.gguf")
+    assert gui.connect_button.text() == "Starting…"
+    scheduled.pop()(); scheduled.pop()()
+    vision = gui._endpoints["vision"]
+    assert (vision.provider, vision.model, vision.base_url, vision.vision) == ("Local", "gemma-4-12b-q4", server.base_url, True)
+    assert gui._worker.endpoint.provider == "Gemini"           # the language model stayed cloud
+    assert gui.connect_button.text() == "Connected"
+
+
+def test_local_vision_model_without_a_projector_is_refused(tmp_path, monkeypatch):
+    gui, _ = _local_gui(tmp_path, monkeypatch)
+    gui.language.key.setText("k")
+    _choose_mode(gui, "Local AI", gui.vision)
+    gui.on_connect()
+    assert _SERVERS == [] and gui.connect_button.text() == "Connect"
+    assert "projector file" in gui.output.toPlainText()
 
 
 def test_stop_microscope_now_goes_the_main_windows_way_and_cancels_the_assistant():
@@ -513,7 +563,7 @@ def test_tools_choice_defaults_to_regular_reaches_the_worker_and_follows_the_con
     gui._worker = type("_W", (), {"configure": lambda self, endpoint, vision=None, profile=None: configured.append(profile),
                                   "set_profile": lambda self, profile: switched.append(profile)})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
-    gui.key.setText("k")
+    gui.language.key.setText("k")
     gui.on_connect()
     assert configured == ["Regular"]
     gui.tools_profile.setCurrentText("Full")

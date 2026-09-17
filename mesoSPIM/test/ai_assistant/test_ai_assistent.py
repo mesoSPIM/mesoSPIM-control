@@ -537,18 +537,10 @@ def test_a_dedicated_vision_model_reads_the_frame_for_a_text_only_main_model(mon
     monkeypatch.setattr(ai, "vision_answer", lambda endpoint, image, question, stats: used.append(endpoint.provider) or "centred")
     local = Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u")
     tools = build_tools(Acceptor(RecordingCore()), threading.Event(), endpoint=local,
-                        vision_endpoint=ai.vision_endpoint_for("Gemini"))
+                        vision_endpoint=Endpoint.from_preset("Gemini"))
     look_tool = next(t for t in tools if t.name == "look")
     out = json.loads(look_tool.function(question="centred?"))
     assert out["answer"] == "centred" and used == ["Gemini"]
-
-
-def test_vision_endpoint_for(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    assert ai.vision_endpoint_for(ai.config.SAME_AS_MODEL) is None
-    assert ai.vision_endpoint_for("Anthropic").provider == "Anthropic"
-    assert ai.vision_endpoint_for("OpenAI") is None                 # no key: the tab explains
 
 
 def test_look_uses_the_live_frame_size(monkeypatch):

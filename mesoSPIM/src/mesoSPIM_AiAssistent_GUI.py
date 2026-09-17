@@ -7,9 +7,10 @@ commands it runs above it, then the final Markdown. Enter submits; the input dis
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
 The setup sits under the input box as a collapsible footer: one line ("Set up AI assistant")
-that expands to two boxes, Preferences and Model. It opens itself when something needs the
-operator (nothing configured, a missing key, a server that failed) and folds back once the
-assistant is ready, so a first-time user sees a chat, not a configuration form.
+that expands to three boxes, Preferences, Language model and Vision model, and one Connect. It
+opens itself when something needs the operator (nothing configured, a missing key, a server that
+failed) and folds back once the assistant is ready, so a first-time user sees a chat, not a
+configuration form.
 
 Maintainer (2026):
     Thom de Hoog
@@ -18,6 +19,7 @@ Maintainer (2026):
     thomdehoog@gmail.com
 """
 
+import dataclasses
 import html as _htmllib
 import os
 import time
@@ -25,11 +27,14 @@ import time
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import mesoSPIM_AiAssistent_Config as config
-from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint, vision_endpoint_for
-from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder
+from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint
+from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder, projector_for
 
 LOCAL_MODE = "Local AI"
 CLOUD_MODE = "Cloud AI"
+SAME_AS_LANGUAGE = "Same as language model"
+LOCAL_PROVIDER = "Local"        # the provider name of a model file served by mesoSPIM itself
+PAIR_GAP = 14                   # px before an inner label, more than the 8 between it and its field
 
 _BUBBLE = "#2b3b47"      # the operator's own turns only — the answers stay on the tab background
 _DIM = "#9aa7b0"         # tool-call and note text
@@ -71,6 +76,150 @@ class _Input(QtWidgets.QPlainTextEdit):
         super().keyPressEvent(event)
 
 
+def _field_label(text, parent, font, gap=PAIR_GAP):
+    """A field's label: right against its field, with room before it so each label-and-field
+    pair reads as one."""
+    widget = QtWidgets.QLabel(parent)
+    widget.setText(text)
+    widget.setFont(font)
+    widget.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+    widget.setContentsMargins(gap, 0, 0, 0)
+    return widget
+
+
+def _describe(endpoint):
+    if endpoint.provider == LOCAL_PROVIDER:
+        return f"{endpoint.model} on {endpoint.base_url}"
+    return f"{endpoint.provider}, {endpoint.model}"
+
+
+class ModelPicker(QtWidgets.QGroupBox):
+    """A titled box that names one model. A Type dropdown (Local AI, Cloud AI, and for the vision
+    box "Same as language model") decides the fields after it: a dropdown of model files and the
+    folder button, or provider and model, then the API key and, for an OpenAI-style server, its
+    base URL. Serving a file is the tab's business; the box only names it."""
+
+    def __init__(self, title, font, parent, models_folder, on_folder, same_as=None):
+        super().__init__(title, parent)
+        self.setFont(font)
+        self.models_folder = models_folder
+        self.grid = QtWidgets.QGridLayout(self)
+        self.grid.setContentsMargins(12, 12, 12, 12)
+        self.grid.setHorizontalSpacing(8)
+        self.grid.setVerticalSpacing(10)
+
+        self.mode = QtWidgets.QComboBox(self)
+        self.mode.addItems(([same_as] if same_as else []) + [LOCAL_MODE, CLOUD_MODE])
+        self.local_model = QtWidgets.QComboBox(self)
+        self.folder_button = QtWidgets.QPushButton("Models folder…", self)
+        self.provider = QtWidgets.QComboBox(self)
+        self.provider.addItems(list(config.PROVIDERS))
+        self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
+        self.model = QtWidgets.QLineEdit("", self)
+        self.model.setMinimumWidth(186)                           # fits the preset model names
+        self.key = QtWidgets.QLineEdit("", self)
+        self.key.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.key.setMinimumWidth(130)
+        self.base_url = QtWidgets.QLineEdit("", self)
+        self.base_url.setMinimumWidth(200)                        # fits the preset address
+        for widget in (self.mode, self.local_model, self.folder_button, self.provider, self.model,
+                       self.key, self.base_url):
+            widget.setFont(font)
+        self.type_label = _field_label("Type", self, font, gap=0)
+        self.local_model_label = _field_label("Model", self, font)
+        self.provider_label = _field_label("Provider", self, font)
+        self.model_label = _field_label("Model", self, font)
+        self.key_label = _field_label("API key", self, font)
+        self.base_url_label = _field_label("Base URL", self, font)
+
+        # Line one: the type and what names the model. Line two, cloud only: the key, after the
+        # base URL when there is one (_on_provider_changed). Columns 5 and 7 take the leftover
+        # width, so the model, the file, the URL and the key all grow with the window.
+        grid = self.grid
+        grid.addWidget(self.type_label, 0, 0)
+        grid.addWidget(self.mode, 0, 1)
+        grid.addWidget(self.local_model_label, 0, 2)
+        grid.addWidget(self.local_model, 0, 3, 1, 5)
+        grid.addWidget(self.folder_button, 0, 8)
+        grid.addWidget(self.provider_label, 0, 2)
+        grid.addWidget(self.provider, 0, 3)
+        grid.addWidget(self.model_label, 0, 4)
+        grid.addWidget(self.model, 0, 5, 1, 4)
+        grid.addWidget(self.base_url_label, 1, 2)
+        grid.addWidget(self.base_url, 1, 3, 1, 3)
+        grid.setColumnStretch(5, 1)
+        grid.setColumnStretch(7, 1)
+
+        self.mode.currentTextChanged.connect(self._on_mode_changed)
+        self.provider.currentTextChanged.connect(self._on_provider_changed)
+        self.folder_button.clicked.connect(on_folder)
+        self.provider.setCurrentText(config.DEFAULT_PROVIDER)
+        self._on_provider_changed(config.DEFAULT_PROVIDER)
+        self.mode.setCurrentText(same_as or CLOUD_MODE)
+        self._on_mode_changed()
+
+    @property
+    def same(self):
+        """True when this box defers to the language model (the vision box's first choice)."""
+        return self.mode.currentText() not in (LOCAL_MODE, CLOUD_MODE)
+
+    @property
+    def local(self):
+        return self.mode.currentText() == LOCAL_MODE
+
+    def _on_mode_changed(self, *_):
+        """Show the fields for the type chosen; the local list is rescanned when it appears."""
+        local, cloud = self.local, not self.local and not self.same
+        server = cloud and config.PROVIDERS[self.provider.currentText()]["kind"] == "openai-compatible"
+        for widget in (self.local_model_label, self.local_model, self.folder_button):
+            widget.setVisible(local)
+        for widget in (self.provider_label, self.provider, self.model_label, self.model,
+                       self.key_label, self.key):
+            widget.setVisible(cloud)
+        for widget in (self.base_url_label, self.base_url):
+            widget.setVisible(server)
+        if local:
+            self.scan_models()
+
+    def _on_provider_changed(self, name):
+        """Prefill the preset. An OpenAI-style server also shows its base URL, and its key is
+        optional: Ollama wants none, a gateway or a hosted API wants one."""
+        preset = config.PROVIDERS[name]
+        self.model.setText(preset["model"])
+        self.base_url.setText(preset.get("base_url", ""))
+        key_env = preset.get("key_env")
+        in_env = bool(key_env and os.environ.get(key_env))
+        if preset["kind"] == "openai-compatible":
+            placeholder = "optional"
+        else:
+            placeholder = f"using {key_env} from the environment" if in_env else f"{name} API key"
+        self.key.setPlaceholderText(placeholder)
+        # The key takes the whole second line, or the end of it after the base URL.
+        self.grid.removeWidget(self.key_label)
+        self.grid.removeWidget(self.key)
+        if preset["kind"] == "openai-compatible":
+            self.grid.addWidget(self.key_label, 1, 6)
+            self.grid.addWidget(self.key, 1, 7, 1, 2)
+        else:
+            self.grid.addWidget(self.key_label, 1, 2)
+            self.grid.addWidget(self.key, 1, 3, 1, 6)
+        self._on_mode_changed()
+
+    def scan_models(self):
+        """Fill the local dropdown from the models folder; an empty folder leaves it greyed."""
+        current = self.local_model.currentText()
+        names = list_models(self.models_folder)
+        self.local_model.clear()
+        self.local_model.addItems(names)
+        if current in names:
+            self.local_model.setCurrentText(current)
+        self.local_model.setEnabled(bool(names))
+
+    def cloud_endpoint(self):
+        return Endpoint.from_preset(self.provider.currentText(), self.model.text(), self.key.text(),
+                                    self.base_url.text())
+
+
 class AiAssistentGUI(QtWidgets.QWidget):
     sig_run_turn = QtCore.pyqtSignal(str)
 
@@ -80,8 +229,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.core = parent.core
         self.setObjectName("AiAssistentTabWidget")
         self._worker = None
-        self._endpoint = None                   # set by Connect, or by the first message
-        self._local_server = None               # the child process serving a local model
+        self._endpoint = None                   # the language model, set by Connect or the first message
+        self._endpoints = {}                    # "language" and, when it is its own, "vision"
+        self._servers = {}                      # by the same names: children serving local files
         self._models_folder = models_folder(getattr(self.core, "cfg", None))
         self._single_shot = QtCore.QTimer.singleShot   # injectable for tests
         self._blocks = []                       # finalized message HTML, oldest first
@@ -225,47 +375,21 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._set_expanded(False)
 
     def _build_setup(self, font):
-        """Two titled boxes, like the Remote Control tab's setup group: Preferences on one line,
-        and Model on two, led by a Local AI / Cloud AI dropdown whose choice decides the fields:
-        a dropdown of model files and the folder button (how a file is served is decided behind
-        Connect), or provider and model, then the API key and, for an OpenAI-style server, its
-        base URL. Connect sits at the bottom right in every case."""
+        """Three titled boxes, like the Remote Control tab's setup group: Preferences on one line,
+        then the Language model and the Vision model, and one Connect at the bottom right that
+        applies all three."""
         setup = QtWidgets.QWidget(self)
         column = QtWidgets.QVBoxLayout(setup)
         column.setContentsMargins(0, 10, 0, 0)                     # air under the toggle; folds with the boxes
         column.setSpacing(8)
-        pair_gap = 14  # px before an inner label, more than the 8 between it and its field
 
-        def box(title):
-            group = QtWidgets.QGroupBox(title, setup)
-            group.setFont(font)
-            grid = QtWidgets.QGridLayout(group)
-            grid.setContentsMargins(12, 12, 12, 12)
-            grid.setHorizontalSpacing(8)
-            grid.setVerticalSpacing(10)
-            column.addWidget(group)
-            return group, grid
-
-        def label(text, group, gap=pair_gap):
-            """A field's label: right against its field, with room before it so each
-            label-and-field pair reads as one."""
-            widget = QtWidgets.QLabel(group)
-            widget.setText(text)
-            widget.setFont(font)
-            widget.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-            widget.setContentsMargins(gap, 0, 0, 0)
-            return widget
-
-        def with_unit(spin, unit):
-            """A number box with its unit after it, as one cell."""
-            cell = QtWidgets.QHBoxLayout()
-            cell.setSpacing(6)
-            cell.addWidget(spin)
-            cell.addWidget(label(unit, preferences, gap=0))
-            cell.addStretch(1)
-            return cell
-
-        preferences, options = box("Preferences")
+        preferences = QtWidgets.QGroupBox("Preferences", setup)
+        preferences.setFont(font)
+        options = QtWidgets.QGridLayout(preferences)
+        options.setContentsMargins(12, 12, 12, 12)
+        options.setHorizontalSpacing(8)
+        options.setVerticalSpacing(10)
+        column.addWidget(preferences)
         self.tools_profile = QtWidgets.QComboBox(preferences)
         self.tools_profile.addItems(list(config.TOOL_PROFILES))
         cfg = getattr(self.core, "cfg", None)
@@ -274,88 +398,67 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.history_turns = QtWidgets.QSpinBox(preferences)
         self.history_turns.setRange(1, 200)
         self.history_turns.setValue(config.MAX_HISTORY_TURNS)
-        self.vision_provider = QtWidgets.QComboBox(preferences)
-        self.vision_provider.addItems([config.SAME_AS_MODEL] + [n for n, p in config.PROVIDERS.items() if p.get("vision")])
         self.frame_size = QtWidgets.QSpinBox(preferences)
         self.frame_size.setRange(256, 4096)
         self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
-
-        group, grid = box("Model")
-        self.mode = QtWidgets.QComboBox(group)
-        self.mode.addItems([LOCAL_MODE, CLOUD_MODE])
-        self.local_model = QtWidgets.QComboBox(group)
-        self.folder_button = QtWidgets.QPushButton("Models folder…", group)
-        self.provider = QtWidgets.QComboBox(group)
-        self.provider.addItems(list(config.PROVIDERS))
-        self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
-        self.model = QtWidgets.QLineEdit("", group)
-        self.model.setMinimumWidth(186)                           # fits the preset model names
-        self.key = QtWidgets.QLineEdit("", group)
-        self.key.setEchoMode(QtWidgets.QLineEdit.Password)
-        self.key.setMinimumWidth(130)
-        self.base_url = QtWidgets.QLineEdit("", group)
-        self.base_url.setMinimumWidth(200)                        # fits the preset address
-        self.connect_button = QtWidgets.QPushButton("Connect", group)
-        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
-        self._local_model_label = label("Model", group)
-        self._provider_label = label("Provider", group)
-        self._model_label = label("Model", group)
-        self._key_label = label("API key", group)
-        self._base_url_label = label("Base URL", group)
-        for widget in (self.tools_profile, self.history_turns, self.vision_provider, self.frame_size,
-                       self.mode, self.local_model, self.folder_button, self.provider, self.model,
-                       self.key, self.base_url, self.connect_button):
+        for widget in (self.tools_profile, self.history_turns, self.frame_size):
             widget.setFont(font)
 
-        # Preferences: four pairs on one line, the leftover width after them.
-        tool_set_label = label("Tool set", preferences, gap=0)
-        vision_label = label("Vision model", preferences)
+        def with_unit(spin, unit):
+            """A number box with its unit after it, as one cell."""
+            cell = QtWidgets.QHBoxLayout()
+            cell.setSpacing(6)
+            cell.addWidget(spin)
+            cell.addWidget(_field_label(unit, preferences, font, gap=0))
+            cell.addStretch(1)
+            return cell
+
+        # Three pairs on one line, the leftover width after them.
+        tool_set_label = _field_label("Tool set", preferences, font, gap=0)
+        memory_label = _field_label("Memory", preferences, font)
+        image_label = _field_label("Downsample image to", preferences, font)
         options.addWidget(tool_set_label, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
-        options.addWidget(label("Memory", preferences), 0, 2)
+        options.addWidget(memory_label, 0, 2)
         options.addLayout(with_unit(self.history_turns, "turns"), 0, 3)
-        options.addWidget(vision_label, 0, 4)
-        options.addWidget(self.vision_provider, 0, 5)
-        options.addWidget(label("Frame", preferences), 0, 6)
-        options.addLayout(with_unit(self.frame_size, "px"), 0, 7)
-        options.setColumnStretch(8, 1)
-        # Model: the first line is the type and what names the model, the second the key (and
-        # the base URL, which pushes the key to the right: _on_provider_changed) and Connect.
-        # Columns 5 and 7 take the leftover width, so the model, the file, the URL and the key
-        # all grow with the window. The first columns are as wide as in Preferences, so the two
-        # boxes line up: Type under Tool set, Provider under Memory, Model under Vision model.
-        widest = max(w.sizeHint().width() for w in (self._provider_label, self._base_url_label, self._key_label))
-        for column, width in ((0, tool_set_label.sizeHint().width()), (1, 144), (2, widest),
-                              (3, self.provider.sizeHint().width()), (4, vision_label.sizeHint().width())):
-            options.setColumnMinimumWidth(column, width)
-            grid.setColumnMinimumWidth(column, width)
-        grid.addWidget(label("Type", group, gap=0), 0, 0)
-        grid.addWidget(self.mode, 0, 1)
-        grid.addWidget(self._local_model_label, 0, 2)
-        grid.addWidget(self.local_model, 0, 3, 1, 5)
-        grid.addWidget(self.folder_button, 1, 7, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)  # by Connect
-        grid.addWidget(self._provider_label, 0, 2)
-        grid.addWidget(self.provider, 0, 3)
-        grid.addWidget(self._model_label, 0, 4)
-        grid.addWidget(self.model, 0, 5, 1, 3)
-        grid.addWidget(self._base_url_label, 1, 2)
-        grid.addWidget(self.base_url, 1, 3, 1, 3)
-        grid.addWidget(self.connect_button, 1, 8)
-        grid.setColumnStretch(5, 1)
-        grid.setColumnStretch(7, 1)
-        self._model_grid = grid
+        options.addWidget(image_label, 0, 4)
+        options.addLayout(with_unit(self.frame_size, "px"), 0, 5)
+        options.setColumnStretch(6, 1)
+
+        self.language = ModelPicker("Language model", font, setup, self._models_folder, self.on_choose_folder)
+        self.vision = ModelPicker("Vision model", font, setup, self._models_folder, self.on_choose_folder,
+                                  same_as=SAME_AS_LANGUAGE)
+        column.addWidget(self.language)
+        column.addWidget(self.vision)
+
+        self.connect_button = QtWidgets.QPushButton("Connect", setup)
+        self.connect_button.setFont(font)
+        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
+        self.connect_button.clicked.connect(self.on_connect)
+        row = QtWidgets.QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(self.connect_button)
+        column.addLayout(row)
+
+        # The boxes share their first columns, each as wide as its widest occupant, so Type sits
+        # under Tool set, the dropdowns under each other, Provider under Memory.
+        pickers = (self.language, self.vision)
+
+        def widest(*widgets):
+            return max(widget.sizeHint().width() for widget in widgets)
+
+        widths = (
+            widest(tool_set_label, *(p.type_label for p in pickers)),
+            widest(*(p.mode for p in pickers)),                  # "Same as language model" sets it
+            widest(memory_label, *(w for p in pickers for w in (p.provider_label, p.base_url_label, p.key_label))),
+            widest(self.history_turns, *(p.provider for p in pickers)),
+        )
+        for grid in (options, self.language.grid, self.vision.grid):
+            for index, width in enumerate(widths):
+                grid.setColumnMinimumWidth(index, width)
         self.tools_profile.currentTextChanged.connect(self._apply_profile)
         self.history_turns.valueChanged.connect(self._apply_options)
         self.frame_size.valueChanged.connect(self._apply_options)
-
-        self.mode.currentTextChanged.connect(self._on_mode_changed)
-        self.provider.currentTextChanged.connect(self._on_provider_changed)
-        self.folder_button.clicked.connect(self.on_choose_folder)
-        self.connect_button.clicked.connect(self.on_connect)
-        self.provider.setCurrentText(config.DEFAULT_PROVIDER)
-        self._on_provider_changed(config.DEFAULT_PROVIDER)
-        self.mode.setCurrentText(CLOUD_MODE)
-        self._on_mode_changed()
         return setup
 
     # --- the footer ---
@@ -373,148 +476,120 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setup_toggle.setArrowType(QtCore.Qt.DownArrow if expanded else QtCore.Qt.RightArrow)
 
     # --- setup state ---
-    def _local_mode(self):
-        return self.mode.currentText() == LOCAL_MODE
-
-    def _on_mode_changed(self, *_):
-        """Show the fields for the type chosen; the local list is rescanned when it appears."""
-        local = self._local_mode()
-        server = not local and config.PROVIDERS[self.provider.currentText()]["kind"] == "openai-compatible"
-        for widget in (self._local_model_label, self.local_model, self.folder_button):
-            widget.setVisible(local)
-        for widget in (self._provider_label, self.provider, self._model_label, self.model,
-                       self._key_label, self.key):
-            widget.setVisible(not local)
-        for widget in (self._base_url_label, self.base_url):
-            widget.setVisible(server)
-        if local:
-            self._scan_models()
-
-    def _on_provider_changed(self, name):
-        """Prefill the preset. An OpenAI-style server also shows its base URL, and its key is
-        optional: Ollama wants none, a gateway or a hosted API wants one."""
-        preset = config.PROVIDERS[name]
-        self.model.setText(preset["model"])
-        self.base_url.setText(preset.get("base_url", ""))
-        key_env = preset.get("key_env")
-        in_env = bool(key_env and os.environ.get(key_env))
-        if preset["kind"] == "openai-compatible":
-            placeholder = "optional"
-        else:
-            placeholder = f"using {key_env} from the environment" if in_env else f"{name} API key"
-        self.key.setPlaceholderText(placeholder)
-        # The key takes the whole second line, or the end of it after the base URL.
-        grid = self._model_grid
-        grid.removeWidget(self._key_label)
-        grid.removeWidget(self.key)
-        if preset["kind"] == "openai-compatible":
-            grid.addWidget(self._key_label, 1, 6)
-            grid.addWidget(self.key, 1, 7)
-        else:
-            grid.addWidget(self._key_label, 1, 2)
-            grid.addWidget(self.key, 1, 3, 1, 5)
-        self._on_mode_changed()
-
-    def _scan_models(self):
-        """Fill the local dropdown from the models folder; say so when it holds nothing."""
-        current = self.local_model.currentText()
-        names = list_models(self._models_folder)
-        self.local_model.clear()
-        self.local_model.addItems(names)
-        if current in names:
-            self.local_model.setCurrentText(current)
-        self.local_model.setEnabled(bool(names))
-
     def on_choose_folder(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Models folder", self._models_folder)
         if path:
             self._models_folder = path
-            self._scan_models()
+            for picker in (self.language, self.vision):
+                picker.models_folder = path
+                picker.scan_models()
 
     # --- connecting ---
     def on_connect(self):
         self._connect()
 
     def _connect(self):
-        """Apply the setup row. Returns True when the assistant can take a message now. A local
-        model returns False while its server is still loading; the status shows the progress."""
+        """Apply the three boxes. Returns True when the assistant can take a message now; False
+        after a note, or while a local model is still loading (the Connect button says so)."""
         if not self._ensure_worker():
             self._note("Stop the Remote Control transport to use the AI Assistant.")
             return False
-        return self._connect_local() if self._local_mode() else self._connect_cloud()
-
-    def _connect_cloud(self):
-        endpoint = Endpoint.from_preset(
-            self.provider.currentText(), self.model.text(), self.key.text(), self.base_url.text()
-        )
-        if endpoint.needs_key and not endpoint.api_key:
-            key_env = config.PROVIDERS[endpoint.provider].get("key_env")
-            self._note(f"Enter an API key for {endpoint.provider}, or set {key_env} before starting mesoSPIM.")
+        plan = self._plan()
+        if plan is None:
             return False
-        self._stop_local_server()
-        self._use(endpoint)
+        self._stop_local_servers()
+        self._endpoints = {}
+        for role, choice in plan.items():
+            if isinstance(choice, Endpoint):
+                self._endpoints[role] = choice
+            elif choice is not None:
+                path, projector = choice
+                server = LocalModelServer(path, projector=projector)
+                try:
+                    server.start()
+                except (RuntimeError, OSError) as error:  # missing runtime, or the child could not spawn
+                    self._local_failed(str(error))
+                    return False
+                self._servers[role] = server
+        if self._servers:
+            self._endpoint = None
+            self._started_at = time.monotonic()
+            self._set_connect_state("starting", ", ".join(server.model for server in self._servers.values()))
+            self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_servers)
+            return False
+        self._use()
         return True
 
-    def _connect_local(self):
-        name = self.local_model.currentText()
-        if not name:
-            self._note(f"Put a model file ({', '.join(config.MODEL_SUFFIXES)}) in {self._models_folder} first.")
-            return False
-        self._stop_local_server()
-        server = LocalModelServer(os.path.join(self._models_folder, name))
-        try:
-            server.start()
-        except (RuntimeError, OSError) as error:  # missing runtime, or the child could not spawn
-            self._note(str(error))
-            return False
-        self._local_server = server
-        self._endpoint = None
-        self._started_at = time.monotonic()
-        self._set_connect_state("starting", server.model)
-        self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_server)
-        return False
+    def _plan(self):
+        """What each box asks for, by role: an Endpoint, a (path, projector) pair for a file to
+        serve, or None when the vision model is the language model. None altogether after a note
+        that says what to fix."""
+        plan = {}
+        for role, picker in (("language", self.language), ("vision", self.vision)):
+            if picker.same:
+                plan[role] = None
+            elif picker.local:
+                name = picker.local_model.currentText()
+                if not name:
+                    self._note(f"Put a model file ({', '.join(config.MODEL_SUFFIXES)}) in {self._models_folder} first.")
+                    return None
+                projector = projector_for(self._models_folder, name) if role == "vision" else None
+                if role == "vision" and projector is None:
+                    self._note(f"{name} needs its projector file (mmproj…) beside it in {self._models_folder} to see.")
+                    return None
+                plan[role] = (os.path.join(self._models_folder, name), projector)
+            else:
+                endpoint = picker.cloud_endpoint()
+                if endpoint.needs_key and not endpoint.api_key:
+                    key_env = config.PROVIDERS[endpoint.provider].get("key_env")
+                    if role == "language":
+                        self._note(f"Enter an API key for {endpoint.provider}, or set {key_env} before starting mesoSPIM.")
+                        return None
+                    self._note(f"Vision model {endpoint.provider} needs an API key, or {key_env} in the environment; "
+                               "the language model will read frames if it can.")
+                    endpoint = None
+                if role == "vision" and endpoint is not None:
+                    endpoint = dataclasses.replace(endpoint, vision=True)   # chosen to see, so it may
+                plan[role] = endpoint
+        return plan
 
-    def _poll_local_server(self):
-        server = self._local_server
-        if server is None:
-            return
-        try:
-            ready = server.ready()
-        except RuntimeError as error:  # the child exited
-            self._local_failed(str(error))
-            return
-        if ready:
-            self._use(Endpoint(provider="Local", kind="openai-compatible", model=server.model, base_url=server.base_url),
-                      detail=f"{server.model} on 127.0.0.1:{server.port}")
-        elif time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
-            self._local_failed(f"{server.model} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; see {server.log_path}")
-        else:
-            self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_server)
+    def _poll_local_servers(self):
+        for server in self._servers.values():
+            try:
+                ready = server.ready()
+            except RuntimeError as error:  # the child exited
+                self._local_failed(str(error))
+                return
+            if not ready:
+                if time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
+                    self._local_failed(f"{server.model} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; "
+                                       f"see {server.log_path}")
+                else:
+                    self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_servers)
+                return
+        for role, server in self._servers.items():
+            self._endpoints[role] = Endpoint(provider=LOCAL_PROVIDER, kind="openai-compatible", model=server.model,
+                                             base_url=server.base_url, vision=role == "vision")
+        self._use()
 
     def _local_failed(self, message):
-        self._stop_local_server()
+        self._stop_local_servers()
         self._endpoint = None
         self._set_connect_state("idle")
         self._note(message)
 
-    def _use(self, endpoint, detail=None):
-        self._worker.configure(endpoint, self._vision_endpoint(), self.tools_profile.currentText())
-        self._endpoint = endpoint
-        self._set_connect_state("ready", detail or f"{endpoint.provider}, {endpoint.model}")
+    def _use(self):
+        """Hand the endpoints to the worker; the Connect button turns green and says which."""
+        language, vision = self._endpoints["language"], self._endpoints.get("vision")
+        self._worker.configure(language, vision, self.tools_profile.currentText())
+        self._endpoint = language
+        detail = _describe(language) + (f"; vision: {_describe(vision)}" if vision else "")
+        self._set_connect_state("ready", detail)
         self._set_expanded(False)
 
-    def _vision_endpoint(self):
-        """The dedicated frame reader chosen in the options row, or None for the main model."""
-        chosen = self.vision_provider.currentText()
-        reader = vision_endpoint_for(chosen)
-        if chosen != config.SAME_AS_MODEL and reader is None:
-            key_env = config.PROVIDERS[chosen].get("key_env")
-            self._note(f"Vision model {chosen} needs {key_env} in the environment; the main model will read frames if it can.")
-        return reader
-
-    def _stop_local_server(self):
-        server, self._local_server = self._local_server, None
-        if server is not None:
+    def _stop_local_servers(self):
+        servers, self._servers = self._servers, {}
+        for server in servers.values():
             server.stop()
 
     def _note(self, text):
@@ -631,10 +706,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _set_running(self, running):
         self.input.setEnabled(not running)
-        for widget in (self.mode, self.provider, self.model, self.local_model,
-                       self.key, self.base_url, self.folder_button, self.connect_button, self.new_button,
-                       self.vision_provider, self.tools_profile):
-            widget.setEnabled(not running)      # the endpoint and tool set change only between turns
+        for widget in (self.language, self.vision, self.connect_button, self.new_button, self.tools_profile):
+            widget.setEnabled(not running)      # the models and the tool set change only between turns
         if running:
             self._set_expanded(False)
         self.status.setText("mesoSPIM is working…" if running else "")
@@ -673,7 +746,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         """Called by MainWindow on app exit: stop the assistant, join with a bound so the GUI
         never hangs on an in-flight model call, release the Core-owned Acceptor, and stop a
         local model server. The instrument is the main window's to stop."""
-        self._stop_local_server()
+        self._stop_local_servers()
         if self._worker is not None:
             self._worker.interrupt()
             self._thread.quit()

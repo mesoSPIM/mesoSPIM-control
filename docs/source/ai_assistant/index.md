@@ -25,50 +25,57 @@ integration
 
 ## Setting it up
 
-The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to two
-boxes, **Preferences** and **Model**, and opens by itself when something needs the operator:
-nothing configured yet, a missing key, or a local model that failed to start. Once the assistant
-is ready it folds back. The Model box starts with a **Type** dropdown, Local AI or Cloud AI; the
-fields after it follow the choice, and Connect sits at its bottom right.
+The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to three
+boxes, **Preferences**, **Language model** and **Vision model**, with one **Connect** under them,
+and opens by itself when something needs the operator: nothing configured yet, a missing key, or
+a local model that failed to start. Once the assistant is ready it folds back. Each model box
+starts with a **Type** dropdown; the fields after it follow the choice.
 
-**Cloud.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style** for any server that
-speaks the OpenAI API, such as an Ollama or vLLM already running somewhere, or a hosted gateway),
-keep or edit the prefilled model name, and type the API key into the masked field. OpenAI-style
-also asks for the server's base URL, and there the key is optional: Ollama wants none, a gateway
-or a hosted API wants its token. The key is kept in memory for this mesoSPIM session only and is
-never written to the repository, the microscope config, or a log. An empty field falls back to
-the provider's environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`), so
-a key exported before starting mesoSPIM keeps working.
+**Language model, Cloud AI.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style**
+for any server that speaks the OpenAI API, such as an Ollama or vLLM already running somewhere, or
+a hosted gateway), keep or edit the prefilled model name, and type the API key into the masked
+field. OpenAI-style also asks for the server's base URL, and there the key is optional: Ollama
+wants none, a gateway or a hosted API wants its token. The key is kept in memory for this mesoSPIM
+session only and is never written to the repository, the microscope config, or a log. An empty
+field falls back to the provider's environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`), so a key exported before starting mesoSPIM keeps working.
 
-**Local.** One **Model** dropdown lists the `.gguf` files in the models folder (`~/mesoSPIM/models`,
-or the `ai_assistant_models_folder` attribute of the microscope config; **Models folder…** points
-it elsewhere for the session). Download a file from Hugging Face, drop it in, choose it, Connect.
-Nothing leaves the machine and no key is needed. Behind Connect, mesoSPIM serves the file itself
-with llama.cpp's OpenAI-compatible server (`pip install llama-cpp-python`, or the
-`ai-assistant-local` extra) as a child process on a loopback port; the Connect button reads
-"Starting…" while the model loads, then turns green with "Connected". Switching models, going back to Cloud, or
-closing mesoSPIM stops the child. A server that fails to start is reported with the path of its
-log. Use a GPU build of llama-cpp-python for anything above a few billion parameters; the 4B to 12B
-instruction models are the realistic range on a microscope PC.
+**Language model, Local AI.** One **Model** dropdown lists the `.gguf` files in the models folder
+(`~/mesoSPIM/models`, or the `ai_assistant_models_folder` attribute of the microscope config;
+**Models folder…** points it elsewhere for the session). Download a file from Hugging Face, drop
+it in, choose it, Connect. Nothing leaves the machine and no key is needed. Behind Connect,
+mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server (`pip install
+llama-cpp-python`, or the `ai-assistant-local` extra) as a child process on a loopback port; the
+Connect button reads "Starting…" while the model loads, then turns green with "Connected".
+Connecting again, or closing mesoSPIM, stops the child. A server that fails to start is reported
+with the path of its log. Use a GPU build of llama-cpp-python for anything above a few billion
+parameters; the 4B to 12B instruction models are the realistic range on a microscope PC.
 
-A third row holds preferences that apply at once. **Tool set** chooses what the assistant may do:
-*Regular* (the default) is for a user setting up a sample on a configured microscope: reads, stage
-and sample moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live,
-and the acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and
-camera timing, the ETL calibration files, the alignment modes and the generic setting call. In
-Regular the other commands are not offered to the model at all, so it cannot be talked into them.
-The start-up choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or "Full").
-TCP and MCP always serve every command; this is the assistant only. Then: how many turns the model
-remembers, and the **Vision model**: "same as model" lets the main model read frames when it can; a cloud provider here reads
-frames on its behalf (keyed from that provider's environment variable), which gives a local
-text-only model eyes. The frame size sent to the vision model (longer side, 1024 px by default)
-sits next to it: smaller is cheaper and faster, and enough for "is it centred" or "is it
-saturated"; the numbers always come from the full frame.
+**Vision model.** The model that reads camera frames when the assistant looks. *Same as language
+model* (the default) lets the language model read frames itself when it can; a text-only local
+model then decides from the numbers alone. Choosing Cloud AI or Local AI here gives it eyes: the
+same fields as above, and the frame goes to this model in a separate call with the question, so
+the conversation itself never carries images. A local vision model needs its projector file
+(`mmproj-…gguf`) in the models folder beside the model file; mesoSPIM picks the one whose name
+matches and serves the two together. Whether a given local file can see depends on
+llama-cpp-python supporting that model family's projector.
 
-**Connect** applies the rows; a first message sent without pressing it applies them as typed.
-Building a cloud endpoint does not contact the provider, so a wrong key shows up as an error on the
-first message. The endpoint can be changed between turns and the transcript is kept. The presets
-live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
+**Preferences** apply at once. **Tool set** chooses what the assistant may do: *Regular* (the
+default) is for a user setting up a sample on a configured microscope: reads, stage and sample
+moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live, and the
+acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and camera timing,
+the ETL calibration files, the alignment modes and the generic setting call. In Regular the other
+commands are not offered to the model at all, so it cannot be talked into them. The start-up
+choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or
+"Full"). TCP and MCP always serve every command; this is the assistant only. **Memory** is how
+many turns the model remembers. **Downsample image to** is the size of the frame handed to the
+vision model (longer side, 1024 px by default): smaller is cheaper and faster, and enough for "is
+it centred" or "is it saturated"; the numbers always come from the full frame.
+
+**Connect** applies the three boxes; a first message sent without pressing it applies them as
+typed. Building a cloud endpoint does not contact the provider, so a wrong key shows up as an
+error on the first message. The models can be changed between turns and the transcript is kept.
+The presets live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 

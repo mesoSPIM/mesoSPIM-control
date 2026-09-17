@@ -287,7 +287,8 @@ if not hasattr(QtWidgets.QComboBox, "setSizeAdjustPolicy"):
     QtWidgets.QComboBox.setSizeAdjustPolicy = lambda self, _p: None
     QtWidgets.QComboBox.AdjustToContents = 0
 if not hasattr(QtWidgets.QWidget, "setToolTip"):
-    QtWidgets.QWidget.setToolTip = lambda self, _t: None
+    QtWidgets.QWidget.setToolTip = lambda self, text: setattr(self, "_tooltip", text)
+    QtWidgets.QWidget.toolTip = lambda self: getattr(self, "_tooltip", "")
 if not hasattr(QtWidgets.QWidget, "setFocus"):
     QtWidgets.QWidget.setFocus = lambda self: None
 if not hasattr(QtWidgets.QWidget, "setStyleSheet"):

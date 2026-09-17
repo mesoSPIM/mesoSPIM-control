@@ -8,7 +8,8 @@ import types
 import pytest
 
 from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
-from mesoSPIM.src.mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder, server_command
+from mesoSPIM.src.mesoSPIM_AiAssistent_Local import (LocalModelServer, list_models, models_folder, projector_for,
+                                                     server_command)
 
 
 def test_models_folder_prefers_the_microscope_config():
@@ -39,6 +40,20 @@ def test_server_command_serves_the_file_on_loopback(monkeypatch):
     assert argv[argv.index("--model_alias") + 1] == "qwen-8b"
     assert argv[argv.index("--host") + 1] == "127.0.0.1"
     assert argv[argv.index("--port") + 1] == "4321"
+    assert "--clip_model_path" not in argv
+    with_eyes = server_command("/models/qwen-8b.gguf", 4321, projector="/models/mmproj-qwen-8b.gguf")
+    assert with_eyes[with_eyes.index("--clip_model_path") + 1] == "/models/mmproj-qwen-8b.gguf"
+
+
+def test_projector_for_matches_by_name_or_takes_the_only_one(tmp_path):
+    assert projector_for(str(tmp_path / "missing"), "gemma-4-12b-q4.gguf") is None
+    assert projector_for(str(tmp_path), "gemma-4-12b-q4.gguf") is None                 # nothing there
+    (tmp_path / "mmproj-qwen3.5-8b-f16.gguf").write_bytes(b"")
+    assert projector_for(str(tmp_path), "gemma-4-12b-q4.gguf") == str(tmp_path / "mmproj-qwen3.5-8b-f16.gguf")  # the only one
+    (tmp_path / "gemma-4-12b-mmproj-f16.gguf").write_bytes(b"")
+    assert projector_for(str(tmp_path), "gemma-4-12b-q4.gguf") == str(tmp_path / "gemma-4-12b-mmproj-f16.gguf")
+    assert projector_for(str(tmp_path), "qwen3.5-8b-q4.gguf") == str(tmp_path / "mmproj-qwen3.5-8b-f16.gguf")
+    assert projector_for(str(tmp_path), "phi-4-q4.gguf") is None                        # several, none match
 
 
 _FAKE_SERVER = """
@@ -54,7 +69,7 @@ HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
 """
 
 
-def _fake_command(model_path, port):
+def _fake_command(model_path, port, projector=None):
     return [sys.executable, "-c", _FAKE_SERVER, str(port)]
 
 
@@ -86,7 +101,7 @@ def test_server_starts_becomes_ready_and_stops(tmp_path):
 
 def test_server_that_dies_is_reported_with_its_log(tmp_path):
     server = LocalModelServer(str(tmp_path / "m.gguf"),
-                              command=lambda p, port: [sys.executable, "-c", "import sys; sys.exit(3)"])
+                              command=lambda p, port, projector: [sys.executable, "-c", "import sys; sys.exit(3)"])
     server.start()
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
