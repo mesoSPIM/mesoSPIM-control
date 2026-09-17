@@ -6,6 +6,7 @@ Real-thread ordering is left to the real-PyQt smoke test, matching the Remote Co
 """
 import json
 import threading
+import time
 
 import pytest
 
@@ -197,8 +198,36 @@ def test_run_turn_reports_a_blank_error_with_its_type(monkeypatch):
 def test_interrupt_sets_cancel_and_stops():
     acc = FakeAcceptor()
     worker = AssistantWorker(acc)
-    worker.interrupt()
+    stopper = worker.interrupt()
     assert worker.cancel.is_set()
+    stopper.join(5)
+    assert not stopper.is_alive()
+    assert ("stop", {}) in acc.calls
+
+
+def test_interrupt_returns_without_waiting_for_a_busy_core():
+    """The Interrupt button runs on the GUI thread. A dispatch waits up to DISPATCH_TIMEOUT_SEC
+    for Core, so the stop must be issued from another thread or the GUI freezes on the one
+    control meant for emergencies."""
+    release = threading.Event()
+    reached = threading.Event()
+
+    class BusyAcceptor(FakeAcceptor):
+        def dispatch(self, name, args):
+            reached.set()
+            assert release.wait(5), "the stop dispatch was never released"
+            return super().dispatch(name, args)
+
+    acc = BusyAcceptor()
+    worker = AssistantWorker(acc)
+    started = time.monotonic()
+    stopper = worker.interrupt()
+    assert time.monotonic() - started < 1.0           # returned while Core is still "busy"
+    assert worker.cancel.is_set()                      # further tool calls are gated at once
+    assert reached.wait(5)                             # the stop was still issued, elsewhere
+    assert stopper.is_alive() and ("stop", {}) not in acc.calls
+    release.set()
+    stopper.join(5)
     assert ("stop", {}) in acc.calls
 
 

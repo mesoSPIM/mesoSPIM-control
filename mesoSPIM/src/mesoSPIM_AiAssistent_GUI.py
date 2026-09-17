@@ -211,7 +211,10 @@ class AiAssistentGUI(QtWidgets.QWidget):
         """Called by MainWindow on app exit: stop the agent, join with a bound so the GUI
         never hangs on an in-flight model call, and release the Core-owned Acceptor."""
         if self._worker is not None:
-            self._worker.interrupt()
+            stopper = self._worker.interrupt()
             self._thread.quit()
             self._thread.wait(3000)
+            # The emergency stop is issued from a helper thread; give it a bounded chance to reach
+            # Core before the acceptor is released (a closed acceptor refuses the dispatch).
+            stopper.join(3.0)
             self._call_on_core("stop_ai_assistant")

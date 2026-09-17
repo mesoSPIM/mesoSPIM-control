@@ -220,3 +220,24 @@ def test_stop_always_emits(tab):
     tab.running = False
     tab.stop()
     assert len(tab.core.stopped) == 1
+
+
+class _ThreadedFakeCore(_FakeCore):
+    """A core that reports a different thread than the tab, as production does."""
+
+    def thread(self):
+        return object()
+
+
+def test_core_to_gui_bridge_is_queued_never_blocking_across_threads():
+    from PyQt5.QtCore import Qt
+
+    window = _FakeParent(_ThreadedFakeCore())
+    tab = RemoteControlGUI(window)
+
+    by_slot = {slot: kwargs for slot, kwargs in tab.sig_install_acquisition_list.connections}
+    assert by_slot[tab.install_acquisition_list]["type"] == Qt.QueuedConnection
+    # The GUI -> Core direction may block; the GUI thread waiting on Core is fine on its own. What
+    # must never happen is Core also waiting on the GUI, which is the bridge above.
+    stop_type = {slot: kwargs for slot, kwargs in tab.sig_stop_remote_control.connections}
+    assert stop_type[window.core.stop_remote_control]["type"] == Qt.BlockingQueuedConnection

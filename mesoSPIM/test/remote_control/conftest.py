@@ -30,9 +30,11 @@ def _install_fake_pyqt5():
 
         def __init__(self):
             self._slots = []
+            self.connections = []  # (slot, kwargs) so a test can assert the connection type
 
         def connect(self, slot, *a, **k):
             self._slots.append(slot)
+            self.connections.append((slot, k))
 
         def disconnect(self, slot=None):
             self._slots = [] if slot is None else [s for s in self._slots if s is not slot]
@@ -75,8 +77,11 @@ def _install_fake_pyqt5():
             fn()  # immediate: drive deferred WAIT bodies in-test
 
     class _Qt:
-        QueuedConnection = 0
+        # Distinct values so a test can tell the connection types apart (real Qt: 0/1/2/3).
+        AutoConnection = 0
         DirectConnection = 1
+        QueuedConnection = 2
+        BlockingQueuedConnection = 3
 
     qtcore.QObject = QObject
     qtcore.pyqtSignal = pyqtSignal
@@ -100,6 +105,9 @@ def _install_fake_pyqt5():
         def __init__(self, parent=None):
             self._parent = parent
             self._enabled = True
+
+        def thread(self):
+            return _MAIN_THREAD  # widgets live on the GUI thread, like QObject above
 
         def setObjectName(self, _name):
             pass

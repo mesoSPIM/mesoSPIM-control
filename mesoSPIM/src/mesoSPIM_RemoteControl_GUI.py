@@ -26,8 +26,11 @@ class RemoteControlGUI(QtWidgets.QWidget):
     """Self-contained Remote Control GUI.
 
     Start is queued to Core so the transport is created on its owning thread. Stop blocks until Core
-    has unbound it. The acquisition-list bridge blocks in the opposite direction just long enough to
-    reset the GUI model on its owning thread. MainWindow keeps only a handle and calls shutdown().
+    has unbound it. The acquisition-list bridge is queued in the opposite direction: Core hands the
+    list to the GUI thread and carries on. It must never block, because the GUI thread may at that
+    moment be blocked on Core (Stop, or the AI Assistant acquiring its acceptor), and two threads
+    each waiting for the other is a frozen application. MainWindow keeps only a handle and calls
+    shutdown().
     """
 
     # Signal arguments are mode, host, port, and password.
@@ -55,9 +58,11 @@ class RemoteControlGUI(QtWidgets.QWidget):
             separate_threads = False
 
         blocking = QtCore.Qt.BlockingQueuedConnection if separate_threads else QtCore.Qt.DirectConnection
+        queued = QtCore.Qt.QueuedConnection if separate_threads else QtCore.Qt.DirectConnection
         self.sig_start_remote_control.connect(self.core.start_remote_control, type=QtCore.Qt.QueuedConnection)
         self.sig_stop_remote_control.connect(self.core.stop_remote_control, type=blocking)
-        self.sig_install_acquisition_list.connect(self.install_acquisition_list, type=blocking)
+        # Core -> GUI is queued, never blocking (see the class docstring for the deadlock it avoids).
+        self.sig_install_acquisition_list.connect(self.install_acquisition_list, type=queued)
         # Commands run on Core's thread. Publishing this bound signal avoids adding acquisition-table
         # plumbing to Core/MainWindow while still performing the Qt model reset on the GUI thread.
         self.core._remote_control_acquisition_list_signal = self.sig_install_acquisition_list

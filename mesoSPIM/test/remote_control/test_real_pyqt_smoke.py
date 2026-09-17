@@ -39,6 +39,7 @@ class Core(QtCore.QObject):
         self.timelapse_active = False
         self.started = []
         self.stopped = 0
+        self.stop_time_list = [{"filename": "installed-during-stop.raw"}]
         self.calls = []
         self.sig_publish_acquisition_list.connect(self.publish_acquisition_list)
 
@@ -48,6 +49,13 @@ class Core(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def stop_remote_control(self):
+        # Runs on the Core thread while the GUI thread is BLOCKED in tab.stop() (a
+        # BlockingQueuedConnection). A remote set_acquisition_list landing at this moment emits the
+        # Core -> GUI bridge from here. With a blocking bridge both threads wait on each other
+        # forever; the bridge must therefore be queued. main() guards this with a watchdog.
+        bridge = getattr(self, "_remote_control_acquisition_list_signal", None)
+        if bridge is not None:
+            bridge.emit(self.stop_time_list, 0)
         self.stopped += 1
 
     @QtCore.pyqtSlot(object, object)
@@ -136,8 +144,17 @@ def main():
     assert window.core.started == [("TCP", "127.0.0.1", 42000, "smoke-secret")]
     window.core.sig_remote_control_started.emit(True, "127.0.0.1:42000")
     assert tab.running and all(not widget.isEnabled() for widget in tab._inputs())
+
+    # Deadlock regression: Stop blocks the GUI thread on Core, and Core emits the acquisition-list
+    # bridge back at the GUI thread while it is blocked. A blocking bridge never returns; the
+    # watchdog turns that hang into a failed run instead of a silent one.
+    watchdog = threading.Timer(15, lambda: os._exit(3))
+    watchdog.daemon = True
+    watchdog.start()
     tab.stop()
+    watchdog.cancel()
     assert window.core.stopped == 1 and not tab.running
+    process_until(app, lambda: window.acquisition_manager_window.model.table is window.core.stop_time_list)
 
     # Marshal a read from a real Python worker through a real queued Qt signal.
     acceptor_core = Core()

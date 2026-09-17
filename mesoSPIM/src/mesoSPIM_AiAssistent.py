@@ -265,9 +265,22 @@ class AssistantWorker(QtCore.QObject):
 
     def interrupt(self):
         """Stop a runaway turn: gate further dispatches (dispatch_and_wait checks cancel) and
-        halt the hardware now."""
+        halt the hardware now.
+
+        The stop is dispatched from a helper thread, not from the caller's. The GUI calls this
+        from its Interrupt button, and a dispatch waits up to DISPATCH_TIMEOUT_SEC for the Core
+        thread to answer: issuing it on the GUI thread would freeze the whole application on the
+        one button meant for emergencies. Returns the helper thread so a caller that needs the
+        stop to have been issued (tests, shutdown) can join it.
+        """
         self.cancel.set()
-        try:
-            self._acceptor.dispatch("stop", {})
-        except Exception:
-            pass
+
+        def issue_stop():
+            try:
+                self._acceptor.dispatch("stop", {})
+            except Exception:
+                pass
+
+        stopper = threading.Thread(target=issue_stop, name="ai-assistant-interrupt", daemon=True)
+        stopper.start()
+        return stopper

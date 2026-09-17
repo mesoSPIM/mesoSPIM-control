@@ -26,6 +26,8 @@ Recommendation: fix findings 1 and 2 before merge, clean up findings 4 and 5 bef
 
 ### 1. Soft motion limits are checked in the wrong coordinate frame after zeroing (must fix)
 
+Status: fixed on this branch by the commit "Remote Control: enforce motion limits in the stage frame after zeroing", with regression tests and a self-test check.
+
 Where: `mesoSPIM/src/mesoSPIM_RemoteControl_Commands.py`, `check_absolute` (line 461), `check_relative` (line 470), `check_acquisition` (line 514), and the callers `_accept_move_absolute` (line 1018) and `_accept_move_relative` (line 1044).
 
 The validators compare the user-visible target (from `state["position"]`, the software-zeroed frame) against `stage_parameters.x_min` / `x_max`, which are physical stage coordinates. The stage drivers subtract `int_<axis>_pos_offset` before their own check (`mesoSPIM_Stages.py`, `move_absolute`), and `Core.check_motion_limits` does the same. So the remote layer and the hardware layer disagree as soon as any axis is zeroed.
@@ -39,6 +41,8 @@ Consequences:
 Fix: convert to the physical frame before checking. The per-axis offset is `state["position"][axis] - state["position_absolute"][axis]`; physical target is user target minus that offset. The preset moves (`_preset_targets`, line 1471) already operate in the physical frame with `use_internal_position=False`, so the pattern exists. Apply the same conversion in `check_acquisition` for `x_pos`, `y_pos`, `z_start`, `z_end`, `f_start`, `f_end`. Add a test with a nonzero offset in `test/remote_control/support/fake_state.py`; the current fake state has no offset, which is why the suite does not catch this.
 
 ### 2. Blocking cross-thread connections can deadlock the GUI and Core threads (must fix)
+
+Status: fixed on this branch by the commit "Remote Control: never block Core on the GUI thread (deadlock fix)", with a real-Qt regression scenario.
 
 Where: `mesoSPIM/src/mesoSPIM_RemoteControl_GUI.py` lines 57 to 60; `mesoSPIM/src/mesoSPIM_AiAssistent_GUI.py` line 63; `mesoSPIM/src/mesoSPIM_AiAssistent.py` `interrupt` (lines 266 to 271).
 
