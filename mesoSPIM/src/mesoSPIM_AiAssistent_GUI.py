@@ -3,7 +3,7 @@
 The transcript is plain on the tab's own background — no bubbles and no speaker labels, so weight
 alone separates the voices: your question is bold, the answer is not. Each answer streams the
 commands it runs above it, then the final Markdown. Enter submits; the input disables during a turn
-(single-flight); Cancel stops the assistant, Stop microscope stops the instrument. The Acceptor is acquired lazily on first use —
+(single-flight); Cancel request stops the assistant, Stop microscope stops the instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
 The endpoint setup sits under the input box as a collapsible footer: one line ("Set up AI
@@ -153,7 +153,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.input.setObjectName("AiAssistentInput")
         self.input.setFont(font)
         self.input.returnPressed.connect(self.on_submit)
-        self.interrupt = QtWidgets.QPushButton("Cancel", self)
+        self.interrupt = QtWidgets.QPushButton("Cancel request", self)
         self.interrupt.setFont(font)
         self.interrupt.setEnabled(False)
         self.interrupt.clicked.connect(self.on_interrupt)
@@ -165,9 +165,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
         row.addWidget(self.input, 1)
-        row.addWidget(self.stop_button)         # the emergency control leads the three buttons
         row.addWidget(self.interrupt)
         row.addWidget(self.new_button)
+        row.addWidget(self.stop_button)         # the emergency control, red, at the far right
         layout.addLayout(row)
         layout.addSpacing(12)
 

@@ -63,7 +63,7 @@ live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 ## Using it
 
 Open the **AI Assistant** tab and type. Commands the agent runs stream live above each answer, so
-the operator sees exactly which named calls were issued. **Cancel** stops the assistant: no
+the operator sees exactly which named calls were issued. **Cancel request** stops the assistant: no
 further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the
 model's next reply; what the assistant already started keeps running. **Stop microscope** stops
 the instrument the way the main window's Stop does (it ends a running mode and halts motion) and
