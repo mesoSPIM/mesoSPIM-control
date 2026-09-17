@@ -427,3 +427,16 @@ def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
     gui.on_connect()
     assert configured == [None]
     assert "OPENAI_API_KEY" in gui.output.toPlainText()
+
+
+def test_stop_microscope_button_is_always_available_and_stops_through_the_worker():
+    gui = _gui()
+    assert gui.stop_button.isEnabled()
+    gui.on_stop_microscope()                                        # no worker yet: nothing to stop, no crash
+    stopped = []
+    gui._worker = type("_W", (), {"stop_microscope": lambda self: stopped.append(True) or None})()
+    gui._set_running(True)
+    assert gui.stop_button.isEnabled() and not gui.new_button.isEnabled()
+    gui.on_stop_microscope()
+    assert stopped == [True]
+    assert "[stop microscope]" in gui.output.toPlainText()

@@ -451,24 +451,28 @@ class AssistantWorker(QtCore.QObject):
         self.sig_tool.emit(name, args)
 
     def interrupt(self):
-        """Stop a runaway turn: gate further dispatches (dispatch_and_wait checks cancel) and
-        halt the hardware now.
-
-        The stop is dispatched from a helper thread, not from the caller's. The GUI calls this
-        from its Interrupt button, and a dispatch waits up to DISPATCH_TIMEOUT_SEC for the Core
-        thread to answer: issuing it on the GUI thread would freeze the whole application on the
-        one button meant for emergencies. Returns the helper thread so a caller that needs the
-        stop to have been issued (tests, shutdown) can join it.
-        """
+        """Stop the assistant, not the microscope: every further tool call in this turn returns
+        'cancelled' (dispatch_and_wait checks the flag), an open Run / Cancel question is answered
+        Cancel, and the turn ends when the model next replies. Whatever the assistant already
+        started keeps running; stopping the instrument is stop_microscope, a separate decision."""
         self.cancel.set()
-        self.gate.answer(False)  # a question still open is Cancel
+        self.gate.answer(False)
+
+    def stop_microscope(self):
+        """The emergency stop, and the assistant with it: end a running mode (live, an
+        acquisition) with stop_activity and halt stage motion with stop, the same two calls the
+        main window's Stop button makes. Dispatched from a helper thread, since a dispatch waits
+        up to DISPATCH_TIMEOUT_SEC for Core and the GUI thread must not; returned so a caller can
+        join it."""
+        self.interrupt()
 
         def issue_stop():
-            try:
-                self._acceptor.dispatch("stop", {})
-            except Exception:
-                pass
+            for name in ("stop_activity", "stop"):
+                try:
+                    self._acceptor.dispatch(name, {})
+                except Exception:
+                    pass
 
-        stopper = threading.Thread(target=issue_stop, name="ai-assistant-interrupt", daemon=True)
+        stopper = threading.Thread(target=issue_stop, name="ai-assistant-stop", daemon=True)
         stopper.start()
         return stopper

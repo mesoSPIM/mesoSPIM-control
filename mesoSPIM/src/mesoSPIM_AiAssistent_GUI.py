@@ -3,7 +3,7 @@
 The transcript is plain on the tab's own background — no bubbles and no speaker labels, so weight
 alone separates the voices: your question is bold, the answer is not. Each answer streams the
 commands it runs above it, then the final Markdown. Enter submits; the input disables during a turn
-(single-flight); Interrupt halts a runaway agent. The Acceptor is acquired lazily on first use —
+(single-flight); Interrupt stops the assistant, Stop microscope stops the instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
 The endpoint setup sits under the input box as a collapsible footer: one line ("Set up AI
@@ -107,7 +107,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _build_ui(self):
         # Only the padding: qdarkstyle's buttons hug their text, and every other property cascades.
-        self.setStyleSheet("QPushButton, QToolButton { padding: 3px 12px; }")
+        self.setStyleSheet("QPushButton, QToolButton { padding: 3px 12px; }"
+                           "QPushButton#AiAssistentStopButton { color: #e08a8a; }")
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
@@ -156,11 +157,16 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.interrupt.setFont(font)
         self.interrupt.setEnabled(False)
         self.interrupt.clicked.connect(self.on_interrupt)
+        self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
+        self.stop_button.setObjectName("AiAssistentStopButton")
+        self.stop_button.setFont(font)
+        self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: an emergency stop
         self.new_button = QtWidgets.QPushButton("New", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
         row.addWidget(self.input, 1)
         row.addWidget(self.interrupt)
+        row.addWidget(self.stop_button)
         row.addWidget(self.new_button)
         layout.addLayout(row)
         layout.addSpacing(12)
@@ -504,6 +510,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._blocks.append(self._note_block("[interrupted]"))
         self._render()
 
+    def on_stop_microscope(self):
+        """Stop the instrument through the assistant's own gate, and the assistant with it. Without
+        a worker there is nothing the assistant started; the main window's Stop covers the rest."""
+        if self._worker is not None:
+            self._worker.stop_microscope()
+        self._show_confirmation(False)
+        self._blocks.append(self._note_block("[stop microscope]"))
+        self._render()
+
     def on_new_conversation(self):
         """Clear the transcript and the model's memory of it; the endpoint stays."""
         if not self.input.isEnabled():
@@ -575,15 +590,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._render()
 
     def shutdown(self):
-        """Called by MainWindow on app exit: stop the agent, join with a bound so the GUI
+        """Called by MainWindow on app exit: stop the assistant, join with a bound so the GUI
         never hangs on an in-flight model call, release the Core-owned Acceptor, and stop a
-        local model server."""
+        local model server. The instrument is the main window's to stop."""
         self._stop_local_server()
         if self._worker is not None:
-            stopper = self._worker.interrupt()
+            self._worker.interrupt()
             self._thread.quit()
             self._thread.wait(3000)
-            # The emergency stop is issued from a helper thread; give it a bounded chance to reach
-            # Core before the acceptor is released (a closed acceptor refuses the dispatch).
-            stopper.join(3.0)
             self._call_on_core("stop_ai_assistant")

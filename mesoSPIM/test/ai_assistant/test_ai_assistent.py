@@ -196,20 +196,17 @@ def test_run_turn_reports_a_blank_error_with_its_type(monkeypatch):
     assert errors == ["TimeoutError"]
 
 
-def test_interrupt_sets_cancel_and_stops():
+def test_interrupt_stops_the_assistant_not_the_microscope():
     acc = FakeAcceptor()
     worker = AssistantWorker(acc)
-    stopper = worker.interrupt()
+    worker.interrupt()
     assert worker.cancel.is_set()
-    stopper.join(5)
-    assert not stopper.is_alive()
-    assert ("stop", {}) in acc.calls
+    assert acc.calls == []                                         # no hardware call at all
 
 
-def test_interrupt_returns_without_waiting_for_a_busy_core():
-    """The Interrupt button runs on the GUI thread. A dispatch waits up to DISPATCH_TIMEOUT_SEC
-    for Core, so the stop must be issued from another thread or the GUI freezes on the one
-    control meant for emergencies."""
+def test_stop_microscope_ends_the_mode_and_halts_motion_off_the_gui_thread():
+    """The button runs on the GUI thread. A dispatch waits up to DISPATCH_TIMEOUT_SEC for Core, so
+    the stop calls are issued from another thread or the GUI freezes on the emergency button."""
     release = threading.Event()
     reached = threading.Event()
 
@@ -222,14 +219,13 @@ def test_interrupt_returns_without_waiting_for_a_busy_core():
     acc = BusyAcceptor()
     worker = AssistantWorker(acc)
     started = time.monotonic()
-    stopper = worker.interrupt()
-    assert time.monotonic() - started < 1.0           # returned while Core is still "busy"
-    assert worker.cancel.is_set()                      # further tool calls are gated at once
-    assert reached.wait(5)                             # the stop was still issued, elsewhere
-    assert stopper.is_alive() and ("stop", {}) not in acc.calls
+    stopper = worker.stop_microscope()
+    assert time.monotonic() - started < 1.0                        # returned while Core is still "busy"
+    assert worker.cancel.is_set()                                   # the assistant is interrupted too
+    assert reached.wait(5)
     release.set()
     stopper.join(5)
-    assert ("stop", {}) in acc.calls
+    assert [c[0] for c in acc.calls] == ["stop_activity", "stop"]   # the main window's Stop, in order
 
 
 # --- Acceptor lifecycle for Core (start/stop_assistant_for_core) ---
@@ -461,9 +457,8 @@ def test_interrupt_cancels_an_open_question():
     thread = threading.Thread(target=lambda: results.append(worker.gate.ask("unload_sample", {})))
     thread.start()
     time.sleep(0.05)
-    stopper = worker.interrupt()
+    worker.interrupt()
     thread.join(5)
-    stopper.join(5)
     assert results == [False]
 
 
