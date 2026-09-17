@@ -22,11 +22,25 @@ integration
   `pip install -e ".[ai-assistant]"`, or `pip install pydantic-ai` on its own. It is imported
   lazily, so the application starts and every other feature works without it; the tab reports the
   missing module when the operator sends a first message.
-- An API key in the environment variable named by `mesoSPIM_AiAssistent_Config.KEY_ENV`
-  (default `GEMINI_API_KEY`). No key is stored in the repository or in any config file.
-- The endpoint is configured in `mesoSPIM_AiAssistent_Config.py`. The default is a cloud Gemini
-  model with a fallback; an OpenAI-compatible local endpoint (Ollama, vLLM, LM Studio) needs only
-  `PROVIDER = "openai-compatible"` and a `BASE_URL`, and no key at all.
+- An API key for the chosen provider, or a local OpenAI-compatible server.
+
+## Setting it up
+
+The **Assistant setup** row at the top of the tab chooses the endpoint:
+
+1. **Provider**: Gemini, OpenAI, Anthropic, or "OpenAI-compatible (local)" for Ollama, vLLM or
+   LM Studio. Choosing one prefills the model name, which can be edited.
+2. **API key**: typed into the masked field. It is kept in memory for this mesoSPIM session only
+   and is never written to the repository, the microscope config, or a log. If the field is left
+   empty, the provider's environment variable is used (`GEMINI_API_KEY`, `OPENAI_API_KEY`,
+   `ANTHROPIC_API_KEY`), so a key exported before starting mesoSPIM keeps working. A local server
+   shows a **Base URL** field instead and needs no key.
+3. **Connect** applies the row; the status reads "ready: Gemini, gemini-3.5-flash-lite". Sending a
+   first message without pressing Connect applies the row as typed. Building the endpoint does not
+   contact the provider, so a wrong key shows up as an error on the first message.
+
+The endpoint can be changed at any time between turns; the transcript is kept. The presets live in
+`mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 

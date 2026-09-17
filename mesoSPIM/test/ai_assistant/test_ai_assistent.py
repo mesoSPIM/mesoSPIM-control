@@ -12,7 +12,7 @@ import pytest
 
 from mesoSPIM.src import mesoSPIM_AiAssistent as ai
 from mesoSPIM.src.mesoSPIM_AiAssistent import (
-    AssistantWorker, dispatch_and_wait, start_assistant_for_core, stop_assistant_for_core)
+    AssistantWorker, Endpoint, dispatch_and_wait, start_assistant_for_core, stop_assistant_for_core)
 from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import READ, WAIT, COMPLETED
 from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 
@@ -119,7 +119,7 @@ def _collect(signal):
 
 def test_run_turn_emits_reply(monkeypatch):
     worker = AssistantWorker(FakeAcceptor())
-    monkeypatch.setattr(ai, "build_agent", lambda a, c, on_call=None: FakeAgent([FakeResult("moved")]))
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: FakeAgent([FakeResult("moved")]))
     replies = _collect(worker.sig_reply)
     dones = _collect(worker.sig_done)
     worker.run_turn("go")
@@ -167,7 +167,7 @@ def test_validation_error_carries_the_configured_vocabulary():
 
 def test_run_turn_error_emits_sig_error(monkeypatch):
     worker = AssistantWorker(FakeAcceptor())
-    monkeypatch.setattr(ai, "build_agent", lambda a, c, on_call=None: FakeAgent(errors=[RuntimeError("boom")]))
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: FakeAgent(errors=[RuntimeError("boom")]))
     errors = _collect(worker.sig_error)
     dones = _collect(worker.sig_done)
     worker.run_turn("go")
@@ -189,7 +189,7 @@ def test_error_message_names_the_type_even_when_blank():
 def test_run_turn_reports_a_blank_error_with_its_type(monkeypatch):
     worker = AssistantWorker(FakeAcceptor())
     monkeypatch.setattr(ai, "build_agent",
-                        lambda a, c, on_call=None, model=None: FakeAgent(errors=[TimeoutError()]))
+                        lambda a, c, **k: FakeAgent(errors=[TimeoutError()]))
     errors = _collect(worker.sig_error)
     worker.run_turn("go")
     assert errors == ["TimeoutError"]
@@ -255,3 +255,44 @@ def test_stop_assistant_releases_the_acceptor():
     start_assistant_for_core(core)
     stop_assistant_for_core(core)
     assert core._assistant_acceptor is None
+
+
+# --- the endpoint chosen in the tab ---
+
+def test_endpoint_prefers_the_typed_key_over_the_environment(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "from-env")
+    typed = Endpoint.from_preset("Gemini", api_key="  typed  ")
+    assert (typed.kind, typed.api_key, typed.model) == ("google", "typed", "gemini-3.5-flash-lite")
+    assert typed.fallback_model == "gemini-3.1-flash-lite"
+    assert Endpoint.from_preset("Gemini").api_key == "from-env"
+
+
+def test_endpoint_without_any_key_is_detectable(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    endpoint = Endpoint.from_preset("Anthropic", model="claude-opus-5")
+    assert endpoint.needs_key and endpoint.api_key == ""
+    assert endpoint.model == "claude-opus-5"                       # a typed model wins over the preset
+
+
+def test_local_endpoint_needs_a_base_url_not_a_key():
+    endpoint = Endpoint.from_preset("OpenAI-compatible (local)", base_url="http://box:8000/v1")
+    assert not endpoint.needs_key
+    assert endpoint.base_url == "http://box:8000/v1"
+    assert "http://box:8000/v1" in endpoint.describe()
+
+
+def test_configure_rebuilds_the_agent_on_the_next_turn_and_keeps_history(monkeypatch):
+    built = []
+
+    def fake_build(a, c, **k):
+        built.append(k["endpoint"])
+        return FakeAgent([FakeResult("one"), FakeResult("two")])
+
+    monkeypatch.setattr(ai, "build_agent", fake_build)
+    worker = AssistantWorker(FakeAcceptor(), Endpoint.from_preset("OpenAI", api_key="k1"))
+    worker.run_turn("first")
+    other = Endpoint.from_preset("Anthropic", api_key="k2")
+    worker.configure(other)
+    worker.run_turn("second")
+    assert [e.provider for e in built] == ["OpenAI", "Anthropic"]
+    assert worker._history                                          # the transcript survived the switch

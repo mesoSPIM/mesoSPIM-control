@@ -14,10 +14,12 @@ Maintainer (2026):
 """
 
 import html as _htmllib
+import os
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .mesoSPIM_AiAssistent import AssistantWorker
+from . import mesoSPIM_AiAssistent_Config as config
+from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint
 
 _BUBBLE = "#2b3b47"      # the operator's own turns only — the answers stay on the tab background
 _DIM = "#9aa7b0"         # tool-call and note text
@@ -44,6 +46,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.core = parent.core
         self.setObjectName("AiAssistentTabWidget")
         self._worker = None
+        self._endpoint = None   # set by Connect; a first message connects with the current fields
         self._blocks = []       # finalized message HTML, oldest first
         self._active = None     # in-progress mesoSPIM turn: {"tools": [...], "reply": str, "error": str}
         self._build_ui()
@@ -91,6 +94,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         font = self.font()
         font.setPointSize(12)                                     # match Remote Control
 
+        layout.addWidget(self._build_setup(font))
+
         self.output = QtWidgets.QTextEdit(self)
         self.output.setReadOnly(True)
         self.output.setObjectName("AiAssistentOutput")
@@ -117,6 +122,96 @@ class AiAssistentGUI(QtWidgets.QWidget):
         row.addWidget(self.input, 1)
         row.addWidget(self.interrupt)
         layout.addLayout(row)
+
+    def _build_setup(self, font):
+        """The endpoint row, styled like the Remote Control tab's setup group: provider and model on
+        one line, the key (or base URL for a local server) with Connect and a status on the next."""
+        group = QtWidgets.QGroupBox("Assistant setup", self)
+        group.setObjectName("AiAssistentSetupGroupBox")
+        group.setFont(font)
+        rows = QtWidgets.QVBoxLayout(group)
+        rows.setContentsMargins(10, 30, 10, 10)
+        rows.setSpacing(8)
+
+        self.provider = QtWidgets.QComboBox(group)
+        self.provider.addItems(list(config.PROVIDERS))
+        self.model = QtWidgets.QLineEdit("", group)
+        self.key = QtWidgets.QLineEdit("", group)
+        self.key.setEchoMode(QtWidgets.QLineEdit.Password)        # a credential, never a caption
+        self.base_url = QtWidgets.QLineEdit("", group)
+        self.connect_button = QtWidgets.QPushButton("Connect", group)
+        self.setup_status = QtWidgets.QLabel(group)
+        self.setup_status.setText("not connected")
+        self._key_label = QtWidgets.QLabel("API key", group)
+        self._base_url_label = QtWidgets.QLabel("Base URL", group)
+        for widget in (self.provider, self.model, self.key, self.base_url, self.connect_button,
+                       self.setup_status, self._key_label, self._base_url_label):
+            widget.setFont(font)
+
+        first = QtWidgets.QHBoxLayout()
+        provider_label = QtWidgets.QLabel("Provider", group)
+        model_label = QtWidgets.QLabel("Model", group)
+        provider_label.setFont(font)
+        model_label.setFont(font)
+        first.addWidget(provider_label)
+        first.addWidget(self.provider, 1)
+        first.addWidget(model_label)
+        first.addWidget(self.model, 2)
+        second = QtWidgets.QHBoxLayout()
+        second.addWidget(self._key_label)
+        second.addWidget(self.key, 2)
+        second.addWidget(self._base_url_label)
+        second.addWidget(self.base_url, 2)
+        second.addWidget(self.connect_button)
+        second.addWidget(self.setup_status, 1)
+        rows.addLayout(first)
+        rows.addLayout(second)
+
+        self.provider.currentTextChanged.connect(self._on_provider_changed)
+        self.connect_button.clicked.connect(self.on_connect)
+        self.provider.setCurrentText(config.DEFAULT_PROVIDER)
+        self._on_provider_changed(config.DEFAULT_PROVIDER)
+        return group
+
+    def _on_provider_changed(self, name):
+        """Prefill the preset and show the field the provider needs: a key, or a base URL."""
+        preset = config.PROVIDERS[name]
+        local = preset["kind"] == "openai-compatible"
+        self.model.setText(preset["model"])
+        self.base_url.setText(preset.get("base_url", ""))
+        key_env = preset.get("key_env")
+        in_env = bool(key_env and os.environ.get(key_env))
+        self.key.setPlaceholderText(f"using {key_env} from the environment" if in_env else f"{name} API key")
+        for widget in (self._key_label, self.key):
+            widget.setVisible(not local)
+        for widget in (self._base_url_label, self.base_url):
+            widget.setVisible(local)
+
+    def on_connect(self):
+        if self._connect():
+            self._render()
+
+    def _connect(self):
+        """Apply the setup row: build the endpoint, acquire the Acceptor, hand the endpoint to the
+        worker for its next turn. Returns False (with a note in the transcript) when it cannot."""
+        endpoint = Endpoint.from_preset(
+            self.provider.currentText(), self.model.text(), self.key.text(), self.base_url.text()
+        )
+        if not self._ensure_worker():
+            self._note("Stop the Remote Control transport to use the AI Assistant.")
+            return False
+        if endpoint.needs_key and not endpoint.api_key:
+            key_env = config.PROVIDERS[endpoint.provider].get("key_env")
+            self._note(f"Enter an API key for {endpoint.provider}, or set {key_env} before starting mesoSPIM.")
+            return False
+        self._worker.configure(endpoint)
+        self._endpoint = endpoint
+        self.setup_status.setText(f"ready: {endpoint.describe()}")
+        return True
+
+    def _note(self, text):
+        self._blocks.append(self._note_block(text))
+        self._render()
 
     # --- transcript rendering ---
     def _user_block(self, text):
@@ -161,9 +256,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         text = self.input.text().strip()
         if not text or not self.input.isEnabled():
             return
-        if not self._ensure_worker():
-            self._blocks.append(self._note_block("Stop the Remote Control transport to use the AI Assistant."))
-            self._render()
+        if self._endpoint is None and not self._connect():   # a first message connects as typed
             return
         self.input.clear()
         self._blocks.append(self._user_block(text))
@@ -181,6 +274,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _set_running(self, running):
         self.input.setEnabled(not running)
         self.interrupt.setEnabled(running)
+        for widget in (self.provider, self.model, self.key, self.base_url, self.connect_button):
+            widget.setEnabled(not running)                        # the endpoint changes only between turns
         self.status.setText("mesoSPIM is working…" if running else "")
         if not running:
             self.input.setFocus()

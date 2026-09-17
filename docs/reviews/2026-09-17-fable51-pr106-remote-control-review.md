@@ -76,6 +76,8 @@ These arrived in Nikita's commits ("add snapshots funny", "Create AI-assistand-f
 
 ### 6. AI provider settings are hardcoded in package source (should fix)
 
+Status: fixed on this branch by the commit "AI Assistant: choose the provider and enter the API key in the tab". The config module now holds presets only.
+
 Where: `mesoSPIM/src/mesoSPIM_AiAssistent_Config.py` lines 14 to 16 (`PROVIDER`, `MODEL = "gemini-3.5-flash-lite"`, `FALLBACK_MODEL`).
 
 Operators would have to edit installed source to switch provider or model, and pinned model IDs go stale quickly. The project convention is per-microscope config files. Suggest an `ai_assistant = {...}` section in the config file, with the module holding defaults only.

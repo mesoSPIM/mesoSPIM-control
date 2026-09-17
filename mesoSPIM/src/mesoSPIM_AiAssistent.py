@@ -17,6 +17,7 @@ import logging
 import os
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from PyQt5 import QtCore
@@ -155,37 +156,82 @@ def build_system_prompt(acceptor):
     return preamble + "\n\n# Microscope command reference\n\n" + manual_text
 
 
-def _build_one(model_id):
-    """One model from the flat config. Cloud Gemini is native; anything OpenAI-compatible
-    (openai / openrouter / ollama / vllm / …) goes through the OpenAI provider with a base_url."""
-    key = os.environ.get(config.KEY_ENV) if config.KEY_ENV else None
-    if config.PROVIDER == "google":
+@dataclass(frozen=True)
+class Endpoint:
+    """One model endpoint as chosen in the tab. The key is held in memory only."""
+
+    provider: str
+    kind: str
+    model: str
+    api_key: str = ""
+    base_url: str = ""
+    fallback_model: str = ""
+
+    @classmethod
+    def from_preset(cls, provider, model="", api_key="", base_url=""):
+        """Fill the blanks from the provider preset: an empty model or base URL takes the preset's,
+        an empty key takes the preset's environment variable (which may also be unset)."""
+        preset = config.PROVIDERS[provider]
+        key_env = preset.get("key_env")
+        key = api_key.strip() or (os.environ.get(key_env, "") if key_env else "")
+        return cls(
+            provider=provider,
+            kind=preset["kind"],
+            model=model.strip() or preset["model"],
+            api_key=key,
+            base_url=base_url.strip() or preset.get("base_url", ""),
+            fallback_model=preset.get("fallback_model", ""),
+        )
+
+    @property
+    def needs_key(self):
+        return self.kind != "openai-compatible"
+
+    def describe(self):
+        where = f" at {self.base_url}" if self.base_url else ""
+        return f"{self.provider}, {self.model}{where}"
+
+
+def _build_one(endpoint, model_id):
+    if endpoint.kind == "google":
         from pydantic_ai.models.google import GoogleModel
         from pydantic_ai.providers.google import GoogleProvider
-        return GoogleModel(model_id, provider=GoogleProvider(api_key=key))
+
+        return GoogleModel(model_id, provider=GoogleProvider(api_key=endpoint.api_key))
+    if endpoint.kind == "anthropic":
+        from pydantic_ai.models.anthropic import AnthropicModel
+        from pydantic_ai.providers.anthropic import AnthropicProvider
+
+        return AnthropicModel(model_id, provider=AnthropicProvider(api_key=endpoint.api_key))
+    # "openai" and any OpenAI-compatible server; a local server needs no key.
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
-    return OpenAIChatModel(model_id, provider=OpenAIProvider(base_url=config.BASE_URL, api_key=key or "not-needed"))
+
+    provider = OpenAIProvider(base_url=endpoint.base_url or None, api_key=endpoint.api_key or "not-needed")
+    return OpenAIChatModel(model_id, provider=provider)
 
 
-def build_model():
-    """The primary model, wrapped with the fallback so a rate-limited or unavailable primary rolls
-    over transparently — each Gemini model carries its own quota. FALLBACK_MODEL=None disables it."""
-    primary = _build_one(config.MODEL)
-    fallback = getattr(config, "FALLBACK_MODEL", None)
-    if not fallback:
+def build_model(endpoint):
+    """The endpoint's model, wrapped with its fallback (if the preset names one) so a rate-limited
+    or unavailable primary rolls over transparently."""
+    primary = _build_one(endpoint, endpoint.model)
+    if not endpoint.fallback_model:
         return primary
     from pydantic_ai.models.fallback import FallbackModel
-    return FallbackModel(primary, _build_one(fallback))
+
+    return FallbackModel(primary, _build_one(endpoint, endpoint.fallback_model))
 
 
-def build_agent(acceptor, cancel, on_call=None, model=None):
-    """`model` overrides the configured endpoint — the GUI never passes it; the offline eval
-    harness uses it to drive the very same agent against a scripted model."""
+def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None):
+    """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
+    GUI never passes it; the offline eval harness uses it to drive the very same agent against a
+    scripted model."""
     from pydantic_ai import Agent
+    if model is None:
+        model = build_model(endpoint or Endpoint.from_preset(config.DEFAULT_PROVIDER))
     # instructions (not system_prompt): applied fresh each run, not accumulated into the
     # message history we carry across turns.
-    return Agent(model or build_model(), instructions=build_system_prompt(acceptor),
+    return Agent(model, instructions=build_system_prompt(acceptor),
                  tools=build_tools(acceptor, cancel, on_call))
 
 
@@ -233,19 +279,27 @@ class AssistantWorker(QtCore.QObject):
     sig_error = QtCore.pyqtSignal(str)
     sig_done = QtCore.pyqtSignal()
 
-    def __init__(self, acceptor):
+    def __init__(self, acceptor, endpoint=None):
         super().__init__()
         self._acceptor = acceptor
+        self._endpoint = endpoint
         self._agent = None
         self._history = []
         self.cancel = threading.Event()
+
+    def configure(self, endpoint):
+        """Use another endpoint from the next turn on; the transcript history is kept. Called from
+        the GUI thread only between turns (the tab disables setup while a turn runs)."""
+        self._endpoint = endpoint
+        self._agent = None
 
     @QtCore.pyqtSlot(str)
     def run_turn(self, text):
         try:
             self.cancel.clear()
             if self._agent is None:
-                self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool)
+                self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
+                                          endpoint=self._endpoint)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.

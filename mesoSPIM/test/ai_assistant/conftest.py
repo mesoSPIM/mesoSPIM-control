@@ -108,6 +108,9 @@ if not hasattr(QtWidgets.QLineEdit, "setPlaceholderText"):
     QtWidgets.QLineEdit.setPlaceholderText = lambda self, _text: None
 if not hasattr(QtWidgets.QLineEdit, "clear"):
     QtWidgets.QLineEdit.clear = lambda self: self.setText("")
+if not hasattr(QtWidgets.QWidget, "setVisible"):
+    QtWidgets.QWidget.setVisible = lambda self, visible: setattr(self, "_visible", bool(visible))
+    QtWidgets.QWidget.isVisible = lambda self: getattr(self, "_visible", True)
 
 
 class _Signal:

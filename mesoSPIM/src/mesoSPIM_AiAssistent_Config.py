@@ -1,6 +1,10 @@
-"""Endpoint + timing for the AI Assistant — its own file so the Remote Control config
-stays clean. No secret here: a cloud endpoint names the env var holding its key; a local
-endpoint (Ollama/vLLM/LM Studio — OpenAI-compatible) sets BASE_URL and needs none.
+"""Endpoint presets and timing for the AI Assistant.
+
+The tab's "Assistant setup" row offers these providers; choosing one prefills the model (and base
+URL for a local server), and the operator types the API key into the tab. The key lives in memory
+for the session only. It is never written to this file, to the microscope config, or to a log.
+When the key field is left empty the environment variable named here is used, so a key exported
+before starting mesoSPIM keeps working.
 
 Maintainer (2026):
     Thom de Hoog
@@ -9,21 +13,24 @@ Maintainer (2026):
     thomdehoog@gmail.com
 """
 
-# The endpoint. Cloud: PROVIDER="google", set MODEL + KEY_ENV.
-# Local: PROVIDER="openai-compatible", set MODEL + BASE_URL, leave KEY_ENV None.
-PROVIDER = "google"                       # "google" (Gemini/Gemma) or "openai-compatible"
-MODEL = "gemini-3.5-flash-lite"           # primary: 250K input tokens/min free tier, native tool-calling
-FALLBACK_MODEL = "gemini-3.1-flash-lite"  # rolls over on rate-limit/unavailable; its own separate 250K/min
-                                          # quota. Set to None to disable rollover.
-KEY_ENV = "GEMINI_API_KEY"
-BASE_URL = None
-
-# Alternatives:
-#   gemma-4-31b-it            16K TPM, no 503s, but mis-shapes nested args on small models.
-#   gemini-flash-latest       higher-TPM alias if a versioned id 404s.
-#   Gemma 4 31B, local free:  PROVIDER="openai-compatible"; MODEL="gemma4:31b";
-#                             BASE_URL="http://localhost:11434/v1"; KEY_ENV=None  (Ollama >= 0.22, ~20 GB VRAM)
+# kind: which Pydantic AI model class is built. "openai-compatible" is any server speaking the
+# OpenAI chat API (Ollama >= 0.22, vLLM, LM Studio) and needs a base URL instead of a key.
+PROVIDERS = {
+    "Gemini": {
+        "kind": "google",
+        "model": "gemini-3.5-flash-lite",  # 250K input tokens/min free tier, native tool calling
+        "fallback_model": "gemini-3.1-flash-lite",  # rolls over on rate limit; its own quota
+        "key_env": "GEMINI_API_KEY",
+    },
+    "OpenAI": {"kind": "openai", "model": "gpt-5-mini", "key_env": "OPENAI_API_KEY"},
+    "Anthropic": {"kind": "anthropic", "model": "claude-sonnet-5", "key_env": "ANTHROPIC_API_KEY"},
+    "OpenAI-compatible (local)": {
+        "kind": "openai-compatible",
+        "model": "gemma4:31b",  # ~20 GB VRAM; mis-shapes nested args on smaller models
+        "base_url": "http://localhost:11434/v1",
+    },
+}
+DEFAULT_PROVIDER = "Gemini"
 
 POLL_INTERVAL_S = 0.15
-WAIT_CAP_S = 120                          # past this a WAIT op returns "still_running"; the agent
-                                          # then polls get_progress (tune — design open question #1)
+WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress
