@@ -275,6 +275,7 @@ QtWidgets.QGridLayout = QGridLayout
 if not hasattr(QtWidgets.QWidget, "setMinimumHeight"):
     QtWidgets.QWidget.setMinimumHeight = lambda self, _h: None
     QtWidgets.QWidget.setMinimumWidth = lambda self, _w: None
+    QtWidgets.QWidget.setMaximumWidth = lambda self, _w: None
 if not hasattr(QtWidgets.QComboBox, "setSizeAdjustPolicy"):
     QtWidgets.QComboBox.setSizeAdjustPolicy = lambda self, _p: None
     QtWidgets.QComboBox.AdjustToContents = 0
@@ -289,7 +290,7 @@ if not hasattr(QtWidgets.QWidget, "sizeHint"):
 if not hasattr(QtWidgets.QWidget, "setSizePolicy"):
     QtWidgets.QWidget.setSizePolicy = lambda self, *_a: None
     QtWidgets.QSizePolicy = types.SimpleNamespace(Ignored=0, Preferred=1)
-for _enum, _value in (("AlignLeft", 1),):
+for _enum, _value in (("AlignLeft", 1), ("AlignRight", 2), ("AlignVCenter", 128)):
     if not hasattr(QtCore.Qt, _enum):
         setattr(QtCore.Qt, _enum, _value)
 QtWidgets.QFileDialog = QFileDialog

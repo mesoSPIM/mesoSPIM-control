@@ -124,8 +124,8 @@ def test_setup_row_prefills_the_default_provider():
 
 def test_choosing_a_local_provider_swaps_the_key_for_a_base_url():
     gui = _gui()
-    gui.provider.setCurrentText("OpenAI-compatible")
-    gui.provider.currentTextChanged.emit("OpenAI-compatible")
+    gui.provider.setCurrentText("OpenAI-style")
+    gui.provider.currentTextChanged.emit("OpenAI-style")
     assert gui.model.text() == "gemma4:31b"
     assert gui.base_url.text() == "http://localhost:11434/v1"
     assert gui.base_url.isVisible() and not gui.key.isVisible()

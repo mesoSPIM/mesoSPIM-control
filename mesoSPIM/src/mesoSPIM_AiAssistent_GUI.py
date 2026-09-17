@@ -226,9 +226,10 @@ class AiAssistentGUI(QtWidgets.QWidget):
         group = QtWidgets.QGroupBox(self)
         group.setObjectName("AiAssistentSetupGroupBox")
         group.setFont(font)
-        rows = QtWidgets.QVBoxLayout(group)
-        rows.setContentsMargins(10, 10, 10, 10)
-        rows.setSpacing(8)
+        grid = QtWidgets.QGridLayout(group)
+        grid.setContentsMargins(12, 12, 12, 12)
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(12)
 
         def label(text):
             widget = QtWidgets.QLabel(group)
@@ -273,48 +274,43 @@ class AiAssistentGUI(QtWidgets.QWidget):
                        self.history_turns, self.vision_provider, self.frame_size, self.tools_profile):
             widget.setFont(font)
 
-        # The mode on its own line, then everything for the endpoint on one line: Cloud shows
-        # provider, model and key (or base URL); Local shows the model file and the folder button;
-        # both end with Connect and the status.
+        # One grid, so the preferences line and the endpoint line share their columns: labels
+        # left-aligned before their fields, Connect at the bottom right under the last field.
+        # Column 6 is the gap that takes the leftover width; Base URL and the local model file
+        # grow into it. The column widths are the grid's own, so switching modes moves nothing.
+        left = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
+        grid.setColumnMinimumWidth(1, self.provider.sizeHint().width())
+        grid.setColumnMinimumWidth(3, 200)                        # fits the preset model names
+        self.key.setMaximumWidth(160)                             # masked anyway
+        self.connect_button.setMinimumWidth(120)                  # "Connected" in bold, no jump
+        grid.addWidget(label("Tool set"), 0, 0, left)
+        grid.addWidget(self.tools_profile, 0, 1)
+        grid.addWidget(label("Memory"), 0, 2, left)
+        grid.addWidget(self.history_turns, 0, 3, left)
+        grid.addWidget(label("Vision model"), 0, 4, left)
+        grid.addWidget(self.vision_provider, 0, 5)
+        grid.addWidget(label("Frame"), 0, 6, left)
+        grid.addWidget(self.frame_size, 0, 7)
         mode = QtWidgets.QHBoxLayout()
         mode.addWidget(self.local_radio)
         mode.addSpacing(16)
         mode.addWidget(self.cloud_radio)
         mode.addStretch(1)
-        rows.addLayout(mode)
-        self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
-        self.model.setMinimumWidth(170)
-        line = QtWidgets.QHBoxLayout()
-        line.setSpacing(8)
-        line.addWidget(self._provider_label)
-        line.addWidget(self.provider)
-        line.addWidget(self._model_label)
-        line.addWidget(self.model, 1)
-        line.addWidget(self._local_model_label)
-        line.addWidget(self.local_model, 3)
-        line.addWidget(self.folder_button)
-        line.addWidget(self._key_label)
-        line.addWidget(self.key, 2)
-        line.addWidget(self._base_url_label)
-        line.addWidget(self.base_url, 3)
-        line.addWidget(self.connect_button)
-        rows.addLayout(line)
-
-        # Operator preferences, applied at once.
-        options = QtWidgets.QHBoxLayout()
-        options.addWidget(label("Tool set"))
-        options.addWidget(self.tools_profile)
-        options.addSpacing(12)
-        options.addWidget(label("Memory"))
-        options.addWidget(self.history_turns)
-        options.addSpacing(12)
-        options.addWidget(label("Vision model"))
-        options.addWidget(self.vision_provider)
-        options.addSpacing(12)
-        options.addWidget(label("Frame"))
-        options.addWidget(self.frame_size)
-        options.addStretch(1)
-        rows.addLayout(options)
+        grid.addLayout(mode, 1, 0, 1, 8)
+        grid.addWidget(self._provider_label, 2, 0, left)
+        grid.addWidget(self.provider, 2, 1)
+        grid.addWidget(self._model_label, 2, 2, left)
+        grid.addWidget(self.model, 2, 3)
+        grid.addWidget(self._key_label, 2, 4, left)
+        grid.addWidget(self.key, 2, 5)
+        grid.addWidget(self._base_url_label, 2, 4, left)
+        grid.addWidget(self.base_url, 2, 5, 1, 2)
+        grid.addWidget(self._local_model_label, 2, 0, left)
+        grid.addWidget(self.local_model, 2, 1, 1, 4)
+        grid.addWidget(self.folder_button, 2, 5, 1, 2, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        grid.addWidget(self.connect_button, 2, 7)
+        grid.setColumnStretch(6, 1)
         self.tools_profile.currentTextChanged.connect(self._apply_profile)
         self.history_turns.valueChanged.connect(self._apply_options)
         self.frame_size.valueChanged.connect(self._apply_options)

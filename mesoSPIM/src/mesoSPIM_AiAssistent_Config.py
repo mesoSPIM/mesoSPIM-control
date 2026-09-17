@@ -13,9 +13,9 @@ Maintainer (2026):
 """
 
 # vision: the model can be shown a camera frame; the `look` tool sends it one in a side call.
-# kind: which Pydantic AI model class is built. "openai-compatible" is any server speaking the
-# OpenAI chat API (Ollama >= 0.22, vLLM, LM Studio) and needs a base URL instead of a key. Local
-# model files served by mesoSPIM itself use that same kind behind the scenes.
+# kind: which Pydantic AI model class is built. "OpenAI-style" is any server speaking the OpenAI
+# chat API (Ollama >= 0.22, vLLM, LM Studio, a company gateway) and needs a base URL; a key only
+# if that server asks for one. Local model files served by mesoSPIM itself use that same kind.
 PROVIDERS = {
     "Gemini": {
         "kind": "google",
@@ -26,7 +26,7 @@ PROVIDERS = {
     },
     "OpenAI": {"kind": "openai", "model": "gpt-5-mini", "key_env": "OPENAI_API_KEY", "vision": True},
     "Anthropic": {"kind": "anthropic", "model": "claude-sonnet-5", "key_env": "ANTHROPIC_API_KEY", "vision": True},
-    "OpenAI-compatible": {
+    "OpenAI-style": {
         "kind": "openai-compatible",
         "model": "gemma4:31b",  # ~20 GB VRAM; mis-shapes nested args on smaller models
         "base_url": "http://localhost:11434/v1",  # e.g. an Ollama or vLLM already running somewhere

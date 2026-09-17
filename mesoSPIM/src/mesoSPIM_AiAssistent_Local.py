@@ -1,6 +1,6 @@
 """Serve a local model file for the AI Assistant, without an external runtime.
 
-A ``.gguf`` file chosen in the tab is served by llama.cpp's OpenAI-compatible (the
+A ``.gguf`` file chosen in the tab is served by llama.cpp's OpenAI-compatible server (the
 ``llama_cpp.server`` module of the ``llama-cpp-python`` package) as a child process bound to
 loopback. The assistant then talks to it through the same OpenAI-compatible endpoint it uses for
 any other server, so nothing in the agent depends on the runtime. The child lives while that
