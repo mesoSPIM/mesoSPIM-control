@@ -281,6 +281,7 @@ QtWidgets.QGridLayout = QGridLayout
 if not hasattr(QtWidgets.QWidget, "setMinimumHeight"):
     QtWidgets.QWidget.setMinimumHeight = lambda self, _h: None
     QtWidgets.QWidget.setMinimumWidth = lambda self, _w: None
+    QtWidgets.QWidget.setFixedHeight = lambda self, _h: None
     QtWidgets.QWidget.setContentsMargins = lambda self, *_a: None
     QtWidgets.QWidget.setAlignment = lambda self, _a: None
 if not hasattr(QtWidgets.QComboBox, "setSizeAdjustPolicy"):

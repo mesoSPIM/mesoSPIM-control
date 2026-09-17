@@ -362,7 +362,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         buttons.addWidget(self.stop_button, 1, 1, 1, 2)
         row.addWidget(self.input, 1)
         row.addLayout(buttons)
-        self.input.setFixedHeight(2 * self.interrupt.sizeHint().height() + 6)
+        two_rows = 2 * self.interrupt.sizeHint().height() + 6
+        self.input.setFixedHeight(two_rows)
+        self.send_button.setFixedHeight(two_rows)
         layout.addLayout(row)
         layout.addSpacing(24)
 
