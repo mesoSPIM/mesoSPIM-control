@@ -446,9 +446,12 @@ def dispatch(core, cmd, args):
         if core_state in config.ACQUIRING_STATES or (core_state in config.LIVE_STATES and cmd.name in config.TAKES_OVER):
             # Started from the GUI: Core's own state machine is busy although no remote
             # operation is. A mutation landing now would run inside that loop. Only the
-            # emergency stop above may; it also resets a state Core left behind.
+            # emergency stops above may; stop_activity also resets a state Core left behind.
             raise BusyError(f"busy: the instrument is in {core_state!r} (started from the GUI); "
-                            "stop ends it, or resets it if nothing is running")
+                            "stop_activity ends it, or resets it if nothing is running")
+        if getattr(core, "timelapse_active", False) is True:
+            # A GUI time lapse is idle between its points and starts the next one on its own.
+            raise BusyError("busy: a time lapse started from the GUI is running; time_lapse_stop ends it")
         operation = _begin(core, cmd.name, cmd.milestone, cmd.running_state)
 
     _schedule_mutation(core, cmd, args, operation)

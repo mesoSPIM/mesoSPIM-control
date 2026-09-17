@@ -68,6 +68,7 @@ TCP_MAX_CLIENTS = 32
 # MCP: at most this many connections are served at once; a rejected request that presented a
 # password has at most this much body drained (briefly) so its response is not lost to a reset.
 MCP_MAX_CONNECTIONS = 32
+MCP_HEADER_TIMEOUT_SEC = 2.0   # a connection has this long to send its request line and headers
 MCP_REJECTION_DRAIN_BYTES = 64 * 1024
 MCP_REJECTION_DRAIN_TIMEOUT_SEC = 1.0
 
@@ -135,8 +136,8 @@ AXES = ("x", "y", "z", "f", "theta")
 # ACQUIRING state every mutation is refused. Core leaves the STALE states behind after a snap or a
 # refused run; the Acceptor resets them to idle on the sig_finished that ends them.
 LIVE_STATES = ("live", "visual_mode", "lightsheet_alignment_mode")
-ACQUIRING_STATES = ("snap", "run_selected_acquisition", "run_acquisition_list",
-                    "preview_acquisition_with_z_update", "preview_acquisition_without_z_update", "running_script")
+ACQUIRING_STATES = ("snap", "run_selected_acquisition", "run_acquisition_list", "preview_acquisition",
+                    "running_script")   # what Core stores; set_state's preview arguments are longer names
 STALE_STATES = ("snap", "run_selected_acquisition", "run_acquisition_list")
 TAKES_OVER = ("start_live", "start_visual_mode", "start_lightsheet_alignment_mode", "snap", "run_acquisition_list",
               "run_selected_acquisition", "acquire_start", "preview_acquisition", "time_lapse_start")

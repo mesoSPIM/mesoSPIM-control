@@ -110,7 +110,19 @@ def test_server_still_loading_is_not_ready(tmp_path):
                               command=lambda p, port, projector: [sys.executable, "-c", _FAKE_SERVER, str(port), "503"])
     server.start()
     try:
-        assert _wait(server, timeout=1.5) is False
+        import http.client
+        deadline = time.monotonic() + 10
+        status = None
+        while time.monotonic() < deadline and status != 503:       # wait for the stand-in to answer
+            try:
+                probe = http.client.HTTPConnection("127.0.0.1", server.port, timeout=0.5)
+                probe.request("GET", "/v1/models")
+                status = probe.getresponse().status
+                probe.close()
+            except OSError:
+                time.sleep(0.05)
+        assert status == 503, "the stand-in never answered"
+        assert server.ready() is False                             # answering is not ready
     finally:
         server.stop()
 

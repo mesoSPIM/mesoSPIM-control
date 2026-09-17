@@ -1323,6 +1323,8 @@ def _run_stop_activity(core, args):
     # Broadcasting another abort while idle can emit the completion signal twice.
     if state(core, "state") != "idle":
         core.stop()
+    if getattr(core, "timelapse_active", False) is True:   # started from the GUI or remotely: no next point
+        core.stop_time_lapse()
 
     return {"state": state(core, "state")}
 

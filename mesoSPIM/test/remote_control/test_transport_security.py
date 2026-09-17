@@ -708,3 +708,16 @@ def test_tcp_full_slots_evict_the_oldest_silent_client_not_the_newcomer():
     for conn in list(adapter._clients):
         if conn not in before:
             adapter._drop(conn)
+
+
+def test_mcp_idle_connection_is_closed_after_the_header_timeout():
+    """A peer that connects and sends nothing holds its slot only for the header timeout."""
+    idle = socket.create_connection(("127.0.0.1", _h.mcp.port), timeout=config.MCP_HEADER_TIMEOUT_SEC + 2.0)
+    started = time.monotonic()
+    try:
+        assert idle.recv(16) == b""
+        assert time.monotonic() - started < config.MCP_HEADER_TIMEOUT_SEC + 1.5
+    finally:
+        idle.close()
+    status, reply = _jsonrpc(_h.mcp.port, json.loads(_CALL))       # a real client is unaffected
+    assert status == 200 and reply["id"] == 1

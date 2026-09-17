@@ -289,7 +289,8 @@ can call hardware. MainWindow waits for this sequence before continuing applicat
    during a GUI live mode the commands that would take over the instrument (snap, mode starts,
    acquisitions, time lapse) are refused while moves and settings pass, as they do from the GUI.
    Core leaves its state at `snap` or a run state after a GUI snap or a refused run; the Acceptor
-   resets that on the `sig_finished` that ends it, and `stop` resets it at any time. The reverse
+   resets that on the `sig_finished` that ends it, and `stop_activity` resets it at any time. A
+   time lapse started from the GUI counts as busy between its points; `time_lapse_stop` ends it. The reverse
    is not guarded: the operator must not start GUI work while a remote operation is running.
 2. `get_progress` reports only the latest operation. Clients must retain and compare its ID.
 3. The MCP endpoint is Streamable HTTP (revision `2025-03-26`, `2025-06-18` accepted) in its

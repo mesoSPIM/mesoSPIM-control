@@ -33,6 +33,7 @@ from . import mesoSPIM_RemoteControl_Config as config
 from . import mesoSPIM_RemoteControl_Commands  # noqa: F401
 from .mesoSPIM_RemoteControl_Dispatcher import (
     PROCESSING,
+    STOPPING,
     _core_state,
     run,
     complete,
@@ -240,7 +241,7 @@ class Acceptor(QtCore.QObject):
         core = self._core
         warning, self._time_lapse_warning = self._time_lapse_warning, None
         latest = operation_snapshot(core)
-        if (warning and latest.get("command") == "time_lapse_start" and latest.get("status") == PROCESSING
+        if (warning and latest.get("command") == "time_lapse_start" and latest.get("status") in (PROCESSING, STOPPING)
                 and _core_state(core) in config.STALE_STATES):
             # A refused point leaves the run state set; a finished one has gone back to idle. Fail
             # first: stop_time_lapse emits sig_time_lapse_cancelled, which would else complete it.
@@ -290,8 +291,10 @@ def _make_handler(acceptor, token):
     class Handler(BaseHTTPRequestHandler):
         server_version = config.MCP_SERVER_BANNER
 
-        # Bound stalled request bodies so one client cannot retain a handler thread indefinitely.
-        timeout = config.CLIENT_TIMEOUT_SEC
+        # A connection has MCP_HEADER_TIMEOUT_SEC to send its request line and headers, so idle
+        # peers without the password cannot fill the connection slots; once the password matched,
+        # the body may take CLIENT_TIMEOUT_SEC.
+        timeout = config.MCP_HEADER_TIMEOUT_SEC
 
         def _json(self, status, payload):
             body = json.dumps(payload, allow_nan=False).encode(config.ENCODING)
@@ -361,6 +364,7 @@ def _make_handler(acceptor, token):
                 return self._json(400, {"error": "invalid Content-Length"})
             if declared > config.MAX_MCP_BODY_BYTES:
                 return self._json(413, {"error": "body too large"})
+            self.connection.settimeout(config.CLIENT_TIMEOUT_SEC)
             body = self.rfile.read(declared)          # authenticated: the body is wanted
             if len(body) != declared:
                 return self._json(400, {"error": "truncated body"})
