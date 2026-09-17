@@ -228,7 +228,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         its radio; the line not chosen is greyed, not hidden, so nothing moves."""
         setup = QtWidgets.QWidget(self)
         column = QtWidgets.QVBoxLayout(setup)
-        column.setContentsMargins(0, 0, 0, 0)
+        column.setContentsMargins(0, 10, 0, 0)                     # air under the toggle; folds with the boxes
         column.setSpacing(8)
         pair_gap = 14  # px before an inner label, more than the 8 between it and its field
 
