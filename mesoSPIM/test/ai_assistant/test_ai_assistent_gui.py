@@ -325,7 +325,7 @@ def test_a_problem_opens_the_footer(monkeypatch):
     assert "Enter an API key" in gui.output.toPlainText()
 
 
-def test_ready_folds_the_footer_and_names_the_model(monkeypatch):
+def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui = _gui()
     gui._worker = type("_Worker", (), {"configure": lambda self, endpoint: None})()
     monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
@@ -333,14 +333,16 @@ def test_ready_folds_the_footer_and_names_the_model(monkeypatch):
     gui.key.setText("g-key")
     gui.on_connect()
     assert not gui.expanded()
-    assert gui.setup_toggle.text() == "Model: gemini-3.5-flash-lite (Gemini)  ·  ready"
+    assert gui.setup_toggle.text() == "Set up AI assistant"
+    assert gui.setup_status.text() == "ready: Gemini, gemini-3.5-flash-lite"
 
 
-def test_local_summary_names_the_runtime(tmp_path, monkeypatch):
+def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     gui.local_radio.setChecked(True)
     gui.on_connect()
-    assert gui.setup_toggle.text() == "Model: gemma-4-12b-q4 (local, llama.cpp)  ·  starting…"
+    assert gui.setup_status.text() == "starting gemma-4-12b-q4…"
     scheduled.pop()(); scheduled.pop()()
     assert not gui.expanded()
-    assert gui.setup_toggle.text() == "Model: gemma-4-12b-q4 (local, llama.cpp)  ·  ready"
+    assert gui.setup_status.text() == "ready: gemma-4-12b-q4 (llama.cpp on 127.0.0.1:4242)"
+    assert gui.setup_toggle.text() == "Set up AI assistant"

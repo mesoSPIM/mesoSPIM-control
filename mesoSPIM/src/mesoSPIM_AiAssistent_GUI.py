@@ -7,7 +7,7 @@ commands it runs above it, then the final Markdown. Enter submits; the input dis
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
 The endpoint setup sits under the input box as a collapsible footer: one line ("Set up AI
-assistant", or "Model: … · ready") that expands to the setup rows. It opens itself when something needs the operator
+assistant") that expands to the setup rows. It opens itself when something needs the operator
 (nothing configured, a missing key, a server that failed) and folds back once the assistant is
 ready, so a first-time user sees a chat, not a configuration form.
 
@@ -139,6 +139,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setup_toggle.setCheckable(True)
         self.setup_toggle.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         self.setup_toggle.setAutoRaise(True)
+        self.setup_toggle.setText("Set up AI assistant")
         self.setup_toggle.toggled.connect(self._set_expanded)
         layout.addWidget(self.setup_toggle)
         self.setup_group = self._build_setup(font)
@@ -216,22 +217,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- the footer ---
     def _set_expanded(self, expanded):
-        """Show or hide the setup rows; the toggle line always shows what the assistant uses."""
+        """Show or hide the setup rows. The toggle line never changes; the status label inside
+        the rows says which model is in use."""
         self.setup_group.setVisible(bool(expanded))
         self.setup_toggle.setChecked(bool(expanded))
         self.setup_toggle.setArrowType(QtCore.Qt.DownArrow if expanded else QtCore.Qt.RightArrow)
-        self._update_summary()
-
-    def _update_summary(self):
-        """One line: which model, where it runs, and whether it is ready."""
-        if self._endpoint is not None:
-            where = "local, llama.cpp" if self._local_server is not None else self._endpoint.provider
-            text = f"Model: {self._endpoint.model} ({where})  ·  ready"
-        elif self._local_server is not None:
-            text = f"Model: {self._local_server.model} (local, llama.cpp)  ·  starting…"
-        else:
-            text = "Set up AI assistant"
-        self.setup_toggle.setText(text)
 
     def expanded(self):
         return self.setup_group.isVisible()
@@ -328,7 +318,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._endpoint = None
         self._started_at = time.monotonic()
         self.setup_status.setText(f"starting {server.model}…")
-        self._update_summary()
         self._single_shot(config.LOCAL_SERVER_POLL_MS, self._poll_local_server)
         return False
 
