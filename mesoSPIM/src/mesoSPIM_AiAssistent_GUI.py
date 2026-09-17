@@ -256,6 +256,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
             widget.setContentsMargins(gap, 0, 0, 0)
             return widget
 
+        def with_unit(spin, unit):
+            """A number box with its unit after it, as one cell."""
+            cell = QtWidgets.QHBoxLayout()
+            cell.setSpacing(6)
+            cell.addWidget(spin)
+            cell.addWidget(label(unit, preferences, gap=0))
+            cell.addStretch(1)
+            return cell
+
         preferences, options = box("Preferences")
         group, grid = box("Model")
 
@@ -266,11 +275,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.history_turns = QtWidgets.QSpinBox(preferences)
         self.history_turns.setRange(1, 200)
         self.history_turns.setValue(config.MAX_HISTORY_TURNS)
-        self.history_turns.setSuffix(" turns")
         self.frame_size = QtWidgets.QSpinBox(preferences)
         self.frame_size.setRange(256, 4096)
         self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
-        self.frame_size.setSuffix(" px")
         self.vision_provider = QtWidgets.QComboBox(preferences)
         self.vision_provider.addItems([config.SAME_AS_MODEL] + [n for n, p in config.PROVIDERS.items() if p.get("vision")])
         self.tools_profile = QtWidgets.QComboBox(preferences)
@@ -302,11 +309,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
         options.addWidget(first, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(label("Memory", preferences), 0, 2)
-        options.addWidget(self.history_turns, 0, 3)
+        options.addLayout(with_unit(self.history_turns, "turns"), 0, 3)
         options.addWidget(vision_label, 0, 4)
         options.addWidget(self.vision_provider, 0, 5)
         options.addWidget(label("Frame", preferences), 0, 6)
-        options.addWidget(self.frame_size, 0, 7)
+        options.addLayout(with_unit(self.frame_size, "px"), 0, 7)
         options.setColumnStretch(8, 1)
         # Model: the first line is the type and what names the model, the second the key (and
         # the base URL, which pushes the key to the right: _on_provider_changed) and Connect.
