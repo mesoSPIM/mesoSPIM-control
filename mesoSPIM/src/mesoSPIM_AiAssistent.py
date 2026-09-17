@@ -48,7 +48,7 @@ def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config):
     the "operation" key of both the accept-reply and get_progress.
     """
     if cancel.is_set():
-        return {"status": "cancelled"}                              # gate every call after Interrupt
+        return {"status": "cancelled"}                              # gate every call after Cancel
     result = acceptor.dispatch(name, args or {})
     if kind != WAIT:
         return result
@@ -421,7 +421,7 @@ class AssistantWorker(QtCore.QObject):
         self._agent = None
 
     def reset(self):
-        """Forget the conversation (New conversation). Called between turns, like configure."""
+        """Forget the conversation (New session). Called between turns, like configure."""
         self._history = []
 
     @QtCore.pyqtSlot(str)

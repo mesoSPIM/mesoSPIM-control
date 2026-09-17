@@ -161,12 +161,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
         self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: an emergency stop
-        self.new_button = QtWidgets.QPushButton("New", self)
+        self.new_button = QtWidgets.QPushButton("New session", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
+        row.addWidget(self.stop_button)         # the emergency control first, by itself
         row.addWidget(self.input, 1)
         row.addWidget(self.interrupt)
-        row.addWidget(self.stop_button)
         row.addWidget(self.new_button)
         layout.addLayout(row)
         layout.addSpacing(12)
@@ -520,7 +520,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._render()
 
     def on_new_conversation(self):
-        """Clear the transcript and the model's memory of it; the endpoint stays."""
+        """New session: clear the transcript and the model's memory of it; the endpoint stays."""
         if not self.input.isEnabled():
             return                                  # not while a turn runs
         self._blocks = []
