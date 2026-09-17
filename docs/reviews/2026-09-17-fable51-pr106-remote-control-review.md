@@ -100,6 +100,63 @@ Either name the real MCP client that was validated in the docs, or generate JSON
 - The MCP handler drains up to 1 MiB of request body before authenticating (Servers line 277). Bounded and intentional, so acceptable; noted for completeness.
 - `mesoSPIM/test/remote_control/support/fake_state.py` carries no stage offset, which is why finding 1 is invisible to the suite.
 
+## Coverage screen: what the API can and cannot do
+
+Method: the 53 registered commands were compared against the public `mesoSPIM_Core` methods,
+the state keys in `mesoSPIM_State.py`, and the operator actions wired in `mesoSPIM_MainWindow.py`
+and `mesoSPIM_AcquisitionManagerWindow.py` on upstream `master`.
+
+### Covered
+
+- Stage: absolute and relative moves with limit checks, zero and unzero, load, unload and center
+  presets, position readback, emergency stop.
+- Optics and timing: filter, zoom, laser, intensity, shutter configuration, open and close
+  shutters, ETL, galvo, laser-timing and camera-timing parameters, ETL config reload, update and
+  save.
+- Modes: live, visual mode, light-sheet alignment mode, stop.
+- Acquisition: install and read the whole acquisition list, run the list, run the selected row,
+  preview a row, one-shot `acquire_start` and `acquire_finish`, time lapse start and stop, disk
+  space and motion limit checks.
+- Reads: state, full state dump, configuration, limits, capabilities, manual, progress, file
+  stat, self-test.
+
+### Gaps, most consequential first
+
+1. **No snap.** `Core.snap` exists and the GUI Snap button uses it, but there is no remote
+   command; `test_registry_is_the_documented_53_calls` asserts it stays out. Adding one is small:
+   it follows the same `set_state("snap")` path as live and completes on `sig_finished`. It also
+   needs a destination, because `snap_folder`, `file_prefix` and `file_suffix` are not settable
+   remotely.
+2. **No image data.** Nothing returns a frame, a thumbnail, or the path of the last written snap.
+   The architecture doc lists this as a known limit. For the AI Assistant it is the largest
+   functional gap: the agent can act but cannot see the result.
+3. **Core warnings never reach the client.** Preflight refusals (file exists, folder missing, disk
+   space, outside limits) go through `sig_warning` to a GUI dialog only. The remote operation
+   fails with the generic text "Core rejected the acquisition during preflight", and `get_info`
+   always returns an empty `warnings` list. The Acceptor could connect `sig_warning` and attach the
+   last message to the failed operation.
+4. **Not settable remotely:** `camera_line_interval`, `camera_sensor_mode`, `samplerate`,
+   `laser_l_max_amplitude_%`, `laser_r_max_amplitude_%`, `laser_interleaving`,
+   `ttl_movement_enabled_during_acq`, `snap_folder`, `file_prefix`, `file_suffix`. Some are
+   reasonable to keep out for safety. Line interval and sensor mode matter for light-sheet
+   readout mode and are the ones an operator is most likely to miss.
+5. **Acquisition list is whole-list only.** No add, delete, copy, reorder or single-row edit, and
+   no load or save of a table file. A client resends the entire list to change one row.
+6. **Wizards are GUI-only:** tiling, filename, focus tracking and image processing wizards, the
+   mark-current-position buttons, rotation point, auto-illumination. `get_config` exposes pixel
+   sizes and sensor size, so a client can compute tiles itself, but nothing does it server-side.
+7. **Optimizer and autofocus** (`sig_launch_optimizer`, the focus auto button) are not exposed.
+8. **Peripheral windows are not exposed:** camera window contrast, processor chain editing (the
+   per-row `processing` field is accepted, but the available processors cannot be listed), tile
+   overview, webcam, PSF analysis, open TIFF.
+9. **Deliberately excluded:** script execution (PR 105) and Galil programs. Correct for a
+   constrained API; worth stating in the docs as a decision rather than an omission.
+10. **Polling only.** No push stream for progress, warnings or completion. Fine by design, but MCP
+    clients that expect `notifications/*` receive nothing.
+
+Items 1 and 3 are cheap and close the gaps a first-time user hits most. Item 2 is the one that
+changes what the assistant can do.
+
 ## What is good
 
 - Single dispatcher and atomic `_GATE`; TCP and MCP cannot diverge in validation or busy semantics.
