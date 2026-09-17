@@ -84,8 +84,8 @@ def test_submit_single_flight_disables_input(monkeypatch):
 
 # --- the setup row ---
 
-def _gui(acceptor=object()):
-    return AiAssistentGUI(_FakeParent(_FakeCore(acceptor=acceptor)))
+def _gui():
+    return AiAssistentGUI(_FakeParent(_FakeCore(acceptor=object())))
 
 
 def test_setup_row_prefills_the_default_provider():
