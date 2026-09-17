@@ -113,7 +113,7 @@ in the file-naming wizard.
             "C:/a/different/plugin/location",
         ],
        'first_image_writer': 'OME_Zarr_Writer',
-        # other options: 'H5_BDV_Writer', 'MP_OME_Zarr_Writer',
+        # other options: 'H5_BDV_Writer', 'MP_OME_Zarr_Writer', 'MP_OME_Zarr_TCZYX_Writer',
         #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
     }
 
@@ -367,6 +367,7 @@ if the corresponding feature is not used:
    H5_BDV_Writer = {}
    OME_Zarr_Writer = {}
    MP_OME_Zarr_Writer = {}
+   MP_OME_Zarr_TCZYX_Writer = {}
 
 Check the ``demo_config.py`` for the latest required keys.
 

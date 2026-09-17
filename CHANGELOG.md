@@ -11,6 +11,9 @@
 - Demo mode no longer requires the `nidaqmx` package: NI-DAQmx is imported through an optional shim, and `nidaqmx` has moved to an optional `ni` extra (`pip install -e ".[ni]"`). `requirements-conda-mamba.txt` still installs it, so the documented install path is unchanged.
 - Configs selecting NI waveform generation, shutters or laser enable lines now fail at startup with a message naming the missing package or driver, instead of an import error or a `DaqNotFoundError` raised mid-acquisition.
 
+### New Features ✨
+- **MP_OME_Zarr_TCZYX_Writer**: a mode of the multi-process OME-Zarr writer that writes one `(t, c, z, y, x)` store per tile: channels along `c`, time points of a time lapse appended along `t`, stage position and channel names/colours in the OME metadata. No chunk or shard spans a channel or a time point, and every shard is written in one go. Configured with `MP_OME_Zarr_TCZYX_Writer = {...}`; see `docs/source/file_formats.rst`.
+
 ### Bugfixes 🐛
 - Waveforms are now `round(samplerate * sweeptime)` samples long instead of truncated: `25000 * 0.073` evaluates to `1824.9999999999998`, which gave 1824 samples and a 72.96 ms waveform for a 73 ms sweep.
 - The pass-through "Identity" image processor no longer costs ~53 ms per full frame: `count_domain_to_uint16()` returns uint16 input unchanged instead of converting it to float and back, which made continuous acquisition drop frames.

@@ -44,6 +44,12 @@ At a glance
      - Yes
      - zstd / lz4
      - Single-core; same format as above
+   * - ``MP_OME_Zarr_TCZYX_Writer``
+     - ``.ome.zarr``
+     - One ``(t, c, z, y, x)`` store per tile
+     - Yes
+     - zstd / lz4
+     - Channels along ``c``, time points appended along ``t``; no BigStitcher XML
    * - ``H5_BDV_Writer``
      - ``.h5``
      - One file (all tiles)
@@ -144,6 +150,43 @@ optionally emit an XML file for drag-and-drop stitching in BigStitcher.
    defaults above are a reasonable starting point — benchmark on your own
    hardware before changing them for a real acquisition.
 
+MP_OME_Zarr_TCZYX_Writer
+-------------------------
+
+The multi-process writer with a different layout on disk: **one
+``(t, c, z, y, x)`` store per tile** inside the acquisition's ``.ome.zarr``
+group, at ``Mag{mag}_Tile{tile}_Sh{shutter}_Rot{rot}.ome.zarr``. Every channel
+of a tile is one index along ``c`` (in laser order), and every time point of a
+timelapse is appended along ``t`` of the same store -- the ``_Time###`` suffix
+mesoSPIM puts on file names between time points is read for ``t`` and stripped
+from the path. Channel names and colours go into the ``omero`` block, the stage
+position into the coordinate transformations. A viewer opens each tile as one
+multichannel, multi-time-point image.
+
+No chunk or shard spans a channel or a time point: every one covers exactly one
+``(t, c)``, so a later stack only ever adds files and nothing on disk is
+rewritten. A shard is always exactly one z-chunk deep -- the live pipeline
+writes one z-chunk over the full sensor per assignment, so such a shard is one
+write; a deeper shard would be read back and rewritten for every chunk landing
+in it, and the writer refuses it. Shards are off by default (one file per
+chunk); ``mesoSPIM/test/benchmark_omezarr_shards.py`` measures the difference on
+your hardware.
+
+.. code-block:: python
+
+   MP_OME_Zarr_TCZYX_Writer = {
+       'ome_version': '0.5',            # '0.4' (zarr v2) or '0.5' (zarr v3, sharding supported)
+       'generate_multiscales': True,
+       'compression': 'zstd',
+       'compression_level': 5,
+       'shards': None,                  # None, or (z, y, x) with z == base_chunks z
+       'base_chunks': (64, 256, 256),
+       'target_chunks': (64, 64, 64),
+       'ring_buffer_size': 512,
+   }
+
+Not supported by this writer: the BigStitcher XML and ``write_cache``.
+
 H5_BDV_Writer
 ----------------
 
@@ -215,6 +258,12 @@ Writer capabilities
      - No
      - uint16
    * - ``OME_Zarr_Writer``
+     - Yes
+     - Yes
+     - Yes
+     - No
+     - uint16
+   * - ``MP_OME_Zarr_TCZYX_Writer``
      - Yes
      - Yes
      - Yes
