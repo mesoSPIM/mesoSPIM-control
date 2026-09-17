@@ -350,9 +350,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.new_button = QtWidgets.QPushButton("Clear", self)
         self.new_button.setFont(font)
         self.new_button.clicked.connect(self.on_new_conversation)
-        # Right of the two-line input: Send as tall as both rows, then Cancel and Clear
-        # session side by side with the emergency stop underneath them, spanning both; the input
-        # is as tall as the two button rows.
+        # Right of the two-line input: Send as tall as both rows, then Cancel and Clear side by
+        # side with the emergency stop underneath them, spanning both; the input is as tall as
+        # the two button rows.
         buttons = QtWidgets.QGridLayout()
         buttons.setHorizontalSpacing(6)
         buttons.setVerticalSpacing(6)
