@@ -285,9 +285,9 @@ can call hardware. MainWindow waits for this sequence before continuing applicat
 1. The one-operation rule coordinates remote clients, not local GUI actions. The operator must not
    start conflicting GUI work during remote control.
 2. `get_progress` reports only the latest operation. Clients must retain and compare its ID.
-3. The MCP endpoint advertises revision `2024-11-05` and implements the methods needed here
-   (`initialize`, `tools/list`, `tools/call`), not the complete lifecycle or newer Streamable HTTP
-   revisions.
+3. The MCP endpoint is Streamable HTTP (revision `2025-03-26`, `2025-06-18` accepted) in its
+   POST-only form. It implements `initialize`, `ping`, `tools/list` and `tools/call`, not the
+   optional server-sent event stream, session IDs, resources, prompts or sampling.
 4. The API reports acquisition metadata and progress, not image pixels.
 5. Warning dialogs remain mesoSPIM dialogs; Remote Control does not dismiss them. The warning
    text is also recorded on the active operation (`operation.warning`, and in the failure

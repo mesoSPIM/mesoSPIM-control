@@ -18,7 +18,11 @@ Maintainer (2026):
 # --- identity ---
 APP_NAME = "mesoSPIM-control"
 PROTOCOL_VERSION = 1
-MCP_PROTOCOL_VERSION = "2024-11-05"
+# The endpoint is a plain JSON-RPC-over-HTTP-POST server: the Streamable HTTP transport shape of
+# MCP 2025-03-26 without its optional SSE stream or sessions. initialize negotiates: a client
+# asking for a supported revision gets that one echoed back, anyone else gets the latest.
+MCP_PROTOCOL_VERSION = "2025-03-26"
+MCP_SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26")
 MCP_SERVER_NAME = "mesoSPIM MCP server"
 MCP_SERVER_VERSION = "1.0"
 

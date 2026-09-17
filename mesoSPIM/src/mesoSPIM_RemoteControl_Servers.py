@@ -266,6 +266,10 @@ def _make_handler(acceptor, token):
         def log_message(self, *_):
             pass
 
+        def do_GET(self):
+            # No server-initiated SSE stream is offered; the transport is request/response only.
+            self._json(405, {"error": "method not allowed; POST JSON-RPC to /mcp"})
+
         def do_POST(self):
             # Drain any declared request body up front. Every rejection below (404/403/401/...)
             # can return before the body would otherwise be read; leaving it unread while this
@@ -337,16 +341,21 @@ def _mcp_reply(acceptor, msg):
     if "params" in msg and not isinstance(msg["params"], dict):
         return rpc_error(rid, -32602, "invalid params: expected an object")
     if method == "initialize":
+        requested = msg.get("params", {}).get("protocolVersion")
         result = {
-            "protocolVersion": config.MCP_PROTOCOL_VERSION,
+            "protocolVersion": (
+                requested if requested in config.MCP_SUPPORTED_PROTOCOL_VERSIONS else config.MCP_PROTOCOL_VERSION
+            ),
             "capabilities": {"tools": {}},
             "serverInfo": {"name": config.MCP_SERVER_NAME, "version": config.MCP_SERVER_VERSION},
             "instructions": config.MCP_INSTRUCTIONS,
         }
+    elif method == "ping":
+        result = {}
     elif method == "tools/list":
         result = {
             "tools": [
-                {"name": c.name, "description": c.hint or c.name, "inputSchema": {"type": "object"}}
+                {"name": c.name, "description": c.hint or c.name, "inputSchema": c.schema}
                 for c in COMMANDS.values()
             ]
         }

@@ -84,6 +84,8 @@ The docs should also state plainly what leaves the machine: the system prompt em
 
 ### 7. MCP compatibility claims need qualifying (should fix or document)
 
+Status: fixed on this branch by the commit "Remote Control: publish MCP argument schemas and align the protocol version". The AI Assistant still hands its tools an open schema (its docstring explains why); switching it to the published schemas is a follow-up to validate against a live model.
+
 Where: `mesoSPIM/src/mesoSPIM_RemoteControl_Config.py` line 21 (`MCP_PROTOCOL_VERSION = "2024-11-05"`); `mesoSPIM/src/mesoSPIM_RemoteControl_Servers.py` line 347 (`tools/list`).
 
 - The server declares protocol `2024-11-05` but serves a POST-only JSON endpoint. That version's HTTP transport is HTTP+SSE; the POST-only shape corresponds to the later Streamable HTTP transport, which also expects `Accept` negotiation and `Mcp-Session-Id` handling. Off-the-shelf MCP clients may not connect.

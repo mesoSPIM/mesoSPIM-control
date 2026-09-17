@@ -71,9 +71,18 @@ class Command:
     # Core state held by this asynchronous operation while it is running.
     running_state: Optional[str] = None
 
+    # JSON Schema of the arguments, published by MCP tools/list. It mirrors `accept`, which stays
+    # the authority: the schema tells a client what to send, accept decides what is allowed.
+    schema: Optional[dict] = None
+
+
+NO_ARGS_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
+
 
 def command(name, kind, execute, **rest):
-    """Register one command definition when the Commands module is imported."""
+    """Register one command definition when the Commands module is imported. A command that
+    declares no schema takes no arguments."""
+    rest.setdefault("schema", NO_ARGS_SCHEMA)
     COMMANDS[name] = Command(name, kind, execute, **rest)
 
 

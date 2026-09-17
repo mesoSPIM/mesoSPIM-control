@@ -716,6 +716,56 @@ def _limits_document(core):
     }
 
 
+# --- Argument schemas (published by MCP tools/list; `accept` remains the authority) ---
+def _schema(properties=None, required=(), **extra):
+    schema = {"type": "object", "properties": dict(properties or {}), "additionalProperties": False}
+    if required:
+        schema["required"] = list(required)
+    schema.update(extra)
+    return schema
+
+
+_NUMBER, _INTEGER, _STRING, _BOOLEAN = {"type": "number"}, {"type": "integer"}, {"type": "string"}, {"type": "boolean"}
+_PERCENT = {"type": "number", "minimum": config.PERCENT_RANGE[0], "maximum": config.PERCENT_RANGE[1]}
+_AXIS_MAP = _schema({axis: _NUMBER for axis in config.AXES}, minProperties=1)
+_AXES = {"type": "array", "items": {"type": "string", "enum": list(config.AXES)}}
+_WAIT = {**_BOOLEAN, "description": "block the call until the hardware confirms"}
+
+
+def _setting_schema(key):
+    """The schema of one settable state key, from the same tables check_setting enforces."""
+    if key in _NUMERIC_OPTION_KEYS:
+        return {**_INTEGER, "description": "one of camera_parameters.subsampling"}
+    if key in ("filter", "zoom", "laser", "shutterconfig", "camera_binning"):
+        return {**_STRING, "description": f"one of the configured {key} options (see get_config)"}
+    if key in _PERCENT_KEYS:
+        return _PERCENT
+    if key in config.PARAMETER_RANGES:
+        low, high = config.PARAMETER_RANGES[key]
+        return {"type": "number", "minimum": low, "maximum": high}
+    if key in _BOOL_STATE_KEYS:
+        return _BOOLEAN
+    return _NUMBER
+
+
+def _settings_schema(keys):
+    return _schema({key: _setting_schema(key) for key in keys}, minProperties=1)
+
+
+_ACQUISITION = _schema(
+    {
+        **{field: _NUMBER for field in config.ACQUISITION_AXIS_FIELDS},
+        "z_step": {"type": "number", "exclusiveMinimum": 0},
+        "planes": {"type": "integer", "minimum": 1, "maximum": config.MAX_ACQUISITION_PLANES},
+        **{field: _STRING for field in config.ACQUISITION_STRING_FIELDS},
+        **{key: _setting_schema(key) for key in ("laser", "intensity", "filter", "zoom", "shutterconfig")},
+        **{key: _setting_schema(key) for key in ("etl_l_offset", "etl_l_amplitude", "etl_r_offset", "etl_r_amplitude")},
+    }
+)
+_ACQUISITIONS = {"type": "array", "items": _ACQUISITION, "minItems": 1}
+_ROW = {"type": "integer", "minimum": 0, "description": "index into the installed acquisition list"}
+
+
 # --- Command definitions ---
 
 
@@ -790,6 +840,7 @@ command(
     "get_state_all",
     READ,
     _run_get_state_all,
+    schema=_schema({"keys": {"type": "array", "items": _STRING, "description": "state keys; omit for all"}}),
     accept=_accept_get_state_all,
     hint="in: {keys?: [str]}. out: state map",
 )
@@ -1004,6 +1055,7 @@ command(
     "stat_files",
     READ,
     _run_stat_files,
+    schema=_schema({"files": {"type": "array", "items": _STRING}}, required=("files",)),
     accept=_accept_stat_files,
     hint="in: {files: [path]}. out: {missing, sizes}",
 )
@@ -1045,6 +1097,7 @@ command(
     "get_disk_space",
     READ,
     _run_get_disk_space,
+    schema=_schema({"acquisitions": {**_ACQUISITIONS, "description": "omit for the installed list"}}),
     accept=_accept_acq_check,
     hint="in: {acquisitions?}. out: {free_bytes, required_bytes}",
 )
@@ -1058,6 +1111,7 @@ command(
     "check_motion_limits",
     READ,
     _run_check_motion_limits,
+    schema=_schema({"acquisitions": {**_ACQUISITIONS, "description": "omit for the installed list"}}),
     accept=_accept_acq_check,
     hint="in: {acquisitions?}. out: {outside_limits}",
 )
@@ -1085,6 +1139,7 @@ command(
     "move_absolute",
     WAIT,
     _run_move_absolute,
+    schema=_schema({"targets": {**_AXIS_MAP, "description": "axis -> um (deg for theta)"}}, required=("targets",)),
     accept=_accept_move_absolute,
     milestone=config.MILESTONE_POSITION,
     hint="in: {targets:{axis: um/deg}}. out: {target}. poll get_progress",
@@ -1120,6 +1175,7 @@ command(
     "move_relative",
     WAIT,
     _run_move_relative,
+    schema=_schema({"deltas": {**_AXIS_MAP, "description": "axis -> um (deg for theta)"}}, required=("deltas",)),
     accept=_accept_move_relative,
     milestone=config.MILESTONE_POSITION,
     hint="in: {deltas:{axis: um/deg}}. out: {target}. poll get_progress",
@@ -1136,7 +1192,7 @@ def _run_zero(core, args):
     return {}
 
 
-command("zero", ACTION, _run_zero, accept=_accept_axes, hint="in: {axes?}. out: {}")
+command("zero", ACTION, _run_zero, schema=_schema({"axes": {**_AXES, "description": "omit for all axes"}}), accept=_accept_axes, hint="in: {axes?}. out: {}")
 
 
 def _run_unzero(core, args):
@@ -1144,7 +1200,7 @@ def _run_unzero(core, args):
     return {}
 
 
-command("unzero", ACTION, _run_unzero, accept=_accept_axes, hint="in: {axes?}. out: {}")
+command("unzero", ACTION, _run_unzero, schema=_schema({"axes": {**_AXES, "description": "omit for all axes"}}), accept=_accept_axes, hint="in: {axes?}. out: {}")
 
 
 # --- Emergency and recovery commands ---
@@ -1235,6 +1291,7 @@ command(
     "set_state",
     ACTION,
     _run_state_settings,
+    schema=_schema({"settings": _settings_schema(config.SETTABLE_STATE_KEYS)}, required=("settings",)),
     accept=_accept_set_state,
     hint="in: {settings:{settable keys, see get_capabilities}}. out: {}",
 )
@@ -1250,7 +1307,7 @@ def _run_set_filter(core, args):
     return {}
 
 
-command("set_filter", ACTION, _run_set_filter, accept=_accept_set_filter, hint="in: {filter, wait?}. out: {}")
+command("set_filter", ACTION, _run_set_filter, schema=_schema({"filter": _setting_schema("filter"), "wait": _WAIT}, required=("filter",)), accept=_accept_set_filter, hint="in: {filter, wait?}. out: {}")
 
 
 def _accept_set_zoom(core, args):
@@ -1268,7 +1325,7 @@ def _run_set_zoom(core, args):
 
 
 command(
-    "set_zoom", ACTION, _run_set_zoom, accept=_accept_set_zoom, hint="in: {zoom, wait?, update_etl?}. out: {}"
+    "set_zoom", ACTION, _run_set_zoom, schema=_schema({"zoom": _setting_schema("zoom"), "wait": _WAIT, "update_etl": _BOOLEAN}, required=("zoom",)), accept=_accept_set_zoom, hint="in: {zoom, wait?, update_etl?}. out: {}"
 )
 
 
@@ -1290,6 +1347,7 @@ command(
     "set_laser",
     ACTION,
     _run_set_laser,
+    schema=_schema({"laser": _setting_schema("laser"), "wait": _WAIT, "update_etl": _BOOLEAN}, required=("laser",)),
     accept=_accept_set_laser,
     hint="in: {laser, wait?, update_etl?}. out: {}",
 )
@@ -1309,6 +1367,7 @@ command(
     "set_shutterconfig",
     ACTION,
     _run_set_shutterconfig,
+    schema=_schema({"shutterconfig": _setting_schema("shutterconfig")}, required=("shutterconfig",)),
     accept=_accept_set_shutterconfig,
     hint="in: {shutterconfig}. out: {}",
 )
@@ -1328,6 +1387,7 @@ command(
     "set_intensity",
     ACTION,
     _run_set_intensity,
+    schema=_schema({"intensity": _PERCENT, "wait": _WAIT}, required=("intensity",)),
     accept=_accept_set_intensity,
     hint="in: {intensity 0..100, wait?}. out: {}",
 )
@@ -1342,6 +1402,7 @@ command(
     "set_camera",
     ACTION,
     _run_state_settings,
+    schema=_settings_schema(config.SETTING_GROUPS["set_camera"]),
     accept=_accept_set_camera,
     hint="in: one or more set_camera keys (see get_capabilities.setting_groups). out: {}",
 )
@@ -1355,6 +1416,7 @@ command(
     "set_etl",
     ACTION,
     _run_state_settings,
+    schema=_settings_schema(config.SETTING_GROUPS["set_etl"]),
     accept=_accept_set_etl,
     hint="in: one or more set_etl keys (see get_capabilities.setting_groups). out: {}",
 )
@@ -1368,6 +1430,7 @@ command(
     "set_galvo",
     ACTION,
     _run_state_settings,
+    schema=_settings_schema(config.SETTING_GROUPS["set_galvo"]),
     accept=_accept_set_galvo,
     hint="in: one or more set_galvo keys (see get_capabilities.setting_groups). out: {}",
 )
@@ -1381,6 +1444,7 @@ command(
     "set_laser_timing",
     ACTION,
     _run_state_settings,
+    schema=_settings_schema(config.SETTING_GROUPS["set_laser_timing"]),
     accept=_accept_set_laser_timing,
     hint="in: one or more set_laser_timing keys (see get_capabilities.setting_groups). out: {}",
 )
@@ -1433,6 +1497,7 @@ command(
     "reload_etl_config",
     ACTION,
     _run_etl,
+    schema=_schema({"path": {**_STRING, "description": "ETL config file; omit for the current one"}, "wait": _WAIT}),
     accept=_accept_reload_etl_config,
     hint="in: {path?, wait?}. out: ETL readback",
 )
@@ -1440,6 +1505,7 @@ command(
     "update_etl_from_laser",
     ACTION,
     _run_etl,
+    schema=_schema({"laser": _setting_schema("laser"), "wait": _WAIT}),
     accept=_accept_update_etl_from_laser,
     hint="in: {laser?, wait?}. out: ETL readback",
 )
@@ -1447,6 +1513,7 @@ command(
     "update_etl_from_zoom",
     ACTION,
     _run_etl,
+    schema=_schema({"zoom": _setting_schema("zoom"), "wait": _WAIT}),
     accept=_accept_update_etl_from_zoom,
     hint="in: {zoom?, wait?}. out: ETL readback",
 )
@@ -1599,6 +1666,7 @@ command(
     "snap",
     WAIT,
     _run_snap,
+    schema=_schema({"folder": {**_STRING, "description": "existing directory; omit for the snap folder"}, "prefix": _STRING}),
     accept=_accept_snap,
     milestone=config.MILESTONE_SNAP,
     hint="in: {folder?, prefix?}. out: {scheduled, prefix}; get_progress result gives {path}. "
@@ -1753,6 +1821,7 @@ command(
     "set_acquisition_list",
     ACTION,
     _run_set_acquisition_list,
+    schema=_schema({"acquisitions": _ACQUISITIONS, "selected_row": _ROW}, required=("acquisitions",)),
     accept=_accept_set_acquisition_list,
     hint="in: {acquisitions:[...], selected_row?}. out: {count}",
 )
@@ -1841,6 +1910,7 @@ command(
     "run_selected_acquisition",
     WAIT,
     _run_run_selected_acquisition,
+    schema=_schema({"row": _ROW}),
     accept=_accept_run_selected,
     milestone=config.MILESTONE_FINISHED,
     running_state="run_selected_acquisition",
@@ -1870,6 +1940,7 @@ command(
     "preview_acquisition",
     WAIT,
     _run_preview,
+    schema=_schema({"row": _ROW, "z_update": _BOOLEAN}),
     accept=_accept_preview,
     milestone=config.MILESTONE_PREVIEW,
     hint="in: {row?, z_update?}. out: {scheduled, row}. requires an installed acquisition list",
@@ -1923,6 +1994,7 @@ command(
     "acquire_start",
     WAIT,
     _run_acquire_start,
+    schema=_schema({"acquisition": _ACQUISITION}, required=("acquisition",)),
     accept=_accept_acquire_start,
     milestone=config.MILESTONE_FINISHED,
     running_state="run_acquisition_list",
@@ -1966,6 +2038,7 @@ command(
     "time_lapse_start",
     WAIT,
     _run_time_lapse_start,
+    schema=_schema({"timepoints": {"type": "integer", "minimum": 1}, "interval_sec": {"type": "integer", "minimum": 0}}),
     accept=_accept_time_lapse_start,
     milestone=config.MILESTONE_TIMELAPSE,
     hint="in: {timepoints?, interval_sec?}. out: {started}. requires an installed acquisition list",

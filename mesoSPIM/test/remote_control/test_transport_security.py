@@ -475,9 +475,41 @@ def test_tools_list_over_wire():
     assert {t["name"] for t in tools} == set(dispatcher.COMMANDS)
     assert len(tools) == 54
     for tool in tools:
-        assert tool["inputSchema"] == {"type": "object"}
+        assert tool["inputSchema"] == dispatcher.COMMANDS[tool["name"]].schema
+        assert tool["inputSchema"]["additionalProperties"] is False
         assert tool["description"]
         assert tool["description"] == dispatcher.COMMANDS[tool["name"]].hint
+    by_name = {t["name"]: t["inputSchema"] for t in tools}
+    assert by_name["move_absolute"]["required"] == ["targets"]
+    assert set(by_name["move_absolute"]["properties"]["targets"]["properties"]) == set(config.AXES)
+    assert by_name["set_intensity"]["properties"]["intensity"]["maximum"] == 100
+    assert by_name["get_manual"]["properties"] == {}
+
+
+def test_initialize_negotiates_the_protocol_version():
+    def initialize(version):
+        status, reply = _jsonrpc(
+            _h.mcp.port,
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": version}},
+        )
+        assert status == 200
+        return reply["result"]["protocolVersion"]
+
+    for version in config.MCP_SUPPORTED_PROTOCOL_VERSIONS:
+        assert initialize(version) == version  # a supported request is echoed
+    assert initialize("2024-11-05") == config.MCP_PROTOCOL_VERSION  # otherwise the latest
+    assert initialize("1.0") == config.MCP_PROTOCOL_VERSION
+
+
+def test_ping_over_wire():
+    assert _h.mcp.rpc("ping")["result"] == {}
+
+
+def test_get_is_refused_without_an_event_stream():
+    request = urllib.request.Request(f"http://127.0.0.1:{_h.mcp.port}/mcp", method="GET")
+    with pytest.raises(urllib.error.HTTPError) as caught:
+        urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT)
+    assert caught.value.code == 405
 
 
 def test_initialize_over_wire():

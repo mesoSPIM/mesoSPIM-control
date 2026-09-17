@@ -30,10 +30,11 @@ The default URL is `http://127.0.0.1:42100/mcp`. Send JSON-RPC POST requests wit
 Authorization: Bearer <Remote Control password>
 ```
 
-Microscope commands use the MCP method `tools/call`. `initialize` and `tools/list` are also
-supported. The endpoint advertises MCP revision `2024-11-05` and intentionally implements only
-these three methods as authenticated HTTP POST requests. It does not claim the resources, prompts,
-streaming, sessions, or complete lifecycle of newer MCP Streamable HTTP revisions.
+Microscope commands use the MCP method `tools/call`. `initialize`, `ping` and `tools/list` are
+also supported, and `tools/list` publishes a JSON Schema for every command's arguments. The
+endpoint is the Streamable HTTP transport of MCP revision `2025-03-26` (`2025-06-18` is accepted
+too) in its request/response form: authenticated HTTP POST, JSON replies, no server-sent event
+stream (GET answers 405) and no session IDs. It does not claim resources, prompts or sampling.
 
 The host and ports can be changed in the tab. Do not hard-code or commit the password.
 

@@ -70,9 +70,38 @@ def test_built_in_manual_matches_the_registry_and_async_contract():
 
 
 def test_mcp_identity_is_complete():
-    assert config.MCP_PROTOCOL_VERSION == "2024-11-05"
+    # A POST-only JSON-RPC endpoint is the Streamable HTTP shape, first defined in 2025-03-26.
+    assert config.MCP_PROTOCOL_VERSION == "2025-03-26"
+    assert config.MCP_PROTOCOL_VERSION in config.MCP_SUPPORTED_PROTOCOL_VERSIONS
+    assert "2024-11-05" not in config.MCP_SUPPORTED_PROTOCOL_VERSIONS  # that revision is HTTP+SSE
     assert config.MCP_SERVER_NAME
     assert config.MCP_SERVER_VERSION
+
+
+def test_every_command_publishes_a_schema_that_matches_its_validator():
+    """The schema is what an MCP client shows its model; accept() is what runs. They must agree on
+    the argument names, and the reviewed valid example of every command must fit its schema."""
+    for name, cmd in dispatcher.COMMANDS.items():
+        schema = cmd.schema
+        assert schema["type"] == "object" and schema["additionalProperties"] is False, name
+        properties = schema["properties"]
+        example = VALID_CASES[name]
+        if not properties:
+            assert example == {}, f"{name} takes arguments but publishes none"
+        assert set(example) <= set(properties), (name, set(example) - set(properties))
+        assert set(schema.get("required", ())) <= set(example), (name, schema.get("required"))
+        for key, value in example.items():
+            expected = properties[key]["type"]
+            actual = {bool: "boolean", int: "integer", float: "number", str: "string", list: "array", dict: "object"}[type(value)]
+            assert actual == expected or (expected == "number" and actual == "integer"), (name, key, expected, actual)
+
+
+def test_schemas_reject_what_accept_rejects():
+    """Every command's universal negative case (an unexpected field) is outside its schema too."""
+    from mesoSPIM.test.remote_control.support.contracts import UNEXPECTED_ARGUMENT_CASES
+
+    for name, bad in UNEXPECTED_ARGUMENT_CASES.items():
+        assert not set(bad) & set(dispatcher.COMMANDS[name].schema["properties"]), name
 
 
 def test_startup_self_test_accepts_a_complete_demo_configuration():
