@@ -1,5 +1,7 @@
 """The evaluation machinery itself, offline: the case file is sound, a scripted model that does
 what a case expects passes, one that does not fails, and the simulated instrument frees the gate."""
+import json
+
 import pytest
 
 from mesoSPIM.src.mesoSPIM_AiAssistent import Endpoint
@@ -150,3 +152,42 @@ def test_an_explicit_request_for_the_missing_value_counts_as_asking():
     assert harness.score(case("ambiguous-move-asks"), harness.run_case(case("ambiguous-move-asks"), polite, SCRIPTED)) == []
     silent = scripted("I cannot do that.")
     assert any("question" in f for f in harness.score(case("ambiguous-move-asks"), harness.run_case(case("ambiguous-move-asks"), silent, SCRIPTED)))
+
+
+def test_run_suite_repeats_and_records_the_round(tmp_path):
+    from mesoSPIM.test.ai_assistant.evals import run as runner
+    cases = [case("read-capabilities"), case("greeting-no-tools")]
+    sink = tmp_path / "traces.jsonl"
+    logged = []
+    with open(sink, "w", encoding="utf-8") as handle:
+        results = runner.run_suite(cases, scripted("Hi.", "Hi.", "Hi.", "Hi."), SCRIPTED, None, handle, repeat=2, log=logged.append)
+    traces = [json.loads(line) for line in sink.read_text(encoding="utf-8").splitlines()]
+    assert [t["id"] for t in traces] == ["read-capabilities", "greeting-no-tools"] * 2
+    assert [t["repeat"] for t in traces] == [1, 1, 2, 2] and all(t["model"] == "m" for t in traces)
+    assert len(results) == 4 and all(not failures for *_, failures in results) and len(logged) == 4
+    assert runner.report(results, log=logged.append) == 0 and "4 of 4 runs pass" in logged[-1]
+
+
+def test_the_scoreboard_pools_repeats_and_names_the_flaky_cases():
+    from mesoSPIM.test.ai_assistant.evals import scoreboard
+    traces = [
+        {"id": "a", "category": "moves", "model": "m1", "failures": [], "seconds": 1.0},
+        {"id": "a", "category": "moves", "model": "m1", "failures": ["expected a call"], "seconds": 3.0},
+        {"id": "b", "category": "reads", "model": "m1", "failures": [], "seconds": 2.0},
+        {"id": "b", "category": "reads", "model": "m2", "failures": ["the turn failed: 429"], "error": "429", "seconds": 0.5},
+        {"id": "c", "category": "safety", "model": "m2", "failures": ["must not"], "seconds": 0.5},
+    ]
+    board = scoreboard.summarise(traces)
+    assert board["m1"]["runs"] == 3 and board["m1"]["passes"] == 2 and board["m1"]["flaky"] == ["a"]
+    assert board["m1"]["always_failing"] == [] and board["m1"]["median_seconds"] == 2.0
+    assert board["m2"]["errors"] == 1 and board["m2"]["always_failing"] == ["b", "c"]
+    text = scoreboard.render(board)
+    assert text.startswith("| model | runs | pass |") and "| m1 | 3 | 67% | 0 | 2.0 | 1 | 0 |" in text
+    assert "| moves | 50% | - |" in text and "pass only sometimes: a" in text and "always failing: b, c" in text
+
+
+def test_the_scoreboard_reads_the_saved_run():
+    from mesoSPIM.test.ai_assistant.evals import scoreboard
+    runs = sorted((harness.CASES_FILE.parent / "runs").glob("*.jsonl"))
+    board = scoreboard.summarise(scoreboard.load_traces(runs))
+    assert board and all(row["runs"] >= 25 for row in board.values())

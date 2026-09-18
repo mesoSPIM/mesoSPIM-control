@@ -131,7 +131,10 @@ suite, records every run as a trace and scores it:
 ```
 python -m mesoSPIM.test.ai_assistant.evals.run --provider Gemini            # GEMINI_API_KEY set
 python -m mesoSPIM.test.ai_assistant.evals.run --provider Anthropic --profile Full --only laser,snap
-python -m mesoSPIM.test.ai_assistant.evals.run --rescore assistant-evals.jsonl
+python -m mesoSPIM.test.ai_assistant.evals.run --provider Gemini --model gemini-3.5-flash-lite,gemma-4-31b-it \
+    --repeat 3 --out "mesoSPIM/test/ai_assistant/evals/runs/{date}-{model}.jsonl"
+python -m mesoSPIM.test.ai_assistant.evals.run --rescore runs/2026-09-17-gemini-3.5-flash-lite.jsonl
+python -m mesoSPIM.test.ai_assistant.evals.scoreboard mesoSPIM/test/ai_assistant/evals/runs/*.jsonl
 ```
 
 The cases cover plain verbs, unit conversion (mm, µm, seconds, words, 1e4), reads that must not
@@ -146,6 +149,17 @@ Dutch. A run costs API calls and two runs can differ, so it is not part of the t
 it when the prompt, the tools or the model change, and keep the trace file: a case that starts
 failing shows in it what the model did instead. `test_evals.py` keeps the machinery itself honest
 offline, with scripted models.
+
+**Benchmarking across models, still to do.** One run of one model is a coin flip on the hard
+cases: the injection-through-state case passed twice and failed once on the same model and prompt.
+The tooling for a real benchmark is in place: `run.py` takes several models and `--repeat`, and
+`scoreboard.py` pools the run files into one table (pass rate per model and per category, provider
+errors, median seconds, and the cases that pass only sometimes or never). What is missing is the
+runs: every model that may face an operator, three repeats each, on a paid tier, since the free
+Gemini tier stops after roughly one full pass per model per day. Read the scoreboard as a report
+on the manual as much as on the model: a case that fails on every model is a rule the manual states
+too loosely (the ambiguity and readout rules were found that way), one that fails on one model is
+that model's fit. Keep the run files; they are the evidence.
 
 Every turn in the tab is recorded the same way, one JSON line per turn in
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl` (or the config attribute
