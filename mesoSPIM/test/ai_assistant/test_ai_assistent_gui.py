@@ -426,6 +426,16 @@ def test_frames_from_look_are_shown_in_the_turn(monkeypatch):
     assert '<img src="data:image/png;base64,QUJD"' in gui.output.toPlainText()   # kept in the finished block
 
 
+def test_a_stand_in_model_is_shown_in_the_turn():
+    gui = _gui()
+    gui._active = {"tools": [], "reply": None, "error": None}
+    gui._on_served("gemini-3.1-flash-lite answered this turn, standing in for gemini-3.5-flash-lite")
+    gui._on_reply("Moved.")
+    assert "standing in for gemini-3.5-flash-lite" in gui.output.toPlainText()
+    gui._on_done()
+    assert "standing in for" in gui.output.toPlainText() and "Moved." in gui.output.toPlainText()
+
+
 # --- the Run / Cancel bar ---
 
 def test_confirmation_bar_is_hidden_until_asked_and_answers_the_gate():

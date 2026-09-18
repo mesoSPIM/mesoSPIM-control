@@ -20,7 +20,9 @@ PROVIDERS = {
     "Gemini": {
         "kind": "google",
         "model": "gemini-3.5-flash-lite",  # 250K input tokens/min free tier, native tool calling
-        "fallback_model": "gemini-3.1-flash-lite",  # rolls over on rate limit; its own quota
+        # No fallback model: the evaluation showed gemini-3.1-flash-lite obeying a note planted in the
+        # state readout six times out of six, where the chosen model never did. A stand-in the
+        # operator did not evaluate is worse than a rate-limit error they can see and retry.
         "key_env": "GEMINI_API_KEY",
         "vision": True,
     },

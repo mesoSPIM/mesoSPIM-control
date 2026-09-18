@@ -353,6 +353,17 @@ def turn_trace(messages):
     return [dict(calls[call_id], result=returns.get(call_id)) for call_id in order]
 
 
+def served_models(messages):
+    """The names of the models that answered in these messages, in order of first appearance: the
+    fallback model rolls in silently on a rate limit, and a trace should say who really answered."""
+    names = []
+    for message in messages:
+        name = getattr(message, "model_name", None)
+        if getattr(message, "kind", None) == "response" and name and name not in names:
+            names.append(name)
+    return names
+
+
 def write_trace(folder, record):
     """Append one turn to today's JSONL file in the folder."""
     os.makedirs(folder, exist_ok=True)
@@ -523,6 +534,7 @@ class AssistantWorker(QtCore.QObject):
     sig_tool = QtCore.pyqtSignal(str, str)   # tool name, args-json
     sig_frame = QtCore.pyqtSignal(str)       # base64 PNG the `look` tool showed the vision model
     sig_confirm = QtCore.pyqtSignal(str, str)  # a confirm-first command waits for Run / Cancel
+    sig_served = QtCore.pyqtSignal(str)      # another model than the chosen one answered (the fallback)
     sig_error = QtCore.pyqtSignal(str)
     sig_done = QtCore.pyqtSignal()
 
@@ -573,6 +585,10 @@ class AssistantWorker(QtCore.QObject):
             result = self._agent.run_sync(with_state(self._acceptor, text), message_history=self._history)
             self._history = trim_history(result.all_messages(), self.max_history_turns)
             self._record(text, result.new_messages(), started, reply=result.output)
+            chosen = self._endpoint.model if self._endpoint else None
+            others = [name for name in served_models(result.new_messages()) if name != chosen]
+            if others:   # the operator must know: another model is not the one they evaluated
+                self.sig_served.emit(f"{', '.join(others)} answered this turn, standing in for {chosen}")
             self.sig_reply.emit(result.output)
         except Exception as error:
             logger.exception("AI Assistant turn failed")
@@ -594,6 +610,7 @@ class AssistantWorker(QtCore.QObject):
             "profile": self._profile,
             "prompt": prompt,
             "tools": turn_trace(messages),
+            "served": served_models(messages),
             "reply": reply,
             "error": error,
             "seconds": round(time.monotonic() - started, 2),

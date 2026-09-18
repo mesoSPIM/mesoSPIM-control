@@ -275,6 +275,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._worker.sig_tool.connect(self._on_tool)
         self._worker.sig_frame.connect(self._on_frame)
         self._worker.sig_confirm.connect(self._on_confirm)
+        self._worker.sig_served.connect(self._on_served)
         self._worker.sig_error.connect(self._on_error)
         self._worker.sig_done.connect(self._on_done)
         self._apply_options()
@@ -647,6 +648,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         for png in active.get("frames", ()):
             # what the vision model was shown, so the operator sees it too
             parts.append(f'<div><img src="data:image/png;base64,{png}" width="320"></div>')
+        if active.get("served"):
+            parts.append(f'<div style="color:#e0c080;"><b>&#9888;</b> {_htmllib.escape(active["served"])}</div>')
         if active["error"] is not None:
             parts.append(f'<div style="color:#e08a8a;"><b>&#9888; error</b> — '
                          f'{_htmllib.escape(active["error"])}</div>')
@@ -761,6 +764,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _on_frame(self, png):
         if self._active is not None:
             self._active.setdefault("frames", []).append(png)
+            self._render()
+
+    def _on_served(self, text):
+        if self._active is not None:
+            self._active["served"] = text
             self._render()
 
     def _on_error(self, message):

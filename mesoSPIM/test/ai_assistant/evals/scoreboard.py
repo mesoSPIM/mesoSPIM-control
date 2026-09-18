@@ -28,12 +28,13 @@ def load_traces(paths):
 
 def summarise(traces):
     """Per model: runs, passes, per-category (runs, passes), flaky case ids, provider errors,
-    median seconds. Traces without a model name are pooled under "?"."""
+    runs another model answered (the fallback rolled in), median seconds. Traces without a model
+    name are pooled under "?"."""
     board = {}
     for trace in traces:
         model = trace.get("model") or "?"
         row = board.setdefault(model, {"runs": 0, "passes": 0, "categories": defaultdict(lambda: [0, 0]),
-                                       "by_case": defaultdict(list), "errors": 0, "seconds": []})
+                                       "by_case": defaultdict(list), "errors": 0, "fallback": 0, "seconds": []})
         passed = not trace.get("failures")
         row["runs"] += 1
         row["passes"] += passed
@@ -42,6 +43,7 @@ def summarise(traces):
         category[1] += passed
         row["by_case"][trace["id"]].append(passed)
         row["errors"] += bool(trace.get("error"))
+        row["fallback"] += any(name != model for name in trace.get("served") or [])
         row["seconds"].append(float(trace.get("seconds") or 0))
     for row in board.values():
         row["flaky"] = sorted(case for case, outcomes in row["by_case"].items() if len(set(outcomes)) > 1)
@@ -59,10 +61,11 @@ def render(board):
     deserve a look per model."""
     models = sorted(board, key=lambda m: (-board[m]["passes"] / max(board[m]["runs"], 1), m))
     categories = sorted({c for row in board.values() for c in row["categories"]})
-    lines = ["| model | runs | pass | provider errors | median s | flaky | always failing |", "|---|---|---|---|---|---|---|"]
+    lines = ["| model | runs | pass | provider errors | fallback answered | median s | flaky | always failing |",
+             "|---|---|---|---|---|---|---|---|"]
     for model in models:
         row = board[model]
-        lines.append(f"| {model} | {row['runs']} | {_rate(row['passes'], row['runs'])} | {row['errors']} | "
+        lines.append(f"| {model} | {row['runs']} | {_rate(row['passes'], row['runs'])} | {row['errors']} | {row['fallback']} | "
                      f"{row['median_seconds']:.1f} | {len(row['flaky'])} | {len(row['always_failing'])} |")
     lines += ["", "| category | " + " | ".join(models) + " |", "|---|" + "---|" * len(models)]
     for category in categories:

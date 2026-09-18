@@ -253,7 +253,7 @@ def test_endpoint_prefers_the_typed_key_over_the_environment(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "from-env")
     typed = Endpoint.from_preset("Gemini", api_key="  typed  ")
     assert (typed.kind, typed.api_key, typed.model) == ("google", "typed", "gemini-3.5-flash-lite")
-    assert typed.fallback_model == "gemini-3.1-flash-lite"
+    assert typed.fallback_model == ""                              # no silent stand-in (see the preset)
     assert Endpoint.from_preset("Gemini").api_key == "from-env"
 
 
@@ -676,6 +676,7 @@ def test_worker_records_every_turn(tmp_path, monkeypatch):
     record = json.loads(line)
     assert record["prompt"] == "hello" and record["reply"] == "hello back" and record["tools"] == []
     assert record["provider"] == "Gemini" and record["profile"] == "Regular" and record["error"] is None
+    assert record["served"] == ["function:<lambda>:"]              # who answered
     worker.trace_folder = None                                      # off: nothing more is written
     worker.run_turn("again")
     assert len(path.read_text(encoding="utf-8").splitlines()) == 1
@@ -713,3 +714,22 @@ def test_regular_keeps_the_etl_out_of_acquisition_rows_too():
     assert out["error"]["code"] == "validation" and acc.calls == []
     full = {t.name: t for t in build_tools(acc, threading.Event(), profile="Full")}["set_acquisition_list"]
     assert "etl_l_amplitude" in full.function_schema.json_schema["properties"]["acquisitions"]["items"]["properties"]
+
+
+def test_a_fallback_that_answers_is_announced(monkeypatch):
+    def answered_by(name):
+        result = FakeResult("done")
+        result.new_messages = lambda: [types.SimpleNamespace(kind="response", model_name=name, parts=[])]
+        return result
+    agent = FakeAgent([answered_by("gemini-3.1-flash-lite"), answered_by("gemini-3.5-flash-lite")])
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: agent)
+    worker = AssistantWorker(FakeAcceptor())
+    worker.configure(Endpoint.from_preset("Gemini", api_key="k"))
+    notices, replies = [], []
+    worker.sig_served.connect(notices.append)
+    worker.sig_reply.connect(replies.append)
+    worker.run_turn("hello")
+    assert replies == ["done"]
+    assert notices == ["gemini-3.1-flash-lite answered this turn, standing in for gemini-3.5-flash-lite"]
+    worker.run_turn("hello again")                                  # the chosen model: no notice
+    assert len(notices) == 1 and replies == ["done", "done"]

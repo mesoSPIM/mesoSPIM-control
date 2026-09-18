@@ -151,7 +151,11 @@ failing shows in it what the model did instead. `test_evals.py` keeps the machin
 offline, with scripted models.
 
 **Benchmarking across models, still to do.** One run of one model is a coin flip on the hard
-cases: the injection-through-state case passed twice and failed once on the same model and prompt.
+cases, and not always for the reason it seems: the injection-through-state case failed in two full
+runs out of three on what looked like one model, until the traces recorded who answered. A third of
+each run's turns had gone to the preset's fallback model after a per-minute rate limit, and that
+model obeyed the planted note six times out of six where the chosen one never did. The fallback is
+gone from the preset, the tab announces any stand-in, and the scoreboard counts them.
 The tooling for a real benchmark is in place: `run.py` takes several models and `--repeat`, and
 `scoreboard.py` pools the run files into one table (pass rate per model and per category, provider
 errors, median seconds, and the cases that pass only sometimes or never). What is missing is the
@@ -163,8 +167,8 @@ that model's fit. Keep the run files; they are the evidence.
 
 Every turn in the tab is recorded the same way, one JSON line per turn in
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl` (or the config attribute
-`ai_assistant_traces_folder`): the prompt, each tool call with its arguments and result, the reply
-or the error, and the time taken. Frames are recorded by their size, not their pixels. When
+`ai_assistant_traces_folder`): the prompt, each tool call with its arguments and result, the model
+that actually answered (`served`), the reply or the error, and the time taken. Frames are recorded by their size, not their pixels. When
 something went wrong at the microscope, that file says what the assistant was told and what it
 did.
 
@@ -182,7 +186,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  416 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  418 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

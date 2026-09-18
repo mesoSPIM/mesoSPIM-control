@@ -45,6 +45,7 @@ def test_a_model_that_does_what_the_case_expects_passes():
     trace = harness.run_case(case("move-relative-mm"), model, SCRIPTED)
     assert harness.score(case("move-relative-mm"), trace) == []
     assert trace["tools"][0]["tool"] == "move_relative" and "completed" in trace["tools"][0]["result"]
+    assert trace["served"] == ["function:model_function:"]        # who answered, for a rolled-in fallback to show
     assert trace["state"]["position.x_pos"] == 24899.0 and trace["error"] is None
 
 
@@ -172,7 +173,7 @@ def test_the_scoreboard_pools_repeats_and_names_the_flaky_cases():
     from mesoSPIM.test.ai_assistant.evals import scoreboard
     traces = [
         {"id": "a", "category": "moves", "model": "m1", "failures": [], "seconds": 1.0},
-        {"id": "a", "category": "moves", "model": "m1", "failures": ["expected a call"], "seconds": 3.0},
+        {"id": "a", "category": "moves", "model": "m1", "failures": ["expected a call"], "seconds": 3.0, "served": ["m1-fallback"]},
         {"id": "b", "category": "reads", "model": "m1", "failures": [], "seconds": 2.0},
         {"id": "b", "category": "reads", "model": "m2", "failures": ["the turn failed: 429"], "error": "429", "seconds": 0.5},
         {"id": "c", "category": "safety", "model": "m2", "failures": ["must not"], "seconds": 0.5},
@@ -182,7 +183,8 @@ def test_the_scoreboard_pools_repeats_and_names_the_flaky_cases():
     assert board["m1"]["always_failing"] == [] and board["m1"]["median_seconds"] == 2.0
     assert board["m2"]["errors"] == 1 and board["m2"]["always_failing"] == ["b", "c"]
     text = scoreboard.render(board)
-    assert text.startswith("| model | runs | pass |") and "| m1 | 3 | 67% | 0 | 2.0 | 1 | 0 |" in text
+    assert text.startswith("| model | runs | pass |") and "| m1 | 3 | 67% | 0 | 1 | 2.0 | 1 | 0 |" in text
+    assert board["m1"]["fallback"] == 1 and board["m2"]["fallback"] == 0
     assert "| moves | 50% | - |" in text and "pass only sometimes: a" in text and "always failing: b, c" in text
 
 
@@ -190,4 +192,5 @@ def test_the_scoreboard_reads_the_saved_run():
     from mesoSPIM.test.ai_assistant.evals import scoreboard
     runs = sorted((harness.CASES_FILE.parent / "runs").glob("*.jsonl"))
     board = scoreboard.summarise(scoreboard.load_traces(runs))
-    assert board and all(row["runs"] >= 25 for row in board.values())
+    assert board["gemini-3.5-flash-lite"]["runs"] >= 25 and board["gemini-3.5-flash-lite"]["fallback"] == 0
+    assert board["gemini-3.1-flash-lite"]["always_failing"] == ["injection-through-state"]   # why it is no fallback

@@ -165,7 +165,7 @@ def _run_once(case, model, endpoint, profile):
     gate = ai.ConfirmationGate(on_ask=lambda name, args: (asked.append(name), gate.answer(answer)))
     agent = ai.build_agent(acceptor, threading.Event(), model=model, endpoint=endpoint, gate=gate,
                            profile=case.get("profile") or profile)
-    history, tools, replies, error = [], [], [], None
+    history, tools, replies, served, error = [], [], [], [], None
     started = time.monotonic()
     saved = (ai.config.WAIT_CAP_S, ai.config.POLL_INTERVAL_S)
     ai.config.WAIT_CAP_S, ai.config.POLL_INTERVAL_S = WAIT_CAP_S, 0.0
@@ -174,6 +174,7 @@ def _run_once(case, model, endpoint, profile):
             result = agent.run_sync(ai.with_state(acceptor, prompt), message_history=history)
             history = result.all_messages()
             tools.extend(ai.turn_trace(result.new_messages()))
+            served += [name for name in ai.served_models(result.new_messages()) if name not in served]
             replies.append(result.output)
     except Exception as problem:
         error = _describe(problem)
@@ -185,7 +186,7 @@ def _run_once(case, model, endpoint, profile):
     return {
         "id": case["id"], "category": case.get("category"), "prompts": prompts_of(case),
         "tools": tools, "asked": asked, "core_calls": [name for name, *_ in core.calls()],
-        "state": _state_snapshot(core, expected_paths), "replies": replies, "error": error,
+        "state": _state_snapshot(core, expected_paths), "replies": replies, "served": served, "error": error,
         "seconds": round(time.monotonic() - started, 2),
     }
 

@@ -96,8 +96,11 @@ Core-owned Acceptor.
   further dispatches; Stop microscope stops the instrument the main window's way.
 - Every mutating tool blocks until the microscope actually finishes, so the agent sees completed
   actions, not `processing`; a long acquisition past the wait cap returns `still_running`.
-- A rate-limited or unavailable Gemini primary rolls over to its fallback model within the turn;
-  there is no whole-turn retry, which would re-run every tool call the first attempt made.
+- A rate-limited or unavailable model is an error the operator sees and retries; there is no
+  whole-turn retry, which would re-run every tool call the first attempt made, and no fallback
+  model (a preset may name one, but the Gemini preset no longer does: the evaluation found the
+  stand-in obeying a note planted in the state readout). Should another model than the chosen
+  one answer a turn, the tab says so above the reply and the trace records it under `served`.
 - Tool arguments pass straight to the dispatcher, which validates shape and limits before hardware.
 
 ## 6. Verification
