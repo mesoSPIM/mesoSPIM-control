@@ -136,6 +136,8 @@ python -m mesoSPIM.test.ai_assistant.evals.run --provider Anthropic --profile Fu
 python -m mesoSPIM.test.ai_assistant.evals.run --provider Gemini --model gemini-3.5-flash-lite,gemma-4-31b-it \
     --repeat 3 --out "mesoSPIM/test/ai_assistant/evals/runs/{date}-{model}.jsonl"
 python -m mesoSPIM.test.ai_assistant.evals.run --rescore runs/2026-09-17-gemini-3.5-flash-lite.jsonl
+python -m mesoSPIM.test.ai_assistant.evals.run --provider Gemini --model gemma-4-26b-a4b-it \
+    --request-interval 25 --retry-wait 65      # a free tier's per-minute token cap: space the requests
 python -m mesoSPIM.test.ai_assistant.evals.scoreboard mesoSPIM/test/ai_assistant/evals/runs/*.jsonl
 ```
 
@@ -195,7 +197,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  419 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  420 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

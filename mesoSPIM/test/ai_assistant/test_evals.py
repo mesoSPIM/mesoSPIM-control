@@ -194,3 +194,12 @@ def test_the_scoreboard_reads_the_saved_run():
     board = scoreboard.summarise(scoreboard.load_traces(runs))
     assert board["gemini-3.5-flash-lite"]["runs"] >= 25 and board["gemini-3.5-flash-lite"]["fallback"] == 0
     assert board["gemini-3.1-flash-lite"]["always_failing"] == ["injection-through-state"]   # why it is no fallback
+
+
+def test_a_throttled_model_spaces_its_requests():
+    import time
+    model = harness.throttled(scripted((("get_state", {}), "Idle."), "Idle."), 0.3)
+    started = time.monotonic()
+    trace = harness.run_case(case("read-capabilities"), model, SCRIPTED)
+    assert trace["error"] is None and trace["tools"][0]["tool"] == "get_state"
+    assert time.monotonic() - started >= 0.3                          # two requests, one interval between them

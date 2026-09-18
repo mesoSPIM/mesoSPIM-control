@@ -70,6 +70,8 @@ def main(argv=None):
     parser.add_argument("--retries", type=int, default=2, help="retries of a case after a provider error")
     parser.add_argument("--retry-wait", type=float, default=harness.RETRY_WAIT_S,
                         help="seconds before a retry; a per-minute token cap needs a full minute")
+    parser.add_argument("--request-interval", type=float, default=0.0,
+                        help="seconds between the model's requests, within a case too, for a per-minute token cap")
     arguments = parser.parse_args(argv)
 
     cases = harness.load_cases(arguments.cases)
@@ -95,7 +97,10 @@ def main(argv=None):
         out = arguments.out.format(date=dt.date.today().isoformat(), provider=endpoint.provider, model=endpoint.model)
         print(f"== {endpoint.provider} {endpoint.model} -> {out}")
         with open(out, "a", encoding="utf-8") as sink:
-            results += run_suite(cases, ai.build_model(endpoint), endpoint, arguments.profile, sink,
+            model = ai.build_model(endpoint)
+            if arguments.request_interval:
+                model = harness.throttled(model, arguments.request_interval)
+            results += run_suite(cases, model, endpoint, arguments.profile, sink,
                                  repeat=arguments.repeat, pause=arguments.pause,
                                  retries=arguments.retries, retry_wait=arguments.retry_wait)
     return report(results)

@@ -131,6 +131,26 @@ def _state_snapshot(core, extra=()):
     return out
 
 
+def throttled(model, interval_s):
+    """The model with at least `interval_s` seconds between its requests. A free tier's
+    input-tokens-per-minute cap (16,000 on Gemma 4) allows two or three requests a minute at this
+    prompt size, and a multi-turn case fires five or six inside one agent run, where a pause
+    between cases cannot reach; only spacing the requests themselves lets such a case complete."""
+    import asyncio
+    from pydantic_ai.models.wrapper import WrapperModel
+
+    class Throttled(WrapperModel):
+        _last = 0.0
+
+        async def request(self, messages, model_settings, model_request_parameters):
+            wait = Throttled._last + interval_s - time.monotonic()
+            if wait > 0:
+                await asyncio.sleep(wait)
+            Throttled._last = time.monotonic()
+            return await super().request(messages, model_settings, model_request_parameters)
+    return Throttled(model)
+
+
 def run_case(case, model, endpoint, profile=None, retries=2, retry_wait=None):
     """Run one case through a fresh agent on a fresh simulated instrument. Returns the trace. A
     provider error (a rate limit, an outage) is retried from scratch after a wait: the evaluation
