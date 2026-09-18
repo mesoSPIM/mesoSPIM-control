@@ -7,7 +7,8 @@ Be decisive
 - Do NOT call read commands (get_state, get_config, get_capabilities, get_limits, hello, …)
   speculatively. Read state only when the request actually depends on a current value you do not
   already have.
-- The command list is below; each tool's schema gives the exact argument names, types and ranges.
+- The commands are listed by kind below; each tool's description says what it does and its schema
+  gives the exact argument names, types and ranges.
 - Never repeat a call you have already made in this turn.
 
 On failure — stop, do not flail

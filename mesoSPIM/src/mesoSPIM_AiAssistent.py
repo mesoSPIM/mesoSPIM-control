@@ -240,6 +240,19 @@ def _row_arguments(schema):
     return [name for name in ("acquisitions", "acquisition") if name in properties]
 
 
+def _rows_by_reference(schema):
+    """A copy of a schema whose acquisition rows are described by reference to set_acquisition_list
+    instead of spelling every row key out again: the checks take the same rows, and repeating the
+    row schema in each of them was a third of all tool text."""
+    schema = json.loads(json.dumps(schema))
+    for name in _row_arguments(schema):
+        holder = schema["properties"][name]
+        if "items" in holder:
+            holder["items"] = {"type": "object"}
+        holder["description"] = "rows exactly as set_acquisition_list takes them; omit to use the installed list"
+    return schema
+
+
 def _rows_without(schema, keys):
     """A copy of a schema whose acquisition rows (a list, or a single one) no longer offer `keys`."""
     schema = json.loads(json.dumps(schema))
@@ -298,6 +311,8 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
             keys = narrow[cmd.name]
             schema = _narrowed(cmd, keys)
             fn = _only_keys(fn, cmd.name, keys)
+        if cmd.name in config.ROWS_BY_REFERENCE:
+            schema = _rows_by_reference(schema)
         if regular and _row_arguments(schema):
             schema = _rows_without(schema, config.REGULAR_ROW_HIDDEN)
             fn = _refuse_row_keys(fn, cmd.name, config.REGULAR_ROW_HIDDEN)
@@ -382,12 +397,22 @@ def with_state(acceptor, text):
     return f"{text}\n\n<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>"
 
 
+_KINDS = (("read", "reads, which change nothing"),
+          ("action", "actions, which return at once"),
+          ("wait", "waits, which return when the instrument is done"),
+          ("emergency", "emergency commands, never gated"))
+
+
 def build_system_prompt(acceptor=None, profile=None):
-    """The hand-written preamble (units, frames, safety) plus one line per offered command.
-    Argument shapes come from the tool schemas, so the prompt does not repeat them."""
+    """The hand-written preamble (units, frames, safety) plus the offered commands grouped by
+    kind. What each does and its argument shape are in its tool description and schema, which the
+    model receives anyway; the prompt does not repeat them, which keeps it small enough for a local
+    model's context alongside the conversation."""
     preamble = (Path(__file__).parent / "assistant_manual.md").read_text(encoding="utf-8")
-    lines = [f"- {cmd.name} ({cmd.kind}): {cmd.hint}" for cmd in offered_commands(profile)]
-    prompt = preamble + "\n\n# Commands\n\n" + "\n".join(lines)
+    offered = offered_commands(profile)
+    lines = [f"- {label}: {', '.join(cmd.name for cmd in offered if cmd.kind == kind)}"
+             for kind, label in _KINDS if any(cmd.kind == kind for cmd in offered)]
+    prompt = preamble + "\n\n# Commands\n\nBy kind; each tool's description says what it does.\n" + "\n".join(lines)
     hidden = hidden_commands(profile)
     if hidden:
         prompt += ("\n\n# Not in this tool set\n\nThe operator chose the "

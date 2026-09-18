@@ -482,7 +482,10 @@ def test_tools_publish_each_commands_schema():
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
     for tool in build_tools(FakeAcceptor(), threading.Event(), profile="Full"):
-        assert tool.function_schema.json_schema == COMMANDS[tool.name].schema
+        if tool.name in ai.config.ROWS_BY_REFERENCE:                 # rows by reference to set_acquisition_list
+            assert tool.function_schema.json_schema == ai._rows_by_reference(COMMANDS[tool.name].schema)
+        else:
+            assert tool.function_schema.json_schema == COMMANDS[tool.name].schema
 
 
 def test_a_scripted_model_can_call_every_tool_through_its_schema(monkeypatch):
@@ -507,15 +510,36 @@ def test_a_scripted_model_can_call_every_tool_through_its_schema(monkeypatch):
     assert not [p for p in parts if type(p).__name__ == "RetryPromptPart"]
 
 
-def test_system_prompt_is_the_preamble_plus_one_line_per_command():
+def test_system_prompt_is_the_preamble_plus_the_commands_by_kind():
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
     prompt = ai.build_system_prompt(profile="Full")          # every command
     assert prompt.startswith("You control a mesoSPIM")
+    commands = prompt.split("# Commands")[1]
+    by_kind = {line.split(":")[0].strip("- "): line.split(":", 1)[1] for line in commands.splitlines() if line.startswith("- ")}
+    assert set(by_kind) == {"reads, which change nothing", "actions, which return at once",
+                            "waits, which return when the instrument is done", "emergency commands, never gated"}
     for name, cmd in COMMANDS.items():
         if name != "get_manual":
-            assert f"- {name} ({cmd.kind}): " in prompt
-    assert "get_manual" not in prompt.split("# Commands")[1]
-    assert len(prompt) < 12000                                      # the JSON manual was several times this
+            assert any(name in names for label, names in by_kind.items() if label.startswith(cmd.kind[:4]))
+    assert "get_manual" not in commands and "in:" not in commands   # the hints live in the tool descriptions
+    assert len(prompt) < 8000                                        # small enough for a local model's context
+
+
+def test_the_prompt_and_the_tools_stay_small_enough_for_a_local_model():
+    """A local model with an 8K context needs room for the conversation: the Regular prompt plus
+    all tool schemas stay under 17,000 characters, roughly 4,500 tokens."""
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    tools = build_tools(FakeAcceptor(), threading.Event(), profile="Regular")
+    schemas = sum(len(json.dumps(t.function_schema.json_schema)) + len(t.description or "") for t in tools)
+    assert len(ai.build_system_prompt(profile="Regular")) + schemas < 17000
+    by_name = {t.name: t.function_schema.json_schema for t in tools}
+    rows = by_name["set_acquisition_list"]["properties"]["acquisitions"]["items"]["properties"]
+    assert "z_start" in rows                                          # the installer spells the row out
+    for name in ai.config.ROWS_BY_REFERENCE:                          # the checks refer to it instead
+        holder = by_name[name]["properties"]["acquisitions"]
+        assert holder["items"] == {"type": "object"} and "set_acquisition_list" in holder["description"]
+    assert by_name["acquire_start"]["properties"]["acquisition"]["properties"]   # the single-row start keeps its row
 
 
 def _turn(kind):
@@ -626,12 +650,13 @@ def test_regular_tools_and_prompt_are_filtered_and_set_camera_is_narrowed():
     assert acc.calls[0] == ("set_camera", {"camera_exposure_time": 0.05})
     assert "Full tool set" in refused["error"]["message"]          # the way out is named, for the operator
     prompt = ai.build_system_prompt(profile="Regular")
-    assert "- set_zoom (" in prompt and "- set_etl (" not in prompt
+    commands = prompt.split("# Commands")[1].split("# Not in this tool set")[0]
+    assert "set_zoom" in commands and "set_etl" not in commands
     hidden = prompt.split("# Not in this tool set")[1]              # named, so the model says so instead of improvising
     assert "self_test" in hidden and "set_etl" in hidden and "get_manual" not in hidden
     assert ai.hidden_commands("Regular") == [n for n in COMMANDS if n not in ai.config.TOOL_PROFILES["Regular"] and n != "get_manual"]
     full = {t.name for t in build_tools(FakeAcceptor(), threading.Event(), profile="Full")}
-    assert "set_etl" in full and "- set_etl (" in ai.build_system_prompt(profile="Full")
+    assert "set_etl" in full and "set_etl" in ai.build_system_prompt(profile="Full").split("# Commands")[1]
     assert ai.hidden_commands("Full") == [] and "# Not in this tool set" not in ai.build_system_prompt(profile="Full")
 
 

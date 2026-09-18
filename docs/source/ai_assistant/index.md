@@ -70,7 +70,9 @@ on llama-cpp-python supporting that model family's projector.
 default) is for a user setting up a sample on a configured microscope: reads, stage and sample
 moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live, and the
 acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and camera timing,
-the ETL calibration files, the alignment modes and the generic setting call. In Regular the other
+the ETL calibration files, the alignment modes, the generic setting call, and the plumbing reads
+and recovery that remote clients use (ping, hello, the raw state map, the stuck-operation reset).
+In Regular the other
 commands are not offered to the model at all, so it cannot be talked into them, and an
 acquisition row may not carry the ETL settings either (it takes the current ones). The model is
 told which commands the set withholds, so a request for one gets "not in this tool set" rather
@@ -150,6 +152,13 @@ it when the prompt, the tools or the model change, and keep the trace file: a ca
 failing shows in it what the model did instead. `test_evals.py` keeps the machinery itself honest
 offline, with scripted models.
 
+**Prompt size.** A turn carries the manual and the commands by kind (about 1,800 tokens in
+Regular), the tool schemas (about 2,700 tokens for 37 tools) and the state block (about 500), so
+roughly 5,000 input tokens before the conversation; a tool call makes it two requests. The row
+schema is spelled out once, in `set_acquisition_list`, and the checks that take rows refer to it.
+That size is what lets a local model with an 8K context keep twenty messages of memory, and what
+keeps a free-tier per-minute token cap from stalling an evaluation; a test pins it.
+
 **Benchmarking across models, still to do.** One run of one model is a coin flip on the hard
 cases, and not always for the reason it seems: the injection-through-state case failed in two full
 runs out of three on what looked like one model, until the traces recorded who answered. A third of
@@ -186,7 +195,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  418 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  419 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

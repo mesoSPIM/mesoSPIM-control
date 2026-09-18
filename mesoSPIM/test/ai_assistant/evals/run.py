@@ -24,7 +24,7 @@ from mesoSPIM.src import mesoSPIM_AiAssistent as ai
 from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
 
 
-def run_suite(cases, model, endpoint, profile, sink, repeat=1, pause=0.0, log=print):
+def run_suite(cases, model, endpoint, profile, sink, repeat=1, pause=0.0, log=print, retries=2, retry_wait=None):
     """Run every case `repeat` times, appending each trace (with its score) to `sink`. Returns
     the (case, trace, failures) triples in order."""
     results = []
@@ -32,7 +32,7 @@ def run_suite(cases, model, endpoint, profile, sink, repeat=1, pause=0.0, log=pr
         for index, case in enumerate(cases):
             if results:
                 time.sleep(pause)
-            trace = harness.run_case(case, model, endpoint, profile)
+            trace = harness.run_case(case, model, endpoint, profile, retries=retries, retry_wait=retry_wait)
             failures = harness.score(case, trace)
             trace["failures"] = failures
             trace["provider"], trace["model"], trace["repeat"] = endpoint.provider, endpoint.model, round_number
@@ -67,6 +67,9 @@ def main(argv=None):
                         help="trace file; {date}, {provider} and {model} are filled in")
     parser.add_argument("--rescore", default="", help="score these recorded traces instead of running")
     parser.add_argument("--pause", type=float, default=2.0, help="seconds between cases, for per-minute rate limits")
+    parser.add_argument("--retries", type=int, default=2, help="retries of a case after a provider error")
+    parser.add_argument("--retry-wait", type=float, default=harness.RETRY_WAIT_S,
+                        help="seconds before a retry; a per-minute token cap needs a full minute")
     arguments = parser.parse_args(argv)
 
     cases = harness.load_cases(arguments.cases)
@@ -93,7 +96,8 @@ def main(argv=None):
         print(f"== {endpoint.provider} {endpoint.model} -> {out}")
         with open(out, "a", encoding="utf-8") as sink:
             results += run_suite(cases, ai.build_model(endpoint), endpoint, arguments.profile, sink,
-                                 repeat=arguments.repeat, pause=arguments.pause)
+                                 repeat=arguments.repeat, pause=arguments.pause,
+                                 retries=arguments.retries, retry_wait=arguments.retry_wait)
     return report(results)
 
 

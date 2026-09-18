@@ -18,8 +18,9 @@ reuses its `Acceptor`, dispatcher, and completion signals.
   serves a local `.gguf` file on loopback.
 - `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Cancel, Clear all, Stop microscope, and
   the collapsible setup footer.
-- `assistant_manual.md` — a thin preamble (units, frames, safety tone); `get_manual` supplies the
-  full, always-in-sync command reference.
+- `assistant_manual.md` — the rules (units, frames, safety, what the evaluation taught); the
+  system prompt adds the offered commands by kind, and each tool's description and schema, derived
+  from the command registry, carry what it does and its arguments.
 
 Dependencies: `pydantic-ai` (imported lazily, only when a turn runs); `llama-cpp-python` only for
 local models (the `ai-assistant-local` extra).

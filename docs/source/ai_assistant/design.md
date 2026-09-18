@@ -41,9 +41,10 @@ app. The cost is owning the threading/Acceptor lifecycle below; the alternative
 - **No per-command operator confirmation** — expert microscopy tool; the dispatcher's
   validation + movement limits + one-op gate are the backstop. Guardrails added only if
   real use shows the need.
-- **System prompt = the auto-generated `get_manual` output + a thin hand-written preamble**
-  (units, frames, safety tone). Rules come from context, not code; the command list is
-  never hand-maintained.
+- **System prompt = a hand-written manual + the commands by kind**, with each tool's
+  description and schema generated from the command registry. Rules come from context, not
+  code; the command list is never hand-maintained, and the prompt stays small enough for a
+  local model's context.
 
 ## Out of scope
 - Typed/JSON-schema tools — `Command` has no declarative schema, so tools are untyped
