@@ -325,14 +325,16 @@ def vision_answer(endpoint, image, question, stats):
 
     agent = Agent(
         build_model(endpoint),
-        instructions="You are looking at one frame from a light-sheet microscope camera, contrast-stretched "
-                     "to 8 bit for display. Answer the operator's question about it in a few sentences. "
-                     "The display cannot show exposure: it is stretched to the frame's own range, so a dim "
-                     "frame looks as bright as a good one. Judge saturation and underexposure from the "
-                     "numbers only: saturated_fraction above a few percent is saturated; a max below about "
-                     "a tenth of full_scale is underexposed. The stretch is linear, so within this one frame "
-                     "what is brighter in the picture is brighter in the data: compare parts of the frame "
-                     "with each other by eye. Judge shapes, positions, focus and artefacts from the picture.",
+        # What to take from the picture comes first and says nothing of stretching: told the frame
+        # was "contrast-stretched" and "cannot show exposure", gemma4:12b answered which of three
+        # spots is brightest with "all appear equally bright because the image is contrast-stretched",
+        # on every scaling tried, and compared them as soon as those words were gone.
+        instructions="You are looking at one frame from a light-sheet microscope camera. Answer the "
+                     "operator's question about it in a few sentences. Judge from the picture what is "
+                     "in it: shapes, counts, positions, focus, artefacts, and which parts are brighter "
+                     "or darker than others. Only whether the exposure is right comes from the numbers, "
+                     "since the picture is scaled to the frame's own range: a saturated_fraction above a "
+                     "few percent is saturated; a max below about a tenth of full_scale is underexposed.",
     )
     prompt = [f"{question}\n\nFrame numbers: {json.dumps(stats)}",
               BinaryContent(data=base64.b64decode(image["base64"]), media_type="image/png")]

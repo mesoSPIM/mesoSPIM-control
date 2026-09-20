@@ -1570,7 +1570,11 @@
         "does not appear",
         "doesn't appear",
         "no discernible",
-        "no structure"
+        "no structure",
+        "no identifiable",
+        "no distinguishable",
+        "not visible",
+        "not in the field of view"
       ]
     }
   },
@@ -1642,7 +1646,8 @@
         "not help",
         "not solve",
         "did not solve",
-        "didn't solve"
+        "didn't solve",
+        "persist"
       ],
       "reply_mentions_none": [
         "no longer saturated",

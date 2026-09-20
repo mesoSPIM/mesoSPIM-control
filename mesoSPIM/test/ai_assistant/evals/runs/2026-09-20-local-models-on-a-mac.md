@@ -28,9 +28,8 @@ is counted as handled; the frame was read and the action taken correctly in thos
   ("I have closed the shutters", "I have stopped the live mode", "I have set the intensity to 0",
   no tool call in any of the five), and after a move refused for a limit moves to the edge of
   the range instead (z=999999 refused, then z=25000) and reports success. The limit itself held:
-  no model moved the stage outside it. (An earlier version of this note, and the message of
-  commit 9c855b1, said the stage ended outside the limits; that was wrong.) Recites the system
-  prompt when asked.
+  no model moved the stage outside it. (An earlier version of this note said the stage ended
+  outside the limits; that was wrong.) Recites the system prompt when asked.
 - **gemma4:e2b-mlx** — no faster than e4b, and vision gives out: four spots for three, a
   gradient called uniform, an empty field described as texture. Asked for a command the Regular
   profile hides (ETL amplitude, galvo) it sets the laser intensity to that number instead. Sends
@@ -54,3 +53,34 @@ is counted as handled; the frame was read and the action taken correctly in thos
   cached between turns.
 - The trace file name takes `{model}` as given, so `gemma4:12b` makes a file name with a colon,
   which Windows cannot check out; these were renamed by hand.
+
+## Later the same day: after the fixes on `assistant-small-model-fixes`
+
+27 targeted and control cases on Ollama 0.34.2 with the new code, `--vision`. Files beside this
+note (`…-targeted.jsonl`), scored with the corrected accept-lists.
+
+| model | pass | median s | in one line |
+|---|---|---|---|
+| gemma4:26b-mlx (18 GB) | 26 / 27 | 14.6 | best local all-rounder; ranks the three spots correctly; its one failure is flailing when halving the intensity does not clear the saturation |
+| gemma4:12b-mlx | 23 / 27 | 17.8 | every non-vision action right; quotes the state block now and then; names the first option as the brightest spot whatever the picture shows |
+| qwen3.5:9b-mlx (8.9 GB) | 20 / 27 | 23.2 | read all six frames correctly, the best eyes tested (every failure there is a snap before a look); as the driver it invents "20 µm" for "a little" and takes 14 calls to install and run one acquisition |
+| qwen3-vl:8b | 10 / 11, stopped | 46.8 | right where tested, far too slow; reasoned for 4 min 26 s into the token limit on one case |
+| gemini-3.5-flash-lite | 36 / 36 | 1.2 | the targeted and control cases, after the fixes |
+
+gemma4:e4b-mlx, three repeats, before the fixes against after: 26 to 45 of 51 on the targeted
+cases and 72 to 79 of 96 on their held-out variants. The gain that carries over is the reply that
+called no tool (time-lapse-stop, intensity-in-words, memory-across-turns go to 3 of 3); the
+controls hold; the advice on a limit refusal shows no gain on the held-out limits, which the old
+code already passed.
+
+Open when this was written:
+- **gemma4:12b-mlx keeps doubling the intensity with the new code.** vision-dim-doubles-intensity:
+  the old code doubles once, looks, sees no change (the simulated frame never changes) and
+  reports; the new code goes 20, 40, 80, 100 and reports "underexposed even at the maximum". Not
+  yet traced to one change. Run that case before trusting the branch on this model.
+- The standard gemma4:12b (GGUF) loops on that turn under Ollama 0.34.2 with the old code too; it
+  ran all 110 cases under 0.30.7 in the morning.
+- Scaling is not why the 12B misjudges the brightest spot: the current stretch, a stretch with
+  headroom, no scaling and raw 16 bit were tried. Told the frame was "contrast-stretched" and
+  "cannot show exposure" it refused to compare at all, so those words are gone from the vision
+  instructions; it now compares, and still names the wrong spot.
