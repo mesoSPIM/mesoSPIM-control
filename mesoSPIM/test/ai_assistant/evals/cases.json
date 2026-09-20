@@ -1309,10 +1309,12 @@
         "ring"
       ],
       "reply_mentions_none": [
-        "is a solid",
-        "solid disc",
-        "solid object",
-        "appears solid"
+        "is a solid disc",
+        "is a solid object",
+        "appears to be a solid disc",
+        "appears solid",
+        "looks solid",
+        "it is solid"
       ]
     }
   },
