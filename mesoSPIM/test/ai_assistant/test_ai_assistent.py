@@ -303,8 +303,8 @@ def test_with_state_appends_the_snapshot_or_nothing():
             return {"state": "idle", "position": {"x": 1.0}}
 
     text = ai.with_state(_Acc(), "move x by 5")
-    assert text.startswith("move x by 5\n\n<microscope_state>\n")
-    assert '"position": {"x": 1.0}' in text and text.endswith("</microscope_state>")
+    assert text.startswith("<microscope_state>\n") and text.endswith("</microscope_state>\n\nmove x by 5")
+    assert '"position": {"x": 1.0}' in text                       # the operator's words come last
 
     class _Broken:
         def dispatch(self, name, args):
@@ -318,7 +318,7 @@ def test_run_turn_sends_the_state_block(monkeypatch):
     agent = FakeAgent([FakeResult("ok")])
     monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: agent)
     worker.run_turn("where is the stage?")
-    assert agent.last_prompt.startswith("where is the stage?\n\n<microscope_state>")
+    assert agent.last_prompt.startswith("<microscope_state>") and agent.last_prompt.endswith("where is the stage?")
 
 
 def test_a_state_block_a_model_copied_into_its_reply_is_stripped_for_the_operator(monkeypatch):

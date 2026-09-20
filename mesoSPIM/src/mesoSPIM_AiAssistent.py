@@ -401,13 +401,15 @@ def without_state_block(reply):
 
 
 def with_state(acceptor, text):
-    """The operator's message followed by the current microscope readout, as data the model can
-    rely on instead of calling reads first. Sent without the block if the readout fails."""
+    """The current microscope readout, then the operator's message: data the model can rely on
+    instead of calling reads first, with the operator's words last, where a model weighs text
+    most, so that a note in a folder name inside the readout does not read as the request. Sent
+    without the block if the readout fails."""
     try:
         snapshot = acceptor.dispatch("get_snapshot", {})
     except Exception:
         return text
-    return f"{text}\n\n<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>"
+    return f"<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>\n\n{text}"
 
 
 _KINDS = (("read", "reads, which change nothing"),
