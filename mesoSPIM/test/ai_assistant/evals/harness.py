@@ -68,21 +68,44 @@ def synthetic_frame(name):
     """A camera frame whose content the frame numbers do not give away, so a case can tell a model
     that looked at the picture from one that only read the numbers. "spots" has three separate
     bright discs (the numbers give one centroid), "ring" a hollow ring (the numbers cannot tell it
-    from a solid disc). None: the offline suite's single off-centre rectangle."""
+    from a solid disc), "graded" three spots of different brightness, "edge" a sample the right
+    edge cuts off, "blur" a sharp spot and a defocused one, "gradient" a background brighter to
+    the right. None: the offline suite's single off-centre rectangle."""
     import numpy as np
     if name is None:
         return None
     rows, cols = np.mgrid[0:256, 0:384]
-    frame = np.zeros((256, 384), dtype=np.uint16)
-    if name == "spots":
+    frame = np.zeros((256, 384), dtype=np.float32)
+
+    def disc(r, c, radius, value):
+        frame[(rows - r) ** 2 + (cols - c) ** 2 <= radius ** 2] = value
+
+    if name == "spots":                       # three equal spots: how many?
         for r, c in ((60, 80), (130, 250), (200, 150)):
-            frame[(rows - r) ** 2 + (cols - c) ** 2 <= 14 ** 2] = 4000
-    elif name == "ring":
+            disc(r, c, 14, 4000)
+    elif name == "ring":                      # hollow: a disc or a ring?
         d2 = (rows - 128) ** 2 + (cols - 192) ** 2
         frame[(d2 <= 70 ** 2) & (d2 >= 50 ** 2)] = 4000
+    elif name == "graded":                    # three spots of different brightness: which is brightest?
+        disc(60, 80, 16, 1500)
+        disc(128, 300, 16, 2500)
+        disc(210, 190, 16, 4000)              # the bottom one
+    elif name == "edge":                      # a sample cut off by the right edge
+        disc(128, 364, 70, 4000)
+    elif name == "blur":                      # a sharp spot left, a blurred one right: which is out of focus?
+        disc(128, 110, 16, 4000)
+        blurred = np.zeros_like(frame)
+        blurred[(rows - 128) ** 2 + (cols - 274) ** 2 <= 16 ** 2] = 4000
+        for _ in range(6):                    # repeated box blur: a Gaussian-like defocus
+            padded = np.pad(blurred, 4, mode="edge")
+            blurred = sum(padded[dr:dr + 256, dc:dc + 384] for dr in range(9) for dc in range(9)) / 81.0
+        frame += blurred
+    elif name == "gradient":                  # a background brighter to the right, with a centred spot
+        frame += 1500.0 * cols / cols.max()
+        disc(128, 192, 20, 4000)
     else:
         raise ValueError(f"unknown frame {name!r}")
-    return frame
+    return frame.astype(np.uint16)
 
 
 class SimulatedInstrument(RecordingCore):

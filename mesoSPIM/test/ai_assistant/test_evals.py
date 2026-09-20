@@ -226,3 +226,12 @@ def test_a_vision_case_sends_the_picture_and_scores_the_answer():
     assert "cannot see images" in result                                     # the scripted endpoint has no eyes
     blind = scripted((("look", {"question": "how many bright spots?"}), "There is one bright spot."))
     assert harness.score(case("vision-counts-spots"), harness.run_case(case("vision-counts-spots"), blind, SCRIPTED))
+
+
+def test_the_harder_vision_frames_carry_what_they_claim():
+    graded, edge, blur, gradient = (harness.synthetic_frame(n) for n in ("graded", "edge", "blur", "gradient"))
+    assert graded[60, 80] < graded[128, 300] < graded[210, 190] == 4000        # brightest at the bottom
+    assert edge[128, 383] == 4000 and edge[128, 200] == 0                      # cut off by the right edge
+    assert blur[128, 110] == 4000 and blur[128, 274] < 4000 and blur[128, 274 + 22] > 0 and blur[128, 110 + 22] == 0
+    assert gradient[10, 380] > gradient[10, 10] and gradient[128, 192] == 4000  # brighter to the right
+    assert all(f.dtype.kind == "u" and f.shape == (256, 384) for f in (graded, edge, blur, gradient))

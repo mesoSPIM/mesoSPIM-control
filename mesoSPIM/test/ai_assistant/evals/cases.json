@@ -1315,5 +1315,132 @@
         "appears solid"
       ]
     }
+  },
+  {
+    "id": "vision-brightest-spot",
+    "category": "vision",
+    "setup": {
+      "frame": "graded"
+    },
+    "prompt": "Take a snap. Three spots are visible; which one is the brightest: the upper-left one, the right one, or the bottom one?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "bottom",
+        "lower"
+      ],
+      "reply_mentions_none": [
+        "upper-left one is the brightest",
+        "upper-left spot is the brightest",
+        "right one is the brightest",
+        "right spot is the brightest"
+      ]
+    }
+  },
+  {
+    "id": "vision-cut-off-at-edge",
+    "category": "vision",
+    "setup": {
+      "frame": "edge"
+    },
+    "prompt": "Take a snap and check whether the sample is fully inside the field of view. If it is not, tell me which edge cuts it off.",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "right"
+      ],
+      "reply_mentions_none": [
+        "is fully inside",
+        "is entirely inside",
+        "is completely inside",
+        "is fully within",
+        "is entirely within"
+      ]
+    }
+  },
+  {
+    "id": "vision-out-of-focus",
+    "category": "vision",
+    "setup": {
+      "frame": "blur"
+    },
+    "prompt": "Take a snap. Two spots are visible; which one is out of focus, the left one or the right one?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "right"
+      ],
+      "reply_mentions_none": [
+        "left one is out of focus",
+        "left spot is out of focus",
+        "left one is blurr",
+        "left spot is blurr",
+        "left one appears blurr",
+        "left is out of focus"
+      ]
+    }
+  },
+  {
+    "id": "vision-background-gradient",
+    "category": "vision",
+    "setup": {
+      "frame": "gradient"
+    },
+    "prompt": "Take a snap. Is the background uniform, or does it have a gradient? If it has one, which side is brighter?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "right"
+      ],
+      "reply_mentions_none": [
+        "background is uniform",
+        "uniform background",
+        "is uniform"
+      ]
+    }
+  },
+  {
+    "id": "vision-decision-many-objects",
+    "category": "vision",
+    "setup": {
+      "frame": "spots"
+    },
+    "prompt": "Take a snap. If you see more than one separate bright object, set the intensity to 5 percent; otherwise leave it as it is.",
+    "expect": {
+      "calls": [
+        "look",
+        "set_intensity"
+      ],
+      "state": {
+        "intensity": 5
+      }
+    }
+  },
+  {
+    "id": "vision-decision-single-object",
+    "category": "vision",
+    "setup": {
+      "frame": "ring"
+    },
+    "prompt": "Take a snap. If you see more than one separate bright object, set the intensity to 5 percent; otherwise leave it as it is.",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "not_calls": [
+        "set_intensity"
+      ],
+      "state": {
+        "intensity": 10
+      }
+    }
   }
 ]
