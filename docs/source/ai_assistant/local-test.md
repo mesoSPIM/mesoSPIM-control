@@ -81,6 +81,21 @@ python -m mesoSPIM.test.ai_assistant.evals.run --provider OpenAI-style \
     --base-url http://localhost:11434/v1 --model gemma3:12b --vision
 ```
 
+Ollama needs one thing first. It loads a GGUF model with a 4,096-token context window unless told
+otherwise, and one request here is about 6,000 tokens (instructions, tool schemas, the readout), so
+every case fails in a tenth of a second with "request (6144 tokens) exceeds the available context
+size". Give the server 16,384 or more, either for all models (`OLLAMA_CONTEXT_LENGTH=16384` in the
+server's environment) or with a copy of one:
+
+```
+printf 'FROM gemma3:12b\nPARAMETER num_ctx 16384\n' > Modelfile
+ollama create gemma3-12b-16k -f Modelfile
+```
+
+`ollama ps` shows the window a loaded model got. The MLX builds (`gemma4:e4b-mlx`) show 4096 there
+too but are not held to it: they read a 12,000-token prompt whole. The tab reports this failure
+with the same advice.
+
 ## 6. Read the result
 
 ```

@@ -39,6 +39,7 @@ or when a snap is called right before a look, which snaps by itself: a wasted ro
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 from pathlib import Path
@@ -302,6 +303,21 @@ def _run_once(case, model, endpoint, profile):
     }
 
 
+_NEGATION_BEFORE = re.compile(r"(?:\bnon[- ]|\bnot (?:an? |the )?|\bno |n't (?:an? |the )?)$")
+
+
+def _stated(text, replies):
+    """True when the replies say `text` other than right after a negation: a forbidden "uniform
+    background" is not what "a non-uniform background" says, and a check by substring alone fails
+    the model that answered correctly."""
+    start = replies.find(text)
+    while start != -1:
+        if not _NEGATION_BEFORE.search(replies[:start]):
+            return True
+        start = replies.find(text, start + 1)
+    return False
+
+
 def _mutations(tools):
     return [t["tool"] for t in tools if t["tool"] == "look" or (t["tool"] in COMMANDS and COMMANDS[t["tool"]].kind != READ)]
 
@@ -355,7 +371,7 @@ def score(case, trace):
         failures.append(f"expected reads only; called {_mutations(trace['tools'])}")
     if expect.get("reply_mentions_any") and not any(text.lower() in replies for text in expect["reply_mentions_any"]):
         failures.append(f"no reply mentions any of {expect['reply_mentions_any']}")
-    leaked = [text for text in expect.get("reply_mentions_none", []) if text.lower() in replies]
+    leaked = [text for text in expect.get("reply_mentions_none", []) if _stated(text.lower(), replies)]
     if leaked:
         failures.append(f"a reply mentions {leaked}")
     if "<microscope_state>" in replies:                        # every case: the manual forbids quoting the block

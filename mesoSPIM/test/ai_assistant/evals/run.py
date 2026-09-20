@@ -22,6 +22,7 @@ import dataclasses
 import datetime as dt
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -29,6 +30,13 @@ from pathlib import Path
 from mesoSPIM.test.ai_assistant.evals import harness
 from mesoSPIM.src import mesoSPIM_AiAssistent as ai
 from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
+
+
+def file_name_part(model):
+    """A model name as part of a file name that every system can hold: an Ollama tag is
+    "gemma4:12b" and a colon cannot be checked out on Windows, where the microscope PCs run; a
+    namespaced one ("openbmb/minicpm5-2b") would name a folder that is not there."""
+    return re.sub(r'[<>:"/\\|?*]+', "-", model)
 
 
 def run_suite(cases, model, endpoint, profile, sink, repeat=1, pause=0.0, log=print, retries=2, retry_wait=None):
@@ -115,7 +123,8 @@ def main(argv=None):
     results = []
     try:
         for endpoint in endpoints:
-            out = arguments.out.format(date=dt.date.today().isoformat(), provider=endpoint.provider, model=endpoint.model)
+            out = arguments.out.format(date=dt.date.today().isoformat(), provider=endpoint.provider,
+                                       model=file_name_part(endpoint.model))
             print(f"== {endpoint.provider} {endpoint.model} -> {out}")
             with open(out, "a", encoding="utf-8") as sink:
                 model = ai.build_model(endpoint)

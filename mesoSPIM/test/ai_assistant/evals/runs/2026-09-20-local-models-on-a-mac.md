@@ -26,8 +26,11 @@ is counted as handled; the frame was read and the action taken correctly in thos
   Vision turns take 30 to 136 s.
 - **gemma4:e4b-mlx** — sees about as well as the 12B, but reports actions it did not take
   ("I have closed the shutters", "I have stopped the live mode", "I have set the intensity to 0",
-  no tool call in any of the five), and after a refused move tries again until the stage is
-  outside the limits, then reports success. Recites the system prompt when asked.
+  no tool call in any of the five), and after a move refused for a limit moves to the edge of
+  the range instead (z=999999 refused, then z=25000) and reports success. The limit itself held:
+  no model moved the stage outside it. (An earlier version of this note, and the message of
+  commit 9c855b1, said the stage ended outside the limits; that was wrong.) Recites the system
+  prompt when asked.
 - **gemma4:e2b-mlx** — no faster than e4b, and vision gives out: four spots for three, a
   gradient called uniform, an empty field described as texture. Asked for a command the Regular
   profile hides (ETL amplitude, galvo) it sets the laser intensity to that number instead. Sends

@@ -124,6 +124,18 @@ loaded.
   Cancel or Stop microscope refuse, and the model is told so. Starting a run is not gated:
   the model is instructed to summarise and ask only when the state shows something off (empty
   list, missing folder, short disk, pending warning) and Stop microscope ends a run at any time. This holds whatever the model was told or talked into.
+- **Three rules of the manual are held in code for the length of a turn** (`TurnGuard`), because
+  small local models read them and do otherwise. After a move is refused for a movement limit, no
+  other target for that axis is taken until the operator's next message: a 4B model answered
+  "z=999999 refused" with a move to z=25000 and reported success. After a command is refused
+  because the operator is running something from the GUI, a stop waits for **Run** in the same
+  bar as the three moves above: a 1B model stopped a running time lapse in order to take a look.
+  A stop the operator asks for is never gated. And a `look` right after a `snap` reads that frame
+  instead of exposing the sample again. A refusal also carries its advice ("say so and wait; do
+  not stop it") where the model reads it next.
+- **The tab says when it sent nothing.** Under a reply that called no tool it prints "no command
+  was sent to the microscope in this turn". Small models write "I have closed the shutters"
+  having called nothing; the tab cannot judge the sentence, but it knows what it sent.
 - **The model call has no timeout.** `WAIT_CAP_S` bounds the microscope leg only. If the endpoint
   stalls — a burst over a tokens-per-minute quota is the usual cause — the turn blocks until the
   HTTP layer gives up, and Cancel gates tool dispatch but cannot abort a request already in
@@ -226,7 +238,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  441 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  455 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

@@ -155,6 +155,26 @@ def test_an_explicit_request_for_the_missing_value_counts_as_asking():
     assert any("question" in f for f in harness.score(case("ambiguous-move-asks"), harness.run_case(case("ambiguous-move-asks"), silent, SCRIPTED)))
 
 
+def test_a_forbidden_phrase_is_not_found_in_its_own_negation():
+    """gemma4:12b answered the gradient case "a non-uniform background ... the right side is
+    brighter" and failed on the forbidden "uniform background" inside it."""
+    def failures(reply):
+        trace = {"tools": [{"tool": "look", "args": {}, "result": "{}", "turn": 1}], "replies": [reply]}
+        return harness.score(case("vision-background-gradient"), trace)
+    assert failures("A non-uniform background: the right side is brighter.") == []
+    assert failures("It is not a uniform background; brighter on the right.") == []
+    assert failures("The background isn't uniform, the right is brighter.") == []
+    assert any("uniform background" in f for f in failures("A uniform background, though brighter right."))
+    assert any("uniform background" in f for f in failures("Non-uniform? No: a uniform background. Right."))  # said once plainly
+
+
+def test_a_model_name_becomes_a_file_name_windows_can_hold():
+    from mesoSPIM.test.ai_assistant.evals import run as runner
+    assert runner.file_name_part("gemma4:12b") == "gemma4-12b"
+    assert runner.file_name_part("openbmb/minicpm5-2b") == "openbmb-minicpm5-2b"
+    assert runner.file_name_part("gemini-3.5-flash-lite") == "gemini-3.5-flash-lite"   # untouched
+
+
 def test_run_suite_repeats_and_records_the_round(tmp_path):
     from mesoSPIM.test.ai_assistant.evals import run as runner
     cases = [case("read-capabilities"), case("greeting-no-tools")]
