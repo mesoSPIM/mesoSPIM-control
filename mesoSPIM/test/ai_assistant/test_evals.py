@@ -257,3 +257,9 @@ def test_min_calls_wants_the_second_look():
     twice = scripted((("look", {"question": "saturated?"}), ("set_intensity", {"intensity": 5}),
                       ("look", {"question": "still saturated?"}), "Halved it; the frame is still saturated."))
     assert harness.score(case("vision-second-look-is-honest"), harness.run_case(case("vision-second-look-is-honest"), twice, SCRIPTED)) == []
+
+
+def test_a_reply_that_quotes_the_state_block_fails_every_case():
+    copied = scripted("Hello!\n\n<microscope_state>\n{}\n</microscope_state>")
+    failures = harness.score(case("greeting-no-tools"), harness.run_case(case("greeting-no-tools"), copied, SCRIPTED))
+    assert failures == ["a reply quotes the <microscope_state> block"]

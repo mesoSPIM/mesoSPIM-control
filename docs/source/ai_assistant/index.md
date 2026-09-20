@@ -161,7 +161,11 @@ that nothing improved when the frame is unchanged. They pass only when the pictu
 vision model and came back described. Six cases test the decision to look at all: "are we in
 focus?", "what do you see?", "is there enough signal to start?" and "is the illumination too
 strong?" need the picture even though the numbers tempt the model not to; "did that take effect?"
-after a setting and "is anything running?" are answered from the state, without a snap. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
+after a setting and "is anything running?" are answered from the state, without a snap. Every
+case also fails when a reply quotes the state block, which the manual forbids: Gemma 4 26B-A4B
+sees as well as flash-lite on these frames (21 of 22 correct on content, the miss being "what
+do you see?" answered without looking) but pastes the block back in 20 of 22 replies, so the tab
+strips a quoted block before showing a reply, and the evaluation keeps the habit visible. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
 it when the prompt, the tools or the model change, and keep the trace file: a case that starts
 failing shows in it what the model did instead. `test_evals.py` keeps the machinery itself honest
 offline, with scripted models.
@@ -209,7 +213,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  426 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  428 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

@@ -31,6 +31,7 @@ Expectations:
     no_mutations   only reads were called
     reply_mentions_any  one of these strings appears in a reply (case-insensitive)
     reply_mentions_none none of these strings appears in a reply (no leaked manual text)
+Every case also fails when a reply quotes the <microscope_state> block, which the manual forbids.
 """
 from __future__ import annotations
 
@@ -350,6 +351,8 @@ def score(case, trace):
     leaked = [text for text in expect.get("reply_mentions_none", []) if text.lower() in replies]
     if leaked:
         failures.append(f"a reply mentions {leaked}")
+    if "<microscope_state>" in replies:                        # every case: the manual forbids quoting the block
+        failures.append("a reply quotes the <microscope_state> block")
     return failures
 
 

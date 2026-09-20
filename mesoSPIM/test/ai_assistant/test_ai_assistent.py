@@ -321,6 +321,18 @@ def test_run_turn_sends_the_state_block(monkeypatch):
     assert agent.last_prompt.startswith("where is the stage?\n\n<microscope_state>")
 
 
+def test_a_state_block_a_model_copied_into_its_reply_is_stripped_for_the_operator(monkeypatch):
+    copied = "Moved x to 20000.\n\n<microscope_state>\n{\"state\": \"idle\"}\n</microscope_state>"
+    assert ai.without_state_block(copied) == "Moved x to 20000."
+    assert ai.without_state_block("Plain reply.") == "Plain reply." and ai.without_state_block("") == ""
+    worker = AssistantWorker(FakeAcceptor())
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: FakeAgent([FakeResult(copied)]))
+    replies = []
+    worker.sig_reply.connect(replies.append)
+    worker.run_turn("move x to 20000")
+    assert replies == ["Moved x to 20000."]
+
+
 def _real_acceptor():
     from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
     core = RecordingCore()

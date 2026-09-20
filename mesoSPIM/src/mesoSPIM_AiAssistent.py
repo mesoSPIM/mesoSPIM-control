@@ -390,6 +390,16 @@ def write_trace(folder, record):
         sink.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
 
+_STATE_BLOCK = re.compile(r"\s*<microscope_state>.*?</microscope_state>\s*", re.DOTALL)
+
+
+def without_state_block(reply):
+    """The reply without any <microscope_state> block a model copied from its input: the manual
+    forbids quoting it, and a small model does it anyway. The evaluation scores the raw reply, so
+    the habit stays visible there; the operator is spared the JSON."""
+    return _STATE_BLOCK.sub("\n", reply).strip() if reply else reply
+
+
 def with_state(acceptor, text):
     """The operator's message followed by the current microscope readout, as data the model can
     rely on instead of calling reads first. Sent without the block if the readout fails."""
@@ -617,7 +627,7 @@ class AssistantWorker(QtCore.QObject):
             others = [name for name in served_models(result.new_messages()) if name != chosen]
             if others:   # the operator must know: another model is not the one they evaluated
                 self.sig_served.emit(f"{', '.join(others)} answered this turn, standing in for {chosen}")
-            self.sig_reply.emit(result.output)
+            self.sig_reply.emit(without_state_block(result.output))
         except Exception as error:
             logger.exception("AI Assistant turn failed")
             self._record(text, [], started, error=describe_error(error))
