@@ -904,3 +904,12 @@ def test_the_instructions_and_tools_are_identical_across_agents():
     schemas = lambda: [(t.name, t.description, json.dumps(t.function_schema.json_schema, sort_keys=True))
                        for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")]
     assert schemas() == schemas()
+
+
+def test_the_snap_tool_tells_the_model_that_look_snaps_by_itself():
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
+    by_name = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
+    assert "never snap and then look" in by_name["snap"].description
+    assert by_name["set_laser"].description == COMMANDS["set_laser"].hint      # the others keep the wire hint

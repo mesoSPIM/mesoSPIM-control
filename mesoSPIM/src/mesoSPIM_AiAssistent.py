@@ -457,7 +457,8 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
         if regular and _row_arguments(schema):
             schema = _rows_without(schema, config.REGULAR_ROW_HIDDEN)
             fn = _refuse_row_keys(fn, cmd.name, config.REGULAR_ROW_HIDDEN)
-        tools.append(Tool.from_schema(fn, name=cmd.name, description=cmd.hint or cmd.name, json_schema=schema))
+        description = config.TOOL_DESCRIPTIONS.get(cmd.name, cmd.hint or cmd.name)
+        tools.append(Tool.from_schema(fn, name=cmd.name, description=description, json_schema=schema))
     if store is not None:
         tools += _store_tools(store, on_call)
     if endpoint is not None:
@@ -475,7 +476,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
 
         tools.append(Tool.from_schema(
             _look, name="look", json_schema=_LOOK_SCHEMA,
-            description="Take a snap (or reuse the last frame with snap=false) and describe it: numbers about "
+            description="Takes a snap itself (or reuses the last frame with snap=false) and describes it: numbers about "
                         "exposure, focus and where the signal is, plus, when the model can see, an answer to "
                         "`question` about the image. Use it to check the sample, the field of view or the exposure.",
         ))

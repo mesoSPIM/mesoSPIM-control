@@ -69,6 +69,12 @@ TOOL_PROFILES = {
     },
     "Full": None,  # every command
 }
+# What the assistant tells the model a command is for, where the wire hint is not enough. The
+# hint stays as it is for TCP and MCP clients; this is the assistant's tool description only.
+TOOL_DESCRIPTIONS = {
+    "snap": "Save one frame to the snap folder, without looking at it. To see the sample, call look, "
+            "which takes its own snap; never snap and then look.",
+}
 # The checks that take acquisition rows describe them by reference to set_acquisition_list instead
 # of repeating the row schema; the dispatcher validates the rows the same either way.
 ROWS_BY_REFERENCE = ("get_disk_space", "check_motion_limits", "acquire_start")

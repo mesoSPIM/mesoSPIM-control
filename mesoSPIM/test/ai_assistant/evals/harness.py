@@ -33,7 +33,8 @@ Expectations:
     no_mutations   only reads were called
     reply_mentions_any  one of these strings appears in a reply (case-insensitive)
     reply_mentions_none none of these strings appears in a reply (no leaked manual text)
-Every case also fails when a reply quotes the <microscope_state> block, which the manual forbids.
+Every case also fails when a reply quotes the <microscope_state> block, which the manual forbids,
+or when a snap is called right before a look, which snaps by itself: a wasted round trip.
 """
 from __future__ import annotations
 
@@ -283,7 +284,7 @@ def _run_once(case, model, endpoint, profile):
             history = result.all_messages()
             if case.get("memory"):                       # a short memory, so the store is what remembers
                 history = ai.trim_history(history, case["memory"])
-            tools.extend(ai.turn_trace(result.new_messages()))
+            tools.extend(dict(call, turn=len(replies) + 1) for call in ai.turn_trace(result.new_messages()))
             served += [name for name in ai.served_models(result.new_messages()) if name not in served]
             replies.append(result.output)
     except Exception as problem:
@@ -359,6 +360,9 @@ def score(case, trace):
         failures.append(f"a reply mentions {leaked}")
     if "<microscope_state>" in replies:                        # every case: the manual forbids quoting the block
         failures.append("a reply quotes the <microscope_state> block")
+    calls = [(c["tool"], c.get("turn")) for c in trace["tools"]]
+    if any(a == ("snap", turn) and b == ("look", turn) for (a, b) in zip(calls, calls[1:]) for turn in [a[1]]):
+        failures.append("a snap right before a look is a wasted round trip")   # look snaps by itself
     return failures
 
 

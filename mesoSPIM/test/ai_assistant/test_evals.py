@@ -272,3 +272,15 @@ def test_a_short_memory_case_still_answers_from_the_store():
     assert harness.score(case("recall-a-readout-the-memory-lost"), trace) == []
     recalled = json.loads([t for t in trace["tools"] if t["tool"] == "recall_turn"][0]["result"])
     assert recalled["prompt"] == "Set the intensity to 35." and recalled["readout"]["disk"]["free_bytes"] == 1000000
+
+
+def test_a_snap_right_before_a_look_is_a_wasted_round_trip():
+    wasteful = scripted((("snap", {}), ("look", {"question": "centred?"}), "Centred."))
+    failures = harness.score(case("look"), harness.run_case(case("look"), wasteful, SCRIPTED))
+    assert failures == ["a snap right before a look is a wasted round trip"]
+    lean = scripted((("look", {"question": "centred?"}), "Centred."))
+    assert harness.score(case("look"), harness.run_case(case("look"), lean, SCRIPTED)) == []
+    across = scripted((("snap", {}), "Snapped."), (("look", {"question": "saturated?", "snap": False}), "No."))
+    trace = harness.run_case(case("look-without-new-snap"), across, SCRIPTED)
+    assert [c["turn"] for c in trace["tools"]] == [1, 2]                       # a snap in an earlier turn is fine
+    assert harness.score(case("look-without-new-snap"), trace) == []

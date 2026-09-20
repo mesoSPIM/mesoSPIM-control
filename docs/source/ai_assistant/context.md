@@ -48,6 +48,11 @@ what leaves room for the conversation.
   time-dependent, and a test compares two builds. A profile switch rebuilds the agent, which is
   the one legitimate change of the prefix.
 
+- **One round trip where one does the job.** On a local model every tool call costs seconds.
+  The traces showed one systematic waste, a snap right before a look, which snaps by itself; the
+  snap tool now says so in its description, the manual says so, and the scorer fails any case
+  that does it within a turn. Confirmation reads after an action did not occur on flash-lite.
+
 ## Still open, in order of payoff
 
 ### 1. Embeddings for the history search, when words prove too literal
