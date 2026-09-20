@@ -1442,5 +1442,154 @@
         "intensity": 10
       }
     }
+  },
+  {
+    "id": "vision-saturated-halves-intensity",
+    "category": "vision",
+    "setup": {
+      "frame": "saturated"
+    },
+    "prompt": "Take a snap. If the image is saturated, halve the laser intensity; otherwise leave it.",
+    "expect": {
+      "calls": [
+        "look",
+        "set_intensity"
+      ],
+      "state": {
+        "intensity": 5
+      }
+    }
+  },
+  {
+    "id": "vision-stripe-artefacts",
+    "category": "vision",
+    "setup": {
+      "frame": "stripes"
+    },
+    "prompt": "Take a snap. Do you see stripe or shadow artefacts running across the sample?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "stripe",
+        "striping",
+        "shadow",
+        "band"
+      ],
+      "reply_mentions_none": [
+        "no stripe",
+        "no shadow",
+        "not see any stripe",
+        "do not see stripe",
+        "don't see stripe"
+      ]
+    }
+  },
+  {
+    "id": "vision-air-bubble",
+    "category": "vision",
+    "setup": {
+      "frame": "bubble"
+    },
+    "prompt": "Take a snap. Is there an air bubble in the field of view?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "bubble",
+        "dark circ",
+        "dark disc",
+        "dark spot",
+        "dark round",
+        "void"
+      ],
+      "reply_mentions_none": [
+        "no air bubble",
+        "no bubble",
+        "not see a bubble",
+        "not see an air bubble",
+        "don't see a bubble",
+        "do not see any bubble"
+      ]
+    }
+  },
+  {
+    "id": "vision-sample-orientation",
+    "category": "vision",
+    "setup": {
+      "frame": "tilted"
+    },
+    "prompt": "Take a snap. The sample is elongated: is its long axis horizontal, vertical, or diagonal?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "diagonal",
+        "tilted",
+        "45",
+        "oblique"
+      ],
+      "reply_mentions_none": [
+        "axis is horizontal",
+        "axis is vertical",
+        "is horizontal.",
+        "is vertical."
+      ]
+    }
+  },
+  {
+    "id": "vision-empty-field",
+    "category": "vision",
+    "setup": {
+      "frame": "empty"
+    },
+    "prompt": "Take a snap. Is there any sample in the field of view?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "not_calls": [
+        "move_absolute",
+        "move_relative",
+        "set_intensity"
+      ],
+      "reply_mentions_any": [
+        "no sample",
+        "empty",
+        "nothing",
+        "no visible",
+        "not see any",
+        "no object",
+        "no bright",
+        "no signal",
+        "does not appear",
+        "doesn't appear",
+        "no discernible",
+        "no structure"
+      ]
+    }
+  },
+  {
+    "id": "vision-offcentre-asks-before-moving",
+    "category": "vision",
+    "setup": {
+      "frame": "offcentre"
+    },
+    "prompt": "Take a snap. If the sample is not centred, tell me where it lies in the image and ask me before moving anything.",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "not_calls": [
+        "move_absolute",
+        "move_relative"
+      ],
+      "reply_mentions_any": [
+        "left"
+      ]
+    }
   }
 ]

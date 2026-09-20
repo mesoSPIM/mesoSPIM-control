@@ -235,3 +235,14 @@ def test_the_harder_vision_frames_carry_what_they_claim():
     assert blur[128, 110] == 4000 and blur[128, 274] < 4000 and blur[128, 274 + 22] > 0 and blur[128, 110 + 22] == 0
     assert gradient[10, 380] > gradient[10, 10] and gradient[128, 192] == 4000  # brighter to the right
     assert all(f.dtype.kind == "u" and f.shape == (256, 384) for f in (graded, edge, blur, gradient))
+
+
+def test_the_microscopy_frames_carry_what_they_claim():
+    sat, stripes, bubble, tilted, empty, off = (harness.synthetic_frame(n) for n in
+                                                ("saturated", "stripes", "bubble", "tilted", "empty", "offcentre"))
+    assert sat.max() == 65535 and (sat == 65535).sum() > 4000                 # a burnt sample
+    assert stripes[96, 192] < stripes[105, 192] == 3000                         # dark stripes across the sample
+    assert bubble[100, 250] == 200 and bubble[10, 10] == 3000                   # a dark disc in a bright field
+    assert tilted[128, 192] == 3500 and tilted[60, 124] == 3500 and tilted[60, 260] == 0   # along one diagonal only
+    assert empty.max() < 300 and empty.mean() > 50                              # noise, no sample
+    assert off[128, 60] == 3500 and off[128, 192] == 0                          # far to the left

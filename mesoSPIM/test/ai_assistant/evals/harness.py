@@ -70,7 +70,9 @@ def synthetic_frame(name):
     bright discs (the numbers give one centroid), "ring" a hollow ring (the numbers cannot tell it
     from a solid disc), "graded" three spots of different brightness, "edge" a sample the right
     edge cuts off, "blur" a sharp spot and a defocused one, "gradient" a background brighter to
-    the right. None: the offline suite's single off-centre rectangle."""
+    the right, "saturated" a sample at full scale, "stripes" light-sheet shadow stripes, "bubble"
+    an air bubble in a filled field, "tilted" an elongated sample on the diagonal, "empty" camera
+    noise only, "offcentre" a sample far to the left. None: the offline suite's single rectangle."""
     import numpy as np
     if name is None:
         return None
@@ -103,6 +105,26 @@ def synthetic_frame(name):
     elif name == "gradient":                  # a background brighter to the right, with a centred spot
         frame += 1500.0 * cols / cols.max()
         disc(128, 192, 20, 4000)
+    elif name == "saturated":                 # the sample burnt to full scale: lower the intensity
+        disc(128, 192, 40, 65535)
+        frame[(rows - 128) ** 2 + (cols - 192) ** 2 <= 60 ** 2] += 2000
+        frame[frame > 65535] = 65535
+    elif name == "stripes":                   # light-sheet shadows: dark horizontal stripes across the sample
+        disc(128, 192, 90, 3000)
+        for r in (95, 118, 140, 165):
+            frame[r:r + 4, :] *= 0.15
+    elif name == "bubble":                    # an air bubble: a dark disc in a bright, filled field
+        frame += 3000.0
+        disc(100, 250, 34, 200)
+    elif name == "tilted":                    # an elongated sample with its long axis on the diagonal
+        u = (cols - 192) + (rows - 128)       # along the diagonal
+        v = (cols - 192) - (rows - 128)       # across it
+        frame[(np.abs(u) <= 190) & (np.abs(v) <= 22)] = 3500
+    elif name == "empty":                     # no sample, only camera noise
+        rng = np.random.default_rng(7)
+        frame += rng.normal(100.0, 12.0, frame.shape).clip(0)
+    elif name == "offcentre":                 # the sample far to the left of the field
+        disc(128, 60, 34, 3500)
     else:
         raise ValueError(f"unknown frame {name!r}")
     return frame.astype(np.uint16)
