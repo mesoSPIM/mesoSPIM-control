@@ -191,6 +191,16 @@ def test_error_message_names_the_type_even_when_blank():
     assert ai.describe_error(ValueError("bad axis")) == "ValueError: bad axis"
 
 
+def test_a_context_window_too_small_for_one_request_says_what_to_do():
+    """Ollama loads a GGUF model with 4,096 tokens and refuses every request with an HTTP 400 that
+    names neither the cause nor the cure. The words are the server's own, from a refused run."""
+    refused = RuntimeError('status_code: 400, body: {"error":{"code":400,"message":"request (6144 tokens) exceeds '
+                           'the available context size (4096 tokens), try increasing it","type":"exceed_context_size_error"}}')
+    described = ai.describe_error(refused)
+    assert described.startswith(ai.config.CONTEXT_TOO_SMALL_HELP) and "num_ctx" in described
+    assert "6144 tokens" in described                                        # the server's words are kept
+
+
 def test_run_turn_reports_a_blank_error_with_its_type(monkeypatch):
     worker = AssistantWorker(FakeAcceptor())
     monkeypatch.setattr(ai, "build_agent",
@@ -913,6 +923,17 @@ def test_the_snap_tool_tells_the_model_that_look_snaps_by_itself():
     by_name = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
     assert "never snap and then look" in by_name["snap"].description
     assert by_name["set_laser"].description == COMMANDS["set_laser"].hint      # the others keep the wire hint
+
+
+def test_the_camera_tool_names_the_unit_the_wire_schema_leaves_out():
+    """The schema says 0.001 to 5 and nothing else, and the GUI shows milliseconds: three models
+    sent 50 for 50 ms. The unit belongs where the model reads the argument."""
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    for profile in ("Regular", "Full"):
+        camera = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile=profile)}["set_camera"]
+        assert "SECONDS" in camera.description and "0.05" in camera.description
+        assert "description" not in camera.function_schema.json_schema["properties"]["camera_exposure_time"]  # still so
 
 
 def test_the_agent_samples_deterministically_and_retries_a_malformed_call():

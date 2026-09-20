@@ -23,7 +23,7 @@ from pathlib import Path
 
 from PyQt5 import QtCore
 
-from .mesoSPIM_RemoteControl_Dispatcher import COMMANDS, WAIT, COMPLETED, FAILED, error_info
+from .mesoSPIM_RemoteControl_Dispatcher import COMMANDS, READ, WAIT, COMPLETED, FAILED, error_info
 from .mesoSPIM_RemoteControl_Servers import Acceptor
 from .mesoSPIM_RemoteControl_Commands import self_test
 from . import mesoSPIM_AiAssistent_Config as config
@@ -79,7 +79,10 @@ def describe_error(error):
     indistinguishable from the assistant having said nothing. Lead with the exception type so the
     line always names what went wrong; run_turn logs the traceback alongside it."""
     text = str(error).strip()
-    return f"{type(error).__name__}: {text}" if text else type(error).__name__
+    described = f"{type(error).__name__}: {text}" if text else type(error).__name__
+    if any(sign in text for sign in config.CONTEXT_TOO_SMALL_SIGNS):
+        described = config.CONTEXT_TOO_SMALL_HELP + " — " + described
+    return described
 
 
 def _configured_options(acceptor):
@@ -134,6 +137,87 @@ class ConfirmationGate:
         self._answered.set()
 
 
+class TurnGuard:
+    """Three rules of the manual, kept in code for the length of one turn, because a small model
+    reads them and does otherwise. After a move was refused for a movement limit, no other target
+    for that axis is taken: a different number is a different instruction, and the operator gives
+    those. After a command was refused because the operator is running something from the GUI, a
+    stop is theirs to confirm, not the model's way to make room. And a look right after a snap
+    reads that frame instead of exposing the sample a second time.
+
+    A turn is one operator message, counted by the session store; without a store there is no turn
+    to count and the guard lets everything through."""
+
+    def __init__(self, store=None):
+        self._store = store
+        self._turn = None
+        self._clear()
+
+    def _clear(self):
+        self.refused_axes = set()
+        self.busy_from_gui = False
+        self.fresh_snap = False
+
+    def _sync(self):
+        if self._store is None:
+            return False
+        turn = len(self._store.turns)
+        if turn != self._turn:
+            self._turn = turn
+            self._clear()
+        return True
+
+    def before(self, name, args):
+        """The refusal this call gets, shaped like any tool error, or None to let it through."""
+        if not self._sync() or name not in config.MOVE_ARGS:
+            return None
+        asked = (args or {}).get(config.MOVE_ARGS[name])
+        again = sorted(self.refused_axes & set(asked)) if isinstance(asked, dict) else []
+        if not again:
+            return None
+        return {"error": {"code": "refused",
+                          "message": f"{', '.join(again)}: a move was refused for a movement limit earlier in this "
+                                     "turn, and another target in its place is not what the operator asked for. "
+                                     "Tell them the limit and what was refused; the next number is theirs."}}
+
+    def stop_is_the_operators(self, name):
+        """True for a stop that would end what the operator is running from the GUI."""
+        return self._sync() and self.busy_from_gui and name in config.STOP_COMMANDS
+
+    def take_fresh_snap(self):
+        """True, once, when the last thing done to the instrument in this turn was a snap."""
+        fresh = self._sync() and self.fresh_snap
+        self.fresh_snap = False
+        return fresh
+
+    def after(self, name, args, outcome):
+        """Note what this call's result rules out for the rest of the turn."""
+        if not self._sync():
+            return
+        error = outcome.get("error") if isinstance(outcome, dict) else None
+        message = str((error or {}).get("message", ""))
+        if error and error.get("code") == "busy" and config.BUSY_FROM_GUI in message:
+            self.busy_from_gui = True
+        if error and error.get("code") == "validation" and config.LIMIT_REFUSAL in message and name in config.MOVE_ARGS:
+            asked = (args or {}).get(config.MOVE_ARGS[name])
+            self.refused_axes |= set(asked) if isinstance(asked, dict) else set()
+        if name == "snap":
+            self.fresh_snap = isinstance(outcome, dict) and outcome.get("status") == COMPLETED
+        elif name == "look" or (name in COMMANDS and COMMANDS[name].kind != READ):
+            self.fresh_snap = False           # the instrument changed, or the frame was read
+
+
+def _advice(name, code, message):
+    """What to do about a refusal, said where the model reads it next: a rule in the manual is
+    thousands of tokens away by the time a tool answers, and the busy message itself names the
+    command that would end the operator's run."""
+    if code == "busy" and config.BUSY_FROM_GUI in message:
+        return "The operator is running this at the microscope. Say so and wait; do not stop it to make room."
+    if code == "validation" and config.LIMIT_REFUSAL in message and name in config.MOVE_ARGS:
+        return "Tell the operator the limit and stop. Do not move to another value in its place."
+    return None
+
+
 def _compact_row(row):
     return {key: row[key] for key in config.ROW_SUMMARY_KEYS if key in row}
 
@@ -164,12 +248,15 @@ def shorten_result(name, result):
     return kept
 
 
-def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
+def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
     """One passthrough tool body, closing over the command it dispatches. The keyword arguments
     ARE the command's wire args, so `move_absolute(targets={"x": 5000})` dispatches verbatim.
     `on_call` (if given) is invoked the moment the command fires, so the GUI can stream the
     activity live. Dispatch errors (out-of-range, busy) are returned to the model as data so it
-    can self-correct, not raised. A confirm-first command first asks the operator through `gate`."""
+    can self-correct, not raised. A confirm-first command first asks the operator through `gate`,
+    and so does a stop that would end the operator's own run (see TurnGuard)."""
+    guard = guard or TurnGuard()
+
     def _call(**args) -> str:
         """See the tool description (the command's hint)."""
         if on_call is not None:
@@ -179,18 +266,28 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
                 pass
         if cancel.is_set():
             return json.dumps({"status": "cancelled"})                   # never ask after Cancel
+        refusal = guard.before(name, args)
+        if refusal is not None:
+            return json.dumps(refusal)
+        refused = json.dumps({"error": {"code": "refused", "message": f"the operator did not confirm {name}"}})
         if gate is not None and name in config.CONFIRM_FIRST and not gate.ask(name, args):
-            return json.dumps({"error": {"code": "refused", "message": f"the operator did not confirm {name}"}})
+            return refused
+        if guard.stop_is_the_operators(name) and (gate is None or not gate.ask(name, args)):
+            return refused                                               # nobody to ask is not a yes
         try:
-            return json.dumps(shorten_result(name, dispatch_and_wait(acceptor, name, args, kind, cancel)))
+            outcome = shorten_result(name, dispatch_and_wait(acceptor, name, args, kind, cancel))
         except Exception as error:
             code, message = error_info(error)
-            failure = {"error": {"code": code, "message": message}}
+            outcome = {"error": {"code": code, "message": message}}
+            advice = _advice(name, code, message)
+            if advice:
+                outcome["error"]["advice"] = advice
             if code == "validation":
                 options = _configured_options(acceptor)
                 if options is not None:
-                    failure["error"]["configured_options"] = options
-            return json.dumps(failure)
+                    outcome["error"]["configured_options"] = options
+        guard.after(name, args, outcome)
+        return json.dumps(outcome)
     return _call
 
 
@@ -233,8 +330,9 @@ def vision_answer(endpoint, image, question, stats):
                      "The display cannot show exposure: it is stretched to the frame's own range, so a dim "
                      "frame looks as bright as a good one. Judge saturation and underexposure from the "
                      "numbers only: saturated_fraction above a few percent is saturated; a max below about "
-                     "a tenth of full_scale is underexposed. Judge shapes, positions, focus and artefacts "
-                     "from the picture.",
+                     "a tenth of full_scale is underexposed. The stretch is linear, so within this one frame "
+                     "what is brighter in the picture is brighter in the data: compare parts of the frame "
+                     "with each other by eye. Judge shapes, positions, focus and artefacts from the picture.",
     )
     prompt = [f"{question}\n\nFrame numbers: {json.dumps(stats)}",
               BinaryContent(data=base64.b64decode(image["base64"]), media_type="image/png")]
@@ -444,9 +542,10 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
     from pydantic_ai import Tool
     regular = (profile or config.DEFAULT_TOOL_PROFILE) == "Regular"
     narrow = config.REGULAR_ARGS if regular else {}
+    guard = TurnGuard(store)             # one for all the tools: what one call rules out for the next
     tools = []
     for cmd in offered_commands(profile):
-        fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate)
+        fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate, guard)
         schema = cmd.schema
         if cmd.name in narrow:
             keys = narrow[cmd.name]
@@ -468,11 +567,20 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
             if on_call is not None:
                 on_call("look", json.dumps({"question": question, "snap": snap}))
             size = image_size() if callable(image_size) else image_size  # a callable reads a live setting
+            reuse = bool(snap) and guard.take_fresh_snap()  # snapped a moment ago: no second exposure
             try:
-                return json.dumps(look(acceptor, eyes, question, snap, cancel, on_frame, size))
+                outcome = look(acceptor, eyes, question, snap and not reuse, cancel, on_frame, size)
+                if reuse and outcome.get("available"):
+                    outcome["frame"] = ("the one snapped a moment ago in this turn, not a second exposure; look "
+                                        "takes its own snap, so next time call look alone")
             except Exception as error:  # busy, shutting down: data for the model, like every tool
                 code, message = error_info(error)
-                return json.dumps({"error": {"code": code, "message": message}})
+                outcome = {"error": {"code": code, "message": message}}
+                advice = _advice("look", code, message)
+                if advice:
+                    outcome["error"]["advice"] = advice
+            guard.after("look", {}, outcome)
+            return json.dumps(outcome)
 
         tools.append(Tool.from_schema(
             _look, name="look", json_schema=_LOOK_SCHEMA,

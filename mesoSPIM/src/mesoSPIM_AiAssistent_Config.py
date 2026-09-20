@@ -46,6 +46,13 @@ LOCAL_SERVER_POLL_MS = 500
 # microscope config may set the attribute named in CONTEXT_CONFIG_KEY to another size.
 LOCAL_CONTEXT_TOKENS = 32768
 CONTEXT_CONFIG_KEY = "ai_assistant_context_tokens"
+# A server the operator runs themselves may not be so generous: Ollama loads a GGUF model with a
+# 4,096-token window unless told otherwise and refuses every request here outright. These are the
+# words llama.cpp and Ollama refuse with; the help is what the tab shows in front of them.
+CONTEXT_TOO_SMALL_SIGNS = ("exceed_context_size", "exceeds the available context size")
+CONTEXT_TOO_SMALL_HELP = ("The model server's context window is smaller than one request (about 6,000 tokens). "
+                          "Give it 16,384 or more: for Ollama, OLLAMA_CONTEXT_LENGTH=16384 on the server, or a "
+                          "copy of the model made with PARAMETER num_ctx 16384")
 LOCAL_BATCH_TOKENS = 2048      # prompt batches: the ~5,700-token prefix is processed in fewer passes than at 512
 LOCAL_FLASH_ATTENTION = True   # smaller KV cache and faster attention where the build supports it
 
@@ -88,6 +95,8 @@ TOOL_PROFILES = {
 TOOL_DESCRIPTIONS = {
     "snap": "Save one frame to the snap folder, without looking at it. To see the sample, call look, "
             "which takes its own snap; never snap and then look.",
+    # The wire schema gives the range (0.001 to 5) and no unit, and the GUI shows milliseconds.
+    "set_camera": "Camera settings. camera_exposure_time is in SECONDS: 50 ms is 0.05, 500 microseconds is 0.0005.",
 }
 # The checks that take acquisition rows describe them by reference to set_acquisition_list instead
 # of repeating the row schema; the dispatcher validates the rows the same either way.
@@ -104,6 +113,15 @@ TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope 
 # Long runs are not gated in code; the model summarises and asks only when something looks off
 # (see assistant_manual.md), and Stop microscope ends them.
 CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition")
+
+# What TurnGuard holds a turn to (see mesoSPIM_AiAssistent). The moves and the argument that maps
+# axis to number; the commands that end a running activity; and the words by which the dispatcher's
+# refusals are told apart. test_ai_assistent.py pins those words to the real refusals, so a change
+# of wording there fails a test here instead of silently disarming the guard.
+MOVE_ARGS = {"move_absolute": "targets", "move_relative": "deltas"}
+STOP_COMMANDS = ("stop", "stop_activity", "time_lapse_stop")
+LIMIT_REFUSAL = "outside the allowed range"
+BUSY_FROM_GUI = "from the GUI"
 
 POLL_INTERVAL_S = 0.15
 # Every turn is appended to a JSONL file in this folder (a config attribute may point elsewhere):

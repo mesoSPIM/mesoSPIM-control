@@ -35,6 +35,7 @@ LOCAL_MODE = "Local AI"
 CLOUD_MODE = "Cloud AI"
 SAME_AS_LANGUAGE = "Same as language model"
 LOCAL_PROVIDER = "Local"        # the provider name of a model file served by mesoSPIM itself
+NO_COMMANDS_SENT = "no command was sent to the microscope in this turn"
 PAIR_GAP = 14                   # px before an inner label, more than the 8 between it and its field
 _ORPHANED_THREADS = []          # worker threads still in a model call at exit; kept so Qt never destroys a running one
 
@@ -655,6 +656,10 @@ class AiAssistentGUI(QtWidgets.QWidget):
             parts.append(f'<div style="color:#e08a8a;"><b>&#9888; error</b> — '
                          f'{_htmllib.escape(active["error"])}</div>')
         elif active["reply"] is not None:
+            if not active["tools"]:
+                # A small model will write "I have closed the shutters" having called nothing. The
+                # tab cannot judge the sentence, but it knows what it sent: say so, every time.
+                parts.append(f'<div style="color:{_DIM};">&#8250; {_htmllib.escape(NO_COMMANDS_SENT)}</div>')
             parts.append(_md_to_html(active["reply"]))
         return f'<div style="margin:2px 0 16px 8px;">{"".join(parts)}</div>'
 

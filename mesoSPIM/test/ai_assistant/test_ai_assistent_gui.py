@@ -437,6 +437,20 @@ def test_a_stand_in_model_is_shown_in_the_turn():
     assert "standing in for" in gui.output.toPlainText() and "Moved." in gui.output.toPlainText()
 
 
+def test_a_reply_with_no_command_behind_it_says_so():
+    """A small model writes "I have closed the shutters" having called nothing. The tab cannot
+    judge the sentence; it can say what it sent."""
+    gui = _gui()
+    gui._active = {"tools": [], "reply": None, "error": None}
+    gui._on_reply("I have closed the shutters.")
+    assert gui_module.NO_COMMANDS_SENT in gui.output.toPlainText()
+    gui._on_done()
+    assert gui_module.NO_COMMANDS_SENT in gui.output.toPlainText()               # kept in the finished block
+    gui._active = {"tools": [("close_shutters", "{}")], "reply": None, "error": None}
+    gui._on_reply("I have closed the shutters.")
+    assert gui.output.toPlainText().count(gui_module.NO_COMMANDS_SENT) == 1      # not under a turn that did send one
+
+
 # --- the Run / Cancel bar ---
 
 def test_confirmation_bar_is_hidden_until_asked_and_answers_the_gate():
