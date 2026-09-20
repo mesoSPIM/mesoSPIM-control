@@ -11,7 +11,7 @@ others on 0.34.2 (the MLX builds need 0.31). The run files are beside this note.
 | gemma4:12b | GGUF Q4_K_M, 7.6 GB | 106 / 110 | ~109 | 28 | `2026-09-20-gemma4-12b-ollama.jsonl` |
 | gemma4:e4b-mlx | MLX nvfp4, 9.5 GB (8.1B stored) | 83 / 110 | ~97 | 4.3 | `2026-09-20-gemma4-e4b-mlx-ollama.jsonl` |
 | gemma4:e2b-mlx | MLX, 7.5 GB | 72 / 110 | ~88 | 4.3 | `2026-09-20-gemma4-e2b-mlx-ollama.jsonl` |
-| minicpm-v4.6 (1B) | GGUF Q4_K_M, 1.6 GB | 12 / 22 (vision and looking only) | 12 | 6 | `2026-09-20-minicpm-v4.6-ollama-vision.jsonl` |
+| minicpm-v4.6 (1B) | GGUF Q4_K_M, 1.6 GB, num_ctx 16384 | 74 / 110 (62 / 88 and 12 / 22) | 74 | 3 and 6 | `…-minicpm-v4.6-ollama-nonvision.jsonl`, `…-ollama-vision.jsonl` |
 
 \* Read by hand: a failure that is only "a snap right before a look" or only "quotes the
 <microscope_state> block" (the tab strips it), or a correct answer the phrase lists do not accept,
@@ -34,7 +34,11 @@ is counted as handled; the frame was read and the action taken correctly in thos
   500 for 500 microseconds; passes "properties" from the tool schema as an argument, which ends
   the turn.
 - **minicpm-v4.6** — misreads (four spots, a cut-off sample "fully inside", "no air bubbles", a
-  sample in an empty field) and does not act on a saturated frame. Fast, not trustworthy.
+  sample in an empty field) and does not act on a saturated frame. Outside vision none of its 26
+  failures is a habit: it never asks when a request is ambiguous (0 of 4), announces a call it does
+  not make ("I'll stop everything now … [stop]", no tool call), makes an absolute move for a
+  relative one (x to -100), runs the acquisition list when asked only to explain it, and stops a
+  running time lapse in order to look. Fast, not trustworthy.
 
 ## Things found on the way
 
