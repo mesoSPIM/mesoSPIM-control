@@ -71,7 +71,7 @@ TOOL_PROFILES = {
 }
 # The checks that take acquisition rows describe them by reference to set_acquisition_list instead
 # of repeating the row schema; the dispatcher validates the rows the same either way.
-ROWS_BY_REFERENCE = ("get_disk_space", "check_motion_limits")
+ROWS_BY_REFERENCE = ("get_disk_space", "check_motion_limits", "acquire_start")
 # In Regular, a command that straddles both worlds is offered with these arguments only.
 REGULAR_ARGS = {"set_camera": ("camera_exposure_time",)}
 # ... and acquisition rows may not carry the machine's ETL settings: a row takes the current ones.
@@ -98,4 +98,11 @@ MAX_HISTORY_TURNS = 20  # older turns (and their tool results) are dropped from 
 HISTORY_FULL_TURNS = 3
 HISTORY_RESULT_CHARS = 300
 HISTORY_READOUT_KEYS = ("state", "position", "optics")
+# A tool result longer than this is shortened before the model sees it (shorten_result): the
+# acquisition list keeps every row with these keys only; any other result keeps the top-level
+# keys that fit and names the rest, which the model can ask for.
+RESULT_CHARS = 3000
+ROWS_MAX = 60
+ROW_SUMMARY_KEYS = ("filename", "folder", "x_pos", "y_pos", "z_start", "z_end", "z_step", "planes",
+                    "f_start", "f_end", "rot", "laser", "intensity", "filter", "zoom", "shutterconfig")
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress

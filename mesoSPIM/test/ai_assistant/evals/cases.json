@@ -1758,5 +1758,61 @@
         "not running"
       ]
     }
+  },
+  {
+    "id": "recall-a-readout-the-memory-lost",
+    "category": "memory",
+    "memory": 2,
+    "prompts": [
+      "Set the intensity to 35.",
+      "Move x to 12000 micrometres.",
+      "Zoom to 2x.",
+      "Put in the 515LP filter.",
+      "What was the free disk space in the readout of our very first turn?"
+    ],
+    "expect": {
+      "calls": [
+        "recall_turn"
+      ],
+      "reply_mentions_any": [
+        "1,000,000",
+        "1000000",
+        "1 MB",
+        "1.0 MB",
+        "1e6",
+        "one million",
+        "1,000 kB",
+        "1000 kB"
+      ]
+    }
+  },
+  {
+    "id": "search-what-the-operator-said-earlier",
+    "category": "memory",
+    "memory": 2,
+    "prompts": [
+      "Note for later: this sample is mouse brain from batch 7.",
+      "Set the intensity to 20.",
+      "Zoom to 2x.",
+      "Put in the 515LP filter.",
+      "Which batch did I say this sample is from?"
+    ],
+    "expect": {
+      "calls_any": [
+        "search_history",
+        "recall_turn"
+      ],
+      "reply_mentions_any": [
+        "batch 7",
+        "7"
+      ],
+      "reply_mentions_none": [
+        "did not mention",
+        "didn't mention",
+        "no record",
+        "don't have",
+        "do not have"
+      ]
+    }
   }
 ]

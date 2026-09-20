@@ -34,31 +34,31 @@ what leaves room for the conversation.
 - **The readout before the operator's words**, so the fixed prefix is followed by the readout
   and the request comes last, which is also what stopped a small model copying the block.
 - **A size guard** in the tests, so the prompt cannot creep back.
+- **A session store with two recall tools.** Every turn is kept in full for the session (the
+  operator's words, the readout, the tool calls with results, the reply), so compaction loses
+  nothing: `recall_turn` returns an earlier turn in full or the turns in which a readout key
+  changed, an exact lookup since readouts are structured; `search_history` finds earlier turns by
+  words in messages, replies and results, which needs no model and works offline. Two evaluation
+  cases run with a two-turn memory, so only the store can answer them. Clear all empties the store.
+- **Large results shortened at the source.** The acquisition list keeps every row with the
+  operator-facing keys only (up to 60 rows); any other result over 3,000 characters keeps the
+  top-level keys that fit and names the ones left out, so the model can ask for them.
+- **The single-acquisition start refers to the row schema** like the checks do.
+- **The prefix is byte-identical across requests**: instructions and tool schemas carry nothing
+  time-dependent, and a test compares two builds. A profile switch rebuilds the agent, which is
+  the one legitimate change of the prefix.
 
 ## Still open, in order of payoff
 
-### 1. Past states as a store with a recall tool, and vector search where it fits
+### 1. Embeddings for the history search, when words prove too literal
 
-Compaction keeps only a one-line readout of older turns, but past states matter: "what was
-the focus before I moved it", "when did the intensity change", "what did we do with the 561
-laser earlier". The full readouts should not travel with every request; they should be stored
-and asked for.
-
-- **Store**: every turn already lands in the trace file (`assistant-<date>.jsonl`): the
-  prompt, the readout, each tool call and result, the reply. Keeping the same records in memory
-  for the session, keyed by turn number and time, costs nothing extra.
-- **Exact recall**: a `recall` tool that returns the full readout of turn N, or of the turn
-  nearest a given time, or the turns in which a named value changed. Readouts are structured, so
-  this is a lookup, not a search, and it is exact.
-- **Semantic recall**: a `search_history` tool over the free text of the session (operator
-  messages, replies, tool results). Start with keyword matching, which needs no model and works
-  offline for a local setup; add embeddings (a small local embedding model, or the provider's)
-  when keyword matching proves too literal. This is the one place vectorization earns its
-  place: unstructured text, a growing corpus, and a question of the form "did we ever ...".
-- **What not to vectorize**: the manual. Its rules must be present before the model decides
-  anything, and an ambiguous request or a planted note is exactly the case where the relevant
-  rule does not look relevant to a retriever. Provider-side prefix caching is the right tool
-  for that part.
+`search_history` matches words. It answers "which batch did I say" but not "did we do anything
+about the illumination earlier" when the earlier turn said "laser too strong". A small local
+embedding model over the same store, or the provider's embeddings, would close that; it is the
+one place vectorization earns its place, an unstructured, growing corpus and questions of the
+form "did we ever". The manual stays out of it: its rules must be present before the model
+decides anything, and an ambiguous request or a planted note is exactly the case where the
+relevant rule does not look relevant to a retriever.
 
 ### 2. Tools on demand
 
@@ -71,30 +71,14 @@ tokens per request, at the cost of one extra round trip the first time a run is 
 a new failure mode, a model that does not find a tool, which the evaluation would have to cover
 before this ships.
 
-### 3. Cap large tool results at the source
+### 3. Slimmer schemas, and a Minimal tool set
 
-`get_config`, `get_acquisition_list` and `get_frame` can each return more than the whole
-system prompt. Compact forms by default, with the detail on request, keep a single read from
-flooding a turn. Compaction shortens them in older turns only; the turn they arrive in pays
-in full.
+In the Full set `set_state` alone is 3K characters. Since a rejected call comes back as data
+with the instrument's own vocabulary, a schema could list names and types and leave ranges to
+the error path. A Minimal set of about fifteen commands (moves, optics, snap, look, live, stop,
+the reads) would halve the schema cost again for a small local model.
 
-### 4. Keep the fixed prefix byte-identical
-
-Gemini, Anthropic, llama.cpp, Ollama and vLLM all reuse a cached prefix that has not changed.
-The prefix is the instructions and the tool schemas; the readout and the request follow. Two
-things would break the cache and must stay out of the prefix: anything time-dependent, and the
-tool list changing between turns (a profile switch rebuilds the agent, which is fine; a per-turn
-change would not be).
-
-### 5. Slimmer schemas, and a Minimal tool set
-
-`acquire_start` still spells out the full row; by reference it saves about 300 tokens. In the
-Full set `set_state` alone is 3K characters. Since a rejected call comes back as data with the
-instrument's own vocabulary, a schema could list names and types and leave ranges to the error
-path. A Minimal set of about fifteen commands (moves, optics, snap, look, live, stop, the
-reads) would halve the schema cost again for a small local model.
-
-### 6. The manual, last
+### 4. The manual, last
 
 It is 1,700 tokens and holds the safety rules. Every sentence in it was added because a
 model without it did something wrong, so cutting it is the lowest payoff and the highest

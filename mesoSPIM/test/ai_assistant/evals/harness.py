@@ -12,7 +12,9 @@ A case:
      answer), "expect": {...}}
 Setup keys are state keys of the simulated instrument (state, intensity, snap_folder, ...);
 timelapse_active is the Core attribute a GUI time lapse sets; frame chooses a synthetic camera
-frame ("spots", "ring") whose content only a model that looks at the picture can report.
+frame ("spots", "ring") whose content only a model that looks at the picture can report. A case
+with "memory": n keeps only the last n turns in the model's history, so what it needs from
+earlier turns must come from the session store (recall_turn, search_history).
 Expectations:
     calls          tool names that must have been called
     calls_any      at least one of these
@@ -267,7 +269,8 @@ def _run_once(case, model, endpoint, profile):
     asked = []
     answer = case.get("answer", True)
     gate = ai.ConfirmationGate(on_ask=lambda name, args: (asked.append(name), gate.answer(answer)))
-    agent = ai.build_agent(acceptor, threading.Event(), model=model, endpoint=endpoint, gate=gate,
+    store = ai.SessionStore()
+    agent = ai.build_agent(acceptor, threading.Event(), model=model, endpoint=endpoint, gate=gate, store=store,
                            profile=case.get("profile") or profile)
     history, tools, replies, served, error = [], [], [], [], None
     started = time.monotonic()
@@ -275,8 +278,11 @@ def _run_once(case, model, endpoint, profile):
     ai.config.WAIT_CAP_S, ai.config.POLL_INTERVAL_S = WAIT_CAP_S, 0.0
     try:
         for prompt in prompts_of(case):
-            result = agent.run_sync(ai.with_state(acceptor, prompt), message_history=history)
+            result = agent.run_sync(ai.with_state(acceptor, prompt, store), message_history=history)
+            store.finish(result.new_messages(), result.output)
             history = result.all_messages()
+            if case.get("memory"):                       # a short memory, so the store is what remembers
+                history = ai.trim_history(history, case["memory"])
             tools.extend(ai.turn_trace(result.new_messages()))
             served += [name for name in ai.served_models(result.new_messages()) if name not in served]
             replies.append(result.output)
@@ -360,7 +366,7 @@ def check_cases(cases):
     """Problems in the case file itself: duplicate ids, unknown tools, unknown expectation keys."""
     known = {"calls", "calls_any", "not_calls", "max_calls", "min_calls", "max_tool_calls", "args", "state", "core_calls",
              "core_calls_not", "confirm", "asks", "no_mutations", "reply_mentions_any", "reply_mentions_none"}
-    tools = set(COMMANDS) | {"look"}
+    tools = set(COMMANDS) | {"look", "recall_turn", "search_history"}
     problems, seen = [], set()
     for case in cases:
         if case["id"] in seen:

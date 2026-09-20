@@ -548,10 +548,11 @@ def test_the_prompt_and_the_tools_stay_small_enough_for_a_local_model():
     by_name = {t.name: t.function_schema.json_schema for t in tools}
     rows = by_name["set_acquisition_list"]["properties"]["acquisitions"]["items"]["properties"]
     assert "z_start" in rows                                          # the installer spells the row out
-    for name in ai.config.ROWS_BY_REFERENCE:                          # the checks refer to it instead
+    for name in ("get_disk_space", "check_motion_limits"):             # the checks refer to it instead
         holder = by_name[name]["properties"]["acquisitions"]
         assert holder["items"] == {"type": "object"} and "set_acquisition_list" in holder["description"]
-    assert by_name["acquire_start"]["properties"]["acquisition"]["properties"]   # the single-row start keeps its row
+    single = by_name["acquire_start"]["properties"]["acquisition"]       # and so does the single-row start
+    assert "properties" not in single and "set_acquisition_list" in single["description"]
 
 
 def _turn(kind):
@@ -797,7 +798,7 @@ def test_regular_keeps_the_etl_out_of_acquisition_rows_too():
     assert out["error"]["code"] == "validation" and "etl_l_amplitude" in out["error"]["message"]
     assert acc.calls == []
     single = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["acquire_start"]
-    assert "etl_l_amplitude" not in single.function_schema.json_schema["properties"]["acquisition"]["properties"]
+    assert "properties" not in single.function_schema.json_schema["properties"]["acquisition"]   # by reference
     out = json.loads(single.function(acquisition={"etl_l_amplitude": 1.5}))
     assert out["error"]["code"] == "validation" and acc.calls == []
     full = {t.name: t for t in build_tools(acc, threading.Event(), profile="Full")}["set_acquisition_list"]
@@ -821,3 +822,85 @@ def test_a_fallback_that_answers_is_announced(monkeypatch):
     assert notices == ["gemini-3.1-flash-lite answered this turn, standing in for gemini-3.5-flash-lite"]
     worker.run_turn("hello again")                                  # the chosen model: no notice
     assert len(notices) == 1 and replies == ["done", "done"]
+
+
+# --- the session store: what compaction leaves out, on request ---
+
+def test_the_store_recalls_a_turn_and_the_changes_of_a_key():
+    store = ai.SessionStore()
+    store.begin("set the intensity to 30", {"state": "idle", "optics": {"intensity": 10}, "disk": {"free_bytes": 5}})
+    store.finish([], "Set to 30.")
+    store.begin("where are we?", {"state": "idle", "optics": {"intensity": 30}, "disk": {"free_bytes": 5}})
+    store.finish([], "Idle.")
+    store.begin("zoom 2x", {"state": "idle", "optics": {"intensity": 30, "zoom": "2x"}, "disk": {"free_bytes": 4}})
+    store.finish([], "Zoomed.")
+    first = store.recall(turn=1)
+    assert first["prompt"] == "set the intensity to 30" and first["readout"]["disk"]["free_bytes"] == 5
+    assert store.recall(turn=-1)["prompt"] == "zoom 2x" and store.recall()["turn"] == 3
+    assert store.recall(turn=9)["error"]["code"] == "not_found" and ai.SessionStore().recall()["error"]
+    changes = store.recall(changed="optics.intensity")["changes"]
+    assert [(c["turn"], c["from"], c["to"]) for c in changes] == [(2, 10, 30)]
+    assert store.recall(changed="disk.free_bytes")["changes"][0]["turn"] == 3
+    hits = store.search("intensity 30")["matches"]
+    assert [h["turn"] for h in hits] == [1]                               # words in messages, replies, results
+    assert store.search("banana")["matches"] == []
+
+
+def test_with_state_opens_the_turn_in_the_store_and_the_tools_read_it():
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    store = ai.SessionStore()
+    text = ai.with_state(FakeAcceptor(), "hello", store)
+    assert text.endswith("hello") and store.turns[-1]["prompt"] == "hello" and store.turns[-1]["readout"]
+    store.finish([], "hi")
+    tools = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), store=store)}
+    assert json.loads(tools["recall_turn"].function(turn=1))["reply"] == "hi"
+    assert json.loads(tools["search_history"].function(query="hello"))["matches"][0]["turn"] == 1
+    assert "recall_turn" not in {t.name for t in build_tools(FakeAcceptor(), threading.Event())}   # only with a store
+
+
+def test_the_worker_keeps_a_store_and_clear_all_empties_it(monkeypatch):
+    worker = AssistantWorker(FakeAcceptor())
+    monkeypatch.setattr(ai, "build_agent", lambda a, c, **k: FakeAgent([FakeResult("ok"), FakeResult("ok")]))
+    worker.run_turn("first")
+    worker.run_turn("second")
+    assert [t["prompt"] for t in worker.store.turns] == ["first", "second"] and worker.store.turns[0]["reply"] == "ok"
+    worker.reset()
+    assert worker.store.turns == [] and worker._agent is None
+
+
+# --- large results are shortened at the source ---
+
+def test_a_long_acquisition_list_keeps_its_rows_with_the_summary_keys_only():
+    rows = [{key: i for key in ("x_pos", "y_pos", "z_start", "z_end", "z_step", "etl_l_amplitude", "etl_r_offset",
+                                "laser", "filter", "zoom", "filename", "folder", "planes", "processing", "rot",
+                                "shutterconfig", "intensity", "f_start", "f_end", "image_writer_plugin")} for i in range(40)]
+    result = ai.shorten_result("get_acquisition_list", {"acquisitions": rows})
+    assert len(result["acquisitions"]) == 40 and "etl_l_amplitude" not in result["acquisitions"][0]
+    assert result["acquisitions"][3]["z_end"] == 3 and "40 rows" in result["note"]
+    long = ai.shorten_result("get_acquisition_list", {"acquisitions": rows * 2})
+    assert len(long["acquisitions"]) == ai.config.ROWS_MAX and "omitted" in long["note"]
+    small = {"acquisitions": rows[:2]}
+    assert ai.shorten_result("get_acquisition_list", small) is small                # short: untouched
+
+
+def test_any_other_long_result_keeps_the_keys_that_fit_and_names_the_rest():
+    big = {"small": 1, "huge": "x" * 5000, "medium": list(range(100))}
+    result = ai.shorten_result("get_limits", big)
+    assert result["small"] == 1 and "huge" not in result and "huge (" in result["note"]
+    assert len(json.dumps(result)) <= ai.config.RESULT_CHARS
+    assert ai.shorten_result("get_state", {"a": 1}) == {"a": 1}
+
+
+# --- the fixed prefix is the same on every request, for the providers' caches ---
+
+def test_the_instructions_and_tools_are_identical_across_agents():
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    import datetime
+    a = ai.build_system_prompt(profile="Regular")
+    b = ai.build_system_prompt(profile="Regular")
+    assert a == b and str(datetime.date.today().year) not in a           # nothing time-dependent in the prefix
+    schemas = lambda: [(t.name, t.description, json.dumps(t.function_schema.json_schema, sort_keys=True))
+                       for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")]
+    assert schemas() == schemas()

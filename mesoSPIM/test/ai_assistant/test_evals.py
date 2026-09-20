@@ -263,3 +263,12 @@ def test_a_reply_that_quotes_the_state_block_fails_every_case():
     copied = scripted("Hello!\n\n<microscope_state>\n{}\n</microscope_state>")
     failures = harness.score(case("greeting-no-tools"), harness.run_case(case("greeting-no-tools"), copied, SCRIPTED))
     assert failures == ["a reply quotes the <microscope_state> block"]
+
+
+def test_a_short_memory_case_still_answers_from_the_store():
+    model = scripted("Set.", "Moved.", "Zoomed.", "Filter in.",
+                     (("recall_turn", {"turn": 1}), "The first readout showed 1,000,000 bytes free."))
+    trace = harness.run_case(case("recall-a-readout-the-memory-lost"), model, SCRIPTED)
+    assert harness.score(case("recall-a-readout-the-memory-lost"), trace) == []
+    recalled = json.loads([t for t in trace["tools"] if t["tool"] == "recall_turn"][0]["result"])
+    assert recalled["prompt"] == "Set the intensity to 35." and recalled["readout"]["disk"]["free_bytes"] == 1000000

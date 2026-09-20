@@ -83,7 +83,10 @@ choice can be fixed per microscope with the config attribute `ai_assistant_tools
 many of the operator's messages, with their answers, the model remembers; the newest three stay
 whole, older ones keep a one-line readout (state, position, optics) instead of the full state
 block and have long tool results shortened, so twenty turns of memory cost a fraction of what
-twenty full readouts would. **Downsample image to** is the size of the frame handed to the
+twenty full readouts would. Nothing is lost by it: every turn stays in a session store, and the
+assistant has two tools on it, one that returns an earlier turn in full or the turns in which a
+readout value changed, and one that finds earlier turns by words, for "what was the focus before
+I moved it" or "which batch did I say this is". Clear all empties the store. **Downsample image to** is the size of the frame handed to the
 vision model (longer side, 1024 px by default): smaller is cheaper and faster, and enough for "is
 it centred" or "is it saturated"; the numbers always come from the full frame.
 
@@ -217,7 +220,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  430 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  437 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

@@ -134,6 +134,36 @@ class ConfirmationGate:
         self._answered.set()
 
 
+def _compact_row(row):
+    return {key: row[key] for key in config.ROW_SUMMARY_KEYS if key in row}
+
+
+def shorten_result(name, result):
+    """A tool result the turn can afford. The acquisition list keeps every row but only the keys
+    an operator asks about; any other result over RESULT_CHARS keeps the top-level keys that fit
+    and names the ones it left out, so the model can ask for them. A short result is returned as
+    it is."""
+    text = json.dumps(result)
+    if len(text) <= config.RESULT_CHARS or not isinstance(result, dict):
+        return result
+    if name == "get_acquisition_list" and isinstance(result.get("acquisitions"), list):
+        rows = [_compact_row(row) for row in result["acquisitions"] if isinstance(row, dict)]
+        note = f"{len(rows)} rows, each with {', '.join(config.ROW_SUMMARY_KEYS)} only; the other row keys hold the current settings"
+        if len(rows) > config.ROWS_MAX:
+            note += f"; rows after the first {config.ROWS_MAX} omitted"
+        return dict(result, acquisitions=rows[:config.ROWS_MAX], note=note)   # the list is what was asked for
+    kept, omitted, size = {}, [], 2
+    for key, value in result.items():
+        piece = len(json.dumps({key: value}))
+        if size + piece <= config.RESULT_CHARS:
+            kept[key] = value
+            size += piece
+        else:
+            omitted.append(f"{key} ({piece} chars)")
+    kept["note"] = "result shortened; omitted: " + ", ".join(omitted)
+    return kept
+
+
 def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
     """One passthrough tool body, closing over the command it dispatches. The keyword arguments
     ARE the command's wire args, so `move_absolute(targets={"x": 5000})` dispatches verbatim.
@@ -152,7 +182,7 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None):
         if gate is not None and name in config.CONFIRM_FIRST and not gate.ask(name, args):
             return json.dumps({"error": {"code": "refused", "message": f"the operator did not confirm {name}"}})
         try:
-            return json.dumps(dispatch_and_wait(acceptor, name, args, kind, cancel))
+            return json.dumps(shorten_result(name, dispatch_and_wait(acceptor, name, args, kind, cancel)))
         except Exception as error:
             code, message = error_info(error)
             failure = {"error": {"code": code, "message": message}}
@@ -243,6 +273,111 @@ def _row_arguments(schema):
     return [name for name in ("acquisitions", "acquisition") if name in properties]
 
 
+class SessionStore:
+    """Every turn of the session in full: the operator's words, the readout the model was given,
+    the tool calls with their results, the reply. The memory the model carries keeps older turns
+    compact; what compaction leaves out is here, and the recall and search tools hand it back on
+    request. Kept in memory for the session only; Clear all empties it."""
+
+    def __init__(self):
+        self.turns = []
+
+    def begin(self, prompt, snapshot):
+        self.turns.append({"turn": len(self.turns) + 1, "time": time.strftime("%H:%M:%S"),
+                           "prompt": prompt, "readout": snapshot, "tools": [], "reply": None})
+        return len(self.turns)
+
+    def finish(self, messages, reply):
+        if self.turns:
+            self.turns[-1]["tools"] = turn_trace(messages)
+            self.turns[-1]["reply"] = reply
+
+    def _get(self, snapshot, path):
+        value = snapshot
+        for key in path.split("."):
+            value = value[key] if isinstance(value, dict) else None
+        return value
+
+    def recall(self, turn=None, changed=None):
+        """The full readout of one turn (1 is the first, -1 the newest), or the turns in which a
+        dotted readout key changed, with its value before and after."""
+        if changed:
+            found, previous = [], None
+            for entry in self.turns:
+                value = self._get(entry["readout"], changed) if entry["readout"] else None
+                if previous is not None and value != previous[1]:
+                    found.append({"turn": entry["turn"], "time": entry["time"], "from": previous[1], "to": value,
+                                  "prompt": entry["prompt"][:120]})
+                previous = (entry["turn"], value)
+            return {"key": changed, "changes": found, "turns": len(self.turns)}
+        if not self.turns:
+            return {"error": {"code": "not_found", "message": "no turns yet"}}
+        index = (turn if turn is not None else -1)
+        index = index - 1 if index > 0 else index
+        try:
+            entry = self.turns[index]
+        except IndexError:
+            return {"error": {"code": "not_found", "message": f"no turn {turn}; the session has {len(self.turns)}"}}
+        return {key: entry[key] for key in ("turn", "time", "prompt", "readout", "tools", "reply")}
+
+    def search(self, query, limit=5):
+        """Turns whose operator message, reply or tool results contain the words of the query,
+        best matches first: a lookup by words, which needs no model and works offline."""
+        words = [w for w in re.findall(r"\w+", query.lower()) if len(w) > 1]
+        hits = []
+        for entry in self.turns:
+            text = " ".join([entry["prompt"], entry["reply"] or "", json.dumps(entry["tools"])]).lower()
+            score = sum(text.count(w) for w in words)
+            if score:
+                hits.append((score, {"turn": entry["turn"], "time": entry["time"], "prompt": entry["prompt"][:200],
+                                     "reply": (entry["reply"] or "")[:200]}))
+        hits.sort(key=lambda pair: (-pair[0], pair[1]["turn"]))
+        return {"query": query, "matches": [hit for _, hit in hits[:limit]], "turns": len(self.turns)}
+
+
+_RECALL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "turn": {"type": "integer", "description": "1 is the first turn of the session, -1 the newest"},
+        "changed": {"type": "string", "description": "a readout key such as optics.intensity or position.x: "
+                                                     "the turns in which it changed, instead of one turn"},
+    },
+    "additionalProperties": False,
+}
+_SEARCH_SCHEMA = {
+    "type": "object",
+    "properties": {"query": {"type": "string", "description": "words to look for"},
+                   "limit": {"type": "integer", "minimum": 1, "maximum": 20}},
+    "required": ["query"],
+    "additionalProperties": False,
+}
+
+
+def _store_tools(store, on_call):
+    from pydantic_ai import Tool
+
+    def recall_turn(turn=None, changed=None) -> str:
+        if on_call is not None:
+            on_call("recall_turn", json.dumps({"turn": turn, "changed": changed}))
+        return json.dumps(store.recall(turn=turn, changed=changed), default=str)
+
+    def search_history(query="", limit=5) -> str:
+        if on_call is not None:
+            on_call("search_history", json.dumps({"query": query, "limit": limit}))
+        return json.dumps(store.search(query, limit), default=str)
+
+    return [
+        Tool.from_schema(recall_turn, name="recall_turn", json_schema=_RECALL_SCHEMA,
+                         description="The full readout, tool calls and reply of an earlier turn, or the turns in "
+                                     "which a readout key changed. Older turns in your memory keep only a one-line "
+                                     "readout; this has the rest."),
+        Tool.from_schema(search_history, name="search_history", json_schema=_SEARCH_SCHEMA,
+                         description="Earlier turns of this session whose operator message, reply or tool results "
+                                     "contain the given words, best matches first. For anything the operator said or "
+                                     "asked earlier that is no longer in your memory."),
+    ]
+
+
 def _rows_by_reference(schema):
     """A copy of a schema whose acquisition rows are described by reference to set_acquisition_list
     instead of spelling every row key out again: the checks take the same rows, and repeating the
@@ -252,7 +387,10 @@ def _rows_by_reference(schema):
         holder = schema["properties"][name]
         if "items" in holder:
             holder["items"] = {"type": "object"}
-        holder["description"] = "rows exactly as set_acquisition_list takes them; omit to use the installed list"
+            holder["description"] = "rows exactly as set_acquisition_list takes them; omit to use the installed list"
+        else:
+            schema["properties"][name] = {"type": "object",
+                                          "description": "one row exactly as set_acquisition_list takes it"}
     return schema
 
 
@@ -295,7 +433,7 @@ def _narrowed(cmd, keys):
 
 
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, gate=None, vision_endpoint=None,
-                image_size=None, profile=None):
+                image_size=None, profile=None, store=None):
     """One passthrough tool per offered command (see offered_commands). The tool list is derived
     from COMMANDS and the profile — never hand-maintained.
 
@@ -320,6 +458,8 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
             schema = _rows_without(schema, config.REGULAR_ROW_HIDDEN)
             fn = _refuse_row_keys(fn, cmd.name, config.REGULAR_ROW_HIDDEN)
         tools.append(Tool.from_schema(fn, name=cmd.name, description=cmd.hint or cmd.name, json_schema=schema))
+    if store is not None:
+        tools += _store_tools(store, on_call)
     if endpoint is not None:
         eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see
 
@@ -400,14 +540,18 @@ def without_state_block(reply):
     return _STATE_BLOCK.sub("\n", reply).strip() if reply else reply
 
 
-def with_state(acceptor, text):
+def with_state(acceptor, text, store=None):
     """The current microscope readout, then the operator's message: data the model can rely on
     instead of calling reads first, with the operator's words last, where a model weighs text
     most, so that a note in a folder name inside the readout does not read as the request. Sent
-    without the block if the readout fails."""
+    without the block if the readout fails. With a store, the turn is opened in it."""
     try:
         snapshot = acceptor.dispatch("get_snapshot", {})
     except Exception:
+        snapshot = None
+    if store is not None:
+        store.begin(text, snapshot)
+    if snapshot is None:
         return text
     return f"<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>\n\n{text}"
 
@@ -564,7 +708,7 @@ def build_model(endpoint):
 
 
 def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None, gate=None,
-                vision_endpoint=None, image_size=None, profile=None):
+                vision_endpoint=None, image_size=None, profile=None, store=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -578,7 +722,8 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
     # keeps, so an old turn is compacted once and stays so.
     return Agent(model, instructions=build_system_prompt(profile=profile),
                  tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
-                                   vision_endpoint=vision_endpoint, image_size=image_size, profile=profile),
+                                   vision_endpoint=vision_endpoint, image_size=image_size, profile=profile,
+                                   store=store),
                  capabilities=[ProcessHistory(compact_history)])
 
 
@@ -639,6 +784,7 @@ class AssistantWorker(QtCore.QObject):
         self._profile = config.DEFAULT_TOOL_PROFILE
         self._agent = None
         self._history = []
+        self.store = SessionStore()      # every turn in full, for recall_turn and search_history
         self.cancel = threading.Event()
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit)
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
@@ -661,6 +807,8 @@ class AssistantWorker(QtCore.QObject):
     def reset(self):
         """Forget the conversation (Clear all). Called between turns, like configure."""
         self._history = []
+        self.store = SessionStore()
+        self._agent = None               # the tools close over the store
 
     @QtCore.pyqtSlot(str)
     def run_turn(self, text):
@@ -671,11 +819,13 @@ class AssistantWorker(QtCore.QObject):
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
                                           endpoint=self._endpoint, on_frame=self.sig_frame.emit, gate=self.gate,
                                           vision_endpoint=self._vision_endpoint,
-                                          image_size=lambda: self.look_image_size, profile=self._profile)
+                                          image_size=lambda: self.look_image_size, profile=self._profile,
+                                          store=self.store)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.
-            result = self._agent.run_sync(with_state(self._acceptor, text), message_history=self._history)
+            result = self._agent.run_sync(with_state(self._acceptor, text, self.store), message_history=self._history)
+            self.store.finish(result.new_messages(), result.output)
             self._history = trim_history(result.all_messages(), self.max_history_turns)
             self._record(text, result.new_messages(), started, reply=result.output)
             chosen = self._endpoint.model if self._endpoint else None
