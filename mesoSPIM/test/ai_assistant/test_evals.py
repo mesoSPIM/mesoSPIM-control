@@ -203,3 +203,26 @@ def test_a_throttled_model_spaces_its_requests():
     trace = harness.run_case(case("read-capabilities"), model, SCRIPTED)
     assert trace["error"] is None and trace["tools"][0]["tool"] == "get_state"
     assert time.monotonic() - started >= 0.3                          # two requests, one interval between them
+
+
+def test_the_vision_frames_differ_from_each_other_in_what_only_eyes_can_tell():
+    import numpy as np
+    spots, ring = harness.synthetic_frame("spots"), harness.synthetic_frame("ring")
+    assert spots.shape == ring.shape == (256, 384) and harness.synthetic_frame(None) is None
+    assert all(spots[r, c] == 4000 for r, c in ((60, 80), (130, 250), (200, 150)))   # three discs...
+    assert spots[95, 165] == 0 and spots[165, 200] == 0 and spots[130, 115] == 0        # ...with dark between them
+    assert ring[128, 192] == 0 and ring[128, 192 + 60] == 4000              # hollow
+    with pytest.raises(ValueError):
+        harness.synthetic_frame("nothing")
+    core = harness.SimulatedInstrument(); core.frame_name = "spots"; core.snap()
+    assert np.array_equal(core.frame_queue_display[0], spots)               # the snap serves the chosen frame
+
+
+def test_a_vision_case_sends_the_picture_and_scores_the_answer():
+    model = scripted((("look", {"question": "how many bright spots?"}), "I see three separate bright spots."))
+    trace = harness.run_case(case("vision-counts-spots"), model, SCRIPTED)
+    assert harness.score(case("vision-counts-spots"), trace) == []
+    result = trace["tools"][0]["result"]
+    assert "cannot see images" in result                                     # the scripted endpoint has no eyes
+    blind = scripted((("look", {"question": "how many bright spots?"}), "There is one bright spot."))
+    assert harness.score(case("vision-counts-spots"), harness.run_case(case("vision-counts-spots"), blind, SCRIPTED))

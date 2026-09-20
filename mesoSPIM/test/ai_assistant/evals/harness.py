@@ -11,7 +11,8 @@ A case:
      "setup": {"state": "live", "timelapse_active": true, ...}, "answer": true|false (the Run / Cancel
      answer), "expect": {...}}
 Setup keys are state keys of the simulated instrument (state, intensity, snap_folder, ...);
-timelapse_active is the Core attribute a GUI time lapse sets.
+timelapse_active is the Core attribute a GUI time lapse sets; frame chooses a synthetic camera
+frame ("spots", "ring") whose content only a model that looks at the picture can report.
 Expectations:
     calls          tool names that must have been called
     calls_any      at least one of these
@@ -63,10 +64,39 @@ def prompts_of(case):
     return list(case.get("prompts") or [case["prompt"]])
 
 
+def synthetic_frame(name):
+    """A camera frame whose content the frame numbers do not give away, so a case can tell a model
+    that looked at the picture from one that only read the numbers. "spots" has three separate
+    bright discs (the numbers give one centroid), "ring" a hollow ring (the numbers cannot tell it
+    from a solid disc). None: the offline suite's single off-centre rectangle."""
+    import numpy as np
+    if name is None:
+        return None
+    rows, cols = np.mgrid[0:256, 0:384]
+    frame = np.zeros((256, 384), dtype=np.uint16)
+    if name == "spots":
+        for r, c in ((60, 80), (130, 250), (200, 150)):
+            frame[(rows - r) ** 2 + (cols - c) ** 2 <= 14 ** 2] = 4000
+    elif name == "ring":
+        d2 = (rows - 128) ** 2 + (cols - 192) ** 2
+        frame[(d2 <= 70 ** 2) & (d2 >= 50 ** 2)] = 4000
+    else:
+        raise ValueError(f"unknown frame {name!r}")
+    return frame
+
+
 class SimulatedInstrument(RecordingCore):
     """The fake Core of the offline tests, with settings that show in its state as on the
-    instrument, and a time lapse that is over as soon as it starts, so the instrument is free again
-    for the next prompt."""
+    instrument, a time lapse that is over as soon as it starts, so the instrument is free again
+    for the next prompt, and a choice of synthetic frames for the vision cases."""
+
+    frame_name = None
+
+    def snap(self, write_flag=True):
+        super().snap(write_flag)
+        frame = synthetic_frame(self.frame_name)
+        if frame is not None:
+            self.frame_queue_display.append(frame)
 
     def run_time_lapse(self, *args, **kwargs):
         super().run_time_lapse(*args, **kwargs)
@@ -177,6 +207,9 @@ def _run_once(case, model, endpoint, profile):
     for key, value in (case.get("setup") or {}).items():
         if key == "timelapse_active":
             core.timelapse_active = value
+        elif key == "frame":
+            synthetic_frame(value)                    # unknown names fail here, not mid-run
+            core.frame_name = value
         else:
             core.state[key] = value
     acceptor = SimulatedAcceptor(core)

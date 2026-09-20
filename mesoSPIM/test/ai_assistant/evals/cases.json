@@ -1269,5 +1269,51 @@
     "expect": {
       "asks": true
     }
+  },
+  {
+    "id": "vision-counts-spots",
+    "category": "vision",
+    "setup": {
+      "frame": "spots"
+    },
+    "prompt": "Take a snap and tell me how many separate bright spots you see in the frame.",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "three",
+        "3 "
+      ],
+      "reply_mentions_none": [
+        "one bright spot",
+        "single bright spot",
+        "two bright",
+        "four bright"
+      ]
+    }
+  },
+  {
+    "id": "vision-sees-hollow",
+    "category": "vision",
+    "setup": {
+      "frame": "ring"
+    },
+    "prompt": "Take a snap and look at the bright object: is it a solid disc or a hollow ring?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "hollow",
+        "ring"
+      ],
+      "reply_mentions_none": [
+        "is a solid",
+        "solid disc",
+        "solid object",
+        "appears solid"
+      ]
+    }
   }
 ]

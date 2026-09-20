@@ -148,8 +148,10 @@ injection in the message and through the instrument's own state, a request to le
 prompt, the confirm-first moves with Run and with Cancel, a GUI-busy instrument in live, in a
 stale run state and in a time lapse (and what is still allowed then), acquisitions, the selected
 row and a time lapse, the two tool sets on the ETL, the galvos, binning and the self test, looking
-without a new snap and deciding on saturation, memory across turns, and prompts in German and
-Dutch. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
+without a new snap and deciding on saturation, memory across turns, prompts in German and
+Dutch, and two vision sanity checks on synthetic frames whose content the frame numbers do not
+give away (three separate spots to count, a hollow ring to tell from a disc), which pass only when
+the picture reached the vision model and came back described. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
 it when the prompt, the tools or the model change, and keep the trace file: a case that starts
 failing shows in it what the model did instead. `test_evals.py` keeps the machinery itself honest
 offline, with scripted models.
@@ -197,7 +199,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  420 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  422 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.
