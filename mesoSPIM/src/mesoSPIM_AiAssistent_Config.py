@@ -46,6 +46,14 @@ LOCAL_SERVER_POLL_MS = 500
 # microscope config may set the attribute named in CONTEXT_CONFIG_KEY to another size.
 LOCAL_CONTEXT_TOKENS = 32768
 CONTEXT_CONFIG_KEY = "ai_assistant_context_tokens"
+LOCAL_BATCH_TOKENS = 2048      # prompt batches: the ~5,700-token prefix is processed in fewer passes than at 512
+LOCAL_FLASH_ATTENTION = True   # smaller KV cache and faster attention where the build supports it
+
+# Sampling and retries for every model, cloud or local: an agent that drives an instrument
+# wants the most likely tool call, not a creative one, and a small model's malformed call is
+# handed back to it a couple of times before the turn fails.
+MODEL_TEMPERATURE = 0.0
+TOOL_CALL_RETRIES = 2
 LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow disk
 
 # The frame handed to a vision model: longer side in pixels.

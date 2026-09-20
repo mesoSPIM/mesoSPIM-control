@@ -913,3 +913,18 @@ def test_the_snap_tool_tells_the_model_that_look_snaps_by_itself():
     by_name = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
     assert "never snap and then look" in by_name["snap"].description
     assert by_name["set_laser"].description == COMMANDS["set_laser"].hint      # the others keep the wire hint
+
+
+def test_the_agent_samples_deterministically_and_retries_a_malformed_call():
+    pytest.importorskip("pydantic_ai")
+    from pydantic_ai.models.function import FunctionModel
+    from pydantic_ai.messages import ModelResponse, TextPart
+    seen = []
+
+    def model_function(messages, info):
+        seen.append(info.model_settings)
+        return ModelResponse(parts=[TextPart("ok")])
+    agent = ai.build_agent(FakeAcceptor(), threading.Event(), model=FunctionModel(model_function))
+    agent.run_sync("hi")
+    assert seen[0]["temperature"] == 0.0 and ai.config.MODEL_TEMPERATURE == 0.0
+    assert agent._max_tool_retries == ai.config.TOOL_CALL_RETRIES == 2

@@ -75,6 +75,8 @@ def server_command(model_path, port, projector=None, context_tokens=None):
         "--port", str(port),
         "--n_gpu_layers", "-1",  # offload everything the GPU can take; CPU-only builds ignore it
         "--n_ctx", str(int(context_tokens or config.LOCAL_CONTEXT_TOKENS)),
+        "--n_batch", str(config.LOCAL_BATCH_TOKENS),
+        "--flash_attn", "true" if config.LOCAL_FLASH_ATTENTION else "false",
     ]
     if projector:
         argv += ["--clip_model_path", projector]

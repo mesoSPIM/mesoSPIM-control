@@ -725,7 +725,9 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
                  tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
                                    vision_endpoint=vision_endpoint, image_size=image_size, profile=profile,
                                    store=store),
-                 capabilities=[ProcessHistory(compact_history)])
+                 capabilities=[ProcessHistory(compact_history)],
+                 model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
+                 retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---

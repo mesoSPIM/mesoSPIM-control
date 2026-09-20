@@ -47,6 +47,7 @@ def test_server_command_serves_the_file_on_loopback(monkeypatch):
     assert argv[argv.index("--n_ctx") + 1] == str(config.LOCAL_CONTEXT_TOKENS) == "32768"   # not llama.cpp's 2,048
     narrow = server_command("/models/qwen-8b.gguf", 4321, context_tokens=8192)
     assert narrow[narrow.index("--n_ctx") + 1] == "8192"
+    assert argv[argv.index("--n_batch") + 1] == "2048" and argv[argv.index("--flash_attn") + 1] == "true"
 
 
 def test_projector_for_wants_the_models_family_in_the_name(tmp_path):
