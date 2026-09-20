@@ -133,9 +133,15 @@ loaded.
   A stop the operator asks for is never gated. And a `look` right after a `snap` reads that frame
   instead of exposing the sample again. A refusal also carries its advice ("say so and wait; do
   not stop it") where the model reads it next.
-- **The tab says when it sent nothing.** Under a reply that called no tool it prints "no command
-  was sent to the microscope in this turn". Small models write "I have closed the shutters"
-  having called nothing; the tab cannot judge the sentence, but it knows what it sent.
+- **A reply that called no tool goes back to the model once, and the tab says when it sent
+  nothing.** Small models write "I have stopped the time lapse" having called nothing, and
+  whether they do turns on the wording of unrelated lines of the manual, so no wording cures it.
+  A turn that ends without a tool call is handed back with that fact: the model calls the tool
+  after all, or answers with one word and its first reply reaches the operator unchanged (one
+  short extra request on turns that send no command; `CALLED_NOTHING_CHALLENGE`, empty switches
+  it off). It is not a guarantee, so under a reply that called nothing the tab also prints "no
+  command was sent to the microscope in this turn". The Stop microscope button never depends on
+  the model.
 - **The model call has no timeout.** `WAIT_CAP_S` bounds the microscope leg only. If the endpoint
   stalls — a burst over a tokens-per-minute quota is the usual cause — the turn blocks until the
   HTTP layer gives up, and Cancel gates tool dispatch but cannot abort a request already in
@@ -217,6 +223,12 @@ on the manual as much as on the model: a case that fails on every model is a rul
 too loosely (the ambiguity and readout rules were found that way), one that fails on one model is
 that model's fit. Keep the run files; they are the evidence.
 
+A change made to pass these cases may only have fitted them. `evals/cases_holdout.json` holds a
+variant of each case, with other wording, numbers, axes, settings and frames (some with the
+opposite answer: a solid disc for the ring, no stripes, a well-exposed frame), written without
+running a model on it. Develop against `cases.json`; run `--cases …/cases_holdout.json` afterwards
+and compare. A gain that does not carry over was a fit.
+
 Every turn in the tab is recorded the same way, one JSON line per turn in
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl` (or the config attribute
 `ai_assistant_traces_folder`): the prompt, each tool call with its arguments and result, the model
@@ -238,7 +250,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  455 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  491 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

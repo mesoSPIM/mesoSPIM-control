@@ -127,6 +127,55 @@ def synthetic_frame(name):
         u = (cols - 192) + (rows - 128)       # along the diagonal
         v = (cols - 192) - (rows - 128)       # across it
         frame[(np.abs(u) <= 190) & (np.abs(v) <= 22)] = 3500
+    # --- the held-out set's frames (cases_holdout.json): the same questions with other answers,
+    # some of them the opposite one, so a model that always says "three", "ring" or "yes" fails
+    elif name == "spots4":                    # four equal spots
+        for r, c in ((50, 70), (70, 300), (190, 110), (205, 280)):
+            disc(r, c, 14, 4000)
+    elif name == "spots2":                    # two equal spots
+        for r, c in ((90, 100), (170, 290)):
+            disc(r, c, 14, 4000)
+    elif name == "disc":                      # solid, where "ring" is hollow
+        disc(128, 192, 66, 4000)
+    elif name == "graded-ul":                 # the upper-left spot is the brightest
+        disc(60, 80, 16, 4000)
+        disc(128, 300, 16, 1500)
+        disc(210, 190, 16, 2500)
+    elif name == "edge-left":                 # cut off by the left edge
+        disc(128, 20, 70, 4000)
+    elif name == "blur-left":                 # the left spot is the defocused one
+        disc(128, 274, 16, 4000)
+        blurred = np.zeros_like(frame)
+        blurred[(rows - 128) ** 2 + (cols - 110) ** 2 <= 16 ** 2] = 4000
+        for _ in range(6):
+            padded = np.pad(blurred, 4, mode="edge")
+            blurred = sum(padded[dr:dr + 256, dc:dc + 384] for dr in range(9) for dc in range(9)) / 81.0
+        frame += blurred
+    elif name == "gradient-left":             # a background brighter to the left
+        frame += 1500.0 * (1.0 - cols / cols.max())
+        disc(128, 192, 20, 4000)
+    elif name == "plain":                     # the sample of "stripes" without the stripes
+        disc(128, 192, 90, 3000)
+    elif name == "bubble2":                   # the bubble lower left
+        frame += 3000.0
+        disc(180, 110, 30, 200)
+    elif name == "horizontal":                # an elongated sample lying flat
+        frame[(np.abs(cols - 192) <= 170) & (np.abs(rows - 128) <= 20)] = 3500
+    elif name == "empty2":                    # noise only, another seed and level
+        rng = np.random.default_rng(23)
+        frame += rng.normal(140.0, 15.0, frame.shape).clip(0)
+    elif name == "offcentre-right":           # a sample far to the right
+        disc(128, 325, 34, 3500)
+    elif name == "dim2":                      # underexposed, elsewhere in the field
+        frame += 120.0
+        disc(100, 150, 36, 300)
+    elif name == "saturated2":                # burnt to full scale, elsewhere in the field
+        disc(110, 140, 46, 65535)
+        frame[(rows - 110) ** 2 + (cols - 140) ** 2 <= 64 ** 2] += 2500
+        frame[frame > 65535] = 65535
+    elif name == "good":                      # well exposed: neither saturated nor dim
+        frame += 300.0
+        disc(128, 192, 50, 30000)
     elif name == "empty":                     # no sample, only camera noise
         rng = np.random.default_rng(7)
         frame += rng.normal(100.0, 12.0, frame.shape).clip(0)
