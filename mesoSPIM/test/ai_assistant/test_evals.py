@@ -284,3 +284,24 @@ def test_a_snap_right_before_a_look_is_a_wasted_round_trip():
     trace = harness.run_case(case("look-without-new-snap"), across, SCRIPTED)
     assert [c["turn"] for c in trace["tools"]] == [1, 2]                       # a snap in an earlier turn is fine
     assert harness.score(case("look-without-new-snap"), trace) == []
+
+
+def test_the_runner_serves_a_local_file_and_evaluates_against_it(monkeypatch, tmp_path):
+    from mesoSPIM.test.ai_assistant.evals import run as runner
+    from mesoSPIM.src import mesoSPIM_AiAssistent_Local as local
+    (tmp_path / "gemma-3-4b-it-Q4.gguf").write_bytes(b"")
+    (tmp_path / "mmproj-gemma-3-4b-it.gguf").write_bytes(b"")
+    started = []
+
+    class FakeServer:
+        def __init__(self, path, command=None, projector=None, context_tokens=None):
+            self.model_path, self.projector, self.polls = path, projector, 0
+            self.model, self.base_url, self.log_path = "gemma-3-4b-it-Q4", "http://127.0.0.1:4242/v1", "x.log"
+        def start(self): started.append(self.model_path)
+        def ready(self): self.polls += 1; return self.polls > 1
+        def stop(self): started.append("stopped")
+    monkeypatch.setattr(local, "LocalModelServer", FakeServer)
+    server, endpoint = runner.local_endpoint(str(tmp_path / "gemma-3-4b-it-Q4.gguf"), poll_s=0, log=lambda *a: None)
+    assert endpoint.provider == "OpenAI-style" and endpoint.base_url == "http://127.0.0.1:4242/v1"
+    assert endpoint.model == "gemma-3-4b-it-Q4" and endpoint.vision is True     # the projector lay beside it
+    assert server.projector.endswith("mmproj-gemma-3-4b-it.gguf") and started == [str(tmp_path / "gemma-3-4b-it-Q4.gguf")]

@@ -3,8 +3,13 @@
     python -m mesoSPIM.test.ai_assistant.evals.run --provider Gemini [--model NAME[,NAME...]] [--repeat N]
         [--profile Regular] [--only id,id] [--out runs/{date}-{model}.jsonl]
     python -m mesoSPIM.test.ai_assistant.evals.run --rescore runs/2026-09-17-gemini-3.5-flash-lite.jsonl
+    python -m mesoSPIM.test.ai_assistant.evals.run --local ~/mesoSPIM/models/gemma-3-12b-it-Q4_K_M.gguf
+    python -m mesoSPIM.test.ai_assistant.evals.run --provider OpenAI-style --base-url http://localhost:11434/v1 --model qwen3:8b
 
-The key comes from the tab's environment variable for the provider (GEMINI_API_KEY, ...). Each
+--local serves a GGUF file exactly as the tab's Local AI mode does (with its projector file when
+one lies beside it, so the model can see) and evaluates against it; --base-url points the
+OpenAI-style preset at a server already running (Ollama, llama-server, vLLM). The key comes from
+the tab's environment variable for the provider (GEMINI_API_KEY, ...). Each
 case is printed as it finishes; every trace is appended to the output file, whose name may carry
 {date}, {provider} and {model}; several models run one after the other, each --repeat times, so
 one command benchmarks a prompt across models and shows which cases are a coin flip. The exit
@@ -13,8 +18,10 @@ calling a model, for a changed case file. scoreboard.py summarises run files."""
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import datetime as dt
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -59,6 +66,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--provider", default=config.DEFAULT_PROVIDER, choices=sorted(config.PROVIDERS))
     parser.add_argument("--model", default="", help="model name(s), comma-separated; the preset's when omitted")
+    parser.add_argument("--base-url", default="", help="an OpenAI-style server already running, e.g. http://localhost:11434/v1")
+    parser.add_argument("--local", default="", help="a .gguf file to serve with llama.cpp as the tab's Local AI mode does")
+    parser.add_argument("--vision", action="store_true", help="with --base-url: the server's model can see images")
     parser.add_argument("--repeat", type=int, default=1, help="run every case this many times")
     parser.add_argument("--profile", default=config.DEFAULT_TOOL_PROFILE, choices=sorted(config.TOOL_PROFILES))
     parser.add_argument("--only", default="", help="comma-separated case ids")
@@ -88,22 +98,56 @@ def main(argv=None):
         results = [(by_id[t["id"]], t, harness.score(by_id[t["id"]], t)) for t in traces if t["id"] in by_id]
         return report(results)
 
+    server = None
+    if arguments.local:
+        server, endpoint = local_endpoint(arguments.local)
+        endpoints = [endpoint]
+    else:
+        endpoints = []
+        for name in [m.strip() for m in arguments.model.split(",")]:
+            endpoint = ai.Endpoint.from_preset(arguments.provider, name, base_url=arguments.base_url)
+            if arguments.vision:
+                endpoint = dataclasses.replace(endpoint, vision=True)
+            if endpoint.needs_key and not endpoint.api_key:
+                print(f"set {config.PROVIDERS[arguments.provider]['key_env']} first", file=sys.stderr)
+                return 2
+            endpoints.append(endpoint)
     results = []
-    for name in [m.strip() for m in arguments.model.split(",")]:
-        endpoint = ai.Endpoint.from_preset(arguments.provider, name)
-        if endpoint.needs_key and not endpoint.api_key:
-            print(f"set {config.PROVIDERS[arguments.provider]['key_env']} first", file=sys.stderr)
-            return 2
-        out = arguments.out.format(date=dt.date.today().isoformat(), provider=endpoint.provider, model=endpoint.model)
-        print(f"== {endpoint.provider} {endpoint.model} -> {out}")
-        with open(out, "a", encoding="utf-8") as sink:
-            model = ai.build_model(endpoint)
-            if arguments.request_interval:
-                model = harness.throttled(model, arguments.request_interval)
-            results += run_suite(cases, model, endpoint, arguments.profile, sink,
-                                 repeat=arguments.repeat, pause=arguments.pause,
-                                 retries=arguments.retries, retry_wait=arguments.retry_wait)
+    try:
+        for endpoint in endpoints:
+            out = arguments.out.format(date=dt.date.today().isoformat(), provider=endpoint.provider, model=endpoint.model)
+            print(f"== {endpoint.provider} {endpoint.model} -> {out}")
+            with open(out, "a", encoding="utf-8") as sink:
+                model = ai.build_model(endpoint)
+                if arguments.request_interval:
+                    model = harness.throttled(model, arguments.request_interval)
+                results += run_suite(cases, model, endpoint, arguments.profile, sink,
+                                     repeat=arguments.repeat, pause=arguments.pause,
+                                     retries=arguments.retries, retry_wait=arguments.retry_wait)
+    finally:
+        if server is not None:
+            server.stop()
     return report(results)
+
+
+def local_endpoint(path, timeout_s=None, poll_s=0.5, log=print):
+    """Serve the GGUF at `path` as the tab does and wait until it answers. Returns the server (to
+    stop afterwards) and the endpoint to evaluate; the model may see images when a projector file
+    for its family lies beside it."""
+    from mesoSPIM.src.mesoSPIM_AiAssistent_Local import LocalModelServer, projector_for
+    folder, name = os.path.split(path)
+    projector = projector_for(folder or ".", os.path.splitext(name)[0])
+    server = LocalModelServer(path, projector=projector)
+    server.start()
+    log(f"== serving {name} on {server.base_url}" + (f" with {os.path.basename(projector)}" if projector else "") + " ...")
+    deadline = time.monotonic() + (timeout_s or config.LOCAL_SERVER_TIMEOUT_S)
+    while not server.ready():
+        if time.monotonic() > deadline:
+            server.stop()
+            raise SystemExit(f"the model did not answer within {timeout_s or config.LOCAL_SERVER_TIMEOUT_S} s; see {server.log_path}")
+        time.sleep(poll_s)
+    endpoint = ai.Endpoint.from_preset("OpenAI-style", model=server.model, base_url=server.base_url)
+    return server, dataclasses.replace(endpoint, vision=projector is not None)
 
 
 if __name__ == "__main__":

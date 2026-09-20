@@ -14,6 +14,7 @@ This builds on [Remote Control](../remote_control/index.md); read that first.
 design
 integration
 context
+local-test
 ```
 
 ## Requirements
@@ -225,7 +226,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  440 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  441 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.
