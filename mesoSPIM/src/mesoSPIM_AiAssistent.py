@@ -200,8 +200,11 @@ def vision_answer(endpoint, image, question, stats):
         build_model(endpoint),
         instructions="You are looking at one frame from a light-sheet microscope camera, contrast-stretched "
                      "to 8 bit for display. Answer the operator's question about it in a few sentences. "
-                     "The numbers were computed from the full-depth frame and are more reliable than the "
-                     "display for exposure questions.",
+                     "The display cannot show exposure: it is stretched to the frame's own range, so a dim "
+                     "frame looks as bright as a good one. Judge saturation and underexposure from the "
+                     "numbers only: saturated_fraction above a few percent is saturated; a max below about "
+                     "a tenth of full_scale is underexposed. Judge shapes, positions, focus and artefacts "
+                     "from the picture.",
     )
     prompt = [f"{question}\n\nFrame numbers: {json.dumps(stats)}",
               BinaryContent(data=base64.b64decode(image["base64"]), media_type="image/png")]

@@ -527,12 +527,12 @@ def test_system_prompt_is_the_preamble_plus_the_commands_by_kind():
 
 def test_the_prompt_and_the_tools_stay_small_enough_for_a_local_model():
     """A local model with an 8K context needs room for the conversation: the Regular prompt plus
-    all tool schemas stay under 17,000 characters, roughly 4,500 tokens."""
+    all tool schemas stay under 17,500 characters, roughly 4,700 tokens."""
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     tools = build_tools(FakeAcceptor(), threading.Event(), profile="Regular")
     schemas = sum(len(json.dumps(t.function_schema.json_schema)) + len(t.description or "") for t in tools)
-    assert len(ai.build_system_prompt(profile="Regular")) + schemas < 17000
+    assert len(ai.build_system_prompt(profile="Regular")) + schemas < 17500
     by_name = {t.name: t.function_schema.json_schema for t in tools}
     rows = by_name["set_acquisition_list"]["properties"]["acquisitions"]["items"]["properties"]
     assert "z_start" in rows                                          # the installer spells the row out

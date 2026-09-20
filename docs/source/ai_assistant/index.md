@@ -149,15 +149,19 @@ prompt, the confirm-first moves with Run and with Cancel, a GUI-busy instrument 
 stale run state and in a time lapse (and what is still allowed then), acquisitions, the selected
 row and a time lapse, the two tool sets on the ETL, the galvos, binning and the self test, looking
 without a new snap and deciding on saturation, memory across turns, prompts in German and
-Dutch, and fourteen vision cases on synthetic frames whose content the frame numbers do not give
-away, most of them the situations an operator meets at the instrument: three spots to count, a
-hollow ring to tell from a disc, the brightest of three spots, a sample the right edge cuts off, a
+Dutch, sixteen vision cases on synthetic frames whose content the frame numbers do not give away,
+most of them the situations an operator meets at the instrument: three spots to count, a hollow
+ring to tell from a disc, the brightest of three spots, a sample the right edge cuts off, a
 defocused spot next to a sharp one, a background brighter to one side, light-sheet shadow stripes,
 an air bubble in the chamber, an elongated sample whose orientation decides the rotation, an empty
 field, and decisions the picture has to drive: halve the intensity only if the image is saturated,
-lower it only if more than one object is in view, and report where an off-centre sample lies and
-ask before moving. They pass only when the picture reached the vision model and came back
-described. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
+double it only if underexposed, lower it only if more than one object is in view, report where an
+off-centre sample lies and ask before moving, and, after a change, look again and say honestly
+that nothing improved when the frame is unchanged. They pass only when the picture reached the
+vision model and came back described. Six cases test the decision to look at all: "are we in
+focus?", "what do you see?", "is there enough signal to start?" and "is the illumination too
+strong?" need the picture even though the numbers tempt the model not to; "did that take effect?"
+after a setting and "is anything running?" are answered from the state, without a snap. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
 it when the prompt, the tools or the model change, and keep the trace file: a case that starts
 failing shows in it what the model did instead. `test_evals.py` keeps the machinery itself honest
 offline, with scripted models.
@@ -205,7 +209,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  424 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  426 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

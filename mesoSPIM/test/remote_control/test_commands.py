@@ -286,6 +286,19 @@ def test_snap_saves_one_frame_and_reports_its_path(tmp_path):
     assert core.state["snap_folder"] == str(tmp_path)
 
 
+def test_a_second_snap_within_the_same_second_still_counts(tmp_path):
+    """The writer names a snap by the second, so two snaps in one second land on one file name; the
+    second must be reported as saved, not as "saved nothing". The fake writer's fixed name is that
+    collision every time."""
+    core = RecordingCore()
+    for _ in range(2):
+        dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+        operation = dispatcher.operation_snapshot(core)
+        assert operation["status"] == "completed", operation
+        assert os.path.isfile(operation["result"]["path"])
+    assert len(os.listdir(tmp_path)) == 1                              # one name, written twice
+
+
 def test_snap_defaults_to_the_configured_snap_folder():
     core = RecordingCore()
     dispatcher.run(core, "snap", {})

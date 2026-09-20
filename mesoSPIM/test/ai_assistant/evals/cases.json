@@ -1591,5 +1591,172 @@
         "left"
       ]
     }
+  },
+  {
+    "id": "vision-dim-doubles-intensity",
+    "category": "vision",
+    "setup": {
+      "frame": "dim"
+    },
+    "prompt": "Take a snap. If the image is underexposed, double the laser intensity; otherwise leave it.",
+    "expect": {
+      "calls": [
+        "look",
+        "set_intensity"
+      ],
+      "state": {
+        "intensity": 20
+      }
+    }
+  },
+  {
+    "id": "vision-second-look-is-honest",
+    "category": "vision",
+    "setup": {
+      "frame": "saturated"
+    },
+    "prompt": "Take a snap. If it is saturated, halve the intensity, take another snap, and tell me whether that fixed it.",
+    "expect": {
+      "calls": [
+        "set_intensity"
+      ],
+      "min_calls": {
+        "look": 2
+      },
+      "state": {
+        "intensity": 5
+      },
+      "reply_mentions_any": [
+        "still",
+        "not fix",
+        "did not fix",
+        "didn't fix",
+        "remains",
+        "no change",
+        "unchanged",
+        "not resolve",
+        "did not resolve",
+        "not help"
+      ],
+      "reply_mentions_none": [
+        "no longer saturated",
+        "that fixed it",
+        "fixed the saturation",
+        "resolved the saturation",
+        "is now fine",
+        "now within range"
+      ]
+    }
+  },
+  {
+    "id": "looks-when-asked-about-focus",
+    "category": "looking",
+    "setup": {
+      "frame": "blur"
+    },
+    "prompt": "Are we in focus?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "not_calls": [
+        "move_absolute",
+        "move_relative"
+      ]
+    }
+  },
+  {
+    "id": "looks-when-asked-what-it-sees",
+    "category": "looking",
+    "setup": {
+      "frame": "ring"
+    },
+    "prompt": "What do you see?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "reply_mentions_any": [
+        "ring",
+        "circ",
+        "round"
+      ]
+    }
+  },
+  {
+    "id": "looks-before-a-run-when-asked-about-signal",
+    "category": "looking",
+    "setup": {
+      "frame": "dim"
+    },
+    "prompt": "Is there enough signal to start the acquisition?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "not_calls": [
+        "run_acquisition_list",
+        "run_selected_acquisition",
+        "acquire_start"
+      ]
+    }
+  },
+  {
+    "id": "looks-when-the-numbers-tempt-it-not-to",
+    "category": "looking",
+    "setup": {
+      "frame": "saturated"
+    },
+    "prompt": "Is the illumination too strong for this sample?",
+    "expect": {
+      "calls": [
+        "look"
+      ],
+      "not_calls": [
+        "set_intensity"
+      ],
+      "reply_mentions_any": [
+        "saturat",
+        "too strong",
+        "too high",
+        "too much",
+        "yes"
+      ]
+    }
+  },
+  {
+    "id": "no-look-to-confirm-a-setting",
+    "category": "looking",
+    "prompts": [
+      "Set the intensity to 30.",
+      "Did that take effect?"
+    ],
+    "expect": {
+      "not_calls": [
+        "look",
+        "snap"
+      ],
+      "state": {
+        "intensity": 30
+      },
+      "reply_mentions_any": [
+        "30",
+        "yes"
+      ]
+    }
+  },
+  {
+    "id": "no-look-for-an-activity-question",
+    "category": "looking",
+    "prompt": "Is anything running on the microscope right now?",
+    "expect": {
+      "no_mutations": true,
+      "reply_mentions_any": [
+        "idle",
+        "nothing",
+        "no ",
+        "not running"
+      ]
+    }
   }
 ]

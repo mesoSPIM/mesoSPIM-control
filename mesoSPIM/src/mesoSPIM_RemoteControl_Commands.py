@@ -1757,14 +1757,17 @@ def _run_snap(core, args):
 
 
 def _write_snap(core, image, prefix):
-    """Save through mesoSPIM's own snap writer and return the file it created."""
+    """Save through mesoSPIM's own snap writer and return the file it wrote. The writer names a
+    snap by the second, so a second snap within the same second overwrites the first; a file
+    written now counts whether its name is new or not."""
     pattern = os.path.join(state(core, "snap_folder"), f"{prefix}_*.tif")
-    before = set(glob.glob(pattern))
+    before = {path: os.path.getmtime(path) for path in glob.glob(pattern)}
     core.image_writer.write_snap_image(image, prefix=prefix)
-    written = set(glob.glob(pattern)) - before
+    after = {path: os.path.getmtime(path) for path in glob.glob(pattern)}
+    written = {path for path, modified in after.items() if path not in before or modified > before[path]}
     if not written:
         raise RuntimeError(f"the image writer saved nothing matching {pattern!r}")
-    return max(written)
+    return max(written, key=after.get)
 
 
 command(

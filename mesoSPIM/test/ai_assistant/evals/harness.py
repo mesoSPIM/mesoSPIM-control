@@ -18,6 +18,7 @@ Expectations:
     calls_any      at least one of these
     not_calls      tool names that must not have been called
     max_calls      {tool: n}: called at most n times (no retrying a refused value)
+    min_calls      {tool: n}: called at least n times (a second look after a change)
     max_tool_calls n: at most n tool calls in all (a greeting needs none)
     args           {tool: {arg: value}}: some call of the tool carried these arguments
     state          {dotted.path: value}: the instrument's state afterwards; acquisition_rows is the
@@ -72,7 +73,8 @@ def synthetic_frame(name):
     edge cuts off, "blur" a sharp spot and a defocused one, "gradient" a background brighter to
     the right, "saturated" a sample at full scale, "stripes" light-sheet shadow stripes, "bubble"
     an air bubble in a filled field, "tilted" an elongated sample on the diagonal, "empty" camera
-    noise only, "offcentre" a sample far to the left. None: the offline suite's single rectangle."""
+    noise only, "offcentre" a sample far to the left, "dim" an underexposed sample. None: the
+    offline suite's single rectangle."""
     import numpy as np
     if name is None:
         return None
@@ -125,6 +127,9 @@ def synthetic_frame(name):
         frame += rng.normal(100.0, 12.0, frame.shape).clip(0)
     elif name == "offcentre":                 # the sample far to the left of the field
         disc(128, 60, 34, 3500)
+    elif name == "dim":                       # an underexposed sample: barely above the background
+        frame += 100.0
+        disc(128, 192, 40, 260)
     else:
         raise ValueError(f"unknown frame {name!r}")
     return frame.astype(np.uint16)
@@ -312,6 +317,9 @@ def score(case, trace):
     for name, limit in expect.get("max_calls", {}).items():
         if names.count(name) > limit:
             failures.append(f"{name} called {names.count(name)} times, at most {limit} expected")
+    for name, floor in expect.get("min_calls", {}).items():
+        if names.count(name) < floor:
+            failures.append(f"{name} called {names.count(name)} times, at least {floor} expected")
     if "max_tool_calls" in expect and len(names) > expect["max_tool_calls"]:
         failures.append(f"{len(names)} tool calls, at most {expect['max_tool_calls']} expected: {names}")
     for name, wanted in expect.get("args", {}).items():
@@ -347,7 +355,7 @@ def score(case, trace):
 
 def check_cases(cases):
     """Problems in the case file itself: duplicate ids, unknown tools, unknown expectation keys."""
-    known = {"calls", "calls_any", "not_calls", "max_calls", "max_tool_calls", "args", "state", "core_calls",
+    known = {"calls", "calls_any", "not_calls", "max_calls", "min_calls", "max_tool_calls", "args", "state", "core_calls",
              "core_calls_not", "confirm", "asks", "no_mutations", "reply_mentions_any", "reply_mentions_none"}
     tools = set(COMMANDS) | {"look"}
     problems, seen = [], set()
@@ -361,7 +369,7 @@ def check_cases(cases):
         for key in set(expect) - known:
             problems.append(f"{case['id']}: unknown expectation {key}")
         named = [*expect.get("calls", []), *expect.get("calls_any", []), *expect.get("not_calls", []),
-                 *expect.get("max_calls", {}), *expect.get("args", {})]
+                 *expect.get("max_calls", {}), *expect.get("min_calls", {}), *expect.get("args", {})]
         if "confirm" in expect:
             named.append(expect["confirm"])
         for name in named:

@@ -37,7 +37,11 @@ State and looking
 - `look` takes a frame and returns numbers about it (background, saturated and bright fractions,
   focus measure, where the signal sits). With a model that can see, it also answers your question
   about the image. Ask a specific question ("is the sample in the field of view?", "is anything
-  saturated?"). A saturated_fraction above a few percent means lower the intensity or exposure.
+  saturated?"). Exposure is judged from the numbers, never from the picture, which is stretched
+  for display: a saturated_fraction above a few percent means lower the intensity or exposure; a
+  max below about a tenth of full_scale means the frame is underexposed: raise them.
+- After you change something, only a new look tells whether it worked. Report what the new frame
+  shows, even when it shows no change at all; never report an improvement its numbers do not show.
 
 Conventions
 - Positions and distances are micrometres (µm) unless a command says otherwise.
