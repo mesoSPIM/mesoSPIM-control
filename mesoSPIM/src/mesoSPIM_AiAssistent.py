@@ -720,6 +720,33 @@ def _compact_prompt(text):
     return (text[:match.start()] + summary + text[match.end():]).strip()
 
 
+def _is_challenge(message):
+    parts = getattr(message, "parts", None) or []
+    return bool(config.CALLED_NOTHING_CHALLENGE) and any(
+        type(part).__name__ == "RetryPromptPart" and part.content == config.CALLED_NOTHING_CHALLENGE for part in parts)
+
+
+def _without_answered_challenges(messages):
+    """The messages without the question about a reply that called nothing, and without its
+    answer, where the answer called nothing either: in earlier turns only, since the turn in
+    progress may still be waiting for that answer. The first reply is what the operator was
+    shown, and the memory should end a turn on it rather than on the word SAME."""
+    messages = list(messages)
+    starts = _turn_starts(messages)
+    current = starts[-1] if starts else len(messages)
+    out, index = [], 0
+    while index < len(messages):
+        message = messages[index]
+        answer = messages[index + 1] if index + 1 < len(messages) else None
+        calls = any(type(part).__name__ == "ToolCallPart" for part in getattr(answer, "parts", None) or [])
+        if index + 1 < current and _is_challenge(message) and answer is not None and not calls:
+            index += 2
+            continue
+        out.append(message)
+        index += 1
+    return out
+
+
 def compact_history(messages, full_turns=None):
     """The history with its older turns made small: the last `full_turns` operator turns stay as
     they are; before them, each operator message keeps a one-line readout instead of the whole
@@ -727,6 +754,7 @@ def compact_history(messages, full_turns=None):
     pairing with results and the replies are untouched, so nothing the model said is lost."""
     from dataclasses import replace
     full_turns = config.HISTORY_FULL_TURNS if full_turns is None else full_turns
+    messages = _without_answered_challenges(messages)
     starts = _turn_starts(messages)
     cutoff = starts[-full_turns] if len(starts) > full_turns else 0
     if cutoff == 0:
@@ -829,13 +857,40 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
     # message history we carry across turns. ProcessHistory compacts the older turns before
     # every model request, mid-turn ones included, and the compacted history is what the run
     # keeps, so an old turn is compacted once and stays so.
-    return Agent(model, instructions=build_system_prompt(profile=profile),
-                 tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
-                                   vision_endpoint=vision_endpoint, image_size=image_size, profile=profile,
-                                   store=store),
-                 capabilities=[ProcessHistory(compact_history)],
-                 model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
-                 retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
+    agent = Agent(model, instructions=build_system_prompt(profile=profile),
+                  tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
+                                    vision_endpoint=vision_endpoint, image_size=image_size, profile=profile,
+                                    store=store),
+                  capabilities=[ProcessHistory(compact_history)],
+                  model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
+                  retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
+    if config.CALLED_NOTHING_CHALLENGE:
+        agent.output_validator(_challenge_a_reply_that_called_nothing(cancel))
+    return agent
+
+
+def _challenge_a_reply_that_called_nothing(cancel):
+    """A small model answers "stop" with "I have stopped the microscope." and no call; whether it
+    does so turns on the wording of an unrelated line of the manual, so no wording cures it. The
+    one thing known without reading the reply is that the turn called nothing: such a reply goes
+    back to the model once, with that fact. If it then calls a tool, the turn goes on and its new
+    reply reports what happened. If it does not, the operator gets the first reply, word for word:
+    asked to repeat itself a small model writes something shorter and worse, so it is asked for one
+    word instead, at the cost of one short request on a turn that sends no command."""
+    from pydantic_ai import ModelRetry
+    first = {}                                        # run id -> the reply that was challenged
+
+    def _check(ctx, output):
+        turn = ctx.messages[_turn_starts(ctx.messages)[-1]:] if _turn_starts(ctx.messages) else ctx.messages
+        called = any(type(part).__name__ == "ToolCallPart" for message in turn for part in getattr(message, "parts", []))
+        if called or cancel.is_set():
+            first.pop(ctx.run_id, None)
+            return output
+        if ctx.run_id in first:
+            return first.pop(ctx.run_id)              # challenged, and still nothing called: as it was
+        first[ctx.run_id] = output
+        raise ModelRetry(config.CALLED_NOTHING_CHALLENGE)
+    return _check
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---

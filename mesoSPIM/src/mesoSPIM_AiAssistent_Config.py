@@ -61,6 +61,13 @@ LOCAL_FLASH_ATTENTION = True   # smaller KV cache and faster attention where the
 # handed back to it a couple of times before the turn fails.
 MODEL_TEMPERATURE = 0.0
 TOOL_CALL_RETRIES = 2
+# A reply at the end of a turn that called no tool goes back to the model once with this text
+# (see _challenge_a_reply_that_called_nothing); empty switches the check off.
+CALLED_NOTHING_CHALLENGE = (
+    "No tool was called in this turn, so nothing at the microscope has changed. If your reply says or implies that "
+    "you did, set, moved, stopped, opened or closed anything, that is not true yet: call the tool now. If your "
+    "reply only answers, asks the operator a question, or declines, answer with the single word SAME and your "
+    "reply goes to the operator as it is.")
 LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow disk
 
 # The frame handed to a vision model: longer side in pixels.

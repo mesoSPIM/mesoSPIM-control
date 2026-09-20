@@ -26,8 +26,17 @@ def scripted(*turns):
     replies = iter(steps)
 
     def model_function(messages, info):
+        if challenged(messages):
+            return ModelResponse(parts=[TextPart("SAME")])    # a reply that called nothing stands as it was
         return next(replies)
     return FunctionModel(model_function)
+
+
+def challenged(messages):
+    """True when the request is the assistant's question about a reply that called no tool."""
+    from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
+    return any(type(part).__name__ == "RetryPromptPart" and part.content == config.CALLED_NOTHING_CHALLENGE
+               for part in messages[-1].parts)
 
 
 def case(case_id):

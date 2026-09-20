@@ -627,7 +627,8 @@ def test_the_agent_compacts_the_history_before_each_model_request():
     assert sent[-1].parts[0].content.startswith("turn 5\n\n<microscope_state>")   # the newest turn whole
     stored = result.all_messages()                                   # pydantic-ai keeps the processed history,
     assert "<microscope_state_then>" in stored[0].parts[0].content   # so an old turn stays compact from then on
-    assert stored[-2].parts[0].content.startswith("turn 5\n\n<microscope_state>")
+    newest = stored[ai._turn_starts(stored)[-1]]                     # its reply called nothing, so more follows it
+    assert newest.parts[0].content.startswith("turn 5\n\n<microscope_state>")
 
 
 def test_run_turn_caps_the_history(monkeypatch):
