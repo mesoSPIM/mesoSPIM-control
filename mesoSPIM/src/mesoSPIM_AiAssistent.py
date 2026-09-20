@@ -157,6 +157,7 @@ class TurnGuard:
         self.refused_axes = set()
         self.busy_from_gui = False
         self.fresh_snap = False
+        self.light_changes = {}
 
     def _sync(self):
         if self._store is None:
@@ -184,6 +185,12 @@ class TurnGuard:
         """True for a stop that would end what the operator is running from the GUI."""
         return self._sync() and self.busy_from_gui and name in config.STOP_COMMANDS
 
+    def is_one_change_too_many(self, name):
+        """True when this turn has already changed this light setting as often as a turn may: asked
+        to double the intensity of a dim frame once, a 12B went 20, 40, 80, 100 because the next
+        frame looked no better. The light on the sample is the operator's to escalate."""
+        return self._sync() and self.light_changes.get(name, 0) >= config.LIGHT_CHANGES_PER_TURN.get(name, 1 << 30)
+
     def take_fresh_snap(self):
         """True, once, when the last thing done to the instrument in this turn was a snap."""
         fresh = self._sync() and self.fresh_snap
@@ -201,6 +208,8 @@ class TurnGuard:
         if error and error.get("code") == "validation" and config.LIMIT_REFUSAL in message and name in config.MOVE_ARGS:
             asked = (args or {}).get(config.MOVE_ARGS[name])
             self.refused_axes |= set(asked) if isinstance(asked, dict) else set()
+        if name in config.LIGHT_CHANGES_PER_TURN and not error:
+            self.light_changes[name] = self.light_changes.get(name, 0) + 1
         if name == "snap":
             self.fresh_snap = isinstance(outcome, dict) and outcome.get("status") == COMPLETED
         elif name == "look" or (name in COMMANDS and COMMANDS[name].kind != READ):
@@ -274,6 +283,10 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
             return refused
         if guard.stop_is_the_operators(name) and (gate is None or not gate.ask(name, args)):
             return refused                                               # nobody to ask is not a yes
+        if guard.is_one_change_too_many(name) and (gate is None or not gate.ask(name, args)):
+            return json.dumps({"error": {"code": "refused", "message": (
+                f"the operator did not confirm another {name} in this turn. It has been changed "
+                f"{config.LIGHT_CHANGES_PER_TURN[name]} times already; tell them what the frames showed and stop.")}})
         try:
             outcome = shorten_result(name, dispatch_and_wait(acceptor, name, args, kind, cancel))
         except Exception as error:

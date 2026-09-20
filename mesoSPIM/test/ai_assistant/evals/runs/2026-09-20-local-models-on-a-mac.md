@@ -74,10 +74,14 @@ controls hold; the advice on a limit refusal shows no gain on the held-out limit
 code already passed.
 
 Open when this was written:
-- **gemma4:12b-mlx keeps doubling the intensity with the new code.** vision-dim-doubles-intensity:
-  the old code doubles once, looks, sees no change (the simulated frame never changes) and
-  reports; the new code goes 20, 40, 80, 100 and reports "underexposed even at the maximum". Not
-  yet traced to one change. Run that case before trusting the branch on this model.
+- **gemma4:12b-mlx sometimes keeps doubling the intensity.** vision-dim-doubles-intensity: asked
+  to double it once if the frame is underexposed, one run went 20, 40, 80, 100 because the next
+  frame looked no better (the simulated frame never changes) and reported "underexposed even at
+  the maximum". It first looked like a regression of this branch; run again, the same code doubles
+  once and stops, with the branch's changes on and with them off. The MLX engine does not repeat
+  itself at temperature 0, so it is the model on a bad run. TurnGuard now holds it whichever way
+  the run goes: a turn may change the intensity, or the exposure, twice, and a third change waits
+  for the operator's Run.
 - The standard gemma4:12b (GGUF) loops on that turn under Ollama 0.34.2 with the old code too; it
   ran all 110 cases under 0.30.7 in the morning.
 - Scaling is not why the 12B misjudges the brightest spot: the current stretch, a stretch with

@@ -127,6 +127,9 @@ CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition")
 # of wording there fails a test here instead of silently disarming the guard.
 MOVE_ARGS = {"move_absolute": "targets", "move_relative": "deltas"}
 STOP_COMMANDS = ("stop", "stop_activity", "time_lapse_stop")
+# How often one turn may change the light on the sample before the next change waits for the
+# operator's Run: twice covers "set it to 30, snap, put it back"; a third is an escalation.
+LIGHT_CHANGES_PER_TURN = {"set_intensity": 2, "set_camera": 2}
 LIMIT_REFUSAL = "outside the allowed range"
 BUSY_FROM_GUI = "from the GUI"
 

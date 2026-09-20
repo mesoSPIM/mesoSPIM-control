@@ -92,6 +92,38 @@ def test_a_look_alone_and_a_look_after_a_change_take_their_own():
     assert exposures(changed) == 2                                           # the snap is older than the change
 
 
+# --- the light on the sample is the operator's to escalate ---
+def doubling_without_end():
+    """What gemma4:12b-mlx did with "if it is underexposed, double the intensity": the next frame
+    looked no better, so it doubled again, up to 100."""
+    steps = [step for value in (20, 40, 80, 100) for step in (("set_intensity", {"intensity": value}), ("look", {"question": "better?"}))]
+    return scripted((("look", {"question": "underexposed?"}), *steps, "Still underexposed at the maximum intensity of 100."))
+
+
+def test_a_third_change_of_the_intensity_in_one_turn_is_the_operators_to_confirm():
+    declined = run(doubling_without_end(), "If it is underexposed, double the intensity.", setup={"frame": "dim"}, answer=False)
+    assert declined["asked"] == ["set_intensity", "set_intensity"]           # the third change, and the fourth
+    assert declined["state"]["intensity"] == 40                              # two went through, no more
+    refusals = [r for r in results(declined) if r.get("error", {}).get("code") == "refused"]
+    assert len(refusals) == 2 and "and stop" in refusals[0]["error"]["message"]
+    confirmed = run(doubling_without_end(), "If it is underexposed, double the intensity.", setup={"frame": "dim"}, answer=True)
+    assert confirmed["state"]["intensity"] == 100                            # theirs to allow
+
+
+def test_two_changes_in_a_turn_and_a_change_in_the_next_turn_are_not_asked():
+    model = scripted((("set_intensity", {"intensity": 30}), ("snap", {}), ("set_intensity", {"intensity": 10}), "Snapped at 30, back to 10."),
+                     (("set_intensity", {"intensity": 55}), "Set to 55."))
+    trace = run(model, "Set it to 30, snap, and put it back.", "Now 55.", answer=False)
+    assert trace["asked"] == [] and trace["state"]["intensity"] == 55
+
+
+def test_a_refused_change_does_not_count_towards_the_limit():
+    model = scripted((("set_intensity", {"intensity": 250}), ("set_intensity", {"intensity": 100}),
+                      ("set_intensity", {"intensity": 50}), "Set to 50."))
+    trace = run(model, "As bright as it goes, then half of that.", answer=False)
+    assert trace["asked"] == [] and trace["state"]["intensity"] == 50        # 250 was refused by the instrument
+
+
 # --- and out of the way where there is no turn to count ---
 def test_without_a_store_the_guard_lets_everything_through():
     guard = ai.TurnGuard()
