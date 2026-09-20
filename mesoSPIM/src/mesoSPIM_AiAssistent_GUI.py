@@ -526,7 +526,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
                 if twin is not None:            # the same file in both boxes: one server
                     self._servers[role] = twin
                     continue
-                server = LocalModelServer(path, projector=projector)
+                server = LocalModelServer(path, projector=projector,
+                                          context_tokens=getattr(getattr(self.core, "cfg", None), config.CONTEXT_CONFIG_KEY, None))
                 try:
                     server.start()
                 except (RuntimeError, OSError) as error:  # missing runtime, or the child could not spawn

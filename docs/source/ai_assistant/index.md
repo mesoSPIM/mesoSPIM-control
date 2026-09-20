@@ -52,7 +52,9 @@ looser on ambiguous requests until the manual spelled the rule out).
 it in, choose it, Connect. Nothing leaves the machine and no key is needed. Behind Connect,
 mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server (`pip install
 llama-cpp-python`, or the `ai-assistant-local` extra) as a child process on a loopback port; the
-Connect button reads "Starting…" while the model loads, then turns green with "Connected".
+Connect button reads "Starting…" while the model loads, then turns green with "Connected". The
+server is started with a 32K-token context window (llama.cpp's own default of 2,048 would not
+hold one request); the config attribute `ai_assistant_context_tokens` sets another size.
 Connecting again, or closing mesoSPIM, stops the child. A server that fails to start is reported
 with the path of its log. Use a GPU build of llama-cpp-python for anything above a few billion
 parameters; the 4B to 12B instruction models are the realistic range on a microscope PC.

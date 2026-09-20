@@ -59,10 +59,10 @@ def projector_for(folder, model_name):
     return os.path.join(folder, best)
 
 
-def server_command(model_path, port, projector=None):
+def server_command(model_path, port, projector=None, context_tokens=None):
     """The child process serving ``model_path`` on ``port``, with its projector file when it is
-    to see images. Raises with the install hint when the runtime is missing, so the tab can say
-    what to do instead of failing later."""
+    to see images and the context window it is to keep. Raises with the install hint when the
+    runtime is missing, so the tab can say what to do instead of failing later."""
     try:
         import llama_cpp  # noqa: F401
     except ImportError:
@@ -74,6 +74,7 @@ def server_command(model_path, port, projector=None):
         "--host", "127.0.0.1",
         "--port", str(port),
         "--n_gpu_layers", "-1",  # offload everything the GPU can take; CPU-only builds ignore it
+        "--n_ctx", str(int(context_tokens or config.LOCAL_CONTEXT_TOKENS)),
     ]
     if projector:
         argv += ["--clip_model_path", projector]
@@ -94,9 +95,10 @@ class LocalModelServer:
     """One server child for one model file. ``start()`` returns at once; poll ``ready()`` until the
     model has loaded (a large file takes tens of seconds), then use ``base_url`` and ``model``."""
 
-    def __init__(self, model_path, command=server_command, projector=None):
+    def __init__(self, model_path, command=server_command, projector=None, context_tokens=None):
         self.model_path = model_path
         self.projector = projector
+        self.context_tokens = context_tokens
         self.model = model_name(model_path)
         self.port = _free_port()
         self.base_url = f"http://127.0.0.1:{self.port}/v1"
@@ -105,7 +107,7 @@ class LocalModelServer:
         self._process = None
 
     def start(self):
-        argv = self._command(self.model_path, self.port, self.projector)  # raises before anything is spawned
+        argv = self._command(self.model_path, self.port, self.projector, self.context_tokens)  # raises before anything is spawned
         handle, self.log_path = tempfile.mkstemp(prefix="mesospim-model-server-", suffix=".log")
         with os.fdopen(handle, "wb") as log:  # the child inherits the descriptor; ours can close
             try:

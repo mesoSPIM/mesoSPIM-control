@@ -234,9 +234,10 @@ _SERVERS = []  # every _FakeServer built, so a test can inspect the ones the tab
 class _FakeServer:
     """A LocalModelServer stand-in: ready after `ready_after` polls, or dies with `error`."""
 
-    def __init__(self, model_path, ready_after=2, error=None, projector=None):
+    def __init__(self, model_path, ready_after=2, error=None, projector=None, context_tokens=None):
         self.model_path = model_path
         self.projector = projector
+        self.context_tokens = context_tokens
         self.model = model_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
         self.port = 4242
         self.base_url = "http://127.0.0.1:4242/v1"
@@ -321,7 +322,7 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
 
 def test_local_server_failure_is_reported_and_cleaned_up(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch,
-                                server_factory=lambda path, projector=None: _FakeServer(path, error="exited with code 3"))
+                                server_factory=lambda path, projector=None, context_tokens=None: _FakeServer(path, error="exited with code 3"))
     _choose_mode(gui, "Local AI")
     gui.on_connect()
     scheduled.pop()()
@@ -617,7 +618,7 @@ def test_a_message_while_a_local_model_loads_waits_instead_of_restarting_it(tmp_
 
 
 def test_a_local_model_that_never_answers_is_given_up_with_its_log(tmp_path, monkeypatch):
-    gui, scheduled = _local_gui(tmp_path, monkeypatch, server_factory=lambda path, projector=None: _FakeServer(path, ready_after=99))
+    gui, scheduled = _local_gui(tmp_path, monkeypatch, server_factory=lambda path, projector=None, context_tokens=None: _FakeServer(path, ready_after=99))
     monkeypatch.setattr(gui_module.config, "LOCAL_SERVER_TIMEOUT_S", 0)
     _choose_mode(gui, "Local AI")
     gui.on_connect()

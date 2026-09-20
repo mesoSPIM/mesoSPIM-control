@@ -40,6 +40,12 @@ DEFAULT_PROVIDER = "Gemini"
 MODELS_FOLDER_CONFIG_KEY = "ai_assistant_models_folder"  # optional attribute of the microscope config
 MODEL_SUFFIXES = (".gguf",)
 LOCAL_SERVER_POLL_MS = 500
+# The context window the local server is started with. llama-cpp-python's own default is 2,048
+# tokens, less than one request here (about 5,700 tokens of instructions, tools and readout).
+# 32K holds a request, twenty turns as compaction keeps them, tool results and a margin; the
+# microscope config may set the attribute named in CONTEXT_CONFIG_KEY to another size.
+LOCAL_CONTEXT_TOKENS = 32768
+CONTEXT_CONFIG_KEY = "ai_assistant_context_tokens"
 LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow disk
 
 # The frame handed to a vision model: longer side in pixels.

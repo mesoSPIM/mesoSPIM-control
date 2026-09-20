@@ -43,6 +43,10 @@ def test_server_command_serves_the_file_on_loopback(monkeypatch):
     assert "--clip_model_path" not in argv
     with_eyes = server_command("/models/qwen-8b.gguf", 4321, projector="/models/mmproj-qwen-8b.gguf")
     assert with_eyes[with_eyes.index("--clip_model_path") + 1] == "/models/mmproj-qwen-8b.gguf"
+    from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
+    assert argv[argv.index("--n_ctx") + 1] == str(config.LOCAL_CONTEXT_TOKENS) == "32768"   # not llama.cpp's 2,048
+    narrow = server_command("/models/qwen-8b.gguf", 4321, context_tokens=8192)
+    assert narrow[narrow.index("--n_ctx") + 1] == "8192"
 
 
 def test_projector_for_wants_the_models_family_in_the_name(tmp_path):
@@ -72,7 +76,7 @@ HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
 """
 
 
-def _fake_command(model_path, port, projector=None):
+def _fake_command(model_path, port, projector=None, context_tokens=None):
     return [sys.executable, "-c", _FAKE_SERVER, str(port)]
 
 
@@ -107,7 +111,7 @@ def test_server_starts_becomes_ready_and_stops(tmp_path, monkeypatch):
 def test_server_still_loading_is_not_ready(tmp_path):
     """llama.cpp answers 503 while the model loads; that is not ready."""
     server = LocalModelServer(str(tmp_path / "m.gguf"),
-                              command=lambda p, port, projector: [sys.executable, "-c", _FAKE_SERVER, str(port), "503"])
+                              command=lambda p, port, projector, context_tokens=None: [sys.executable, "-c", _FAKE_SERVER, str(port), "503"])
     server.start()
     try:
         import http.client
@@ -129,7 +133,7 @@ def test_server_still_loading_is_not_ready(tmp_path):
 
 def test_server_that_dies_is_reported_with_its_log(tmp_path):
     server = LocalModelServer(str(tmp_path / "m.gguf"),
-                              command=lambda p, port, projector: [sys.executable, "-c", "import sys; sys.exit(3)"])
+                              command=lambda p, port, projector, context_tokens=None: [sys.executable, "-c", "import sys; sys.exit(3)"])
     server.start()
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
