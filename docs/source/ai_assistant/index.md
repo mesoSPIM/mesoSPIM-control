@@ -13,6 +13,7 @@ This builds on [Remote Control](../remote_control/index.md); read that first.
 
 design
 integration
+context
 ```
 
 ## Requirements
