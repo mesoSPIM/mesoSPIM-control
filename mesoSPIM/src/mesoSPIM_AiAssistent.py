@@ -441,13 +441,62 @@ def build_system_prompt(acceptor=None, profile=None):
 def trim_history(messages, max_turns):
     """Keep the last `max_turns` operator turns. A turn starts at a request whose first part is
     the operator's prompt, so a tool call is never separated from its result."""
-    starts = [
-        index for index, message in enumerate(messages)
-        if type(getattr(message, "parts", [None])[0]).__name__ == "UserPromptPart"
-    ]
+    starts = _turn_starts(messages)
     if len(starts) <= max_turns:
         return list(messages)
     return list(messages[starts[-max_turns]:])
+
+
+def _turn_starts(messages):
+    return [index for index, message in enumerate(messages)
+            if type(getattr(message, "parts", [None])[0]).__name__ == "UserPromptPart"]
+
+
+def _compact_prompt(text):
+    """The operator's message with its readout reduced to the few values later turns may refer to
+    ("put it back to what it was"): a stale readout is noise, its optics and position are not."""
+    match = re.search(r"<microscope_state>\n?(.*?)\n?</microscope_state>", text, re.DOTALL)
+    if not match:
+        return text
+    try:
+        snapshot = json.loads(match.group(1))
+        kept = {key: snapshot[key] for key in config.HISTORY_READOUT_KEYS if key in snapshot}
+        summary = f"<microscope_state_then>{json.dumps(kept)}</microscope_state_then>"
+    except (ValueError, TypeError):
+        summary = ""
+    return (text[:match.start()] + summary + text[match.end():]).strip()
+
+
+def compact_history(messages, full_turns=None):
+    """The history with its older turns made small: the last `full_turns` operator turns stay as
+    they are; before them, each operator message keeps a one-line readout instead of the whole
+    state block, and a tool result longer than HISTORY_RESULT_CHARS is shortened. Tool calls, their
+    pairing with results and the replies are untouched, so nothing the model said is lost."""
+    from dataclasses import replace
+    full_turns = config.HISTORY_FULL_TURNS if full_turns is None else full_turns
+    starts = _turn_starts(messages)
+    cutoff = starts[-full_turns] if len(starts) > full_turns else 0
+    if cutoff == 0:
+        return list(messages)
+    out = []
+    for index, message in enumerate(messages):
+        if index >= cutoff or not getattr(message, "parts", None):
+            out.append(message)
+            continue
+        parts = []
+        for part in message.parts:
+            kind = type(part).__name__
+            if kind == "UserPromptPart" and isinstance(part.content, str):
+                compact = _compact_prompt(part.content)
+                part = replace(part, content=compact) if compact != part.content else part
+            elif kind == "ToolReturnPart":
+                content = part.content if isinstance(part.content, str) else json.dumps(part.content, default=str)
+                if len(content) > config.HISTORY_RESULT_CHARS:
+                    part = replace(part, content=content[:config.HISTORY_RESULT_CHARS] + " …[shortened in memory]")
+            parts.append(part)
+        changed = any(new is not old for new, old in zip(parts, message.parts))
+        out.append(replace(message, parts=parts) if changed else message)
+    return out
 
 
 @dataclass(frozen=True)
@@ -520,13 +569,17 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
     from pydantic_ai import Agent
+    from pydantic_ai.capabilities import ProcessHistory
     if model is None:
         model = build_model(endpoint or Endpoint.from_preset(config.DEFAULT_PROVIDER))
     # instructions (not system_prompt): applied fresh each run, not accumulated into the
-    # message history we carry across turns.
+    # message history we carry across turns. ProcessHistory compacts the older turns before
+    # every model request, mid-turn ones included, and the compacted history is what the run
+    # keeps, so an old turn is compacted once and stays so.
     return Agent(model, instructions=build_system_prompt(profile=profile),
                  tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
-                                   vision_endpoint=vision_endpoint, image_size=image_size, profile=profile))
+                                   vision_endpoint=vision_endpoint, image_size=image_size, profile=profile),
+                 capabilities=[ProcessHistory(compact_history)])
 
 
 # --- In-process Acceptor lifecycle (called by Core's start_ai_assistant / stop_ai_assistant slots) ---

@@ -79,7 +79,10 @@ told which commands the set withholds, so a request for one gets "not in this to
 than a stand-in command dressed up as the result. The start-up
 choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or
 "Full"). TCP and MCP always serve every command; this is the assistant only. **Memory** is how
-many of the operator's messages, with their answers, the model remembers. **Downsample image to** is the size of the frame handed to the
+many of the operator's messages, with their answers, the model remembers; the newest three stay
+whole, older ones keep a one-line readout (state, position, optics) instead of the full state
+block and have long tool results shortened, so twenty turns of memory cost a fraction of what
+twenty full readouts would. **Downsample image to** is the size of the frame handed to the
 vision model (longer side, 1024 px by default): smaller is cheaper and faster, and enough for "is
 it centred" or "is it saturated"; the numbers always come from the full frame.
 
@@ -213,7 +216,7 @@ did.
       --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
   ```
 
-  428 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
+  430 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
   scripts, among them one that builds the tab offscreen and checks the setup layout and the input
   keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.

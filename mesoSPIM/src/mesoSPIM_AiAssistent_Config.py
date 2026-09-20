@@ -92,4 +92,10 @@ POLL_INTERVAL_S = 0.15
 TRACES_FOLDER_CONFIG_KEY = "ai_assistant_traces_folder"
 TRACE_RESULT_CHARS = 2000
 MAX_HISTORY_TURNS = 20  # older turns (and their tool results) are dropped from what the model sees
+# Within the memory, the newest turns are kept in full; older ones keep a one-line readout instead
+# of the whole state block and have long tool results shortened. Twenty readouts of 500 tokens
+# would otherwise outweigh the system prompt on a small model.
+HISTORY_FULL_TURNS = 3
+HISTORY_RESULT_CHARS = 300
+HISTORY_READOUT_KEYS = ("state", "position", "optics")
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress

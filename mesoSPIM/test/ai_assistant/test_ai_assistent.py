@@ -568,6 +568,57 @@ def test_trim_history_keeps_whole_recent_turns():
     assert ai.trim_history([], 5) == []
 
 
+def test_compact_history_keeps_the_newest_turns_whole_and_shrinks_the_older_ones():
+    pytest.importorskip("pydantic_ai")
+    from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, ToolCallPart, ToolReturnPart, UserPromptPart
+    state = json.dumps({"state": "idle", "position": {"x": 1.0}, "optics": {"intensity": 10}, "limits": {"x": [-9, 9]} , "disk": {"free_bytes": 5}})
+    big = "x" * 900
+
+    def turn(n):
+        return [ModelRequest(parts=[UserPromptPart(content=f"turn {n}\n\n<microscope_state>\n{state}\n</microscope_state>")]),
+                ModelResponse(parts=[ToolCallPart(tool_name="get_config", args={}, tool_call_id=f"c{n}")]),
+                ModelRequest(parts=[ToolReturnPart(tool_name="get_config", content=big, tool_call_id=f"c{n}")]),
+                ModelResponse(parts=[TextPart(f"reply {n}")])]
+    history = [m for n in range(5) for m in turn(n)]
+    compact = ai.compact_history(history, full_turns=2)
+    assert len(compact) == len(history) and compact[12:] == history[12:]            # the last two turns untouched
+    old_prompt = compact[0].parts[0].content
+    assert old_prompt.startswith("turn 0") and "<microscope_state>" not in old_prompt
+    assert '"intensity": 10' in old_prompt and "limits" not in old_prompt          # optics kept, limits dropped
+    assert compact[2].parts[0].content.endswith("[shortened in memory]") and len(compact[2].parts[0].content) < 400
+    assert compact[1] is history[1] and compact[3] is history[3]                     # calls and replies as they were
+    def content(messages):
+        return sum(len(str(getattr(part, "content", ""))) for m in messages for part in m.parts)
+    assert content(compact[:12]) < content(history[:12]) / 2                       # the older turns, half or less
+    assert ai.compact_history(history[:8], full_turns=2) == history[:8]              # nothing older than the window
+    assert ai.compact_history([], 2) == []
+
+
+def test_the_agent_compacts_the_history_before_each_model_request():
+    """Older turns reach the model compacted whatever history was handed in, mid-turn requests
+    included, while the stored history stays complete."""
+    pytest.importorskip("pydantic_ai")
+    from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
+    from pydantic_ai.models.function import FunctionModel
+    seen = []
+
+    def model_function(messages, info):
+        seen.append(messages)
+        return ModelResponse(parts=[TextPart("ok")])
+    state = json.dumps({"state": "idle", "position": {"x": 1.0}, "optics": {"intensity": 10}, "limits": {"x": [-9, 9]}})
+    history = [m for n in range(5) for m in (
+        ModelRequest(parts=[UserPromptPart(content=f"turn {n}\n\n<microscope_state>\n{state}\n</microscope_state>")]),
+        ModelResponse(parts=[TextPart(f"reply {n}")]))]
+    agent = ai.build_agent(FakeAcceptor(), threading.Event(), model=FunctionModel(model_function))
+    result = agent.run_sync("turn 5\n\n<microscope_state>\n" + state + "\n</microscope_state>", message_history=history)
+    sent = seen[0]
+    assert "<microscope_state_then>" in sent[0].parts[0].content and "limits" not in sent[0].parts[0].content
+    assert sent[-1].parts[0].content.startswith("turn 5\n\n<microscope_state>")   # the newest turn whole
+    stored = result.all_messages()                                   # pydantic-ai keeps the processed history,
+    assert "<microscope_state_then>" in stored[0].parts[0].content   # so an old turn stays compact from then on
+    assert stored[-2].parts[0].content.startswith("turn 5\n\n<microscope_state>")
+
+
 def test_run_turn_caps_the_history(monkeypatch):
     monkeypatch.setattr(ai.config, "MAX_HISTORY_TURNS", 1)
     worker = AssistantWorker(FakeAcceptor())
