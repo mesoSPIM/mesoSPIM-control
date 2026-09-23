@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(
     package_directory))  # this is critical for 'from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow' to work in both script and package form.
 from mesoSPIM.src.plugins.manager import PluginRegistry
 from mesoSPIM.src.utils.config_loader import load_config_from_file
+from mesoSPIM.src.utils.system_info import log_system_info
 
 def load_config_UI(current_path):
     '''
@@ -130,6 +131,7 @@ def main(embed_console=False, demo_mode=False):
     logger = get_logger(cfg, package_directory)
     logger.info(f'Config file loaded: {config_fname}')
     logger.info(f'mesoSPIM-control version: {__version__}')
+    log_system_info()
     app = QtWidgets.QApplication(sys.argv)
     dark_mode_check(cfg, app)
     stage_referencing_check(cfg)
