@@ -27,7 +27,7 @@ from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
-from .utils.config_loader import check_zoom_keys
+from .utils.config_loader import check_zoom_keys, is_demo
 
 logger = logging.getLogger(__name__)
 
@@ -164,8 +164,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
 
-        # launch ETL menu
-        self.choose_etl_config()
+        # launch ETL menu, unless there is no ETL to tune: the waveform generator has
+        # already loaded startup['ETL_cfg_file'], so demo mode starts without the dialog
+        if is_demo(self.cfg.waveformgeneration):
+            logger.info(f"Demo mode: using ETL config file {self.state['ETL_cfg_file']}")
+        else:
+            self.choose_etl_config()
 
         # Widget list for blockSignals during status updates
         self.widgets_to_block = []
