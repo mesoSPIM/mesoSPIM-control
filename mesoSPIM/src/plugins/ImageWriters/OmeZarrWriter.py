@@ -126,45 +126,47 @@ class OMEZarrWriter(ImageWriter):
             IncludeAllChannelsInSingleFileFormat = True,  # Will put all channels in name if SingleFileFormat==True
         )
 
+    @classmethod
+    def wizard_parameters(cls):
+        '''The tunable OME-Zarr settings: the defaults used by open(), and the rows
+        the filename wizard shows so they can be changed for one acquisition.
+
+        {key: (default, help text)}. Values set here or in the config file win over
+        the defaults; the config entry is the dict named cls.name().
+        '''
+        return {
+            'ome_version': ('0.5', "'0.4' = zarr v2, no sharding. '0.5' = zarr v3, sharding supported"),
+            'generate_multiscales': (True, 'False saves only the full-resolution data'),
+            'compression': ('zstd', "None, 'zstd' or 'lz4'. zstd-5 costs almost no speed and saves disk"),
+            'compression_level': (5, '1-9'),
+            'shards': ((64, 6000, 6000), 'Max shard size (z,y,x), or None. Shallow in z, sensor-sized in xy. Ignored for ome_version 0.4'),
+            'base_chunks': ((64, 256, 256), 'Chunk size (z,y,x) at multiscale level 0. Bigger chunks = fewer files and better IO'),
+            'target_chunks': ((64, 64, 64), 'Chunk size (z,y,x) at the smallest multiscale level'),
+            'async_finalize': (True, 'True: start the next tile while the multiscale finishes. Set False if slow IO fills the RAM'),
+            'write_big_stitcher_xml': (True, 'BigStitcher XML for drag-and-drop import (ome_version 0.4 only)'),
+            'flip_xyz': ((False, False, False), 'Match BigStitcher coordinates to the mesoSPIM axes'),
+            'transpose_xy': (False, 'Swap x and y for correct BigStitcher tile positions'),
+        }
+
     def open(self, req: WriteRequest) -> None:
         assert self.compatible_suffix(req), f'URI suffix not compatible with {self.name()}'
 
-        #######################
-        ####  GET Defaults  ###
-        #######################
-        ome_version = '0.5'  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-        generate_multiscales = True  # True, False. False: only the primary data is saved. True: multiscale data is generated
-        compression = 'zstd'  # None, 'zstd', 'lz4'
-        compression_level = 5  # 1-9
-        shards = (64, 6000, 6000)  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-        base_chunks = (64, 256, 256)  # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-        target_chunks = (64, 64, 64)  # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-        async_finalize = True  # True, False
-
-        # BigStitcher XML Options Defaults - for easy drag/drop import into BigStitcher
-        write_big_stitcher_xml = True  # True, False
-        flip_xyz = (False, False, False)  # match BigStitcher coordinates to mesoSPIM axes.
-        transpose_xy = False  # in case X and Y axes need to be swapped for the correct BigStitcher tile positions
-
-        #####################################
-        ####  Load from Config if defined ###
-        #####################################
-        if req.writer_config_file_values:
-            ome_version = req.writer_config_file_values.get('ome_version', ome_version)
-            generate_multiscales = req.writer_config_file_values.get('generate_multiscales', generate_multiscales)
-            if 'compression' in req.writer_config_file_values:
-                # Deals with case where compression is None in config so it is retained
-                compression = req.writer_config_file_values.get('compression')
-            else:
-                pass
-            compression_level = req.writer_config_file_values.get('compression_level', compression_level)
-            shards = req.writer_config_file_values.get('shards', shards)
-            base_chunks = req.writer_config_file_values.get('base_chunks', base_chunks)
-            target_chunks = req.writer_config_file_values.get('target_chunks', target_chunks)
-            async_finalize = req.writer_config_file_values.get('async_finalize', async_finalize)
-            write_big_stitcher_xml = req.writer_config_file_values.get('write_big_stitcher_xml', write_big_stitcher_xml)
-            flip_xyz = req.writer_config_file_values.get('flip_xyz', flip_xyz)
-            transpose_xy = req.writer_config_file_values.get('transpose_xy', transpose_xy)
+        #############################################################
+        ####  Defaults, overridden by the config file / wizard  ###
+        #############################################################
+        p = {key: default for key, (default, _help) in self.wizard_parameters().items()}
+        p.update(req.writer_config_file_values or {})
+        ome_version = p['ome_version']
+        generate_multiscales = p['generate_multiscales']
+        compression = p['compression']
+        compression_level = p['compression_level']
+        shards = p['shards']
+        base_chunks = p['base_chunks']
+        target_chunks = p['target_chunks']
+        async_finalize = p['async_finalize']
+        write_big_stitcher_xml = p['write_big_stitcher_xml']
+        flip_xyz = p['flip_xyz']
+        transpose_xy = p['transpose_xy']
 
         acq = req.acq
         acq_list = req.acq_list
