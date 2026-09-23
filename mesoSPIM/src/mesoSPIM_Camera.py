@@ -17,6 +17,7 @@ except:
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import log_cpu_core, timed
+from .utils.config_loader import is_demo
 from .mesoSPIM_ProcessorChain import ProcessorChain
 
 
@@ -89,7 +90,7 @@ class mesoSPIM_Camera(QtCore.QObject):
             self.camera = mesoSPIM_PhotometricsCamera(self)
         elif self.cfg.camera == 'PCO':
             self.camera = mesoSPIM_PCOCamera(self)
-        elif self.cfg.camera == 'DemoCamera':
+        elif is_demo(self.cfg.camera):
             self.camera = mesoSPIM_DemoCamera(self)
 
         self.camera.open_camera()
@@ -470,14 +471,6 @@ class mesoSPIM_HamamatsuCamera(mesoSPIM_GenericCamera):
 
     def close_camera(self):
         self.hcam.shutdown()
-
-    def set_camera_sensor_mode(self, mode):
-        if mode == 'Area':
-            self.hcam.setPropertyValue("sensor_mode", 1)
-        elif mode == 'ASLM':
-            self.hcam.setPropertyValue("sensor_mode", 12)
-        else:
-            print('Camera mode not supported')
 
     def set_exposure_time(self, time):
         self.hcam.setPropertyValue("exposure_time", time)

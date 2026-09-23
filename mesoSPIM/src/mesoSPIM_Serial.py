@@ -17,6 +17,7 @@ from .mesoSPIM_Stages import mesoSPIM_PI_1toN, mesoSPIM_PI_NtoN, mesoSPIM_ASI_St
 from .plugins.FilterWheelApi import FilterWheel
 from .plugins.utils import get_filter_wheel_plugins, get_filter_wheel_plugin_class_from_name
 from .utils.utility_functions import log_cpu_core, timed
+from .utils.config_loader import is_demo
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.filterwheel = DynamixelFilterWheel(self.cfg.filterdict, self.cfg.filterwheel_parameters['COMport'],
                                                     self.cfg.filterwheel_parameters['servo_id'],
                                                     self.cfg.filterwheel_parameters['baudrate'])
-        elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Demo':
+        elif is_demo(self.cfg.filterwheel_parameters['filterwheel_type']):
             self.filterwheel = mesoSPIM_DemoFilterWheel(self.cfg.filterdict)
         elif self.cfg.filterwheel_parameters['filterwheel_type'] == 'Sutter':
             self.filterwheel = SutterLambda10BFilterWheel(self.cfg.filterwheel_parameters, self.cfg.filterdict)
@@ -103,7 +104,7 @@ class mesoSPIM_Serial(QtCore.QObject):
             self.zoom = DynamixelZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'], self.cfg.zoom_parameters['servo_id'], self.cfg.zoom_parameters['baudrate'])
         elif self.cfg.zoom_parameters['zoom_type'] in ('Mitu', 'Mitutoyo'):
             self.zoom = MitutoyoZoom(self.cfg.zoomdict, self.cfg.zoom_parameters['COMport'], self.cfg.zoom_parameters['baudrate'])
-        elif self.cfg.zoom_parameters['zoom_type'] in ('Demo', 'DemoZoom'):
+        elif is_demo(self.cfg.zoom_parameters['zoom_type']):
             self.zoom = DemoZoom(self.cfg.zoomdict)
         else:
             raise ValueError(f"Zoom type unknown: {self.cfg.zoom_parameters['zoom_type']}")
@@ -134,7 +135,7 @@ class mesoSPIM_Serial(QtCore.QObject):
         elif self.cfg.stage_parameters['stage_type'].lower() == 'mixed':
             self.stage = mesoSPIM_Mixed_Stages(self)
             self.parent.sig_progress.connect(self.stage.log_slice)
-        elif self.cfg.stage_parameters['stage_type'] == 'DemoStage':
+        elif is_demo(self.cfg.stage_parameters['stage_type']):
             self.stage = mesoSPIM_DemoStage(self)
         else:
             raise ValueError(f"Stage type unknown: {self.cfg.stage_parameters['stage_type']}")

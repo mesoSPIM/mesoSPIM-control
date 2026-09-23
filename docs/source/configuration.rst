@@ -5,27 +5,99 @@ The **configuration file** is a Python (``.py``) file that tells
 mesoSPIM-control which hardware is connected and how it is wired.
 Every setting — from NI DAQ channel names to stage serial ports — lives here.
 
+Since version 1.26 a configuration is split over **two files**:
+
+``mesoSPIM/config/hardware/<rig>_hw.py``
+   The *hardware file*: the ground truth for one instrument. Camera model,
+   filter wheel and filters, objectives, galvo offsets and amplitudes, stages,
+   DAQ lines, writer defaults. It changes when the instrument changes.
+
+``mesoSPIM/config/<rig>.py``
+   The *user file*: one ``include()`` line that pulls in the hardware file,
+   plus the handful of settings that differ for your session — where the data
+   goes, how files are named, which state the software starts in.
+
+Single-file configurations from earlier versions still load unchanged.
+
 Location and selection
 ----------------------
 
-Config files are stored in ``mesoSPIM/config/``.  On startup, if more than
-one ``*.py`` file is present you will be prompted to select one.
+User config files are stored in ``mesoSPIM/config/``.  On startup, if more than
+one ``*.py`` file is present you will be prompted to select one.  Hardware files
+live one level down in ``mesoSPIM/config/hardware/`` and never appear in that
+dialog, so they cannot be picked by mistake.
 
 The shipped ``demo_config.py`` replaces every hardware device with a software
 simulator — use it to verify a fresh installation, or as the starting point
-for your own config file.
+for your own config file.  Its hardware file is
+``mesoSPIM/config/hardware/demo_config_hw.py``.
 
 .. tip::
 
-   Make a copy of ``demo_config.py``, rename it to something like
-   ``my_scope_config.py``, and edit that copy.  Never commit credentials or
-   personal paths to the main file.
+   Copy *both* files, rename them to something like ``my_scope.py`` and
+   ``hardware/my_scope_hw.py``, point the ``include()`` line at your copy, and
+   edit those.  Never commit credentials or personal paths to the main file.
 
 Config file structure
 ---------------------
 
-A config file is plain Python, so you can use arithmetic, imports, and
-comments freely.  The sections below describe every top-level variable.
+Both files are plain Python, so you can use arithmetic, imports, and comments
+freely.  The variables documented in the sections below all belong in the
+**hardware file** — that is where the old single-file config went.
+
+The user file only needs three things:
+
+.. code-block:: python
+
+   config_format = 2
+
+   include('hardware/my_scope_hw.py')
+
+   startup.update({
+       'state': 'init',
+       'folder': 'D:/data/',
+       'snap_folder': 'D:/data/',
+       'file_prefix': '',
+       'file_suffix': '000001',
+   })
+
+``include()`` copies every variable from the hardware file into the user file.
+The path is relative to the user file, so a config and its copy in a different
+folder use the same line.  Anything written *after* ``include()`` wins, because
+it is simply later Python:
+
+.. code-block:: python
+
+   include('hardware/my_scope_hw.py')
+
+   startup['camera_exposure_time'] = 0.05   # override one value
+   filterdict['Empty-Alignment'] = 0        # add one entry
+
+Only the user file may call ``include()``.  A hardware file that calls it raises
+``NameError``, so a configuration is never more than two files deep and you never
+have to follow a chain of includes to find out what a setting is.
+
+Converting an existing config
+-----------------------------
+
+A single-file config is converted with:
+
+.. code-block:: bash
+
+   python -m mesoSPIM.src.utils.convert_config path/to/my_config.py
+
+This writes ``my_config.py`` (the user file) and ``hardware/my_config_hw.py``
+next to it.  The hardware file is the original, byte for byte, minus the five
+session settings that move to the user file.  Before the files are written, the
+converter loads the new pair and compares it against the original; if anything
+differs it raises and writes nothing.  Pass ``-o OUTDIR`` to convert into a
+different directory instead of in place.
+
+.. warning::
+
+   The converter proves that the *values* are unchanged.  It cannot test the
+   instrument.  Check trigger lines, COM ports and travel limits before running
+   a converted config on a microscope.
 
 plugins
 ~~~~~~~
@@ -298,16 +370,27 @@ if the corresponding feature is not used:
 
 Check the ``demo_config.py`` for the latest required keys.
 
+The zoom tables are checked at startup and mesoSPIM-control refuses to start if
+they cannot work, because ``pixelsize[zoom]`` is read while an acquisition is
+running, where a missing key costs the whole run:
+
+* ``zoomdict`` and ``pixelsize`` must have exactly the same keys;
+* ``startup['zoom']`` must be one of those keys.
+
 Switching between config files
 ------------------------------
 
-If you have several setups or configurations, place each ``*.py`` file in
+If you have several setups or configurations, place each user file in
 ``mesoSPIM/config/`` and mesoSPIM-control will display a selection dialog on
-startup.
+startup.  Several user files may include the same hardware file — that is the
+tidy way to keep, say, a 20 ms and a 200 ms exposure variant of one microscope
+without duplicating its wiring.
 
 Further reading
 ---------------
 
 * `mesoSPIM hardware wiki — configuration file <https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file>`_
-* ``mesoSPIM/config/demo_config.py`` — heavily commented reference config
-* ``mesoSPIM/config/`` — additional real-world examples
+* ``mesoSPIM/config/hardware/demo_config_hw.py`` — heavily commented reference hardware file
+* ``mesoSPIM/config/demo_config.py`` — the matching user file
+* ``mesoSPIM/config/examples/demo_config_legacy.py`` — the same config in the old single-file format
+* ``mesoSPIM/config/examples/`` — additional real-world examples
