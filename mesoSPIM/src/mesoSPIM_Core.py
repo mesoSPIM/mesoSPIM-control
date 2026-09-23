@@ -53,6 +53,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
+    sig_zoom_in_progress = QtCore.pyqtSignal(bool)  # True while the zoom change runs
     sig_progress = QtCore.pyqtSignal(dict)
     sig_run_timepoint = QtCore.pyqtSignal(int)
     sig_time_lapse_finished = QtCore.pyqtSignal()    # emitted when all time points completed normally
@@ -493,25 +494,29 @@ class mesoSPIM_Core(QtCore.QObject):
             update_etl (bool): Emit a state request to reload ETL parameters for the
                 new zoom value from the calibration CSV.
         """
-        self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
-        # Move to the objective exchange position if necessary
-        f_pos_old = None
-        self.parent.ZoomComboBox.setEnabled(False)
-        if self.cfg.stage_parameters.get('f_objective_exchange') is not None:
-            self.sig_warning.emit('Please wait until the zoom change is complete')
-            f_pos_old = self.state['position']['f_pos']
-            logger.debug('f_pos_old: '+str(f_pos_old))
-            self.send_status_message_to_gui('Moving to objective exchange position')
-            self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done, use_internal_position=False)
-            self.send_status_message_to_gui('At the objective exchange position')
-        # Set the zoom/revolver
-        self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
-        # Return to the previous f_pos
-        if f_pos_old is not None:
-            self.send_status_message_to_gui('Moving to the focus position')
-            self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done, use_internal_position=True)
-        self.send_status_message_to_gui('Magnification (zoom) changed')
-        self.parent.ZoomComboBox.setEnabled(True)
+        # The zoom dropdown stays disabled until the f-axis is back where it started,
+        # so the progress is visible in the status bar instead of a modal dialog.
+        self.sig_zoom_in_progress.emit(True)
+        try:
+            self.send_status_message_to_gui('Changing magnification (zoom) to '+str(zoom))
+            # Move to the objective exchange position if necessary
+            f_pos_old = None
+            if self.cfg.stage_parameters.get('f_objective_exchange') is not None:
+                f_pos_old = self.state['position']['f_pos']
+                logger.debug('f_pos_old: '+str(f_pos_old))
+                self.send_status_message_to_gui('Zoom change: moving to objective exchange position')
+                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done, use_internal_position=False)
+                self.send_status_message_to_gui('Zoom change: at the objective exchange position')
+            # Set the zoom/revolver
+            self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
+            # Return to the previous f_pos
+            if f_pos_old is not None:
+                self.send_status_message_to_gui('Zoom change: moving back to the focus position')
+                self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done, use_internal_position=True)
+            self.send_status_message_to_gui('Magnification (zoom) changed')
+        finally:
+            # Also on failure: a permanently disabled dropdown would need a restart.
+            self.sig_zoom_in_progress.emit(False)
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
         

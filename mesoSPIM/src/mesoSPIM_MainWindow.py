@@ -184,6 +184,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+        self.core.sig_zoom_in_progress.connect(self.set_zoom_change_in_progress)
         self.core.sig_time_lapse_finished.connect(self.on_time_lapse_finished)
         self.core.sig_time_lapse_cancelled.connect(self.on_time_lapse_cancelled)
         self.core.camera_worker.sig_snap_image_ready.connect(self.save_snap_image)
@@ -346,6 +347,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.create_widget_list(list, widget_list)
             else:
                 return None
+
+    @QtCore.pyqtSlot(bool)
+    def set_zoom_change_in_progress(self, in_progress):
+        """Lock the zoom dropdown while the zoom changes.
+
+        The f-axis drives to the objective exchange position and back, and picking a
+        second zoom in between would interrupt that.
+        """
+        self.ZoomComboBox.setEnabled(not in_progress)
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string):
