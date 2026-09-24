@@ -16,6 +16,11 @@ class _Signal:
     def connect(self, slot, *a, **k):
         self._slots.append(slot)
 
+    def disconnect(self, slot):
+        if slot not in self._slots:                     # as PyQt5
+            raise TypeError("'method' object is not connected")
+        self._slots.remove(slot)
+
     def emit(self, *args):
         for slot in list(self._slots):
             slot(*args)
@@ -37,6 +42,9 @@ class _FakeCore:
         self.started = []
         self.stopped = []
         self.sig_remote_control_started = _Signal()
+        self.sig_warning = _Signal()
+        self._remote_control = None                     # Core's controller handles (Core.py:104-105)
+        self._assistant_acceptor = None
 
     def start_remote_control(self, *args):
         self.started.append(args)
@@ -80,6 +88,11 @@ class _FakeParent:
         self.acquisition_manager_window = _FakeAcquisitionManager()
         self.sig_state_request = _Signal()                  # MainWindow's two stop signals
         self.sig_stop_time_lapse = _Signal()
+        self.shown = []                                     # the warning windows opened
+        core.sig_warning.connect(self.display_warning)      # as MainWindow.py:184, before the tab
+
+    def display_warning(self, text):
+        self.shown.append(text)
 
 
 @pytest.fixture
@@ -359,3 +372,79 @@ def test_another_state_request_from_the_window_is_not_a_stop():
     dispatcher.run(core, "run_acquisition_list", {})
     window.sig_state_request.emit({"intensity": 20})
     assert not dispatcher.operation_snapshot(core).get("stop_requested")
+
+
+# --- a warning a remote command caused goes to its caller, not into a window ---
+
+_REFUSED = "The following files already exist - stopping! x.raw"
+
+
+def _operation_in(core, state):
+    """Leave the session's latest operation in `state`, through the Dispatcher's own transitions."""
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Config as rc_config
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+
+    if state == "none":
+        return
+    dispatcher.run(core, "run_acquisition_list", {})              # processing
+    if state in ("stopping", "stopped"):
+        dispatcher.request_stop(core)
+    if state in ("stopped", "completed"):
+        dispatcher.complete(core, rc_config.MILESTONE_FINISHED)
+    if state == "failed":
+        dispatcher.fail(core, rc_config.MILESTONE_FINISHED, RuntimeError("refused"))
+
+
+@pytest.mark.parametrize("state", ["none", "processing", "stopping", "stopped", "completed", "failed"])
+@pytest.mark.parametrize("connected", [False, True], ids=["no controller", "assistant connected"])
+def test_a_warning_opens_no_window_exactly_when_a_connected_controllers_operation_takes_it(connected, state):
+    """mesoSPIM's warning window is modal: it waits for OK and blocks the main window's STOP. For a
+    warning a TCP, MCP or AI Assistant command caused, the caller already gets the text on its
+    operation, so it opens no window; every other warning opens one, as upstream."""
+    from mesoSPIM.src import mesoSPIM_AiAssistent as assistant
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+
+    core = _SessionCore()
+    window = _FakeMainWindow(core)
+    RemoteControlGUI(window)
+    if connected:
+        assistant.start_assistant_for_core(core)
+    _operation_in(core, state)
+
+    core.sig_warning.emit(_REFUSED)
+
+    operation = dispatcher.operation_snapshot(core)
+    if connected and state in ("processing", "stopping"):
+        assert window.shown == [] and operation["warning"] == _REFUSED      # the caller has it
+    else:
+        assert window.shown == [_REFUSED] and operation.get("warning") != _REFUSED
+
+
+def test_a_warning_after_the_transport_stopped_opens_one_window():
+    """Stopping the transport unwires its recording but leaves its operation open; a later warning
+    reaches no caller, so it opens the window."""
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Servers as servers
+
+    core = _SessionCore()
+    window = _FakeMainWindow(core)
+    RemoteControlGUI(window)
+    servers.start_for_core(core, "MCP", "127.0.0.1", 0, "token")
+    dispatcher.run(core, "run_acquisition_list", {})
+    core.sig_warning.emit("first")
+    assert window.shown == [] and dispatcher.operation_snapshot(core)["warning"] == "first"
+
+    servers.stop_for_core(core)
+    assert dispatcher.operation_snapshot(core)["status"] == "processing"
+    core.sig_warning.emit("second")
+    assert window.shown == ["second"] and dispatcher.operation_snapshot(core)["warning"] == "first"
+
+
+def test_upstream_connects_its_warning_window_before_the_remote_control_tab_is_built():
+    """The tab takes that connection over (MainWindow.py:184, before :617): if upstream changes it,
+    this fails here rather than on the instrument."""
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[2] / "src" / "mesoSPIM_MainWindow.py").read_text(encoding="utf-8")
+    connect = source.index("self.core.sig_warning.connect(self.display_warning)")
+    assert connect < source.index("self.remote_control = RemoteControlGUI(self)")

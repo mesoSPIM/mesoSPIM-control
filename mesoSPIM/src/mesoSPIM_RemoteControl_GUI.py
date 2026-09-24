@@ -41,6 +41,8 @@ class RemoteControlGUI(QtWidgets.QWidget):
     sig_install_acquisition_list = QtCore.pyqtSignal(object, object)
     # True when a remote run starts, False when its start raised.
     sig_remote_run = QtCore.pyqtSignal(bool)
+    # A Core warning that goes to upstream's window (MainWindow.display_warning).
+    sig_show_warning = QtCore.pyqtSignal(str)
 
     def __init__(self, parent):
         super().__init__(parent.TabWidget)
@@ -74,6 +76,10 @@ class RemoteControlGUI(QtWidgets.QWidget):
         self.core._remote_control_run_signal = self.sig_remote_run
         parent.sig_state_request.connect(self.on_window_state_request)
         parent.sig_stop_time_lapse.connect(self.on_window_stop)
+        # Take over upstream's one warning connection (MainWindow.py:184, made before this tab).
+        self.core.sig_warning.disconnect(parent.display_warning)
+        self.core.sig_warning.connect(self.route_warning, type=QtCore.Qt.DirectConnection)
+        self.sig_show_warning.connect(parent.display_warning)
         self.core.sig_remote_control_started.connect(self.on_started)
         index = parent.TabWidget.indexOf(parent.TimelapseTabWidget)
         if index >= 0:
@@ -208,6 +214,15 @@ class RemoteControlGUI(QtWidgets.QWidget):
         stop_activity marks it, so the client is not told a stopped run simply completed."""
         if isinstance(request, dict) and request.get("state") == "idle":
             self.on_window_stop()
+
+    def route_warning(self, text):
+        """Runs on the Core thread, where the warning is emitted, with record_warning's own test: a
+        warning a connected remote controller's command caused reaches its caller (the operation,
+        get_info, the AI chat) and gets no window, since that window is modal and would stand
+        between the operator and STOP. Any other opens upstream's warning, as before."""
+        connected = self.core._remote_control is not None or self.core._assistant_acceptor is not None
+        if not (connected and dispatcher._active(self.core) is not None):
+            self.sig_show_warning.emit(text)
 
     def on_window_stop(self):
         dispatcher.request_stop(self.core)

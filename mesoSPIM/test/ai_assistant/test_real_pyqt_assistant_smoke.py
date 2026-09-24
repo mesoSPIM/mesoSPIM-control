@@ -28,7 +28,10 @@ SLACK = 80               # the boxes may run a little past it; the window is wid
 
 class Core(QtCore.QObject):
     sig_remote_control_started = QtCore.pyqtSignal(bool, str)
+    sig_warning = QtCore.pyqtSignal(str)
     cfg = types.SimpleNamespace()
+    _remote_control = None                                # Core's controller handles
+    _assistant_acceptor = None
 
     @QtCore.pyqtSlot(str, str, int, str)
     def start_remote_control(self, *_args):
@@ -47,11 +50,15 @@ class Window(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.core = Core()
+        self.core.sig_warning.connect(self.display_warning)   # as MainWindow.py:184, before the tab
         self.TabWidget = QtWidgets.QTabWidget(self)
         self.TimelapseTabWidget = QtWidgets.QWidget()
         self.TabWidget.addTab(self.TimelapseTabWidget, "Timelapse")
         self.setCentralWidget(self.TabWidget)
         self.remote_control = RemoteControlGUI(self)
+
+    def display_warning(self, text):
+        pass
 
 
 def cell_of(grid, widget):

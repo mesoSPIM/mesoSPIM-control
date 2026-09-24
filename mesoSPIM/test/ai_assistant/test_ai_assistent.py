@@ -1084,3 +1084,18 @@ def test_the_assistant_waiting_on_a_run_that_is_stopped_reports_stopped():
     dispatcher.complete(core, rc_config.MILESTONE_FINISHED)
     waiting.join(10)
     assert done["status"] == "stopped"
+
+
+def test_a_refused_run_reaches_the_assistant_with_its_reason():
+    """A warning a remote command caused opens no window (the Remote Control tab routes it), which is
+    only right because the caller gets the text: here the assistant's tool result carries it."""
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
+    from mesoSPIM.test.remote_control.test_commands import _RefusingCore
+
+    refused = "The following files already exist - stopping! x.raw"
+    tools = {t.name: t for t in build_tools(Acceptor(_RefusingCore()), threading.Event(), profile="Regular")}
+    out = json.loads(tools["run_acquisition_list"].function())
+    operation = out["result"]["operation"]
+    assert out["status"] == "failed" and operation["warning"] == refused and refused in operation["error"]

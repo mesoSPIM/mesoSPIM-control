@@ -26,6 +26,7 @@ from mesoSPIM.src.mesoSPIM_RemoteControl_GUI import RemoteControlGUI
 
 class Core(QtCore.QObject):
     sig_remote_control_started = QtCore.pyqtSignal(bool, str)
+    sig_warning = QtCore.pyqtSignal(str)
     sig_finished = QtCore.pyqtSignal()
     sig_time_lapse_finished = QtCore.pyqtSignal()
     sig_time_lapse_cancelled = QtCore.pyqtSignal()
@@ -36,6 +37,8 @@ class Core(QtCore.QObject):
         self.state = {"state": "idle"}
         self.cfg = SimpleNamespace(version="pyqt-smoke")
         self._remote_session = {"operation": None, "counter": 0}
+        self._remote_control = None                       # Core's controller handles
+        self._assistant_acceptor = None
         self.timelapse_active = False
         self.started = []
         self.stopped = 0
@@ -103,9 +106,9 @@ class Window(QtWidgets.QMainWindow):
     sig_state_request = QtCore.pyqtSignal(dict)
     sig_stop_time_lapse = QtCore.pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, core=None):
         super().__init__()
-        self.core = Core()
+        self.core = core or Core()
         self.core_thread = QtCore.QThread(self)
         self.core.moveToThread(self.core_thread)
         self.core_thread.start()
@@ -114,6 +117,99 @@ class Window(QtWidgets.QMainWindow):
         self.TabWidget.addTab(self.TimelapseTabWidget, "Timelapse")
         self.setCentralWidget(self.TabWidget)
         self.acquisition_manager_window = AcquisitionManager()
+        self.shown = []                                   # (text, thread) of every warning window
+        self.core.sig_warning.connect(self.display_warning)   # as MainWindow.py:184, before the tab
+
+    def display_warning(self, text):
+        self.shown.append((text, threading.get_ident()))
+
+    # What the tab calls on MainWindow when a remote run starts or ends (its STOP bridge).
+    ControlGroupBox = property(lambda self: self.TabWidget)
+
+    def enable_stop_button(self, enabled):
+        self.stop_enabled = enabled
+
+    def enable_mode_control_buttons(self, enabled):
+        pass
+
+    def set_progressbars_to_busy(self):
+        pass
+
+    def finished(self):
+        self.stop_enabled = False
+
+
+class WarningCore(Core):
+    """The smoke Core with the slots a warning test drives on its own thread."""
+
+    @QtCore.pyqtSlot()
+    def connect_assistant(self):                          # as start_assistant_for_core, minus the self-test
+        self._assistant_acceptor = Acceptor(self)
+        self.done.set()
+
+    @QtCore.pyqtSlot()
+    def disconnect_assistant(self):                       # as stop_assistant_for_core
+        self._assistant_acceptor.stop()
+        self._assistant_acceptor = None
+        self.done.set()
+
+    @QtCore.pyqtSlot()
+    def open_live(self):
+        run(self, "start_live", {})
+        self.done.set()
+
+    @QtCore.pyqtSlot(str)
+    def warn(self, text):
+        self.sig_warning.emit(text)
+        self.done.set()
+
+
+class Driver(QtCore.QObject):
+    """Queues calls onto the Core thread."""
+    connect_assistant = QtCore.pyqtSignal()
+    disconnect_assistant = QtCore.pyqtSignal()
+    open_live = QtCore.pyqtSignal()
+    warn = QtCore.pyqtSignal(str)
+
+
+def exercise_warning_routing(app):
+    """A warning a connected remote controller's command caused opens no window and is on its
+    operation; once the controller is gone, a warning opens exactly one window, on the GUI thread.
+    Core runs on its own thread, as in mesoSPIM; every step waits on an Event, never on a sleep."""
+    core = WarningCore()
+    core.done = threading.Event()
+    window = Window(core)                                 # Core on its own thread, upstream's connect made
+    tab = RemoteControlGUI(window)
+    driver = Driver()
+    for name in ("connect_assistant", "disconnect_assistant", "open_live", "warn"):
+        getattr(driver, name).connect(getattr(window.core, name), QtCore.Qt.QueuedConnection)
+
+    def on_core(signal, *args):
+        window.core.done.clear()
+        signal.emit(*args)
+        assert window.core.done.wait(5), "the Core thread did not run the step"
+        app.processEvents()                               # deliver anything queued to the GUI thread
+
+    gui = threading.get_ident()
+    on_core(driver.connect_assistant)
+    on_core(driver.open_live)
+    on_core(driver.warn, "remote")
+    app.processEvents()
+    assert window.shown == [], window.shown
+    assert operation_snapshot(window.core)["warning"] == "remote"
+
+    on_core(driver.disconnect_assistant)
+    on_core(driver.warn, "operator")
+    app.processEvents()
+    assert window.shown == [("operator", gui)], window.shown   # exactly one, on the GUI thread
+
+    window.core_thread.quit()
+    window.core_thread.wait()
+    tab.deleteLater()
+    window.deleteLater()
+    app.processEvents()
+    print("REAL PYQT WARNING ROUTING PASS: a remote command's warning on its operation, no window; "
+          "after disconnect one window on the GUI thread")
 
 
 def process_until(app, predicate, timeout=5):
@@ -212,6 +308,7 @@ def main():
     window.close()
     window.deleteLater()
     app.processEvents()
+    exercise_warning_routing(app)
     print(
         f"REAL PYQT SMOKE PASS: Qt {QtCore.QT_VERSION_STR}, "
         f"PyQt {QtCore.PYQT_VERSION_STR}, commands={len(COMMANDS)}, no transport bound"

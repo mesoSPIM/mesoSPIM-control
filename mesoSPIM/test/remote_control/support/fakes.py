@@ -69,7 +69,10 @@ class _Sig:
         self._slots.append(slot)
 
     def disconnect(self, slot=None):
-        self._slots = [] if slot is None else [s for s in self._slots if s is not slot]
+        # As PyQt5: a bound method matches by equality, and one never connected raises.
+        if slot is not None and slot not in self._slots:
+            raise TypeError("'method' object is not connected")
+        self._slots = [] if slot is None else [s for s in self._slots if s != slot]
 
     def emit(self, *args):
         self._core._record(self._name, *args)
@@ -139,6 +142,8 @@ class RecordingCore:
         )
         self.timelapse_active = False
         self._remote_session = {"operation": None, "counter": 0}
+        self._remote_control = None                # Core's controller handles (Core.py:104-105)
+        self._assistant_acceptor = None
         self._calls = []
 
     def reset(self):

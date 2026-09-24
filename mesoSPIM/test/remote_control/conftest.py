@@ -37,7 +37,10 @@ def _install_fake_pyqt5():
             self.connections.append((slot, k))
 
         def disconnect(self, slot=None):
-            self._slots = [] if slot is None else [s for s in self._slots if s is not slot]
+            # As PyQt5: a bound method matches by equality, and one never connected raises.
+            if slot is not None and slot not in self._slots:
+                raise TypeError("'method' object is not connected")
+            self._slots = [] if slot is None else [s for s in self._slots if s != slot]
 
         def emit(self, *args):
             for slot in list(self._slots):
