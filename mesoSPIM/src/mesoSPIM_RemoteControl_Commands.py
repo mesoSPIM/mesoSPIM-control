@@ -22,6 +22,7 @@ Maintainer (2026):
 """
 
 import glob
+import logging
 import math
 import os
 import time
@@ -1771,18 +1772,37 @@ def _run_snap(core, args):
     return {"scheduled": True, "prefix": prefix}
 
 
+class _WriterErrors(logging.Handler):
+    """The errors mesoSPIM's image writer logs while it runs: write_snap_image catches its own
+    exception and only logs it, so its logger is where a failed write says why."""
+
+    def __init__(self):
+        super().__init__(logging.ERROR)
+        self.messages = []
+
+    def emit(self, record):
+        if record.name.endswith("mesoSPIM_ImageWriter"):
+            self.messages.append(record.getMessage())
+
+
 def _write_snap(core, image, prefix):
-    """Save through mesoSPIM's own snap writer and return the file it wrote. The writer names a
-    snap by the second, so a second snap within the same second overwrites the first; a file
-    written now counts whether its name is new or not."""
+    """Save through mesoSPIM's own snap writer and return the file it wrote. A failed write is
+    judged by the error the writer logs, not by file times: on Windows two writes within one
+    clock tick share a modification time. The writer names a snap by the second, so the newest
+    matching file is the one just written, a same-second overwrite included."""
     pattern = os.path.join(state(core, "snap_folder"), f"{prefix}_*.tif")
-    before = {path: os.path.getmtime(path) for path in glob.glob(pattern)}
-    core.image_writer.write_snap_image(image, prefix=prefix)
-    after = {path: os.path.getmtime(path) for path in glob.glob(pattern)}
-    written = {path for path, modified in after.items() if path not in before or modified > before[path]}
+    errors = _WriterErrors()
+    logging.getLogger().addHandler(errors)
+    try:
+        core.image_writer.write_snap_image(image, prefix=prefix)
+    finally:
+        logging.getLogger().removeHandler(errors)
+    if errors.messages:
+        raise RuntimeError(f"the image writer could not save the snap: {'; '.join(errors.messages)}")
+    written = glob.glob(pattern)
     if not written:
         raise RuntimeError(f"the image writer saved nothing matching {pattern!r}")
-    return max(written, key=after.get)
+    return max(written, key=os.path.getmtime)
 
 
 command(

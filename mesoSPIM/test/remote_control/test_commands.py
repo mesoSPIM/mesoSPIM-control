@@ -438,3 +438,21 @@ def test_a_snap_into_a_missing_snap_folder_is_refused_with_the_reason(tmp_path):
     with pytest.raises(dispatcher.ValidationError, match="snap folder .*gone.* does not exist"):
         dispatcher.run(core, "snap", {})
     assert [call[0] for call in core.calls()] == []
+
+
+def test_a_snap_the_writer_could_not_save_fails_with_the_writers_reason(tmp_path):
+    """mesoSPIM's write_snap_image catches its error and only logs it. The snap is judged by that
+    error, not by file times: on Windows two writes within one clock tick share a modification
+    time, so a timestamp comparison called a real second snap "saved nothing"."""
+    import logging
+
+    class _LoggingWriter:
+        def write_snap_image(self, image, prefix=""):
+            logging.getLogger("mesoSPIM.src.mesoSPIM_ImageWriter").error("[Errno 28] No space left on device")
+
+    core = RecordingCore()
+    core.image_writer = _LoggingWriter()
+    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "failed"
+    assert "No space left on device" in operation["error"]
