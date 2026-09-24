@@ -4,8 +4,8 @@ The offline tests and the evaluation run the assistant against a simulated Core.
 same agent, tools, TurnGuard, gate and failure advice against a real one: a mesoSPIM started with
 -D (DemoStage) whose Remote Control tab has TCP running. The assistant's acceptor is swapped for
 one that sends each command over that connection, so every tool call is a real command to the
-running Core, and the stage, the filter wheel, the snap folder and the acquisition table change
-on screen as it goes. After each step the instrument's own state is read back and checked.
+running Core, and the stage, the filter wheel, the snap folder, live mode and the acquisition
+table change on screen as it goes. After each step the instrument's own state is read back and checked.
 
     python -m mesoSPIM.test.ai_assistant.live.demo_walkthrough                      # scripted calls
     python -m mesoSPIM.test.ai_assistant.live.demo_walkthrough --provider Gemini    # the model decides
@@ -136,6 +136,12 @@ def main():
         ("Take a snap.",
          [("snap", {})],
          "a new file in the snap folder", lambda: newest_snap() > snap_count["before"], True),
+        ("Start live mode.",
+         [("start_live", {})],
+         "the state", lambda: _wait_until(lambda: value("state"), "live"), "live"),
+        ("Stop the live mode.",
+         [("stop_activity", {})],
+         "the state", lambda: _wait_until(lambda: value("state"), "idle"), "idle"),
     ]
     if first_row is not None:
         steps.append(("Rename the first acquisition to walkthrough.tif.",
