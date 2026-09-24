@@ -3,18 +3,17 @@
 The transcript is plain on the tab's own background — no bubbles and no speaker labels, so weight
 alone separates the voices: your question is bold, the answer is not. Each answer shows its
 final Markdown, with the commands it ran above it when "Show tool calls" is on. Images stay out of
-the chat: a frame goes to the vision model and the trace. Enter or Send submits; the input disables
+the chat: a frame goes to the vision model and the trace. Enter submits; the input disables
 during a turn (single-flight); Cancel stops the assistant, Stop microscope stops the
 instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
-Send sits right of the input box; under them every other button sits on one line, among them
-one session button that reads Connect, and Disconnect once connected. The setup
-is a collapsible footer below: one line ("Configure AI assistant") that expands to three boxes,
-Preferences, Language model and Vision model, which Connect applies. It
-opens itself when something needs the operator (nothing configured, a missing key, a server that
-failed) and folds back once the assistant is ready, so a first-time user sees a chat, not a
-configuration form.
+Stop microscope sits right of the input box; under them the other buttons sit on one line, among
+them one session button that reads Connect, and Disconnect once connected. Configure AI assistant
+folds out the setup below: three boxes, Preferences, Language model and Vision model, which Connect
+applies. It opens itself when something needs the operator (nothing configured, a missing key, a
+server that failed) and folds back once the assistant is ready, so a first-time user sees a chat,
+not a configuration form.
 
 Maintainer (2026):
     Thom de Hoog
@@ -370,9 +369,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.input.setObjectName("AiAssistentInput")
         self.input.setFont(font)
         self.input.returnPressed.connect(self.on_submit)
-        self.send_button = QtWidgets.QPushButton("Send", self)
-        self.send_button.setFont(font)
-        self.send_button.clicked.connect(self.on_submit)       # the same as Enter, for the mouse
         self.interrupt = QtWidgets.QPushButton("Cancel prompt", self)
         self.interrupt.setFont(font)
         self.interrupt.clicked.connect(self.on_interrupt)   # always clickable; a no-op between turns
@@ -386,14 +382,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.connect_button = QtWidgets.QPushButton("Connect AI assistant", self)
         self.connect_button.setFont(font)
         self.connect_button.clicked.connect(self.on_connect)
-        # The two-line input with Send to its right, as tall as it; under them Configure AI assistant
-        # and every other button on one line, side by side; the setup it opens folds out below.
+        # The two-line input, which Enter sends, with Stop microscope to its right, as tall as it;
+        # under them the other buttons on one line, side by side; the setup Configure opens folds
+        # out below.
         two_rows = 2 * self.interrupt.sizeHint().height() + 6
         self.input.setFixedHeight(two_rows)
-        self.send_button.setFixedHeight(two_rows)
+        self.stop_button.setFixedHeight(two_rows)
         entry = QtWidgets.QHBoxLayout()
         entry.addWidget(self.input, 1)
-        entry.addWidget(self.send_button)
+        entry.addWidget(self.stop_button)
         layout.addLayout(entry)
         self.setup_toggle = QtWidgets.QToolButton(self)
         self.setup_toggle.setObjectName("AiAssistentSetupToggle")
@@ -405,8 +402,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setup_toggle.toggled.connect(self._set_expanded)
         buttons = QtWidgets.QHBoxLayout()
         buttons.setSpacing(6)
-        buttons.addWidget(self.setup_toggle)
-        for button in (self.connect_button, self.interrupt, self.clear_button, self.stop_button):
+        for button in (self.interrupt, self.clear_button, self.connect_button, self.setup_toggle):
             buttons.addWidget(button)
         buttons.addStretch(1)
         layout.addLayout(buttons)
@@ -803,7 +799,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _set_running(self, running):
         self._running = running
         self.input.setEnabled(not running)
-        for widget in (self.send_button, self.language, self.vision, self.clear_button, self.tools_profile):
+        for widget in (self.language, self.vision, self.clear_button, self.tools_profile):
             widget.setEnabled(not running)      # the models and the tool set change only between turns
         self._refresh_session_buttons()
         if running:

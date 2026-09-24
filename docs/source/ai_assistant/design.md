@@ -99,7 +99,7 @@ Tab label: `"AI Assistant"` · Class: `AiAssistentGUI`.
    call).
 
 5. **GUI (`AiAssistentGUI`)** — a `QTextEdit` transcript (agent text, tool calls, frames),
-   a two-line input (Enter or Send submits, Shift+Enter a new line; disabled during a turn),
+   a two-line input (Enter submits, Shift+Enter a new line; disabled during a turn),
    Cancel prompt, Clear context and Stop microscope, and the collapsible setup footer.
 
 ## Acceptor ownership

@@ -30,9 +30,9 @@ roadmap
 
 ## Setting it up
 
-The tab opens as a chat. **Send** sits right of the input box; under them the other buttons sit on
-one line: **Configure AI assistant**, **Connect AI assistant**, **Cancel prompt**, **Clear
-context** and **Stop microscope**. **Configure AI assistant** opens three boxes below the row,
+The tab opens as a chat. **Stop microscope** sits right of the input box, which Enter sends; under
+them the other buttons sit on one line: **Cancel prompt**, **Clear context**, **Connect AI
+assistant** and **Configure AI assistant**. **Configure AI assistant** opens three boxes below the row,
 **Preferences**, **Language model** and **Vision model**, which Connect applies, and opens by itself when something needs the operator: nothing configured yet, a missing key, or
 a local model that failed to start. Once the assistant is ready it folds back, and the button reads
 **Disconnect AI assistant**: pressed, it hands the microscope session back, so the Remote Control tab can start a transport without restarting
@@ -109,7 +109,7 @@ The presets live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 
-Open the **AI Assistant** tab and type. Enter or **Send** submits; Shift+Enter starts a new line,
+Open the **AI Assistant** tab and type. Enter submits; Shift+Enter starts a new line,
 as in an editor. Commands the agent runs stream live above each answer, so
 the operator sees exactly which named calls were issued. **Cancel prompt** stops the assistant: no
 further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the

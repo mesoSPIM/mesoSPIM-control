@@ -115,7 +115,7 @@ def test_submit_single_flight_disables_input(monkeypatch):
     gui.on_submit()
     assert sent == ["hello"]
     assert gui.input.isEnabled() is False               # single-flight: locked until the turn ends
-    assert gui.send_button.isEnabled() is False         # and so is the mouse's way in
+    assert not hasattr(gui, "send_button")              # Enter sends; the button there is Stop microscope
     assert gui.input.text() == ""                       # the submitted text was cleared
 
 
