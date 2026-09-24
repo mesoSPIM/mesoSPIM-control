@@ -64,6 +64,7 @@ logger = logging.getLogger(__name__)
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     """ Main application window which instantiates worker objects and moves them to a thread. """
+    showing_state = False   # True while update_widget_from_state shows Core's state in a widget
     # sig_live = QtCore.pyqtSignal()
     sig_stop = QtCore.pyqtSignal()
     sig_finished = QtCore.pyqtSignal()
@@ -727,15 +728,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             state_parameter (str): State parameter (has to exist in the config)
         '''
         combobox.addItems(option_list)
-        if not int_conversion:
-            self.sig_state_request.emit({state_parameter: self.cfg.startup[state_parameter]})  # force update of the state
-            combobox.setCurrentText(self.cfg.startup[state_parameter])
-            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+        convert = int if int_conversion else str
+        self.sig_state_request.emit({state_parameter: convert(self.cfg.startup[state_parameter])})  # force update of the state
+        combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
 
-        else:
-            self.sig_state_request.emit({state_parameter: int(self.cfg.startup[state_parameter])})  # force update of the state
-            combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
-            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+        def request(text):
+            ''' A change the operator or the joystick makes is a request to Core. A change that only
+            shows Core's state (update_widget_from_state) is not: sending it back made Core redo its
+            own change (a second zoom change, with its focus trip and its warning). '''
+            if not self.showing_state:
+                self.sig_state_request.emit({state_parameter: convert(text)})
+
+        combobox.currentTextChanged.connect(request)
 
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
@@ -767,12 +771,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_execute_script.emit(script)
 
     def update_widget_from_state(self, widget, state_parameter_string, conversion_factor):
-        if isinstance(widget, QtWidgets.QComboBox):
-            widget.setCurrentText(self.state[state_parameter_string])
-        elif isinstance(widget, (QtWidgets.QSlider, QtWidgets.QSpinBox)):
-            widget.setValue(int(self.state[state_parameter_string]*conversion_factor))
-        elif isinstance(widget, (QtWidgets.QDoubleSpinBox)):
-            widget.setValue(float(self.state[state_parameter_string]*conversion_factor))
+        ''' Shows Core's state in a widget. The change this makes is Core's, not the operator's, so a
+        combo box does not send it back as a request (connect_combobox_to_state_parameter). '''
+        self.showing_state = True
+        try:
+            if isinstance(widget, QtWidgets.QComboBox):
+                widget.setCurrentText(self.state[state_parameter_string])
+            elif isinstance(widget, (QtWidgets.QSlider, QtWidgets.QSpinBox)):
+                widget.setValue(int(self.state[state_parameter_string]*conversion_factor))
+            elif isinstance(widget, (QtWidgets.QDoubleSpinBox)):
+                widget.setValue(float(self.state[state_parameter_string]*conversion_factor))
+        finally:
+            self.showing_state = False
     
     @QtCore.pyqtSlot()
     def update_gui_from_state(self):
