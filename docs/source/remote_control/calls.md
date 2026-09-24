@@ -4,8 +4,8 @@ TCP and MCP provide the same 56 calls. The call names and behavior are identical
 transports.
 
 Before changing the microscope, call `get_manual` and `get_limits`. Ordinary changes return an
-accepted or rejected reply. After acceptance, poll `get_progress` until the operation is completed
-or failed.
+accepted or rejected reply. After acceptance, poll `get_progress` until the operation is completed,
+stopped or failed.
 
 For connection details, arguments, polling, and errors, see the
 [Remote Control manual](index.md).

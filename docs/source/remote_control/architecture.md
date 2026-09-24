@@ -194,6 +194,7 @@ An operation has one of these useful public states:
 - `processing`: accepted and still active;
 - `stopping`: an emergency stop was requested;
 - `completed`: its completion condition was confirmed;
+- `stopped`: a stop cut it short (a stopped stage move is `failed`, see below);
 - `failed`: execution or completion failed.
 
 Clients poll `get_progress` and match the returned operation ID. The server stores the latest
@@ -229,8 +230,9 @@ validate target
 This keeps the Core event loop free. MCP and TCP can answer `get_progress`, `get_position`, and
 emergency commands while movement is active.
 
-The operation exposes its requested `target` and latest `observed` values. A stop before arrival
-marks the move failed with `stop_requested: true`. Recovery cannot clear an unconfirmed stage move
+The operation exposes its requested `target` and latest `observed` values. A stop after the move
+was sent and before arrival marks it failed with `stop_requested: true`; a stop before it was sent
+ends it `stopped`, with the stage untouched. Recovery cannot clear an unconfirmed stage move
 just because Core's general state says `idle`; the operator must stop it first.
 
 ## Other long operations

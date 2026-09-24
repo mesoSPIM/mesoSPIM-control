@@ -910,7 +910,8 @@ _MANUAL_INTERACTION = {
     "and execute immediately without creating a new operation.",
     "confirm_completion": "After an ordinary mutation is accepted, save operation.id and poll "
     "get_progress over TCP or MCP. Match the same operation id and wait for "
-    "status 'completed', 'stopped' (a stop cut it short) or 'failed'. For movement, completion means "
+    "status 'completed', 'stopped' (a stop cut it short) or 'failed'; a stage move stopped after "
+    "it was sent ends 'failed' with stop_requested. For movement, completion means "
     "mesoSPIM's position readback reached the accepted target within "
     "tolerance. If an emergency command returns an active operation, keep "
     "polling that operation. Never resend accepted work merely because it "
@@ -953,7 +954,7 @@ _MANUAL_RECIPES = [
         "goal": "Run one supplied acquisition",
         "steps": [
             "acquire_start {acquisition: {...}}",
-            "poll get_progress until 'completed'",
+            "poll get_progress until 'completed', 'stopped' or 'failed'",
             "acquire_finish {}",
         ],
     },
@@ -963,7 +964,7 @@ _MANUAL_RECIPES = [
             "set_acquisition_list {acquisitions: [...], selected_row: 0}",
             "poll get_progress until the list operation is completed",
             "run_acquisition_list {}",
-            "poll get_progress until 'completed'",
+            "poll get_progress until 'completed', 'stopped' or 'failed'",
         ],
     },
 ]
@@ -1752,7 +1753,9 @@ def _run_snap(core, args):
 
     def save():
         operation = _session(core).get("operation")
-        if operation is None or operation.get("id") != operation_id or operation.get("status") != "processing":
+        if operation is None or operation.get("id") != operation_id:
+            return
+        if operation.get("status") not in ("processing", "stopping"):
             return
         if not core.frame_queue_display:
             if time.monotonic() < deadline:

@@ -491,7 +491,9 @@ def test_recovery_leaves_a_snap_that_is_still_saving_its_file(tmp_path):
     assert operation["status"] == "completed" and os.path.isfile(operation["result"]["path"])
 
 
-def test_recovery_ends_a_stopped_snap_that_stopped_saving(tmp_path):
+def test_a_snap_stopped_while_saving_saves_its_frame_and_ends_stopped(tmp_path):
+    """A stop after the exposure cannot take the frame back: the save carries on, as a stopped move
+    keeps polling, and the operation ends 'stopped' with its file, releasing the gate."""
     core = RecordingCore()
     pending = []
     core._remote_control_single_shot = lambda _msec, callback: pending.append(callback)
@@ -499,7 +501,22 @@ def test_recovery_ends_a_stopped_snap_that_stopped_saving(tmp_path):
     pending.pop(0)()                                                  # scheduled
     pending.pop(0)()                                                  # the exposure; now saving
     dispatcher.request_stop(core)
-    while pending:
-        pending.pop(0)()                                              # save gives up: status is not processing
     assert dispatcher.operation_snapshot(core)["status"] == "stopping"
-    assert dispatcher.clear_if_core_idle(core)["cleared"] is True     # not wedged
+    while pending:
+        pending.pop(0)()                                              # the save completes
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "stopped" and os.path.isfile(operation["result"]["path"])
+    assert dispatcher._active(core) is None
+
+
+def test_recovery_ends_a_stopped_snap_whose_save_never_ran(tmp_path):
+    """The one way a stopped snap is still recovered: its save callback never ran."""
+    core = RecordingCore()
+    pending = []
+    core._remote_control_single_shot = lambda _msec, callback: pending.append(callback)
+    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+    pending.pop(0)()                                                  # scheduled
+    pending.pop(0)()                                                  # the exposure
+    pending.clear()                                                   # the save is lost
+    dispatcher.request_stop(core)
+    assert dispatcher.clear_if_core_idle(core)["cleared"] is True

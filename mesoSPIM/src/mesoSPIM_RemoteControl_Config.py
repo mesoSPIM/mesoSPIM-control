@@ -35,7 +35,7 @@ MCP_INSTRUCTIONS = (
     "You are controlling a mesoSPIM light-sheet microscope over a validated named-call API. "
     "Call get_manual first: it returns the full command reference, workflows, typed errors, and "
     "completion contract. An ordinary mutation returns an operation; poll get_progress until its "
-    "status is 'completed' or 'failed', and never infer completion from elapsed time. Emergency "
+    "status is 'completed', 'stopped' or 'failed', and never infer completion from elapsed time. Emergency "
     "commands execute immediately and do not create a new operation. Read get_info and get_limits "
     "before mutating, and never exceed a limit get_limits reports."
 )
