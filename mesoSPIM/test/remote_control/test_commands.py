@@ -426,3 +426,15 @@ def test_a_core_without_the_tab_runs_without_a_window_bridge():
     core = RecordingCore()
     dispatcher.run(core, "start_live", {})
     assert [call[0] for call in core.calls()].count("set_state") == 1
+
+
+def test_a_snap_into_a_missing_snap_folder_is_refused_with_the_reason(tmp_path):
+    """mesoSPIM's writer swallows the error and only logs it, so a snap into a missing folder saved
+    nothing and said nothing: on the Windows demo the assistant could only say "the image writer did
+    not save the file". The default folder is checked like an explicit one, before Core runs."""
+    core = RecordingCore()
+    missing = str(tmp_path / "gone")
+    core.state["snap_folder"] = missing
+    with pytest.raises(dispatcher.ValidationError, match="snap folder .*gone.* does not exist"):
+        dispatcher.run(core, "snap", {})
+    assert [call[0] for call in core.calls()] == []
