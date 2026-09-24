@@ -164,3 +164,6 @@ ROWS_MAX = 60
 ROW_SUMMARY_KEYS = ("filename", "folder", "x_pos", "y_pos", "z_start", "z_end", "z_step", "planes",
                     "f_start", "f_end", "rot", "laser", "intensity", "filter", "zoom", "shutterconfig")
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress
+# Modes that end only when stopped: waiting for them to finish would hold the turn until someone
+# presses STOP, so the assistant returns once the mode runs.
+RUNS_UNTIL_STOPPED = ("start_live", "start_visual_mode", "start_lightsheet_alignment_mode")

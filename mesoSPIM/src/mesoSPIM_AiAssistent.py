@@ -59,6 +59,7 @@ def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config):
         return {"status": op["status"], "operation": op_id, "result": result}
 
     deadline = time.monotonic() + cfg.WAIT_CAP_S
+    runs = COMMANDS[name].running_state if name in getattr(cfg, "RUNS_UNTIL_STOPPED", ()) else None
     while time.monotonic() < deadline:
         if cancel.is_set():
             return {"status": "cancelled", "operation": op_id}      # interrupt() halts the hardware
@@ -67,6 +68,9 @@ def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config):
         status = (snap.get("operation") or {}).get("status")
         if status in _TERMINAL:
             return {"status": status, "operation": op_id, "result": snap}
+        if runs is not None and snap.get("state") == runs:
+            return {"status": "running", "operation": op_id,
+                    "note": f"{runs} runs until stopped; stop_activity ends it, and nothing else changes meanwhile."}
     return {"status": "still_running", "operation": op_id,
             "note": "operation exceeds the wait cap; call get_progress to check on it."}
 

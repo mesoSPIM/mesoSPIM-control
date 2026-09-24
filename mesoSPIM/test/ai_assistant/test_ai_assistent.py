@@ -1023,3 +1023,18 @@ def test_regular_keeps_the_etl_out_of_a_row_change_too():
     out = json.loads(tool.function(row=0, changes={"etl_l_amplitude": 1.5}))
     assert out["error"]["code"] == "validation" and "etl_l_amplitude" in out["error"]["message"]
     assert core.state["acq_list"][0]["etl_l_amplitude"] == 0.461
+
+
+@pytest.mark.parametrize("name,mode", [("start_live", "live"), ("start_visual_mode", "visual_mode"),
+                                       ("start_lightsheet_alignment_mode", "lightsheet_alignment_mode")])
+def test_a_mode_that_runs_until_stopped_returns_once_it_runs(name, mode):
+    """start_live completes on sig_finished, which a live mode sends only when it is stopped: on the
+    Windows demo the assistant's turn waited 75 s, until the operator pressed STOP, before it could
+    answer. A mode now returns as soon as it runs; the gate stays held until it is stopped."""
+    acceptor, core = _real_acceptor()
+    started = time.monotonic()
+    done = ai.dispatch_and_wait(acceptor, name, {}, WAIT, threading.Event())
+    assert time.monotonic() - started < 5
+    assert done["status"] == "running" and core.state["state"] == mode
+    assert "stop_activity" in done["note"]
+    assert acceptor.dispatch("get_progress", {})["operation"]["status"] == "processing"   # still held
