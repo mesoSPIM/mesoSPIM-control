@@ -130,7 +130,7 @@ def wait_for_operation(tool, result, label):
         return None
     operation = result.get("operation") or {}
     operation_id = operation.get("id")
-    if not operation_id or operation.get("status") == "completed":
+    if not operation_id or operation.get("status") in ("completed", "stopped"):
         return operation
     if operation.get("status") == "failed":
         raise AssertionError(f"{label} failed: {operation}")
@@ -141,7 +141,7 @@ def wait_for_operation(tool, result, label):
             raise AssertionError(f"{label} operation changed from {operation_id} to {current.get('id')}")
         if current.get("status") == "failed":
             raise AssertionError(f"{label} failed: {current}")
-        return current if current.get("status") == "completed" else None
+        return current if current.get("status") in ("completed", "stopped") else None
 
     return wait_until(terminal, f"{label} operation {operation_id}")
 

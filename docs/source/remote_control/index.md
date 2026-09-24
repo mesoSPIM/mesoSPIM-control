@@ -82,8 +82,10 @@ work has finished.
 
 When the status is `processing` or `stopping`, call `get_progress` through the same TCP or MCP
 transport and verify that the returned operation ID is unchanged. Stop when its status becomes
-`completed` or `failed`. On completion, command-specific output is stored in `operation.result`.
-On failure, the reason is stored in `operation.error`.
+`completed`, `stopped` or `failed`. On completion, command-specific output is stored in
+`operation.result`. `stopped` means a stop cut the operation short, from a client or from the
+operator's STOP in mesoSPIM, so an acquisition wrote only part of its planes; `stop_requested: true`
+is set as well. On failure, the reason is stored in `operation.error`.
 
 Emergency commands validate and execute immediately so they remain available while the ordinary
 mutation gate is busy. They do not create a new operation. Their reply contains the current
@@ -146,7 +148,7 @@ def wait_for_operation(sock, accepted):
         operation = call(sock, "get_progress")["operation"]
         if operation.get("id") != operation_id:
             raise RuntimeError("the latest operation changed")
-        if operation.get("status") == "completed":
+        if operation.get("status") in ("completed", "stopped"):
             return operation
         if operation.get("status") == "failed":
             raise RuntimeError(operation.get("error", "operation failed"))

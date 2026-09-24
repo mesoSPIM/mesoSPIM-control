@@ -1069,3 +1069,18 @@ def test_stop_and_stop_activity_say_what_each_ends():
     tools = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
     assert "stage" in tools["stop"].description and "stop_activity" in tools["stop"].description
     assert "live" in tools["stop_activity"].description
+
+
+def test_the_assistant_waiting_on_a_run_that_is_stopped_reports_stopped():
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Config as rc_config
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+    acceptor, core = _real_acceptor()
+    done = {}
+    waiting = threading.Thread(target=lambda: done.update(
+        ai.dispatch_and_wait(acceptor, "run_acquisition_list", {}, WAIT, threading.Event())))
+    waiting.start()
+    time.sleep(0.3)
+    dispatcher.request_stop(core)
+    dispatcher.complete(core, rc_config.MILESTONE_FINISHED)
+    waiting.join(10)
+    assert done["status"] == "stopped"

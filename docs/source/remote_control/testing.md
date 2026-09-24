@@ -29,7 +29,7 @@ The runner only selects and orders tests. It never starts or stops mesoSPIM, MCP
 The offline profile uses an in-memory Core and a small PyQt substitute. It verifies:
 
 - the complete 56-call registry over TCP and MCP;
-- accepted, rejected, completed, failed, stopping, and busy replies;
+- accepted, rejected, completed, stopped, failed, stopping, and busy replies;
 - argument types, configured options, numeric ranges, and stage limits;
 - strict JSON, TCP framing, MCP authentication, origins, paths, and body limits;
 - the one-mutation gate, cross-transport behavior, and concurrent admission;
@@ -105,7 +105,8 @@ process exits, ports 42000 and 42100 close, and no mesoSPIM, Python, or Qt worke
 ## Interpreting asynchronous results
 
 An accepted mutation has started an operation; it has not necessarily succeeded yet. Tests retain
-the operation ID and poll `get_progress` until the same operation becomes `completed` or `failed`.
+the operation ID and poll `get_progress` until the same operation becomes `completed`, `stopped` or
+`failed`.
 They never repeat an accepted mutation because its first response was delayed.
 
 If polling is delayed, retrying the read-only `get_progress` call is safe after Core becomes

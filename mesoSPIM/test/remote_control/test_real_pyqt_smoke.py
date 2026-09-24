@@ -185,6 +185,7 @@ def main():
     app.processEvents()
     assert timer_core.calls == []
     assert operation_snapshot(timer_core)["stop_requested"] is True
+    assert operation_snapshot(timer_core)["status"] == "stopped"     # a stop before it started ends it stopped
 
     # The uncancelled timer executes and resolves only after the fake Core leaves its run state.
     normal_core = Core()
@@ -193,7 +194,7 @@ def main():
     assert normal_core.calls == [("set_state", "live")]
     run(normal_core, "stop_activity", {})
     complete(normal_core, config.MILESTONE_FINISHED)
-    assert operation_snapshot(normal_core)["status"] == "completed"
+    assert operation_snapshot(normal_core)["status"] == "stopped"         # stop_activity ended it
 
     server = QtNetwork.QTcpServer()  # construct the real class; never call listen()
     assert not server.isListening()

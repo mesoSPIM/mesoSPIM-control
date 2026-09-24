@@ -347,7 +347,7 @@ def test_a_remote_run_stopped_from_the_window_is_reported_as_stopped(stop):
 
     dispatcher.complete(core, rc_config.MILESTONE_FINISHED)
     operation = dispatcher.operation_snapshot(core)
-    assert operation["status"] == "completed" and operation["stop_requested"] is True
+    assert operation["status"] == "stopped" and operation["stop_requested"] is True
 
 
 def test_another_state_request_from_the_window_is_not_a_stop():

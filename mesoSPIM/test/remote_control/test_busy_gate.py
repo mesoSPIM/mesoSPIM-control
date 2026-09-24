@@ -285,3 +285,24 @@ def test_a_refused_time_point_is_detected_while_the_operation_is_stopping(hs):
     core.sig_finished.emit()
     latest = dispatcher.operation_snapshot(core)
     assert latest["status"] == "failed" and core.timelapse_active is False and core.state["state"] == "idle"
+
+
+def test_a_stopped_run_ends_stopped_and_frees_the_gate(h):
+    """A run a stop cut short used to end "completed" with stop_requested beside it, so a client that
+    read only the status thought all its planes were taken. It ends "stopped" now; stop_requested
+    stays for a client that reads it."""
+    ok, opened = h.invoke("tcp", "run_acquisition_list", {})
+    assert ok and opened["operation"]["status"] == "processing"
+    h.invoke("tcp", "stop_activity", {})
+    dispatcher.complete(h.core, config.MILESTONE_FINISHED)
+    operation = dispatcher.operation_snapshot(h.core)
+    assert operation["status"] == "stopped" and operation["stop_requested"] is True
+    ok, next_one = h.invoke("tcp", "set_intensity", {"intensity": 20})      # the gate is free again
+    assert ok and next_one["operation"]["status"] == "completed"
+
+
+def test_a_run_nobody_stopped_still_ends_completed(h):
+    h.invoke("tcp", "run_acquisition_list", {})
+    dispatcher.complete(h.core, config.MILESTONE_FINISHED)
+    operation = dispatcher.operation_snapshot(h.core)
+    assert operation["status"] == "completed" and not operation.get("stop_requested")

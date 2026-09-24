@@ -23,14 +23,14 @@ from pathlib import Path
 
 from PyQt5 import QtCore
 
-from .mesoSPIM_RemoteControl_Dispatcher import COMMANDS, READ, WAIT, COMPLETED, FAILED, error_info
+from .mesoSPIM_RemoteControl_Dispatcher import COMMANDS, READ, WAIT, COMPLETED, FAILED, STOPPED, error_info
 from .mesoSPIM_RemoteControl_Servers import Acceptor
 from .mesoSPIM_RemoteControl_Commands import self_test
 from . import mesoSPIM_AiAssistent_Config as config
 
 logger = logging.getLogger(__name__)
 
-_TERMINAL = {COMPLETED, FAILED}
+_TERMINAL = {COMPLETED, FAILED, STOPPED}
 
 # Commands embedded in the system prompt, so not worth exposing as tools (a call only re-fetches
 # what the model already has). get_manual is the whole command reference — large and static.
@@ -39,7 +39,7 @@ _PROMPT_ONLY = {"get_manual"}
 
 def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config):
     """Run one command and return a finished result. For WAIT commands the return always
-    carries a consistent top-level `status` ('completed' / 'failed' / 'still_running' /
+    carries a consistent top-level `status` ('completed' / 'failed' / 'stopped' / 'still_running' /
     'cancelled'); READ/ACTION commands pass their own result through unchanged.
 
     A WAIT command returns 'processing' immediately and completes later on a milestone; we

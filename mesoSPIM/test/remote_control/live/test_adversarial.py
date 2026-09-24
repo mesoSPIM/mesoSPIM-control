@@ -115,7 +115,7 @@ def _wait_for_failed_operation(tool, started, label):
         operation = _must(tool, "get_progress")["operation"]
         if operation.get("id") != operation_id:
             raise AssertionError(f"{label} operation changed from {operation_id} to {operation.get('id')}")
-        return operation if operation.get("status") in {"completed", "failed"} else None
+        return operation if operation.get("status") in {"completed", "stopped", "failed"} else None
 
     operation = _wait_until(terminal, f"{label} terminal operation")
     assert operation["status"] == "failed", operation
@@ -761,10 +761,10 @@ def test_real_demo_time_lapse_idle_gap_cannot_be_mistaken_for_a_wedge():
 
         def terminal_operation():
             operation = _must(tool, "get_progress")["operation"]
-            return operation if operation.get("status") in {"completed", "failed"} else None
+            return operation if operation.get("status") in {"completed", "stopped", "failed"} else None
 
         terminal = _wait_until(terminal_operation, "time lapse cancellation")
-        assert terminal["id"] == operation_id and terminal.get("stop_requested") is True
+        assert terminal["id"] == operation_id and terminal["status"] == "stopped" and terminal.get("stop_requested") is True
     finally:
         try:
             _must(tool, "time_lapse_stop")

@@ -49,8 +49,10 @@ ACTION = "action"
 WAIT = "wait"
 EMERGENCY = "emergency"
 
-# Only PROCESSING and STOPPING hold the mutation gate.
+# Only PROCESSING and STOPPING hold the mutation gate. An operation a stop cut short ends STOPPED, so a
+# client that reads only the status does not take it for one that finished (COMPLETED).
 PROCESSING, STOPPING, COMPLETED, FAILED, IDLE = ("processing", "stopping", "completed", "failed", "idle")
+STOPPED = "stopped"
 
 COMMANDS = {}
 
@@ -191,8 +193,8 @@ def claim_scheduled(core, operation_id):
 
 
 def request_stop(core):
-    """The stop commands call this; close_shutters does not. `stop_requested` survives past
-    terminal so a reader can tell a completed op was stopped, not finished."""
+    """The stop commands call this; close_shutters does not. The operation ends STOPPED, and
+    `stop_requested` survives past terminal for a client that reads it."""
     # Serialize this operation-state transition with dispatch.
     with _GATE:
         operation = _active(core)
@@ -201,7 +203,7 @@ def request_stop(core):
             if operation.get("phase") == "scheduled":
                 # Nothing has touched hardware yet. Make the queued callback fail its id/phase claim
                 # and release the gate immediately instead of creating a permanent STOPPING op.
-                operation["status"] = COMPLETED
+                operation["status"] = STOPPED
             else:
                 operation["status"] = STOPPING
 
@@ -224,7 +226,7 @@ def complete(core, milestone):
             # core actually leaves its running state. This is the operation/state association that
             # keeps a late signal from completing a newer operation early.
             return
-        operation["status"] = COMPLETED
+        operation["status"] = STOPPED if operation.get("stop_requested") else COMPLETED
 
 
 def fail(core, milestone, error):

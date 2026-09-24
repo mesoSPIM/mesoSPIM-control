@@ -148,7 +148,8 @@ scheduled before their execution function runs:
 - `ACTION` is a short asynchronous mutation. It completes when its scheduled execution function
   returns.
 - `WAIT` starts asynchronous work and retains the mutation gate until a verified milestone marks
-  the operation `completed` or `failed`.
+  the operation `completed`, `stopped` (a stop cut it short: `stop_activity`, `stop`, or the
+  operator's STOP in the main window) or `failed`.
 - `EMERGENCY` is reserved for bounded safety actions that must remain available while another
   mutation is active.
 
