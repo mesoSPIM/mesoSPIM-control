@@ -83,8 +83,13 @@ def _restore(acceptor, start):
     """Put back what the walk changed, each command waited out as the assistant waits for its
     own: the next one would otherwise meet the gate still held by the last (busy)."""
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
-    undo = [("move_absolute", {"targets": {"x": start["x"]}}), ("set_intensity", {"intensity": start["intensity"]}),
-            ("set_filter", {"filter": start["filter"]})]
+    undo = []
+    if acceptor.dispatch("get_state_all", {"keys": ["state"]}).get("state") != "idle":
+        undo.append(("stop_activity", {}))
+    undo += [("move_absolute", {"targets": {"x": start["x"], "y": start["y"]}}),
+             ("set_intensity", {"intensity": start["intensity"]}), ("set_filter", {"filter": start["filter"]}),
+             ("set_laser", {"laser": start["laser"]}), ("set_zoom", {"zoom": start["zoom"]}),
+             ("set_shutterconfig", {"shutterconfig": start["shutterconfig"]})]
     if start["acquisitions"]:
         undo.append(("set_acquisition_list", {"acquisitions": start["acquisitions"], "selected_row": 0}))
     for name, args in undo:
@@ -92,9 +97,105 @@ def _restore(acceptor, start):
         print(f"    {name}: {done.get('status', 'done') if isinstance(done, dict) else done}")
 
 
+class Step:
+    """One operator request: the prompt, the calls a scripted run makes for it, and a check that
+    reads the instrument (and, for a refusal, the reply) afterwards. `model_only` steps need a
+    real model: look calls a vision model."""
+
+    def __init__(self, prompt, calls, check, model_only=False):
+        self.prompt, self.calls, self.check, self.model_only = prompt, calls, check, model_only
+
+
+_LIMIT_WORDS = ("limit", "range", "25000", "25,000")
+_FOLDER_WORDS = ("folder", "directory")
+# The operator asked that a failure end with a way forward: the same words the evaluation accepts.
+_PROPOSAL_WORDS = ("shall i", "should i", "would you like", "do you want", "another folder", "existing folder",
+                   "set the snap folder", "choose", "create", "configur", "please")
+
+
+def _steps(read, value, position, probe, stamp):
+    """The walk. Each check returns (passed, what it saw); `before` holds the snap count and the
+    position taken just before each step."""
+    first = (read("get_acquisition_list", {}).get("acquisitions") or [None])[0]
+    before = {"snaps": 0, "x": None, "y": None}
+
+    def count_snaps():
+        folder = value("snap_folder")
+        return len([f for f in os.listdir(folder) if f.endswith(".tif")]) if folder and os.path.isdir(folder) else 0
+
+    def mark():
+        before.update(snaps=count_snaps(), x=position("x"), y=position("y"))
+
+    def settled(read_value, expected):
+        got = _wait_until(read_value, expected)
+        return got == expected, f"{got!r} (expected {expected!r})"
+
+    def new_snaps():
+        return count_snaps() - before["snaps"]
+
+    def first_row(*keys):
+        row = read("get_acquisition_list", {})["acquisitions"][0]
+        return tuple(row.get(key) for key in keys)
+
+    def says(reply, words):
+        """A scripted run answers only "Done.", so the reply is judged only with a model (None)."""
+        return reply is None or any(word in reply.lower() for word in words)
+
+    steps = [
+        Step("Move the stage to X = 5000 um.", [("move_absolute", {"targets": {"x": 5000}})],
+             lambda reply: settled(lambda: position("x"), 5000.0)),
+        Step("Move Y by 1 mm.", [("move_relative", {"deltas": {"y": 1000}})],
+             lambda reply: settled(lambda: position("y"), before["y"] + 1000.0)),
+        Step("Set the laser intensity to 20 %.", [("set_intensity", {"intensity": 20})],
+             lambda reply: settled(lambda: value("intensity"), 20)),
+        Step("Switch the filter to 515LP.", [("set_filter", {"filter": "515LP"})],
+             lambda reply: settled(lambda: value("filter"), "515LP")),
+        Step("Switch to the 561 nm laser.", [("set_laser", {"laser": "561 nm"})],
+             lambda reply: settled(lambda: value("laser"), "561 nm")),
+        Step("Set the zoom to 1x.", [("set_zoom", {"zoom": "1x"})],
+             lambda reply: settled(lambda: value("zoom"), "1x")),
+        Step("Use the left light sheet.", [("set_shutterconfig", {"shutterconfig": "Left"})],
+             lambda reply: settled(lambda: value("shutterconfig"), "Left")),
+        Step("Take a snap.", [("snap", {})],
+             lambda reply: (new_snaps() == 1, f"{new_snaps()} new file(s) (expected 1)")),
+        Step("Take a snap into D:\\nowhere.", [("snap", {"folder": "D:\\nowhere"})],
+             lambda reply: (new_snaps() == 0 and says(reply, _FOLDER_WORDS) and says(reply, _PROPOSAL_WORDS),
+                            f"{new_snaps()} new file(s) (expected 0); the reply names the folder: {says(reply, _FOLDER_WORDS)}, "
+                            f"proposes a fix: {says(reply, _PROPOSAL_WORDS)}")),
+        Step("Look at the sample and tell me what you see.", [],
+             lambda reply: (new_snaps() == 1 and len(reply) > 20, f"{new_snaps()} new file(s) (expected 1: one exposure)"),
+             model_only=True),
+        Step("Start live mode.", [("start_live", {})],
+             lambda reply: settled(lambda: value("state"), "live")),
+        Step("Stop the live mode.", [("stop_activity", {})],
+             lambda reply: settled(lambda: value("state"), "idle")),
+        Step("Move X to 30000 um.", [("move_absolute", {"targets": {"x": 30000}})],
+             lambda reply: (position("x") == before["x"] and says(reply, _LIMIT_WORDS),
+                            f"X {position('x')!r} (expected {before['x']!r} kept); the reply names the limit: {says(reply, _LIMIT_WORDS)}")),
+    ]
+    if first is not None:
+        name = f"walk_{stamp}.tif"
+        steps += [
+            Step(f"Rename the first acquisition to {name}.",
+                 [("update_acquisition_row", {"row": 0, "changes": {"filename": name}})],
+                 lambda reply: settled(lambda: first_row("filename", "zoom", "f_start"),
+                                       (name, first.get("zoom"), first.get("f_start")))),
+            Step(f"Change the first acquisition to z from 0 to 20 um in steps of 10, saved in {probe}.",
+                 [("update_acquisition_row", {"row": 0, "changes": {"z_start": 0, "z_end": 20, "z_step": 10, "folder": probe}})],
+                 lambda reply: settled(lambda: first_row("z_end", "z_step", "folder", "zoom"),
+                                       (20, 10, probe, first.get("zoom")))),
+            Step("Run the acquisition list.", [("run_acquisition_list", {})],
+                 lambda reply: (_wait_until(lambda: os.path.exists(os.path.join(probe, name)), True, 60),
+                                os.path.join(probe, name))),
+        ]
+    return steps, mark
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--provider", default="", help="a model preset (Gemini, OpenAI, Anthropic); scripted calls when omitted")
+    parser.add_argument("--repeat", type=int, default=1, help="walk this many times: a model's choice can differ per run")
+    parser.add_argument("--probe", default=r"D:\mesospim-pr106-probe", help="an existing folder for the acquisition step")
     parser.add_argument("--host", default=os.environ.get("MESOSPIM_LIVE_TCP_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("MESOSPIM_LIVE_TCP_PORT", "42000")))
     parser.add_argument("--token", default=os.environ.get("MESOSPIM_LIVE_TCP_TOKEN", "smart_mesospim"))
@@ -112,74 +213,48 @@ def main():
     def position(axis):
         return read("get_position", {}).get(axis)
 
-    start = {"x": position("x"), "intensity": value("intensity"), "filter": value("filter"),
+    start = {"x": position("x"), "y": position("y"),
+             **{key: value(key) for key in ("intensity", "filter", "laser", "zoom", "shutterconfig")},
              "acquisitions": read("get_acquisition_list", {}).get("acquisitions") or []}
-    first_row = start["acquisitions"][0] if start["acquisitions"] else None
-    x_target = 5000.0 if abs((start["x"] or 0) - 5000.0) > 1 else 6000.0
-    snap_count = {"before": None}
-
-    def newest_snap():
-        folder = value("snap_folder")
-        files = [f for f in os.listdir(folder) if f.endswith(".tif")] if folder and os.path.isdir(folder) else []
-        return len(files)
-
-    steps = [
-        (f"Move the stage to X = {x_target:.0f} um.",
-         [("move_absolute", {"targets": {"x": x_target}})],
-         "X", lambda: _wait_until(lambda: position("x"), x_target), x_target),
-        ("Set the laser intensity to 20 %.",
-         [("set_intensity", {"intensity": 20})],
-         "intensity", lambda: _wait_until(lambda: value("intensity"), 20), 20),
-        ("Switch the filter to 515LP.",
-         [("set_filter", {"filter": "515LP"})],
-         "filter", lambda: _wait_until(lambda: value("filter"), "515LP"), "515LP"),
-        ("Take a snap.",
-         [("snap", {})],
-         "a new file in the snap folder", lambda: newest_snap() > snap_count["before"], True),
-        ("Start live mode.",
-         [("start_live", {})],
-         "the state", lambda: _wait_until(lambda: value("state"), "live"), "live"),
-        ("Stop the live mode.",
-         [("stop_activity", {})],
-         "the state", lambda: _wait_until(lambda: value("state"), "idle"), "idle"),
-    ]
-    if first_row is not None:
-        steps.append(("Rename the first acquisition to walkthrough.tif.",
-                      [("update_acquisition_row", {"row": 0, "changes": {"filename": "walkthrough.tif"}})],
-                      "row 0 renamed, zoom and z range kept",
-                      lambda: _wait_until(lambda: (lambda row: (row.get("filename"), row.get("zoom"), row.get("z_end")))(
-                          (read("get_acquisition_list", {}).get("acquisitions") or [{}])[0]),
-                          ("walkthrough.tif", first_row.get("zoom"), first_row.get("z_end"))),
-                      ("walkthrough.tif", first_row.get("zoom"), first_row.get("z_end"))))
-
     endpoint = ai.Endpoint.from_preset(arguments.provider) if arguments.provider else None
     gate = ai.ConfirmationGate(on_ask=lambda name, args: (print(f"      Run / Cancel asked for {name}: Run"),
                                                            gate.answer(True)))
     mode = f"model {endpoint.model}" if endpoint else "scripted tool calls"
     print(f"AI Assistant -> mesoSPIM DemoStage at {arguments.host}:{arguments.port}, {mode}\n")
 
-    passed = 0
+    failures, total = [], 0
     try:
-        for prompt, calls, what, check, expected in steps:
-            if what.startswith("a new file"):
-                snap_count["before"] = newest_snap()
-            print(f"> {prompt}")
-            agent = ai.build_agent(acceptor, threading.Event(), gate=gate, profile="Regular",
-                                   on_call=lambda name, args: print(f"    tool: {name}({args})"),
-                                   model=None if endpoint else _scripted(calls), endpoint=endpoint)
-            reply = agent.run_sync(ai.with_state(acceptor, prompt)).output
-            print(f"    reply: {ai.without_state_block(reply).strip()}")
-            got = check()
-            ok = got == expected
-            passed += ok
-            print(f"    {'PASS' if ok else 'FAIL'}: {what} is {got!r}{'' if ok else f', expected {expected!r}'}\n")
-            time.sleep(arguments.pause)
-    finally:
-        print("Putting the instrument back ...")
+        for walk in range(1, arguments.repeat + 1):
+            steps, mark = _steps(read, value, position, arguments.probe, time.strftime("%H%M%S"))
+            for step in steps:
+                if step.model_only and endpoint is None:
+                    continue
+                mark()
+                print(f"[walk {walk}] > {step.prompt}")
+                agent = ai.build_agent(acceptor, threading.Event(), gate=gate, profile="Regular",
+                                       on_call=lambda name, args: print(f"    tool: {name}({args})"),
+                                       model=None if endpoint else _scripted(step.calls), endpoint=endpoint)
+                reply = ai.without_state_block(agent.run_sync(ai.with_state(acceptor, step.prompt)).output).strip()
+                print(f"    reply: {reply}")
+                ok, seen = step.check(reply if endpoint else None)
+                total += 1
+                print(f"    {'PASS' if ok else 'FAIL'}: {seen}\n")
+                if not ok:
+                    failures.append((walk, step.prompt, seen, reply))
+                time.sleep(arguments.pause)
+            print(f"Putting the instrument back after walk {walk} ...")
+            _restore(acceptor, start)
+            print()
+    except BaseException:
+        print("Stopped early: putting the instrument back ...")
         _restore(acceptor, start)
+        raise
+    finally:
         acceptor.close()
-    print(f"{passed} of {len(steps)} steps passed")
-    raise SystemExit(0 if passed == len(steps) else 1)
+    print(f"{total - len(failures)} of {total} steps passed")
+    for walk, prompt, seen, reply in failures:
+        print(f"  FAIL walk {walk}: {prompt}\n       saw {seen}\n       reply: {reply}")
+    raise SystemExit(0 if not failures else 1)
 
 
 if __name__ == "__main__":
