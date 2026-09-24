@@ -134,6 +134,11 @@ STOP_COMMANDS = ("stop", "stop_activity", "time_lapse_stop")
 # operator's Run: twice covers "set it to 30, snap, put it back"; a third is an escalation.
 LIGHT_CHANGES_PER_TURN = {"set_intensity": 2, "set_camera": 2}
 LIMIT_REFUSAL = "outside the allowed range"
+# Said with every failure that has no advice of its own: the operator asked for a way forward, not
+# only the error. It rides on the failure because the manual has no room left for a local model.
+FAILURE_ADVICE = ("Unless configured_options holds the value that was meant, tell the operator the cause and "
+                  "propose one fix as a question; do not carry it out until they answer. 'Try again' means "
+                  "the same command again.")
 BUSY_FROM_GUI = "from the GUI"
 
 POLL_INTERVAL_S = 0.15

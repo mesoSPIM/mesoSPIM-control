@@ -947,3 +947,29 @@ def test_the_agent_samples_deterministically_and_retries_a_malformed_call():
     agent.run_sync("hi")
     assert seen[0]["temperature"] == 0.0 and ai.config.MODEL_TEMPERATURE == 0.0
     assert agent._max_tool_retries == ai.config.TOOL_CALL_RETRIES == 2
+
+
+# --- a way forward after a failure, said where the model reads it next ---
+
+def test_a_failed_command_tells_the_model_to_propose_one_fix_and_not_to_act_on_it():
+    """The operator asked that a failure end with the cause and a proposed fix, not only the
+    error. The manual has no room left for a local model's context, so the advice rides on the
+    failure itself, as the busy and limit advice already do."""
+    outcome = ai.with_advice("snap", {"error": {"code": "validation", "message": "the snap folder 'D:/tmp/' does not exist"}})
+    advice = outcome["error"]["advice"]
+    assert "propose one fix" in advice and "until they answer" in advice
+    assert "try again" in advice.lower() and "same command" in advice
+
+
+def test_a_failed_wait_and_a_failed_look_carry_the_advice_too():
+    failed_wait = ai.with_advice("run_acquisition_list", {"status": "failed", "operation": "op-000009", "result": {}})
+    assert "propose one fix" in failed_wait["advice"]
+    failed_look = ai.with_advice("look", {"error": {"code": "execution", "message": "snap did not complete: {...}"}})
+    assert "propose one fix" in failed_look["error"]["advice"]
+
+
+def test_a_success_carries_no_advice_and_the_specific_advice_is_kept():
+    done = {"status": "completed", "operation": "op-000001", "result": {"path": "D:/x.tif"}}
+    assert ai.with_advice("snap", dict(done)) == done
+    busy = ai.with_advice("set_intensity", {"error": {"code": "busy", "message": f"busy: {ai.config.BUSY_FROM_GUI} run"}})
+    assert busy["error"]["advice"].startswith("The operator is running this at the microscope")

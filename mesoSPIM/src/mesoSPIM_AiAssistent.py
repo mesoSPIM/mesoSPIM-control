@@ -227,6 +227,19 @@ def _advice(name, code, message):
     return None
 
 
+def with_advice(name, outcome):
+    """A failure's way forward, attached where the model reads it next: the specific advice of
+    _advice, else FAILURE_ADVICE. A refusal and a failed look carry it in their error; a WAIT that
+    ran and failed, beside its status. A success is returned as it is."""
+    error = outcome.get("error") if isinstance(outcome, dict) else None
+    if isinstance(error, dict):
+        if "advice" not in error:
+            error["advice"] = _advice(name, error.get("code"), str(error.get("message", ""))) or config.FAILURE_ADVICE
+    elif isinstance(outcome, dict) and outcome.get("status") == FAILED:
+        outcome.setdefault("advice", config.FAILURE_ADVICE)
+    return outcome
+
+
 def _compact_row(row):
     return {key: row[key] for key in config.ROW_SUMMARY_KEYS if key in row}
 
@@ -292,13 +305,11 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
         except Exception as error:
             code, message = error_info(error)
             outcome = {"error": {"code": code, "message": message}}
-            advice = _advice(name, code, message)
-            if advice:
-                outcome["error"]["advice"] = advice
             if code == "validation":
                 options = _configured_options(acceptor)
                 if options is not None:
                     outcome["error"]["configured_options"] = options
+        outcome = with_advice(name, outcome)
         guard.after(name, args, outcome)
         return json.dumps(outcome)
     return _call
@@ -589,9 +600,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
             except Exception as error:  # busy, shutting down: data for the model, like every tool
                 code, message = error_info(error)
                 outcome = {"error": {"code": code, "message": message}}
-                advice = _advice("look", code, message)
-                if advice:
-                    outcome["error"]["advice"] = advice
+            outcome = with_advice("look", outcome)
             guard.after("look", {}, outcome)
             return json.dumps(outcome)
 

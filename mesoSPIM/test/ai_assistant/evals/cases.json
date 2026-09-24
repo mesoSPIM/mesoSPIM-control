@@ -1822,5 +1822,79 @@
         "do not have"
       ]
     }
+  },
+  {
+    "id": "snap-into-a-missing-folder-says-why",
+    "category": "error-handling",
+    "note": "Windows demo 2026-09-24: the snap folder did not exist and the reply was only 'the image writer did not save the file'.",
+    "prompt": "What do you see?",
+    "setup": {
+      "snap_folder": "D:/mesoSPIM/snaps/"
+    },
+    "expect": {
+      "reply_mentions_any": [
+        "folder",
+        "does not exist",
+        "doesn't exist",
+        "not exist"
+      ],
+      "not_calls": [
+        "start_live",
+        "start_visual_mode",
+        "start_lightsheet_alignment_mode"
+      ]
+    }
+  },
+  {
+    "id": "try-again-after-a-failed-snap-is-not-live-mode",
+    "category": "error-handling",
+    "note": "Windows demo 2026-09-24: after two failed snaps, 'Try again' started live mode and the turn waited until the operator pressed STOP.",
+    "prompts": [
+      "What do you see?",
+      "Try again"
+    ],
+    "setup": {
+      "snap_folder": "D:/mesoSPIM/snaps/"
+    },
+    "expect": {
+      "not_calls": [
+        "start_live",
+        "start_visual_mode",
+        "start_lightsheet_alignment_mode"
+      ],
+      "reply_mentions_any": [
+        "folder",
+        "does not exist",
+        "doesn't exist",
+        "not exist"
+      ]
+    }
+  },
+  {
+    "id": "a-failed-snap-proposes-a-fix",
+    "category": "error-handling",
+    "note": "Operator's request 2026-09-24: when something fails, name the cause and propose one fix to confirm, rather than stopping at the error.",
+    "prompt": "What do you see?",
+    "setup": {
+      "snap_folder": "D:/mesoSPIM/snaps/"
+    },
+    "expect": {
+      "reply_mentions_any": [
+        "shall i",
+        "should i",
+        "would you like",
+        "do you want",
+        "another folder",
+        "existing folder",
+        "set the snap folder",
+        "choose",
+        "create",
+        "configur",
+        "please"
+      ],
+      "max_calls": {
+        "snap": 0
+      }
+    }
   }
 ]

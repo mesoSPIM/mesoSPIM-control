@@ -189,12 +189,35 @@ def synthetic_frame(name):
     return frame.astype(np.uint16)
 
 
+class _LoggingSnapWriter:
+    """Production's write_snap_image catches every error and only logs it, so a snap into a
+    missing folder writes nothing and says nothing; the offline fake raises instead, which would
+    hand the model a reason the microscope does not give it."""
+
+    def __init__(self, writer):
+        self._writer = writer
+
+    def write_snap_image(self, image, prefix=""):
+        try:
+            self._writer.write_snap_image(image, prefix=prefix)
+        except OSError:
+            pass
+
+    def __getattr__(self, name):
+        return getattr(self._writer, name)
+
+
 class SimulatedInstrument(RecordingCore):
     """The fake Core of the offline tests, with settings that show in its state as on the
     instrument, a time lapse that is over as soon as it starts, so the instrument is free again
-    for the next prompt, and a choice of synthetic frames for the vision cases."""
+    for the next prompt, a choice of synthetic frames for the vision cases, and production's
+    snap writer, which fails silently."""
 
     frame_name = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.image_writer = _LoggingSnapWriter(self.image_writer)
 
     def snap(self, write_flag=True):
         super().snap(write_flag)
