@@ -5,10 +5,11 @@ start or stop the selected transport. It displays the result reported by Core an
 server as running before binding succeeds. Only one transport can run in a session, and neither is
 started automatically when mesoSPIM opens.
 
-The class also supplies the small, thread-safe bridge needed to keep a remotely installed
-acquisition list synchronized with the visible mesoSPIM table. Network protocols, validation, and
-hardware calls deliberately live in the other Remote Control modules. MainWindow only constructs
-this widget and calls ``shutdown`` during application exit.
+The class also supplies the small, thread-safe bridges needed to keep a remotely installed
+acquisition list synchronized with the visible mesoSPIM table, and to give a remotely started run
+the main window's STOP. Network protocols, validation, and hardware calls deliberately live in the
+other Remote Control modules. MainWindow only constructs this widget and calls ``shutdown`` during
+application exit.
 
 Maintainer (2026):
     Thom de Hoog
@@ -37,6 +38,8 @@ class RemoteControlGUI(QtWidgets.QWidget):
     sig_start_remote_control = QtCore.pyqtSignal(str, str, int, str)
     sig_stop_remote_control = QtCore.pyqtSignal()
     sig_install_acquisition_list = QtCore.pyqtSignal(object, object)
+    # True when a remote run starts, False when its start raised.
+    sig_remote_run = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent):
         super().__init__(parent.TabWidget)
@@ -66,6 +69,8 @@ class RemoteControlGUI(QtWidgets.QWidget):
         # Commands run on Core's thread. Publishing this bound signal avoids adding acquisition-table
         # plumbing to Core/MainWindow while still performing the Qt model reset on the GUI thread.
         self.core._remote_control_acquisition_list_signal = self.sig_install_acquisition_list
+        self.sig_remote_run.connect(self.on_remote_run, type=queued)
+        self.core._remote_control_run_signal = self.sig_remote_run
         self.core.sig_remote_control_started.connect(self.on_started)
         index = parent.TabWidget.indexOf(parent.TimelapseTabWidget)
         if index >= 0:
@@ -177,6 +182,22 @@ class RemoteControlGUI(QtWidgets.QWidget):
         manager.update_acquisition_size_prediction()
         if row is not None and 0 <= row < len(acquisitions):
             manager.set_selected_row(row)
+
+    @QtCore.pyqtSlot(bool)
+    def on_remote_run(self, running):
+        """Give a remotely started run what MainWindow's own Run handlers give a GUI run: STOP
+        enabled, the run buttons and the Controls locked, the progress bars busy. Upstream's
+        finished() undoes it on sig_finished; a start that raised sends no sig_finished, so it is
+        undone here. The tabs stay enabled: the Remote Control and AI Assistant tabs are among
+        them, and their Stop and Cancel must work during the run they started."""
+        window = self.main_window
+        if not running:
+            window.finished()
+            return
+        window.enable_stop_button(True)
+        window.enable_mode_control_buttons(False)
+        window.ControlGroupBox.setEnabled(False)
+        window.set_progressbars_to_busy()
 
     def on_started(self, ok, message):
         """Core's queued report of a start attempt. On failure the transport did NOT bind, so the

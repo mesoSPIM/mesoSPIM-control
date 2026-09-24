@@ -169,17 +169,27 @@ def defer_wait(core, milestone, action, verify_idle=False):
     `verify_idle` (preview) there is no signal: this runner completes the op once the action
     returns to idle. On a signal-less core (offline fakes) the op stays processing — the runtime
     never fabricates a completion; tests drive it. Qt is imported lazily.
+
+    The main window enables its STOP only in its own Run handlers, so a run that ends with
+    sig_finished first tells the window, through the Remote Control tab's queued bridge, to take
+    the state a GUI run gives it; upstream's finished() gives it back. A start that raises is
+    followed by no sig_finished, so it gives the window back here.
     """
     from PyQt5 import QtCore
 
     operation_id = schedule_current(core)
+    window = getattr(core, "_remote_control_run_signal", None) if milestone == config.MILESTONE_FINISHED else None
 
     def body():
         if not claim_scheduled(core, operation_id):
             return
+        if window is not None:
+            window.emit(True)
         try:
             action()
         except Exception as error:
+            if window is not None:
+                window.emit(False)
             fail(core, milestone, error)
             return
         if verify_idle:

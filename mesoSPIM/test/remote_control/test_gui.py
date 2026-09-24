@@ -241,3 +241,64 @@ def test_core_to_gui_bridge_is_queued_never_blocking_across_threads():
     # must never happen is Core also waiting on the GUI, which is the bridge above.
     stop_type = {slot: kwargs for slot, kwargs in tab.sig_stop_remote_control.connections}
     assert stop_type[window.core.stop_remote_control]["type"] == Qt.BlockingQueuedConnection
+
+
+class _FakeButton:
+    def __init__(self, enabled):
+        self.enabled = enabled
+
+    def setEnabled(self, enabled):
+        self.enabled = enabled
+
+
+class _FakeMainWindow(_FakeParent):
+    """The four MainWindow methods a GUI Run button calls, recorded, plus its Controls box."""
+
+    def __init__(self, core):
+        super().__init__(core)
+        self.ControlGroupBox = _FakeButton(True)
+        self.stop_enabled = False
+        self.mode_buttons_enabled = True
+        self.progress = "standard"
+        self.finished_calls = 0
+
+    def enable_stop_button(self, enabled):
+        self.stop_enabled = enabled
+
+    def enable_mode_control_buttons(self, enabled):
+        self.mode_buttons_enabled = enabled
+
+    def set_progressbars_to_busy(self):
+        self.progress = "busy"
+
+    def finished(self):
+        self.finished_calls += 1
+        self.stop_enabled, self.mode_buttons_enabled = False, True
+        self.ControlGroupBox.setEnabled(True)
+        self.progress = "standard"
+
+
+def test_a_remote_run_enables_stop_and_locks_the_run_buttons_like_a_gui_run():
+    window = _FakeMainWindow(_FakeCore())
+    tab = RemoteControlGUI(window)
+    assert tab.core._remote_control_run_signal is tab.sig_remote_run
+
+    tab.core._remote_control_run_signal.emit(True)
+    assert window.stop_enabled is True
+    assert window.mode_buttons_enabled is False
+    assert window.ControlGroupBox.enabled is False
+    assert window.progress == "busy"
+    assert window.finished_calls == 0
+
+    tab.core._remote_control_run_signal.emit(False)          # the start raised: no sig_finished
+    assert window.finished_calls == 1
+    assert (window.stop_enabled, window.mode_buttons_enabled, window.ControlGroupBox.enabled) == (False, True, True)
+
+
+def test_the_run_bridge_is_queued_never_blocking_across_threads():
+    from PyQt5.QtCore import Qt
+
+    window = _FakeMainWindow(_ThreadedFakeCore())
+    tab = RemoteControlGUI(window)
+    by_slot = {slot: kwargs for slot, kwargs in tab.sig_remote_run.connections}
+    assert by_slot[tab.on_remote_run]["type"] == Qt.QueuedConnection

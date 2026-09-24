@@ -12,7 +12,7 @@ from mesoSPIM.src import mesoSPIM_RemoteControl_Commands as commands
 from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
 from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
 from mesoSPIM.src import mesoSPIM_RemoteControl_Servers as servers
-from mesoSPIM.test.remote_control.support.contracts import VALID_CASES
+from mesoSPIM.test.remote_control.support.contracts import EXPECTED_CORE_CALL, VALID_CASES
 from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 
 
@@ -369,3 +369,60 @@ def test_warning_history_is_bounded():
     history = dispatcher.recent_warnings(core)
     assert len(history) == dispatcher.MAX_WARNINGS
     assert history[-1]["message"] == f"w{dispatcher.MAX_WARNINGS + 4}"
+
+
+REMOTE_RUNS = ("start_live", "start_visual_mode", "start_lightsheet_alignment_mode",
+               "run_acquisition_list", "run_selected_acquisition", "acquire_start")
+
+
+class _WindowBridge:
+    """Stands in for the Remote Control tab's run signal and notes how far Core had got."""
+
+    def __init__(self, core):
+        self.core = core
+        self.emitted = []
+
+    def emit(self, running):
+        self.emitted.append((running, len(self.core.calls())))
+
+
+@pytest.mark.parametrize("name", REMOTE_RUNS)
+def test_a_remote_run_puts_the_window_into_run_state_before_core_starts(name):
+    """The main window's STOP is enabled only by its own Run handlers, so a run started remotely
+    must tell the window, before Core starts, or the operator has no STOP for it."""
+    core = RecordingCore()
+    bridge = core._remote_control_run_signal = _WindowBridge(core)
+    dispatcher.run(core, name, VALID_CASES[name])
+    started = [i for i, call in enumerate(core.calls()) if call[0] == EXPECTED_CORE_CALL[name]]
+    assert bridge.emitted and bridge.emitted[0][0] is True
+    assert bridge.emitted == [(True, bridge.emitted[0][1])]
+    assert started and bridge.emitted[0][1] <= started[-1]
+
+
+class _CoreThatCannotStartLive(RecordingCore):
+    def set_state(self, *args, **kwargs):
+        raise RuntimeError("camera not ready")
+
+
+def test_a_remote_run_that_cannot_start_gives_the_window_back():
+    """No sig_finished follows a start that raised, so the window must be released here."""
+    core = _CoreThatCannotStartLive()
+    bridge = core._remote_control_run_signal = _WindowBridge(core)
+    dispatcher.run(core, "start_live", {})
+    assert [running for running, _ in bridge.emitted] == [True, False]
+    assert dispatcher.operation_snapshot(core)["status"] == "failed"
+
+
+def test_a_preview_leaves_the_window_alone():
+    """Preview ends without sig_finished, so upstream's finished() would never release a window
+    put into run state for it: only runs that end with sig_finished may lock the window."""
+    core = RecordingCore()
+    bridge = core._remote_control_run_signal = _WindowBridge(core)
+    dispatcher.run(core, "preview_acquisition", VALID_CASES["preview_acquisition"])
+    assert bridge.emitted == []
+
+
+def test_a_core_without_the_tab_runs_without_a_window_bridge():
+    core = RecordingCore()
+    dispatcher.run(core, "start_live", {})
+    assert [call[0] for call in core.calls()].count("set_state") == 1
