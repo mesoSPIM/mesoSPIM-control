@@ -31,11 +31,11 @@ roadmap
 ## Setting it up
 
 The tab opens as a chat. **Send** sits right of the input box; under them the other buttons sit on
-one line: **Cancel**, **Clear all**, **Connect**, **Disconnect** and **Stop microscope**. The line below them, **Configure
-AI assistant**, expands to three boxes, **Preferences**, **Language model** and **Vision model**,
-which Connect applies, and opens by itself when something needs the operator: nothing configured yet, a missing key, or
-a local model that failed to start. Once the assistant is ready it folds back. **Disconnect** hands
-the microscope session back, so the Remote Control tab can start a transport without restarting
+one line: **Configure AI assistant**, **Connect AI assistant**, **Cancel prompt**, **Clear
+context** and **Stop microscope**. **Configure AI assistant** opens three boxes below the row,
+**Preferences**, **Language model** and **Vision model**, which Connect applies, and opens by itself when something needs the operator: nothing configured yet, a missing key, or
+a local model that failed to start. Once the assistant is ready it folds back, and the button reads
+**Disconnect AI assistant**: pressed, it hands the microscope session back, so the Remote Control tab can start a transport without restarting
 mesoSPIM. The chat shows each answer; **Show tool calls**, under Preferences, adds the commands each
 answer ran. Images stay out of the chat: a frame goes to the vision model and the trace. Each model box
 starts with a **Type** dropdown; the fields after it follow the choice.
@@ -58,7 +58,7 @@ looser on ambiguous requests until the manual spelled the rule out).
 it in, choose it, Connect. Nothing leaves the machine and no key is needed. Behind Connect,
 mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server (`pip install
 llama-cpp-python`, or the `ai-assistant-local` extra) as a child process on a loopback port; the
-Connect button reads "Starting…" while the model loads, then turns green with "Connected". The
+Connect button reads "Starting…" while the model loads, then "Disconnect AI assistant". The
 server is started with a 32K-token context window (llama.cpp's own default of 2,048 would not
 hold one request), prompt batches of 2,048 tokens and flash attention where the build has it;
 the config attribute `ai_assistant_context_tokens` sets another context size. Every model, cloud
@@ -97,20 +97,21 @@ block and have long tool results shortened, so twenty turns of memory cost a fra
 twenty full readouts would. Nothing is lost by it: every turn stays in a session store, and the
 assistant has two tools on it, one that returns an earlier turn in full or the turns in which a
 readout value changed, and one that finds earlier turns by words, for "what was the focus before
-I moved it" or "which batch did I say this is". Clear all empties the store. **Downsample image to** is the size of the frame handed to the
+I moved it" or "which batch did I say this is". Clear context empties the store. **Downsample image to** is the size of the frame handed to the
 vision model (longer side, 1024 px by default): smaller is cheaper and faster, and enough for "is
 it centred" or "is it saturated"; the numbers always come from the full frame.
 
 **Connect** applies the three boxes; a first message sent without pressing it applies them as
 typed. Building a cloud endpoint does not contact the provider, so a wrong key shows up as an
-error on the first message. The models can be changed between turns and the transcript is kept.
+error on the first message. To change the models, disconnect and connect again; the transcript is
+kept.
 The presets live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 
 Open the **AI Assistant** tab and type. Enter or **Send** submits; Shift+Enter starts a new line,
 as in an editor. Commands the agent runs stream live above each answer, so
-the operator sees exactly which named calls were issued. **Cancel** stops the assistant: no
+the operator sees exactly which named calls were issued. **Cancel prompt** stops the assistant: no
 further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the
 model's next reply; what the assistant already started keeps running. **Stop microscope** is
 the main window's Stop: the same queued signals to Core (state idle aborts the running mode, the

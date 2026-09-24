@@ -8,8 +8,8 @@ during a turn (single-flight); Cancel stops the assistant, Stop microscope stops
 instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
-Send sits right of the input box; under them every other button sits on one line, Connect and
-Disconnect among them. The setup
+Send sits right of the input box; under them every other button sits on one line, among them
+one session button that reads Connect, and Disconnect once connected. The setup
 is a collapsible footer below: one line ("Configure AI assistant") that expands to three boxes,
 Preferences, Language model and Vision model, which Connect applies. It
 opens itself when something needs the operator (nothing configured, a missing key, a server that
@@ -25,6 +25,7 @@ Maintainer (2026):
 
 import dataclasses
 import html as _htmllib
+import re
 import os
 import time
 
@@ -55,7 +56,13 @@ def _md_to_html(markdown):
     body, close = lower.find("<body"), lower.rfind("</body>")
     if body == -1 or close == -1:
         return _htmllib.escape(markdown)
-    return html[html.find(">", body) + 1:close].strip()
+    return _chat_sized(html[html.find(">", body) + 1:close].strip())
+
+
+def _chat_sized(html):
+    """Qt's Markdown sets inline code, which is how a model writes a file path, in a fixed point
+    size smaller than the chat; drop the size and keep the fixed-width face."""
+    return re.sub(r"\s*font-size:\s*[\d.]+pt;", "", html)
 
 
 class _Input(QtWidgets.QPlainTextEdit):
@@ -256,6 +263,18 @@ class AiAssistentGUI(QtWidgets.QWidget):
             parent.TabWidget.insertTab(index + 1, self, "AI Assistant")
         else:
             parent.TabWidget.addTab(self, "AI Assistant")
+        self._fit_session_button()
+
+    def _fit_session_button(self):
+        """As wide as its longest label, so the row never shifts when Connect becomes Disconnect.
+        Measured once the tab is in the main window, where the style sheet reaches it."""
+        button, label = self.connect_button, self.connect_button.text()
+        widest = 0
+        for text in ("Connect AI assistant", "Disconnect AI assistant"):
+            button.setText(text)
+            widest = max(widest, button.sizeHint().width())
+        button.setText(label)
+        button.setMinimumWidth(widest)
 
     def _call_on_core(self, method):
         """Invoke a Core slot on the Core thread (affinity matters — the Acceptor must be
@@ -354,25 +373,21 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.send_button = QtWidgets.QPushButton("Send", self)
         self.send_button.setFont(font)
         self.send_button.clicked.connect(self.on_submit)       # the same as Enter, for the mouse
-        self.interrupt = QtWidgets.QPushButton("Cancel", self)
+        self.interrupt = QtWidgets.QPushButton("Cancel prompt", self)
         self.interrupt.setFont(font)
         self.interrupt.clicked.connect(self.on_interrupt)   # always clickable; a no-op between turns
         self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
         self.stop_button.setObjectName("AiAssistentStopButton")
         self.stop_button.setFont(font)
         self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: the emergency stop
-        self.clear_button = QtWidgets.QPushButton("Clear all", self)
+        self.clear_button = QtWidgets.QPushButton("Clear context", self)
         self.clear_button.setFont(font)
         self.clear_button.clicked.connect(self.on_clear_all)
-        self.connect_button = QtWidgets.QPushButton("Connect", self)
+        self.connect_button = QtWidgets.QPushButton("Connect AI assistant", self)
         self.connect_button.setFont(font)
-        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
         self.connect_button.clicked.connect(self.on_connect)
-        self.disconnect_button = QtWidgets.QPushButton("Disconnect", self)
-        self.disconnect_button.setFont(font)
-        self.disconnect_button.clicked.connect(self.on_disconnect)
-        # The two-line input with Send to its right, as tall as it; under them every other button
-        # on one line, side by side.
+        # The two-line input with Send to its right, as tall as it; under them Configure AI assistant
+        # and every other button on one line, side by side; the setup it opens folds out below.
         two_rows = 2 * self.interrupt.sizeHint().height() + 6
         self.input.setFixedHeight(two_rows)
         self.send_button.setFixedHeight(two_rows)
@@ -380,15 +395,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         entry.addWidget(self.input, 1)
         entry.addWidget(self.send_button)
         layout.addLayout(entry)
-        buttons = QtWidgets.QHBoxLayout()
-        buttons.setSpacing(6)
-        for button in (self.interrupt, self.clear_button, self.connect_button, self.disconnect_button,
-                       self.stop_button):
-            buttons.addWidget(button)
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
-        layout.addSpacing(24)
-
         self.setup_toggle = QtWidgets.QToolButton(self)
         self.setup_toggle.setObjectName("AiAssistentSetupToggle")
         self.setup_toggle.setFont(font)
@@ -397,7 +403,13 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setup_toggle.setAutoRaise(True)
         self.setup_toggle.setText("Configure AI assistant")
         self.setup_toggle.toggled.connect(self._set_expanded)
-        layout.addWidget(self.setup_toggle)
+        buttons = QtWidgets.QHBoxLayout()
+        buttons.setSpacing(6)
+        buttons.addWidget(self.setup_toggle)
+        for button in (self.connect_button, self.interrupt, self.clear_button, self.stop_button):
+            buttons.addWidget(button)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
         self.setup_group = self._build_setup(font)
         layout.addWidget(self.setup_group)
         self._set_connect_state("idle")
@@ -487,22 +499,18 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- the footer ---
     def _set_connect_state(self, state, detail=""):
-        """The Connect button shows the state: Connect, Starting…, or a green Connected. `detail`
-        goes in its tooltip (the local server's address, for instance)."""
-        text = {"idle": "Connect", "starting": "Starting…", "ready": "Connected"}[state]
+        """The one session button shows what pressing it does: Connect, Starting… while a local
+        model loads, and Disconnect once connected. `detail` goes in its tooltip (which model
+        answers, a local server's address)."""
+        text = {"idle": "Connect AI assistant", "starting": "Starting…", "ready": "Disconnect AI assistant"}[state]
         self._state = state
         self.connect_button.setText(text)
         self.connect_button.setToolTip(detail)
-        self.connect_button.setStyleSheet("color: #4cd964; font-weight: bold;" if state == "ready" else "")
         self._refresh_session_buttons()
 
     def _refresh_session_buttons(self):
-        """Connect and Disconnect, one enabled at a time, as the Remote Control tab's Start and Stop:
-        Disconnect while the tab holds the session or loads a local model, Connect otherwise. Both
-        wait while a turn runs; the models change only between turns."""
-        holding = self._worker is not None or bool(self._servers)
-        self.connect_button.setEnabled(not self._running and self._state != "ready")
-        self.disconnect_button.setEnabled(not self._running and holding)
+        """The session button waits while a turn runs; the models change only between turns."""
+        self.connect_button.setEnabled(not self._running)
 
     def _set_expanded(self, expanded):
         self.setup_group.setVisible(bool(expanded))
@@ -520,11 +528,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- connecting ---
     def on_connect(self):
-        self._connect()
+        """The one session button: Disconnect once connected, Connect otherwise."""
+        if self._state == "ready":
+            self.on_disconnect()
+        else:
+            self._connect()
 
     def on_disconnect(self):
         """Hand the session back so the Remote Control tab can start a transport, without
-        restarting mesoSPIM. The transcript stays; Clear all is its own button. A run the assistant
+        restarting mesoSPIM. The transcript stays; Clear context is its own button. A run the assistant
         started carries on, and the main window's STOP ends it."""
         if self._running:
             return
@@ -698,9 +710,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
             parts.append(f'<div style="color:#e08a8a;"><b>&#9888; error</b> — '
                          f'{_htmllib.escape(active["error"])}</div>')
         elif active["reply"] is not None:
-            if not active["tools"]:
+            if not active["tools"] and self.show_tool_calls.isChecked():
                 # A small model will write "I have closed the shutters" having called nothing. The
-                # tab cannot judge the sentence, but it knows what it sent: say so, every time.
+                # tab cannot judge the sentence, but it knows what it sent: said with the tool calls.
                 parts.append(f'<div style="color:{_DIM};">&#8250; {_htmllib.escape(NO_COMMANDS_SENT)}</div>')
             parts.append(_md_to_html(active["reply"]))
         # Qt drops a bottom margin before the next question's table: an empty line keeps the air.

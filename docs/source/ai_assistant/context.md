@@ -39,7 +39,7 @@ what leaves room for the conversation.
   nothing: `recall_turn` returns an earlier turn in full or the turns in which a readout key
   changed, an exact lookup since readouts are structured; `search_history` finds earlier turns by
   words in messages, replies and results, which needs no model and works offline. Two evaluation
-  cases run with a two-turn memory, so only the store can answer them. Clear all empties the store.
+  cases run with a two-turn memory, so only the store can answer them. Clear context empties the store.
 - **Large results shortened at the source.** The acquisition list keeps every row with the
   operator-facing keys only (up to 60 rows); any other result over 3,000 characters keeps the
   top-level keys that fit and names the ones left out, so the model can ask for them.

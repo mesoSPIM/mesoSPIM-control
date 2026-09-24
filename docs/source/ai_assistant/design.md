@@ -100,7 +100,7 @@ Tab label: `"AI Assistant"` · Class: `AiAssistentGUI`.
 
 5. **GUI (`AiAssistentGUI`)** — a `QTextEdit` transcript (agent text, tool calls, frames),
    a two-line input (Enter or Send submits, Shift+Enter a new line; disabled during a turn),
-   Cancel, Clear all and Stop microscope, and the collapsible setup footer.
+   Cancel prompt, Clear context and Stop microscope, and the collapsible setup footer.
 
 ## Acceptor ownership
 The assistant needs a live `Acceptor` — the Core-thread bridge **and** the WAIT

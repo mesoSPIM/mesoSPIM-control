@@ -16,7 +16,7 @@ reuses its `Acceptor`, dispatcher, and completion signals.
   threads.
 - `mesoSPIM_AiAssistent_Local.py` — the models-folder scan and the llama.cpp server child that
   serves a local `.gguf` file on loopback.
-- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Cancel, Clear all, Stop microscope, and
+- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Cancel prompt, Clear context, Stop microscope, and
   the collapsible setup footer.
 - `assistant_manual.md` — the rules (units, frames, safety, what the evaluation taught); the
   system prompt adds the offered commands by kind, and each tool's description and schema, derived

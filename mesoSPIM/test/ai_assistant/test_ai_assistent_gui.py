@@ -130,7 +130,7 @@ def test_setup_row_prefills_the_default_provider():
     assert gui.language.provider.currentText() == "Gemini"
     assert gui.language.model.text() == "gemini-3.5-flash-lite"
     assert gui.language.key.isVisible() and not gui.language.base_url.isVisible()
-    assert gui.connect_button.text() == "Connect"
+    assert gui.connect_button.text() == "Connect AI assistant"
 
 
 def test_an_openai_style_server_adds_a_base_url_and_keeps_an_optional_key():
@@ -171,29 +171,28 @@ def test_connect_with_a_key_configures_the_worker(monkeypatch):
     gui.on_connect()
     (endpoint,) = configured
     assert (endpoint.provider, endpoint.kind, endpoint.api_key) == ("Anthropic", "anthropic", "sk-test")
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_openai_style_connects_without_a_key_and_passes_one_through(monkeypatch):
-    gui = _gui()
-    configured = []
+    for key in ("", "gw-token"):                            # an Ollama-like server; a gateway
+        gui = _gui()
+        configured = []
 
-    class _Worker:
-        def configure(self, endpoint, vision=None, profile=None):
-            configured.append(endpoint)
+        class _Worker:
+            def configure(self, endpoint, vision=None, profile=None):
+                configured.append(endpoint)
 
-    gui._worker = _Worker()
-    monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
-    gui.language.provider.setCurrentText("OpenAI-style")
-    gui.language.provider.currentTextChanged.emit("OpenAI-style")
-    gui.language.base_url.setText("http://box:8000/v1")
-    gui.on_connect()                                       # an Ollama-like server: no key
-    gui.language.key.setText("gw-token")
-    gui.on_connect()                                       # a gateway: the token goes through
-    without, with_key = configured
-    assert (without.kind, without.base_url, without.api_key) == ("openai-compatible", "http://box:8000/v1", "")
-    assert with_key.api_key == "gw-token"
-    assert gui.connect_button.text() == "Connected"
+        gui._worker = _Worker()
+        monkeypatch.setattr(gui, "_ensure_worker", lambda: True)
+        gui.language.provider.setCurrentText("OpenAI-style")
+        gui.language.provider.currentTextChanged.emit("OpenAI-style")
+        gui.language.base_url.setText("http://box:8000/v1")
+        gui.language.key.setText(key)
+        gui.on_connect()
+        (endpoint,) = configured
+        assert (endpoint.kind, endpoint.base_url, endpoint.api_key) == ("openai-compatible", "http://box:8000/v1", key)
+        assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_first_message_connects_with_the_typed_key(monkeypatch):
@@ -316,7 +315,7 @@ def test_local_connect_starts_the_server_and_configures_when_ready(tmp_path, mon
     endpoint = gui._worker.endpoint
     assert (endpoint.kind, endpoint.model, endpoint.base_url) == ("openai-compatible", "qwen3.5-8b-q4", server.base_url)
     assert endpoint.api_key == "" and not endpoint.needs_key
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
     assert scheduled == []
 
 
@@ -328,7 +327,7 @@ def test_local_server_failure_is_reported_and_cleaned_up(tmp_path, monkeypatch):
     scheduled.pop()()
     (server,) = _SERVERS
     assert server.stopped and gui._servers == {}
-    assert gui.connect_button.text() == "Connect"
+    assert gui.connect_button.text() == "Connect AI assistant"
     assert "exited with code 3" in gui.output.toPlainText()
 
 
@@ -404,7 +403,7 @@ def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui.on_connect()
     assert not gui.setup_group.isVisible()
     assert gui.setup_toggle.text() == "Configure AI assistant"
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
@@ -414,7 +413,7 @@ def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     assert gui.connect_button.text() == "Starting…"
     scheduled.pop()(); scheduled.pop()()
     assert not gui.setup_group.isVisible()
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
     assert gui.setup_toggle.text() == "Configure AI assistant"
 
 
@@ -443,12 +442,14 @@ def test_tool_calls_show_only_when_switched_on_in_configure():
     assert "move_absolute" not in gui.output.toPlainText()
 
 
-def test_no_command_was_sent_is_said_even_with_tool_calls_hidden():
-    """Not a tool call: the tab's own statement that a reply sent nothing, against a small model
-    that writes "I have closed the shutters" having called nothing."""
+def test_no_command_was_sent_shows_only_with_the_tool_calls():
+    """It says what the turn sent, so it goes with the tool calls: hidden by default (the operator
+    did not want it in the chat), there when Show tool calls is on."""
     gui = _gui()
     gui._active = {"tools": [], "reply": "I have closed the shutters.", "error": None}
     gui._on_done()
+    assert gui_module.NO_COMMANDS_SENT not in gui.output.toPlainText()
+    gui.show_tool_calls.setChecked(True)
     assert gui.output.toPlainText().count(gui_module.NO_COMMANDS_SENT) == 1
 
 
@@ -466,6 +467,7 @@ def test_a_reply_with_no_command_behind_it_says_so():
     """A small model writes "I have closed the shutters" having called nothing. The tab cannot
     judge the sentence; it can say what it sent."""
     gui = _gui()
+    gui.show_tool_calls.setChecked(True)
     gui._active = {"tools": [], "reply": None, "error": None}
     gui._on_reply("I have closed the shutters.")
     assert gui_module.NO_COMMANDS_SENT in gui.output.toPlainText()
@@ -560,7 +562,7 @@ def test_vision_model_without_a_key_falls_back_with_a_note(monkeypatch):
     assert configured == [None]
     assert "OPENAI_API_KEY" in gui.output.toPlainText()
     assert gui.setup_group.isVisible()                          # the note stays in view although connected
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_local_vision_model_is_served_with_its_projector(tmp_path, monkeypatch):
@@ -578,7 +580,7 @@ def test_local_vision_model_is_served_with_its_projector(tmp_path, monkeypatch):
     vision = gui._endpoints["vision"]
     assert (vision.provider, vision.model, vision.base_url, vision.vision) == ("Local", "gemma-4-12b-q4", server.base_url, True)
     assert gui._worker.endpoint.provider == "Gemini"           # the language model stayed cloud
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_local_language_model_sees_when_its_projector_is_beside_it(tmp_path, monkeypatch):
@@ -605,7 +607,7 @@ def test_the_same_file_in_both_boxes_is_served_once(tmp_path, monkeypatch):
     assert gui._servers["language"] is gui._servers["vision"] is server
     scheduled.pop()(); scheduled.pop()()
     assert gui._endpoints["language"].base_url == gui._endpoints["vision"].base_url == server.base_url
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_a_second_connect_while_loading_leaves_one_live_poll(tmp_path, monkeypatch):
@@ -618,7 +620,7 @@ def test_a_second_connect_while_loading_leaves_one_live_poll(tmp_path, monkeypat
     stale()                                                    # the old chain finds its servers gone
     assert len(scheduled) == 1 and gui._state == "starting"
     scheduled.pop()(); scheduled.pop()()
-    assert gui.connect_button.text() == "Connected" and scheduled == []
+    assert gui.connect_button.text() == "Disconnect AI assistant" and scheduled == []
 
 
 def test_language_model_takes_no_projector_when_vision_is_its_own(tmp_path, monkeypatch):
@@ -638,7 +640,7 @@ def test_language_model_takes_no_projector_when_vision_is_its_own(tmp_path, monk
     scheduled.pop()()
     language, vision = gui._endpoints["language"], gui._endpoints["vision"]
     assert (language.vision, vision.vision) == (False, True) and (language.model, vision.model) == ("qwen3.5-8b-q4", "gemma-4-12b-q4")
-    assert gui.connect_button.text() == "Connected"
+    assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_a_message_while_a_local_model_loads_waits_instead_of_restarting_it(tmp_path, monkeypatch):
@@ -662,7 +664,7 @@ def test_a_local_model_that_never_answers_is_given_up_with_its_log(tmp_path, mon
     _choose_mode(gui, "Local AI")
     gui.on_connect()
     scheduled.pop()()
-    assert _SERVERS[0].stopped and gui._servers == {} and gui.connect_button.text() == "Connect"
+    assert _SERVERS[0].stopped and gui._servers == {} and gui.connect_button.text() == "Connect AI assistant"
     assert "did not answer" in gui.output.toPlainText() and "/tmp/fake.log" in gui.output.toPlainText()
 
 
@@ -674,20 +676,24 @@ def test_a_server_that_cannot_start_is_reported_at_the_tab(tmp_path, monkeypatch
     gui, scheduled = _local_gui(tmp_path, monkeypatch, server_factory=_NoRuntime)
     _choose_mode(gui, "Local AI")
     assert gui.on_connect() is None and scheduled == []
-    assert gui._servers == {} and gui.connect_button.text() == "Connect"
+    assert gui._servers == {} and gui.connect_button.text() == "Connect AI assistant"
     assert "pip install llama-cpp-python" in gui.output.toPlainText()
 
 
-def test_a_refused_plan_leaves_a_live_local_model_connected(tmp_path, monkeypatch):
+def test_other_models_take_disconnect_then_connect(tmp_path, monkeypatch):
+    """The button toggles, so while connected it disconnects whatever the boxes now say; the
+    new choice is applied by the Connect after it, and refused there if it cannot be served."""
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     _choose_mode(gui, "Local AI")
     gui.on_connect()
     scheduled.pop()(); scheduled.pop()()
     (server,) = _SERVERS
-    _choose_mode(gui, "Local AI", gui.vision)                  # no projector in the folder: refused
+    _choose_mode(gui, "Local AI", gui.vision)                  # no projector in the folder
+    gui._worker = None                                         # no session taken in this test
     gui.on_connect()
-    assert not server.stopped and gui._servers == {"language": server}
-    assert gui.connect_button.text() == "Connected" and "projector file" in gui.output.toPlainText()
+    assert server.stopped and gui.connect_button.text() == "Connect AI assistant"
+    gui.on_connect()
+    assert gui.connect_button.text() == "Connect AI assistant" and "projector file" in gui.output.toPlainText()
 
 
 def test_shutdown_stops_local_servers(tmp_path, monkeypatch):
@@ -704,7 +710,7 @@ def test_local_vision_model_without_a_projector_is_refused(tmp_path, monkeypatch
     gui.language.key.setText("k")
     _choose_mode(gui, "Local AI", gui.vision)
     gui.on_connect()
-    assert _SERVERS == [] and gui.connect_button.text() == "Connect"
+    assert _SERVERS == [] and gui.connect_button.text() == "Connect AI assistant"
     assert "projector file" in gui.output.toPlainText()
 
 
@@ -803,13 +809,14 @@ def _connected_gui(monkeypatch):
     return gui, core, worker, thread
 
 
-def test_connect_and_disconnect_sit_side_by_side_one_enabled_at_a_time(monkeypatch):
+def test_connect_toggles_to_disconnect(monkeypatch):
+    """One button: it reads Connect, and once connected it reads Disconnect and releases the session."""
     gui = _gui()
-    assert gui.connect_button.isEnabled() and not gui.disconnect_button.isEnabled()
+    assert not hasattr(gui, "disconnect_button")
+    assert gui.connect_button.text() == "Connect AI assistant" and gui.connect_button.isEnabled()
 
     gui, core, worker, thread = _connected_gui(monkeypatch)
-    assert gui.connect_button.text() == "Connected"
-    assert not gui.connect_button.isEnabled() and gui.disconnect_button.isEnabled()
+    assert gui.connect_button.text() == "Disconnect AI assistant" and gui.connect_button.isEnabled()
 
 
 def test_disconnect_releases_the_session_so_a_transport_can_start(monkeypatch):
@@ -818,43 +825,54 @@ def test_disconnect_releases_the_session_so_a_transport_can_start(monkeypatch):
     gui, core, worker, thread = _connected_gui(monkeypatch)
     gui._blocks.append("<p>earlier turn</p>")
 
-    gui.on_disconnect()
+    gui.on_connect()                                          # the button, now reading Disconnect
 
     assert core.calls == ["start_ai_assistant", "stop_ai_assistant"]
     assert core._assistant_acceptor is None                  # what start_for_core checks
     assert worker.interrupted == 1 and thread.quit_calls == 1
     assert gui._worker is None and gui._endpoints == {}
-    assert gui.connect_button.text() == "Connect"
-    assert gui.connect_button.isEnabled() and not gui.disconnect_button.isEnabled()
-    assert "<p>earlier turn</p>" in gui._blocks               # the record stays; Clear all is separate
+    assert gui.connect_button.text() == "Connect AI assistant" and gui.connect_button.isEnabled()
+    assert "<p>earlier turn</p>" in gui._blocks               # the record stays; Clear context is separate
 
 
 def test_connect_after_disconnect_takes_the_session_again(monkeypatch):
     gui, core, worker, thread = _connected_gui(monkeypatch)
-    gui.on_disconnect()
+    gui.on_connect()
     gui.on_connect()
     assert core.calls == ["start_ai_assistant", "stop_ai_assistant", "start_ai_assistant"]
-    assert gui.connect_button.text() == "Connected" and gui.disconnect_button.isEnabled()
+    assert gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_disconnect_waits_for_the_turn_to_end(monkeypatch):
     gui, core, worker, thread = _connected_gui(monkeypatch)
     gui.input.setText("move x")
     gui.on_submit()                                           # a turn is running
-    assert not gui.disconnect_button.isEnabled() and not gui.connect_button.isEnabled()
+    assert not gui.connect_button.isEnabled()
 
     gui.on_disconnect()                                       # a stray call during the turn
     assert core.calls == ["start_ai_assistant"] and gui._worker is worker
 
     gui._set_running(False)                                   # the turn ended
-    assert gui.disconnect_button.isEnabled() and not gui.connect_button.isEnabled()
+    assert gui.connect_button.isEnabled() and gui.connect_button.text() == "Disconnect AI assistant"
 
 
 def test_disconnect_stops_a_local_model_server(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     _choose_mode(gui, "Local AI")
     gui.on_connect()
+    scheduled.pop()(); scheduled.pop()()                      # the server answers: ready
+    assert gui.connect_button.text() == "Disconnect AI assistant"
     gui._worker = None                                        # no session taken in this test
-    gui.on_disconnect()
+    gui.on_connect()
     assert _SERVERS[0].stopped and gui._servers == {}
-    assert gui.connect_button.text() == "Connect"
+    assert gui.connect_button.text() == "Connect AI assistant"
+
+
+def test_a_path_in_a_reply_is_as_large_as_the_text_around_it():
+    """Qt's Markdown gives an inline code span, which is how a model writes a file path, a fixed
+    8 pt: smaller than the chat. The size goes; the fixed-width face stays."""
+    qt = ('<p>I have saved a snap to <span style=" font-family:\'Courier New\'; font-size:8pt;">'
+          'D:/tmp/remote_20260924-175526.tif</span> while the microscope remained idle.</p>')
+    html = gui_module._chat_sized(qt)
+    assert "font-size" not in html
+    assert "font-family:'Courier New';" in html and "D:/tmp/remote_20260924-175526.tif" in html
