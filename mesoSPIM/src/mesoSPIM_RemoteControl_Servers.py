@@ -498,6 +498,18 @@ def _listen_address(host):
     return address
 
 
+class _TcpServer(QtNetwork.QTcpServer):
+    """Creates each client socket in Python. Qt's own incomingConnection() creates it in C++, and
+    PyQt learns of such an object's deletion only later: a socket accepted in between at the same
+    address could be handed the old Python wrapper, which PyQt then invalidates, silently losing
+    that live connection. PyQt tracks a socket it created itself exactly."""
+
+    def incomingConnection(self, descriptor):
+        conn = QtNetwork.QTcpSocket(self)
+        conn.setSocketDescriptor(descriptor)
+        self.addPendingConnection(conn)
+
+
 class TcpAdapter:
     name = "tcp"
 
@@ -506,7 +518,7 @@ class TcpAdapter:
             raise ValueError("a token is required; the TCP transport never serves unauthenticated clients")
         self._acceptor = acceptor
         self._token = token
-        self._server = QtNetwork.QTcpServer(acceptor)
+        self._server = _TcpServer(acceptor)
         if not self._server.listen(_listen_address(host), int(port)):
             raise RuntimeError(f"cannot listen on {host}:{port}: {self._server.errorString()}")
         self._port = int(self._server.serverPort())

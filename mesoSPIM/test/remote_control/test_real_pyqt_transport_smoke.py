@@ -19,7 +19,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 try:
-    from PyQt5 import QtCore, QtNetwork
+    from PyQt5 import QtCore, QtNetwork, sip
 except ModuleNotFoundError as error:
     raise SystemExit("real_pyqt_transport_smoke.py requires PyQt5") from error
 
@@ -251,6 +251,91 @@ def exercise_bind_rules(app):
     print("REAL PYQT TCP BIND RULES PASS: localhost is loopback, no token or hostname refused, silent client dropped")
 
 
+class CoreThreadServer(QtCore.QObject):
+    """The TCP server on a QThread of its own, as mesoSPIM runs it on Core's."""
+
+    listening = QtCore.pyqtSignal(int)
+
+    @QtCore.pyqtSlot()
+    def start(self):
+        self.acceptor = Acceptor(Core())
+        self.adapter = TcpAdapter()
+        self.listening.emit(self.adapter.start(self.acceptor, "127.0.0.1", 0, TOKEN))
+
+    @QtCore.pyqtSlot()
+    def stop(self):
+        self.adapter.stop()
+        self.acceptor.stop()
+
+
+def exercise_tcp_sockets_are_created_by_pyqt(app):
+    """Every client socket the TCP server hands out is one PyQt created, so PyQt learns the moment
+    it is deleted: the invariant behind exercise_tcp_reconnect_per_call, checked without timing."""
+    acceptor = Acceptor(Core())
+    adapter = TcpAdapter()
+    port = adapter.start(acceptor, "127.0.0.1", 0, TOKEN)
+    clients = [socket.create_connection(("127.0.0.1", port), timeout=2.0) for _ in range(3)]
+    try:
+        process_until(app, lambda: len(adapter._clients) == 3)
+        assert all(sip.ispycreated(conn) for conn in adapter._clients), "a client socket was created in C++"
+    finally:
+        for client in clients:
+            client.close()
+        adapter.stop()
+        acceptor.stop()
+    print("REAL PYQT TCP SOCKETS PASS: every client socket is created by PyQt, which tracks its deletion")
+
+
+def exercise_tcp_reconnect_per_call(app, calls=1000):
+    """A client that opens a connection for every call is answered every time, with Core's server on
+    its own thread and the GUI thread busy. Qt's own QTcpServer creates each socket in C++, and PyQt
+    learns of such a socket's deletion only later: a socket accepted in between at the same address
+    could be handed the deleted one's wrapper, which PyQt then invalidated, and that call was never
+    answered (about 5 in 1000 here). Runs a real event loop, the only place Qt deletes sockets."""
+    core_thread = QtCore.QThread()
+    server = CoreThreadServer()
+    server.moveToThread(core_thread)
+    ports = []
+    server.listening.connect(ports.append, QtCore.Qt.DirectConnection)
+    core_thread.started.connect(server.start)
+    core_thread.start()
+    deadline = time.monotonic() + 5
+    while not ports and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert ports, "the TCP server on the Core thread did not start"
+    unanswered = []
+
+    def client():
+        for index in range(calls):
+            try:
+                with socket.create_connection(("127.0.0.1", ports[0]), timeout=2.0) as sock:
+                    reader = FrameReader(sock)
+                    sock.sendall(frame(TOKEN))
+                    assert reader.read().strip() == "OK"
+                    sock.sendall(frame(json.dumps({"ping": {}})))
+                    assert reader.read().startswith(config.OK_MARKER)
+            except (OSError, AssertionError):
+                unanswered.append(index)
+                return
+
+    worker = threading.Thread(target=client)
+    busy_gui = QtCore.QTimer()
+    busy_gui.timeout.connect(lambda: time.sleep(0.02))
+    finished = QtCore.QTimer()
+    finished.timeout.connect(lambda: worker.is_alive() or app.quit())
+    busy_gui.start(5)
+    finished.start(20)
+    worker.start()
+    app.exec_()
+    busy_gui.stop()
+    finished.stop()
+    QtCore.QMetaObject.invokeMethod(server, "stop", QtCore.Qt.BlockingQueuedConnection)
+    core_thread.quit()
+    core_thread.wait()
+    assert unanswered == [], f"call {unanswered[0]} of {calls} was never answered"
+    print(f"REAL PYQT TCP RECONNECT PER CALL PASS: {calls} connections from one client, every call answered")
+
+
 def main():
     app = QtCore.QCoreApplication.instance() or QtCore.QCoreApplication([])
     startup_ok, startup_report = self_test(Core())
@@ -285,6 +370,8 @@ def main():
         "REAL PYQT TRANSPORT POLLING PASS: actions accepted first, polling responsive, "
         "movement target confirmed"
     )
+    exercise_tcp_sockets_are_created_by_pyqt(app)
+    exercise_tcp_reconnect_per_call(app)
 
 
 if __name__ == "__main__":
