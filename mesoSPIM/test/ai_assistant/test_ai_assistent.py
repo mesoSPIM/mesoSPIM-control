@@ -82,7 +82,8 @@ def test_build_tools_covers_commands_except_prompt_only():
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools, _PROMPT_ONLY
     tools = build_tools(FakeAcceptor(), threading.Event(), profile="Full")
     names = {t.name for t in tools}
-    assert len(tools) == len(COMMANDS) - len(_PROMPT_ONLY)
+    assert len([n for n in names if n in COMMANDS]) == len(COMMANDS) - len(_PROMPT_ONLY)
+    assert names - set(COMMANDS) == {"update_acquisition_row"}   # the assistant's own, over set_acquisition_list
     assert "get_manual" not in names                            # in the system prompt, not a tool
     assert "move_absolute" in names
 
@@ -501,6 +502,8 @@ def test_tools_publish_each_commands_schema():
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
     for tool in build_tools(FakeAcceptor(), threading.Event(), profile="Full"):
+        if tool.name not in COMMANDS:                                    # the assistant's own tools
+            continue
         if tool.name in ai.config.ROWS_BY_REFERENCE:                 # rows by reference to set_acquisition_list
             assert tool.function_schema.json_schema == ai._rows_by_reference(COMMANDS[tool.name].schema)
         else:
@@ -973,3 +976,50 @@ def test_a_success_carries_no_advice_and_the_specific_advice_is_kept():
     assert ai.with_advice("snap", dict(done)) == done
     busy = ai.with_advice("set_intensity", {"error": {"code": "busy", "message": f"busy: {ai.config.BUSY_FROM_GUI} run"}})
     assert busy["error"]["advice"].startswith("The operator is running this at the microscope")
+
+
+# --- changing one acquisition row without retyping it ---
+
+DEMO_ROW = {"x_pos": 0, "y_pos": 0, "z_start": 0, "z_end": 100, "z_step": 10, "planes": 11, "rot": 0,
+            "f_start": 2500, "f_end": 2500, "laser": "488 nm", "intensity": 10, "filter": "Empty", "zoom": "2x",
+            "shutterconfig": "Right", "folder": "D:/tmp", "filename": "one_2.tif", "image_writer_plugin": "Tiff_Writer",
+            "etl_l_offset": 2.397, "etl_l_amplitude": 0.461, "etl_r_offset": 2.545, "etl_r_amplitude": 0.366,
+            "processing": "MAX"}
+
+
+def _update_tool(profile="Full"):
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    acceptor, core = _real_acceptor()
+    core.state["acq_list"] = [dict(DEMO_ROW)]
+    tools = {t.name: t for t in build_tools(acceptor, threading.Event(), profile=profile)}
+    return tools["update_acquisition_row"], core
+
+
+@pytest.mark.parametrize("profile", ["Regular", "Full"])
+def test_renaming_an_acquisition_changes_the_name_and_nothing_else(profile):
+    """On the Windows demo "give it a new name" went through set_acquisition_list, which replaces
+    the whole list: the model retyped the row and the zoom went 2x -> 4x Olympus, the focus 2500 ->
+    0, 11 planes -> 1. The row is now changed where it lies, by name."""
+    tool, core = _update_tool(profile)
+    out = json.loads(tool.function(row=0, changes={"filename": "one_5.tif"}))
+    assert "error" not in out, out
+    row = core.state["acq_list"][0]
+    assert row["filename"] == "one_5.tif"
+    assert {key: row[key] for key in DEMO_ROW if key != "filename"} == {k: v for k, v in DEMO_ROW.items() if k != "filename"}
+
+
+def test_an_unknown_field_or_row_is_refused_and_the_list_kept():
+    tool, core = _update_tool()
+    for args in ({"row": 0, "changes": {"colour": "red"}}, {"row": 3, "changes": {"filename": "x.tif"}},
+                 {"row": 0, "changes": {}}):
+        out = json.loads(tool.function(**args))
+        assert out["error"]["code"] == "validation", (args, out)
+    assert core.state["acq_list"][0]["filename"] == "one_2.tif"
+
+
+def test_regular_keeps_the_etl_out_of_a_row_change_too():
+    tool, core = _update_tool("Regular")
+    out = json.loads(tool.function(row=0, changes={"etl_l_amplitude": 1.5}))
+    assert out["error"]["code"] == "validation" and "etl_l_amplitude" in out["error"]["message"]
+    assert core.state["acq_list"][0]["etl_l_amplitude"] == 0.461

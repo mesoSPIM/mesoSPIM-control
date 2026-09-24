@@ -1894,5 +1894,101 @@
         "snap": 0
       }
     }
+  },
+  {
+    "id": "h-rename-an-acquisition-changes-only-the-name",
+    "category": "acquisition",
+    "prompt": "Please call the acquisition brain_01.tif instead.",
+    "setup": {
+      "acq_list": [
+        {
+          "x_pos": 0,
+          "y_pos": 0,
+          "z_start": 0,
+          "z_end": 100,
+          "z_step": 10,
+          "planes": 11,
+          "rot": 0,
+          "f_start": 2500,
+          "f_end": 2500,
+          "laser": "488 nm",
+          "intensity": 10,
+          "filter": "Empty",
+          "zoom": "2x",
+          "shutterconfig": "Right",
+          "folder": "D:/tmp",
+          "filename": "one_2.tif",
+          "image_writer_plugin": "Tiff_Writer",
+          "etl_l_offset": 2.397,
+          "etl_l_amplitude": 0.461,
+          "etl_r_offset": 2.545,
+          "etl_r_amplitude": 0.366,
+          "processing": "MAX"
+        }
+      ]
+    },
+    "expect": {
+      "calls": [
+        "update_acquisition_row"
+      ],
+      "state": {
+        "acq_list.0.zoom": "2x",
+        "acq_list.0.f_start": 2500,
+        "acq_list.0.z_end": 100,
+        "acq_list.0.z_step": 10,
+        "acq_list.0.intensity": 10,
+        "acq_list.0.filter": "Empty",
+        "acquisition_rows": 1,
+        "acq_list.0.filename": "brain_01.tif"
+      }
+    }
+  },
+  {
+    "id": "h-change-the-name-changes-only-the-name",
+    "category": "acquisition",
+    "prompt": "Rename the file of the acquisition to test_run.tif",
+    "setup": {
+      "acq_list": [
+        {
+          "x_pos": 0,
+          "y_pos": 0,
+          "z_start": 0,
+          "z_end": 100,
+          "z_step": 10,
+          "planes": 11,
+          "rot": 0,
+          "f_start": 2500,
+          "f_end": 2500,
+          "laser": "488 nm",
+          "intensity": 10,
+          "filter": "Empty",
+          "zoom": "2x",
+          "shutterconfig": "Right",
+          "folder": "D:/tmp",
+          "filename": "one_2.tif",
+          "image_writer_plugin": "Tiff_Writer",
+          "etl_l_offset": 2.397,
+          "etl_l_amplitude": 0.461,
+          "etl_r_offset": 2.545,
+          "etl_r_amplitude": 0.366,
+          "processing": "MAX"
+        }
+      ]
+    },
+    "expect": {
+      "calls": [
+        "update_acquisition_row"
+      ],
+      "state": {
+        "acq_list.0.zoom": "2x",
+        "acq_list.0.f_start": 2500,
+        "acq_list.0.z_end": 100,
+        "acq_list.0.z_step": 10,
+        "acq_list.0.intensity": 10,
+        "acq_list.0.filter": "Empty",
+        "acquisition_rows": 1,
+        "acq_list.0.filename": "test_run.tif"
+      }
+    }
   }
 ]

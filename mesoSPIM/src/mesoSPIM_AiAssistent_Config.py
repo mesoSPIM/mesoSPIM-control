@@ -103,6 +103,8 @@ TOOL_PROFILES = {
 # What the assistant tells the model a command is for, where the wire hint is not enough. The
 # hint stays as it is for TCP and MCP clients; this is the assistant's tool description only.
 TOOL_DESCRIPTIONS = {
+    "update_acquisition_row": "Change the named keys of one acquisition row; the rest stays. To rename or edit "
+                              "a row use this, never set_acquisition_list.",
     "snap": "Save one frame to the snap folder, without looking at it. To see the sample, call look, "
             "which takes its own snap; never snap and then look.",
     # The wire schema gives the range (0.001 to 5) and no unit, and the GUI shows milliseconds.

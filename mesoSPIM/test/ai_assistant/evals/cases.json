@@ -1896,5 +1896,103 @@
         "snap": 0
       }
     }
+  },
+  {
+    "id": "rename-an-acquisition-changes-only-the-name",
+    "category": "acquisition",
+    "note": "Windows demo 2026-09-24: 'give it a new name' rewrote the whole row through set_acquisition_list: zoom 2x -> 4x Olympus, focus 2500 -> 0, 11 planes -> 1, and the reply said only the name changed.",
+    "prompt": "Give the acquisition a new name: one_5.tif",
+    "setup": {
+      "acq_list": [
+        {
+          "x_pos": 0,
+          "y_pos": 0,
+          "z_start": 0,
+          "z_end": 100,
+          "z_step": 10,
+          "planes": 11,
+          "rot": 0,
+          "f_start": 2500,
+          "f_end": 2500,
+          "laser": "488 nm",
+          "intensity": 10,
+          "filter": "Empty",
+          "zoom": "2x",
+          "shutterconfig": "Right",
+          "folder": "D:/tmp",
+          "filename": "one_2.tif",
+          "image_writer_plugin": "Tiff_Writer",
+          "etl_l_offset": 2.397,
+          "etl_l_amplitude": 0.461,
+          "etl_r_offset": 2.545,
+          "etl_r_amplitude": 0.366,
+          "processing": "MAX"
+        }
+      ]
+    },
+    "expect": {
+      "calls": [
+        "update_acquisition_row"
+      ],
+      "state": {
+        "acq_list.0.zoom": "2x",
+        "acq_list.0.f_start": 2500,
+        "acq_list.0.z_end": 100,
+        "acq_list.0.z_step": 10,
+        "acq_list.0.intensity": 10,
+        "acq_list.0.filter": "Empty",
+        "acquisition_rows": 1,
+        "acq_list.0.filename": "one_5.tif"
+      }
+    }
+  },
+  {
+    "id": "change-the-name-changes-only-the-name",
+    "category": "acquisition",
+    "note": "Windows demo 2026-09-24: 'give it a new name' rewrote the whole row through set_acquisition_list: zoom 2x -> 4x Olympus, focus 2500 -> 0, 11 planes -> 1, and the reply said only the name changed.",
+    "prompt": "Change the name of the acquisition to sample_a.tif",
+    "setup": {
+      "acq_list": [
+        {
+          "x_pos": 0,
+          "y_pos": 0,
+          "z_start": 0,
+          "z_end": 100,
+          "z_step": 10,
+          "planes": 11,
+          "rot": 0,
+          "f_start": 2500,
+          "f_end": 2500,
+          "laser": "488 nm",
+          "intensity": 10,
+          "filter": "Empty",
+          "zoom": "2x",
+          "shutterconfig": "Right",
+          "folder": "D:/tmp",
+          "filename": "one_2.tif",
+          "image_writer_plugin": "Tiff_Writer",
+          "etl_l_offset": 2.397,
+          "etl_l_amplitude": 0.461,
+          "etl_r_offset": 2.545,
+          "etl_r_amplitude": 0.366,
+          "processing": "MAX"
+        }
+      ]
+    },
+    "expect": {
+      "calls": [
+        "update_acquisition_row"
+      ],
+      "state": {
+        "acq_list.0.zoom": "2x",
+        "acq_list.0.f_start": 2500,
+        "acq_list.0.z_end": 100,
+        "acq_list.0.z_step": 10,
+        "acq_list.0.intensity": 10,
+        "acq_list.0.filter": "Empty",
+        "acquisition_rows": 1,
+        "acq_list.0.filename": "sample_a.tif"
+      }
+    }
   }
 ]
