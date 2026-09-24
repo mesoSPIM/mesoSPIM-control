@@ -237,6 +237,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._servers = {}                      # by the same names: children serving local files
         self._started_at = 0.0
         self._needs_operator = False            # a note asked for something: keep the footer open
+        self._running = False                   # a turn is in flight: the session buttons wait for it
+        self._run_turn_slot = None
         self._pending_confirmation = None
         self._models_folder = models_folder(getattr(self.core, "cfg", None))
         self._single_shot = QtCore.QTimer.singleShot   # injectable for tests
@@ -271,7 +273,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._thread = QtCore.QThread(self)
         self._worker = AssistantWorker(acceptor)
         self._worker.moveToThread(self._thread)
-        self.sig_run_turn.connect(self._worker.run_turn, QtCore.Qt.QueuedConnection)
+        self._run_turn_slot = self._worker.run_turn
+        self.sig_run_turn.connect(self._run_turn_slot, QtCore.Qt.QueuedConnection)
         self._worker.sig_reply.connect(self._on_reply)
         self._worker.sig_tool.connect(self._on_tool)
         self._worker.sig_frame.connect(self._on_frame)
@@ -450,9 +453,14 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.connect_button.setFont(font)
         self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
         self.connect_button.clicked.connect(self.on_connect)
+        self.disconnect_button = QtWidgets.QPushButton("Disconnect", setup)
+        self.disconnect_button.setFont(font)
+        self.disconnect_button.setMinimumWidth(150)
+        self.disconnect_button.clicked.connect(self.on_disconnect)
         row = QtWidgets.QHBoxLayout()
         row.addStretch(1)
         row.addWidget(self.connect_button)
+        row.addWidget(self.disconnect_button)
         column.addLayout(row)
 
         # The boxes share their first columns, each as wide as its widest occupant, so Type sits
@@ -485,6 +493,15 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.connect_button.setText(text)
         self.connect_button.setToolTip(detail)
         self.connect_button.setStyleSheet("color: #4cd964; font-weight: bold;" if state == "ready" else "")
+        self._refresh_session_buttons()
+
+    def _refresh_session_buttons(self):
+        """Connect and Disconnect, one enabled at a time, as the Remote Control tab's Start and Stop:
+        Disconnect while the tab holds the session or loads a local model, Connect otherwise. Both
+        wait while a turn runs; the models change only between turns."""
+        holding = self._worker is not None or bool(self._servers)
+        self.connect_button.setEnabled(not self._running and self._state != "ready")
+        self.disconnect_button.setEnabled(not self._running and holding)
 
     def _set_expanded(self, expanded):
         self.setup_group.setVisible(bool(expanded))
@@ -503,6 +520,33 @@ class AiAssistentGUI(QtWidgets.QWidget):
     # --- connecting ---
     def on_connect(self):
         self._connect()
+
+    def on_disconnect(self):
+        """Hand the session back so the Remote Control tab can start a transport, without
+        restarting mesoSPIM. The transcript stays; Clear all is its own button. A run the assistant
+        started carries on, and the main window's STOP ends it."""
+        if self._running:
+            return
+        self._release_session()
+        self._set_connect_state("idle")
+
+    def _release_session(self):
+        """Stop a local model server and the worker, joining with a bound so the GUI never hangs
+        on an in-flight model call, and release the Core-owned Acceptor."""
+        self._stop_local_servers()
+        self._endpoints = {}
+        if self._worker is None:
+            return
+        self._worker.interrupt()
+        if self._run_turn_slot is not None:
+            self.sig_run_turn.disconnect(self._run_turn_slot)
+            self._run_turn_slot = None
+        self._thread.quit()
+        if not self._thread.wait(3000):         # still inside a model call: let it be, never qFatal
+            self._thread.setParent(None)
+            _ORPHANED_THREADS.append(self._thread)
+        self._call_on_core("stop_ai_assistant")
+        self._worker, self._thread = None, None
 
     def _connect(self):
         """Apply the three boxes. Returns True when the assistant can take a message now; False
@@ -746,10 +790,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._render()
 
     def _set_running(self, running):
+        self._running = running
         self.input.setEnabled(not running)
-        for widget in (self.send_button, self.language, self.vision, self.connect_button, self.clear_button,
-                       self.tools_profile):
+        for widget in (self.send_button, self.language, self.vision, self.clear_button, self.tools_profile):
             widget.setEnabled(not running)      # the models and the tool set change only between turns
+        self._refresh_session_buttons()
         if running:
             self._set_expanded(False)
         self.status.setText("mesoSPIM is working…" if running else "")
@@ -790,14 +835,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._render()
 
     def shutdown(self):
-        """Called by MainWindow on app exit: stop the assistant, join with a bound so the GUI
-        never hangs on an in-flight model call, release the Core-owned Acceptor, and stop a
-        local model server. The instrument is the main window's to stop."""
-        self._stop_local_servers()
-        if self._worker is not None:
-            self._worker.interrupt()
-            self._thread.quit()
-            if not self._thread.wait(3000):     # still inside a model call: let it be, never qFatal
-                self._thread.setParent(None)
-                _ORPHANED_THREADS.append(self._thread)
-            self._call_on_core("stop_ai_assistant")
+        """Called by MainWindow on app exit: release the session as Disconnect does. The
+        instrument is the main window's to stop."""
+        self._release_session()

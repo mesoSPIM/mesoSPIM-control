@@ -728,3 +728,108 @@ def test_tools_choice_defaults_to_regular_reaches_the_worker_and_follows_the_con
     core = _FakeCore(acceptor=object())
     core.cfg = types.SimpleNamespace(ai_assistant_tools="Full")
     assert AiAssistentGUI(_FakeParent(core)).tools_profile.currentText() == "Full"
+
+
+# --- ending the session ---
+
+class _StoppableWorker:
+    """What Disconnect touches on the worker and its thread, recorded."""
+
+    def __init__(self):
+        self.interrupted = 0
+        self.configured = []
+
+    def configure(self, endpoint, vision=None, profile=None):
+        self.configured.append(endpoint)
+
+    def interrupt(self):
+        self.interrupted += 1
+
+    def run_turn(self, _text):
+        pass
+
+
+class _StoppableThread:
+    def __init__(self):
+        self.quit_calls = 0
+
+    def quit(self):
+        self.quit_calls += 1
+
+    def wait(self, _msec):
+        return True
+
+
+def _connected_gui(monkeypatch):
+    """A tab that holds the session: Core handed it the acceptor and a model is configured."""
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    core = _FakeCore(acceptor=object())
+    gui = AiAssistentGUI(_FakeParent(core))
+    worker, thread = _StoppableWorker(), _StoppableThread()
+
+    def ensure():
+        if gui._worker is None:
+            core.start_ai_assistant()
+            gui._worker, gui._thread = worker, thread
+        return True
+
+    monkeypatch.setattr(gui, "_ensure_worker", ensure)
+    gui.on_connect()
+    return gui, core, worker, thread
+
+
+def test_connect_and_disconnect_sit_side_by_side_one_enabled_at_a_time(monkeypatch):
+    gui = _gui()
+    assert gui.connect_button.isEnabled() and not gui.disconnect_button.isEnabled()
+
+    gui, core, worker, thread = _connected_gui(monkeypatch)
+    assert gui.connect_button.text() == "Connected"
+    assert not gui.connect_button.isEnabled() and gui.disconnect_button.isEnabled()
+
+
+def test_disconnect_releases_the_session_so_a_transport_can_start(monkeypatch):
+    """Without it the assistant holds the session until mesoSPIM exits, and the Remote Control
+    tab refuses to start with nothing on screen to release it."""
+    gui, core, worker, thread = _connected_gui(monkeypatch)
+    gui._blocks.append("<p>earlier turn</p>")
+
+    gui.on_disconnect()
+
+    assert core.calls == ["start_ai_assistant", "stop_ai_assistant"]
+    assert core._assistant_acceptor is None                  # what start_for_core checks
+    assert worker.interrupted == 1 and thread.quit_calls == 1
+    assert gui._worker is None and gui._endpoints == {}
+    assert gui.connect_button.text() == "Connect"
+    assert gui.connect_button.isEnabled() and not gui.disconnect_button.isEnabled()
+    assert "<p>earlier turn</p>" in gui._blocks               # the record stays; Clear all is separate
+
+
+def test_connect_after_disconnect_takes_the_session_again(monkeypatch):
+    gui, core, worker, thread = _connected_gui(monkeypatch)
+    gui.on_disconnect()
+    gui.on_connect()
+    assert core.calls == ["start_ai_assistant", "stop_ai_assistant", "start_ai_assistant"]
+    assert gui.connect_button.text() == "Connected" and gui.disconnect_button.isEnabled()
+
+
+def test_disconnect_waits_for_the_turn_to_end(monkeypatch):
+    gui, core, worker, thread = _connected_gui(monkeypatch)
+    gui.input.setText("move x")
+    gui.on_submit()                                           # a turn is running
+    assert not gui.disconnect_button.isEnabled() and not gui.connect_button.isEnabled()
+
+    gui.on_disconnect()                                       # a stray call during the turn
+    assert core.calls == ["start_ai_assistant"] and gui._worker is worker
+
+    gui._set_running(False)                                   # the turn ended
+    assert gui.disconnect_button.isEnabled() and not gui.connect_button.isEnabled()
+
+
+def test_disconnect_stops_a_local_model_server(tmp_path, monkeypatch):
+    gui, scheduled = _local_gui(tmp_path, monkeypatch)
+    _choose_mode(gui, "Local AI")
+    gui.on_connect()
+    gui._worker = None                                        # no session taken in this test
+    gui.on_disconnect()
+    assert _SERVERS[0].stopped and gui._servers == {}
+    assert gui.connect_button.text() == "Connect"

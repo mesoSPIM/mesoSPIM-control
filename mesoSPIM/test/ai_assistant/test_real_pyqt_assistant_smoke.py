@@ -114,12 +114,15 @@ def main():
     app.processEvents()
     assert vision.local_model.isVisible() and not vision.provider.isVisible()
 
-    # The boxes line up: same first columns; Connect ends where the boxes end.
+    # The boxes line up: same first columns; Connect | Disconnect end where the boxes end.
     for column in range(5):
         assert language.grid.cellRect(0, column).width() == vision.grid.cellRect(0, column).width()
     assert language.mapToParent(language.grid.cellRect(0, 1).topLeft()).x() == \
         vision.mapToParent(vision.grid.cellRect(0, 1).topLeft()).x()
-    assert tab.connect_button.geometry().right() == language.geometry().right()
+    assert tab.disconnect_button.geometry().right() == language.geometry().right()
+    assert tab.connect_button.geometry().right() < tab.disconnect_button.geometry().left()
+    assert tab.disconnect_button.text() == "Disconnect"
+    assert tab.connect_button.isEnabled() and not tab.disconnect_button.isEnabled()
 
     for name, width in (("cloud", width_cloud), ("local", width_local)):
         assert width <= MAIN_WINDOW_WIDTH + SLACK, f"{name} setup needs {width} px"
