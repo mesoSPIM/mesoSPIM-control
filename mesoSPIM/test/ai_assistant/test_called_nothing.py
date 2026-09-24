@@ -84,3 +84,34 @@ def test_cancel_and_an_empty_challenge_switch_it_off(monkeypatch):
     model, requests = model_that("SAME")
     agent = ai.build_agent(harness.SimulatedAcceptor(harness.SimulatedInstrument()), threading.Event(), model=model)
     assert agent.run_sync("Stop.").output == "I have stopped the time lapse." and len(requests) == 1
+
+
+# --- a reply with nothing in it goes back once too ---
+
+def model_that_answers_empty(then_with):
+    """Calls set_laser, then replies "_" (as Gemini did once in 948 on 2026-09-24), and answers the
+    hand-back with `then_with`."""
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+    from pydantic_ai.models.function import FunctionModel
+    from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
+
+    def model_function(messages, info):
+        last = messages[-1].parts
+        if any(type(p).__name__ == "RetryPromptPart" and p.content == config.EMPTY_REPLY_CHALLENGE for p in last):
+            return ModelResponse(parts=[TextPart(then_with)])
+        if any(type(p).__name__ == "ToolReturnPart" for p in last):
+            return ModelResponse(parts=[TextPart("_")])
+        return ModelResponse(parts=[ToolCallPart(tool_name="set_laser", args={"laser": "561 nm"})])
+    return FunctionModel(model_function)
+
+
+def test_an_empty_reply_goes_back_once_and_the_operator_gets_the_answer():
+    trace = run(model_that_answers_empty("The laser is now 561 nm."), "Switch to the 561 nm laser.")
+    assert trace["replies"] == ["The laser is now 561 nm."]
+    assert [t["tool"] for t in trace["tools"]] == ["set_laser"]
+
+
+def test_an_empty_reply_twice_gives_the_operator_a_plain_line_not_an_underscore():
+    from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
+    trace = run(model_that_answers_empty("..."), "Switch to the 561 nm laser.")
+    assert trace["replies"] == [config.EMPTY_REPLY_FALLBACK]

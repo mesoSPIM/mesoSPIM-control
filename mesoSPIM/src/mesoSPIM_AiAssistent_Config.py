@@ -68,6 +68,10 @@ CALLED_NOTHING_CHALLENGE = (
     "you did, set, moved, stopped, opened or closed anything, that is not true yet: call the tool now. If your "
     "reply only answers, asks the operator a question, or declines, answer with the single word SAME and your "
     "reply goes to the operator as it is.")
+# A reply with no letter or digit in it (Gemini once answered a refusal with "_", 1 in 948) goes
+# back to the model once with this text; a second such reply reaches the operator as the fallback.
+EMPTY_REPLY_CHALLENGE = "Your reply is empty: tell the operator in a sentence what happened in this turn."
+EMPTY_REPLY_FALLBACK = "The model gave no answer for this turn."
 LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow disk
 
 # The frame handed to a vision model: longer side in pixels.
@@ -148,7 +152,9 @@ FAILURE_ADVICE = ("Tell the operator the cause and propose one fix as a question
 # from them once; for any other (a folder, a limit) the lists are noise, and the fix is the operator's.
 OPTION_COMMANDS = ("set_filter", "set_zoom", "set_laser", "set_shutterconfig", "set_state", "set_acquisition_list",
                    "acquire_start")
-OPTIONS_ADVICE = "If configured_options holds the value that was meant, correct it and retry once. Otherwise: " + FAILURE_ADVICE
+OPTIONS_ADVICE = ("configured_options lists the instrument's own values. Correct and retry once only when one of them "
+                  "is the same value spelled differently (\"561 nm\" for \"561\"). A different value, even the nearest, "
+                  "is not what was asked: tell the operator the cause and propose it as a question; do not set it.")
 BUSY_FROM_GUI = "from the GUI"
 
 POLL_INTERVAL_S = 0.15

@@ -943,9 +943,28 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
                   capabilities=[ProcessHistory(compact_history)],
                   model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
                   retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
+    agent.output_validator(_hand_back_an_empty_reply())
     if config.CALLED_NOTHING_CHALLENGE:
         agent.output_validator(_challenge_a_reply_that_called_nothing(cancel))
     return agent
+
+
+def _hand_back_an_empty_reply():
+    """A reply with no letter or digit in it goes back to the model once; a second one reaches the
+    operator as a plain line rather than as, say, an underscore."""
+    from pydantic_ai import ModelRetry
+    asked = set()                                     # run ids already handed back
+
+    def _check(ctx, output):
+        if re.search(r"[^\W_]", output or ""):
+            asked.discard(ctx.run_id)
+            return output
+        if ctx.run_id in asked:
+            asked.discard(ctx.run_id)
+            return config.EMPTY_REPLY_FALLBACK
+        asked.add(ctx.run_id)
+        raise ModelRetry(config.EMPTY_REPLY_CHALLENGE)
+    return _check
 
 
 def _challenge_a_reply_that_called_nothing(cancel):
