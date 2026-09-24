@@ -289,8 +289,32 @@ for _layout in (QtWidgets.QVBoxLayout, QtWidgets.QHBoxLayout, QtWidgets.QFormLay
         _layout.addSpacing = lambda self, *a, **k: None
 
 
+class QColor:
+    def __init__(self, name):
+        self.name = name
+
+
+class QPalette:
+    PlaceholderText = "PlaceholderText"
+
+    def __init__(self):
+        self._colors = {}
+
+    def setColor(self, role, color):
+        self._colors[role] = color
+
+    def color(self, role):
+        return self._colors.get(role)
+
+
+if not hasattr(QtWidgets.QWidget, "palette"):
+    QtWidgets.QWidget.palette = lambda self: getattr(self, "_palette", None) or QPalette()
+    QtWidgets.QWidget.setPalette = lambda self, palette: setattr(self, "_palette", palette)
+
 _qtgui = types.ModuleType("PyQt5.QtGui")
 _qtgui.QTextDocument = QTextDocument
 _qtgui.QTextCursor = QTextCursor
+_qtgui.QColor = QColor
+_qtgui.QPalette = QPalette
 sys.modules["PyQt5.QtGui"] = _qtgui
 sys.modules["PyQt5"].QtGui = _qtgui

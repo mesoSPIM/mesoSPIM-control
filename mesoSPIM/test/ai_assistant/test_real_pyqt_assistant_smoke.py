@@ -114,13 +114,19 @@ def main():
     app.processEvents()
     assert vision.local_model.isVisible() and not vision.provider.isVisible()
 
-    # The boxes line up: same first columns; Connect | Disconnect end where the boxes end.
+    # The boxes line up: same first columns.
     for column in range(5):
         assert language.grid.cellRect(0, column).width() == vision.grid.cellRect(0, column).width()
     assert language.mapToParent(language.grid.cellRect(0, 1).topLeft()).x() == \
         vision.mapToParent(vision.grid.cellRect(0, 1).topLeft()).x()
-    assert tab.disconnect_button.geometry().right() == language.geometry().right()
-    assert tab.connect_button.geometry().right() < tab.disconnect_button.geometry().left()
+    # Send right of the input, on its line; under them every other button on one line, in this order.
+    assert tab.send_button.mapTo(tab, tab.send_button.rect().topLeft()).y() == tab.input.mapTo(tab, tab.input.rect().topLeft()).y()
+    assert tab.send_button.mapTo(tab, tab.send_button.rect().topLeft()).x() > tab.input.mapTo(tab, tab.input.rect().topRight()).x()
+    row = (tab.interrupt, tab.clear_button, tab.connect_button, tab.disconnect_button, tab.stop_button)
+    tops = {tab.mapTo(tab, b.mapTo(tab, b.rect().topLeft())).y() for b in row}
+    assert len(tops) == 1 and tops.pop() > tab.input.mapTo(tab, tab.input.rect().bottomLeft()).y()
+    lefts = [b.mapTo(tab, b.rect().topLeft()).x() for b in row]
+    assert lefts == sorted(lefts)
     assert tab.disconnect_button.text() == "Disconnect"
     assert tab.connect_button.isEnabled() and not tab.disconnect_button.isEnabled()
 

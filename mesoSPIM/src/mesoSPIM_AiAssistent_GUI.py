@@ -8,8 +8,10 @@ during a turn (single-flight); Cancel stops the assistant, Stop microscope stops
 instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
-The setup sits under the input box as a collapsible footer: one line ("Configure AI assistant")
-that expands to three boxes, Preferences, Language model and Vision model, and one Connect. It
+Send sits right of the input box; under them every other button sits on one line, Connect and
+Disconnect among them. The setup
+is a collapsible footer below: one line ("Configure AI assistant") that expands to three boxes,
+Preferences, Language model and Vision model, which Connect applies. It
 opens itself when something needs the operator (nothing configured, a missing key, a server that
 failed) and folds back once the assistant is ready, so a first-time user sees a chat, not a
 configuration form.
@@ -66,6 +68,9 @@ class _Input(QtWidgets.QPlainTextEdit):
         super().__init__(parent)
         self.setTabChangesFocus(True)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        palette = self.palette()
+        palette.setColor(QtGui.QPalette.PlaceholderText, QtGui.QColor("white"))   # "Ask the microscope…" reads
+        self.setPalette(palette)
 
     def text(self):
         return self.toPlainText()
@@ -341,7 +346,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         layout.addLayout(confirm)
         self._show_confirmation(False)
 
-        row = QtWidgets.QHBoxLayout()
         self.input = _Input(self)
         self.input.setPlaceholderText("Ask the microscope…")
         self.input.setObjectName("AiAssistentInput")
@@ -360,22 +364,29 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.clear_button = QtWidgets.QPushButton("Clear all", self)
         self.clear_button.setFont(font)
         self.clear_button.clicked.connect(self.on_clear_all)
-        # Right of the two-line input: Send as tall as both rows, then the emergency stop on top,
-        # spanning both, with Cancel and Clear all side by side under it; the input is as tall as the
-        # two button rows.
-        buttons = QtWidgets.QGridLayout()
-        buttons.setHorizontalSpacing(6)
-        buttons.setVerticalSpacing(6)
-        buttons.addWidget(self.send_button, 0, 0, 2, 1)
-        buttons.addWidget(self.stop_button, 0, 1, 1, 2)
-        buttons.addWidget(self.interrupt, 1, 1)
-        buttons.addWidget(self.clear_button, 1, 2)
-        row.addWidget(self.input, 1)
-        row.addLayout(buttons)
+        self.connect_button = QtWidgets.QPushButton("Connect", self)
+        self.connect_button.setFont(font)
+        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
+        self.connect_button.clicked.connect(self.on_connect)
+        self.disconnect_button = QtWidgets.QPushButton("Disconnect", self)
+        self.disconnect_button.setFont(font)
+        self.disconnect_button.clicked.connect(self.on_disconnect)
+        # The two-line input with Send to its right, as tall as it; under them every other button
+        # on one line, side by side.
         two_rows = 2 * self.interrupt.sizeHint().height() + 6
         self.input.setFixedHeight(two_rows)
         self.send_button.setFixedHeight(two_rows)
-        layout.addLayout(row)
+        entry = QtWidgets.QHBoxLayout()
+        entry.addWidget(self.input, 1)
+        entry.addWidget(self.send_button)
+        layout.addLayout(entry)
+        buttons = QtWidgets.QHBoxLayout()
+        buttons.setSpacing(6)
+        for button in (self.interrupt, self.clear_button, self.connect_button, self.disconnect_button,
+                       self.stop_button):
+            buttons.addWidget(button)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
         layout.addSpacing(24)
 
         self.setup_toggle = QtWidgets.QToolButton(self)
@@ -394,8 +405,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _build_setup(self, font):
         """Three titled boxes, like the Remote Control tab's setup group: Preferences on one line,
-        then the Language model and the Vision model, and one Connect at the bottom right that
-        applies all three."""
+        then the Language model and the Vision model, which Connect in the button row applies."""
         setup = QtWidgets.QWidget(self)
         column = QtWidgets.QVBoxLayout(setup)
         column.setContentsMargins(0, 10, 0, 0)                     # air under the toggle; folds with the boxes
@@ -453,19 +463,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         column.addWidget(self.language)
         column.addWidget(self.vision)
 
-        self.connect_button = QtWidgets.QPushButton("Connect", setup)
-        self.connect_button.setFont(font)
-        self.connect_button.setMinimumWidth(150)                  # "Connected" in bold, with air
-        self.connect_button.clicked.connect(self.on_connect)
-        self.disconnect_button = QtWidgets.QPushButton("Disconnect", setup)
-        self.disconnect_button.setFont(font)
-        self.disconnect_button.setMinimumWidth(150)
-        self.disconnect_button.clicked.connect(self.on_disconnect)
-        row = QtWidgets.QHBoxLayout()
-        row.addStretch(1)
-        row.addWidget(self.connect_button)
-        row.addWidget(self.disconnect_button)
-        column.addLayout(row)
 
         # The boxes share their first columns, each as wide as its widest occupant, so Type sits
         # under Tool set, the dropdowns under each other, Provider under Memory.
@@ -706,7 +703,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
                 # tab cannot judge the sentence, but it knows what it sent: say so, every time.
                 parts.append(f'<div style="color:{_DIM};">&#8250; {_htmllib.escape(NO_COMMANDS_SENT)}</div>')
             parts.append(_md_to_html(active["reply"]))
-        return f'<div style="margin:2px 0 16px 8px;">{"".join(parts)}</div>'
+        # Qt drops a bottom margin before the next question's table: an empty line keeps the air.
+        return f'<div style="margin:12px 0 0 8px;">{"".join(parts)}</div><p style="margin:0;">&nbsp;</p>'
 
     def _note_block(self, text):
         return f'<div style="color:{_DIM};margin:3px 0;"><i>{_htmllib.escape(text)}</i></div>'

@@ -30,9 +30,10 @@ roadmap
 
 ## Setting it up
 
-The tab opens as a chat. The line under the input box, **Configure AI assistant**, expands to three
-boxes, **Preferences**, **Language model** and **Vision model**, with **Connect** and **Disconnect**
-under them, and opens by itself when something needs the operator: nothing configured yet, a missing key, or
+The tab opens as a chat. **Send** sits right of the input box; under them the other buttons sit on
+one line: **Cancel**, **Clear all**, **Connect**, **Disconnect** and **Stop microscope**. The line below them, **Configure
+AI assistant**, expands to three boxes, **Preferences**, **Language model** and **Vision model**,
+which Connect applies, and opens by itself when something needs the operator: nothing configured yet, a missing key, or
 a local model that failed to start. Once the assistant is ready it folds back. **Disconnect** hands
 the microscope session back, so the Remote Control tab can start a transport without restarting
 mesoSPIM. The chat shows each answer; **Show tool calls**, under Preferences, adds the commands each
