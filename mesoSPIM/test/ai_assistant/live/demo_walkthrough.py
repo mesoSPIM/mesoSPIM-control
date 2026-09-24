@@ -80,9 +80,10 @@ def _wait_until(read, expected, seconds=15.0):
 
 
 def _restore(acceptor, start):
-    """Put back what the walk changed, each command waited out as the assistant waits for its
-    own: the next one would otherwise meet the gate still held by the last (busy)."""
-    from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
+    """Put back what the walk changed, each action waited out until its operation ends: the
+    assistant returns an action at acceptance, and the next command would otherwise meet the gate
+    still held by the last (busy). An emergency stop has no operation of its own to wait on."""
+    from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import ACTION, COMMANDS, WAIT
     undo = []
     if acceptor.dispatch("get_state_all", {"keys": ["state"]}).get("state") != "idle":
         undo.append(("stop_activity", {}))
@@ -93,7 +94,8 @@ def _restore(acceptor, start):
     if start["acquisitions"]:
         undo.append(("set_acquisition_list", {"acquisitions": start["acquisitions"], "selected_row": 0}))
     for name, args in undo:
-        done = ai.dispatch_and_wait(acceptor, name, args, COMMANDS[name].kind, threading.Event())
+        kind = COMMANDS[name].kind
+        done = ai.dispatch_and_wait(acceptor, name, args, WAIT if kind == ACTION else kind, threading.Event())
         print(f"    {name}: {done.get('status', 'done') if isinstance(done, dict) else done}")
 
 
