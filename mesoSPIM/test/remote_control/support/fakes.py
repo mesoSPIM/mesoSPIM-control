@@ -265,3 +265,12 @@ class RecordingCore:
             object.__setattr__(self, name, sig)
             return sig
         raise AttributeError(name)
+
+
+class RefusingCore(RecordingCore):
+    """Core.start refusing in preflight: it warns, emits sig_finished, and keeps the run state."""
+
+    def start(self, *args, **kwargs):
+        self._record("start", *args, **kwargs)
+        self.sig_warning.emit("The following files already exist - stopping! x.raw")
+        self.sig_finished.emit()

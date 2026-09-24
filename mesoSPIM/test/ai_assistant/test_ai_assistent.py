@@ -1075,15 +1075,19 @@ def test_the_assistant_waiting_on_a_run_that_is_stopped_reports_stopped():
     from mesoSPIM.src import mesoSPIM_RemoteControl_Config as rc_config
     from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
     acceptor, core = _real_acceptor()
+    quick = types.SimpleNamespace(WAIT_CAP_S=5, POLL_INTERVAL_S=0.01, RUNS_UNTIL_STOPPED=())
     done = {}
     waiting = threading.Thread(target=lambda: done.update(
-        ai.dispatch_and_wait(acceptor, "run_acquisition_list", {}, WAIT, threading.Event())))
+        ai.dispatch_and_wait(acceptor, "run_acquisition_list", {}, WAIT, threading.Event(), cfg=quick)))
     waiting.start()
-    time.sleep(0.3)
+    deadline = time.monotonic() + 5
+    while (dispatcher.operation_snapshot(core) or {}).get("status") != "processing":
+        assert time.monotonic() < deadline, "the run was never admitted"
+        time.sleep(0.005)
     dispatcher.request_stop(core)
     dispatcher.complete(core, rc_config.MILESTONE_FINISHED)
     waiting.join(10)
-    assert done["status"] == "stopped"
+    assert done["status"] == "stopped", done
 
 
 def test_a_refused_run_reaches_the_assistant_with_its_reason():
@@ -1092,10 +1096,10 @@ def test_a_refused_run_reaches_the_assistant_with_its_reason():
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
-    from mesoSPIM.test.remote_control.test_commands import _RefusingCore
+    from mesoSPIM.test.remote_control.support.fakes import RefusingCore
 
     refused = "The following files already exist - stopping! x.raw"
-    tools = {t.name: t for t in build_tools(Acceptor(_RefusingCore()), threading.Event(), profile="Regular")}
+    tools = {t.name: t for t in build_tools(Acceptor(RefusingCore()), threading.Event(), profile="Regular")}
     out = json.loads(tools["run_acquisition_list"].function())
     operation = out["result"]["operation"]
     assert out["status"] == "failed" and operation["warning"] == refused and refused in operation["error"]

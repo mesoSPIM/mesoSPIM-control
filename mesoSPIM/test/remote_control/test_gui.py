@@ -417,29 +417,55 @@ def _operation_in(core, state):
         dispatcher.fail(core, rc_config.MILESTONE_FINISHED, RuntimeError("refused"))
 
 
+def _connect(core, controller):
+    """Wire one remote controller to Core as mesoSPIM does: MCP through the Remote Control tab's
+    transport, or the in-app AI Assistant. (TCP needs real Qt networking: the real-Qt smoke.)"""
+    from mesoSPIM.src import mesoSPIM_AiAssistent as assistant
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Servers as servers
+
+    if controller == "MCP":
+        servers.start_for_core(core, "MCP", "127.0.0.1", 0, "token")
+    elif controller == "AI Assistant":
+        assistant.start_assistant_for_core(core)
+
+
 @pytest.mark.parametrize("state", ["none", "processing", "stopping", "stopped", "completed", "failed"])
-@pytest.mark.parametrize("connected", [False, True], ids=["no controller", "assistant connected"])
-def test_a_warning_opens_no_window_exactly_when_a_connected_controllers_operation_takes_it(connected, state):
+@pytest.mark.parametrize("controller", [None, "MCP", "AI Assistant"], ids=["no controller", "MCP", "AI Assistant"])
+def test_a_warning_opens_no_window_exactly_when_a_connected_controllers_operation_takes_it(controller, state):
     """mesoSPIM's warning window is modal: it waits for OK and blocks the main window's STOP. For a
     warning a TCP, MCP or AI Assistant command caused, the caller already gets the text on its
     operation, so it opens no window; every other warning opens one, as upstream."""
-    from mesoSPIM.src import mesoSPIM_AiAssistent as assistant
     from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Servers as servers
 
     core = _SessionCore()
     window = _FakeMainWindow(core)
     _build(window)
-    if connected:
-        assistant.start_assistant_for_core(core)
-    _operation_in(core, state)
+    _connect(core, controller)
+    try:
+        _operation_in(core, state)
+        core.sig_warning.emit(_REFUSED)
+        operation = dispatcher.operation_snapshot(core)
+        if controller and state in ("processing", "stopping"):
+            assert window.shown == [] and operation["warning"] == _REFUSED      # the caller has it
+        else:
+            assert window.shown == [_REFUSED] and operation.get("warning") != _REFUSED
+    finally:
+        servers.stop_for_core(core)
 
-    core.sig_warning.emit(_REFUSED)
 
-    operation = dispatcher.operation_snapshot(core)
-    if connected and state in ("processing", "stopping"):
-        assert window.shown == [] and operation["warning"] == _REFUSED      # the caller has it
-    else:
-        assert window.shown == [_REFUSED] and operation.get("warning") != _REFUSED
+def test_until_the_main_window_shows_every_warning_opens_its_window():
+    """The tab takes upstream's connection over when the main window first shows; before that, a
+    warning (Core's startup requests can raise one) opens upstream's window, as it always did."""
+    core = _SessionCore()
+    window = _FakeMainWindow(core)
+    RemoteControlGUI(window)
+    core.sig_warning.connect(window.display_warning)            # MainWindow.py:184
+    core.sig_warning.emit("during startup")
+    assert window.shown == ["during startup"]
+    window.show()
+    core.sig_warning.emit("after show")
+    assert window.shown == ["during startup", "after show"]
 
 
 def test_a_warning_after_the_transport_stopped_opens_one_window():
@@ -472,10 +498,11 @@ def test_showing_the_main_window_again_keeps_one_window_per_warning():
 
 
 def test_upstream_connects_cores_warnings_to_its_warning_window():
-    """The tab takes this connection over once the main window is built (MainWindow.py:184, which
-    runs after the tab is built through :167 -> :617): if upstream drops it, this fails here rather
-    than on the instrument."""
+    """A tripwire on upstream's source, not a behaviour test: the tab takes this one connection over
+    when the main window first shows (MainWindow.py:184, after the tab is built through :167 ->
+    :617). If upstream drops or duplicates it, this fails here rather than on the instrument, where
+    the takeover would stop mesoSPIM at show()."""
     from pathlib import Path
 
     source = (Path(__file__).resolve().parents[2] / "src" / "mesoSPIM_MainWindow.py").read_text(encoding="utf-8")
-    assert "self.core.sig_warning.connect(self.display_warning)" in source
+    assert source.count("self.core.sig_warning.connect(self.display_warning)") == 1

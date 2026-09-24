@@ -13,7 +13,7 @@ from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
 from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
 from mesoSPIM.src import mesoSPIM_RemoteControl_Servers as servers
 from mesoSPIM.test.remote_control.support.contracts import EXPECTED_CORE_CALL, VALID_CASES
-from mesoSPIM.test.remote_control.support.fakes import RecordingCore
+from mesoSPIM.test.remote_control.support.fakes import RecordingCore, RefusingCore
 
 
 def test_registry_is_the_documented_56_calls():
@@ -328,15 +328,6 @@ def test_snap_fails_when_no_frame_arrives(monkeypatch):
 # --- Core warnings reach the client ---
 
 
-class _RefusingCore(RecordingCore):
-    """Core.start refusing in preflight: it warns, emits sig_finished, and keeps the run state."""
-
-    def start(self, *args, **kwargs):
-        self._record("start", *args, **kwargs)
-        self.sig_warning.emit("The following files already exist - stopping! x.raw")
-        self.sig_finished.emit()
-
-
 def test_acceptor_records_core_warnings_for_get_info():
     core = RecordingCore()
     acceptor = servers.Acceptor(core)
@@ -349,7 +340,7 @@ def test_acceptor_records_core_warnings_for_get_info():
 
 
 def test_preflight_refusal_reports_the_reason():
-    core = _RefusingCore()
+    core = RefusingCore()
     acceptor = servers.Acceptor(core)
     try:
         dispatcher.run(core, "run_acquisition_list", {})
@@ -470,23 +461,34 @@ def test_a_snap_into_a_named_missing_folder_says_how_to_go_on(tmp_path):
     assert "pass an existing folder" in message and repr(core.state["snap_folder"]) in message
 
 
-def test_recovery_leaves_a_snap_that_is_still_saving_its_file(tmp_path):
-    """After the exposure Core is idle again, but the snap is still saving its frame (up to
-    SNAP_TIMEOUT_SEC). clear_stuck_operation took that for a stuck operation and failed it, so the
-    file was never written. A snap is recoverable once a stop was asked for, as a move is."""
-    core = RecordingCore()
+def _deferred(core):
+    """Hold Core's deferred callbacks (the snap's exposure and save, a move's polls) so a test runs
+    them one by one and can act in between."""
     pending = []
     core._remote_control_single_shot = lambda _msec, callback: pending.append(callback)
+    return pending
+
+
+def _snap_saving(tmp_path):
+    """A remote snap whose exposure is taken and whose save is the one callback left."""
+    core = RecordingCore()
+    pending = _deferred(core)
     dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
     pending.pop(0)()                                                  # scheduled
     pending.pop(0)()                                                  # the exposure; Core idle again
     assert core.state["state"] == "idle" and dispatcher.operation_snapshot(core)["status"] == "processing"
-    assert [callback.__name__ for callback in pending] == ["save"]
+    assert len(pending) == 1
+    return core, pending
 
+
+def test_recovery_leaves_a_snap_that_is_still_saving_its_file(tmp_path):
+    """After the exposure Core is idle again, but the snap is still saving its frame (up to
+    SNAP_TIMEOUT_SEC). clear_stuck_operation took that for a stuck operation and failed it, so the
+    file was never written. A snap is recoverable once a stop was asked for, as a move is."""
+    core, pending = _snap_saving(tmp_path)
     refused = dispatcher.clear_if_core_idle(core)
     assert refused["cleared"] is False and dispatcher.operation_snapshot(core)["status"] == "processing"
-    while pending:
-        pending.pop(0)()                                              # the save completes
+    pending.pop()()                                                   # the save completes
     operation = dispatcher.operation_snapshot(core)
     assert operation["status"] == "completed" and os.path.isfile(operation["result"]["path"])
 
@@ -494,16 +496,10 @@ def test_recovery_leaves_a_snap_that_is_still_saving_its_file(tmp_path):
 def test_a_snap_stopped_while_saving_saves_its_frame_and_ends_stopped(tmp_path):
     """A stop after the exposure cannot take the frame back: the save carries on, as a stopped move
     keeps polling, and the operation ends 'stopped' with its file, releasing the gate."""
-    core = RecordingCore()
-    pending = []
-    core._remote_control_single_shot = lambda _msec, callback: pending.append(callback)
-    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
-    pending.pop(0)()                                                  # scheduled
-    pending.pop(0)()                                                  # the exposure; now saving
+    core, pending = _snap_saving(tmp_path)
     dispatcher.request_stop(core)
     assert dispatcher.operation_snapshot(core)["status"] == "stopping"
-    while pending:
-        pending.pop(0)()                                              # the save completes
+    pending.pop()()                                                   # the save completes
     operation = dispatcher.operation_snapshot(core)
     assert operation["status"] == "stopped" and os.path.isfile(operation["result"]["path"])
     assert dispatcher._active(core) is None
@@ -511,12 +507,66 @@ def test_a_snap_stopped_while_saving_saves_its_frame_and_ends_stopped(tmp_path):
 
 def test_recovery_ends_a_stopped_snap_whose_save_never_ran(tmp_path):
     """The one way a stopped snap is still recovered: its save callback never ran."""
-    core = RecordingCore()
-    pending = []
-    core._remote_control_single_shot = lambda _msec, callback: pending.append(callback)
-    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
-    pending.pop(0)()                                                  # scheduled
-    pending.pop(0)()                                                  # the exposure
+    core, pending = _snap_saving(tmp_path)
     pending.clear()                                                   # the save is lost
     dispatcher.request_stop(core)
     assert dispatcher.clear_if_core_idle(core)["cleared"] is True
+
+
+def test_a_snap_stopped_before_its_exposure_ends_stopped_without_exposing(tmp_path):
+    core = RecordingCore()
+    pending = _deferred(core)
+    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+    dispatcher.request_stop(core)                                     # still scheduled
+    while pending:
+        pending.pop(0)()
+    assert dispatcher.operation_snapshot(core)["status"] == "stopped"
+    assert [call for call in core.calls() if call[0] == "snap"] == [] and os.listdir(tmp_path) == []
+    assert dispatcher._active(core) is None
+
+
+def test_a_stopped_snap_whose_frame_never_arrives_ends_failed_and_frees_the_gate(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "SNAP_TIMEOUT_SEC", 0.0)
+    core = RecordingCore()
+    core.snap = lambda write_flag=True: core._record("snap", write_flag=write_flag)  # camera silent
+    pending = _deferred(core)
+    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+    pending.pop(0)()                                                  # scheduled
+    pending.pop(0)()                                                  # the exposure, no frame
+    dispatcher.request_stop(core)
+    while pending:
+        pending.pop(0)()
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "failed" and "no frame" in operation["error"]
+    assert dispatcher._active(core) is None
+
+
+def test_a_stage_move_stopped_after_it_was_sent_ends_failed_with_stop_requested():
+    """The manual's promise: a move a stop cut short is never taken for an arrival. Once sent to the
+    stage it ends 'failed' with stop_requested, not 'stopped', and the gate is free."""
+    core = RecordingCore()
+    pending = _deferred(core)
+    dispatcher.run(core, "move_absolute", {"targets": {"x": 100}})
+    pending.pop(0)()                                                  # the command runs
+    pending.pop(0)()                                                  # the move is sent to the stage
+    assert [call for call in core.calls() if call[0] == "move_absolute"]
+    dispatcher.request_stop(core)
+    while pending:
+        pending.pop(0)()                                              # the next readback poll
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "failed" and operation["stop_requested"] is True
+    assert "stopped before the target" in operation["error"]
+    assert dispatcher._active(core) is None
+
+
+def test_a_stage_move_stopped_before_it_was_sent_ends_stopped_and_never_moves():
+    core = RecordingCore()
+    pending = _deferred(core)
+    dispatcher.run(core, "move_absolute", {"targets": {"x": 100}})
+    pending.pop(0)()                                                  # the command runs; the move waits
+    dispatcher.request_stop(core)
+    while pending:
+        pending.pop(0)()
+    assert dispatcher.operation_snapshot(core)["status"] == "stopped"
+    assert [call for call in core.calls() if call[0] == "move_absolute"] == []
+    assert dispatcher._active(core) is None
