@@ -238,7 +238,8 @@ def with_advice(name, outcome):
     error = outcome.get("error") if isinstance(outcome, dict) else None
     if isinstance(error, dict):
         if "advice" not in error:
-            error["advice"] = _advice(name, error.get("code"), str(error.get("message", ""))) or config.FAILURE_ADVICE
+            general = config.OPTIONS_ADVICE if "configured_options" in error else config.FAILURE_ADVICE
+            error["advice"] = _advice(name, error.get("code"), str(error.get("message", ""))) or general
     elif isinstance(outcome, dict) and outcome.get("status") == FAILED:
         outcome.setdefault("advice", config.FAILURE_ADVICE)
     return outcome
@@ -309,11 +310,15 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
         except Exception as error:
             code, message = error_info(error)
             outcome = {"error": {"code": code, "message": message}}
-            if code == "validation":
+            if code == "validation" and name in config.OPTION_COMMANDS:
                 options = _configured_options(acceptor)
                 if options is not None:
                     outcome["error"]["configured_options"] = options
         outcome = with_advice(name, outcome)
+        if name == "stop" and isinstance(outcome, dict) and "error" not in outcome:
+            running = acceptor.dispatch("get_state_all", {"keys": ["state"]}).get("state")
+            if running and running != "idle":
+                outcome["note"] = config.STAGE_STOP_NOTE.format(state=running)
         guard.after(name, args, outcome)
         return json.dumps(outcome)
     return _call

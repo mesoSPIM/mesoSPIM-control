@@ -1038,3 +1038,34 @@ def test_a_mode_that_runs_until_stopped_returns_once_it_runs(name, mode):
     assert done["status"] == "running" and core.state["state"] == mode
     assert "stop_activity" in done["note"]
     assert acceptor.dispatch("get_progress", {})["operation"]["status"] == "processing"   # still held
+
+
+def test_a_stage_stop_during_live_says_live_is_still_running():
+    """On the Windows demo Gemini answered "Stop the live mode" with stop, the stage stop, which
+    leaves live running, and replied that it had stopped the live view. The stop result now says
+    what it left running and which command ends it, so the model can neither claim otherwise nor
+    miss the command it wanted."""
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    acceptor, core = _real_acceptor()
+    ai.dispatch_and_wait(acceptor, "start_live", {}, WAIT, threading.Event())
+    stop = {t.name: t for t in build_tools(acceptor, threading.Event(), profile="Regular")}["stop"]
+    out = json.loads(stop.function())
+    assert "live" in out["note"] and "stop_activity" in out["note"]
+    assert core.state["state"] == "live"
+
+
+def test_a_stage_stop_while_idle_carries_no_note():
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    acceptor, _ = _real_acceptor()
+    stop = {t.name: t for t in build_tools(acceptor, threading.Event(), profile="Regular")}["stop"]
+    assert "note" not in json.loads(stop.function())
+
+
+def test_stop_and_stop_activity_say_what_each_ends():
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    tools = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
+    assert "stage" in tools["stop"].description and "stop_activity" in tools["stop"].description
+    assert "live" in tools["stop_activity"].description

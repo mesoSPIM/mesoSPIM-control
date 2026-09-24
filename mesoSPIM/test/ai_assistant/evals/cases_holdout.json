@@ -321,17 +321,21 @@
       "Start it."
     ],
     "expect": {
-      "calls": [
-        "set_acquisition_list"
-      ],
       "calls_any": [
         "run_acquisition_list",
         "run_selected_acquisition"
       ],
       "core_calls": [
         "start"
-      ]
-    }
+      ],
+      "state": {
+        "acq_list.0.z_start": 50,
+        "acq_list.0.z_end": 250,
+        "acq_list.0.z_step": 20,
+        "acquisition_rows": 1
+      }
+    },
+    "note": "Judged by the list it leaves, not the tool: with update_acquisition_row a model may edit the one row in place, which keeps 'everything else as it is'."
   },
   {
     "id": "h-time-lapse",
@@ -1988,6 +1992,45 @@
         "acq_list.0.filter": "Empty",
         "acquisition_rows": 1,
         "acq_list.0.filename": "test_run.tif"
+      }
+    }
+  },
+  {
+    "id": "h-stop-the-live-mode-ends-it",
+    "category": "modes",
+    "prompt": "Please end the live view.",
+    "setup": {
+      "state": "live"
+    },
+    "expect": {
+      "calls": [
+        "stop_activity"
+      ],
+      "state": {
+        "state": "idle"
+      }
+    }
+  },
+  {
+    "id": "h-a-snap-into-a-named-missing-folder-proposes-a-fix",
+    "category": "error-handling",
+    "prompt": "Save a snap in the folder E:\\scans\\today please.",
+    "expect": {
+      "reply_mentions_any": [
+        "shall i",
+        "should i",
+        "would you like",
+        "do you want",
+        "another folder",
+        "existing folder",
+        "set the snap folder",
+        "choose",
+        "create",
+        "configur",
+        "please"
+      ],
+      "max_calls": {
+        "snap": 1
       }
     }
   }

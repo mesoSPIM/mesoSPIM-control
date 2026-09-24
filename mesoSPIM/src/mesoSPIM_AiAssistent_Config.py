@@ -103,7 +103,11 @@ TOOL_PROFILES = {
 # What the assistant tells the model a command is for, where the wire hint is not enough. The
 # hint stays as it is for TCP and MCP clients; this is the assistant's tool description only.
 TOOL_DESCRIPTIONS = {
-    "update_acquisition_row": "Change the named keys of one acquisition row; the rest stays. To rename or edit "
+    # The wire hints say only "in: none"; a model told "stop the live mode" took stop, which halts
+    # the stage and leaves live running.
+    "stop": "Stops the stage only; live or an acquisition runs on (stop_activity ends it).",
+    "stop_activity": "Ends live, an acquisition or a time lapse.",
+    "update_acquisition_row": "Change named keys of one acquisition row; the rest stays. To rename or edit "
                               "a row use this, never set_acquisition_list.",
     "snap": "Save one frame to the snap folder, without looking at it. To see the sample, call look, "
             "which takes its own snap; never snap and then look.",
@@ -138,9 +142,13 @@ LIGHT_CHANGES_PER_TURN = {"set_intensity": 2, "set_camera": 2}
 LIMIT_REFUSAL = "outside the allowed range"
 # Said with every failure that has no advice of its own: the operator asked for a way forward, not
 # only the error. It rides on the failure because the manual has no room left for a local model.
-FAILURE_ADVICE = ("Unless configured_options holds the value that was meant, tell the operator the cause and "
-                  "propose one fix as a question; do not carry it out until they answer. 'Try again' means "
-                  "the same command again.")
+FAILURE_ADVICE = ("Tell the operator the cause and propose one fix as a question; do not carry it out until "
+                  "they answer. 'Try again' means the same command again.")
+# A refusal of a command that names the instrument's options carries the lists, and may be corrected
+# from them once; for any other (a folder, a limit) the lists are noise, and the fix is the operator's.
+OPTION_COMMANDS = ("set_filter", "set_zoom", "set_laser", "set_shutterconfig", "set_state", "set_acquisition_list",
+                   "acquire_start")
+OPTIONS_ADVICE = "If configured_options holds the value that was meant, correct it and retry once. Otherwise: " + FAILURE_ADVICE
 BUSY_FROM_GUI = "from the GUI"
 
 POLL_INTERVAL_S = 0.15
@@ -164,6 +172,8 @@ ROWS_MAX = 60
 ROW_SUMMARY_KEYS = ("filename", "folder", "x_pos", "y_pos", "z_start", "z_end", "z_step", "planes",
                     "f_start", "f_end", "rot", "laser", "intensity", "filter", "zoom", "shutterconfig")
 WAIT_CAP_S = 120  # past this a WAIT op returns "still_running"; the agent then polls get_progress
+# Said with a stage stop that left something running, so a reply cannot call it stopped.
+STAGE_STOP_NOTE = "The stage stopped, but {state} is still running; stop_activity ends it."
 # Modes that end only when stopped: waiting for them to finish would hold the turn until someone
 # presses STOP, so the assistant returns once the mode runs.
 RUNS_UNTIL_STOPPED = ("start_live", "start_visual_mode", "start_lightsheet_alignment_mode")
