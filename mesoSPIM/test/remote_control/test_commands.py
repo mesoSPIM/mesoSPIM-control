@@ -456,3 +456,15 @@ def test_a_snap_the_writer_could_not_save_fails_with_the_writers_reason(tmp_path
     operation = dispatcher.operation_snapshot(core)
     assert operation["status"] == "failed"
     assert "No space left on device" in operation["error"]
+
+
+def test_a_snap_into_a_named_missing_folder_says_how_to_go_on(tmp_path):
+    """The refusal said only that the folder did not exist, and on the demo the AI Assistant, asked
+    to propose a fix, had none to give (1 of 5). It now names the ways forward, as the refusal for
+    a missing snap folder does."""
+    core = RecordingCore()
+    with pytest.raises(dispatcher.ValidationError) as refused:
+        dispatcher.run(core, "snap", {"folder": str(tmp_path / "nowhere")})
+    message = str(refused.value)
+    assert "nowhere" in message and "does not exist" in message
+    assert "pass an existing folder" in message and repr(core.state["snap_folder"]) in message

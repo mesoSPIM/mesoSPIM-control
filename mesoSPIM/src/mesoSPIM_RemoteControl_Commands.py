@@ -1703,10 +1703,11 @@ command(
 def _accept_snap(core, args):
     only(args, ("folder", "prefix"))
     folder = text(args, "folder", required=False)
-    if folder is not None and not os.path.isdir(folder):
-        raise ValidationError(f"folder {folder!r} is not an existing directory on the microscope PC")
-    # mesoSPIM's writer only logs a failed write, so an unchecked default folder saves nothing silently.
     default = state(core, "snap_folder")
+    if folder is not None and not os.path.isdir(folder):
+        raise ValidationError(f"the folder {folder!r} does not exist on the microscope PC; pass an existing folder, "
+                              f"or omit folder to use the snap folder {default!r}")
+    # mesoSPIM's writer only logs a failed write, so an unchecked default folder saves nothing silently.
     if folder is None and not os.path.isdir(default or ""):
         raise ValidationError(f"the snap folder {default!r} does not exist on the microscope PC; "
                               "pass an existing folder, or set the snap folder in mesoSPIM")
