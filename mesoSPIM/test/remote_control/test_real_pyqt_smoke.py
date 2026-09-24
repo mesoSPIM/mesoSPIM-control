@@ -118,7 +118,6 @@ class Window(QtWidgets.QMainWindow):
         self.setCentralWidget(self.TabWidget)
         self.acquisition_manager_window = AcquisitionManager()
         self.shown = []                                   # (text, thread) of every warning window
-        self.core.sig_warning.connect(self.display_warning)   # as MainWindow.py:184, before the tab
 
     def display_warning(self, text):
         self.shown.append((text, threading.get_ident()))
@@ -172,14 +171,23 @@ class Driver(QtCore.QObject):
     warn = QtCore.pyqtSignal(str)
 
 
+def build_tab(window):
+    """In mesoSPIM's order: MainWindow builds the tab (:167 -> :617), connects Core's warnings to
+    its window (:184), and mesoSPIM_Control.py:162 shows the window, where the tab takes over."""
+    tab = RemoteControlGUI(window)
+    window.core.sig_warning.connect(window.display_warning)
+    window.show()
+    return tab
+
+
 def exercise_warning_routing(app):
     """A warning a connected remote controller's command caused opens no window and is on its
     operation; once the controller is gone, a warning opens exactly one window, on the GUI thread.
     Core runs on its own thread, as in mesoSPIM; every step waits on an Event, never on a sleep."""
     core = WarningCore()
     core.done = threading.Event()
-    window = Window(core)                                 # Core on its own thread, upstream's connect made
-    tab = RemoteControlGUI(window)
+    window = Window(core)                                 # Core on its own thread
+    tab = build_tab(window)
     driver = Driver()
     for name in ("connect_assistant", "disconnect_assistant", "open_live", "warn"):
         getattr(driver, name).connect(getattr(window.core, name), QtCore.Qt.QueuedConnection)
@@ -223,7 +231,7 @@ def process_until(app, predicate, timeout=5):
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = Window()
-    tab = RemoteControlGUI(window)
+    tab = build_tab(window)
     app.processEvents()
 
     assert not tab.running and window.core.started == []

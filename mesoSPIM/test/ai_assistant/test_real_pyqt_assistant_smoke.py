@@ -50,12 +50,12 @@ class Window(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.core = Core()
-        self.core.sig_warning.connect(self.display_warning)   # as MainWindow.py:184, before the tab
         self.TabWidget = QtWidgets.QTabWidget(self)
         self.TimelapseTabWidget = QtWidgets.QWidget()
         self.TabWidget.addTab(self.TimelapseTabWidget, "Timelapse")
         self.setCentralWidget(self.TabWidget)
         self.remote_control = RemoteControlGUI(self)
+        self.core.sig_warning.connect(self.display_warning)   # MainWindow.py:184 runs after the tab
 
     def display_warning(self, text):
         pass

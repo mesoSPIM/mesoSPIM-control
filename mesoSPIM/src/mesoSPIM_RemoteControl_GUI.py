@@ -76,10 +76,7 @@ class RemoteControlGUI(QtWidgets.QWidget):
         self.core._remote_control_run_signal = self.sig_remote_run
         parent.sig_state_request.connect(self.on_window_state_request)
         parent.sig_stop_time_lapse.connect(self.on_window_stop)
-        # Take over upstream's one warning connection (MainWindow.py:184, made before this tab).
-        self.core.sig_warning.disconnect(parent.display_warning)
-        self.core.sig_warning.connect(self.route_warning, type=QtCore.Qt.DirectConnection)
-        self.sig_show_warning.connect(parent.display_warning)
+        parent.installEventFilter(self)
         self.core.sig_remote_control_started.connect(self.on_started)
         index = parent.TabWidget.indexOf(parent.TimelapseTabWidget)
         if index >= 0:
@@ -214,6 +211,20 @@ class RemoteControlGUI(QtWidgets.QWidget):
         stop_activity marks it, so the client is not told a stopped run simply completed."""
         if isinstance(request, dict) and request.get("state") == "idle":
             self.on_window_stop()
+
+    def eventFilter(self, watched, event):
+        """Takes over upstream's one warning connection when the main window first shows. Upstream
+        makes it late in building that window (MainWindow.py:184, after this tab at :167 -> :617 and
+        after the ETL file dialog's own event loop); showing the window comes after all of it. No
+        controller can connect before then, so until then every warning opens upstream's window. The
+        route is connected before upstream's connection is removed: Core's thread is already running,
+        and a warning it raises in between must not be lost."""
+        if event.type() == QtCore.QEvent.Show:
+            watched.removeEventFilter(self)
+            self.sig_show_warning.connect(watched.display_warning)
+            self.core.sig_warning.connect(self.route_warning, type=QtCore.Qt.DirectConnection)
+            self.core.sig_warning.disconnect(watched.display_warning)
+        return False
 
     def route_warning(self, text):
         """Runs on the Core thread, where the warning is emitted, with record_warning's own test: a

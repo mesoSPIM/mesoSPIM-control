@@ -79,6 +79,9 @@ def _install_fake_pyqt5():
         def singleShot(_msec, fn):
             fn()  # immediate: drive deferred WAIT bodies in-test
 
+    class QEvent:
+        Show = 17
+
     class _Qt:
         # Distinct values so a test can tell the connection types apart (real Qt: 0/1/2/3).
         AutoConnection = 0
@@ -92,6 +95,7 @@ def _install_fake_pyqt5():
     qtcore.QThread = QThread
     qtcore.QTimer = QTimer
     qtcore.Qt = _Qt
+    qtcore.QEvent = QEvent
 
     qtnetwork = types.ModuleType("PyQt5.QtNetwork")
     qtnetwork.QTcpServer = object  # only touched at runtime, never in unit tests

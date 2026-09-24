@@ -89,16 +89,38 @@ class _FakeParent:
         self.sig_state_request = _Signal()                  # MainWindow's two stop signals
         self.sig_stop_time_lapse = _Signal()
         self.shown = []                                     # the warning windows opened
-        core.sig_warning.connect(self.display_warning)      # as MainWindow.py:184, before the tab
+        self.filters = []
+
+    def installEventFilter(self, watcher):
+        self.filters.append(watcher)
+
+    def removeEventFilter(self, watcher):
+        self.filters.remove(watcher)
+
+    def show(self):
+        from PyQt5 import QtCore
+
+        event = type("ShowEvent", (), {"type": lambda _self: QtCore.QEvent.Show})()
+        for watcher in list(self.filters):
+            watcher.eventFilter(self, event)
 
     def display_warning(self, text):
         self.shown.append(text)
 
 
+def _build(parent):
+    """Build the tab in mesoSPIM's order: MainWindow builds it (:167 -> :617), connects Core's
+    warnings to its window (:184), and mesoSPIM_Control.py:162 shows the window."""
+    tab = RemoteControlGUI(parent)
+    parent.core.sig_warning.connect(parent.display_warning)
+    parent.show()
+    return tab
+
+
 @pytest.fixture
 def tab():
     QMessageBox.warnings.clear()
-    return RemoteControlGUI(_FakeParent(_FakeCore()))
+    return _build(_FakeParent(_FakeCore()))
 
 
 def _fill(tab, host="127.0.0.1", port="42000", token="secret", mode="TCP"):
@@ -250,7 +272,7 @@ def test_core_to_gui_bridge_is_queued_never_blocking_across_threads():
     from PyQt5.QtCore import Qt
 
     window = _FakeParent(_ThreadedFakeCore())
-    tab = RemoteControlGUI(window)
+    tab = _build(window)
 
     by_slot = {slot: kwargs for slot, kwargs in tab.sig_install_acquisition_list.connections}
     assert by_slot[tab.install_acquisition_list]["type"] == Qt.QueuedConnection
@@ -297,7 +319,7 @@ class _FakeMainWindow(_FakeParent):
 
 def test_a_remote_run_enables_stop_and_locks_the_run_buttons_like_a_gui_run():
     window = _FakeMainWindow(_FakeCore())
-    tab = RemoteControlGUI(window)
+    tab = _build(window)
     assert tab.core._remote_control_run_signal is tab.sig_remote_run
 
     tab.core._remote_control_run_signal.emit(True)
@@ -316,7 +338,7 @@ def test_the_run_bridge_is_queued_never_blocking_across_threads():
     from PyQt5.QtCore import Qt
 
     window = _FakeMainWindow(_ThreadedFakeCore())
-    tab = RemoteControlGUI(window)
+    tab = _build(window)
     by_slot = {slot: kwargs for slot, kwargs in tab.sig_remote_run.connections}
     assert by_slot[tab.on_remote_run]["type"] == Qt.QueuedConnection
 
@@ -348,7 +370,7 @@ def test_a_remote_run_stopped_from_the_window_is_reported_as_stopped(stop):
 
     core = _SessionCore()
     window = _WindowWithStop(core)
-    RemoteControlGUI(window)
+    _build(window)
     dispatcher.run(core, "run_acquisition_list", {})
     assert dispatcher.operation_snapshot(core)["status"] == "processing"
 
@@ -368,7 +390,7 @@ def test_another_state_request_from_the_window_is_not_a_stop():
 
     core = _SessionCore()
     window = _WindowWithStop(core)
-    RemoteControlGUI(window)
+    _build(window)
     dispatcher.run(core, "run_acquisition_list", {})
     window.sig_state_request.emit({"intensity": 20})
     assert not dispatcher.operation_snapshot(core).get("stop_requested")
@@ -406,7 +428,7 @@ def test_a_warning_opens_no_window_exactly_when_a_connected_controllers_operatio
 
     core = _SessionCore()
     window = _FakeMainWindow(core)
-    RemoteControlGUI(window)
+    _build(window)
     if connected:
         assistant.start_assistant_for_core(core)
     _operation_in(core, state)
@@ -428,7 +450,7 @@ def test_a_warning_after_the_transport_stopped_opens_one_window():
 
     core = _SessionCore()
     window = _FakeMainWindow(core)
-    RemoteControlGUI(window)
+    _build(window)
     servers.start_for_core(core, "MCP", "127.0.0.1", 0, "token")
     dispatcher.run(core, "run_acquisition_list", {})
     core.sig_warning.emit("first")
@@ -440,11 +462,20 @@ def test_a_warning_after_the_transport_stopped_opens_one_window():
     assert window.shown == ["second"] and dispatcher.operation_snapshot(core)["warning"] == "first"
 
 
-def test_upstream_connects_its_warning_window_before_the_remote_control_tab_is_built():
-    """The tab takes that connection over (MainWindow.py:184, before :617): if upstream changes it,
-    this fails here rather than on the instrument."""
+def test_showing_the_main_window_again_keeps_one_window_per_warning():
+    """Minimising and restoring shows the main window again; the takeover happens once."""
+    window = _FakeParent(_FakeCore())
+    _build(window)
+    window.show()
+    window.core.sig_warning.emit("operator")
+    assert window.shown == ["operator"]
+
+
+def test_upstream_connects_cores_warnings_to_its_warning_window():
+    """The tab takes this connection over once the main window is built (MainWindow.py:184, which
+    runs after the tab is built through :167 -> :617): if upstream drops it, this fails here rather
+    than on the instrument."""
     from pathlib import Path
 
     source = (Path(__file__).resolve().parents[2] / "src" / "mesoSPIM_MainWindow.py").read_text(encoding="utf-8")
-    connect = source.index("self.core.sig_warning.connect(self.display_warning)")
-    assert connect < source.index("self.remote_control = RemoteControlGUI(self)")
+    assert "self.core.sig_warning.connect(self.display_warning)" in source
