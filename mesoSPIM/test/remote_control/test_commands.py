@@ -468,3 +468,38 @@ def test_a_snap_into_a_named_missing_folder_says_how_to_go_on(tmp_path):
     message = str(refused.value)
     assert "nowhere" in message and "does not exist" in message
     assert "pass an existing folder" in message and repr(core.state["snap_folder"]) in message
+
+
+def test_recovery_leaves_a_snap_that_is_still_saving_its_file(tmp_path):
+    """After the exposure Core is idle again, but the snap is still saving its frame (up to
+    SNAP_TIMEOUT_SEC). clear_stuck_operation took that for a stuck operation and failed it, so the
+    file was never written. A snap is recoverable once a stop was asked for, as a move is."""
+    core = RecordingCore()
+    pending = []
+    core._remote_control_single_shot = lambda _msec, callback: pending.append(callback)
+    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+    pending.pop(0)()                                                  # scheduled
+    pending.pop(0)()                                                  # the exposure; Core idle again
+    assert core.state["state"] == "idle" and dispatcher.operation_snapshot(core)["status"] == "processing"
+    assert [callback.__name__ for callback in pending] == ["save"]
+
+    refused = dispatcher.clear_if_core_idle(core)
+    assert refused["cleared"] is False and dispatcher.operation_snapshot(core)["status"] == "processing"
+    while pending:
+        pending.pop(0)()                                              # the save completes
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "completed" and os.path.isfile(operation["result"]["path"])
+
+
+def test_recovery_ends_a_stopped_snap_that_stopped_saving(tmp_path):
+    core = RecordingCore()
+    pending = []
+    core._remote_control_single_shot = lambda _msec, callback: pending.append(callback)
+    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
+    pending.pop(0)()                                                  # scheduled
+    pending.pop(0)()                                                  # the exposure; now saving
+    dispatcher.request_stop(core)
+    while pending:
+        pending.pop(0)()                                              # save gives up: status is not processing
+    assert dispatcher.operation_snapshot(core)["status"] == "stopping"
+    assert dispatcher.clear_if_core_idle(core)["cleared"] is True     # not wedged

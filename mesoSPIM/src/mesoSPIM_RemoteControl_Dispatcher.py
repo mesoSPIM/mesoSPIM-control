@@ -288,6 +288,12 @@ def clear_if_core_idle(core):
                 "operation_id": operation["id"],
                 "reason": "the stage target has not been confirmed; call stop before recovery",
             }
+        if operation["milestone"] == config.MILESTONE_SNAP and not operation.get("stop_requested"):
+            return {
+                "cleared": False,
+                "operation_id": operation["id"],
+                "reason": "the snap is still saving its frame; call stop before recovery",
+            }
         if operation["command"] == "time_lapse_start":
             active = getattr(core, "timelapse_active", None)
             if active is not False:
