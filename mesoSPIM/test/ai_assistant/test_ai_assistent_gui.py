@@ -373,7 +373,7 @@ def test_choosing_a_folder_rescans(tmp_path, monkeypatch):
 def test_setup_starts_collapsed_with_an_inviting_summary():
     gui = _gui()
     assert not gui.setup_group.isVisible()
-    assert gui.setup_toggle.text() == "Set up AI assistant"
+    assert gui.setup_toggle.text() == "Configure AI assistant"
     assert gui.setup_toggle.arrowType() == QtCore.Qt.RightArrow
 
 
@@ -403,7 +403,7 @@ def test_ready_folds_the_footer_and_keeps_the_label(monkeypatch):
     gui.language.key.setText("g-key")
     gui.on_connect()
     assert not gui.setup_group.isVisible()
-    assert gui.setup_toggle.text() == "Set up AI assistant"
+    assert gui.setup_toggle.text() == "Configure AI assistant"
     assert gui.connect_button.text() == "Connected"
 
 
@@ -415,16 +415,41 @@ def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     scheduled.pop()(); scheduled.pop()()
     assert not gui.setup_group.isVisible()
     assert gui.connect_button.text() == "Connected"
-    assert gui.setup_toggle.text() == "Set up AI assistant"
+    assert gui.setup_toggle.text() == "Configure AI assistant"
 
 
-def test_frames_from_look_are_shown_in_the_turn(monkeypatch):
+def test_the_chat_shows_no_images():
+    """The frame a look reads goes to the vision model and the trace, not into the chat."""
+    from mesoSPIM.src import mesoSPIM_AiAssistent as assistant
+    assert not hasattr(assistant.AssistantWorker, "sig_frame")
     gui = _gui()
-    gui._active = {"tools": [("look", "{}")], "reply": None, "error": None}
-    gui._on_frame("QUJD")
-    assert '<img src="data:image/png;base64,QUJD"' in gui.output.toPlainText()
+    gui._active = {"tools": [("look", "{}")], "reply": "Diagonal stripes.", "error": None}
     gui._on_done()
-    assert '<img src="data:image/png;base64,QUJD"' in gui.output.toPlainText()   # kept in the finished block
+    assert "<img" not in gui.output.toPlainText() and "Diagonal stripes." in gui.output.toPlainText()
+
+
+def test_tool_calls_show_only_when_switched_on_in_configure():
+    """Off by default; the switch shows or hides them for every turn, the earlier ones too."""
+    gui = _gui()
+    assert gui.show_tool_calls.isChecked() is False
+    gui._active = {"tools": [("move_absolute", '{"targets": {"x": 5}}')], "reply": "Moved.", "error": None}
+    gui._on_done()
+    assert "Moved." in gui.output.toPlainText() and "move_absolute" not in gui.output.toPlainText()
+
+    gui.show_tool_calls.setChecked(True)
+    assert "move_absolute" in gui.output.toPlainText()
+
+    gui.show_tool_calls.setChecked(False)
+    assert "move_absolute" not in gui.output.toPlainText()
+
+
+def test_no_command_was_sent_is_said_even_with_tool_calls_hidden():
+    """Not a tool call: the tab's own statement that a reply sent nothing, against a small model
+    that writes "I have closed the shutters" having called nothing."""
+    gui = _gui()
+    gui._active = {"tools": [], "reply": "I have closed the shutters.", "error": None}
+    gui._on_done()
+    assert gui.output.toPlainText().count(gui_module.NO_COMMANDS_SENT) == 1
 
 
 def test_a_stand_in_model_is_shown_in_the_turn():

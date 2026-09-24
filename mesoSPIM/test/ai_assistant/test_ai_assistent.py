@@ -351,24 +351,21 @@ def _real_acceptor():
 
 def test_look_gives_a_text_only_model_the_numbers_and_no_image():
     acceptor, core = _real_acceptor()
-    shown = []
     endpoint = Endpoint(provider="Local", kind="openai-compatible", model="m", base_url="u")
-    result = ai.look(acceptor, endpoint, "is it in focus?", True, threading.Event(), on_frame=shown.append)
+    result = ai.look(acceptor, endpoint, "is it in focus?", True, threading.Event())
     assert result["available"] and "answer" not in result and "cannot see" in result["note"]
     assert result["stats"]["shape"] == [64, 96] and result["stats"]["bright_fraction"] > 0
-    assert shown == []                                              # nothing was rendered for nobody
     assert [c[0] for c in core.calls() if c[0] == "snap"] == ["snap"]
 
 
 def test_look_asks_the_vision_model_in_a_side_call(monkeypatch):
     acceptor, _ = _real_acceptor()
-    asked, shown = [], []
+    asked = []
     monkeypatch.setattr(ai, "vision_answer", lambda endpoint, image, question, stats: asked.append((question, image["format"])) or "sample centred")
     endpoint = Endpoint.from_preset("Gemini", api_key="k")
-    result = ai.look(acceptor, endpoint, "is the sample centred?", True, threading.Event(), on_frame=shown.append)
+    result = ai.look(acceptor, endpoint, "is the sample centred?", True, threading.Event())
     assert result["answer"] == "sample centred"
     assert asked == [("is the sample centred?", "png")]
-    assert len(shown) == 1 and shown[0]                             # the operator sees the same frame
 
 
 def test_look_reuses_the_last_frame_when_asked(monkeypatch):

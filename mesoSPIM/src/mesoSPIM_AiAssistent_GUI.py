@@ -1,13 +1,14 @@
 """The 'AI Assistant' tab: a chat transcript styled like a coding-agent chat.
 
 The transcript is plain on the tab's own background — no bubbles and no speaker labels, so weight
-alone separates the voices: your question is bold, the answer is not. Each answer streams the
-commands it runs above it, then the final Markdown. Enter or Send submits; the input disables
+alone separates the voices: your question is bold, the answer is not. Each answer shows its
+final Markdown, with the commands it ran above it when "Show tool calls" is on. Images stay out of
+the chat: a frame goes to the vision model and the trace. Enter or Send submits; the input disables
 during a turn (single-flight); Cancel stops the assistant, Stop microscope stops the
 instrument. The Acceptor is acquired lazily on first use —
 until then the Remote Control transports stay usable, and the two are mutually exclusive.
 
-The setup sits under the input box as a collapsible footer: one line ("Set up AI assistant")
+The setup sits under the input box as a collapsible footer: one line ("Configure AI assistant")
 that expands to three boxes, Preferences, Language model and Vision model, and one Connect. It
 opens itself when something needs the operator (nothing configured, a missing key, a server that
 failed) and folds back once the assistant is ready, so a first-time user sees a chat, not a
@@ -242,7 +243,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._pending_confirmation = None
         self._models_folder = models_folder(getattr(self.core, "cfg", None))
         self._single_shot = QtCore.QTimer.singleShot   # injectable for tests
-        self._blocks = []                       # finalized message HTML, oldest first
+        self._blocks = []                       # oldest first: HTML, or a finished answer's turn dict
         self._active = None                     # the running turn: {"tools", "reply", "error"}
         self._build_ui()
         index = parent.TabWidget.indexOf(parent.remote_control)   # RemoteControlGUI instance
@@ -277,7 +278,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.sig_run_turn.connect(self._run_turn_slot, QtCore.Qt.QueuedConnection)
         self._worker.sig_reply.connect(self._on_reply)
         self._worker.sig_tool.connect(self._on_tool)
-        self._worker.sig_frame.connect(self._on_frame)
         self._worker.sig_confirm.connect(self._on_confirm)
         self._worker.sig_served.connect(self._on_served)
         self._worker.sig_error.connect(self._on_error)
@@ -384,7 +384,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setup_toggle.setCheckable(True)
         self.setup_toggle.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         self.setup_toggle.setAutoRaise(True)
-        self.setup_toggle.setText("Set up AI assistant")
+        self.setup_toggle.setText("Configure AI assistant")
         self.setup_toggle.toggled.connect(self._set_expanded)
         layout.addWidget(self.setup_toggle)
         self.setup_group = self._build_setup(font)
@@ -419,7 +419,10 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.frame_size = QtWidgets.QSpinBox(preferences)
         self.frame_size.setRange(256, 4096)
         self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
-        for widget in (self.tools_profile, self.history_turns, self.frame_size):
+        self.show_tool_calls = QtWidgets.QCheckBox("Show tool calls", preferences)
+        self.show_tool_calls.setChecked(config.SHOW_TOOL_CALLS)
+        self.show_tool_calls.toggled.connect(lambda _checked: self._render())
+        for widget in (self.tools_profile, self.history_turns, self.frame_size, self.show_tool_calls):
             widget.setFont(font)
 
         def with_unit(spin, unit):
@@ -442,6 +445,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         options.addWidget(image_label, 0, 4)
         options.addLayout(with_unit(self.frame_size, "px"), 0, 5)
         options.setColumnStretch(6, 1)
+        options.addWidget(self.show_tool_calls, 1, 0, 1, 4)     # its own line: the one above is full
 
         self.language = ModelPicker("Language model", font, setup, self._models_folder, self.on_choose_folder)
         self.vision = ModelPicker("Vision model", font, setup, self._models_folder, self.on_choose_folder,
@@ -688,12 +692,9 @@ class AiAssistentGUI(QtWidgets.QWidget):
         is emitted until the first tool call or the reply arrives — the status line already says the
         turn is running."""
         parts = []
-        for name, args in active["tools"]:
+        for name, args in active["tools"] if self.show_tool_calls.isChecked() else ():
             parts.append(f'<div style="color:{_DIM};">&#8250; {_htmllib.escape(name)}'
                          f'({_htmllib.escape(args)})</div>')
-        for png in active.get("frames", ()):
-            # what the vision model was shown, so the operator sees it too
-            parts.append(f'<div><img src="data:image/png;base64,{png}" width="320"></div>')
         if active.get("served"):
             parts.append(f'<div style="color:#e0c080;"><b>&#9888;</b> {_htmllib.escape(active["served"])}</div>')
         if active["error"] is not None:
@@ -711,7 +712,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         return f'<div style="color:{_DIM};margin:3px 0;"><i>{_htmllib.escape(text)}</i></div>'
 
     def _render(self):
-        blocks = list(self._blocks)
+        blocks = [self._assistant_block(b) if isinstance(b, dict) else b for b in self._blocks]
         if self._active is not None:
             blocks.append(self._assistant_block(self._active))
         self.output.setHtml("".join(blocks))
@@ -812,11 +813,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
             self._active["tools"].append((name, args))
             self._render()
 
-    def _on_frame(self, png):
-        if self._active is not None:
-            self._active.setdefault("frames", []).append(png)
-            self._render()
-
     def _on_served(self, text):
         if self._active is not None:
             self._active["served"] = text
@@ -829,7 +825,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _on_done(self):
         if self._active is not None:
-            self._blocks.append(self._assistant_block(self._active))
+            self._blocks.append(self._active)   # kept as the turn, so Show tool calls reaches it
             self._active = None
         self._set_running(False)
         self._render()

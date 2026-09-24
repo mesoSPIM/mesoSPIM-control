@@ -30,10 +30,13 @@ roadmap
 
 ## Setting it up
 
-The tab opens as a chat. The line under the input box, **Set up AI assistant**, expands to three
-boxes, **Preferences**, **Language model** and **Vision model**, with one **Connect** under them,
-and opens by itself when something needs the operator: nothing configured yet, a missing key, or
-a local model that failed to start. Once the assistant is ready it folds back. Each model box
+The tab opens as a chat. The line under the input box, **Configure AI assistant**, expands to three
+boxes, **Preferences**, **Language model** and **Vision model**, with **Connect** and **Disconnect**
+under them, and opens by itself when something needs the operator: nothing configured yet, a missing key, or
+a local model that failed to start. Once the assistant is ready it folds back. **Disconnect** hands
+the microscope session back, so the Remote Control tab can start a transport without restarting
+mesoSPIM. The chat shows each answer; **Show tool calls**, under Preferences, adds the commands each
+answer ran. Images stay out of the chat: a frame goes to the vision model and the trace. Each model box
 starts with a **Type** dropdown; the fields after it follow the choice.
 
 **Language model, Cloud AI.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style**

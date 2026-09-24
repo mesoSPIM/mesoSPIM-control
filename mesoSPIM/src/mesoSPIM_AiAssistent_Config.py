@@ -73,6 +73,9 @@ LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow 
 # The frame handed to a vision model: longer side in pixels.
 LOOK_IMAGE_SIZE = 1024
 
+# Whether the chat lists the commands each answer ran; the Configure box switches it.
+SHOW_TOOL_CALLS = False
+
 # Which commands the assistant offers the model. "Regular" is for a user setting up a sample on a
 # configured microscope: everything about the sample and the session, nothing about the machine.
 # "Full" is everything. TCP and MCP always serve every command; this is the assistant only.

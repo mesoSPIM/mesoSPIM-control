@@ -52,8 +52,8 @@ python mesoSPIM/mesoSPIM_Control.py -D
 
 Open the **AI Assistant** tab, set Type to **Local AI**, pick the file, Connect. The button reads
 "Starting…" while the model loads, then "Connected". Ask "Where is the stage?", then "Take a snap
-and tell me what you see". The transcript shows each tool call under the reply; the frame the
-vision model was shown appears in it too. Every turn is written to
+and tell me what you see". With **Show tool calls** on (Configure AI assistant, Preferences), the
+transcript lists each tool call above the reply. Every turn is written to
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl`.
 
 ## 5. Run the evaluation against the model

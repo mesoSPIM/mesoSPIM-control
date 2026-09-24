@@ -304,7 +304,7 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
     return _call
 
 
-def look(acceptor, endpoint, question, snap, cancel, on_frame=None, image_size=None):
+def look(acceptor, endpoint, question, snap, cancel, image_size=None):
     """Take a frame and describe it. The numbers come from get_frame and reach the main model
     always. The picture itself goes to a vision model in a separate single-shot call with the
     question, and only that answer comes back — the main conversation never carries images, so a
@@ -318,8 +318,6 @@ def look(acceptor, endpoint, question, snap, cancel, on_frame=None, image_size=N
         return {"available": False, "note": "no frame yet; take a snap first"}
     result = {"available": True, "stats": frame["stats"]}
     image = frame.get("image")
-    if image is not None and on_frame is not None:
-        on_frame(image["base64"])
     if image is None:
         result["note"] = "this model cannot see images; decide from the numbers"
     elif question:
@@ -545,7 +543,7 @@ def _narrowed(cmd, keys):
     return schema
 
 
-def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, gate=None, vision_endpoint=None,
+def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision_endpoint=None,
                 image_size=None, profile=None, store=None):
     """One passthrough tool per offered command (see offered_commands). The tool list is derived
     from COMMANDS and the profile — never hand-maintained.
@@ -584,7 +582,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, on_frame=None, ga
             size = image_size() if callable(image_size) else image_size  # a callable reads a live setting
             reuse = bool(snap) and guard.take_fresh_snap()  # snapped a moment ago: no second exposure
             try:
-                outcome = look(acceptor, eyes, question, snap and not reuse, cancel, on_frame, size)
+                outcome = look(acceptor, eyes, question, snap and not reuse, cancel, size)
                 if reuse and outcome.get("available"):
                     outcome["frame"] = ("the one snapped a moment ago in this turn, not a second exposure; look "
                                         "takes its own snap, so next time call look alone")
@@ -859,7 +857,7 @@ def build_model(endpoint):
     return FallbackModel(primary, _build_one(endpoint, endpoint.fallback_model))
 
 
-def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_frame=None, gate=None,
+def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=None,
                 vision_endpoint=None, image_size=None, profile=None, store=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
@@ -873,7 +871,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, on_fr
     # every model request, mid-turn ones included, and the compacted history is what the run
     # keeps, so an old turn is compacted once and stays so.
     agent = Agent(model, instructions=build_system_prompt(profile=profile),
-                  tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, on_frame=on_frame, gate=gate,
+                  tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, gate=gate,
                                     vision_endpoint=vision_endpoint, image_size=image_size, profile=profile,
                                     store=store),
                   capabilities=[ProcessHistory(compact_history)],
@@ -951,7 +949,6 @@ class AssistantWorker(QtCore.QObject):
 
     sig_reply = QtCore.pyqtSignal(str)
     sig_tool = QtCore.pyqtSignal(str, str)   # tool name, args-json
-    sig_frame = QtCore.pyqtSignal(str)       # base64 PNG the `look` tool showed the vision model
     sig_confirm = QtCore.pyqtSignal(str, str)  # a confirm-first command waits for Run / Cancel
     sig_served = QtCore.pyqtSignal(str)      # another model than the chosen one answered (the fallback)
     sig_error = QtCore.pyqtSignal(str)
@@ -998,7 +995,7 @@ class AssistantWorker(QtCore.QObject):
             self.cancel.clear()
             if self._agent is None:
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
-                                          endpoint=self._endpoint, on_frame=self.sig_frame.emit, gate=self.gate,
+                                          endpoint=self._endpoint, gate=self.gate,
                                           vision_endpoint=self._vision_endpoint,
                                           image_size=lambda: self.look_image_size, profile=self._profile,
                                           store=self.store)

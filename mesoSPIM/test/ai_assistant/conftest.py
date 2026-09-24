@@ -221,6 +221,25 @@ class QSpinBox(QtWidgets.QWidget):
         return self._value
 
 
+class QCheckBox(QtWidgets.QWidget):
+    def __init__(self, text="", parent=None):
+        super().__init__(parent)
+        self._text = text
+        self._checked = False
+        self.toggled = _Signal()
+
+    def text(self):
+        return self._text
+
+    def setChecked(self, checked):
+        if bool(checked) != self._checked:
+            self._checked = bool(checked)
+            self.toggled.emit(self._checked)
+
+    def isChecked(self):
+        return self._checked
+
+
 class QFileDialog:
     chosen = ""  # a test sets the folder the dialog "returns"
 
@@ -231,6 +250,7 @@ class QFileDialog:
 
 QtWidgets.QToolButton = QToolButton
 QtWidgets.QSpinBox = QSpinBox
+QtWidgets.QCheckBox = QCheckBox
 QtWidgets.QPlainTextEdit = QPlainTextEdit
 for _enum, _value in (("ScrollBarAsNeeded", 0), ("Key_Return", 0x01000004), ("Key_Enter", 0x01000005), ("ShiftModifier", 0x02000000)):
     if not hasattr(QtCore.Qt, _enum):
