@@ -5,6 +5,8 @@ import pytest
 from PyQt5.QtWidgets import QMessageBox
 from mesoSPIM.src.mesoSPIM_RemoteControl_GUI import RemoteControlGUI
 from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
+from mesoSPIM.test.remote_control.support.fakes import RecordingCore
+from mesoSPIM.src import mesoSPIM_RemoteControl_Commands  # noqa: F401  (fills the command registry)
 
 
 class _Signal:
@@ -76,6 +78,8 @@ class _FakeParent:
         self.TimelapseTabWidget = object()
         self.core = core
         self.acquisition_manager_window = _FakeAcquisitionManager()
+        self.sig_state_request = _Signal()                  # MainWindow's two stop signals
+        self.sig_stop_time_lapse = _Signal()
 
 
 @pytest.fixture
@@ -302,3 +306,56 @@ def test_the_run_bridge_is_queued_never_blocking_across_threads():
     tab = RemoteControlGUI(window)
     by_slot = {slot: kwargs for slot, kwargs in tab.sig_remote_run.connections}
     assert by_slot[tab.on_remote_run]["type"] == Qt.QueuedConnection
+
+
+class _SessionCore(RecordingCore):
+    """The fake Core with a real remote session, plus what the tab connects to."""
+
+    def __init__(self):
+        super().__init__()
+        self.sig_remote_control_started = _Signal()
+
+    def start_remote_control(self, *args):
+        pass
+
+    def stop_remote_control(self, *args):
+        pass
+
+
+_WindowWithStop = _FakeMainWindow   # STOP and Stop microscope emit its sig_state_request and sig_stop_time_lapse
+
+
+@pytest.mark.parametrize("stop", ["idle request", "time lapse stop"])
+def test_a_remote_run_stopped_from_the_window_is_reported_as_stopped(stop):
+    """On the Windows demo, Stop microscope ended a remote 1000-plane run at 25 planes and the
+    client was told "completed" with no stop_requested: it could not tell. Only stop_activity
+    marked the operation; a stop from the window now does too."""
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Config as rc_config
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+
+    core = _SessionCore()
+    window = _WindowWithStop(core)
+    RemoteControlGUI(window)
+    dispatcher.run(core, "run_acquisition_list", {})
+    assert dispatcher.operation_snapshot(core)["status"] == "processing"
+
+    if stop == "idle request":
+        window.sig_state_request.emit({"state": "idle"})
+    else:
+        window.sig_stop_time_lapse.emit()
+    assert dispatcher.operation_snapshot(core)["stop_requested"] is True
+
+    dispatcher.complete(core, rc_config.MILESTONE_FINISHED)
+    operation = dispatcher.operation_snapshot(core)
+    assert operation["status"] == "completed" and operation["stop_requested"] is True
+
+
+def test_another_state_request_from_the_window_is_not_a_stop():
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+
+    core = _SessionCore()
+    window = _WindowWithStop(core)
+    RemoteControlGUI(window)
+    dispatcher.run(core, "run_acquisition_list", {})
+    window.sig_state_request.emit({"intensity": 20})
+    assert not dispatcher.operation_snapshot(core).get("stop_requested")

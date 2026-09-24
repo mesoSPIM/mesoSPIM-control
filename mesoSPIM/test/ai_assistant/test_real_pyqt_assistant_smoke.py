@@ -40,6 +40,10 @@ class Core(QtCore.QObject):
 
 
 class Window(QtWidgets.QMainWindow):
+    # MainWindow's two stop signals, which the Remote Control tab listens to.
+    sig_state_request = QtCore.pyqtSignal(dict)
+    sig_stop_time_lapse = QtCore.pyqtSignal()
+
     def __init__(self):
         super().__init__()
         self.core = Core()

@@ -21,6 +21,7 @@ Maintainer (2026):
 from PyQt5 import QtCore, QtWidgets
 
 from . import mesoSPIM_RemoteControl_Config as config
+from . import mesoSPIM_RemoteControl_Dispatcher as dispatcher
 
 
 class RemoteControlGUI(QtWidgets.QWidget):
@@ -71,6 +72,8 @@ class RemoteControlGUI(QtWidgets.QWidget):
         self.core._remote_control_acquisition_list_signal = self.sig_install_acquisition_list
         self.sig_remote_run.connect(self.on_remote_run, type=queued)
         self.core._remote_control_run_signal = self.sig_remote_run
+        parent.sig_state_request.connect(self.on_window_state_request)
+        parent.sig_stop_time_lapse.connect(self.on_window_stop)
         self.core.sig_remote_control_started.connect(self.on_started)
         index = parent.TabWidget.indexOf(parent.TimelapseTabWidget)
         if index >= 0:
@@ -198,6 +201,16 @@ class RemoteControlGUI(QtWidgets.QWidget):
         window.enable_mode_control_buttons(False)
         window.ControlGroupBox.setEnabled(False)
         window.set_progressbars_to_busy()
+
+    def on_window_state_request(self, request):
+        """The main window's STOP (and the AI Assistant's Stop microscope, which calls the same
+        handler) asks Core for the idle state. A remote run it ends is marked stopped, as
+        stop_activity marks it, so the client is not told a stopped run simply completed."""
+        if isinstance(request, dict) and request.get("state") == "idle":
+            self.on_window_stop()
+
+    def on_window_stop(self):
+        dispatcher.request_stop(self.core)
 
     def on_started(self, ok, message):
         """Core's queued report of a start attempt. On failure the transport did NOT bind, so the
