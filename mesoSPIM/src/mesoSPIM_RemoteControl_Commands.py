@@ -617,6 +617,33 @@ def check_acquisition(core, acquisition, label="acquisition"):
     return dict(acquisition)
 
 
+def check_writer_suffix(row, label):
+    """A row's file name must end in one of its writer's extensions. The writer checks it only once
+    Core has stopped the stage-position polling, and Core does not resume the polling on that error:
+    the position freezes, and a remote move then waits for it for good. A writer mesoSPIM does not
+    know is left to Core."""
+    from .plugins.utils import get_image_writer_class_from_name
+
+    if not isinstance(row, dict) or not isinstance(row.get("filename"), str):
+        return
+    writer = get_image_writer_class_from_name(row.get("image_writer_plugin"))
+    extensions = writer.file_extensions() if writer is not None else None
+    if not extensions:
+        return
+    extensions = ["." + e.lstrip(".") for e in ([extensions] if isinstance(extensions, str) else extensions)]
+    if not any(row["filename"].endswith(e) for e in extensions):
+        raise ValidationError(f"{label}: {row['filename']!r} does not suit {row['image_writer_plugin']}, which "
+                              f"writes {', '.join(extensions)}; rename the file or choose another writer")
+
+
+def revalidate_installed_writers(core, indices=None):
+    """check_writer_suffix for the installed rows about to run (`indices`: only those)."""
+    installed = state(core, "acq_list", []) or []
+    for i in range(len(installed)) if indices is None else indices:
+        if 0 <= i < len(installed):
+            check_writer_suffix(installed[i], f"installed acquisitions[{i}]")
+
+
 def revalidate_installed_limits(core, indices=None):
     """Re-check the ALREADY-installed acquisition rows' stage fields against the effective limits,
     right before a remote command starts them. The installed list may have been set from the GUI
@@ -2014,6 +2041,7 @@ def _accept_run_acquisition_list(core, args):
         raise ValidationError("the installed acquisition list is empty")
     # The installed list must still be within the current limits when execution begins.
     revalidate_installed_limits(core)
+    revalidate_installed_writers(core)
     return {}
 
 
@@ -2044,6 +2072,7 @@ def _accept_run_selected(core, args):
 
     # Revalidate only the row that is about to run.
     revalidate_installed_limits(core, [selected])
+    revalidate_installed_writers(core, [selected])
     return {"row": selected}
 
 
@@ -2106,6 +2135,7 @@ def _accept_acquire_start(core, args):
         raise ValidationError("a previous acquire_start is unfinished; call acquire_finish first")
 
     acquisition = check_acquisition(core, args.get("acquisition"))
+    check_writer_suffix(acquisition, "acquisition")
 
     # Validate sensor dimensions before the mutation gate opens.
     _camera_pixels(core)
@@ -2177,6 +2207,7 @@ def _accept_time_lapse_start(core, args):
 
     # A time lapse runs the installed list, so recheck it against the current limits.
     revalidate_installed_limits(core)
+    revalidate_installed_writers(core)
     return {"timepoints": timepoints, "interval_sec": interval}
 
 

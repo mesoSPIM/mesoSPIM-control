@@ -227,6 +227,49 @@ def test_installed_rows_are_revalidated_in_the_stage_frame_before_running():
     assert [name for name, *_ in core.calls() if name == "start"] == []
 
 
+@pytest.fixture
+def writers():
+    """The RAW and TIFF writers, registered as mesoSPIM's plugin manager registers them at start-up."""
+    import sys
+    from mesoSPIM.src.plugins import manager
+
+    modules = [manager._import_path(manager.PLUGINS_DIR / "ImageWriters" / name).__name__
+               for name in ("RawWriter.py", "TiffWriter.py")]
+    yield
+    for name in modules:
+        sys.modules.pop(name, None)
+
+
+def _writer_row(filename, writer):
+    return {"x_pos": 0, "y_pos": 0, "z_start": 0, "z_end": 0, "z_step": 1, "planes": 1,
+            "filename": filename, "image_writer_plugin": writer}
+
+
+def test_a_run_whose_file_name_does_not_suit_its_writer_is_refused_before_anything_moves(writers):
+    """The writer checks the name only after Core has stopped the stage-position polling, and Core
+    does not resume it on that error: the position freezes and a later remote move never completes
+    (seen on the demo). So a run is refused here, by the writer's own extensions."""
+    core = RecordingCore()
+    dispatcher.run(core, "set_acquisition_list", {"acquisitions": [_writer_row("walk.tif", "RAW_Writer")]})
+    for command, args in (("run_acquisition_list", {}), ("run_selected_acquisition", {"row": 0}),
+                          ("time_lapse_start", {})):
+        with pytest.raises(dispatcher.ValidationError, match=r"walk\.tif.*RAW_Writer.*\.raw"):
+            dispatcher.run(core, command, args)
+    assert [name for name, *_ in core.calls() if name in ("start", "move_absolute")] == []
+
+
+def test_a_file_name_that_suits_its_writer_runs(writers):
+    core = RecordingCore()
+    dispatcher.run(core, "set_acquisition_list", {"acquisitions": [_writer_row("walk.raw", "RAW_Writer")]})
+    assert dispatcher.run(core, "run_acquisition_list", {})["accepted"] is True
+
+
+def test_acquire_start_refuses_a_file_name_its_writer_cannot_write(writers):
+    acquisition = dict(VALID_CASES["acquire_start"]["acquisition"], filename="one.tif", image_writer_plugin="RAW_Writer")
+    with pytest.raises(dispatcher.ValidationError, match=r"one\.tif.*RAW_Writer"):
+        dispatcher.run(RecordingCore(), "acquire_start", {"acquisition": acquisition})
+
+
 def test_zeroing_cannot_bypass_a_tightened_environment_envelope(monkeypatch):
     monkeypatch.setenv(config.LIMITS_ENV_VAR, '{"x": [-100, 100]}')
     core = _zeroed_core(user=0.0, physical=24999.0)

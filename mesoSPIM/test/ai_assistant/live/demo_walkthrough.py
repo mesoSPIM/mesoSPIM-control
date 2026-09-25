@@ -176,7 +176,8 @@ def _steps(read, value, position, probe, stamp):
                             f"X {position('x')!r} (expected {before['x']!r} kept); the reply names the limit: {says(reply, _LIMIT_WORDS)}")),
     ]
     if first is not None:
-        name = f"walk_{stamp}.tif"
+        # The row's own extension: it suits the row's writer, which refuses any other.
+        name = f"walk_{stamp}{os.path.splitext(first.get('filename') or '')[1] or '.tif'}"
         steps += [
             Step(f"Rename the first acquisition to {name}.",
                  [("update_acquisition_row", {"row": 0, "changes": {"filename": name}})],
