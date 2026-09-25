@@ -63,7 +63,10 @@ server is started with a 32K-token context window (llama.cpp's own default of 2,
 hold one request), prompt batches of 2,048 tokens and flash attention where the build has it;
 the config attribute `ai_assistant_context_tokens` sets another context size. Every model, cloud
 or local, is sampled at temperature 0 and gets a malformed tool call handed back twice before
-the turn fails.
+the turn fails. The four `ai_assistant_*` attributes (`_tools`, `_models_folder`, `_context_tokens`,
+`_traces_folder`) describe the microscope, so in a configuration split into a hardware file and a
+user file they belong in the hardware file (`config/hardware/…_hw.py`); the user file can
+override any of them below its `include()` line.
 Connecting again, or closing mesoSPIM, stops the child. A server that fails to start is reported
 with the path of its log. Use a GPU build of llama-cpp-python for anything above a few billion
 parameters; the 4B to 12B instruction models are the realistic range on a microscope PC.
