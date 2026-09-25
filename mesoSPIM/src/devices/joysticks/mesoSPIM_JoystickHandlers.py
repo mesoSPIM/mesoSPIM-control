@@ -124,12 +124,16 @@ class mesoSPIM_JoystickHandler(QtCore.QObject):
             combobox.setCurrentIndex(index)
 
     def increment_combobox(self, combobox):
+        if not combobox.isEnabled():   # e.g. the zoom dropdown during a zoom change
+            return
         index = combobox.currentIndex()
         index += 1
         if index < combobox.count():
             combobox.setCurrentIndex(index)
 
     def decrement_combobox(self, combobox):
+        if not combobox.isEnabled():
+            return
         index = combobox.currentIndex()
         index -= 1
         if index > -1:

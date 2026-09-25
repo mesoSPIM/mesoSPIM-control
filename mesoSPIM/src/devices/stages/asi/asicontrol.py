@@ -40,9 +40,13 @@ class StageControlASI(QtCore.QObject):
         self.position_dict = {axis : None for axis in self.axis_list} # create an empty position dict
         self.asi_connection = serial.Serial(self.port, self.baudrate, parity=serial.PARITY_NONE, timeout=5, xonxoff=False, stopbits=serial.STOPBITS_ONE)
         self.previous_command = ''
+        # Must be set before the first read_position(): _send_command() logs
+        # current_z_slice on any response slower than 40 ms, so a slow first reply
+        # raised AttributeError inside _send_command and was misreported as
+        # 'Could not connect to ASI stage'.
+        self.current_z_slice = 0
         if self.read_position() is None:
             raise ValueError('Could not connect to ASI stage')
-        self.current_z_slice = 0
 
     def close(self):
         '''Closes connection to the stage'''
@@ -80,6 +84,15 @@ class StageControlASI(QtCore.QObject):
 
     def _reset_buffers(self):
         if self.asi_connection is not None:
+            # Anything still in the input buffer here is a reply nobody consumed:
+            # either stale controller output or, more importantly, a reply that
+            # another thread is mid-way through reading. Discarding it silently is
+            # what turns a race into a full read timeout, so log it loudly -- a
+            # non-zero count is direct evidence of unserialized port access.
+            pending = self.asi_connection.in_waiting
+            if pending:
+                logger.warning(f"Discarding {pending} unread byte(s) from the ASI input buffer "
+                               f"before sending a new command; another caller may be using the port.")
             self.asi_connection.reset_input_buffer()
             self.asi_connection.reset_output_buffer()
         else:
@@ -102,7 +115,10 @@ class StageControlASI(QtCore.QObject):
     def stop(self):
         '''Stops movement on all axes by sending "halt" to the controller
         '''
-        response = self._send_command(b'\\r')
+        # HALT is a single backslash followed by a carriage return. b'\\r' is
+        # backslash + letter 'r' with no terminator, which the controller never
+        # answers -- the read then blocks for the full serial timeout.
+        response = self._send_command(b'\\\r')
         logger.info(f"ASI response to HALT command: {response}")
         
     def wait_until_done(self):

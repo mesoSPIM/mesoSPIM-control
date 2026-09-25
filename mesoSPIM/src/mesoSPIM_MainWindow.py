@@ -10,7 +10,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.uic import loadUi
 
-from ..config.demo_config import plugins
 
 ''' Disabled taskbar button progress display due to problems with Anaconda default'''
 # if sys.platform == 'win32':
@@ -30,6 +29,7 @@ from .mesoSPIM_RemoteControl_GUI import RemoteControlGUI
 from .mesoSPIM_AiAssistent_GUI import AiAssistentGUI
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
+from .utils.config_loader import check_zoom_keys, is_demo
 
 logger = logging.getLogger(__name__)
 
@@ -167,8 +167,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
 
-        # launch ETL menu
-        self.choose_etl_config()
+        # launch ETL menu, unless there is no ETL to tune: the waveform generator has
+        # already loaded startup['ETL_cfg_file'], so demo mode starts without the dialog
+        if is_demo(self.cfg.waveformgeneration):
+            logger.info(f"Demo mode: using ETL config file {self.state['ETL_cfg_file']}")
+        else:
+            self.choose_etl_config()
 
         # Widget list for blockSignals during status updates
         self.widgets_to_block = []
@@ -183,6 +187,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+        self.core.sig_zoom_in_progress.connect(self.set_zoom_change_in_progress)
         self.core.sig_time_lapse_finished.connect(self.on_time_lapse_finished)
         self.core.sig_time_lapse_cancelled.connect(self.on_time_lapse_cancelled)
         self.core.camera_worker.sig_snap_image_ready.connect(self.save_snap_image)
@@ -220,6 +225,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         """Checks missing blocks in config file and gives suggestions.
         Todo: all new config options
         """
+        logger.info(f"Config format: {getattr(self.cfg, 'config_format', 1)}")
+        check_zoom_keys(self.cfg)
         gen_msg = "You are using outdated config file, check project github with the most recent template (demo_config.py):"
         if not hasattr(self.cfg, 'ui_options'):
             spec_msg = "\n - 'ui_options' is missing"
@@ -238,7 +245,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.state['galvo_amp_scale_w_zoom'] = self.cfg.scale_galvo_amp_with_zoom
         self.checkBoxScaleWZoom.setChecked(self.state['galvo_amp_scale_w_zoom'])
 
-        if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
+        if self.cfg.stage_parameters.get('f_objective_exchange') is not None:
             msg = f"Objective exchange in f-position {self.cfg.stage_parameters['f_objective_exchange']} ('f_objective_exchange' in stage parameters of the config file)."
             if self.cfg.stage_parameters['f_min'] <= self.cfg.stage_parameters['f_objective_exchange'] <= self.cfg.stage_parameters['f_max']:
                 pass
@@ -345,6 +352,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.create_widget_list(list, widget_list)
             else:
                 return None
+
+    @QtCore.pyqtSlot(bool)
+    def set_zoom_change_in_progress(self, in_progress):
+        """Lock the zoom dropdown while the zoom changes.
+
+        The f-axis drives to the objective exchange position and back, and picking a
+        second zoom in between would interrupt that.
+        """
+        self.ZoomComboBox.setEnabled(not in_progress)
 
     @QtCore.pyqtSlot(str)
     def display_status_message(self, string):
@@ -459,6 +475,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionPSF_Analysis = QtWidgets.QAction("PSF (beads) analysis from a stack", self)
         self.menuUtils.addAction(self.actionPSF_Analysis)
         self.actionPSF_Analysis.triggered.connect(self.launch_psf_analysis_window)
+
+        # Add field curvature analysis menu item to Utils menu
+        self.actionField_Curvature = QtWidgets.QAction("Field curvature / chromatic shift from Z-stacks", self)
+        self.menuUtils.addAction(self.actionField_Curvature)
+        self.actionField_Curvature.triggered.connect(self.launch_field_curvature_window)
 
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
@@ -607,10 +628,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.connect_combobox_to_state_parameter(self.ZoomComboBox,self.cfg.zoomdict.keys(),'zoom')
         self.connect_combobox_to_state_parameter(self.ShutterComboBox,self.cfg.shutteroptions,'shutterconfig')
         self.connect_combobox_to_state_parameter(self.LaserComboBox,self.cfg.laserdict.keys(),'laser')
-        # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.LiveSubSamplingComboBox,subsampling_list,'camera_display_live_subsampling', int_conversion = True)
         self.connect_combobox_to_state_parameter(self.AcquisitionSubSamplingComboBox,subsampling_list,'camera_display_acquisition_subsampling', int_conversion = True)
-        # self.connect_combobox_to_state_parameter(self.CameraSensorModeComboBox,['ASLM','Area'],'camera_sensor_mode')
         self.connect_combobox_to_state_parameter(self.BinningComboBox, self.cfg.binning_dict.keys(),'camera_binning')
 
         self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
@@ -1049,25 +1068,48 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def _launch_psf_analysis_subprocess(self, filename, mag, pixel_pitch_micron, z_step_micron):
         """Start mesoSPIM/src/utils/psf_gui_qt.py as an independent process."""
-        script_path = os.path.join(os.path.dirname(__file__), 'utils', 'psf_gui_qt.py')
-        cmd = [sys.executable, script_path]
-        if filename:
-            cmd.append(filename)
-        if mag is not None:
-            cmd += ['--mag', str(mag)]
-        if pixel_pitch_micron is not None:
-            cmd += ['--pixel-pitch', str(pixel_pitch_micron)]
-        if z_step_micron is not None:
-            cmd += ['--z-step', str(z_step_micron)]
+        args = [filename] if filename else []
+        args += self._system_parameter_args(mag, pixel_pitch_micron, z_step_micron)
+        self._launch_utils_tool('psf_gui_qt.py', args, "PSF analysis")
 
-        if not hasattr(self, '_psf_analysis_processes'):
-            self._psf_analysis_processes = []
+    @QtCore.pyqtSlot()
+    def launch_field_curvature_window(self):
+        """
+        Launch the field curvature / chromatic shift tool as a separate OS process, for
+        the same reason as the PSF tool: the analysis streams through multi-GB stacks and
+        must not block mesoSPIM_control's GUI thread. The window opens with an empty
+        channel table (the user adds one stack per channel there), but with the system
+        parameters prefilled from the current zoom and camera settings.
+        """
+        mag = self._parse_zoom_magnification(self.state['zoom'])
+        pixel_pitch_micron = self.cfg.camera_parameters['x_pixel_size_in_microns']
+        args = self._system_parameter_args(mag, pixel_pitch_micron, None)
+        self._launch_utils_tool('field_curvature_gui_qt.py', args, "Field curvature analysis")
+
+    @staticmethod
+    def _system_parameter_args(mag, pixel_pitch_micron, z_step_micron):
+        """Command-line arguments shared by the utils GUI tools, skipping unknown values."""
+        args = []
+        if mag is not None:
+            args += ['--mag', str(mag)]
+        if pixel_pitch_micron is not None:
+            args += ['--pixel-pitch', str(pixel_pitch_micron)]
+        if z_step_micron is not None:
+            args += ['--z-step', str(z_step_micron)]
+        return args
+
+    def _launch_utils_tool(self, script_name, args, title):
+        """Start a mesoSPIM/src/utils/*.py GUI tool as an independent process."""
+        script_path = os.path.join(os.path.dirname(__file__), 'utils', script_name)
+
+        if not hasattr(self, '_utils_tool_processes'):
+            self._utils_tool_processes = []
         try:
-            proc = subprocess.Popen(cmd)
+            proc = subprocess.Popen([sys.executable, script_path] + args)
         except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "PSF analysis", f"Failed to launch PSF analysis tool:\n{e}")
+            QtWidgets.QMessageBox.critical(self, title, f"Failed to launch {title} tool:\n{e}")
             return
-        self._psf_analysis_processes.append(proc)
+        self._utils_tool_processes.append(proc)
 
     @staticmethod
     def _parse_zoom_magnification(zoom_string):
@@ -1274,7 +1316,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         with open(config_file, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        updated_keys, skipped_keys = [], []
+        skipped_keys = []
         for key, value in params.items():
             # Match 'key' : value or "key" : value anywhere in the file;
             # stops before a comma, newline, or inline comment.
@@ -1282,16 +1324,22 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             new_content, count = re.subn(pattern, r'\g<1>' + repr(value), content)
             if count > 0:
                 content = new_content
-                updated_keys.append(key)
             else:
                 skipped_keys.append(key)
+
+        if skipped_keys:
+            # Format 2: these keys live in the hardware file, so append them as overrides.
+            # The next save finds them with the regex above and substitutes in place.
+            content += ('\n\nstartup.update({\n'
+                        + ''.join(f'    {k!r}: {params[k]!r},\n' for k in skipped_keys)
+                        + '})\n')
 
         with open(save_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
-        result_msg = f'Saved {len(updated_keys)} parameters to:\n{save_path}'
+        result_msg = f'Saved {len(params)} parameters to:\n{save_path}'
         if skipped_keys:
-            result_msg += '\n\nNot found in startup dict (skipped):\n' + ', '.join(skipped_keys)
+            result_msg += '\n\nAppended as startup.update() overrides:\n' + ', '.join(skipped_keys)
         logger.info(f'Saved parameters to config file: {save_path}')
         QtWidgets.QMessageBox.information(self, 'Saved', result_msg)
 

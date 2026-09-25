@@ -29,6 +29,8 @@ from .mesoSPIM_Camera import mesoSPIM_Camera
 
 from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
+from .utils.ni_daqmx import require_nidaqmx
+from .utils.config_loader import is_demo
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
@@ -51,6 +53,7 @@ class mesoSPIM_Core(QtCore.QObject):
     sig_position = QtCore.pyqtSignal(dict)
     sig_status_message = QtCore.pyqtSignal(str)
     sig_warning = QtCore.pyqtSignal(str)
+    sig_zoom_in_progress = QtCore.pyqtSignal(bool)  # True while the zoom change runs
     sig_progress = QtCore.pyqtSignal(dict)
     sig_run_timepoint = QtCore.pyqtSignal(int)
     sig_time_lapse_finished = QtCore.pyqtSignal()    # emitted when all time points completed normally
@@ -96,6 +99,14 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.state = self.parent.state # mesoSPIM_StateSingleton class
         self.state['state'] = 'init'
+
+        ''' If the config file asks for NI hardware, fail here rather than half-way through
+        device setup, when the camera and image writer threads are already running. The NI
+        device classes guard themselves as well, this is only about failing before side effects. '''
+        ni_selected = [key for key in ('waveformgeneration', 'shutter', 'laser')
+                       if getattr(self.cfg, key, None) in ('NI', 'cDAQ')]
+        if ni_selected:
+            require_nidaqmx(f"NI hardware selected in the config file ({', '.join(ni_selected)})")
 
         self.frame_queue = deque([])
         self.frame_queue_display = deque([], maxlen=1)    
@@ -144,11 +155,15 @@ class mesoSPIM_Core(QtCore.QObject):
         self.image_writer = mesoSPIM_ImageWriter(self, self.frame_queue)
         self.image_writer.moveToThread(self.image_writer_thread)
         self.sig_write_metadata.connect(self.image_writer.write_metadata, type=QtCore.Qt.BlockingQueuedConnection)
-        self.sig_end_image_series.connect(self.image_writer.end_acquisition, type=QtCore.Qt.QueuedConnection)
         self.sig_stop_aquisition.connect(self.image_writer.abort_writing, type=QtCore.Qt.QueuedConnection)
         self.image_writer.sig_end_acquisition_done.connect(self._on_writer_end_acquisition_done, type=QtCore.Qt.QueuedConnection)
 
         self.camera_worker.sig_write_images.connect(self.image_writer.write_images, type=QtCore.Qt.QueuedConnection)
+        # end_acquisition must be triggered by the Camera thread, NOT by the Core thread. Qt only
+        # guarantees the delivery order of queued signals emitted by the *same* sender thread, so a
+        # Core-thread emit could overtake the sig_write_images of the last plane and close the file
+        # before that frame was written (frame then leaked into the next acquisition's file).
+        self.camera_worker.sig_end_acquisition.connect(self.image_writer.end_acquisition, type=QtCore.Qt.QueuedConnection)
 
         #self.serial_thread = QtCore.QThread() # The serial_worker remains in the Core thread, not separate thread for serial_worker
         self.serial_worker = mesoSPIM_Serial(self)
@@ -178,7 +193,7 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Setting waveform generation up '''
         if self.cfg.waveformgeneration in ('NI', 'cDAQ'):
             self.waveformer = mesoSPIM_WaveFormGenerator(self)
-        elif self.cfg.waveformgeneration == 'DemoWaveFormGeneration':
+        elif is_demo(self.cfg.waveformgeneration):
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
 
         self.waveformer.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
@@ -195,7 +210,7 @@ class mesoSPIM_Core(QtCore.QObject):
         if self.cfg.shutter in ('NI','cDAQ'):
             self.shutter_left = NI_Shutter(left_shutter_line) if left_shutter_line is not None else Demo_Shutter(left_shutter_line)
             self.shutter_right = NI_Shutter(right_shutter_line) if right_shutter_line is not None else Demo_Shutter(right_shutter_line)
-        elif self.cfg.shutter == 'Demo':
+        elif is_demo(self.cfg.shutter):
             self.shutter_left = Demo_Shutter(left_shutter_line)
             self.shutter_right = Demo_Shutter(right_shutter_line)
 
@@ -208,7 +223,7 @@ class mesoSPIM_Core(QtCore.QObject):
         ''' Setting the laser enabler up '''
         if self.cfg.laser in ('NI', 'cDAQ'):
             self.laserenabler = mesoSPIM_LaserEnabler(self.cfg.laserdict)
-        elif 'demo' in self.cfg.laser.lower():
+        elif is_demo(self.cfg.laser):
             self.laserenabler = Demo_LaserEnabler(self.cfg.laserdict)
 
         self.state['current_framerate'] = self.cfg.startup['average_frame_rate']
@@ -273,17 +288,25 @@ class mesoSPIM_Core(QtCore.QObject):
         so that stop signals and GUI updates are still delivered.
 
         Args:
-            timeout_s (float): Maximum time to wait in seconds before giving up.
+            timeout_s (float): Number of seconds to wait before printing a warning
         """
+        total_time_elapsed = 0
+        start_time = time.time()
         deadline = time.time() + timeout_s
         while not (self._camera_end_done and self._writer_end_done):
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+
             if time.time() > deadline:
+                total_time_elapsed = round(time.time() - start_time, 2)
                 logger.warning(
-                    '_wait_for_end_image_series timed out after %.1f s '
+                    '_wait_for_end_image_series %.1f s warning'
                     '(camera_done=%s, writer_done=%s)',
-                    timeout_s, self._camera_end_done, self._writer_end_done)
-                break
+                    total_time_elapsed, self._camera_end_done, self._writer_end_done)
+
+                # Do NOT continue to the next acquisition while writer is busy.
+                # Reset the warning timer and continue waiting.
+                deadline = time.time() + timeout_s
+
             time.sleep(0.01)
 
     @QtCore.pyqtSlot(dict)
@@ -336,7 +359,6 @@ class mesoSPIM_Core(QtCore.QObject):
                        'camera_pulse_%',
                        'camera_display_live_subsampling',
                        'camera_display_acquisition_subsampling',
-                       'camera_sensor_mode',
                        'camera_binning',
                        'galvo_amp_scale_w_zoom',
                        ):
@@ -478,25 +500,29 @@ class mesoSPIM_Core(QtCore.QObject):
             update_etl (bool): Emit a state request to reload ETL parameters for the
                 new zoom value from the calibration CSV.
         """
-        self.send_status_message_to_gui('Setting magnification (zoom) to '+str(zoom))
-        # Move to the objective exchange position if necessary
-        f_pos_old = None
-        self.parent.ZoomComboBox.setEnabled(False)
-        if 'f_objective_exchange' in self.cfg.stage_parameters.keys():
-            self.sig_warning.emit('Please wait until the zoom change is complete')
-            f_pos_old = self.state['position']['f_pos']
-            logger.debug('f_pos_old: '+str(f_pos_old))
-            self.send_status_message_to_gui('Moving to objective exchange position')
-            self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done, use_internal_position=False)
-            self.send_status_message_to_gui('At the objective exchange position')
-        # Set the zoom/revolver
-        self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
-        # Return to the previous f_pos
-        if f_pos_old is not None:
-            self.send_status_message_to_gui('Moving to the focus position')
-            self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done, use_internal_position=True)
-        self.send_status_message_to_gui('Magnification (zoom) changed')
-        self.parent.ZoomComboBox.setEnabled(True)
+        # The zoom dropdown stays disabled until the f-axis is back where it started,
+        # so the progress is visible in the status bar instead of a modal dialog.
+        self.sig_zoom_in_progress.emit(True)
+        try:
+            self.send_status_message_to_gui('Changing magnification (zoom) to '+str(zoom))
+            # Move to the objective exchange position if necessary
+            f_pos_old = None
+            if self.cfg.stage_parameters.get('f_objective_exchange') is not None:
+                f_pos_old = self.state['position']['f_pos']
+                logger.debug('f_pos_old: '+str(f_pos_old))
+                self.send_status_message_to_gui('Zoom change: moving to objective exchange position')
+                self.move_absolute({'f_abs': self.cfg.stage_parameters['f_objective_exchange']}, wait_until_done=wait_until_done, use_internal_position=False)
+                self.send_status_message_to_gui('Zoom change: at the objective exchange position')
+            # Set the zoom/revolver
+            self.sig_state_request_and_wait_until_done.emit({'zoom': zoom})
+            # Return to the previous f_pos
+            if f_pos_old is not None:
+                self.send_status_message_to_gui('Zoom change: moving back to the focus position')
+                self.move_absolute({'f_abs': f_pos_old}, wait_until_done=wait_until_done, use_internal_position=True)
+            self.send_status_message_to_gui('Magnification (zoom) changed')
+        finally:
+            # Also on failure: a permanently disabled dropdown would need a restart.
+            self.sig_zoom_in_progress.emit(False)
         if update_etl:
             self.sig_state_request.emit({'set_etls_according_to_zoom': zoom})
         

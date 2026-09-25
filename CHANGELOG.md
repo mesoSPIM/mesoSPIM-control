@@ -1,10 +1,18 @@
 ## Unreleased
+### Hardware Control & Support 🔧
+- Demo mode no longer requires the `nidaqmx` package: NI-DAQmx is imported through an optional shim, and `nidaqmx` has moved to an optional `ni` extra (`pip install -e ".[ni]"`). `requirements-conda-mamba.txt` still installs it, so the documented install path is unchanged.
+- Configs selecting NI waveform generation, shutters or laser enable lines now fail at startup with a message naming the missing package or driver, instead of an import error or a `DaqNotFoundError` raised mid-acquisition.
+
 ### Bugfixes 🐛
 - PSF analysis tool: fixed bead detection finding 0 beads (or crashing) on beads elongated/wiggly in Z (e.g. stage-jitter artifacts): `keepBeads()` now keeps the brightest candidate among mutually-close peaks instead of discarding all of them, and 0 detected beads is reported in the UI instead of raising an uncaught error.
 - PSF analysis tool: beads sitting too close to a Z-stack edge for the configured fitting window are now excluded (previously a window that exactly touched the edge was silently accepted, giving an unreliable, baseline-biased axial fit).
 - PSF analysis tool: FWHM histograms no longer silently drop beads with a measured FWHM below 1 µm. The histogram range's lower bound was hardcoded to 1, so `ax.hist(..., range=(1, xmax))` excluded any value under that from the bar counts entirely (not just from view) - noticeable e.g. with sub-micron lateral FWHM. Lower bound is now 0.
 - PSF analysis tool now excludes beads with any saturated pixel (value at the numerical max of the file's dtype, e.g. 65535 for uint16) within their fitting window, instead of only warning about saturation stack-wide at load time and fitting them anyway.
 - PSF analysis tool: fixed the axial/lateral FWHM standard deviation sometimes being huge (100s of µm in a stack only ~100 µm deep) while the median stayed reasonable. `curve_fit`'s Gaussian sigma was unbounded, so a bead with a weak/noisy profile could occasionally converge on a degenerate, very broad "fit" (or even a negative sigma, giving a negative FWHM) that wildly skewed the std without affecting the (outlier-robust) median. Sigma is now bounded to the fitting window's own extent.
+- Fresh Python 3.12 installations no longer fail at startup with `ModuleNotFoundError: No module named 'distutils'`. `distutils` left the standard library in 3.12 and only resolved where setuptools' compatibility shim happened to be installed. The `tifffile` version check that imported it was dead on every supported `tifffile` version, and has been removed.
+- Removed `requirements-clean-python.txt` and the install instructions pointing at it. The file could never be installed: it listed standard-library module names as pip requirements, so pip aborted the run.
+- `pip install -e .` now installs `pandas`, `scikit-learn`, `zarr`, `psutil` and `typer`. `pyproject.toml` never declared them, so on a pip-based install the PSF analysis tool and the BigStitcher export script failed with `ModuleNotFoundError`, and `MP OME Zarr` was missing from the file format list.
+- `pyqtgraph` is now pinned to `==0.13.7` in `pyproject.toml`, matching `requirements-conda-mamba.txt`.
 
 ### GUI Improvements 🖥️
 - PSF analysis tool: axial (Z) fitting window is now a separate "Z fit window (µm)" control, independent of "Min dist betw beads (µm)", so it can be widened for beads with a broad/wiggly axial profile without also enlarging the lateral crop. Default increased 15→30 µm.

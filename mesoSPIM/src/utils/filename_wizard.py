@@ -2,6 +2,8 @@
 Contains Nonlinear Filename Wizard Class: autogenerates Filenames
 '''
 
+import ast
+
 from PyQt5 import QtCore, QtWidgets
 
 from .utility_functions import replace_with_underscores
@@ -30,6 +32,7 @@ class FilenameWizard(QtWidgets.QWizard):
         self.cfg = self.parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
         self.selected_writer = None
+        self.writer_parameters = None  # filled in by WriterParameterPage, applied in done()
 
         # Set Writer ID #s for use in UI Wizard
         # Enable option to have a favorite writer at the top of the list
@@ -48,6 +51,8 @@ class FilenameWizard(QtWidgets.QWizard):
         for writer in self.Writers:
             self.setPage(writer.get('id'), self.build_selection_page(self, writer))
         self.setPage(self.num_of_pages-1, FilenameWizardCheckResultsPage(self))
+        self.parameter_page_id = self.num_of_pages  # only reached for writers that offer parameters
+        self.setPage(self.parameter_page_id, WriterParameterPage(self))
         self.setStyleSheet(''' font-size: 16px; ''')
         self.show()
 
@@ -74,6 +79,7 @@ class FilenameWizard(QtWidgets.QWizard):
         if r == 1:
             logger.info('Filename Wizard was closed properly')
             self.update_filenames_in_model()
+            self.apply_writer_parameters()
         else:
             logger.info(f'Filename Wizard provided return code: {r}')
 
@@ -244,6 +250,98 @@ class FilenameWizard(QtWidgets.QWizard):
             self.parent.model.setData(index, self.selected_writer.get('name'))
 
 
+    def apply_writer_parameters(self):
+        '''Hand the values from WriterParameterPage to the writer.
+
+        They go into the config attribute the writer already reads (the dict named
+        after the plugin), so nothing downstream needs to know the wizard exists.
+        The change lives for this session only - the config file is not touched.
+        '''
+        if not self.writer_parameters:
+            return
+        name = self.selected_writer.get('name')
+        merged = dict(getattr(self.cfg, name, {}))
+        merged.update(self.writer_parameters)
+        setattr(self.cfg, name, merged)
+        logger.info(f'{name} parameters set from the wizard: {self.writer_parameters}')
+
+
+class WriterParameterPage(QtWidgets.QWizardPage):
+    '''Edit the writer's own settings (OME-Zarr chunking, compression, sharding, ...).
+
+    The rows come from the plugin's wizard_parameters(), so this page serves any
+    writer that offers them and needs no knowledge of the individual settings.
+    '''
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.setStyleSheet(''' font-size: 16px; ''')
+        self.setTitle('Writer parameters')
+        self.editors = {}
+        self.text_keys = set()
+        self.layout = QtWidgets.QGridLayout()
+        self.setLayout(self.layout)
+
+    def initializePage(self):
+        writer = self.parent.selected_writer
+        self.setSubTitle(f"Defaults for {writer.get('name')}, overridden by the config file. "
+                         f"Change them for this session if needed.")
+        # The page is built here, not in __init__: the writer is only known once it is picked.
+        while self.layout.count():
+            self.layout.takeAt(0).widget().deleteLater()
+        self.editors = {}
+        self.text_keys = set()
+        current = getattr(self.parent.cfg, writer.get('name'), {})
+
+        for row, (key, (default, help_text)) in enumerate(writer['writer_class'].wizard_parameters().items()):
+            value = current.get(key, default)
+            if isinstance(value, bool):
+                editor = QtWidgets.QCheckBox()
+                editor.setChecked(value)
+            elif isinstance(value, int):
+                editor = QtWidgets.QSpinBox()
+                editor.setRange(0, 2 ** 31 - 1)
+                editor.setValue(value)
+            elif isinstance(value, str):
+                # Kept as typed: literal_eval would turn the version '0.5' into a float.
+                editor = QtWidgets.QLineEdit(value)
+                self.text_keys.add(key)
+            else:
+                # Tuples and None are typed in as Python literals, e.g. (64, 6000, 6000).
+                # Anything unparseable is kept as plain text, so a Windows path can be
+                # pasted into write_cache without quoting it.
+                editor = QtWidgets.QLineEdit(repr(value))
+            label = QtWidgets.QLabel(key)
+            label.setToolTip(help_text)
+            editor.setToolTip(help_text)
+            self.layout.addWidget(label, row, 0)
+            self.layout.addWidget(editor, row, 1)
+            self.editors[key] = editor
+
+    def validatePage(self):
+        values = {}
+        for key, editor in self.editors.items():
+            if isinstance(editor, QtWidgets.QCheckBox):
+                values[key] = editor.isChecked()
+            elif isinstance(editor, QtWidgets.QSpinBox):
+                values[key] = editor.value()
+            else:
+                text = editor.text().strip()
+                if key in self.text_keys:
+                    # 'None' still has to mean None: compression accepts it.
+                    values[key] = None if text == 'None' else text
+                    continue
+                try:
+                    values[key] = ast.literal_eval(text)
+                except (ValueError, SyntaxError):
+                    values[key] = text
+        self.parent.writer_parameters = values
+        return super().validatePage()
+
+    def nextId(self):
+        return self.parent.num_of_pages - 1 # Last page 'finished'
+
+
 class FilenameWizardWelcomePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -292,6 +390,8 @@ class AbstractSelectionPage(QtWidgets.QWizardPage):
         return super().validatePage()
 
     def nextId(self):
+        if hasattr(self.parent.selected_writer['writer_class'], 'wizard_parameters'):
+            return self.parent.parameter_page_id
         return self.parent.num_of_pages - 1 # Last page 'finished'
 
 
@@ -376,4 +476,9 @@ class FilenameWizardCheckResultsPage(QtWidgets.QWizardPage):
 
     def cleanupPage(self):
         self.mystring = ''
+
+    def nextId(self):
+        # Without this, Qt would offer 'Next' into the higher-numbered parameter page
+        # instead of 'Finish'.
+        return -1
 

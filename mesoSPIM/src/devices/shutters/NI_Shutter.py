@@ -4,8 +4,7 @@ Author: Fabian Voigt
 #TODO
 """
 
-import nidaqmx
-from nidaqmx.constants import LineGrouping
+from ...utils.ni_daqmx import nidaqmx, require_nidaqmx, LineGrouping
 
 class NI_Shutter:
     """
@@ -19,6 +18,7 @@ class NI_Shutter:
     analog voltage for as long the device is not powered down.
     """
     def __init__(self, shutterline):
+        require_nidaqmx('NI shutter control')
         self.shutterline = shutterline
 
         # Make sure that the Shutter is closed upon initialization

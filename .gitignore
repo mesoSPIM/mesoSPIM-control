@@ -22,6 +22,8 @@ mesoSPIM/config/processor_chain.json
 !mesoSPIM/config/demo_config.py
 !mesoSPIM/config/*example*_config.py
 !mesoSPIM/config/examples/*.py
+mesoSPIM/config/hardware/*.py
+!mesoSPIM/config/hardware/demo_config_hw.py
 mesoSPIM/config/examples_private/
 mesoSPIM/acq/
 mesoSPIM/tmp/
@@ -39,3 +41,4 @@ docs/build_log.txt
 /.vscode
 PROJECT_CONTEXT.md
 .claude/skills
+CLAUDE.md

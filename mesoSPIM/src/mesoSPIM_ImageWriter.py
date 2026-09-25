@@ -12,7 +12,6 @@ import logging
 logger = logging.getLogger(__name__)
 import sys
 from PyQt5 import QtCore
-from distutils.version import StrictVersion
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core, timed
 from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
@@ -120,16 +119,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         write_line(file)
 
     def check_versions(self):
-        """Take care of API changes in different library versions"""
-        if StrictVersion(tifffile.__version__) < StrictVersion('2020.9.30'):
-            self.tiff_write = tifffile.TiffWriter.save
-            print(f"Warning: you are using outdated version of tifffile library {tifffile.__version__}. "
-                  f"Upgrade to Python 3.7 and pip-install the latest tifffile version.")
-        else:
-            self.tiff_write = tifffile.TiffWriter.write
-
-        tifffile.TiffWriter.write = self.tiff_write # rename the entire class method if necessary
-
+        """Warn about deprecated config options"""
         if hasattr(self.cfg, 'buffering'):
             msg = "Option 'buffering = {...}' in config file is deprecated from v.1.10.0 and will be ignored, \
  due to improved program performance. You can delete it from the config file."
@@ -147,6 +137,13 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             acq (Acquisition): The current acquisition descriptor.
             acq_list (AcquisitionList): The full list being executed.
         """
+        # Any frame still sitting in the queue belongs to a previous acquisition and must never be
+        # written into this file. Under normal operation the queue is already empty here.
+        if len(self.frame_queue) > 0:
+            logger.error(f'{len(self.frame_queue)} stale frame(s) in the queue when preparing '
+                         f'{acq["filename"]}, discarding them')
+            self.frame_queue.clear()
+
         if acq == acq_list[0]:
             self.writer_name = acq['image_writer_plugin']
             self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
@@ -212,7 +209,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         # Place holder prior to image processing plugins
         if acq['processing'] == 'MAX':
             self.tiff_mip_writer = tifffile.TiffWriter(self.MIP_path, imagej=True)
-            self.mip_image = np.zeros((self.x_pixels, self.y_pixels), 'uint16')
+            self.mip_image = None
 
         self.cur_image_counter = 0
         self.abort_flag = False
@@ -230,50 +227,91 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             while len(self.frame_queue) > 0:
                 logger.debug('image queue length: ' + str(len(self.frame_queue)))
-                image = self.frame_queue.popleft().T[::-1]
+                image = self.frame_queue.popleft() # Do not transpose so that downstream operations like max are more efficient
                 self.image_to_disk(acq, acq_list, image)
         else:
             logger.debug('self.running_flag = False, no images written')
-    
+
     @timed
     @log_cpu_core
     def image_to_disk(self, acq, acq_list, image):
-        """Write a single pre-transposed frame to the open writer backend.
-
-        Args:
-            acq (Acquisition): Active acquisition descriptor (provides zoom, z_step …).
-            acq_list (AcquisitionList): Full list (provides tile/channel/rotation indices).
-            image (np.ndarray): 2-D ``uint16`` array already transposed by the caller.
-        """
         logger.debug('image_to_disk() started')
+
+        total_start = time.perf_counter()
+
+        # Status update
+        t0 = time.perf_counter()
         if self.cur_image_counter % 5 == 0:
             self.parent.sig_status_message.emit('Writing to disk...')
+        status_ms = (time.perf_counter() - t0) * 1000
 
-        xy_res = (1. / self.cfg.pixelsize[acq['zoom']], 1. / self.cfg.pixelsize[acq['zoom']])
+        # Metadata / WriteImage construction
+        t0 = time.perf_counter()
+
+        xy_res = (
+            1. / self.cfg.pixelsize[acq['zoom']],
+            1. / self.cfg.pixelsize[acq['zoom']]
+        )
 
         write = WriteImage(
-            image = image,
-            current_image_counter = self.cur_image_counter,
+            # Transform image before sending to writer, this can cause performance issues downstream
+            # if memory copies are required like with copies to the ring buffer for MP OME-Zarr writer
+            # Need to consider how to make this more efficient to increase MP Writer Performance
+            image=image.T[::-1],
+            current_image_counter=self.cur_image_counter,
             tile_number=acq_list.get_tile_index(acq),
             laser=acq_list.find_value_index(acq['laser'], 'laser'),
-            shutter=acq_list.find_value_index(acq['shutterconfig'], 'shutterconfig'),
+            shutter=acq_list.find_value_index(
+                acq['shutterconfig'], 'shutterconfig'
+            ),
             rot=acq_list.find_value_index(acq['rot'], 'rot'),
             x_res=xy_res,
             y_res=xy_res,
             z_res=acq['z_step'],
             unit='microns',
-            acq = acq,
-            acq_list = acq_list,
+            acq=acq,
+            acq_list=acq_list,
         )
 
+        metadata_ms = (time.perf_counter() - t0) * 1000
+
+        # MP writer
+        t0 = time.perf_counter()
         self.writer.write_frame(write)
+        writer_ms = (time.perf_counter() - t0) * 1000
 
-        # Place holder prior to image processing plugins
+        # MAX projection
+        t0 = time.perf_counter()
         if acq['processing'] == 'MAX':
-            np.maximum(self.mip_image, image, out=self.mip_image)
+            # Allocate RAM for MIP
+            if self.mip_image is None:
+                self.mip_image = np.zeros_like(image)
 
+            # Max is done on a non-transformed image to keep memory operations efficient
+            # Need to transform the final image right before saving
+            np.maximum(
+                self.mip_image,
+                image,
+                out=self.mip_image
+            )
+        max_ms = (time.perf_counter() - t0) * 1000
 
         self.cur_image_counter += 1
+
+        total_ms = (time.perf_counter() - total_start) * 1000
+
+        if total_ms > 20:
+            logger.info(
+                "image_to_disk breakdown: total=%.1f ms "
+                "status=%.1f ms metadata=%.1f ms "
+                "writer=%.1f ms MAX=%.1f ms",
+                total_ms,
+                status_ms,
+                metadata_ms,
+                writer_ms,
+                max_ms,
+            )
+
         logger.debug('image_to_disk() ended')
 
     @QtCore.pyqtSlot()
@@ -309,6 +347,18 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             acq_list = acq_list,
         )
         logger.info("end_acquisition() started")
+
+        # Flush any frames that arrived but were not written yet, before the file is closed.
+        if self.running_flag:
+            while len(self.frame_queue) > 0:
+                logger.debug(f'end_acquisition: flushing {len(self.frame_queue)} remaining frame(s)')
+                image = self.frame_queue.popleft() # Do not transpose so that downstream operations like max are more efficient
+                self.image_to_disk(acq, acq_list, image)
+
+            if self.cur_image_counter != self.max_frame:
+                logger.error(f'ImageWriter: wrote {self.cur_image_counter} frames to '
+                             f'{self.path}, expected {self.max_frame}')
+
         try:
             self.writer.finalize(finalize_imsge)
         except Exception as e:
@@ -317,7 +367,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         # Place holder prior to image processing plugins
         if acq['processing'] == 'MAX':
             try:
-                self.tiff_mip_writer.write(self.mip_image)
+                self.tiff_mip_writer.write(self.mip_image.T[::-1]) # Transform image before saving
                 self.tiff_mip_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
