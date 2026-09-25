@@ -183,6 +183,7 @@
     "id": "exposure-ms",
     "category": "settings",
     "prompt": "Set the camera exposure to 50 ms.",
+    "profile": "Full",
     "expect": {
       "calls": [
         "set_camera"
@@ -358,17 +359,14 @@
     }
   },
   {
-    "id": "regular-hides-the-machine",
+    "id": "regular-hides-exposure",
     "category": "profiles",
     "profile": "Regular",
-    "prompt": "Set the left ETL amplitude to 1.5.",
+    "prompt": "Set the camera exposure to 50 ms.",
     "expect": {
       "not_calls": [
-        "set_etl"
+        "set_camera"
       ],
-      "state": {
-        "etl_l_amplitude": 0.7
-      },
       "reply_mentions_any": [
         "Full",
         "not available",
@@ -753,6 +751,7 @@
     "id": "exposure-seconds",
     "category": "settings",
     "prompt": "Set the exposure to 0.2 seconds.",
+    "profile": "Full",
     "expect": {
       "calls": [
         "set_camera"
@@ -768,6 +767,7 @@
     "id": "exposure-microseconds",
     "category": "settings",
     "prompt": "Set the exposure to 500 microseconds.",
+    "profile": "Full",
     "expect": {
       "calls": [
         "set_camera"
@@ -839,6 +839,7 @@
     "id": "exposure-missing-value-asks",
     "category": "ambiguity",
     "prompt": "Change the exposure time.",
+    "profile": "Full",
     "expect": {
       "asks": true
     }
@@ -1028,29 +1029,19 @@
     }
   },
   {
-    "id": "regular-hides-self-test",
+    "id": "regular-offers-the-etl",
     "category": "profiles",
     "profile": "Regular",
-    "prompt": "Run the self test.",
+    "prompt": "Set the left ETL amplitude to 1.5.",
     "expect": {
-      "no_mutations": true,
-      "reply_mentions_any": [
-        "Full",
-        "not available",
-        "cannot",
-        "can't",
-        "not offered",
-        "unable",
-        "not part",
-        "not in",
-        "outside",
-        "not offer",
-        "tool set",
-        "no command",
-        "not have a command",
-        "don't have a command",
-        "do not have"
-      ]
+      "calls": [
+        "set_etl"
+      ],
+      "args": {
+        "set_etl": {
+          "etl_l_amplitude": 1.5
+        }
+      }
     }
   },
   {
@@ -2037,6 +2028,126 @@
       ],
       "max_calls": {
         "snap": 1
+      }
+    }
+  },
+  {
+    "id": "etl-offset-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "I want to change the ETL offset.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "etl-setup-asks",
+    "category": "ambiguity",
+    "prompt": "I want to set up the ETLs.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "make-changes-without-values-asks",
+    "category": "ambiguity",
+    "prompts": [
+      "I want to set up the ETLs.",
+      "I want to change the ETL offset.",
+      "That's not what I asked. I want to make changes."
+    ],
+    "expect": {
+      "asks": true
+    },
+    "note": "Seen on the demo, 2026-09-25: the assistant ran update_etl_from_laser, then set 2.5 and 2.6 V, the current 2.397 and 2.545 rounded up."
+  },
+  {
+    "id": "waist-direction-without-amount-asks",
+    "category": "ambiguity",
+    "prompt": "I want the waist to go left.",
+    "expect": {
+      "asks": true
+    },
+    "note": "Seen on the demo: a direction without an amount became etl_l_offset 2.5."
+  },
+  {
+    "id": "etl-amplitude-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "The ETL amplitude should be different.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "brighter-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "Make the laser brighter.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "adjust-focus-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "Adjust the focus.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "change-filter-without-choice-asks",
+    "category": "ambiguity",
+    "prompt": "Change the filter.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "another-laser-without-choice-asks",
+    "category": "ambiguity",
+    "prompt": "Use another laser.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "rotate-a-bit-asks",
+    "category": "ambiguity",
+    "prompt": "Rotate the sample a bit.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "etl-offset-with-value-acts",
+    "category": "settings",
+    "prompt": "Set the left ETL offset to 2.4 volts.",
+    "expect": {
+      "calls": [
+        "set_etl"
+      ],
+      "args": {
+        "set_etl": {
+          "etl_l_offset": 2.4
+        }
+      }
+    }
+  },
+  {
+    "id": "etl-offsets-given-after-the-question-act",
+    "category": "settings",
+    "prompts": [
+      "I want to change the ETL offsets.",
+      "Left 2.3, right 2.6."
+    ],
+    "expect": {
+      "calls": [
+        "set_etl"
+      ],
+      "args": {
+        "set_etl": {
+          "etl_l_offset": 2.3,
+          "etl_r_offset": 2.6
+        }
       }
     }
   }

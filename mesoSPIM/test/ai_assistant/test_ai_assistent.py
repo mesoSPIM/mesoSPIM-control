@@ -551,12 +551,13 @@ def test_system_prompt_is_the_preamble_plus_the_commands_by_kind():
 
 def test_the_prompt_and_the_tools_stay_small_enough_for_a_local_model():
     """A local model with an 8K context needs room for the conversation: the Regular prompt plus
-    all tool schemas stay under 17,500 characters, roughly 4,700 tokens."""
+    all tool schemas stay under 20,500 characters, roughly 5,500 tokens (20,379 with the ETL and
+    the checks in Regular)."""
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     tools = build_tools(FakeAcceptor(), threading.Event(), profile="Regular")
     schemas = sum(len(json.dumps(t.function_schema.json_schema)) + len(t.description or "") for t in tools)
-    assert len(ai.build_system_prompt(profile="Regular")) + schemas < 17500
+    assert len(ai.build_system_prompt(profile="Regular")) + schemas < 20500
     by_name = {t.name: t.function_schema.json_schema for t in tools}
     rows = by_name["set_acquisition_list"]["properties"]["acquisitions"]["items"]["properties"]
     assert "z_start" in rows                                          # the installer spells the row out
@@ -697,44 +698,79 @@ def test_look_uses_the_live_frame_size(monkeypatch):
     assert sizes == [300, 600]
 
 
-# --- tool sets: Regular for a facility user, Full for the machine ---
+# --- tool sets: Regular for a facility user, Full for everything ---
 
-def test_regular_profile_offers_the_session_not_the_machine():
+REGULAR_WITHHELD = {"set_camera", "set_state", "set_galvo", "set_laser_timing", "start_visual_mode",
+                    "start_lightsheet_alignment_mode"}
+
+
+def test_regular_offers_the_etl_and_the_checks_but_not_the_camera():
     from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import COMMANDS
     regular = {c.name for c in ai.offered_commands("Regular")}
     everything = {c.name for c in ai.offered_commands("Full")}
     assert everything == set(COMMANDS) - {"get_manual"}
-    assert regular < everything
-    assert {"move_absolute", "set_laser", "set_zoom", "snap", "run_acquisition_list", "load_sample", "stop"} <= regular
-    machine = {"set_etl", "set_galvo", "set_laser_timing", "set_state", "reload_etl_config", "update_etl_from_laser",
-               "update_etl_from_zoom", "save_etl_config", "start_lightsheet_alignment_mode", "start_visual_mode", "self_test"}
-    assert machine <= everything - regular
+    assert everything - regular == REGULAR_WITHHELD
+    assert {"set_etl", "reload_etl_config", "update_etl_from_laser", "update_etl_from_zoom", "save_etl_config",
+            "hello", "ping", "get_state_all", "get_info", "get_capabilities", "stat_files", "self_test",
+            "clear_stuck_operation"} <= regular
     assert all(name in COMMANDS for name in ai.config.TOOL_PROFILES["Regular"])   # no stale names
 
 
-def test_regular_tools_and_prompt_are_filtered_and_set_camera_is_narrowed():
+def test_regular_tools_and_prompt_are_filtered():
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     tools = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
-    assert "set_etl" not in tools and "set_camera" in tools
-    assert list(tools["set_camera"].function_schema.json_schema["properties"]) == ["camera_exposure_time"]
-    acc = FakeAcceptor(flip_after=1)
-    narrowed = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["set_camera"]
-    refused = json.loads(narrowed.function(camera_binning="2x2"))
-    assert refused["error"]["code"] == "validation" and "camera_binning" in refused["error"]["message"]
-    assert acc.calls == []
-    json.loads(narrowed.function(camera_exposure_time=0.05))
-    assert acc.calls[0] == ("set_camera", {"camera_exposure_time": 0.05})
-    assert "Full tool set" in refused["error"]["message"]          # the way out is named, for the operator
+    assert "set_etl" in tools and "set_camera" not in tools
     prompt = ai.build_system_prompt(profile="Regular")
     commands = prompt.split("# Commands")[1].split("# Not in this tool set")[0]
-    assert "set_zoom" in commands and "set_etl" not in commands
+    assert "set_etl" in commands and "set_camera" not in commands
     hidden = prompt.split("# Not in this tool set")[1]              # named, so the model says so instead of improvising
-    assert "self_test" in hidden and "set_etl" in hidden and "get_manual" not in hidden
-    assert ai.hidden_commands("Regular") == [n for n in COMMANDS if n not in ai.config.TOOL_PROFILES["Regular"] and n != "get_manual"]
+    assert "set_camera" in hidden and "set_galvo" in hidden and "set_etl" not in hidden and "get_manual" not in hidden
+    assert ai.hidden_commands("Regular") == [n for n in COMMANDS if n in REGULAR_WITHHELD]
     full = {t.name for t in build_tools(FakeAcceptor(), threading.Event(), profile="Full")}
-    assert "set_etl" in full and "set_etl" in ai.build_system_prompt(profile="Full").split("# Commands")[1]
+    assert "set_camera" in full and "set_camera" in ai.build_system_prompt(profile="Full").split("# Commands")[1]
     assert ai.hidden_commands("Full") == [] and "# Not in this tool set" not in ai.build_system_prompt(profile="Full")
+
+
+def test_the_prompt_tells_no_jokes():
+    for profile in ("Regular", "Full"):
+        assert "joke" not in ai.build_system_prompt(profile=profile).lower()
+
+
+ETL_VOLTAGES = ["etl_l_amplitude", "etl_l_offset", "etl_r_amplitude", "etl_r_offset"]
+
+
+def test_regular_set_etl_sets_the_voltages_only():
+    """Regular sets the ETL's voltages, amplitude and offset on each side; its delay and ramps are the
+    machine's timing, Full only. A delay or a ramp is refused with the way to Full named."""
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src import mesoSPIM_RemoteControl_Config as rc_config
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    regular = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}["set_etl"]
+    full = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Full")}["set_etl"]
+    assert sorted(regular.function_schema.json_schema["properties"]) == sorted(ETL_VOLTAGES)
+    assert set(full.function_schema.json_schema["properties"]) == set(rc_config.SETTING_GROUPS["set_etl"])
+    acc = FakeAcceptor(flip_after=1)
+    narrowed = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["set_etl"]
+    for timing in ("etl_l_delay_%", "etl_r_ramp_rising_%"):
+        refused = json.loads(narrowed.function(**{timing: 5}))
+        assert refused["error"]["code"] == "validation" and timing in refused["error"]["message"]
+        assert "Full tool set" in refused["error"]["message"]
+    assert acc.calls == []
+    json.loads(narrowed.function(etl_l_offset=2.5))
+    assert acc.calls[0] == ("set_etl", {"etl_l_offset": 2.5})
+
+
+def test_every_other_regular_tool_is_the_full_tool():
+    """Apart from set_etl's timing, the tool sets differ only in which commands they offer."""
+    pytest.importorskip("pydantic_ai")
+    from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
+    regular = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Regular")}
+    full = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Full")}
+    for name, tool in regular.items():
+        if name != "set_etl":
+            assert tool.function_schema.json_schema == full[name].function_schema.json_schema, name
+        assert tool.description == full[name].description, name
 
 
 def test_worker_rebuilds_the_agent_for_a_new_profile(monkeypatch):
@@ -835,24 +871,20 @@ def test_every_preset_builds_its_model_with_the_installed_sdks():
         assert ai.build_model(endpoint) is not None, provider
 
 
-def test_regular_keeps_the_etl_out_of_acquisition_rows_too():
-    """A row carries the machine's ETL settings, so without this the Regular set could set them
-    through set_acquisition_list; the schema hides the keys and a row carrying one is refused."""
+def test_regular_acquisition_rows_carry_the_etl():
+    """The ETL is in Regular, so a row may carry its settings too, as it does in Full."""
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     acc = FakeAcceptor()
     regular = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["set_acquisition_list"]
     rows = regular.function_schema.json_schema["properties"]["acquisitions"]["items"]["properties"]
-    assert not any(key.startswith("etl_") for key in rows) and "z_step" in rows
+    assert "etl_l_amplitude" in rows and "z_step" in rows
     out = json.loads(regular.function(acquisitions=[{"z_start": 0, "z_end": 0, "z_step": 1, "etl_l_amplitude": 1.5}]))
-    assert out["error"]["code"] == "validation" and "etl_l_amplitude" in out["error"]["message"]
-    assert acc.calls == []
+    assert "error" not in out, out
+    assert acc.calls[0] == ("set_acquisition_list", {"acquisitions": [{"z_start": 0, "z_end": 0, "z_step": 1,
+                                                                       "etl_l_amplitude": 1.5}]})
     single = {t.name: t for t in build_tools(acc, threading.Event(), profile="Regular")}["acquire_start"]
     assert "properties" not in single.function_schema.json_schema["properties"]["acquisition"]   # by reference
-    out = json.loads(single.function(acquisition={"etl_l_amplitude": 1.5}))
-    assert out["error"]["code"] == "validation" and acc.calls == []
-    full = {t.name: t for t in build_tools(acc, threading.Event(), profile="Full")}["set_acquisition_list"]
-    assert "etl_l_amplitude" in full.function_schema.json_schema["properties"]["acquisitions"]["items"]["properties"]
 
 
 def test_a_fallback_that_answers_is_announced(monkeypatch):
@@ -970,10 +1002,9 @@ def test_the_camera_tool_names_the_unit_the_wire_schema_leaves_out():
     sent 50 for 50 ms. The unit belongs where the model reads the argument."""
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
-    for profile in ("Regular", "Full"):
-        camera = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile=profile)}["set_camera"]
-        assert "SECONDS" in camera.description and "0.05" in camera.description
-        assert "description" not in camera.function_schema.json_schema["properties"]["camera_exposure_time"]  # still so
+    camera = {t.name: t for t in build_tools(FakeAcceptor(), threading.Event(), profile="Full")}["set_camera"]
+    assert "SECONDS" in camera.description and "0.05" in camera.description
+    assert "description" not in camera.function_schema.json_schema["properties"]["camera_exposure_time"]  # still so
 
 
 def test_the_agent_samples_deterministically_and_retries_a_malformed_call():
@@ -1057,11 +1088,11 @@ def test_an_unknown_field_or_row_is_refused_and_the_list_kept():
     assert core.state["acq_list"][0]["filename"] == "one_2.tif"
 
 
-def test_regular_keeps_the_etl_out_of_a_row_change_too():
+def test_regular_changes_the_etl_of_a_row_too():
     tool, core = _update_tool("Regular")
     out = json.loads(tool.function(row=0, changes={"etl_l_amplitude": 1.5}))
-    assert out["error"]["code"] == "validation" and "etl_l_amplitude" in out["error"]["message"]
-    assert core.state["acq_list"][0]["etl_l_amplitude"] == 0.461
+    assert "error" not in out, out
+    assert core.state["acq_list"][0]["etl_l_amplitude"] == 1.5
 
 
 @pytest.mark.parametrize("name,mode", [("start_live", "live"), ("start_visual_mode", "visual_mode"),

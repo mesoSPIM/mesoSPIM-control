@@ -519,12 +519,11 @@ _ROW_UPDATE_SCHEMA = {
 }
 
 
-def _row_update_tool(acceptor, install, on_call, hidden):
+def _row_update_tool(acceptor, install, on_call):
     """Change the named keys of one row and hand the whole list to set_acquisition_list, so the
     rest of the row is the instrument's, never retyped. On the Windows demo a rename through
     set_acquisition_list rewrote the zoom, the focus and the planes. `install` is the tool body
-    of set_acquisition_list, so its checks, the gate and the advice all apply; `hidden` are the
-    keys this tool set may not change (the ETL under Regular)."""
+    of set_acquisition_list, so its checks, the gate and the advice all apply."""
     from pydantic_ai import Tool
     known = set(COMMANDS["set_acquisition_list"].schema["properties"]["acquisitions"]["items"]["properties"])
 
@@ -542,9 +541,6 @@ def _row_update_tool(acceptor, install, on_call, hidden):
         unknown = sorted(set(changes) - known)
         if unknown:
             return refused(f"unknown row key(s): {', '.join(unknown)}; the keys are {', '.join(sorted(known))}")
-        withheld = sorted(set(changes) & set(hidden))
-        if withheld:
-            return refused(f"{', '.join(withheld)} cannot be changed with this tool set")
         new = [dict(existing) for existing in rows]
         new[row].update(changes)
         return install(acquisitions=new, selected_row=row)
@@ -567,33 +563,6 @@ def _rows_by_reference(schema):
             schema["properties"][name] = {"type": "object",
                                           "description": "one row exactly as set_acquisition_list takes it"}
     return schema
-
-
-def _rows_without(schema, keys):
-    """A copy of a schema whose acquisition rows (a list, or a single one) no longer offer `keys`."""
-    schema = json.loads(json.dumps(schema))
-    for name in _row_arguments(schema):
-        holder = schema["properties"][name]
-        row = holder.get("items", holder)
-        for key in keys:
-            row.get("properties", {}).pop(key, None)
-    return schema
-
-
-def _refuse_row_keys(fn, name, keys):
-    """Refuse, as data, an acquisition row that carries any of `keys`; then call through."""
-    def _call(**args) -> str:
-        rows = list(args.get("acquisitions") or [])
-        if isinstance(args.get("acquisition"), dict):
-            rows.append(args["acquisition"])
-        found = sorted({key for row in rows if isinstance(row, dict) for key in row if key in keys})
-        if found:
-            return json.dumps({"error": {"code": "validation",
-                                         "message": f"{name}: {', '.join(found)} are not part of the Regular tool set; "
-                                                    "a row takes the current settings for them, and the Full tool set "
-                                                    "(the operator's choice in the setup box) offers them"}})
-        return fn(**args)
-    return _call
 
 
 def _narrowed(cmd, keys):
@@ -632,14 +601,10 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
             fn = _only_keys(fn, cmd.name, keys)
         if cmd.name in config.ROWS_BY_REFERENCE:
             schema = _rows_by_reference(schema)
-        if regular and _row_arguments(schema):
-            schema = _rows_without(schema, config.REGULAR_ROW_HIDDEN)
-            fn = _refuse_row_keys(fn, cmd.name, config.REGULAR_ROW_HIDDEN)
         description = config.TOOL_DESCRIPTIONS.get(cmd.name, cmd.hint or cmd.name)
         tools.append(Tool.from_schema(fn, name=cmd.name, description=description, json_schema=schema))
     if "set_acquisition_list" in installs:
-        tools.append(_row_update_tool(acceptor, installs["set_acquisition_list"], on_call,
-                                      config.REGULAR_ROW_HIDDEN if regular else ()))
+        tools.append(_row_update_tool(acceptor, installs["set_acquisition_list"], on_call))
     if store is not None:
         tools += _store_tools(store, on_call)
     if endpoint is not None:

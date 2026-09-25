@@ -182,6 +182,7 @@
     "id": "h-exposure-ms",
     "category": "settings",
     "prompt": "Exposure time 20 ms, please.",
+    "profile": "Full",
     "expect": {
       "calls": [
         "set_camera"
@@ -357,13 +358,13 @@
     }
   },
   {
-    "id": "h-regular-hides-the-machine",
+    "id": "h-regular-hides-exposure",
     "category": "profiles",
-    "prompt": "Set the right ETL offset to 2.0.",
+    "prompt": "Make the exposure time 30 ms.",
     "profile": "Regular",
     "expect": {
       "not_calls": [
-        "set_etl"
+        "set_camera"
       ],
       "reply_mentions_any": [
         "Full",
@@ -752,6 +753,7 @@
     "id": "h-exposure-seconds",
     "category": "settings",
     "prompt": "Make the exposure 1.5 seconds.",
+    "profile": "Full",
     "expect": {
       "calls": [
         "set_camera"
@@ -767,6 +769,7 @@
     "id": "h-exposure-microseconds",
     "category": "settings",
     "prompt": "An exposure of 2000 microseconds, please.",
+    "profile": "Full",
     "expect": {
       "calls": [
         "set_camera"
@@ -1027,29 +1030,19 @@
     }
   },
   {
-    "id": "h-regular-hides-self-test",
+    "id": "h-regular-offers-the-etl",
     "category": "profiles",
-    "prompt": "Do a self test of the instrument.",
+    "prompt": "Change the right ETL amplitude to 0.9.",
     "profile": "Regular",
     "expect": {
-      "no_mutations": true,
-      "reply_mentions_any": [
-        "Full",
-        "not available",
-        "cannot",
-        "can't",
-        "not offered",
-        "unable",
-        "not part",
-        "not in",
-        "outside",
-        "not offer",
-        "tool set",
-        "no command",
-        "not have a command",
-        "don't have a command",
-        "do not have"
-      ]
+      "calls": [
+        "set_etl"
+      ],
+      "args": {
+        "set_etl": {
+          "etl_r_amplitude": 0.9
+        }
+      }
     }
   },
   {
@@ -2031,6 +2024,123 @@
       ],
       "max_calls": {
         "snap": 1
+      }
+    }
+  },
+  {
+    "id": "h-etl-offset-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "Can you adjust the ETL offsets for me?",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-etl-setup-asks",
+    "category": "ambiguity",
+    "prompt": "Help me configure the ETLs.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-make-changes-without-values-asks",
+    "category": "ambiguity",
+    "prompts": [
+      "I need to configure the ETL.",
+      "Just do it, make the changes."
+    ],
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-waist-direction-without-amount-asks",
+    "category": "ambiguity",
+    "prompt": "Shift the light-sheet waist to the right.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-etl-amplitude-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "Tweak the ETL amplitude.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-brighter-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "The image is too dark, turn up the laser.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-adjust-focus-without-value-asks",
+    "category": "ambiguity",
+    "prompt": "Refocus a little.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-change-filter-without-choice-asks",
+    "category": "ambiguity",
+    "prompt": "Swap the filter.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-another-laser-without-choice-asks",
+    "category": "ambiguity",
+    "prompt": "Switch to a different wavelength.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-rotate-a-bit-asks",
+    "category": "ambiguity",
+    "prompt": "Turn the sample slightly.",
+    "expect": {
+      "asks": true
+    }
+  },
+  {
+    "id": "h-etl-offset-with-value-acts",
+    "category": "settings",
+    "prompt": "Put the right ETL offset at 2.45 V.",
+    "expect": {
+      "calls": [
+        "set_etl"
+      ],
+      "args": {
+        "set_etl": {
+          "etl_r_offset": 2.45
+        }
+      }
+    }
+  },
+  {
+    "id": "h-etl-offsets-given-after-the-question-act",
+    "category": "settings",
+    "prompts": [
+      "Please adjust both ETL offsets.",
+      "2.2 on the left and 2.7 on the right."
+    ],
+    "expect": {
+      "calls": [
+        "set_etl"
+      ],
+      "args": {
+        "set_etl": {
+          "etl_l_offset": 2.2,
+          "etl_r_offset": 2.7
+        }
       }
     }
   }

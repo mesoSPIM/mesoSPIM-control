@@ -79,15 +79,14 @@ choosing the same file in both boxes serves it once. Whether a given local file 
 on llama-cpp-python supporting that model family's projector.
 
 **Preferences** apply at once. **Tool set** chooses what the assistant may do: *Regular* (the
-default) is for a user setting up a sample on a configured microscope: reads, stage and sample
-moves, laser, intensity, filter, zoom, shutters, the camera exposure time, snap, live, and the
-acquisition and time lapse commands. *Full* adds the machine: ETL, galvo, laser and camera timing,
-the ETL calibration files, the alignment modes, the generic setting call, and the plumbing reads
-and recovery that remote clients use (ping, hello, the raw state map, the stuck-operation reset).
-In Regular the other
-commands are not offered to the model at all, so it cannot be talked into them, and an
-acquisition row may not carry the ETL settings either (it takes the current ones). The model is
-told which commands the set withholds, so a request for one gets "not in this tool set" rather
+default) is for a user setting up a sample on a configured microscope: reads and checks (the
+self test and the stuck-operation reset included), stage and sample moves, laser, intensity,
+filter, zoom, shutters, the ETL voltages (amplitude and offset) and its calibration files, snap,
+live, and the acquisition and time lapse commands. *Full* adds the camera settings (the exposure
+time included), the ETL's delay and ramps, galvo and laser timing, the alignment modes and the
+generic setting call. In Regular the other commands are not offered to the model at all, so it
+cannot be talked into them; a command offered in both sets takes the same arguments in both,
+except `set_etl`, which in Regular takes the voltages only. The model is told which commands the set withholds, so a request for one gets "not in this tool set" rather
 than a stand-in command dressed up as the result. The start-up
 choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or
 "Full"). TCP and MCP always serve every command; this is the assistant only. **Memory** is how

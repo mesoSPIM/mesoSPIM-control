@@ -81,23 +81,27 @@ LOOK_IMAGE_SIZE = 1024
 SHOW_TOOL_CALLS = False
 
 # Which commands the assistant offers the model. "Regular" is for a user setting up a sample on a
-# configured microscope: everything about the sample and the session, nothing about the machine.
-# "Full" is everything. TCP and MCP always serve every command; this is the assistant only.
+# configured microscope: the sample, the session and the ETL voltages, without the camera, the ETL,
+# galvo and laser timing, the generic setting call or the alignment modes. "Full" is everything. A
+# command in both sets is the same tool in both, except as REGULAR_ARGS narrows it. TCP and MCP
+# always serve every command; this is the assistant only.
 # A command not in the set is not offered at all, so the model never sees it. The microscope
 # config may choose the start-up profile with the attribute named in TOOLS_CONFIG_KEY.
 TOOL_PROFILES = {
     "Regular": {
-        # reads (the plumbing reads hello, ping, get_info, get_state_all, get_capabilities and
-        # stat_files, and the stuck-operation recovery, are for remote clients: Full only)
-        "get_state", "get_position", "get_config", "get_limits", "get_progress", "get_snapshot",
-        "get_frame", "get_acquisition_list", "get_disk_space", "check_motion_limits",
+        # reads and checks
+        "hello", "ping", "get_state", "get_state_all", "get_position", "get_config", "get_info",
+        "get_limits", "get_capabilities", "get_progress", "get_snapshot", "get_frame", "self_test",
+        "get_acquisition_list", "stat_files", "get_disk_space", "check_motion_limits",
         # sample and stage
         "move_absolute", "move_relative", "load_sample", "unload_sample", "center_sample", "zero", "unzero",
-        # optics for the session (set_camera: the exposure time only, see REGULAR_ARGS)
+        # optics for the session
         "set_laser", "set_intensity", "set_filter", "set_zoom", "set_shutterconfig",
-        "open_shutters", "close_shutters", "set_camera",
+        "open_shutters", "close_shutters",
+        # the ETL
+        "set_etl", "reload_etl_config", "update_etl_from_laser", "update_etl_from_zoom", "save_etl_config",
         # seeing
-        "snap", "start_live", "stop_activity", "stop",
+        "snap", "start_live", "stop_activity", "stop", "clear_stuck_operation",
         # acquiring
         "set_acquisition_list", "run_acquisition_list", "run_selected_acquisition",
         "preview_acquisition", "acquire_start", "acquire_finish", "time_lapse_start", "time_lapse_stop",
@@ -121,10 +125,8 @@ TOOL_DESCRIPTIONS = {
 # The checks that take acquisition rows describe them by reference to set_acquisition_list instead
 # of repeating the row schema; the dispatcher validates the rows the same either way.
 ROWS_BY_REFERENCE = ("get_disk_space", "check_motion_limits", "acquire_start")
-# In Regular, a command that straddles both worlds is offered with these arguments only.
-REGULAR_ARGS = {"set_camera": ("camera_exposure_time",)}
-# ... and acquisition rows may not carry the machine's ETL settings: a row takes the current ones.
-REGULAR_ROW_HIDDEN = ("etl_l_amplitude", "etl_l_offset", "etl_r_amplitude", "etl_r_offset")
+# In Regular, the ETL is set by its voltages only; its delay and ramps are the machine's timing.
+REGULAR_ARGS = {"set_etl": ("etl_l_amplitude", "etl_l_offset", "etl_r_amplitude", "etl_r_offset")}
 DEFAULT_TOOL_PROFILE = "Regular"
 TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope config: "Regular" or "Full"
 

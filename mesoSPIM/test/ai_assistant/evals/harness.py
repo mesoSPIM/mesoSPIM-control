@@ -59,7 +59,7 @@ STATE_PATHS = ("state", "position.x_pos", "position.y_pos", "position.z_pos", "p
 WAIT_CAP_S = 2.0   # a WAIT that no simulated signal ends (live) returns "still_running" after this
 RETRY_WAIT_S = 20.0   # a provider error is mostly a per-minute rate limit: wait it out before retrying
 ASKING = ("?", "please specify", "please provide", "please clarify", "please tell", "let me know", "which axis",
-          "how far", "how much", "what value")   # a reply that asks, with or without a question mark
+          "how far", "how much", "what value", "need to know")   # a reply that asks, with or without a question mark
 
 
 def load_cases(path=CASES_FILE):

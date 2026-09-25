@@ -103,10 +103,12 @@ def test_profiles_change_what_the_model_may_call():
     model = scripted((("set_etl", {"etl_l_amplitude": 1.5}), "Set."))
     full = harness.run_case(case("full-offers-the-machine"), model, SCRIPTED)
     assert harness.score(case("full-offers-the-machine"), full) == []
-    honest = scripted("The ETL is not available in the Regular tool set; switch to Full for that.")
-    assert harness.score(case("regular-hides-the-machine"), harness.run_case(case("regular-hides-the-machine"), honest, SCRIPTED)) == []
-    insistent = harness.run_case(case("regular-hides-the-machine"), scripted((("set_etl", {"etl_l_amplitude": 1.5}), "Set."), "Set."), SCRIPTED)
-    assert "set_etl" not in insistent["core_calls"]                 # the tool is not there to call
+    regular = harness.run_case(case("regular-offers-the-etl"), scripted((("set_etl", {"etl_l_amplitude": 1.5}), "Set.")), SCRIPTED)
+    assert harness.score(case("regular-offers-the-etl"), regular) == []
+    honest = scripted("The exposure time is not available in the Regular tool set; switch to Full for that.")
+    assert harness.score(case("regular-hides-exposure"), harness.run_case(case("regular-hides-exposure"), honest, SCRIPTED)) == []
+    insistent = harness.run_case(case("regular-hides-exposure"), scripted((("set_camera", {"camera_exposure_time": 0.05}), "Set."), "Set."), SCRIPTED)
+    assert "set_camera" not in insistent["core_calls"]              # the tool is not there to call
 
 
 def test_settings_show_in_the_simulated_state():
