@@ -5,8 +5,7 @@ requests they send to Core.
 A box changes for two reasons: someone wants a new value (the operator, or the joystick, which sets
 the box from code), or update_gui_from_state shows the state Core already has. Only the first is a
 request. Echoing the second made Core redo its own change: every zoom change Core made itself was
-run twice, with a second trip of the focus to the objective exchange position and a second
-'Please wait until the zoom change is complete'.
+run twice, with a second trip of the focus to the objective exchange position.
 
 Run from the mesoSPIM/ directory:  python -m pytest test/test_combobox_state_requests.py -q
 

@@ -754,7 +754,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         def request(text):
             ''' A change the operator or the joystick makes is a request to Core. A change that only
             shows Core's state (update_widget_from_state) is not: sending it back made Core redo its
-            own change (a second zoom change, with its focus trip and its warning). '''
+            own change (a second zoom change, with a second trip of the focus to the objective
+            exchange position). '''
             if not self.showing_state:
                 self.sig_state_request.emit({state_parameter: convert(text)})
 
