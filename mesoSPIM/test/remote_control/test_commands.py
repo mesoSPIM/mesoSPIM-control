@@ -272,6 +272,7 @@ def test_startup_self_test_fails_if_the_zeroed_frame_is_ignored(monkeypatch):
 
 def test_snap_saves_one_frame_and_reports_its_path(tmp_path):
     core = RecordingCore()
+    operator_folder = core.state["snap_folder"]
     reply = dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "remote"})
     assert reply["accepted"] is True
     operation = dispatcher.operation_snapshot(core)
@@ -283,7 +284,19 @@ def test_snap_saves_one_frame_and_reports_its_path(tmp_path):
     ((_, _, kwargs),) = [c for c in core.calls() if c[0] == "snap"]
     assert kwargs == {"write_flag": False}
     assert core.state["state"] == "idle"
-    assert core.state["snap_folder"] == str(tmp_path)
+    assert core.state["snap_folder"] == operator_folder          # the named folder held for this snap only
+
+
+def test_a_named_folder_holds_for_one_snap_and_the_next_goes_to_the_snap_folder(tmp_path):
+    """The operator's snap folder is theirs: a remote snap into another folder leaves it as it was,
+    so the next snap (the GUI's Snap button, or a remote snap without a folder) goes where the GUI's
+    snap folder says."""
+    core = RecordingCore()
+    dispatcher.run(core, "snap", {"folder": str(tmp_path), "prefix": "named"})
+    dispatcher.run(core, "snap", {"prefix": "plain"})
+    path = dispatcher.operation_snapshot(core)["result"]["path"]
+    assert os.path.dirname(path) == core.state["snap_folder"] != str(tmp_path)
+    assert [name.split("_")[0] for name in os.listdir(tmp_path)] == ["named"]
 
 
 def test_a_second_snap_within_the_same_second_still_counts(tmp_path):

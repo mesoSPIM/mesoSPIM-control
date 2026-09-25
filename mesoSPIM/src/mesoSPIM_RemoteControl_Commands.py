@@ -1738,8 +1738,6 @@ def _run_snap(core, args):
         if not claim_scheduled(core, operation_id):
             return
         try:
-            if folder is not None:
-                core.state["snap_folder"] = folder
             core.frame_queue_display.clear()
             core.state["state"] = "snap"
             try:
@@ -1764,7 +1762,7 @@ def _run_snap(core, args):
                 fail(core, config.MILESTONE_SNAP, RuntimeError("no frame arrived from the camera"))
             return
         try:
-            path = _write_snap(core, core.frame_queue_display[0], prefix)
+            path = _write_snap(core, core.frame_queue_display[0], folder, prefix)
             operation["result"] = {"path": path}
             _session(core)["last_snap"] = path
         except Exception as error:
@@ -1789,17 +1787,23 @@ class _WriterErrors(logging.Handler):
             self.messages.append(record.getMessage())
 
 
-def _write_snap(core, image, prefix):
-    """Save through mesoSPIM's own snap writer and return the file it wrote. A failed write is
+def _write_snap(core, image, folder, prefix):
+    """Save through mesoSPIM's own snap writer and return the file it wrote. The writer saves into
+    the state's snap folder, so a named folder is set for this write only: the operator's snap
+    folder stays theirs, and the GUI's Snap keeps saving where the GUI says. A failed write is
     judged by the error the writer logs, not by file times: on Windows two writes within one
     clock tick share a modification time. The writer names a snap by the second, so the newest
     matching file is the one just written, a same-second overwrite included."""
-    pattern = os.path.join(state(core, "snap_folder"), f"{prefix}_*.tif")
+    operator_folder = state(core, "snap_folder")
+    folder = folder or operator_folder
+    pattern = os.path.join(folder, f"{prefix}_*.tif")
     errors = _WriterErrors()
     logging.getLogger().addHandler(errors)
+    core.state["snap_folder"] = folder
     try:
         core.image_writer.write_snap_image(image, prefix=prefix)
     finally:
+        core.state["snap_folder"] = operator_folder
         logging.getLogger().removeHandler(errors)
     if errors.messages:
         raise RuntimeError(f"the image writer could not save the snap: {'; '.join(errors.messages)}")
