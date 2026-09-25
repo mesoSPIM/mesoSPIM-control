@@ -36,15 +36,19 @@ SUBSAMPLING = ['1', '2', '4']
 
 
 class Window(QtCore.QObject):
-    """What the combo box helpers use of the Main Window: its state, its startup config, the signal
-    that carries state requests to Core, and the flag the GUI refresh sets."""
+    """What the combo boxes and the GUI refresh use of the Main Window, with the Main Window's own
+    code for both: its state, its startup config, the signal that carries state requests to Core."""
     sig_state_request = QtCore.pyqtSignal(dict)
     showing_state = mesoSPIM_MainWindow.showing_state
+    request_state_from_combobox = mesoSPIM_MainWindow.request_state_from_combobox
+    update_widget_from_state = mesoSPIM_MainWindow.update_widget_from_state
 
     def __init__(self, startup):
         super().__init__()
         self.cfg = types.SimpleNamespace(startup=dict(startup))
-        self.state = dict(startup)
+        self.state = dict(startup, selected_row=0)
+        self.acquisition_manager_window = types.SimpleNamespace(set_selected_row=lambda _row: None)
+        self.widget_to_state_parameter_assignment = []
         self.requests = []
         self.sig_state_request.connect(self.requests.append)
 
@@ -62,8 +66,9 @@ def settled(window):
 
 
 def show_state(window, box, state_parameter):
-    """What update_gui_from_state does for one box, through the Main Window's own code."""
-    mesoSPIM_MainWindow.update_widget_from_state(window, box, state_parameter, 1)
+    """The GUI refresh (update_gui_from_state) for one box, through the Main Window's own code."""
+    window.widget_to_state_parameter_assignment = [(box, state_parameter, 1)]
+    mesoSPIM_MainWindow.update_gui_from_state(window)
 
 
 @pytest.fixture

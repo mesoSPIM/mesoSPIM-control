@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     """ Main application window which instantiates worker objects and moves them to a thread. """
-    showing_state = False   # True while update_widget_from_state shows Core's state in a widget
+    showing_state = False   # True while update_gui_from_state shows Core's state (request_state_from_combobox)
     # sig_live = QtCore.pyqtSignal()
     sig_stop = QtCore.pyqtSignal()
     sig_finished = QtCore.pyqtSignal()
@@ -634,6 +634,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
 
+        # The Remote Control and AI Assistant tabs; all their code is in their own modules.
         self.remote_control = RemoteControlGUI(self)
         self.ai_assistent = AiAssistentGUI(self)
 
@@ -747,19 +748,23 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             state_parameter (str): State parameter (has to exist in the config)
         '''
         combobox.addItems(option_list)
-        convert = int if int_conversion else str
-        self.sig_state_request.emit({state_parameter: convert(self.cfg.startup[state_parameter])})  # force update of the state
-        combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
+        if not int_conversion:
+            self.sig_state_request.emit({state_parameter: self.cfg.startup[state_parameter]})  # force update of the state
+            combobox.setCurrentText(self.cfg.startup[state_parameter])
+            combobox.currentTextChanged.connect(lambda currentText: self.request_state_from_combobox(state_parameter, currentText))
 
-        def request(text):
-            ''' A change the operator or the joystick makes is a request to Core. A change that only
-            shows Core's state (update_widget_from_state) is not: sending it back made Core redo its
-            own change (a second zoom change, with a second trip of the focus to the objective
-            exchange position). '''
-            if not self.showing_state:
-                self.sig_state_request.emit({state_parameter: convert(text)})
+        else:
+            self.sig_state_request.emit({state_parameter: int(self.cfg.startup[state_parameter])})  # force update of the state
+            combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
+            combobox.currentTextChanged.connect(lambda currentParameter: self.request_state_from_combobox(state_parameter, int(currentParameter)))
 
-        combobox.currentTextChanged.connect(request)
+    def request_state_from_combobox(self, state_parameter, value):
+        ''' A combo box change the operator or the joystick makes is a state request to Core. A change
+        that only shows Core's state (update_gui_from_state) is not: sending it back made Core redo its
+        own change (a second zoom change, with a second trip of the focus to the objective exchange
+        position). Called directly, not queued, so that it still sees showing_state. '''
+        if not self.showing_state:
+            self.sig_state_request.emit({state_parameter: value})
 
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
@@ -791,23 +796,21 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.sig_execute_script.emit(script)
 
     def update_widget_from_state(self, widget, state_parameter_string, conversion_factor):
-        ''' Shows Core's state in a widget. The change this makes is Core's, not the operator's, so a
-        combo box does not send it back as a request (connect_combobox_to_state_parameter). '''
-        self.showing_state = True
-        try:
-            if isinstance(widget, QtWidgets.QComboBox):
-                widget.setCurrentText(self.state[state_parameter_string])
-            elif isinstance(widget, (QtWidgets.QSlider, QtWidgets.QSpinBox)):
-                widget.setValue(int(self.state[state_parameter_string]*conversion_factor))
-            elif isinstance(widget, (QtWidgets.QDoubleSpinBox)):
-                widget.setValue(float(self.state[state_parameter_string]*conversion_factor))
-        finally:
-            self.showing_state = False
+        if isinstance(widget, QtWidgets.QComboBox):
+            widget.setCurrentText(self.state[state_parameter_string])
+        elif isinstance(widget, (QtWidgets.QSlider, QtWidgets.QSpinBox)):
+            widget.setValue(int(self.state[state_parameter_string]*conversion_factor))
+        elif isinstance(widget, (QtWidgets.QDoubleSpinBox)):
+            widget.setValue(float(self.state[state_parameter_string]*conversion_factor))
     
     @QtCore.pyqtSlot()
     def update_gui_from_state(self):
-        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
-            self.update_widget_from_state(widget, state_parameter, conversion_factor)   
+        self.showing_state = True       # Core's own state: the combo boxes do not send it back to Core
+        try:
+            for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+                self.update_widget_from_state(widget, state_parameter, conversion_factor)
+        finally:
+            self.showing_state = False
         self.acquisition_manager_window.set_selected_row(self.state['selected_row'])
         logger.debug('GUI updated from state')
 
