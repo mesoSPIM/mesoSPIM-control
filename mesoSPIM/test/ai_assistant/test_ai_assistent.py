@@ -102,12 +102,14 @@ class FakeResult:
 
 
 class FakeAgent:
+    """Stands in for pydantic-ai's Agent where the worker uses it: the awaitable run()."""
+
     def __init__(self, results=None, errors=None):
         self._results = list(results or [])
         self._errors = list(errors or [])
         self.runs = 0
 
-    def run_sync(self, text, message_history=None):
+    async def run(self, text, message_history=None):
         self.runs += 1
         self.last_prompt = text
         if self._errors:
@@ -780,6 +782,43 @@ def test_worker_records_every_turn(tmp_path, monkeypatch):
     worker.trace_folder = None                                      # off: nothing more is written
     worker.run_turn("again")
     assert len(path.read_text(encoding="utf-8").splitlines()) == 1
+
+
+def test_cancel_prompt_ends_a_turn_whose_model_call_is_still_in_flight(tmp_path, monkeypatch):
+    """Cancel prompt used to wait the model out: the turn ran as one blocking run_sync, so a request
+    already sent to the model finished (and the model could then call more tools) before the turn
+    ended and the input came back. The turn now ends at once, with no reply and nothing kept."""
+    pytest.importorskip("pydantic_ai")
+    import asyncio
+    from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
+
+    asked = threading.Event()
+
+    async def slow_model(messages, info):
+        asked.set()
+        await asyncio.sleep(30)                                     # a model that has not answered yet
+        return ModelResponse(parts=[TextPart("too late")])
+
+    monkeypatch.setattr(ai, "build_model", lambda endpoint: FunctionModel(slow_model))
+    worker = AssistantWorker(FakeAcceptor())
+    worker.configure(Endpoint.from_preset("Gemini", api_key="k"))
+    worker.trace_folder = str(tmp_path)
+    replies, errors, done = [], [], threading.Event()
+    worker.sig_reply.connect(replies.append)
+    worker.sig_error.connect(errors.append)
+    worker.sig_done.connect(done.set)
+    turn = threading.Thread(target=worker.run_turn, args=("hello",), daemon=True)
+    turn.start()
+    assert asked.wait(5), "the model was never asked"
+    started = time.monotonic()
+    worker.interrupt()
+    assert done.wait(2), "the turn waited for the model to answer"
+    assert time.monotonic() - started < 2
+    turn.join(2)
+    assert replies == [] and errors == [] and worker._history == []
+    (record,) = [json.loads(line) for path in tmp_path.iterdir() for line in path.read_text(encoding="utf-8").splitlines()]
+    assert record["prompt"] == "hello" and record["error"] == "cancelled" and record["reply"] is None
 
 
 def test_traces_folder_follows_the_config():

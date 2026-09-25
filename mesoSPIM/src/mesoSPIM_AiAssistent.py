@@ -12,6 +12,7 @@ Maintainer (2026):
     thomdehoog@gmail.com
 """
 
+import asyncio
 import json
 import re
 import logging
@@ -1027,10 +1028,9 @@ def stop_assistant_for_core(core):
 
 class AssistantWorker(QtCore.QObject):
     """Runs agent turns on the shared Acceptor, off the GUI/Core threads. Single-flight: the
-    GUI disables input during a turn. Cancellation is at the tool boundary (dispatch_and_wait
-    checks `cancel` before every dispatch) plus a `stop`: the agent can only touch the
-    instrument through gated tools, so gating them + stopping the hardware halts it; the
-    in-flight model call finishes harmlessly."""
+    GUI disables input during a turn. Cancel ends the turn at once (its task is cancelled, so a
+    model request in flight is abandoned) and gates the tools (dispatch_and_wait checks `cancel`
+    before every dispatch): the agent can only touch the instrument through them."""
 
     sig_reply = QtCore.pyqtSignal(str)
     sig_tool = QtCore.pyqtSignal(str, str)   # tool name, args-json
@@ -1049,6 +1049,7 @@ class AssistantWorker(QtCore.QObject):
         self._history = []
         self.store = SessionStore()      # every turn in full, for recall_turn and search_history
         self.cancel = threading.Event()
+        self._turn = None                # (event loop, task) of the turn in progress: what Cancel cancels
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit)
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
         self.look_image_size = config.LOOK_IMAGE_SIZE
@@ -1087,7 +1088,8 @@ class AssistantWorker(QtCore.QObject):
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.
-            result = self._agent.run_sync(with_state(self._acceptor, text, self.store), message_history=self._history)
+            result = self._run_cancellable(self._agent.run(with_state(self._acceptor, text, self.store),
+                                                           message_history=self._history))
             self.store.finish(result.new_messages(), result.output)
             self._history = trim_history(result.all_messages(), self.max_history_turns)
             self._record(text, result.new_messages(), started, reply=result.output)
@@ -1096,12 +1098,32 @@ class AssistantWorker(QtCore.QObject):
             if others:   # the operator must know: another model is not the one they evaluated
                 self.sig_served.emit(f"{', '.join(others)} answered this turn, standing in for {chosen}")
             self.sig_reply.emit(without_state_block(result.output))
+        except asyncio.CancelledError:
+            self._record(text, [], started, error="cancelled")
         except Exception as error:
             logger.exception("AI Assistant turn failed")
             self._record(text, [], started, error=describe_error(error))
             self.sig_error.emit(describe_error(error))
         finally:
             self.sig_done.emit()
+
+    def _run_cancellable(self, coro):
+        """Agent.run_sync's own recipe (pydantic_ai._utils.run_until_complete: this thread's event
+        loop, the turn as a task), with the task kept where interrupt() can cancel it: a model
+        request in flight is abandoned instead of waited out."""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        task = loop.create_task(coro)
+        self._turn = (loop, task)
+        if self.cancel.is_set():                 # Cancel came while the turn was being set up
+            task.cancel()
+        try:
+            return loop.run_until_complete(task)
+        finally:
+            self._turn = None
 
     def _record(self, prompt, messages, started, reply=None, error=None):
         """One line per turn in the traces folder, so what the assistant did can be read back
@@ -1132,10 +1154,14 @@ class AssistantWorker(QtCore.QObject):
         self.sig_tool.emit(name, args)
 
     def interrupt(self):
-        """The Cancel button: stop the assistant, not the microscope. Every further tool call in
-        this turn returns 'cancelled' (dispatch_and_wait checks the flag), an open Run / Cancel
-        question is answered Cancel, and the turn ends when the model next replies. Whatever the assistant already
-        started keeps running; stopping the instrument is stop_microscope, a separate decision."""
+        """The Cancel button: stop the assistant, not the microscope. The turn ends at once, a model
+        request in flight abandoned; a tool call still running returns 'cancelled' (dispatch_and_wait
+        checks the flag) and an open Run / Cancel question is answered Cancel. Whatever the assistant
+        already started keeps running; stopping the instrument is stop_microscope, a separate decision."""
         self.cancel.set()
         self.gate.answer(False)
+        turn = self._turn
+        if turn is not None:
+            loop, task = turn
+            loop.call_soon_threadsafe(task.cancel)
 
