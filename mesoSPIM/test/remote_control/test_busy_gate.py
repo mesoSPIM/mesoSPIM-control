@@ -137,6 +137,7 @@ class _SignallingCore(RecordingCore):
         self.sig_warning = _Sig()
         self.sig_time_lapse_cancelled = _Sig()
         self.sig_time_lapse_finished = _Sig()
+        self.sig_run_timepoint = _Sig()
 
     def stop_time_lapse(self, *args, **kwargs):
         was_active = self.timelapse_active
@@ -306,3 +307,26 @@ def test_a_run_nobody_stopped_still_ends_completed(h):
     dispatcher.complete(h.core, config.MILESTONE_FINISHED)
     operation = dispatcher.operation_snapshot(h.core)
     assert operation["status"] == "completed" and not operation.get("stop_requested")
+
+
+@pytest.mark.parametrize("stop", ["stop_activity", "time_lapse_stop"])
+def test_a_time_lapse_stopped_during_a_point_holds_the_gate_until_the_point_ends(hs, stop):
+    """Core cancels a time lapse at once, but the point it was imaging still winds down (after
+    stop_activity) or runs to its end (after time_lapse_stop). Until that point's sig_finished, a
+    remote command would land inside it."""
+    core = hs.core
+    operation = dispatcher._begin(core, "time_lapse_start", config.MILESTONE_TIMELAPSE)
+    operation["phase"] = "running"
+    core.timelapse_active = True
+    core.sig_run_timepoint.emit(0)
+    core.state["state"] = "run_acquisition_list"                  # MainWindow.run_timepoint did this
+    ok, _ = hs.invoke("tcp", stop, {})
+    assert ok and dispatcher.operation_snapshot(core)["status"] == "stopping"
+    ok, refused = hs.invoke("tcp", "move_absolute", {"targets": {"x": 10}})
+    assert not ok and refused["code"] == "busy"
+    core.state["state"] = "idle"                                  # close_acquisition_list did this
+    core.sig_finished.emit()
+    latest = dispatcher.operation_snapshot(core)
+    assert latest["id"] == operation["id"] and latest["status"] == "stopped", latest
+    ok, accepted = hs.invoke("tcp", "move_absolute", {"targets": {"x": 10}})
+    assert ok and accepted["accepted"] is True

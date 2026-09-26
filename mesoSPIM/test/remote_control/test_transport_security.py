@@ -479,8 +479,12 @@ def test_tools_list_over_wire():
     for tool in tools:
         assert tool["inputSchema"] == dispatcher.COMMANDS[tool["name"]].schema
         assert tool["inputSchema"]["additionalProperties"] is False
-        assert tool["description"]
-        assert tool["description"] == dispatcher.COMMANDS[tool["name"]].hint
+        command = dispatcher.COMMANDS[tool["name"]]
+        if command.kind == dispatcher.WAIT:                         # returns once admitted: poll
+            assert "poll" not in command.hint                       # the transport says it, once
+            assert tool["description"] == f"{command.hint}. {config.MCP_WAIT_NOTE}"
+        else:
+            assert tool["description"] == command.hint
     by_name = {t["name"]: t["inputSchema"] for t in tools}
     assert by_name["move_absolute"]["required"] == ["targets"]
     assert set(by_name["move_absolute"]["properties"]["targets"]["properties"]) == set(config.AXES)
@@ -721,3 +725,31 @@ def test_mcp_idle_connection_is_closed_after_the_header_timeout():
         idle.close()
     status, reply = _jsonrpc(_h.mcp.port, json.loads(_CALL))       # a real client is unaffected
     assert status == 200 and reply["id"] == 1
+
+
+def test_mcp_trickled_headers_are_closed_after_the_header_timeout():
+    """The header timeout is one deadline for the request line and all headers, not per read: a
+    peer sending one byte at a time inside each read's limit would else hold its slot for good."""
+    trickle = socket.create_connection(("127.0.0.1", _h.mcp.port), timeout=0.5)
+    started = time.monotonic()
+    closed = False
+    try:
+        for byte in b"POST /mcp HTTP/1.1\r\nX-Slow: " + b"a" * 200:
+            trickle.sendall(bytes([byte]))
+            time.sleep(config.MCP_HEADER_TIMEOUT_SEC / 4)
+            try:
+                if trickle.recv(1024) == b"":
+                    closed = True
+                    break
+            except socket.timeout:
+                pass
+            except OSError:
+                closed = True
+                break
+            if time.monotonic() - started > config.MCP_HEADER_TIMEOUT_SEC + 3.0:
+                break
+    except OSError:
+        closed = True
+    finally:
+        trickle.close()
+    assert closed and time.monotonic() - started < config.MCP_HEADER_TIMEOUT_SEC + 1.5

@@ -18,7 +18,7 @@ python mesoSPIM/test/remote_control/run.py live tcp
 | Profile | Requires | Can change a microscope? | Expected result |
 | --- | --- | --- | --- |
 | `offline` | Python and pytest | No | All command, validation, protocol, and GUI tests pass. |
-| `pyqt` | PyQt5 | No | Both real-PyQt smoke scripts pass on temporary loopback ports. |
+| `pyqt` | PyQt5 | No | The real-PyQt scripts and the combo-box tests pass, on temporary loopback ports. |
 | `live mcp` | Running DemoStage and an operator-started MCP server | Yes, DemoStage only | 2 valid and 6 adversarial tests pass. |
 | `live tcp` | Running DemoStage and an operator-started TCP server | Yes, DemoStage only | 2 valid and 6 adversarial tests pass. |
 
@@ -34,15 +34,20 @@ The offline profile uses an in-memory Core and a small PyQt substitute. It verif
 - strict JSON, TCP framing, MCP authentication, origins, paths, and body limits;
 - the one-mutation gate, cross-transport behavior, and concurrent admission;
 - acquisition-list handling, native `planes` metadata, preflight recovery, and time lapses;
+- the frame readouts (`get_frame`, `get_snapshot`);
 - operator controls and the acquisition-table bridge.
 
 No listener is exposed outside temporary loopback addresses, and no microscope process is started.
 
-## Real PyQt smoke tests
+## Real PyQt tests
 
-The PyQt profile runs two scripts outside pytest's fake-Qt environment. The first constructs the
-Remote Control widgets and checks signal, timer, and shutdown behavior without opening a port. The
-second opens temporary loopback TCP and MCP listeners against a fake Core and verifies that:
+The PyQt profile runs three scripts outside pytest's fake-Qt environment, then the Main Window's
+combo-box tests (`mesoSPIM/test/test_combobox_state_requests.py`). The first script constructs the
+Remote Control widgets and checks the warning route, signals, timers and shutdown without opening a
+port. The third builds the AI Assistant tab offscreen and checks its layout and input keys; the
+offscreen platform on Windows has no fonts, so there it skips the width checks and says so
+(`QT_QPA_PLATFORM=windows` measures them). The second opens temporary loopback TCP and MCP
+listeners against a fake Core and verifies that:
 
 - `localhost` binds the loopback interface, an empty password or a hostname never binds, and a
   connected client that sends no password is dropped after the authentication timeout;
@@ -52,6 +57,10 @@ second opens temporary loopback TCP and MCP listeners against a fake Core and ve
 - both listeners and their worker threads stop cleanly.
 
 These scripts do not start mesoSPIM or access hardware.
+
+The offline suites run on a Qt substitute, which cannot share an interpreter with real Qt, so
+`pytest mesoSPIM/test` leaves the `remote_control` and `ai_assistant` folders out (`norecursedirs`
+in `pyproject.toml`). Run them by folder, or through this runner.
 
 ## Live DemoStage tests
 

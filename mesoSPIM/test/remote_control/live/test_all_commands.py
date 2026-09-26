@@ -43,7 +43,8 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
     if transport == "mcp":
         if not token:
             pytest.skip("set MESOSPIM_LIVE_MCP_TOKEN for the live MCP server")
-        tool = lambda name, arguments=None: _raw_tool(host, port, token, request_timeout, name, arguments)
+        def tool(name, arguments=None):
+            return _raw_tool(host, port, token, request_timeout, name, arguments)
     elif transport == "tcp":
         tcp_host = os.environ.get("MESOSPIM_LIVE_TCP_HOST", "127.0.0.1")
         tcp_port = os.environ.get("MESOSPIM_LIVE_TCP_PORT")
@@ -52,7 +53,8 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
             pytest.skip("set loopback MESOSPIM_LIVE_TCP_PORT and MESOSPIM_LIVE_TCP_TOKEN")
         tcp_client = RemoteControl(tcp_host, int(tcp_port), tcp_token, timeout=request_timeout)
         request.addfinalizer(tcp_client.close)
-        tool = lambda name, arguments=None: _raw_tcp_tool(tcp_client, name, arguments)
+        def tool(name, arguments=None):
+            return _raw_tcp_tool(tcp_client, name, arguments)
     else:
         raise ValueError("MESOSPIM_LIVE_DEMO_TRANSPORT must be 'mcp' or 'tcp'")
 

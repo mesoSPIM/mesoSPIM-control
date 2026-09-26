@@ -32,6 +32,7 @@ def _offline():
         TESTS / "test_transport_matrix.py",
         TESTS / "test_transport_security.py",
         TESTS / "test_gui.py",
+        TESTS / "test_frame.py",
     ]
     return _run_pytest(paths)
 
@@ -42,7 +43,7 @@ def _pyqt():
         result = subprocess.call([sys.executable, str(script)], cwd=REPOSITORY, env=os.environ.copy())
         if result:
             return result
-    return 0
+    return _run_pytest([TESTS.parent / "test_combobox_state_requests.py"])   # real boxes, offscreen
 
 
 def _live(transport):

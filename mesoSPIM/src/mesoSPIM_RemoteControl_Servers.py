@@ -32,8 +32,10 @@ from . import mesoSPIM_RemoteControl_Config as config
 # Importing Commands fills the dispatcher registry before either server accepts requests.
 from . import mesoSPIM_RemoteControl_Commands  # noqa: F401
 from .mesoSPIM_RemoteControl_Dispatcher import (
+    EMERGENCY,
     PROCESSING,
     STOPPING,
+    WAIT,
     _core_state,
     run,
     complete,
@@ -153,6 +155,7 @@ class Acceptor(QtCore.QObject):
         self._core = core
         self._closed = False
         self._time_lapse_warning = None       # a warning during a time-lapse point, until its sig_finished
+        self._time_point_running = False      # from sig_run_timepoint to that point's sig_finished
         if _core_state(core) == "snap":       # a GUI snap is synchronous: this can only be its leftover
             core.state["state"] = "idle"
         self._incoming.connect(self._execute, QtCore.Qt.QueuedConnection)
@@ -204,8 +207,9 @@ class Acceptor(QtCore.QObject):
         # ALWAYS set call.done (in finally), even when we drop a cancelled/closed call — otherwise a
         # queued caller would block until DISPATCH_TIMEOUT_SEC waiting for an answer that never comes.
         try:
-            # A call queued before close() must never actuate afterward.
-            if call.cancelled or self._closed:
+            # A call queued before close() must never actuate afterward, nor one whose caller gave
+            # up waiting; a stop still runs, as it is what the caller was waiting for.
+            if self._closed or (call.cancelled and COMMANDS[call.name].kind != EMERGENCY):
                 call.error = RuntimeError("remote control is shutting down")
                 return
 
@@ -226,6 +230,10 @@ class Acceptor(QtCore.QObject):
         self._connect(getattr(core, "sig_time_lapse_finished", None), self._complete_time_lapse)
         self._connect(getattr(core, "sig_time_lapse_cancelled", None), self._complete_time_lapse)
         self._connect(getattr(core, "sig_warning", None), self._on_warning)
+        self._connect(getattr(core, "sig_run_timepoint", None), self._on_time_point)
+
+    def _on_time_point(self, _index):
+        self._time_point_running = True
 
     def _on_warning(self, text):
         """Keep the warning for clients. During a time lapse it may be Core refusing a point in
@@ -240,6 +248,7 @@ class Acceptor(QtCore.QObject):
         Core leaves behind after a GUI snap or a refused GUI run, so it does not read as busy."""
         core = self._core
         warning, self._time_lapse_warning = self._time_lapse_warning, None
+        point_ended, self._time_point_running = self._time_point_running, False
         latest = operation_snapshot(core)
         if (warning and latest.get("command") == "time_lapse_start" and latest.get("status") in (PROCESSING, STOPPING)
                 and _core_state(core) in config.STALE_STATES):
@@ -254,11 +263,16 @@ class Acceptor(QtCore.QObject):
         complete(core, config.MILESTONE_FINISHED)
         if operation_snapshot(core).get("status") != PROCESSING and _core_state(core) in config.STALE_STATES:
             core.state["state"] = "idle"
+        if point_ended:
+            self._complete_time_lapse()           # a time lapse stopped during this point ends now
 
     def _complete_time_lapse(self):
         if getattr(self._core, "timelapse_active", None) is not False:
             # Ignore a duplicate/late signal from an older time lapse while the current generation
             # is independently known to be active (including its idle interval between points).
+            return
+        if self._time_point_running:
+            # Stopped during a point: the point still winds down, and its sig_finished ends this.
             return
         try:
             # Core may otherwise leave the state at run_acquisition_list.
@@ -291,10 +305,39 @@ def _make_handler(acceptor, token):
     class Handler(BaseHTTPRequestHandler):
         server_version = config.MCP_SERVER_BANNER
 
-        # A connection has MCP_HEADER_TIMEOUT_SEC to send its request line and headers, so idle
-        # peers without the password cannot fill the connection slots; once the password matched,
-        # the body may take CLIENT_TIMEOUT_SEC.
+        # A connection has MCP_HEADER_TIMEOUT_SEC in all to send its request line and headers, so
+        # idle or trickling peers without the password cannot fill the connection slots; once the
+        # password matched, the body may take CLIENT_TIMEOUT_SEC.
         timeout = config.MCP_HEADER_TIMEOUT_SEC
+
+        def setup(self):
+            super().setup()
+            self._too_slow = False
+            self._header_deadline = threading.Timer(config.MCP_HEADER_TIMEOUT_SEC, self._close_slow_peer)
+            self._header_deadline.start()
+
+        def _close_slow_peer(self):
+            self._too_slow = True
+            try:
+                self.connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+        def handle(self):
+            try:
+                super().handle()
+            except OSError:
+                if not self._too_slow:            # closed by the header deadline: nothing to answer
+                    raise
+
+        def parse_request(self):
+            parsed = super().parse_request()      # reads the headers
+            self._header_deadline.cancel()
+            return parsed
+
+        def finish(self):
+            self._header_deadline.cancel()
+            super().finish()
 
         def _json(self, status, payload):
             body = json.dumps(payload, allow_nan=False).encode(config.ENCODING)
@@ -421,7 +464,8 @@ def _mcp_reply(acceptor, msg):
     elif method == "tools/list":
         result = {
             "tools": [
-                {"name": c.name, "description": c.hint or c.name, "inputSchema": c.schema}
+                {"name": c.name, "inputSchema": c.schema,
+                 "description": f"{c.hint}. {config.MCP_WAIT_NOTE}" if c.kind == WAIT else c.hint or c.name}
                 for c in COMMANDS.values()
             ]
         }

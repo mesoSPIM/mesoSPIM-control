@@ -18,7 +18,6 @@ end. It refuses to run unless get_limits reports DemoStage.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import threading
 import time

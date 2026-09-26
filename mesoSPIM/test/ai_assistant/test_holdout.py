@@ -23,7 +23,8 @@ def test_the_held_out_file_is_sound_and_mirrors_the_cases():
     assert harness.check_cases(cases) == []
     assert [c["category"] for c in cases] == [c["category"] for c in originals]      # case for case
     assert not {c["id"] for c in cases} & {c["id"] for c in originals}
-    prompts = lambda cs: {p for c in cs for p in harness.prompts_of(c)}
+    def prompts(cs):
+        return {p for c in cs for p in harness.prompts_of(c)}
     assert len(prompts(cases) & prompts(originals)) <= 3                              # other words, not a copy
     for c in cases:
         harness.synthetic_frame((c.get("setup") or {}).get("frame"))                 # every frame exists

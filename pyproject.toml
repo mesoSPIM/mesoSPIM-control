@@ -46,7 +46,7 @@ ni = ["nidaqmx==1.0.1"]
 ai-assistant = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1"]
 # Serving a local .gguf model from the AI Assistant tab; use a GPU wheel from the llama-cpp-python
 # release page for anything beyond a few billion parameters.
-ai-assistant-local = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1", "llama-cpp-python>=0.3"]
+ai-assistant-local = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1", "llama-cpp-python[server]>=0.3"]
 
 [project.urls]
 "Homepage" = "http://mesospim.org"
@@ -54,3 +54,8 @@ ai-assistant-local = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1", "llama-cpp-p
 
 [project.scripts]
 mesospim-control = "mesoSPIM.mesoSPIM_Control:run"
+
+[tool.pytest.ini_options]
+# The Remote Control and AI Assistant suites run on a Qt substitute, which cannot share an
+# interpreter with the real-Qt tests: run them by folder, or with mesoSPIM/test/remote_control/run.py.
+norecursedirs = ["*.egg", ".*", "build", "dist", "venv", "ai_assistant", "remote_control"]

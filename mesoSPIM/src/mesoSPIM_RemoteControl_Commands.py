@@ -767,7 +767,7 @@ _NUMBER, _INTEGER, _STRING, _BOOLEAN = {"type": "number"}, {"type": "integer"}, 
 _PERCENT = {"type": "number", "minimum": config.PERCENT_RANGE[0], "maximum": config.PERCENT_RANGE[1]}
 _AXIS_MAP = _schema({axis: _NUMBER for axis in config.AXES}, minProperties=1)
 _AXES = {"type": "array", "items": {"type": "string", "enum": list(config.AXES)}}
-_WAIT = {**_BOOLEAN, "description": "block the call until the hardware confirms"}
+_WAIT = {**_BOOLEAN, "description": "the operation completes only once the hardware confirms"}
 
 
 def _setting_schema(key):
@@ -949,9 +949,9 @@ _MANUAL_INTERACTION = {
         "get_progress for its terminal result.",
         "wait": "A longer asynchronous mutation. Admission is acknowledged first; poll "
         "get_progress for the same operation id until it becomes terminal.",
-        "emergency": "An immediate safety command allowed while another mutation is processing: "
-        "stop, stop_activity, close_shutters, or time_lapse_stop. It does not "
-        "create a new operation.",
+        "emergency": "An immediate command allowed while another mutation is processing: the "
+        "stops (stop, stop_activity, time_lapse_stop), close_shutters, and the guarded recovery "
+        "clear_stuck_operation. It does not create a new operation.",
     },
     "mutation_gate": "Only one mutation may run at a time. A second valid mutation is rejected "
     "with error code 'busy' while an operation is processing or stopping. Reads, "
@@ -1282,7 +1282,7 @@ command(
     schema=_schema({"targets": {**_AXIS_MAP, "description": "axis -> um (deg for theta)"}}, required=("targets",)),
     accept=_accept_move_absolute,
     milestone=config.MILESTONE_POSITION,
-    hint="in: {targets:{axis: um/deg}}. out: {target}. poll get_progress",
+    hint="in: {targets:{axis: um/deg}}. out: {target}",
 )
 
 
@@ -1318,7 +1318,7 @@ command(
     schema=_schema({"deltas": {**_AXIS_MAP, "description": "axis -> um (deg for theta)"}}, required=("deltas",)),
     accept=_accept_move_relative,
     milestone=config.MILESTONE_POSITION,
-    hint="in: {deltas:{axis: um/deg}}. out: {target}. poll get_progress",
+    hint="in: {deltas:{axis: um/deg}}. out: {target}",
 )
 
 
@@ -1608,6 +1608,9 @@ def _accept_reload_etl_config(core, args):
     cfg_file = args.get("path", state(core, "ETL_cfg_file"))
     if not isinstance(cfg_file, str) or not cfg_file:
         raise ValidationError("path is required when ETL_cfg_file is not set")
+    # Core stores the path before it opens the file; a wrong one would break every later ETL update.
+    if not cfg_file.lower().endswith(".csv") or not os.path.isfile(os.path.join(core.package_directory, cfg_file)):
+        raise ValidationError(f"no ETL config .csv file at {cfg_file!r}")
     return {"request": {"ETL_cfg_file": cfg_file}, "wait": flag(args, "wait", True)}
 
 
@@ -1906,7 +1909,7 @@ command(
     _run_load_sample,
     accept=_accept_load_sample,
     milestone=config.MILESTONE_POSITION,
-    hint="in: none. out: {target}. poll get_progress",
+    hint="in: none. out: {target}",
 )
 
 
@@ -1930,7 +1933,7 @@ command(
     _run_unload_sample,
     accept=_accept_unload_sample,
     milestone=config.MILESTONE_POSITION,
-    hint="in: none. out: {target}. poll get_progress",
+    hint="in: none. out: {target}",
 )
 
 
@@ -1956,7 +1959,7 @@ command(
     _run_center_sample,
     accept=_accept_center_sample,
     milestone=config.MILESTONE_POSITION,
-    hint="in: none. out: {target}. poll get_progress",
+    hint="in: none. out: {target}",
 )
 
 
@@ -2135,7 +2138,7 @@ def _accept_acquire_start(core, args):
         raise ValidationError("a previous acquire_start is unfinished; call acquire_finish first")
 
     acquisition = check_acquisition(core, args.get("acquisition"))
-    check_writer_suffix(acquisition, "acquisition")
+    check_writer_suffix(_make_acquisition_list([acquisition])[0], "acquisition")   # as it will run: default writer too
 
     # Validate sensor dimensions before the mutation gate opens.
     _camera_pixels(core)

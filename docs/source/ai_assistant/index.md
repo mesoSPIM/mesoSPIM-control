@@ -15,7 +15,7 @@ design
 integration
 context
 local-test
-roadmap
+open-work
 ```
 
 ## Requirements
@@ -26,19 +26,22 @@ roadmap
   starts and every other feature works without it; the tab reports the missing module when the
   operator sends a first message.
 - An API key for the chosen provider, or any server that speaks the OpenAI API (Ollama, vLLM, LM Studio).
-- For a local model file, `llama-cpp-python`: the extra `ai-assistant-local` installs both.
+- For a local model file, `llama-cpp-python` with its server: the extra `ai-assistant-local`
+  installs both.
 
 ## Setting it up
 
 The tab opens as a chat. **Stop microscope** sits right of the input box, which Enter sends; under
-them the other buttons sit on one line: **Cancel prompt**, **Clear context**, **Connect AI
-assistant** and **Configure AI assistant**. **Configure AI assistant** opens three boxes below the row,
-**Preferences**, **Language model** and **Vision model**, which Connect applies, and opens by itself when something needs the operator: nothing configured yet, a missing key, or
-a local model that failed to start. Once the assistant is ready it folds back, and the button reads
-**Disconnect AI assistant**: pressed, it hands the microscope session back, so the Remote Control tab can start a transport without restarting
-mesoSPIM. The chat shows each answer; **Show tool calls**, under Preferences, adds the commands each
-answer ran. Images stay out of the chat: a frame goes to the vision model and the trace. Each model box
-starts with a **Type** dropdown; the fields after it follow the choice.
+them, on one line: **Cancel prompt**, **Clear context**, **Connect AI assistant** and **Configure
+AI assistant**. **Configure AI assistant** opens three boxes below the row, **Preferences**,
+**Language model** and **Vision model**, which Connect applies. They also open by themselves when
+something needs the operator: nothing configured yet, a missing key, or a local model that failed
+to start. Once the assistant is ready they fold, and the button reads **Disconnect AI assistant**:
+pressed, it hands the microscope session back, so the Remote Control tab can start a transport
+without restarting mesoSPIM. The chat shows each answer; **Show tool calls**, under Preferences,
+adds the commands each answer ran. Images stay out of the chat: a frame goes to the vision model
+and the trace. Each model box starts with a **Type** dropdown; the fields after it follow the
+choice.
 
 **Language model, Cloud AI.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style**
 for any server that speaks the OpenAI API, such as an Ollama or vLLM already running somewhere, or
@@ -57,8 +60,8 @@ looser on ambiguous requests until the manual spelled the rule out).
 **Models folder…** points it elsewhere for the session). Download a file from Hugging Face, drop
 it in, choose it, Connect. Nothing leaves the machine and no key is needed. Behind Connect,
 mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server (`pip install
-llama-cpp-python`, or the `ai-assistant-local` extra) as a child process on a loopback port; the
-Connect button reads "Starting…" while the model loads, then "Disconnect AI assistant". The
+"llama-cpp-python[server]"`, or the `ai-assistant-local` extra) as a child process on a loopback
+port; the Connect button reads "Starting…" while the model loads, then "Disconnect AI assistant". The
 server is started with a 32K-token context window (llama.cpp's own default of 2,048 would not
 hold one request), prompt batches of 2,048 tokens and flash attention where the build has it;
 the config attribute `ai_assistant_context_tokens` sets another context size. Every model, cloud
@@ -89,19 +92,21 @@ live, and the acquisition and time lapse commands. *Full* adds the camera settin
 time included), the ETL's delay and ramps, galvo and laser timing, the alignment modes and the
 generic setting call. In Regular the other commands are not offered to the model at all, so it
 cannot be talked into them; a command offered in both sets takes the same arguments in both,
-except `set_etl`, which in Regular takes the voltages only. The model is told which commands the set withholds, so a request for one gets "not in this tool set" rather
-than a stand-in command dressed up as the result. The start-up
-choice can be fixed per microscope with the config attribute `ai_assistant_tools` ("Regular" or
-"Full"). TCP and MCP always serve every command; this is the assistant only. **Memory** is how
+except `set_etl`, which in Regular takes the voltages only. The model is told which commands the
+set withholds, so a request for one gets "not in this tool set" rather than a stand-in command
+dressed up as the result. The start-up choice can be fixed per microscope with the config
+attribute `ai_assistant_tools` ("Regular" or "Full"). TCP and MCP always serve every command; this
+is the assistant only. **Memory** is how
 many of the operator's messages, with their answers, the model remembers; the newest three stay
 whole, older ones keep a one-line readout (state, position, optics) instead of the full state
 block and have long tool results shortened, so twenty turns of memory cost a fraction of what
 twenty full readouts would. Nothing is lost by it: every turn stays in a session store, and the
 assistant has two tools on it, one that returns an earlier turn in full or the turns in which a
 readout value changed, and one that finds earlier turns by words, for "what was the focus before
-I moved it" or "which batch did I say this is". Clear context empties the store. **Downsample image to** is the size of the frame handed to the
-vision model (longer side, 1024 px by default): smaller is cheaper and faster, and enough for "is
-it centred" or "is it saturated"; the numbers always come from the full frame.
+I moved it" or "which batch did I say this is". Clear context empties the store. **Downsample
+image to** is the size of the frame handed to the vision model (longer side, 1024 px by default):
+smaller is cheaper and faster, and enough for "is it centred" or "is it saturated"; the numbers
+always come from the full frame.
 
 **Connect** applies the three boxes; a first message sent without pressing it applies them as
 typed. Building a cloud endpoint does not contact the provider, so a wrong key shows up as an
@@ -111,11 +116,11 @@ The presets live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 
-Open the **AI Assistant** tab and type. Enter submits; Shift+Enter starts a new line,
-as in an editor. Commands the agent runs stream live above each answer, so
-the operator sees exactly which named calls were issued. **Cancel prompt** stops the assistant: no
-further tool calls this turn, an open Run / Cancel question is cancelled, and the turn ends at the
-model's next reply; what the assistant already started keeps running. **Stop microscope** is
+Open the **AI Assistant** tab and type. Enter submits; Shift+Enter starts a new line, as in an
+editor. Commands the agent runs stream live above each answer, so the operator sees exactly which
+named calls were issued. **Cancel prompt** stops the assistant: the turn ends at once, a model
+request in flight is abandoned and an open Run / Cancel question is cancelled; what the assistant
+already started keeps running. **Stop microscope** is
 the main window's Stop: the same queued signals to Core (state idle aborts the running mode, the
 time lapse is cancelled) plus the stage stop, sent straight from the tab with nothing of the
 assistant in between, so it is as immediate as the button on the main window and works before the
@@ -129,9 +134,10 @@ loaded.
 - **Three stage moves are gated by the operator, in code.** `load_sample`, `unload_sample` and
   `preview_acquisition` cross the stage's range and can collide faster than anyone reacts, so they
   do not execute until the operator presses **Run** in the bar above the input; Cancel there,
-  Cancel or Stop microscope refuse, and the model is told so. Starting a run is not gated:
-  the model is instructed to summarise and ask only when the state shows something off (empty
-  list, missing folder, short disk, pending warning) and Stop microscope ends a run at any time. This holds whatever the model was told or talked into.
+  Cancel or Stop microscope refuse, and the model is told so. This holds whatever the model was
+  told or talked into. Starting a run is not gated: the model is instructed to summarise and ask
+  only when the state shows something off (empty list, missing folder, short disk, pending
+  warning), and Stop microscope ends a run at any time.
 - **Four rules are held in code for the length of a turn** (`TurnGuard`), because
   small local models read them and do otherwise. After a move is refused for a movement limit, no
   other target for that axis is taken until the operator's next message: a 4B model answered
@@ -141,8 +147,8 @@ loaded.
   A stop the operator asks for is never gated. A turn may change the laser intensity, or the
   exposure, twice; a third change waits for **Run** too: asked to double the intensity of a dim
   frame once, a 12B model went 20, 40, 80, 100 because the next frame looked no better. And a
-  `look` right after a `snap` reads that frame instead of exposing the sample again. A refusal also carries its advice ("say so and wait; do
-  not stop it") where the model reads it next.
+  `look` right after a `snap` reads that frame instead of exposing the sample again. A refusal
+  also carries its advice ("say so and wait; do not stop it") where the model reads it next.
 - **A reply that called no tool goes back to the model once, and the tab says when it sent
   nothing.** Small models write "I have stopped the time lapse" having called nothing, and
   whether they do turns on the wording of unrelated lines of the manual, so no wording cures it.
@@ -152,10 +158,9 @@ loaded.
   it off). It is not a guarantee, so under a reply that called nothing the tab also prints "no
   command was sent to the microscope in this turn". The Stop microscope button never depends on
   the model.
-- **The model call has no timeout.** `WAIT_CAP_S` bounds the microscope leg only. If the endpoint
-  stalls — a burst over a tokens-per-minute quota is the usual cause — the turn blocks until the
-  HTTP layer gives up, and Cancel gates tool dispatch but cannot abort a request already in
-  flight.
+- **The model call has no time limit of its own.** `WAIT_CAP_S` bounds the microscope leg only. If
+  the endpoint stalls (a burst over a tokens-per-minute quota is the usual cause), the turn waits
+  until the HTTP layer gives up; **Cancel prompt** ends it at once.
 - **A commanded move smaller than `POSITION_TOLERANCE` completes without verifying motion.**
   Arrival is tested as `abs(observed - target) > tolerance`, so with the default 1.0 µm a 1 µm move
   from the current position is "already reached" on the first poll and is reported as a successful
@@ -182,34 +187,22 @@ python -m mesoSPIM.test.ai_assistant.evals.run --provider Gemini --model gemma-4
 python -m mesoSPIM.test.ai_assistant.evals.scoreboard mesoSPIM/test/ai_assistant/evals/runs/*.jsonl
 ```
 
-The cases cover plain verbs, unit conversion (mm, µm, seconds, words, 1e4), reads that must not
-mutate, greetings and off-topic questions that need no tool at all, vocabulary refusals and the one
-permitted retry, limit refusals (and that a refused value is not retried), ambiguity, prompt
-injection in the message and through the instrument's own state, a request to leak the system
-prompt, the confirm-first moves with Run and with Cancel, a GUI-busy instrument in live, in a
-stale run state and in a time lapse (and what is still allowed then), acquisitions, the selected
-row and a time lapse, the two tool sets on the ETL, the galvos, binning and the self test, looking
-without a new snap and deciding on saturation, memory across turns, prompts in German and
-Dutch, sixteen vision cases on synthetic frames whose content the frame numbers do not give away,
-most of them the situations an operator meets at the instrument: three spots to count, a hollow
-ring to tell from a disc, the brightest of three spots, a sample the right edge cuts off, a
-defocused spot next to a sharp one, a background brighter to one side, light-sheet shadow stripes,
-an air bubble in the chamber, an elongated sample whose orientation decides the rotation, an empty
-field, and decisions the picture has to drive: halve the intensity only if the image is saturated,
-double it only if underexposed, lower it only if more than one object is in view, report where an
-off-centre sample lies and ask before moving, and, after a change, look again and say honestly
-that nothing improved when the frame is unchanged. They pass only when the picture reached the
-vision model and came back described. Six cases test the decision to look at all: "are we in
-focus?", "what do you see?", "is there enough signal to start?" and "is the illumination too
-strong?" need the picture even though the numbers tempt the model not to; "did that take effect?"
-after a setting and "is anything running?" are answered from the state, without a snap. Every
-case also fails when a reply quotes the state block, which the manual forbids: Gemma 4 26B-A4B
-sees as well as flash-lite on these frames (21 of 22 correct on content, the miss being "what
-do you see?" answered without looking) but pastes the block back in 20 of 22 replies, so the tab
-strips a quoted block before showing a reply, and the evaluation keeps the habit visible. A run costs API calls and two runs can differ, so it is not part of the test profiles; run
-it when the prompt, the tools or the model change, and keep the trace file: a case that starts
-failing shows in it what the model did instead. `test_evals.py` keeps the machinery itself honest
-offline, with scripted models.
+The cases cover plain verbs and unit conversion, reads that must change nothing, greetings that
+need no tool, vocabulary and limit refusals (and the one permitted retry), requests that lack a
+value and must be asked back, prompt injection in the message and through the instrument's own
+state, the confirm-first moves, a microscope busy from the GUI, acquisitions and time lapses, the
+two tool sets, memory across turns, prompts in German and Dutch, and vision: synthetic frames whose
+content the numbers do not give away (spots to count, a ring to tell from a disc, a sample the edge
+cuts off, a defocused spot, shadow stripes, an empty field), decisions the picture must drive, and
+when to look at all. A vision case passes only when the frame reached the vision model and came
+back described. Every case also fails when a reply quotes the state block, which the manual
+forbids; the tab strips a quoted block before showing a reply, and the evaluation keeps the habit
+visible.
+
+A run costs API calls and two runs can differ, so it is not part of the test profiles: run it when
+the prompt, the tools or the model change, and keep the trace file, which shows what the model did
+instead when a case starts failing. `test_evals.py` keeps the machinery itself honest offline, with
+scripted models.
 
 **Prompt size.** A turn carries the manual and the commands by kind (about 1,800 tokens in
 Regular), the tool schemas (about 2,700 tokens for 37 tools) and the state block (about 500), so
@@ -218,20 +211,14 @@ schema is spelled out once, in `set_acquisition_list`, and the checks that take 
 That size is what lets a local model with an 8K context keep twenty messages of memory, and what
 keeps a free-tier per-minute token cap from stalling an evaluation; a test pins it.
 
-**Benchmarking across models, still to do.** One run of one model is a coin flip on the hard
-cases, and not always for the reason it seems: the injection-through-state case failed in two full
-runs out of three on what looked like one model, until the traces recorded who answered. A third of
-each run's turns had gone to the preset's fallback model after a per-minute rate limit, and that
-model obeyed the planted note six times out of six where the chosen one never did. The fallback is
-gone from the preset, the tab announces any stand-in, and the scoreboard counts them.
-The tooling for a real benchmark is in place: `run.py` takes several models and `--repeat`, and
-`scoreboard.py` pools the run files into one table (pass rate per model and per category, provider
-errors, median seconds, and the cases that pass only sometimes or never). What is missing is the
-runs: every model that may face an operator, three repeats each, on a paid tier, since the free
-Gemini tier stops after roughly one full pass per model per day. Read the scoreboard as a report
-on the manual as much as on the model: a case that fails on every model is a rule the manual states
-too loosely (the ambiguity and readout rules were found that way), one that fails on one model is
-that model's fit. Keep the run files; they are the evidence.
+**Across models.** One run of one model is a coin flip on the hard cases. `run.py` takes several
+models and `--repeat`, and `scoreboard.py` pools the run files into one table: pass rate per model
+and per category, provider errors, median seconds, the cases that pass only sometimes, and the
+turns a fallback model answered in place of the chosen one. Read it as a report on the manual as
+much as on the model: a case that fails on every model is a rule the manual states too loosely; one
+that fails on one model is that model's fit. Still to do: three repeats of every model that may
+face an operator, on a paid tier, since the free Gemini tier stops after roughly one full pass per
+model per day.
 
 A change made to pass these cases may only have fitted them. `evals/cases_holdout.json` holds a
 variant of each case, with other wording, numbers, axes, settings and frames (some with the
@@ -242,27 +229,20 @@ and compare. A gain that does not carry over was a fit.
 Every turn in the tab is recorded the same way, one JSON line per turn in
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl` (or the config attribute
 `ai_assistant_traces_folder`): the prompt, each tool call with its arguments and result, the model
-that actually answered (`served`), the reply or the error, and the time taken. Frames are recorded by their size, not their pixels. When
-something went wrong at the microscope, that file says what the assistant was told and what it
-did.
+that actually answered (`served`), the reply or the error, and the time taken; a turn cut short by
+Cancel or an error lists the calls it started. Frames are recorded by their size, not their
+pixels. When something went wrong at the microscope, that file says what the assistant was told
+and what it did.
 
 ## What has been verified
 
 - `mesoSPIM/test/ai_assistant/` — offline tests for the worker (completion wrapper, tools, turn,
   error and interrupt behaviour, the Acceptor lifecycle), the local model server and the tab
   (wiring, transport-busy refusal, the single-flight input lock, the setup boxes, local servers
-  and their projectors). They run without Qt or hardware, reusing the Remote Control substitute,
-  together with the Remote Control offline suites:
-
-  ```
-  pytest mesoSPIM/test/remote_control mesoSPIM/test/ai_assistant \
-      --ignore=mesoSPIM/test/remote_control/test_real_pyqt_smoke.py \
-      --ignore=mesoSPIM/test/remote_control/test_real_pyqt_transport_smoke.py
-  ```
-
-  494 passed. `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt smoke
-  scripts, among them one that builds the tab offscreen and checks the setup layout and the input
-  keys.
+  and their projectors). They run without Qt or hardware, on the Remote Control substitute, alone
+  or with the Remote Control suites: `pytest mesoSPIM/test/remote_control mesoSPIM/test/ai_assistant`.
+  `python mesoSPIM/test/remote_control/run.py pyqt` adds the real-PyQt scripts, among them one that
+  builds the tab offscreen and checks the setup layout and the input keys.
 - The behavioural evaluation above, run by hand against a model; its traces are the record.
 - End-to-end operation against the Windows DemoStage build.
 

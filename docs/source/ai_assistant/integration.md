@@ -16,14 +16,14 @@ reuses its `Acceptor`, dispatcher, and completion signals.
   threads.
 - `mesoSPIM_AiAssistent_Local.py` — the models-folder scan and the llama.cpp server child that
   serves a local `.gguf` file on loopback.
-- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Cancel prompt, Clear context, Stop microscope, and
-  the collapsible setup footer.
+- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Cancel prompt,
+  Clear context, Stop microscope, and the collapsible setup footer.
 - `assistant_manual.md` — the rules (units, frames, safety, what the evaluation taught); the
   system prompt adds the offered commands by kind, and each tool's description and schema, derived
   from the command registry, carry what it does and its arguments.
 
-Dependencies: `pydantic-ai` (imported lazily, only when a turn runs); `llama-cpp-python` only for
-local models (the `ai-assistant-local` extra).
+Dependencies: `pydantic-ai` (imported lazily, only when a turn runs); `llama-cpp-python` with its
+server only for local models (the `ai-assistant-local` extra).
 
 ## 2. Acceptor lifecycle — in `mesoSPIM_AiAssistent.py`
 
@@ -93,8 +93,8 @@ Core-owned Acceptor.
 
 - The Acceptor is acquired lazily on the first message, not at startup; until then the Remote Control
   transports stay usable.
-- One turn runs at a time — the input disables while the agent works (single-flight); Cancel gates
-  further dispatches; Stop microscope stops the instrument the main window's way.
+- One turn runs at a time — the input disables while the agent works (single-flight); Cancel
+  prompt ends the turn at once; Stop microscope stops the instrument the main window's way.
 - Every mutating tool blocks until the microscope actually finishes, so the agent sees completed
   actions, not `processing`; a long acquisition past the wait cap returns `still_running`.
 - A rate-limited or unavailable model is an error the operator sees and retries; there is no
@@ -109,5 +109,6 @@ Core-owned Acceptor.
 The offline suites in `mesoSPIM/test/ai_assistant/` test the completion wrapper, the tool builder,
 the endpoint, the worker turn and interrupt, the local server child (with a stand-in process), and
 the tab: setup footer, Cloud and Local modes, transport-busy refusal and the single-flight lock,
-all under the Qt-free substitute. Real-thread hand-off and a live turn on the DemoStage are the
-operator-gated bench checks.
+all under the Qt-free substitute. `mesoSPIM/test/remote_control/run.py pyqt` builds the tab with
+real PyQt, offscreen; `mesoSPIM/test/ai_assistant/live/demo_walkthrough.py` runs the agent, with
+scripted calls or a live model, against a running demo mesoSPIM over TCP.

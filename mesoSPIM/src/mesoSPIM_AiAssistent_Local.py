@@ -66,7 +66,7 @@ def server_command(model_path, port, projector=None, context_tokens=None):
     try:
         import llama_cpp  # noqa: F401
     except ImportError:
-        raise RuntimeError("llama-cpp-python is not installed: pip install llama-cpp-python")
+        raise RuntimeError('llama-cpp-python is not installed: pip install "llama-cpp-python[server]"')
     argv = [
         sys.executable, "-m", "llama_cpp.server",
         "--model", model_path,

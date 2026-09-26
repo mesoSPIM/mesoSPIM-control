@@ -28,7 +28,7 @@ def test_list_models_shows_only_model_files_sorted(tmp_path):
 
 def test_server_command_names_the_missing_runtime(monkeypatch):
     monkeypatch.setitem(sys.modules, "llama_cpp", None)          # import fails as if not installed
-    with pytest.raises(RuntimeError, match="pip install llama-cpp-python"):
+    with pytest.raises(RuntimeError, match=r'pip install "llama-cpp-python\[server\]"'):
         server_command("/models/x.gguf", 1234)
 
 

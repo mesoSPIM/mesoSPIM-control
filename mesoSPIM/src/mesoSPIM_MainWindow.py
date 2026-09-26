@@ -762,9 +762,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         ''' A combo box change the operator or the joystick makes is a state request to Core. A change
         that only shows Core's state (update_gui_from_state) is not: sending it back made Core redo its
         own change (a second zoom change, with a second trip of the focus to the objective exchange
-        position). Called directly, not queued, so that it still sees showing_state. '''
+        position). Called directly, not queued, so that it still sees showing_state. A refresh queued
+        behind the request shows the state after it, so no older refresh leaves the box wrong. '''
         if not self.showing_state:
             self.sig_state_request.emit({state_parameter: value})
+            QtCore.QMetaObject.invokeMethod(self.core, 'sig_update_gui_from_state', QtCore.Qt.QueuedConnection)
 
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
@@ -805,12 +807,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     
     @QtCore.pyqtSlot()
     def update_gui_from_state(self):
-        self.showing_state = True       # Core's own state: the combo boxes do not send it back to Core
+        showing, self.showing_state = self.showing_state, True   # Core's own state: the combo boxes do not send it back to Core
         try:
             for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
                 self.update_widget_from_state(widget, state_parameter, conversion_factor)
         finally:
-            self.showing_state = False
+            self.showing_state = showing
         self.acquisition_manager_window.set_selected_row(self.state['selected_row'])
         logger.debug('GUI updated from state')
 

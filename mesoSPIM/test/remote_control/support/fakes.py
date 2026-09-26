@@ -125,6 +125,8 @@ class RecordingCore:
         self.frame_queue_display = deque([], maxlen=1)
 
     def _build(self):
+        self.package_directory = tempfile.mkdtemp(prefix="mesospim_package_")   # holds the ETL file below
+        open(os.path.join(self.package_directory, "etl.csv"), "w").close()
         self.state = FakeState(
             state="idle",
             position={"x_pos": 24999.0, "y_pos": 0.0, "z_pos": 0.0, "f_pos": 1000.0, "theta_pos": 0.0},
@@ -142,7 +144,7 @@ class RecordingCore:
         )
         self.timelapse_active = False
         self._remote_session = {"operation": None, "counter": 0}
-        self._remote_control = None                # Core's controller handles (Core.py:104-105)
+        self._remote_control = None                # Core's controller handles
         self._assistant_acceptor = None
         self._calls = []
 

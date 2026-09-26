@@ -245,7 +245,9 @@ def test_the_vision_frames_differ_from_each_other_in_what_only_eyes_can_tell():
     assert ring[128, 192] == 0 and ring[128, 192 + 60] == 4000              # hollow
     with pytest.raises(ValueError):
         harness.synthetic_frame("nothing")
-    core = harness.SimulatedInstrument(); core.frame_name = "spots"; core.snap()
+    core = harness.SimulatedInstrument()
+    core.frame_name = "spots"
+    core.snap()
     assert np.array_equal(core.frame_queue_display[0], spots)               # the snap serves the chosen frame
 
 
@@ -329,7 +331,9 @@ def test_the_runner_serves_a_local_file_and_evaluates_against_it(monkeypatch, tm
             self.model_path, self.projector, self.polls = path, projector, 0
             self.model, self.base_url, self.log_path = "gemma-3-4b-it-Q4", "http://127.0.0.1:4242/v1", "x.log"
         def start(self): started.append(self.model_path)
-        def ready(self): self.polls += 1; return self.polls > 1
+        def ready(self):
+            self.polls += 1
+            return self.polls > 1
         def stop(self): started.append("stopped")
     monkeypatch.setattr(local, "LocalModelServer", FakeServer)
     server, endpoint = runner.local_endpoint(str(tmp_path / "gemma-3-4b-it-Q4.gguf"), poll_s=0, log=lambda *a: None)

@@ -39,6 +39,8 @@ MCP_INSTRUCTIONS = (
     "commands execute immediately and do not create a new operation. Read get_info and get_limits "
     "before mutating, and never exceed a limit get_limits reports."
 )
+# Appended to each wait command's description in tools/list; the AI Assistant's tools wait themselves.
+MCP_WAIT_NOTE = "Returns once admitted: poll get_progress until 'completed', 'stopped' or 'failed'."
 
 # --- network ---
 # Loopback is the safe default. Any other address exposes the service to a network.

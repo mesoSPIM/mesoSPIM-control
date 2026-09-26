@@ -304,9 +304,8 @@ def test_real_demo_busy_gate_survives_bounded_single_transport_concurrency():
     if transport == "mcp":
         if not token:
             pytest.skip("set MESOSPIM_LIVE_MCP_TOKEN for the live MCP server")
-        burst_call = lambda name, arguments=None: _raw_tool(
-            host, port, token, request_timeout, name, arguments
-        )
+        def burst_call(name, arguments=None):
+            return _raw_tool(host, port, token, request_timeout, name, arguments)
     else:
         tcp_host = os.environ.get("MESOSPIM_LIVE_TCP_HOST", "127.0.0.1")
         tcp_port = os.environ.get("MESOSPIM_LIVE_TCP_PORT")
@@ -595,13 +594,18 @@ def test_real_demo_preflight_refusals_are_failed_terminal_and_recoverable(reques
     for case, target_folder, filename in (
         ("missing folder", folder / "missing", "missing.raw"),
         ("existing file", folder, existing.name),
-        ("missing extension", folder, "no-extension"),
     ):
         acquisition = _demo_acquisition(target_folder, filename, original_state)
         cases.append((case, acquisition))
     verified = 0
 
     try:
+        # A name its writer cannot write is refused before an operation opens: the writer would
+        # assert only after Core stopped the stage-position polling, which it then never resumes.
+        ok, reply = tool("acquire_start", {"acquisition": _demo_acquisition(folder, "no-extension", original_state)})
+        assert not ok and "validation" in str(reply).lower() and "no-extension" in str(reply), reply
+        assert _must(tool, "get_acquisition_list")["acquisitions"] == original_list
+        verified += 1
         for case, acquisition in cases:
             started = _must(tool, "acquire_start", {"acquisition": acquisition})
             assert started["operation"]["status"] == "processing"
@@ -665,8 +669,8 @@ def test_real_demo_preflight_refusals_are_failed_terminal_and_recoverable(reques
     assert _must(tool, "get_state")["state"] == "idle"
     mode = "persistent" if persistent_client is not None else "reconnect-per-call"
     print(
-        f"LIVE PREFLIGHT RECOVERY VERIFIED: {verified} upstream refusals became failed terminal "
-        f"operations; list restored; transport={transport}; connection_mode={mode}",
+        f"LIVE PREFLIGHT RECOVERY VERIFIED: {verified} refusals (a writer mismatch before admission, the "
+        f"rest failed terminal operations); list restored; transport={transport}; connection_mode={mode}",
         flush=True,
     )
 

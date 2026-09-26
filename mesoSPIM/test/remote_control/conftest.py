@@ -11,6 +11,8 @@ import types
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+collect_ignore = ["test_real_pyqt_smoke.py", "test_real_pyqt_transport_smoke.py"]  # scripts for real PyQt; run.py pyqt runs them
+
 
 def _install_fake_pyqt5():
     if "PyQt5" in sys.modules:

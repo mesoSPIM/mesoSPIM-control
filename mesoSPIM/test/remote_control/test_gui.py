@@ -43,7 +43,7 @@ class _FakeCore:
         self.stopped = []
         self.sig_remote_control_started = _Signal()
         self.sig_warning = _Signal()
-        self._remote_control = None                     # Core's controller handles (Core.py:104-105)
+        self._remote_control = None                     # Core's controller handles
         self._assistant_acceptor = None
 
     def start_remote_control(self, *args):

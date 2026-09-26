@@ -28,7 +28,6 @@ what leaves room for the conversation.
   carry what each does.
 - **Acquisition rows by reference** in the disk-space and motion-limit checks; the row schema
   is spelled out once, in `set_acquisition_list`.
-- **Plumbing reads Full-only** (ping, hello, the raw state map, the stuck-operation reset).
 - **History compaction** as above, with "put it back to what it was" still answerable from
   the compact readout.
 - **The readout before the operator's words**, so the fixed prefix is followed by the readout
@@ -39,7 +38,8 @@ what leaves room for the conversation.
   nothing: `recall_turn` returns an earlier turn in full or the turns in which a readout key
   changed, an exact lookup since readouts are structured; `search_history` finds earlier turns by
   words in messages, replies and results, which needs no model and works offline. Two evaluation
-  cases run with a two-turn memory, so only the store can answer them. Clear context empties the store.
+  cases run with a two-turn memory, so only the store can answer them. Clear context empties the
+  store.
 - **Large results shortened at the source.** The acquisition list keeps every row with the
   operator-facing keys only (up to 60 rows); any other result over 3,000 characters keeps the
   top-level keys that fit and names the ones left out, so the model can ask for them.
@@ -47,7 +47,6 @@ what leaves room for the conversation.
 - **The prefix is byte-identical across requests**: instructions and tool schemas carry nothing
   time-dependent, and a test compares two builds. A profile switch rebuilds the agent, which is
   the one legitimate change of the prefix.
-
 - **One round trip where one does the job.** On a local model every tool call costs seconds.
   The traces showed one systematic waste, a snap right before a look, which snaps by itself; the
   snap tool now says so in its description, the manual says so, and the scorer fails any case

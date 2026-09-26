@@ -3,12 +3,14 @@
 The real QThread / worker hand-off is a real-PyQt concern (the smoke layer); here we test the
 tab wiring, the transport-busy refusal, and the single-flight input lock in isolation.
 """
+import os
 import types
 
 from PyQt5 import QtCore, QtWidgets
 
 from mesoSPIM.src import mesoSPIM_AiAssistent_GUI as gui_module
 from mesoSPIM.src.mesoSPIM_AiAssistent_GUI import AiAssistentGUI
+from mesoSPIM.src.mesoSPIM_AiAssistent_Local import model_name
 
 
 class _FakeTabWidget:
@@ -237,7 +239,7 @@ class _FakeServer:
         self.model_path = model_path
         self.projector = projector
         self.context_tokens = context_tokens
-        self.model = model_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        self.model = model_name(model_path)            # as LocalModelServer names it
         self.port = 4242
         self.base_url = "http://127.0.0.1:4242/v1"
         self.log_path = "/tmp/fake.log"
@@ -411,7 +413,8 @@ def test_local_status_moves_from_starting_to_ready(tmp_path, monkeypatch):
     _choose_mode(gui, "Local AI")
     gui.on_connect()
     assert gui.connect_button.text() == "Starting…"
-    scheduled.pop()(); scheduled.pop()()
+    scheduled.pop()()
+    scheduled.pop()()
     assert not gui.setup_group.isVisible()
     assert gui.connect_button.text() == "Disconnect AI assistant"
     assert gui.setup_toggle.text() == "Configure AI assistant"
@@ -576,7 +579,8 @@ def test_local_vision_model_is_served_with_its_projector(tmp_path, monkeypatch):
     (server,) = _SERVERS
     assert server.projector == str(tmp_path / "mmproj-gemma-4-12b-f16.gguf")
     assert gui.connect_button.text() == "Starting…"
-    scheduled.pop()(); scheduled.pop()()
+    scheduled.pop()()
+    scheduled.pop()()
     vision = gui._endpoints["vision"]
     assert (vision.provider, vision.model, vision.base_url, vision.vision) == ("Local", "gemma-4-12b-q4", server.base_url, True)
     assert gui._worker.endpoint.provider == "Gemini"           # the language model stayed cloud
@@ -591,7 +595,8 @@ def test_local_language_model_sees_when_its_projector_is_beside_it(tmp_path, mon
     gui.on_connect()                                           # vision stays "Same as language model"
     (server,) = _SERVERS
     assert server.projector == str(tmp_path / "mmproj-qwen3.5-8b-f16.gguf")
-    scheduled.pop()(); scheduled.pop()()
+    scheduled.pop()()
+    scheduled.pop()()
     assert gui._worker.endpoint.vision is True and "vision" not in gui._endpoints
 
 
@@ -605,7 +610,8 @@ def test_the_same_file_in_both_boxes_is_served_once(tmp_path, monkeypatch):
     gui.on_connect()
     (server,) = _SERVERS                                       # one child for both roles
     assert gui._servers["language"] is gui._servers["vision"] is server
-    scheduled.pop()(); scheduled.pop()()
+    scheduled.pop()()
+    scheduled.pop()()
     assert gui._endpoints["language"].base_url == gui._endpoints["vision"].base_url == server.base_url
     assert gui.connect_button.text() == "Disconnect AI assistant"
 
@@ -619,7 +625,8 @@ def test_a_second_connect_while_loading_leaves_one_live_poll(tmp_path, monkeypat
     assert _SERVERS[0].stopped and len(scheduled) == 1
     stale()                                                    # the old chain finds its servers gone
     assert len(scheduled) == 1 and gui._state == "starting"
-    scheduled.pop()(); scheduled.pop()()
+    scheduled.pop()()
+    scheduled.pop()()
     assert gui.connect_button.text() == "Disconnect AI assistant" and scheduled == []
 
 
@@ -632,7 +639,7 @@ def test_language_model_takes_no_projector_when_vision_is_its_own(tmp_path, monk
     _choose_mode(gui, "Local AI", gui.vision)
     gui.vision.local_model.setCurrentText("gemma-4-12b-q4.gguf")
     gui.on_connect()
-    by_path = {s.model_path.rsplit("/", 1)[-1]: s for s in _SERVERS}
+    by_path = {os.path.basename(s.model_path): s for s in _SERVERS}
     assert by_path["qwen3.5-8b-q4.gguf"].projector is None       # text only; the other one sees
     assert by_path["gemma-4-12b-q4.gguf"].projector == str(tmp_path / "mmproj-gemma-4-12b-f16.gguf")
     scheduled.pop()()                                          # neither ready yet: one poll rescheduled
@@ -652,7 +659,8 @@ def test_a_message_while_a_local_model_loads_waits_instead_of_restarting_it(tmp_
     gui.on_submit()
     assert len(_SERVERS) == 1 and not _SERVERS[0].stopped and sent == []
     assert "still loading" in gui.output.toPlainText() and gui.input.text() == "centre the sample"
-    scheduled.pop()(); scheduled.pop()()
+    scheduled.pop()()
+    scheduled.pop()()
     assert not gui.setup_group.isVisible()                      # that note was no ask: the footer folds
     gui.on_submit()
     assert sent == ["centre the sample"]
@@ -660,7 +668,7 @@ def test_a_message_while_a_local_model_loads_waits_instead_of_restarting_it(tmp_
 
 def test_a_local_model_that_never_answers_is_given_up_with_its_log(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch, server_factory=lambda path, projector=None, context_tokens=None: _FakeServer(path, ready_after=99))
-    monkeypatch.setattr(gui_module.config, "LOCAL_SERVER_TIMEOUT_S", 0)
+    monkeypatch.setattr(gui_module.config, "LOCAL_SERVER_TIMEOUT_S", -1)   # past at once: Windows' clock can read 0 s
     _choose_mode(gui, "Local AI")
     gui.on_connect()
     scheduled.pop()()
@@ -671,13 +679,13 @@ def test_a_local_model_that_never_answers_is_given_up_with_its_log(tmp_path, mon
 def test_a_server_that_cannot_start_is_reported_at_the_tab(tmp_path, monkeypatch):
     class _NoRuntime(_FakeServer):
         def start(self):
-            raise RuntimeError("llama-cpp-python is not installed: pip install llama-cpp-python")
+            raise RuntimeError('llama-cpp-python is not installed: pip install "llama-cpp-python[server]"')
 
     gui, scheduled = _local_gui(tmp_path, monkeypatch, server_factory=_NoRuntime)
     _choose_mode(gui, "Local AI")
     assert gui.on_connect() is None and scheduled == []
     assert gui._servers == {} and gui.connect_button.text() == "Connect AI assistant"
-    assert "pip install llama-cpp-python" in gui.output.toPlainText()
+    assert "llama-cpp-python[server]" in gui.output.toPlainText()
 
 
 def test_other_models_take_disconnect_then_connect(tmp_path, monkeypatch):
@@ -686,7 +694,8 @@ def test_other_models_take_disconnect_then_connect(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     _choose_mode(gui, "Local AI")
     gui.on_connect()
-    scheduled.pop()(); scheduled.pop()()
+    scheduled.pop()()
+    scheduled.pop()()
     (server,) = _SERVERS
     _choose_mode(gui, "Local AI", gui.vision)                  # no projector in the folder
     gui._worker = None                                         # no session taken in this test
@@ -860,7 +869,8 @@ def test_disconnect_stops_a_local_model_server(tmp_path, monkeypatch):
     gui, scheduled = _local_gui(tmp_path, monkeypatch)
     _choose_mode(gui, "Local AI")
     gui.on_connect()
-    scheduled.pop()(); scheduled.pop()()                      # the server answers: ready
+    scheduled.pop()()
+    scheduled.pop()()                      # the server answers: ready
     assert gui.connect_button.text() == "Disconnect AI assistant"
     gui._worker = None                                        # no session taken in this test
     gui.on_connect()

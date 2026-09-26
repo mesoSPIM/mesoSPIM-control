@@ -214,8 +214,8 @@ class RemoteControlGUI(QtWidgets.QWidget):
 
     def eventFilter(self, watched, event):
         """Takes over upstream's one warning connection when the main window first shows. Upstream
-        makes it late in building that window (MainWindow.py:184, after this tab at :167 -> :617 and
-        after the ETL file dialog's own event loop); showing the window comes after all of it. No
+        makes it late in building that window (after this tab is built, and after the ETL file
+        dialog's own event loop); showing the window comes after all of it. No
         controller can connect before then, so until then every warning opens upstream's window. The
         route is connected before upstream's connection is removed: Core's thread is already running,
         and a warning it raises in between must not be lost."""

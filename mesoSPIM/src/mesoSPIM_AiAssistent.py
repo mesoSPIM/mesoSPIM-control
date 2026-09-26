@@ -19,7 +19,7 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PyQt5 import QtCore
@@ -121,21 +121,27 @@ def _only_keys(fn, name, keys):
 
 class ConfirmationGate:
     """The operator's Run / Cancel for a confirm-first command, asked from the worker thread and
-    answered from the GUI thread. One question at a time. The question waits as long as it takes:
-    nothing is pending at the provider or on the instrument meanwhile, and Cancel and
-    Stop microscope answer it too. This is a gate in code: the model cannot talk its way past it."""
+    answered from the GUI thread. One question at a time, even when one reply calls two such
+    commands at once: each gets its own answer. The question waits as long as it takes; Cancel
+    and Stop microscope answer it, and after Cancel none is asked. This is a gate in code: the
+    model cannot talk its way past it."""
 
-    def __init__(self, on_ask):
+    def __init__(self, on_ask, cancel=None):
         self._on_ask = on_ask
+        self._cancel = cancel
+        self._one_at_a_time = threading.Lock()
         self._answered = threading.Event()
         self._answer = False
 
     def ask(self, name, args):
-        self._answered.clear()
-        self._answer = False
-        self._on_ask(name, json.dumps(args or {}))
-        self._answered.wait()
-        return self._answer
+        with self._one_at_a_time:
+            self._answered.clear()
+            self._answer = False
+            if self._cancel is not None and self._cancel.is_set():
+                return False
+            self._on_ask(name, json.dumps(args or {}))
+            self._answered.wait()
+            return self._answer
 
     def answer(self, allowed):
         self._answer = bool(allowed)
@@ -610,7 +616,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     if endpoint is not None:
         eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see
 
-        def _look(question="", snap=True) -> str:
+        def _look_now(question, snap):
             if on_call is not None:
                 on_call("look", json.dumps({"question": question, "snap": snap}))
             size = image_size() if callable(image_size) else image_size  # a callable reads a live setting
@@ -626,6 +632,11 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
             outcome = with_advice("look", outcome)
             guard.after("look", {}, outcome)
             return json.dumps(outcome)
+
+        async def _look(question="", snap=True) -> str:
+            # On a thread the turn does not wait on: Cancel ends the turn at once, and a vision
+            # answer that comes later is dropped.
+            return await asyncio.to_thread(_look_now, question, snap)
 
         tools.append(Tool.from_schema(
             _look, name="look", json_schema=_LOOK_SCHEMA,
@@ -694,6 +705,12 @@ def without_state_block(reply):
     return _STATE_BLOCK.sub("\n", reply).strip() if reply else reply
 
 
+def _block_json(value):
+    """JSON for a <microscope_state> block: with "<" escaped, no text in the readout (a folder name)
+    can close the block and read as the operator's words."""
+    return json.dumps(value).replace("<", "\\u003c")
+
+
 def with_state(acceptor, text, store=None):
     """The current microscope readout, then the operator's message: data the model can rely on
     instead of calling reads first, with the operator's words last, where a model weighs text
@@ -707,7 +724,7 @@ def with_state(acceptor, text, store=None):
         store.begin(text, snapshot)
     if snapshot is None:
         return text
-    return f"<microscope_state>\n{json.dumps(snapshot)}\n</microscope_state>\n\n{text}"
+    return f"<microscope_state>\n{_block_json(snapshot)}\n</microscope_state>\n\n{text}"
 
 
 _KINDS = (("read", "reads, which change nothing"),
@@ -759,7 +776,7 @@ def _compact_prompt(text):
     try:
         snapshot = json.loads(match.group(1))
         kept = {key: snapshot[key] for key in config.HISTORY_READOUT_KEYS if key in snapshot}
-        summary = f"<microscope_state_then>{json.dumps(kept)}</microscope_state_then>"
+        summary = f"<microscope_state_then>{_block_json(kept)}</microscope_state_then>"
     except (ValueError, TypeError):
         summary = ""
     return (text[:match.start()] + summary + text[match.end():]).strip()
@@ -832,7 +849,7 @@ class Endpoint:
     provider: str
     kind: str
     model: str
-    api_key: str = ""
+    api_key: str = field(default="", repr=False)
     base_url: str = ""
     fallback_model: str = ""
     vision: bool = False  # may be shown a camera frame (the `look` side call)
@@ -1014,8 +1031,10 @@ class AssistantWorker(QtCore.QObject):
         self._history = []
         self.store = SessionStore()      # every turn in full, for recall_turn and search_history
         self.cancel = threading.Event()
+        self._loop = None                # the worker's event loop, made by the first turn and kept
         self._turn = None                # (event loop, task) of the turn in progress: what Cancel cancels
-        self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit)
+        self._fired = []                 # the tool calls of the turn in progress, as they fire
+        self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit, cancel=self.cancel)
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
         self.look_image_size = config.LOOK_IMAGE_SIZE
         self.trace_folder = None                           # set by the tab: every turn is recorded there
@@ -1044,6 +1063,7 @@ class AssistantWorker(QtCore.QObject):
         started = time.monotonic()
         try:
             self.cancel.clear()
+            self._fired = []
             if self._agent is None:
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
                                           endpoint=self._endpoint, gate=self.gate,
@@ -1073,14 +1093,12 @@ class AssistantWorker(QtCore.QObject):
             self.sig_done.emit()
 
     def _run_cancellable(self, coro):
-        """Agent.run_sync's own recipe (pydantic_ai._utils.run_until_complete: this thread's event
-        loop, the turn as a task), with the task kept where interrupt() can cancel it: a model
-        request in flight is abandoned instead of waited out."""
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        """Agent.run_sync's own recipe (pydantic_ai._utils.run_until_complete: one event loop kept
+        across turns, the turn as a task), with the task kept where interrupt() can cancel it: a
+        model request in flight is abandoned instead of waited out."""
+        if self._loop is None:
+            self._loop = asyncio.new_event_loop()
+        loop = self._loop
         task = loop.create_task(coro)
         self._turn = (loop, task)
         if self.cancel.is_set():                 # Cancel came while the turn was being set up
@@ -1102,7 +1120,7 @@ class AssistantWorker(QtCore.QObject):
             "model": endpoint.model if endpoint else None,
             "profile": self._profile,
             "prompt": prompt,
-            "tools": turn_trace(messages),
+            "tools": turn_trace(messages) if messages else self._fired,   # a turn cut short: what it started
             "served": served_models(messages),
             "reply": reply,
             "error": error,
@@ -1116,6 +1134,7 @@ class AssistantWorker(QtCore.QObject):
     def _emit_tool(self, name, args):
         """Called at the tool boundary (worker thread) as each command fires; the queued signal
         delivers it to the GUI so tool calls stream in live rather than all at the end of the turn."""
+        self._fired.append({"tool": name, "args": json.loads(args)})
         self.sig_tool.emit(name, args)
 
     def interrupt(self):
@@ -1129,4 +1148,3 @@ class AssistantWorker(QtCore.QObject):
         if turn is not None:
             loop, task = turn
             loop.call_soon_threadsafe(task.cancel)
-

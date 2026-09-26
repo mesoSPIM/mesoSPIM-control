@@ -42,7 +42,7 @@ For connection details, arguments, polling, and errors, see the
 | `zero` | Set the current position of selected axes to zero. |
 | `unzero` | Restore physical coordinates after zeroing selected axes. |
 | `stop` | Stop stage movement. |
-| `stop_activity` | Stop live or acquisition activity. |
+| `stop_activity` | Stop live mode, an acquisition or a time lapse. |
 | `clear_stuck_operation` | Release a safely verified lost-completion operation. |
 | `open_shutters` | Open the shutters. |
 | `close_shutters` | Close the shutters, including during another operation. |
@@ -73,7 +73,7 @@ For connection details, arguments, polling, and errors, see the
 | `start_live` | Start live mode. |
 | `start_visual_mode` | Start visual mode. |
 | `start_lightsheet_alignment_mode` | Start light-sheet alignment mode. |
-| `snap` | Capture one frame and save it to the snap folder; the operation result gives the path. |
+| `snap` | Capture one frame and save it, as the GUI's Snap does, to the snap folder or a named one; the operation result gives the path. |
 | `load_sample` | Move to the configured sample-load position. |
 | `unload_sample` | Move to the configured sample-unload position. |
 | `center_sample` | Move to the configured sample-center position. |

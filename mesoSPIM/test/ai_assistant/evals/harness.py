@@ -300,8 +300,8 @@ def throttled(model, interval_s):
         _last = 0.0
 
         async def request(self, messages, model_settings, model_request_parameters):
-            wait = Throttled._last + interval_s - time.monotonic()
-            if wait > 0:
+            # asyncio may wake a sleep up to one clock tick early (15.6 ms on Windows): sleep again.
+            while (wait := Throttled._last + interval_s - time.monotonic()) > 0:
                 await asyncio.sleep(wait)
             Throttled._last = time.monotonic()
             return await super().request(messages, model_settings, model_request_parameters)

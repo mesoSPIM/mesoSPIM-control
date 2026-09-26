@@ -15,7 +15,7 @@ os.environ.pop("GEMINI_API_KEY", None)
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 try:
-    from PyQt5 import QtCore, QtTest, QtWidgets
+    from PyQt5 import QtCore, QtGui, QtTest, QtWidgets
 except ModuleNotFoundError as error:
     raise SystemExit("test_real_pyqt_assistant_smoke.py requires PyQt5") from error
 
@@ -142,9 +142,13 @@ def main():
     assert lefts == sorted(lefts)
     assert tab.connect_button.text() == "Connect AI assistant" and tab.connect_button.isEnabled()
 
-    for name, width in (("cloud", width_cloud), ("local", width_local)):
-        assert width <= MAIN_WINDOW_WIDTH + SLACK, f"{name} setup needs {width} px"
-    assert width_server <= MAIN_WINDOW_WIDTH + 2 * SLACK, f"OpenAI-style setup needs {width_server} px"
+    # Widths are only real with real fonts: offscreen Qt on Windows has none, and draws every
+    # letter as a wide box.
+    fonts = bool(QtGui.QFontDatabase().families())
+    if fonts:
+        for name, width in (("cloud", width_cloud), ("local", width_local)):
+            assert width <= MAIN_WINDOW_WIDTH + SLACK, f"{name} setup needs {width} px"
+        assert width_server <= MAIN_WINDOW_WIDTH + 2 * SLACK, f"OpenAI-style setup needs {width_server} px"
 
     # The input box: Enter sends, Shift+Enter starts a new line, as editors do. Only the key
     # handling is under test, so the tab's own submit slot is detached first.
@@ -169,7 +173,8 @@ def main():
 
     tab.shutdown()
     print(f"REAL PYQT ASSISTANT SMOKE PASS: Qt {QtCore.QT_VERSION_STR}, "
-          f"setup widths cloud={width_cloud} local={width_local} openai-style={width_server}")
+          + (f"setup widths cloud={width_cloud} local={width_local} openai-style={width_server}" if fonts
+             else "setup widths not measured: no fonts on this platform, run with QT_QPA_PLATFORM=windows"))
 
 
 if __name__ == "__main__":

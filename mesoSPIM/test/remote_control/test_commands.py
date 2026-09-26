@@ -67,6 +67,9 @@ def test_built_in_manual_matches_the_registry_and_async_contract():
     assert "ordinary mutation" in manual["interaction"]["accepted_or_rejected"]
     assert "poll get_progress" in manual["interaction"]["kinds"]["wait"]
     assert "does not create a new operation" in manual["interaction"]["kinds"]["emergency"]
+    for name, command in dispatcher.COMMANDS.items():
+        if command.kind == dispatcher.EMERGENCY:
+            assert name in manual["interaction"]["kinds"]["emergency"], name
 
 
 def test_mcp_identity_is_complete():
@@ -229,15 +232,20 @@ def test_installed_rows_are_revalidated_in_the_stage_frame_before_running():
 
 @pytest.fixture
 def writers():
-    """The RAW and TIFF writers, registered as mesoSPIM's plugin manager registers them at start-up."""
+    """The RAW and TIFF writers, registered as mesoSPIM's plugin manager registers them at start-up:
+    before acquisitions.py is imported, which takes its default writer from them."""
+    import importlib
     import sys
     from mesoSPIM.src.plugins import manager
+    from mesoSPIM.src.utils import acquisitions
 
     modules = [manager._import_path(manager.PLUGINS_DIR / "ImageWriters" / name).__name__
                for name in ("RawWriter.py", "TiffWriter.py")]
+    importlib.reload(acquisitions)
     yield
     for name in modules:
         sys.modules.pop(name, None)
+    importlib.reload(acquisitions)
 
 
 def _writer_row(filename, writer):
@@ -267,6 +275,14 @@ def test_a_file_name_that_suits_its_writer_runs(writers):
 def test_acquire_start_refuses_a_file_name_its_writer_cannot_write(writers):
     acquisition = dict(VALID_CASES["acquire_start"]["acquisition"], filename="one.tif", image_writer_plugin="RAW_Writer")
     with pytest.raises(dispatcher.ValidationError, match=r"one\.tif.*RAW_Writer"):
+        dispatcher.run(RecordingCore(), "acquire_start", {"acquisition": acquisition})
+
+
+def test_acquire_start_checks_the_writer_a_row_without_one_runs_with(writers):
+    """A row that names no writer runs with Acquisition's default, the TIFF writer."""
+    acquisition = dict(VALID_CASES["acquire_start"]["acquisition"], filename="one.raw")
+    acquisition.pop("image_writer_plugin", None)
+    with pytest.raises(dispatcher.ValidationError, match=r"one\.raw.*Tiff_Writer"):
         dispatcher.run(RecordingCore(), "acquire_start", {"acquisition": acquisition})
 
 
@@ -393,6 +409,37 @@ def test_acceptor_records_core_warnings_for_get_info():
         acceptor.stop()
     warnings = dispatcher.run(core, "get_info", {})["warnings"]
     assert warnings == [{"operation": None, "message": "Snap folder not found"}]
+
+
+def test_reload_etl_config_refuses_a_path_that_is_not_an_etl_file(tmp_path):
+    """Core stores the path before it opens the file, so a wrong one would break every later
+    laser and zoom change as well."""
+    core = RecordingCore()
+    core.package_directory = str(tmp_path)
+    (tmp_path / "notes.txt").write_text("")
+    (tmp_path / "etl.csv").write_text("")
+    for path in ("missing.csv", "notes.txt", str(tmp_path / "missing.csv")):
+        with pytest.raises(dispatcher.ValidationError, match="ETL config"):
+            dispatcher.run(core, "reload_etl_config", {"path": path, "wait": False})
+    assert core.calls() == []
+    dispatcher.run(core, "reload_etl_config", {"path": "etl.csv", "wait": False})
+    dispatcher.run(core, "reload_etl_config", {"path": str(tmp_path / "etl.csv"), "wait": False})
+
+
+def test_a_stop_still_runs_after_its_caller_stopped_waiting():
+    """The transport gives up on a call Core has not reached within DISPATCH_TIMEOUT_SEC (Core busy
+    in a long move, say). An ordinary command is then dropped, as nobody is told it ran; a stop is
+    the one call that must still reach the microscope."""
+    core = RecordingCore()
+    acceptor = servers.Acceptor(core)
+    try:
+        for name in ("close_shutters", "zero"):
+            call = servers._Call(name, {})
+            call.cancelled = True
+            acceptor._execute(call)
+    finally:
+        acceptor.stop()
+    assert [name for name, *_ in core.calls()] == ["close_shutters"]
 
 
 def test_preflight_refusal_reports_the_reason():

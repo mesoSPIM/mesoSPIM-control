@@ -85,7 +85,9 @@ transport and verify that the returned operation ID is unchanged. Stop when its 
 `completed`, `stopped` or `failed`. On completion, command-specific output is stored in
 `operation.result`. `stopped` means a stop cut the operation short, from a client or from the
 operator's STOP in mesoSPIM, so an acquisition wrote only part of its planes; `stop_requested: true`
-is set as well. On failure, the reason is stored in `operation.error`.
+is set as well. On failure, the reason is stored in `operation.error`. A warning mesoSPIM raises during
+the operation (a missing folder, an existing file) is stored in `operation.warning` and listed by
+`get_info`; it opens no dialog at the microscope.
 
 Emergency commands validate and execute immediately so they remain available while the ordinary
 mutation gate is busy. They do not create a new operation. Their reply contains the current

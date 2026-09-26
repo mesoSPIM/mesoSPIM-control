@@ -5,7 +5,9 @@ requests they send to Core.
 A box changes for two reasons: someone wants a new value (the operator, or the joystick, which sets
 the box from code), or update_gui_from_state shows the state Core already has. Only the first is a
 request. Echoing the second made Core redo its own change: every zoom change Core made itself was
-run twice, with a second trip of the focus to the objective exchange position.
+run twice, with a second trip of the focus to the objective exchange position; and a laser Core set
+without touching the ETL (an acquisition row, with its own ETL values) came back as a laser request
+that reloaded the ETL values from the file over the row's.
 
 Run from the mesoSPIM/ directory:  python -m pytest test/test_combobox_state_requests.py -q
 
@@ -35,6 +37,19 @@ ZOOMS = ['1x', '2x', '4x Olympus']
 SUBSAMPLING = ['1', '2', '4']
 
 
+class Core(QtCore.QObject):
+    """Core's side: it takes a state request in its own turn of the event loop, and its
+    sig_update_gui_from_state refreshes the GUI."""
+    sig_update_gui_from_state = QtCore.pyqtSignal()
+
+    def __init__(self, window):
+        super().__init__()
+        self.window = window
+
+    def state_request_handler(self, request):
+        self.window.state.update(request)
+
+
 class Window(QtCore.QObject):
     """What the combo boxes and the GUI refresh use of the Main Window, with the Main Window's own
     code for both: its state, its startup config, the signal that carries state requests to Core."""
@@ -51,6 +66,9 @@ class Window(QtCore.QObject):
         self.widget_to_state_parameter_assignment = []
         self.requests = []
         self.sig_state_request.connect(self.requests.append)
+        self.core = Core(self)
+        self.sig_state_request.connect(self.core.state_request_handler, type=QtCore.Qt.QueuedConnection)
+        self.core.sig_update_gui_from_state.connect(lambda: mesoSPIM_MainWindow.update_gui_from_state(self))
 
 
 def connected_box(window, options, state_parameter, int_conversion=False):
@@ -135,3 +153,19 @@ def test_a_subsampling_box_asks_with_an_integer():
     window.requests.clear()
     box.setCurrentText('4')
     assert settled(window) == [{'camera_display_live_subsampling': 4}]
+
+
+def test_a_refresh_older_than_the_request_does_not_leave_the_box_wrong():
+    """A refresh Core sent before it took the request (after a zoom change, the ETL update's) can
+    arrive after the operator chose 515LP. It shows Empty and asks for nothing; the wheel still goes
+    to 515LP, so the box must come back to 515LP rather than name a filter that is not in."""
+    window = Window({'filter': 'Empty'})
+    box = connected_box(window, FILTERS, 'filter')
+    window.widget_to_state_parameter_assignment = [(box, 'filter', 1)]
+    app.processEvents()
+    window.requests.clear()
+    box.setCurrentText('515LP')                  # the operator
+    show_state(window, box, 'filter')            # the older refresh: Core has not taken 515LP yet
+    assert box.currentText() == 'Empty'
+    assert settled(window) == [{'filter': '515LP'}]
+    assert window.state['filter'] == '515LP' and box.currentText() == '515LP'

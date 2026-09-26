@@ -5,12 +5,11 @@ evaluation that judged the cloud models. Nothing here touches a microscope: demo
 for the instrument, exactly as in the offline tests. Times are for an M-series Mac with 16 GB or
 more; a 12B model needs the 16 GB, a 4B model runs on 8 GB.
 
-## 1. Get the branch and a Python 3.12 environment
+## 1. A Python 3.12 environment
+
+From the root of a mesoSPIM-control checkout:
 
 ```
-git clone https://github.com/thomdehoog/mesoSPIM-control.git
-cd mesoSPIM-control
-git checkout remote-control-py312
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-clean-python.txt
 pip install -e ".[ai-assistant]"
@@ -50,16 +49,15 @@ same way; Qwen 3 8B is a good third choice.
 python mesoSPIM/mesoSPIM_Control.py -D
 ```
 
-Open the **AI Assistant** tab, set Type to **Local AI**, pick the file, **Connect AI assistant**. The
-button reads "Starting…" while the model loads, then "Disconnect AI assistant". Ask "Where is the stage?", then "Take a snap
-and tell me what you see". With **Show tool calls** on (Configure AI assistant, Preferences), the
-transcript lists each tool call above the reply. Every turn is written to
+Open the **AI Assistant** tab, set Type to **Local AI**, pick the file, **Connect AI assistant**.
+The button reads "Starting…" while the model loads, then "Disconnect AI assistant". Ask "Where is
+the stage?", then "Take a snap and tell me what you see". With **Show tool calls** on (Configure AI
+assistant, Preferences), the transcript lists each tool call above the reply. Every turn is written to
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl`.
 
 ## 5. Run the evaluation against the model
 
-Close the tab's connection first (Clear context is not needed; the evaluation starts its own server).
-Then, from the repository root:
+Disconnect the tab first; the evaluation starts its own server. Then, from the repository root:
 
 ```
 python -m mesoSPIM.test.ai_assistant.evals.run \
@@ -67,7 +65,7 @@ python -m mesoSPIM.test.ai_assistant.evals.run \
     --out "mesoSPIM/test/ai_assistant/evals/runs/{date}-{model}.jsonl"
 ```
 
-It serves the file as the tab does, waits until the model answers, runs the 110 cases and prints
+It serves the file as the tab does, waits until the model answers, runs every case and prints
 one line per case, then the failures with what the model did instead. On a 12B model on an M2 or
 M3 expect one to three seconds a turn after the first, and about ten minutes for the whole set;
 a 4B model is faster. Add `--only vision-counts-spots,look` to try a couple of cases first, or
@@ -116,6 +114,3 @@ pass only sometimes or never. Three things to look at first:
   `look` results say "this model cannot see images" and those cases fail honestly.
 - **The quoted state block and the wasted snap.** Both are scored on every case; a local model
   that does either shows it in the failure text, and the tab already strips the block.
-
-Send the run file, or the trace file from step 4, and the scoring and the reading of what the
-model did can happen anywhere.

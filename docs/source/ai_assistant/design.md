@@ -1,149 +1,59 @@
-# AI Assistant — Minimal Design
+# Design
 
-*The design note written before the build. The [manual](index.md) and
-[integration notes](integration.md) describe what shipped.*
+The decisions behind the AI Assistant and why each was made. [Integration](integration.md) says
+where the code sits; the [manual](index.md) says how the tab behaves.
 
-*Reviewed against the dispatcher / servers / GUI code; the review's findings are incorporated below.*
+## One more caller of the Acceptor
 
-## Goal
-An in-process chat tab in mesoSPIM that lets an operator drive the microscope in
-natural language via an LLM, reusing the existing Remote Control command core.
-Provider-agnostic (local or cloud model) through Pydantic AI. Safety is inherited
-from the dispatcher.
+The assistant is an in-process sibling of the TCP and MCP transports: its tools call
+`Acceptor.dispatch()`, so every action passes the same validation, movement limits and
+one-mutation gate, and the assistant adds no command logic and no safety logic of its own. Going
+through the loopback MCP server instead would have spared the lifecycle code, but put the chat
+outside the application. One controller holds the session at a time: the assistant refuses to
+start while a transport runs, and a transport refuses while the assistant holds the Acceptor.
 
-## Design principle
-Smallest thing that **actually works**. The assistant is one more in-process caller of
-`Acceptor.dispatch()` — a sibling of the TCP/MCP transports, minus the socket. No new
-command logic, no new safety logic. "Minimal" = enforce the real invariants (a tool
-call completes before it returns; the Acceptor is wired exactly once) — not omit the
-parts that make it correct.
+## Tools from the command registry
 
-*In-process (not the existing MCP server) is deliberate — it keeps the chat inside the
-app. The cost is owning the threading/Acceptor lifecycle below; the alternative
-(agent → loopback MCP) trades the in-app tab for avoiding that. Kept in-process.*
+Each offered command becomes one tool with the command's own JSON schema, the one MCP's
+`tools/list` serves, so the tool list is never maintained by hand. The tools skip pydantic's own
+validation of a call: the command's `accept()` stays the one place a call is refused, with one
+error vocabulary, and the refusal goes back to the model as data.
 
-## In scope
-- One model from `mesoSPIM_AiAssistent_Config.py` — a **list of named endpoint profiles**
-  (`name`, provider/`base_url`, `model`, key-*reference*); v1 active = `gemini-3.5-flash`.
-  Cloud (key via env-var reference, not the secret) or local (no key). The list makes
-  operator-selectable endpoints a cheap later add.
-- Tools generated from `COMMANDS` (single source of truth), as **untyped object-passthrough
-  tools** (one `{type: object}` param + the command `hint` — same shape as the MCP
-  `tools/list`). Per-arg correctness comes from the command's `accept()` validator, with
-  errors fed back to the model.
-- **Short mutating ops block until done**: the tool wrapper waits (polling `get_progress`,
-  a READ) until the op is terminal, then returns the finished result. One tool call = one
-  completed action — the agent needs no polling rule.
-- **Long ops** (acquisitions, time-lapse) return after a cap with "still running — poll
-  `get_progress`"; that poll guidance lives in the manual.
-- The agent can **query state on demand** (`get_position` / `get_state` / `get_progress` …)
-  — READ tools return directly.
-- **No per-command operator confirmation** — expert microscopy tool; the dispatcher's
-  validation + movement limits + one-op gate are the backstop. Guardrails added only if
-  real use shows the need.
-- **System prompt = a hand-written manual + the commands by kind**, with each tool's
-  description and schema generated from the command registry. Rules come from context, not
-  code; the command list is never hand-maintained, and the prompt stays small enough for a
-  local model's context.
+A tool returns when the instrument is done, not when the command is admitted: the wrapper polls
+`get_progress` until the operation ends, so one tool call is one finished action and the model
+needs no polling rule. An acquisition still running after `WAIT_CAP_S` returns `still_running`,
+and the model polls from there.
 
-## Out of scope
-- Typed/JSON-schema tools — `Command` has no declarative schema, so tools are untyped
-  passthroughs (add a schema field to `Command` later if richer typing is wanted — a
-  dispatcher change).
-- Per-command confirmation / destructive-op guard — deferred; add if needed (`kind` alone
-  can't express "catastrophic", so a guard would be a per-command risk flag).
-- Streaming token deltas — start with reply + tool-call/result notices.
-- Session persistence, branching, skills, subagents.
-- Context compaction — unnecessary at 1M context; if a small local model needs it, a
-  Pydantic AI `history_processor` (sliding window / drop old tool-result bodies).
-- Operator endpoint selection (dropdown) → add/edit UI — phase 2/3.
-- The provider *menu* (OpenAI, Claude, OpenRouter, Ollama, vLLM, …) — config, not code.
-- MCP / network transport — not needed in-process.
+## What the model is offered
 
-## Modules
-```
-mesoSPIM_RemoteControl_Dispatcher.py  unchanged  COMMANDS, validation, _GATE, kind    (shared core, imported)
-mesoSPIM_RemoteControl_Commands.py    unchanged  53 commands + limits + get_manual    (imported)
-mesoSPIM_RemoteControl_Servers.py     CHANGES    Acceptor ownership → shared lifecycle (see below)
-mesoSPIM_AiAssistent.py               NEW        tools (+ poll-to-done) + agent + worker
-mesoSPIM_AiAssistent_Config.py        NEW        endpoint profiles / model / key-refs
-mesoSPIM_AiAssistent_GUI.py           NEW        the "AI Assistant" tab (AiAssistentGUI)
-assistant_manual.md                   NEW        thin system-prompt preamble (get_manual is the spine)
-```
-Own module family `mesoSPIM_AiAssistent_*` — separate from Remote Control, imports the shared core.
-Tab label: `"AI Assistant"` · Class: `AiAssistentGUI`.
+The **Regular** tool set leaves out what a user setting up a sample has no business with: the
+camera settings, the galvos, laser timing, the alignment modes, the generic setting call, and the
+ETL's delay and ramps (`set_etl` takes the voltages only). The model is not offered them at all
+and is told they exist in the Full set, so it cannot be talked into them and does not stand another
+command in for one. **Full** offers every command.
 
-## Pieces
+## Rules in code, where the prompt was not enough
 
-1. **Tools** — `build_tools(acceptor)` iterates `COMMANDS` and returns one untyped
-   passthrough tool per command; each calls `Acceptor.dispatch(name, args)`. The tool list
-   *is* `COMMANDS`, never hand-maintained.
+The evaluation found small models reading a rule and doing otherwise, so the rules that matter
+most are held in code. `load_sample`, `unload_sample` and `preview_acquisition` cross the stage's
+range and wait for the operator's **Run**. `TurnGuard` keeps, for one turn, what a refusal ruled
+out: no other target on an axis refused for its limit, no stop to clear a GUI-busy instrument
+without **Run**, no third intensity or exposure change without **Run**, no second exposure for a
+look right after a snap. A reply that called no tool is handed back once, and the tab says when a
+turn sent nothing to the microscope.
 
-2. **Completion** — READ / short-ACTION tools return their dispatch result directly. A WAIT
-   tool (move, mode change) does not: after `dispatch()` returns `processing`, the worker
-   **block-polls `get_progress`** (short READ dispatches, each well under
-   `DISPATCH_TIMEOUT_SEC`) until the op is terminal, then returns the finished result. Long
-   ops return after a configurable cap with a "still running — poll `get_progress`" result.
-   Safety stays in the dispatcher (validation, limits, `_GATE`); no confirmation.
+## Context
 
-3. **Agent** — `build_agent(model, tools, system_prompt)` constructs a Pydantic AI `Agent`.
-   Model from `mesoSPIM_AiAssistent_Config.py`. System prompt = `get_manual` output + thin
-   preamble. Built lazily on first submit, reused (keeps history), no connect step.
+Every operator message carries the instrument's readout in a `<microscope_state>` block, so the
+model acts on current values without reading them first; the block is data, escaped so that no
+text in it can close it. Older turns are compacted to a one-line readout and shortened tool
+results before each request, and every turn stays whole in a session store the model can search
+and recall, so a long session costs little and loses nothing.
 
-4. **Worker** — runs `agent.run_sync(user_text)` on its own thread, off the GUI and Core
-   threads, via the shared Acceptor. **Single-flight**: one turn at a time (input disabled while
-   running), so no concurrent runs corrupt the Agent's history. Emits `sig_reply`, `sig_tool`,
-   `sig_frame`, `sig_confirm`, `sig_error`, `sig_done`. Supports **cancel** (the turn is
-   interrupted at its next tool call; on shutdown the thread gets a bounded join and, if still
-   inside a model call, is set free rather than destroyed, so the GUI never blocks on a cloud
-   call).
+## Failures
 
-5. **GUI (`AiAssistentGUI`)** — a `QTextEdit` transcript (agent text, tool calls, frames),
-   a two-line input (Enter submits, Shift+Enter a new line; disabled during a turn),
-   Cancel prompt, Clear context and Stop microscope, and the collapsible setup footer.
-
-## Acceptor ownership
-The assistant needs a live `Acceptor` — the Core-thread bridge **and** the WAIT
-completion-signal wiring that lets `get_progress` ever read `completed`. **The assistant is
-a peer of the transports in the existing "one at a time" model:** it asks Core (via a queued
-signal, like `RemoteControlGUI`'s start) to build + wire an Acceptor on the Core thread while
-active, and it is **mutually exclusive with TCP/MCP** — it can't run alongside a transport.
-That avoids both the double completion-wiring and the "operator hits Stop and silently kills
-the assistant" trap. This touches Core / the `RemoteControl` lifecycle in `_Servers.py`, so
-that module **does change** (an earlier draft wrongly called it unchanged). Optional cleanup:
-hoist the Acceptor to a neutral shared module so the assistant needn't import it from the
-transport module.
-
-## Safety invariants
-- Every actuation goes through `Acceptor.dispatch()` → validation, movement limits, `_GATE`.
-- Out-of-range, malformed, or concurrent calls are rejected by the dispatcher.
-- Short mutating ops block until terminal, so the agent can't race ahead into `BusyError`.
-- The assistant has no side channel to Core. No per-command confirmation (deferred).
-
-## Tests (TDD, no live model)
-- Tools: each `COMMANDS` entry yields a passthrough tool that calls `dispatch(name, args)` (fake acceptor).
-- Completion: a WAIT tool returns only once the fake op goes `processing → completed`; a long op returns the cap fallback.
-- Safety: out-of-range move rejected by limits; a call while busy gets `BusyError`; a valid call dispatches.
-- Worker: single-flight (a second submit mid-turn is rejected/queued); interrupt cancels; shutdown joins within the bound.
-
-## Open questions
-1. Cost/latency cap for the long-op poll fallback — what cap, and what does the agent see past it?
-2. Manual preamble scope — how much units/frames/safety tone on top of `get_manual`?
-3. Endpoint keys on a shared instrument — profile stores a key *reference* (env-var / keyring), never the secret; local needs none.
-4. Fail-fast if the configured model lacks tool-calling.
-5. (Deferred) a per-command guard on irreversible ops (sample presets, acquisitions, large moves) — add only if real use shows the need.
-
-## Build sequence
-1. **Review** — done; findings incorporated.
-2. **Acceptor lifecycle** — Core-built, single-wired instance the assistant borrows; assistant ↔ transport mutually exclusive (`_Servers.py` / Core).
-3. **Config** — endpoint-profile list in `mesoSPIM_AiAssistent_Config.py` (v1 = `gemini-3.5-flash`).
-4. **`mesoSPIM_AiAssistent.py`** (TDD — fakes, no live model): `build_tools(acceptor)` from `COMMANDS`; the poll-to-done wrapper; `build_agent(...)` with `get_manual` + preamble; the single-flight / cancellable QThread worker.
-5. **`assistant_manual.md`** — thin preamble.
-6. **`mesoSPIM_AiAssistent_GUI.py`** — the tab (output + input + interrupt); wire into MainWindow after the Remote Control tab.
-7. **Validate** — Gemini Flash on real tasks, iterate the preamble; final quality check on a paid frontier model.
-8. **Deferred** — operator endpoint selection/UI, streaming deltas, image input, guardrails.
-
-## Files touched
-**Create:** `mesoSPIM_AiAssistent.py`, `mesoSPIM_AiAssistent_Config.py`, `mesoSPIM_AiAssistent_GUI.py`, `assistant_manual.md`, `test_ai_assistent.py`.
-**Edit:** `mesoSPIM_MainWindow.py` (3-line tab wiring); **`mesoSPIM_RemoteControl_Servers.py` / Core** (Acceptor lifecycle + assistant↔transport mutual exclusion — *not* unchanged); dependency/env (add `pydantic-ai`).
-**Unchanged (imported):** `mesoSPIM_RemoteControl_Dispatcher.py`, `_Commands.py` (incl. `get_manual`), `_Config.py`.
+A model that is rate-limited or unavailable is an error the operator sees; there is no
+whole-turn retry, which would re-run every tool call the first attempt made. The Gemini preset
+names no fallback model: in the evaluation the stand-in obeyed a note planted in the readout that
+the chosen model never did. When another model answers anyway, the tab says so and the trace
+records it.
