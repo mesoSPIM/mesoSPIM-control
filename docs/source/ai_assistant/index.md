@@ -31,17 +31,16 @@ open-work
 
 ## Setting it up
 
-The tab opens as a chat. **Stop microscope** sits right of the input box, which Enter sends; under
-them, on one line: **Cancel prompt**, **Clear context**, **Connect AI assistant** and **Configure
-AI assistant**. **Configure AI assistant** opens three boxes below the row, **Preferences**,
-**Language model** and **Vision model**, which Connect applies. They also open by themselves when
-something needs the operator: nothing configured yet, a missing key, or a local model that failed
-to start. Once the assistant is ready they fold, and the button reads **Disconnect AI assistant**:
-pressed, it hands the microscope session back, so the Remote Control tab can start a transport
-without restarting mesoSPIM. The chat shows each answer; **Show tool calls**, under Preferences,
-adds the commands each answer ran. Images stay out of the chat: a frame goes to the vision model
-and the trace. Each model box starts with a **Type** dropdown; the fields after it follow the
-choice.
+The tab is the setup, shaped like the Remote Control tab: one **Setup AI assistant** box with
+**Preferences**, **Language model** and **Vision model**, a **Status** line, and **Connect** and
+**Disconnect**. Connect applies the boxes, takes the microscope session and opens the assistant
+window, where the chat is; the status line then names the model that answers. Disconnect, or
+closing that window, cancels a running turn, closes it and hands the session back, so the Remote
+Control tab can start a transport without restarting mesoSPIM. While connected the boxes are
+read-only: Disconnect to change them. When a Connect cannot go ahead (nothing configured yet, a
+missing key, a local model that failed to start) the status line says what is needed. Images stay
+out of the chat: a frame goes to the vision model and the trace. Each model box starts with a
+**Type** dropdown; the fields after it follow the choice.
 
 **Language model, Cloud AI.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style**
 for any server that speaks the OpenAI API, such as an Ollama or vLLM already running somewhere, or
@@ -61,7 +60,8 @@ looser on ambiguous requests until the manual spelled the rule out).
 it in, choose it, Connect. Nothing leaves the machine and no key is needed. Behind Connect,
 mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server (`pip install
 "llama-cpp-python[server]"`, or the `ai-assistant-local` extra) as a child process on a loopback
-port; the Connect button reads "Starting…" while the model loads, then "Disconnect AI assistant". The
+port; the status line reads "starting …" while the model loads, and the window opens once it
+answers. The
 server is started with a 32K-token context window (llama.cpp's own default of 2,048 would not
 hold one request), prompt batches of 2,048 tokens and flash attention where the build has it;
 the config attribute `ai_assistant_context_tokens` sets another context size. Every model, cloud
@@ -108,17 +108,17 @@ image to** is the size of the frame handed to the vision model (longer side, 102
 smaller is cheaper and faster, and enough for "is it centred" or "is it saturated"; the numbers
 always come from the full frame.
 
-**Connect** applies the three boxes; a first message sent without pressing it applies them as
-typed. Building a cloud endpoint does not contact the provider, so a wrong key shows up as an
-error on the first message. To change the models, disconnect and connect again; the transcript is
-kept.
+Building a cloud endpoint does not contact the provider, so a wrong key shows up as an error on
+the first message. To change the models, disconnect and connect again; the transcript is kept.
 The presets live in `mesoSPIM_AiAssistent_Config.py` as defaults only.
 
 ## Using it
 
-Open the **AI Assistant** tab and type. Enter submits; Shift+Enter starts a new line, as in an
-editor. Commands the agent runs stream live above each answer, so the operator sees exactly which
-named calls were issued. **Cancel prompt** stops the assistant: the turn ends at once, a model
+Press **Connect** in the tab and type in the window that opens. Enter submits; Shift+Enter starts
+a new line, as in an editor. **Stop microscope** sits right of the input; under them **Cancel
+prompt**, **Clear context** and **Show tool calls**, which lists the commands each answer ran above
+it, streamed live, so the operator sees exactly which named calls were issued. **Cancel prompt**
+stops the assistant: the turn ends at once, a model
 request in flight is abandoned and an open Run / Cancel question is cancelled; what the assistant
 already started keeps running. **Stop microscope** is
 the main window's Stop: the same queued signals to Core (state idle aborts the running mode, the

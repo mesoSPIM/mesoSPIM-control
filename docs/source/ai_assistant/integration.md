@@ -16,8 +16,9 @@ reuses its `Acceptor`, dispatcher, and completion signals.
   threads.
 - `mesoSPIM_AiAssistent_Local.py` — the models-folder scan and the llama.cpp server child that
   serves a local `.gguf` file on loopback.
-- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab: transcript, input line, Cancel prompt,
-  Clear context, Stop microscope, and the collapsible setup footer.
+- `mesoSPIM_AiAssistent_GUI.py` — the `AiAssistentGUI` tab (setup, status, Connect and
+  Disconnect) and the `AssistantWindow` it opens while connected: transcript, input line, Stop
+  microscope, Cancel prompt, Clear context, Show tool calls.
 - `assistant_manual.md` — the rules (units, frames, safety, what the evaluation taught); the
   system prompt adds the offered commands by kind, and each tool's description and schema, derived
   from the command registry, carry what it does and its arguments.
@@ -108,7 +109,8 @@ Core-owned Acceptor.
 
 The offline suites in `mesoSPIM/test/ai_assistant/` test the completion wrapper, the tool builder,
 the endpoint, the worker turn and interrupt, the local server child (with a stand-in process), and
-the tab: setup footer, Cloud and Local modes, transport-busy refusal and the single-flight lock,
-all under the Qt-free substitute. `mesoSPIM/test/remote_control/run.py pyqt` builds the tab with
+the tab and window: Cloud and Local modes, the window opening with Connect and closing with
+Disconnect or its ×, the transport-busy refusal and the single-flight lock, all under the Qt-free
+substitute. `mesoSPIM/test/remote_control/run.py pyqt` builds the tab and the window with
 real PyQt, offscreen; `mesoSPIM/test/ai_assistant/live/demo_walkthrough.py` runs the agent, with
 scripted calls or a live model, against a running demo mesoSPIM over TCP.

@@ -1,19 +1,15 @@
-"""The 'AI Assistant' tab: a chat transcript styled like a coding-agent chat.
+"""The 'AI Assistant' tab and window.
 
-The transcript is plain on the tab's own background — no bubbles and no speaker labels, so weight
-alone separates the voices: your question is bold, the answer is not. Each answer shows its
-final Markdown, with the commands it ran above it when "Show tool calls" is on. Images stay out of
-the chat: a frame goes to the vision model and the trace. Enter submits; the input disables
-during a turn (single-flight); Cancel stops the assistant, Stop microscope stops the
-instrument. The Acceptor is acquired lazily on first use —
-until then the Remote Control transports stay usable, and the two are mutually exclusive.
+The tab is shaped like the Remote Control tab: one Setup AI assistant box (Preferences, Language
+model, Vision model), a status line, and Connect and Disconnect. Connect applies the boxes, takes
+the session and opens the assistant window; Disconnect, or closing that window, cancels a running
+turn, closes it and hands the session back, so the Remote Control transports can start. The two
+are mutually exclusive.
 
-Stop microscope sits right of the input box; under them the other buttons sit on one line, among
-them one session button that reads Connect, and Disconnect once connected. Configure AI assistant
-folds out the setup below: three boxes, Preferences, Language model and Vision model, which Connect
-applies. It opens itself when something needs the operator (nothing configured, a missing key, a
-server that failed) and folds back once the assistant is ready, so a first-time user sees a chat,
-not a configuration form.
+The window is the chat, styled like a coding-agent chat: your question bold on its own panel, the
+answer plain under the commands it ran when Show tool calls is on. Images stay out of the chat: a
+frame goes to the vision model and the trace. Enter submits; the input disables during a turn
+(single-flight); Cancel prompt stops the assistant, Stop microscope stops the instrument.
 
 Maintainer (2026):
     Thom de Hoog
@@ -234,7 +230,103 @@ class ModelPicker(QtWidgets.QGroupBox):
                                     self.base_url.text())
 
 
+class AssistantWindow(QtWidgets.QWidget):
+    """The chat, in a window of its own: the transcript, the input line with Stop microscope
+    beside it, and under them Cancel prompt, Clear context and Show tool calls. It exists while
+    the assistant is connected: Connect in the tab opens it, Disconnect closes it, and closing it
+    disconnects. The tab owns the session and the turn; this window is what it shows."""
+
+    def __init__(self, tab, font):
+        super().__init__(tab.main_window, QtCore.Qt.Window)
+        self.tab = tab
+        self.setObjectName("AiAssistentWindow")
+        self.setWindowTitle("mesoSPIM AI Assistant")
+        self.setStyleSheet("QPushButton { padding: 3px 9px; }"
+                           "QPushButton#AiAssistentStopButton { color: #ff4d4d; font-weight: bold; }")
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
+
+        self.output = QtWidgets.QTextEdit(self)
+        self.output.setReadOnly(True)
+        self.output.setObjectName("AiAssistentOutput")
+        self.output.setFont(font)
+        self.output.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)          # wrap; no horizontal bar
+        self.output.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)   # scrollbar from the start
+        layout.addWidget(self.output, 1)
+
+        self.status = QtWidgets.QLabel("", self)
+        self.status.setObjectName("AiAssistentStatus")
+        self.status.setFont(font)
+        self.status.setVisible(False)                             # shown only while a turn runs
+        layout.addWidget(self.status)
+
+        # The confirm-first bar: hidden until the assistant wants to run a command the operator
+        # must approve; Run or Cancel answers the worker's gate.
+        confirm = QtWidgets.QHBoxLayout()
+        self.confirm_label = QtWidgets.QLabel(self)
+        self.confirm_label.setFont(font)
+        self.confirm_run = QtWidgets.QPushButton("Run", self)
+        self.confirm_cancel = QtWidgets.QPushButton("Cancel", self)
+        for widget in (self.confirm_run, self.confirm_cancel):
+            widget.setFont(font)
+        self.confirm_run.clicked.connect(lambda: tab._answer_confirmation(True))
+        self.confirm_cancel.clicked.connect(lambda: tab._answer_confirmation(False))
+        confirm.addWidget(self.confirm_label, 1)
+        confirm.addWidget(self.confirm_run)
+        confirm.addWidget(self.confirm_cancel)
+        for widget in (self.confirm_label, self.confirm_run, self.confirm_cancel):
+            widget.setVisible(False)
+        layout.addLayout(confirm)
+
+        self.input = _Input(self)
+        self.input.setPlaceholderText("Ask the microscope…")
+        self.input.setObjectName("AiAssistentInput")
+        self.input.setFont(font)
+        self.input.returnPressed.connect(tab.on_submit)
+        self.interrupt = QtWidgets.QPushButton("Cancel prompt", self)
+        self.interrupt.setFont(font)
+        self.interrupt.clicked.connect(tab.on_interrupt)      # always clickable; a no-op between turns
+        self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
+        self.stop_button.setObjectName("AiAssistentStopButton")
+        self.stop_button.setFont(font)
+        self.stop_button.clicked.connect(tab.on_stop_microscope)   # always enabled: the emergency stop
+        self.clear_button = QtWidgets.QPushButton("Clear context", self)
+        self.clear_button.setFont(font)
+        self.clear_button.clicked.connect(tab.on_clear_all)
+        self.show_tool_calls = QtWidgets.QCheckBox("Show tool calls", self)
+        self.show_tool_calls.setFont(font)
+        self.show_tool_calls.setChecked(config.SHOW_TOOL_CALLS)
+        self.show_tool_calls.toggled.connect(lambda _checked: tab._render())
+        # The two-line input, which Enter sends, with Stop microscope to its right, as tall as it;
+        # under them the other controls on one line.
+        two_rows = 2 * self.interrupt.sizeHint().height() + 6
+        self.input.setFixedHeight(two_rows)
+        self.stop_button.setFixedHeight(two_rows)
+        entry = QtWidgets.QHBoxLayout()
+        entry.addWidget(self.input, 1)
+        entry.addWidget(self.stop_button)
+        layout.addLayout(entry)
+        buttons = QtWidgets.QHBoxLayout()
+        buttons.setSpacing(6)
+        for widget in (self.interrupt, self.clear_button, self.show_tool_calls):
+            buttons.addWidget(widget)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        self.resize(760, 640)
+        self.hide()
+
+    def closeEvent(self, event):
+        """The window's own close button: the operator is done with the assistant."""
+        event.accept()
+        self.tab.on_window_closed()
+
+
 class AiAssistentGUI(QtWidgets.QWidget):
+    """The tab: setup and the session, shaped like the Remote Control tab. One Setup AI assistant
+    box (Preferences, Language model, Vision model), a status line, and Connect and Disconnect;
+    the chat is in the AssistantWindow, which Connect opens."""
+
     sig_run_turn = QtCore.pyqtSignal(str)
 
     def __init__(self, parent):
@@ -244,12 +336,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.setObjectName("AiAssistentTabWidget")
         self._worker = None
         self._thread = None
-        self._state = "idle"                    # idle, starting (a local model loads), ready; the Connect button shows it
+        self._state = "idle"                    # idle, starting (a local model loads), ready; the status line shows it
         self._endpoints = {}                    # "language" and, when it is its own, "vision"
         self._servers = {}                      # by the same names: children serving local files
         self._started_at = 0.0
-        self._needs_operator = False            # a note asked for something: keep the footer open
-        self._running = False                   # a turn is in flight: the session buttons wait for it
+        self._running = False                   # a turn is in flight
         self._run_turn_slot = None
         self._pending_confirmation = None
         self._models_folder = models_folder(getattr(self.core, "cfg", None))
@@ -262,18 +353,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
             parent.TabWidget.insertTab(index + 1, self, "AI Assistant")
         else:
             parent.TabWidget.addTab(self, "AI Assistant")
-        self._fit_session_button()
-
-    def _fit_session_button(self):
-        """As wide as its longest label, so the row never shifts when Connect becomes Disconnect.
-        Measured once the tab is in the main window, where the style sheet reaches it."""
-        button, label = self.connect_button, self.connect_button.text()
-        widest = 0
-        for text in ("Connect AI assistant", "Disconnect AI assistant"):
-            button.setText(text)
-            widest = max(widest, button.sizeHint().width())
-        button.setText(label)
-        button.setMinimumWidth(widest)
 
     def _call_on_core(self, method):
         """Invoke a Core slot on the Core thread (affinity matters — the Acceptor must be
@@ -322,101 +401,54 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _build_ui(self):
         # Only the padding: qdarkstyle's buttons hug their text, its labels carry 7 px a side that
         # the setup grids do not want, and every other property cascades.
-        self.setStyleSheet("QPushButton, QToolButton { padding: 3px 9px; }"
-                           "QPushButton#AiAssistentStopButton { color: #ff4d4d; font-weight: bold; }"
+        self.setStyleSheet("QPushButton { padding: 3px 9px; }"
                            "QGroupBox QLabel { padding: 0px; }")
+        font = self.font()
+        font.setPointSize(12)                                     # match Remote Control
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
+        group = QtWidgets.QGroupBox("Setup AI assistant", self)
+        group.setFont(font)
+        column = QtWidgets.QVBoxLayout(group)
+        column.setContentsMargins(12, 12, 12, 12)
+        column.setSpacing(8)
+        column.addWidget(self._build_setup(group, font))
 
-        font = self.font()
-        font.setPointSize(12)                                     # match Remote Control
+        # The status line: what the session is doing, and what a failed Connect needs.
+        status_row = QtWidgets.QHBoxLayout()
+        status_row.setSpacing(8)
+        status_row.addWidget(_field_label("Status", group, font, gap=0))
+        self.status_label = QtWidgets.QLabel(group)
+        self.status_label.setObjectName("AiAssistentStatusLabel")
+        self.status_label.setFont(font)
+        self.status_label.setWordWrap(True)
+        status_row.addWidget(self.status_label, 1)
+        column.addLayout(status_row)
 
-        self.output = QtWidgets.QTextEdit(self)
-        self.output.setReadOnly(True)
-        self.output.setObjectName("AiAssistentOutput")
-        self.output.setFont(font)
-        self.output.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)          # wrap; no horizontal bar
-        self.output.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)   # scrollbar from the start
-        self.output.setMinimumHeight(480)                          # the transcript is the tab; it takes all spare height too
-        layout.addWidget(self.output, 1)
-
-        self.status = QtWidgets.QLabel("", self)
-        self.status.setObjectName("AiAssistentStatus")
-        self.status.setFont(font)
-        self.status.setVisible(False)                             # shown only while a turn runs
-        layout.addWidget(self.status)
-
-        # The confirm-first bar: hidden until the assistant wants to run a command the operator
-        # must approve; Run or Cancel answers the worker's gate.
-        confirm = QtWidgets.QHBoxLayout()
-        self.confirm_label = QtWidgets.QLabel(self)
-        self.confirm_label.setFont(font)
-        self.confirm_run = QtWidgets.QPushButton("Run", self)
-        self.confirm_cancel = QtWidgets.QPushButton("Cancel", self)
-        for widget in (self.confirm_run, self.confirm_cancel):
-            widget.setFont(font)
-        self.confirm_run.clicked.connect(lambda: self._answer_confirmation(True))
-        self.confirm_cancel.clicked.connect(lambda: self._answer_confirmation(False))
-        confirm.addWidget(self.confirm_label, 1)
-        confirm.addWidget(self.confirm_run)
-        confirm.addWidget(self.confirm_cancel)
-        layout.addLayout(confirm)
-        self._show_confirmation(False)
-
-        self.input = _Input(self)
-        self.input.setPlaceholderText("Ask the microscope…")
-        self.input.setObjectName("AiAssistentInput")
-        self.input.setFont(font)
-        self.input.returnPressed.connect(self.on_submit)
-        self.interrupt = QtWidgets.QPushButton("Cancel prompt", self)
-        self.interrupt.setFont(font)
-        self.interrupt.clicked.connect(self.on_interrupt)   # always clickable; a no-op between turns
-        self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
-        self.stop_button.setObjectName("AiAssistentStopButton")
-        self.stop_button.setFont(font)
-        self.stop_button.clicked.connect(self.on_stop_microscope)   # always enabled: the emergency stop
-        self.clear_button = QtWidgets.QPushButton("Clear context", self)
-        self.clear_button.setFont(font)
-        self.clear_button.clicked.connect(self.on_clear_all)
-        self.connect_button = QtWidgets.QPushButton("Connect AI assistant", self)
+        self.connect_button = QtWidgets.QPushButton("Connect", group)
         self.connect_button.setFont(font)
         self.connect_button.clicked.connect(self.on_connect)
-        # The two-line input, which Enter sends, with Stop microscope to its right, as tall as it;
-        # under them the other buttons on one line, side by side; the setup Configure opens folds
-        # out below.
-        two_rows = 2 * self.interrupt.sizeHint().height() + 6
-        self.input.setFixedHeight(two_rows)
-        self.stop_button.setFixedHeight(two_rows)
-        entry = QtWidgets.QHBoxLayout()
-        entry.addWidget(self.input, 1)
-        entry.addWidget(self.stop_button)
-        layout.addLayout(entry)
-        self.setup_toggle = QtWidgets.QToolButton(self)
-        self.setup_toggle.setObjectName("AiAssistentSetupToggle")
-        self.setup_toggle.setFont(font)
-        self.setup_toggle.setCheckable(True)
-        self.setup_toggle.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        self.setup_toggle.setAutoRaise(True)
-        self.setup_toggle.setText("Configure AI assistant")
-        self.setup_toggle.toggled.connect(self._set_expanded)
+        self.disconnect_button = QtWidgets.QPushButton("Disconnect", group)
+        self.disconnect_button.setFont(font)
+        self.disconnect_button.clicked.connect(self.on_disconnect)
         buttons = QtWidgets.QHBoxLayout()
         buttons.setSpacing(6)
-        for button in (self.interrupt, self.clear_button, self.connect_button, self.setup_toggle):
-            buttons.addWidget(button)
+        buttons.addWidget(self.connect_button)
+        buttons.addWidget(self.disconnect_button)
         buttons.addStretch(1)
-        layout.addLayout(buttons)
-        self.setup_group = self._build_setup(font)
-        layout.addWidget(self.setup_group)
+        column.addLayout(buttons)
+        layout.addWidget(group)
+        layout.addStretch(1)
+        self.chat_window = AssistantWindow(self, font)
         self._set_connect_state("idle")
-        self._set_expanded(False)
 
-    def _build_setup(self, font):
-        """Three titled boxes, like the Remote Control tab's setup group: Preferences on one line,
-        then the Language model and the Vision model, which Connect in the button row applies."""
-        setup = QtWidgets.QWidget(self)
+    def _build_setup(self, parent, font):
+        """Three titled boxes: Preferences on one line, then the Language model and the Vision
+        model, which Connect applies."""
+        setup = QtWidgets.QWidget(parent)
         column = QtWidgets.QVBoxLayout(setup)
-        column.setContentsMargins(0, 10, 0, 0)                     # air under the toggle; folds with the boxes
+        column.setContentsMargins(0, 0, 0, 0)
         column.setSpacing(8)
 
         preferences = QtWidgets.QGroupBox("Preferences", setup)
@@ -437,10 +469,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.frame_size = QtWidgets.QSpinBox(preferences)
         self.frame_size.setRange(256, 4096)
         self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
-        self.show_tool_calls = QtWidgets.QCheckBox("Show tool calls", preferences)
-        self.show_tool_calls.setChecked(config.SHOW_TOOL_CALLS)
-        self.show_tool_calls.toggled.connect(lambda _checked: self._render())
-        for widget in (self.tools_profile, self.history_turns, self.frame_size, self.show_tool_calls):
+        for widget in (self.tools_profile, self.history_turns, self.frame_size):
             widget.setFont(font)
 
         def with_unit(spin, unit):
@@ -463,14 +492,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
         options.addWidget(image_label, 0, 4)
         options.addLayout(with_unit(self.frame_size, "px"), 0, 5)
         options.setColumnStretch(6, 1)
-        options.addWidget(self.show_tool_calls, 1, 0, 1, 4)     # its own line: the one above is full
 
         self.language = ModelPicker("Language model", font, setup, self._models_folder, self.on_choose_folder)
         self.vision = ModelPicker("Vision model", font, setup, self._models_folder, self.on_choose_folder,
                                   same_as=SAME_AS_LANGUAGE)
         column.addWidget(self.language)
         column.addWidget(self.vision)
-
 
         # The boxes share their first columns, each as wide as its widest occupant, so Type sits
         # under Tool set, the dropdowns under each other, Provider under Memory.
@@ -493,25 +520,28 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.frame_size.valueChanged.connect(self._apply_options)
         return setup
 
-    # --- the footer ---
+    # --- the session ---
     def _set_connect_state(self, state, detail=""):
-        """The one session button shows what pressing it does: Connect, Starting… while a local
-        model loads, and Disconnect once connected. `detail` goes in its tooltip (which model
-        answers, a local server's address)."""
-        text = {"idle": "Connect AI assistant", "starting": "Starting…", "ready": "Disconnect AI assistant"}[state]
+        """idle: Connect is the one button that works and the window is closed. starting: a local
+        model is loading. ready: connected, the window open and titled with what answers."""
         self._state = state
-        self.connect_button.setText(text)
-        self.connect_button.setToolTip(detail)
-        self._refresh_session_buttons()
+        text = {"idle": "disconnected", "starting": f"starting {detail}…", "ready": f"connected: {detail}"}[state]
+        self.status_label.setText(text)
+        self.connect_button.setEnabled(state == "idle")
+        self.disconnect_button.setEnabled(state != "idle")
+        self._set_setup_enabled(state == "idle")
+        if state == "ready":
+            self.chat_window.setWindowTitle(f"mesoSPIM AI Assistant — {detail}")
+            self.chat_window.show()
+            self.chat_window.raise_()
+            self.chat_window.activateWindow()
+        else:
+            self.chat_window.hide()
 
-    def _refresh_session_buttons(self):
-        """The session button waits while a turn runs; the models change only between turns."""
-        self.connect_button.setEnabled(not self._running)
-
-    def _set_expanded(self, expanded):
-        self.setup_group.setVisible(bool(expanded))
-        self.setup_toggle.setChecked(bool(expanded))
-        self.setup_toggle.setArrowType(QtCore.Qt.DownArrow if expanded else QtCore.Qt.RightArrow)
+    def _set_setup_enabled(self, enabled):
+        """The setup is applied by Connect and read only after it: Disconnect first to change it."""
+        for widget in (self.language, self.vision, self.tools_profile, self.history_turns, self.frame_size):
+            widget.setEnabled(enabled)
 
     # --- setup state ---
     def on_choose_folder(self):
@@ -524,20 +554,27 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- connecting ---
     def on_connect(self):
-        """The one session button: Disconnect once connected, Connect otherwise."""
-        if self._state == "ready":
-            self.on_disconnect()
-        else:
+        if self._state == "idle":
             self._connect()
 
     def on_disconnect(self):
         """Hand the session back so the Remote Control tab can start a transport, without
-        restarting mesoSPIM. The transcript stays; Clear context is its own button. A run the assistant
-        started carries on, and the main window's STOP ends it."""
-        if self._running:
+        restarting mesoSPIM: a running turn is cancelled, the window closes, the transcript is
+        kept for the next Connect. A run the assistant started carries on, and the main window's
+        STOP ends it."""
+        if self._state == "idle":
             return
         self._release_session()
+        self._show_confirmation(False)
+        if self._running:
+            self._blocks.append(self._note_block("[cancelled]"))
+            self._set_running(False)
+            self._render()
         self._set_connect_state("idle")
+
+    def on_window_closed(self):
+        """The window's ×: the same as Disconnect."""
+        self.on_disconnect()
 
     def _release_session(self):
         """Stop a local model server and the worker, joining with a bound so the GUI never hangs
@@ -559,12 +596,11 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _connect(self):
         """Apply the three boxes. Returns True when the assistant can take a message now; False
-        after a note, or while a local model is still loading (the Connect button says so)."""
+        after a note, or while a local model is still loading (the status line says so)."""
         if not self._ensure_worker():
             self._note(getattr(self.core, "_assistant_refusal", None)
                        or "Stop the Remote Control transport to use the AI Assistant.")
             return False
-        self._needs_operator = False
         plan = self._plan()
         if plan is None:
             return False
@@ -661,26 +697,23 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._note(message)
 
     def _use(self):
-        """Hand the endpoints to the worker; the Connect button turns green and says which."""
+        """Hand the endpoints to the worker; the status line says which, and the window opens."""
         language, vision = self._endpoints["language"], self._endpoints.get("vision")
         self._worker.configure(language, vision, self.tools_profile.currentText())
         detail = _describe(language) + (f"; vision: {_describe(vision)}" if vision else "")
         self._set_connect_state("ready", detail)
-        if not self._needs_operator:            # a note on the way here stays in view
-            self._set_expanded(False)
 
     def _stop_local_servers(self):
         servers, self._servers = self._servers, {}
         for server in servers.values():
             server.stop()
 
-    def _note(self, text, needs_operator=True):
-        """A note in the transcript about the setup; the footer opens so the fix is in view and
-        stays open through the Connect that follows."""
+    def _note(self, text):
+        """What a Connect needs: on the status line, where the setup is, and in the transcript,
+        where it stays readable once connected (a vision model without its key, say)."""
+        self.status_label.setText(text)
         self._blocks.append(self._note_block(text))
         self._render()
-        self._set_expanded(True)
-        self._needs_operator = self._needs_operator or needs_operator
 
     # --- transcript rendering ---
     def _user_block(self, text):
@@ -697,7 +730,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         is emitted until the first tool call or the reply arrives — the status line already says the
         turn is running."""
         parts = []
-        for name, args in active["tools"] if self.show_tool_calls.isChecked() else ():
+        for name, args in active["tools"] if self.chat_window.show_tool_calls.isChecked() else ():
             parts.append(f'<div style="color:{_DIM};">&#8250; {_htmllib.escape(name)}'
                          f'({_htmllib.escape(args)})</div>')
         if active.get("served"):
@@ -706,7 +739,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
             parts.append(f'<div style="color:#e08a8a;"><b>&#9888; error</b> — '
                          f'{_htmllib.escape(active["error"])}</div>')
         elif active["reply"] is not None:
-            if not active["tools"] and self.show_tool_calls.isChecked():
+            if not active["tools"] and self.chat_window.show_tool_calls.isChecked():
                 # A small model will write "I have closed the shutters" having called nothing. The
                 # tab cannot judge the sentence, but it knows what it sent: said with the tool calls.
                 parts.append(f'<div style="color:{_DIM};">&#8250; {_htmllib.escape(NO_COMMANDS_SENT)}</div>')
@@ -718,27 +751,22 @@ class AiAssistentGUI(QtWidgets.QWidget):
         return f'<div style="color:{_DIM};margin:3px 0;"><i>{_htmllib.escape(text)}</i></div>'
 
     def _render(self):
+        output = self.chat_window.output
         blocks = [self._assistant_block(b) if isinstance(b, dict) else b for b in self._blocks]
         if self._active is not None:
             blocks.append(self._assistant_block(self._active))
-        self.output.setHtml("".join(blocks))
-        cursor = self.output.textCursor()
+        output.setHtml("".join(blocks))
+        cursor = output.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)               # collapse to the end: nothing selected
-        self.output.setTextCursor(cursor)
-        self.output.ensureCursorVisible()                        # scroll to the newest line
+        output.setTextCursor(cursor)
+        output.ensureCursorVisible()                             # scroll to the newest line
 
     # --- input / turn lifecycle ---
     def on_submit(self):
-        text = self.input.text().strip()
-        if not text or not self.input.isEnabled():
+        text = self.chat_window.input.text().strip()
+        if not text or not self.chat_window.input.isEnabled() or self._state != "ready":
             return
-        if self._state == "starting":
-            self._note("The local model is still loading; the Connect button says when it is ready.",
-                       needs_operator=False)
-            return
-        if self._state != "ready" and not self._connect():   # a first message connects as typed
-            return
-        self.input.clear()
+        self.chat_window.input.clear()
         self._blocks.append(self._user_block(text))
         self._active = {"tools": [], "reply": None, "error": None}
         self._set_running(True)
@@ -746,7 +774,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.sig_run_turn.emit(text)
 
     def on_interrupt(self):
-        if self.input.isEnabled():
+        if not self._running:
             return                                  # nothing is running
         if self._worker is not None:
             self._worker.interrupt()
@@ -758,7 +786,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         """The emergency stop, exactly as the main window's Stop button does it and just as fast:
         from the GUI thread, the same queued signals to Core (state idle aborts the running mode,
         the time lapse is cancelled) plus the stage stop, with no assistant thread or dispatcher
-        in between. Works before the assistant has ever connected. The assistant is cancelled too."""
+        in between. The assistant is cancelled too."""
         if self._worker is not None:
             self._worker.interrupt()
         self.main_window.stop_acquisition_and_timelapse()
@@ -769,7 +797,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def on_clear_all(self):
         """Clear the transcript and the model's memory of it; the models stay connected."""
-        if not self.input.isEnabled():
+        if self._running:
             return                                  # not while a turn runs
         self._blocks = []
         self._active = None
@@ -779,12 +807,12 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     # --- confirm-first commands ---
     def _show_confirmation(self, visible):
-        for widget in (self.confirm_label, self.confirm_run, self.confirm_cancel):
+        for widget in (self.chat_window.confirm_label, self.chat_window.confirm_run, self.chat_window.confirm_cancel):
             widget.setVisible(visible)
 
     def _on_confirm(self, name, args):
         self._pending_confirmation = name
-        self.confirm_label.setText(f"The assistant wants to run {name} {args}. Run it?")
+        self.chat_window.confirm_label.setText(f"The assistant wants to run {name} {args}. Run it?")
         self._show_confirmation(True)
 
     def _answer_confirmation(self, allowed):
@@ -798,16 +826,13 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _set_running(self, running):
         self._running = running
-        self.input.setEnabled(not running)
-        for widget in (self.language, self.vision, self.clear_button, self.tools_profile):
-            widget.setEnabled(not running)      # the models and the tool set change only between turns
-        self._refresh_session_buttons()
-        if running:
-            self._set_expanded(False)
-        self.status.setText("mesoSPIM is working…" if running else "")
-        self.status.setVisible(running)
+        window = self.chat_window
+        window.input.setEnabled(not running)
+        window.clear_button.setEnabled(not running)   # the memory is cleared between turns
+        window.status.setText("mesoSPIM is working…" if running else "")
+        window.status.setVisible(running)
         if not running:
-            self.input.setFocus()
+            window.input.setFocus()
 
     def _on_reply(self, text):
         if self._active is not None:
@@ -840,3 +865,4 @@ class AiAssistentGUI(QtWidgets.QWidget):
         """Called by MainWindow on app exit: release the session as Disconnect does. The
         instrument is the main window's to stop."""
         self._release_session()
+        self.chat_window.hide()

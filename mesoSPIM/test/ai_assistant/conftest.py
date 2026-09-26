@@ -307,6 +307,45 @@ class QPalette:
         return self._colors.get(role)
 
 
+class QCloseEvent:
+    def __init__(self):
+        self.accepted = True
+
+    def accept(self):
+        self.accepted = True
+
+    def ignore(self):
+        self.accepted = False
+
+
+def _close(self):
+    """A top-level window's close: its closeEvent decides, then it hides, as in Qt."""
+    event = QCloseEvent()
+    self.closeEvent(event)
+    if event.accepted:
+        self.setVisible(False)
+    return event.accepted
+
+
+_button_init = QtWidgets.QPushButton.__init__
+QtWidgets.QPushButton.__init__ = lambda self, *args, **kwargs: (_button_init(self, *args, **kwargs),
+                                                                 setattr(self, "_text", args[0] if args and isinstance(args[0], str) else ""))[0]
+_widget_init = QtWidgets.QWidget.__init__
+QtWidgets.QWidget.__init__ = lambda self, parent=None, *_flags: _widget_init(self, parent)   # (parent, Qt.Window)
+if not hasattr(QtWidgets.QWidget, "show"):
+    QtWidgets.QWidget.show = lambda self: self.setVisible(True)
+    QtWidgets.QWidget.hide = lambda self: self.setVisible(False)
+    QtWidgets.QWidget.close = _close
+    QtWidgets.QWidget.closeEvent = lambda self, event: event.accept()
+    QtWidgets.QWidget.raise_ = lambda self: None
+    QtWidgets.QWidget.activateWindow = lambda self: None
+    QtWidgets.QWidget.resize = lambda self, *_a: None
+    QtWidgets.QWidget.setWordWrap = lambda self, _flag: None
+    QtWidgets.QWidget.setWindowTitle = lambda self, title: setattr(self, "_title", title)
+    QtWidgets.QWidget.windowTitle = lambda self: getattr(self, "_title", "")
+if not hasattr(QtCore.Qt, "Window"):
+    QtCore.Qt.Window = 1
+
 if not hasattr(QtWidgets.QWidget, "palette"):
     QtWidgets.QWidget.palette = lambda self: getattr(self, "_palette", None) or QPalette()
     QtWidgets.QWidget.setPalette = lambda self, palette: setattr(self, "_palette", palette)

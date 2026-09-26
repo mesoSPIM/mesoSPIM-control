@@ -49,15 +49,15 @@ same way; Qwen 3 8B is a good third choice.
 python mesoSPIM/mesoSPIM_Control.py -D
 ```
 
-Open the **AI Assistant** tab, set Type to **Local AI**, pick the file, **Connect AI assistant**.
-The button reads "Starting…" while the model loads, then "Disconnect AI assistant". Ask "Where is
-the stage?", then "Take a snap and tell me what you see". With **Show tool calls** on (Configure AI
-assistant, Preferences), the transcript lists each tool call above the reply. Every turn is written to
+Open the **AI Assistant** tab, set Type to **Local AI**, pick the file, **Connect**. The status
+line reads "starting …" while the model loads; the assistant window opens once it answers. Ask
+"Where is the stage?", then "Take a snap and tell me what you see". With **Show tool calls** on,
+the transcript lists each tool call above the reply. Every turn is written to
 `~/mesoSPIM/assistant_traces/assistant-<date>.jsonl`.
 
 ## 5. Run the evaluation against the model
 
-Disconnect the tab first; the evaluation starts its own server. Then, from the repository root:
+Press Disconnect first; the evaluation starts its own server. Then, from the repository root:
 
 ```
 python -m mesoSPIM.test.ai_assistant.evals.run \

@@ -1,6 +1,6 @@
 """Endpoint presets and timing for the AI Assistant.
 
-The tab's setup footer offers these providers; choosing one prefills the model (and base URL for
+The tab's setup offers these providers; choosing one prefills the model (and base URL for
 a server), and the operator types the API key into the tab. The key lives in memory for the
 session only, never in this file, the microscope config, or a log. An empty key field falls back
 to the environment variable named here.

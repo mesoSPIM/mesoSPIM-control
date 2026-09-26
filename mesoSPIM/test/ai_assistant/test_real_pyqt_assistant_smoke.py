@@ -1,8 +1,9 @@
-"""Real-PyQt smoke test for the AI Assistant tab's layout: builds the tab offscreen, never a
+"""Real-PyQt smoke test for the AI Assistant tab and window: builds them offscreen, never a
 worker, a model or a server. Checks what the fake-Qt unit tests cannot: that the setup grid
 re-places the key without duplicating it, shows the right fields per type and preset in both
-model boxes, lines the boxes up, stays within the main window's width, and that Enter sends
-while Shift+Enter starts a new line."""
+model boxes, lines the boxes up, stays within the main window's width; that the window lays its
+controls out as designed and appears only when connected; and that Enter sends while Shift+Enter
+starts a new line."""
 from __future__ import annotations
 
 import os
@@ -75,7 +76,6 @@ def main():
     window = Window()
     tab = AiAssistentGUI(window)
     window.TabWidget.setCurrentWidget(tab)
-    tab.setup_toggle.setChecked(True)
     window.show()
     app.processEvents()
     language, vision = tab.language, tab.vision
@@ -130,17 +130,32 @@ def main():
         assert language.grid.cellRect(0, column).width() == vision.grid.cellRect(0, column).width()
     assert language.mapToParent(language.grid.cellRect(0, 1).topLeft()).x() == \
         vision.mapToParent(vision.grid.cellRect(0, 1).topLeft()).x()
-    # Stop microscope right of the input, on its line (Enter sends); under them the other buttons on
-    # one line, in this order.
-    stop, entry = tab.stop_button, tab.input
-    assert stop.mapTo(tab, stop.rect().topLeft()).y() == entry.mapTo(tab, entry.rect().topLeft()).y()
-    assert stop.mapTo(tab, stop.rect().topLeft()).x() > entry.mapTo(tab, entry.rect().topRight()).x()
-    row = (tab.interrupt, tab.clear_button, tab.connect_button, tab.setup_toggle)
-    middles = {b.mapTo(tab, b.rect().center()).y() for b in row}
-    assert max(middles) - min(middles) <= 2 and min(middles) > tab.input.mapTo(tab, tab.input.rect().bottomLeft()).y()
-    lefts = [b.mapTo(tab, b.rect().topLeft()).x() for b in row]
+    # The tab: Connect and Disconnect side by side under the setup, Connect the one that works;
+    # the window a separate top-level window, closed until connected.
+    chat = tab.chat_window
+    assert tab.connect_button.isEnabled() and not tab.disconnect_button.isEnabled()
+    assert tab.connect_button.mapTo(tab, tab.connect_button.rect().topLeft()).y() == \
+        tab.disconnect_button.mapTo(tab, tab.disconnect_button.rect().topLeft()).y()
+    assert chat.isWindow() and not chat.isVisible() and chat.parent() is window
+    tab._set_connect_state("ready", "Gemini, gemini-3.5-flash-lite")
+    app.processEvents()
+    assert chat.isVisible() and chat.windowTitle() == "mesoSPIM AI Assistant — Gemini, gemini-3.5-flash-lite"
+    assert not tab.connect_button.isEnabled() and tab.disconnect_button.isEnabled()
+    assert not language.isEnabled()
+    # In the window: the transcript on top, Stop microscope right of the input, on its line (Enter
+    # sends); under them Cancel prompt, Clear context and Show tool calls on one line, in this order.
+    stop, entry = chat.stop_button, chat.input
+    assert chat.output.mapTo(chat, chat.output.rect().bottomLeft()).y() < entry.mapTo(chat, entry.rect().topLeft()).y()
+    assert stop.mapTo(chat, stop.rect().topLeft()).y() == entry.mapTo(chat, entry.rect().topLeft()).y()
+    assert stop.mapTo(chat, stop.rect().topLeft()).x() > entry.mapTo(chat, entry.rect().topRight()).x()
+    row = (chat.interrupt, chat.clear_button, chat.show_tool_calls)
+    middles = {b.mapTo(chat, b.rect().center()).y() for b in row}
+    assert max(middles) - min(middles) <= 2 and min(middles) > entry.mapTo(chat, entry.rect().bottomLeft()).y()
+    lefts = [b.mapTo(chat, b.rect().topLeft()).x() for b in row]
     assert lefts == sorted(lefts)
-    assert tab.connect_button.text() == "Connect AI assistant" and tab.connect_button.isEnabled()
+    tab._set_connect_state("idle")
+    app.processEvents()
+    assert not chat.isVisible() and language.isEnabled()
 
     # Widths are only real with real fonts: offscreen Qt on Windows has none, and draws every
     # letter as a wide box.
@@ -153,23 +168,17 @@ def main():
     # The input box: Enter sends, Shift+Enter starts a new line, as editors do. Only the key
     # handling is under test, so the tab's own submit slot is detached first.
     sent = []
-    tab.input.returnPressed.disconnect(tab.on_submit)
-    tab.input.returnPressed.connect(lambda: sent.append(tab.input.text()))
-    tab.input.setFocus()
-    QtTest.QTest.keyClicks(tab.input, "centre the sample")
-    QtTest.QTest.keyClick(tab.input, QtCore.Qt.Key_Return, QtCore.Qt.ShiftModifier)
-    QtTest.QTest.keyClicks(tab.input, "then snap")
-    assert sent == [] and tab.input.text() == "centre the sample\nthen snap"
-    QtTest.QTest.keyClick(tab.input, QtCore.Qt.Key_Return)
+    entry.returnPressed.disconnect(tab.on_submit)
+    entry.returnPressed.connect(lambda: sent.append(entry.text()))
+    chat.show()
+    entry.setFocus()
+    QtTest.QTest.keyClicks(entry, "centre the sample")
+    QtTest.QTest.keyClick(entry, QtCore.Qt.Key_Return, QtCore.Qt.ShiftModifier)
+    QtTest.QTest.keyClicks(entry, "then snap")
+    assert sent == [] and entry.text() == "centre the sample\nthen snap"
+    QtTest.QTest.keyClick(entry, QtCore.Qt.Key_Return)
     assert sent == ["centre the sample\nthen snap"]
-    tab.input.setText("")
-
-    # The Connect button never changes size between its states.
-    tab._set_connect_state("idle")
-    idle = tab.connect_button.sizeHint().width()
-    tab._set_connect_state("ready")
-    app.processEvents()
-    assert tab.connect_button.minimumWidth() >= tab.connect_button.sizeHint().width() >= idle
+    entry.setText("")
 
     tab.shutdown()
     print(f"REAL PYQT ASSISTANT SMOKE PASS: Qt {QtCore.QT_VERSION_STR}, "
