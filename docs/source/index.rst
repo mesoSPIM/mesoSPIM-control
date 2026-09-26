@@ -77,6 +77,18 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Repeating an acquisition list over time: setup, timing model, and progress.
 
+   .. grid-item-card:: :octicon:`broadcast` Remote Control
+      :link: remote_control/index
+      :link-type: doc
+
+      Safe, named microscope calls over TCP or an MCP-compatible endpoint.
+
+   .. grid-item-card:: :octicon:`comment-discussion` AI Assistant
+      :link: ai_assistant/index
+      :link-type: doc
+
+      Optional chat tab that drives the microscope in natural language, through the same gate.
+
    .. grid-item-card:: :octicon:`pulse` Bead PSF Analysis
       :link: psf_analysis
       :link-type: doc
@@ -124,6 +136,8 @@ multiview, and tiled imaging of large cleared-tissue samples.
    field_curvature
    image_processors
    timelapse
+   remote_control/index
+   ai_assistant/index
    changelog
 
 .. toctree::

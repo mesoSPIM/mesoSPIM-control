@@ -87,6 +87,8 @@ class mesoSPIM_Core(QtCore.QObject):
     ''' ETL-related signals '''
     sig_save_etl_config = QtCore.pyqtSignal()
 
+    sig_remote_control_started = QtCore.pyqtSignal(bool, str)  # Remote Control tab: a transport started (ok, message)
+
     def __init__(self, config, parent):
         super().__init__()
 
@@ -108,6 +110,11 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.frame_queue = deque([])
         self.frame_queue_display = deque([], maxlen=1)    
+
+        # Remote Control and AI Assistant: the session they share, and the one controller holding it.
+        self._remote_session = {"operation": None, "counter": 0}
+        self._remote_control = None
+        self._assistant_acceptor = None
 
         ''' The signal-slot switchboard '''
         # Note the name duplication (shadowing)!!
@@ -1203,6 +1210,28 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_finished.emit()
         self.state['state']='idle'
         self.sig_update_gui_from_state.emit()
+
+    # Remote Control and AI Assistant: their controllers live on Core's thread, so the tabs start and
+    # stop them through these slots. The code is in mesoSPIM_RemoteControl_*.py and mesoSPIM_AiAssistent*.py.
+    @QtCore.pyqtSlot(str, str, int, str)
+    def start_remote_control(self, mode, host, port, token):
+        from .mesoSPIM_RemoteControl_Servers import start_for_core
+        start_for_core(self, mode, host, port, token)
+
+    @QtCore.pyqtSlot()
+    def stop_remote_control(self):
+        from .mesoSPIM_RemoteControl_Servers import stop_for_core
+        stop_for_core(self)
+
+    @QtCore.pyqtSlot()
+    def start_ai_assistant(self):
+        from .mesoSPIM_AiAssistent import start_assistant_for_core
+        start_assistant_for_core(self)
+
+    @QtCore.pyqtSlot()
+    def stop_ai_assistant(self):
+        from .mesoSPIM_AiAssistent import stop_assistant_for_core
+        stop_assistant_for_core(self)
 
     def lightsheet_alignment_mode(self):
         """Continuous live mode that alternates left/right shutters for dual-lightsheet co-alignment.

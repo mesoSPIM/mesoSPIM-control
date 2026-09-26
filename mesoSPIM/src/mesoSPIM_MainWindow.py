@@ -25,6 +25,8 @@ from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this li
 from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
+from .mesoSPIM_RemoteControl_GUI import RemoteControlGUI
+from .mesoSPIM_AiAssistent_GUI import AiAssistentGUI
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
 from .utils.config_loader import check_zoom_keys, is_demo
@@ -62,6 +64,7 @@ logger = logging.getLogger(__name__)
 
 class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     """ Main application window which instantiates worker objects and moves them to a thread. """
+    showing_state = False   # True while update_gui_from_state shows Core's state (request_state_from_combobox)
     # sig_live = QtCore.pyqtSignal()
     sig_stop = QtCore.pyqtSignal()
     sig_finished = QtCore.pyqtSignal()
@@ -283,6 +286,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     def close_app(self):
         #self.log_display_handler.flushOnClose = False #discontinued
         logger.info('Closing the application')
+        self.remote_control.shutdown()
+        self.ai_assistent.shutdown()
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:
@@ -629,6 +634,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
 
+        # The Remote Control and AI Assistant tabs; all their code is in their own modules.
+        self.remote_control = RemoteControlGUI(self)
+        self.ai_assistent = AiAssistentGUI(self)
+
         ''' Timelapse tab '''
         self.AsFastAsPossibleCheckBox.toggled.connect(self.toggle_timelapse_interval)
         self.toggle_timelapse_interval(self.AsFastAsPossibleCheckBox.isChecked())  # sync initial state set in the .ui file
@@ -742,12 +751,22 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if not int_conversion:
             self.sig_state_request.emit({state_parameter: self.cfg.startup[state_parameter]})  # force update of the state
             combobox.setCurrentText(self.cfg.startup[state_parameter])
-            combobox.currentTextChanged.connect(lambda currentText: self.sig_state_request.emit({state_parameter : currentText}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+            combobox.currentTextChanged.connect(lambda currentText: self.request_state_from_combobox(state_parameter, currentText))
 
         else:
             self.sig_state_request.emit({state_parameter: int(self.cfg.startup[state_parameter])})  # force update of the state
             combobox.setCurrentText(str(self.cfg.startup[state_parameter]))
-            combobox.currentTextChanged.connect(lambda currentParameter: self.sig_state_request.emit({state_parameter : int(currentParameter)}), type=QtCore.Qt.QueuedConnection) # Execute in the Core (receiver) thread
+            combobox.currentTextChanged.connect(lambda currentParameter: self.request_state_from_combobox(state_parameter, int(currentParameter)))
+
+    def request_state_from_combobox(self, state_parameter, value):
+        ''' A combo box change the operator or the joystick makes is a state request to Core. A change
+        that only shows Core's state (update_gui_from_state) is not: sending it back made Core redo its
+        own change (a second zoom change, with a second trip of the focus to the objective exchange
+        position). Called directly, not queued, so that it still sees showing_state. A refresh queued
+        behind the request shows the state after it, so no older refresh leaves the box wrong. '''
+        if not self.showing_state:
+            self.sig_state_request.emit({state_parameter: value})
+            QtCore.QMetaObject.invokeMethod(self.core, 'sig_update_gui_from_state', QtCore.Qt.QueuedConnection)
 
 
     def connect_spinbox_to_state_parameter(self, spinbox, state_parameter, conversion_factor=1):
@@ -788,8 +807,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     
     @QtCore.pyqtSlot()
     def update_gui_from_state(self):
-        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
-            self.update_widget_from_state(widget, state_parameter, conversion_factor)   
+        showing, self.showing_state = self.showing_state, True   # Core's own state: the combo boxes do not send it back to Core
+        try:
+            for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
+                self.update_widget_from_state(widget, state_parameter, conversion_factor)
+        finally:
+            self.showing_state = showing
         self.acquisition_manager_window.set_selected_row(self.state['selected_row'])
         logger.debug('GUI updated from state')
 
