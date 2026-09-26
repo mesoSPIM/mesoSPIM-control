@@ -32,7 +32,7 @@ open-work
 ## Setting it up
 
 The tab is the setup, shaped like the Remote Control tab: one **Setup AI assistant** box with
-**Preferences**, **Language model** and **Vision model**, a **Status** line, and **Connect** and
+**Language model**, **Vision model** and **Preferences**, a **Status** line, and **Connect** and
 **Disconnect**. Connect applies the boxes, takes the microscope session and opens the assistant
 window, where the chat is; the status line then names the model that answers. Disconnect, or
 closing that window, cancels a running turn, closes it and hands the session back, so the Remote

@@ -444,8 +444,8 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._set_connect_state("idle")
 
     def _build_setup(self, parent, font):
-        """Three titled boxes: Preferences on one line, then the Language model and the Vision
-        model, which Connect applies."""
+        """Three titled boxes, in the order they are decided: the Language model, the Vision model,
+        then Preferences on one line. Connect applies them."""
         setup = QtWidgets.QWidget(parent)
         column = QtWidgets.QVBoxLayout(setup)
         column.setContentsMargins(0, 0, 0, 0)
@@ -457,7 +457,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         options.setContentsMargins(12, 12, 12, 12)
         options.setHorizontalSpacing(8)
         options.setVerticalSpacing(10)
-        column.addWidget(preferences)
         self.tools_profile = QtWidgets.QComboBox(preferences)
         self.tools_profile.addItems(list(config.TOOL_PROFILES))
         cfg = getattr(self.core, "cfg", None)
@@ -498,6 +497,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
                                   same_as=SAME_AS_LANGUAGE)
         column.addWidget(self.language)
         column.addWidget(self.vision)
+        column.addWidget(preferences)
 
         # The boxes share their first columns, each as wide as its widest occupant, so Type sits
         # under Tool set, the dropdowns under each other, Provider under Memory.
