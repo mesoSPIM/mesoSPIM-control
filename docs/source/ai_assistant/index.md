@@ -103,10 +103,10 @@ block and have long tool results shortened, so twenty turns of memory cost a fra
 twenty full readouts would. Nothing is lost by it: every turn stays in a session store, and the
 assistant has two tools on it, one that returns an earlier turn in full or the turns in which a
 readout value changed, and one that finds earlier turns by words, for "what was the focus before
-I moved it" or "which batch did I say this is". Clear context empties the store. **Downsample
-image to** is the size of the frame handed to the vision model (longer side, 1024 px by default):
-smaller is cheaper and faster, and enough for "is it centred" or "is it saturated"; the numbers
-always come from the full frame.
+I moved it" or "which batch did I say this is". Clear context empties the store. **Bin image** bins
+the frame handed to the vision model 1, 2, 4 or 8 times (2 by default: a 2048-pixel camera frame
+arrives as 1024): coarser is cheaper and faster, and enough for "is it centred" or "is it
+saturated"; the numbers always come from the full frame.
 
 Building a cloud endpoint does not contact the provider, so a wrong key shows up as an error on
 the first message. To change the models, disconnect and connect again; the transcript is kept.

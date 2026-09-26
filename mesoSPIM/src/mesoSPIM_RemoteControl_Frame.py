@@ -74,9 +74,8 @@ def focus_measure(sample):
     return float(laplacian.var() / (scale * scale))
 
 
-def downsample(frame, max_size):
-    """Block-mean the frame so its longer side is at most ``max_size`` pixels."""
-    factor = int(np.ceil(max(frame.shape) / max_size))
+def bin_frame(frame, factor):
+    """Bin the frame ``factor`` x ``factor``: each pixel the mean of its block, as a camera bins."""
     if factor <= 1:
         return frame.astype(np.float32)
     rows = (frame.shape[0] // factor) * factor
@@ -85,11 +84,17 @@ def downsample(frame, max_size):
     return block.reshape(rows // factor, factor, cols // factor, factor).mean(axis=(1, 3))
 
 
-def to_png(frame, max_size):
-    """A contrast-stretched 8-bit PNG of the frame, longer side at most ``max_size``."""
+def downsample(frame, max_size):
+    """Bin the frame so its longer side is at most ``max_size`` pixels."""
+    return bin_frame(frame, int(np.ceil(max(frame.shape) / max_size)))
+
+
+def to_png(frame, max_size=None, bin_factor=None):
+    """A contrast-stretched 8-bit PNG of the frame: binned by ``bin_factor`` when given, else with
+    its longer side at most ``max_size``."""
     from PIL import Image  # a matplotlib dependency, so always present in the application
 
-    small = downsample(frame, max_size)
+    small = bin_frame(frame, bin_factor) if bin_factor else downsample(frame, max_size)
     low, high = np.percentile(small, _STRETCH)
     if high <= low:
         high = low + 1.0
@@ -100,14 +105,15 @@ def to_png(frame, max_size):
     return buffer.getvalue(), image.size
 
 
-def describe_frame(frame, max_size=1024, include_image=True):
-    """The `get_frame` document: stats always, the PNG (base64) when asked for."""
+def describe_frame(frame, max_size=1024, include_image=True, bin_factor=None):
+    """The `get_frame` document: stats always (from the full frame), the PNG (base64) when asked
+    for, binned by ``bin_factor`` or bounded by ``max_size``."""
     frame = np.asarray(frame)
     if frame.ndim != 2 or frame.size == 0:
         raise ValueError(f"expected a 2-D frame, got shape {frame.shape}")
     document = {"available": True, "stats": frame_stats(frame)}
     if include_image:
-        png, (width, height) = to_png(frame, max_size)
+        png, (width, height) = to_png(frame, max_size, bin_factor)
         document["image"] = {
             "format": "png",
             "width": width,

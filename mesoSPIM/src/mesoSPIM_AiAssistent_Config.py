@@ -74,8 +74,9 @@ EMPTY_REPLY_CHALLENGE = "Your reply is empty: tell the operator in a sentence wh
 EMPTY_REPLY_FALLBACK = "The model gave no answer for this turn."
 LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow disk
 
-# The frame handed to a vision model: longer side in pixels.
-LOOK_IMAGE_SIZE = 1024
+# The frame handed to a vision model, binned n x n (one of the Remote Control's FRAME_BINS): 2 keeps
+# a 2048-pixel camera frame at 1024 pixels, enough for "is it centred" or "is it saturated".
+LOOK_BIN = 2
 
 # Whether the chat lists the commands each answer ran; the Configure box switches it.
 SHOW_TOOL_CALLS = False

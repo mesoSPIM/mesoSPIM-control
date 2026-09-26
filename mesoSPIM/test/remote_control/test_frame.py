@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from mesoSPIM.src import mesoSPIM_RemoteControl_Dispatcher as dispatcher
-from mesoSPIM.src.mesoSPIM_RemoteControl_Frame import describe_frame, downsample, focus_measure, frame_stats
+from mesoSPIM.src.mesoSPIM_RemoteControl_Frame import bin_frame, describe_frame, downsample, focus_measure, frame_stats
 from mesoSPIM.test.remote_control.support.fakes import RecordingCore
 
 
@@ -50,6 +50,15 @@ def test_png_is_bounded_and_stretched():
     assert decoded.dtype == np.uint8 and decoded.max() == 255 and decoded.min() == 0
 
 
+def test_binning_keeps_every_pixel_in_a_block_mean():
+    """A bin of 4 turns the 300 x 400 frame into 75 x 100, each pixel the mean of a 4 x 4 block;
+    the numbers still come from the full frame."""
+    document = describe_frame(_frame(), bin_factor=4)
+    assert (document["image"]["width"], document["image"]["height"]) == (100, 75)
+    assert document["stats"]["shape"] == [300, 400]
+    assert np.array_equal(bin_frame(_frame(), 1), _frame().astype(np.float32))
+
+
 def test_numbers_only_when_asked():
     document = describe_frame(_frame(), include_image=False)
     assert document["available"] and "image" not in document and "stats" in document
@@ -66,8 +75,11 @@ def test_get_frame_after_a_snap_over_the_dispatcher():
     document = dispatcher.run(core, "get_frame", {"max_size": 64, "include_image": True})
     assert document["available"] and document["stats"]["shape"] == [64, 96]
     assert max(document["image"]["width"], document["image"]["height"]) <= 64
-    with pytest.raises(dispatcher.ValidationError):
-        dispatcher.run(core, "get_frame", {"max_size": 10})
+    binned = dispatcher.run(core, "get_frame", {"bin": 8})
+    assert (binned["image"]["width"], binned["image"]["height"]) == (12, 8)
+    for bad in ({"max_size": 10}, {"bin": 3}, {"bin": 16}):
+        with pytest.raises(dispatcher.ValidationError):
+            dispatcher.run(core, "get_frame", bad)
 
 
 def test_snapshot_is_one_compact_readout():

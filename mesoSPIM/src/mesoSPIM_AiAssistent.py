@@ -331,7 +331,7 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
     return _call
 
 
-def look(acceptor, endpoint, question, snap, cancel, image_size=None):
+def look(acceptor, endpoint, question, snap, cancel, image_bin=None):
     """Take a frame and describe it. The numbers come from get_frame and reach the main model
     always. The picture itself goes to a vision model in a separate single-shot call with the
     question, and only that answer comes back — the main conversation never carries images, so a
@@ -340,7 +340,7 @@ def look(acceptor, endpoint, question, snap, cancel, image_size=None):
         done = dispatch_and_wait(acceptor, "snap", {"prefix": "assistant"}, WAIT, cancel)
         if done.get("status") != COMPLETED:
             return {"error": {"code": "execution", "message": f"snap did not complete: {done}"}}
-    frame = acceptor.dispatch("get_frame", {"include_image": endpoint.vision, "max_size": image_size or config.LOOK_IMAGE_SIZE})
+    frame = acceptor.dispatch("get_frame", {"include_image": endpoint.vision, "bin": image_bin or config.LOOK_BIN})
     if not frame.get("available"):
         return {"available": False, "note": "no frame yet; take a snap first"}
     result = {"available": True, "stats": frame["stats"]}
@@ -583,7 +583,7 @@ def _narrowed(cmd, keys):
 
 
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision_endpoint=None,
-                image_size=None, profile=None, store=None):
+                image_bin=None, profile=None, store=None):
     """One passthrough tool per offered command (see offered_commands). The tool list is derived
     from COMMANDS and the profile — never hand-maintained.
 
@@ -619,7 +619,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
         def _look_now(question, snap):
             if on_call is not None:
                 on_call("look", json.dumps({"question": question, "snap": snap}))
-            size = image_size() if callable(image_size) else image_size  # a callable reads a live setting
+            size = image_bin() if callable(image_bin) else image_bin  # a callable reads a live setting
             reuse = bool(snap) and guard.take_fresh_snap()  # snapped a moment ago: no second exposure
             try:
                 outcome = look(acceptor, eyes, question, snap and not reuse, cancel, size)
@@ -907,7 +907,7 @@ def build_model(endpoint):
 
 
 def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=None,
-                vision_endpoint=None, image_size=None, profile=None, store=None):
+                vision_endpoint=None, image_bin=None, profile=None, store=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -921,7 +921,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
     # keeps, so an old turn is compacted once and stays so.
     agent = Agent(model, instructions=build_system_prompt(profile=profile),
                   tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, gate=gate,
-                                    vision_endpoint=vision_endpoint, image_size=image_size, profile=profile,
+                                    vision_endpoint=vision_endpoint, image_bin=image_bin, profile=profile,
                                     store=store),
                   capabilities=[ProcessHistory(compact_history)],
                   model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
@@ -1036,7 +1036,7 @@ class AssistantWorker(QtCore.QObject):
         self._fired = []                 # the tool calls of the turn in progress, as they fire
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit, cancel=self.cancel)
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
-        self.look_image_size = config.LOOK_IMAGE_SIZE
+        self.look_image_bin = config.LOOK_BIN
         self.trace_folder = None                           # set by the tab: every turn is recorded there
 
     def configure(self, endpoint, vision_endpoint=None, profile=None):
@@ -1068,7 +1068,7 @@ class AssistantWorker(QtCore.QObject):
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
                                           endpoint=self._endpoint, gate=self.gate,
                                           vision_endpoint=self._vision_endpoint,
-                                          image_size=lambda: self.look_image_size, profile=self._profile,
+                                          image_bin=lambda: self.look_image_bin, profile=self._profile,
                                           store=self.store)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)

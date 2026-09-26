@@ -27,6 +27,7 @@ import time
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import mesoSPIM_AiAssistent_Config as config
+from . import mesoSPIM_RemoteControl_Config as rc_config
 from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint, traces_folder
 from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder, projector_for
 
@@ -324,7 +325,7 @@ class AssistantWindow(QtWidgets.QWidget):
 
 class AiAssistentGUI(QtWidgets.QWidget):
     """The tab: setup and the session, shaped like the Remote Control tab. One Setup AI assistant
-    box (Preferences, Language model, Vision model), a status line, and Connect and Disconnect;
+    box (Language model, Vision model, Preferences), a status line, and Connect and Disconnect;
     the chat is in the AssistantWindow, which Connect opens."""
 
     sig_run_turn = QtCore.pyqtSignal(str)
@@ -396,7 +397,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
     def _apply_options(self, *_):
         if self._worker is not None:
             self._worker.max_history_turns = self.history_turns.value()
-            self._worker.look_image_size = self.frame_size.value()
+            self._worker.look_image_bin = int(self.frame_bin.currentText())
 
     def _build_ui(self):
         # Only the padding: qdarkstyle's buttons hug their text, its labels carry 7 px a side that
@@ -465,10 +466,10 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self.history_turns = QtWidgets.QSpinBox(preferences)
         self.history_turns.setRange(1, 200)
         self.history_turns.setValue(config.MAX_HISTORY_TURNS)
-        self.frame_size = QtWidgets.QSpinBox(preferences)
-        self.frame_size.setRange(256, 4096)
-        self.frame_size.setValue(config.LOOK_IMAGE_SIZE)
-        for widget in (self.tools_profile, self.history_turns, self.frame_size):
+        self.frame_bin = QtWidgets.QComboBox(preferences)
+        self.frame_bin.addItems([str(factor) for factor in rc_config.FRAME_BINS])
+        self.frame_bin.setCurrentText(str(config.LOOK_BIN))
+        for widget in (self.tools_profile, self.history_turns, self.frame_bin):
             widget.setFont(font)
 
         def with_unit(spin, unit):
@@ -483,13 +484,13 @@ class AiAssistentGUI(QtWidgets.QWidget):
         # Three pairs on one line, the leftover width after them.
         tool_set_label = _field_label("Tool set", preferences, font, gap=0)
         memory_label = _field_label("Memory", preferences, font)
-        image_label = _field_label("Downsample image to", preferences, font, gap=3 * PAIR_GAP)  # set apart
+        image_label = _field_label("Bin image", preferences, font, gap=3 * PAIR_GAP)  # set apart
         options.addWidget(tool_set_label, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(memory_label, 0, 2)
         options.addLayout(with_unit(self.history_turns, "messages"), 0, 3)   # yours: one per turn
         options.addWidget(image_label, 0, 4)
-        options.addLayout(with_unit(self.frame_size, "px"), 0, 5)
+        options.addWidget(self.frame_bin, 0, 5)
         options.setColumnStretch(6, 1)
 
         self.language = ModelPicker("Language model", font, setup, self._models_folder, self.on_choose_folder)
@@ -517,7 +518,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
                 grid.setColumnMinimumWidth(index, width)
         self.tools_profile.currentTextChanged.connect(self._apply_profile)
         self.history_turns.valueChanged.connect(self._apply_options)
-        self.frame_size.valueChanged.connect(self._apply_options)
+        self.frame_bin.currentTextChanged.connect(self._apply_options)
         return setup
 
     # --- the session ---
@@ -540,7 +541,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
 
     def _set_setup_enabled(self, enabled):
         """The setup is applied by Connect and read only after it: Disconnect first to change it."""
-        for widget in (self.language, self.vision, self.tools_profile, self.history_turns, self.frame_size):
+        for widget in (self.language, self.vision, self.tools_profile, self.history_turns, self.frame_bin):
             widget.setEnabled(enabled)
 
     # --- setup state ---

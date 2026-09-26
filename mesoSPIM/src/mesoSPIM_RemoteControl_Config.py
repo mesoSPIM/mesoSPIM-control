@@ -125,6 +125,7 @@ POSITION_POLL_INTERVAL_MS = 50
 # A snap frame arrives from the camera thread; poll the display queue for it with a bound.
 SNAP_POLL_INTERVAL_MS = 50
 SNAP_TIMEOUT_SEC = 30.0
+FRAME_BINS = (1, 2, 4, 8)   # get_frame's bin: the PNG binned n x n, as a camera bins
 POSITION_TOLERANCE = {"x": 1.0, "y": 1.0, "z": 1.0, "f": 1.0, "theta": 1.0}
 
 # --- environment variable names (the reading lives in Commands) ---

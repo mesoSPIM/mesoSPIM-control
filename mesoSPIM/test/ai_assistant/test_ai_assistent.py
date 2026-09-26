@@ -735,7 +735,7 @@ def test_a_dedicated_vision_model_reads_the_frame_for_a_text_only_main_model(mon
     assert out["answer"] == "centred" and used == ["Gemini"]
 
 
-def test_look_uses_the_live_frame_size(monkeypatch):
+def test_look_uses_the_live_bin(monkeypatch):
     pytest.importorskip("pydantic_ai")
     from mesoSPIM.src.mesoSPIM_AiAssistent import build_tools
     from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
@@ -745,19 +745,19 @@ def test_look_uses_the_live_frame_size(monkeypatch):
 
     def spy(name, args):
         if name == "get_frame":
-            sizes.append(args["max_size"])
+            sizes.append(args["bin"])
         return real(name, args)
 
     acceptor.dispatch = spy
-    size = {"px": 300}
+    size = {"bin": 2}
     tools = build_tools(acceptor, threading.Event(), endpoint=Endpoint.from_preset("Gemini", api_key="k"),
-                        image_size=lambda: size["px"])
+                        image_bin=lambda: size["bin"])
     monkeypatch.setattr(ai, "vision_answer", lambda *a: "ok")
     look_tool = next(t for t in tools if t.name == "look")
     asyncio.run(look_tool.function(question="q"))
-    size["px"] = 600
+    size["bin"] = 4
     asyncio.run(look_tool.function(question="q", snap=False))
-    assert sizes == [300, 600]
+    assert sizes == [2, 4]
 
 
 # --- tool sets: Regular for a facility user, Full for everything ---

@@ -1109,9 +1109,13 @@ command(
 
 
 def _accept_get_frame(core, args):
-    only(args, ("max_size", "include_image"))
+    only(args, ("max_size", "bin", "include_image"))
+    bin_factor = integer(args, "bin", minimum=1, maximum=8, required=False)
+    if bin_factor is not None and bin_factor not in config.FRAME_BINS:
+        raise ValidationError(f"bin must be one of {list(config.FRAME_BINS)}")
     return {
         "max_size": integer(args, "max_size", minimum=64, maximum=4096, required=False, default=1024),
+        "bin": bin_factor,
         "include_image": flag(args, "include_image", True),
     }
 
@@ -1123,7 +1127,8 @@ def _run_get_frame(core, args):
     queue = getattr(core, "frame_queue_display", None)
     if not queue:
         return {"available": False}
-    return describe_frame(queue[0], max_size=args["max_size"], include_image=args["include_image"])
+    return describe_frame(queue[0], max_size=args["max_size"], include_image=args["include_image"],
+                          bin_factor=args["bin"])
 
 
 command(
@@ -1133,9 +1138,10 @@ command(
     accept=_accept_get_frame,
     schema=_schema({
         "max_size": {"type": "integer", "minimum": 64, "maximum": 4096, "description": "longer side of the PNG, default 1024"},
+        "bin": {"type": "integer", "enum": list(config.FRAME_BINS), "description": "bin the PNG n x n instead of max_size"},
         "include_image": {**_BOOLEAN, "description": "false for the numbers only"},
     }),
-    hint="in: {max_size?, include_image?}. out: {available, stats{shape, min, max, percentiles, "
+    hint="in: {max_size?, bin?, include_image?}. out: {available, stats{shape, min, max, percentiles, "
     "background, saturated_fraction, bright_fraction, signal_centroid, focus_measure}, image{png base64}}. "
     "the last displayed frame (after snap or live)",
 )
