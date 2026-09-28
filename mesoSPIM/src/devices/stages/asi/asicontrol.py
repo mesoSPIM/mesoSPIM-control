@@ -121,24 +121,32 @@ class StageControlASI(QtCore.QObject):
         response = self._send_command(b'\\\r')
         logger.info(f"ASI response to HALT command: {response}")
         
-    def wait_until_done(self):
-        '''Blocks if the stage is moving due to a serial command'''
+    def is_busy(self):
+        '''True while any axis moves: the answer to '/' starts with 'B', or is missing.'''
+        answer = self._send_command(b'/\r')
+        return not (answer and answer[0] == 'N')
 
-        '''If the stage returns 'B'as the first letter, it is busy, if it returns 'N', it is done.
-        Only if the stage returns 'N' twice, it is not busy.
-        '''
-        self.stage_busy = True
-        while self.stage_busy is True:
-            try: 
-                message1 = self._send_command(b'/\r')[0]
-                time.sleep(0.05)
-                message2 = self._send_command(b'/\r')[0]
-                time.sleep(0.05)
-                if message1 == 'N' and message2 == 'N':
-                    self.stage_busy = False
-            except:
-                logger.error('ASI stages: Wait until done failed')
-        
+    def wait_until_done(self, lock, should_stop, timeout_s):
+        '''Block until two consecutive 'N' answers (True). ``lock`` is held per query only, so a
+        HALT from the GUI thread gets the port. Returns False once ``should_stop()`` is true
+        (the stopper has sent HALT), or after ``timeout_s``, when it sends HALT itself.'''
+        deadline = time.monotonic() + timeout_s
+        done_answers = 0
+        while done_answers < 2:
+            if should_stop():
+                logger.warning('ASI stages: stop requested during a move, giving up the wait')
+                return False
+            if time.monotonic() > deadline:
+                logger.error(f'ASI stages: move not finished after {timeout_s} s, sending HALT')
+                with lock:
+                    self.stop()
+                return False
+            with lock:
+                busy = self.is_busy()
+            done_answers = 0 if busy else done_answers + 1
+            time.sleep(0.05)
+        return True
+
     def read_position(self):
         '''Reports position from the stages
         Returns:

@@ -33,6 +33,7 @@ from .utils.ni_daqmx import require_nidaqmx
 from .utils.config_loader import is_demo
 
 from .mesoSPIM_Serial import mesoSPIM_Serial
+from .mesoSPIM_Stages import StageMotionHalted
 from .mesoSPIM_WaveFormGenerator import mesoSPIM_WaveFormGenerator, mesoSPIM_DemoWaveFormGenerator
 from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 
@@ -890,10 +891,16 @@ class mesoSPIM_Core(QtCore.QObject):
             acq_list (AcquisitionList): The list of acquisitions to execute.
         """
         for acq in acq_list:
-            if not self.stopflag:
+            if self.stopflag:
+                break
+            try:
                 self.prepare_acquisition(acq, acq_list)
-                self.run_acquisition(acq, acq_list)
-                self.close_acquisition(acq, acq_list)
+            except StageMotionHalted as halted:
+                logger.error(f'Acquisition list stopped: {halted}')
+                self.stop()
+                break
+            self.run_acquisition(acq, acq_list)
+            self.close_acquisition(acq, acq_list)
 
     def close_acquisition_list(self, acq_list):
         self.sig_status_message.emit('Closing Acquisition List')
