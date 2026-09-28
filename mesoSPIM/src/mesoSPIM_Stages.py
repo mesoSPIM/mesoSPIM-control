@@ -10,6 +10,10 @@ from PyQt5 import QtCore
 logger = logging.getLogger(__name__)
 
 
+class StageMotionHalted(Exception):
+    '''A blocking move was halted (stop requested, or timed out) instead of arriving.'''
+
+
 class mesoSPIM_Stage(QtCore.QObject):
     '''Abstract base class for all mesoSPIM stage drivers.
 
@@ -1897,6 +1901,8 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
         assert hasattr(self.cfg, 'asi_parameters'), "Config file with ASI stage must have 'asi_parameters' dict."
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
+        self._halt_requested = threading.Event()
+        self.move_timeout_s = self.asi_parameters.get('move_timeout_s', 120)
         self.set_speed_from_config()
         self.pos_timer.setInterval(250)
         logger.info('ASI stages initialized')
@@ -2001,12 +2007,12 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
                     self.sig_status_message.emit('Relative movement stopped: f Motion limit would be reached!')
 
             if motion_dict != {}:
+                self._halt_requested.clear()
                 with self._serial_lock:
                     self.asi_stages.move_relative(motion_dict)
 
             if wait_until_done:
-                with self._serial_lock:
-                    self.asi_stages.wait_until_done()
+                self._wait_until_done()
     
     def move_absolute(self, dict, wait_until_done=False, use_internal_position=True):
         '''
@@ -2064,14 +2070,19 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
                 logger.error(f"The theta-move is outside of min-max range, check your config file, 'theta_min' and 'theta_max'.")
 
         if motion_dict:
+            self._halt_requested.clear()
             with self._serial_lock:
                 self.asi_stages.move_absolute(motion_dict)
-        
+
         if wait_until_done is True:
-            with self._serial_lock:
-                self.asi_stages.wait_until_done()
-        
+            self._wait_until_done()
+
+    def _wait_until_done(self):
+        if not self.asi_stages.wait_until_done(self._serial_lock, self._halt_requested.is_set, self.move_timeout_s):
+            raise StageMotionHalted('ASI move halted before reaching its target')
+
     def stop(self):
+        self._halt_requested.set()
         with self._serial_lock:
             self.asi_stages.stop()
 
@@ -2196,6 +2207,8 @@ class mesoSPIM_Mixed_Stages(mesoSPIM_Stage):
             "Config file with 'Mixed' stage must have 'asi_parameters' dict."
         self.ttl_motion_enabled_during_acq = self.cfg.asi_parameters['ttl_motion_enabled']
         self.ttl_motion_currently_enabled = False
+        self._halt_requested = threading.Event()
+        self.move_timeout_s = self.asi_parameters.get('move_timeout_s', 120)
         self._set_asi_speed_from_config()
         logger.info(f'Mixed stage: ASI axes configured: {self.asi_stages.axis_keys}')
 
@@ -2330,11 +2343,11 @@ class mesoSPIM_Mixed_Stages(mesoSPIM_Stage):
                     self.sig_status_message.emit('Relative movement stopped: Theta Motion limit would be reached!')
 
             if motion_dict:
+                self._halt_requested.clear()
                 with self._serial_lock:
                     self.asi_stages.move_relative(motion_dict)
             if wait_until_done:
-                with self._serial_lock:
-                    self.asi_stages.wait_until_done()
+                self._wait_until_done()
 
         # PI relative moves (all axes assigned to PI)
         if self.pi_device_connected and self.pi_axes:
@@ -2409,11 +2422,11 @@ class mesoSPIM_Mixed_Stages(mesoSPIM_Stage):
                 logger.error("f-move outside min-max range, check 'f_min'/'f_max' in config.")
 
         if motion_dict:
+            self._halt_requested.clear()
             with self._serial_lock:
                 self.asi_stages.move_absolute(motion_dict)
         if wait_until_done:
-            with self._serial_lock:
-                self.asi_stages.wait_until_done()
+            self._wait_until_done()
 
         # PI absolute moves (all axes assigned to PI)
         if self.pi_device_connected and self.pi_axes:
@@ -2451,8 +2464,13 @@ class mesoSPIM_Mixed_Stages(mesoSPIM_Stage):
                 except Exception as e:
                     logger.error(f"PI absolute move failed: {e}")
 
+    def _wait_until_done(self):
+        if not self.asi_stages.wait_until_done(self._serial_lock, self._halt_requested.is_set, self.move_timeout_s):
+            raise StageMotionHalted('ASI move halted before reaching its target')
+
     @QtCore.pyqtSlot()
     def stop(self):
+        self._halt_requested.set()
         with self._serial_lock:
             self.asi_stages.stop()
         if self.pi_device_connected:
