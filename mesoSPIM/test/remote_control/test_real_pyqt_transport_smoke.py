@@ -23,9 +23,9 @@ try:
 except ModuleNotFoundError as error:
     raise SystemExit("real_pyqt_transport_smoke.py requires PyQt5") from error
 
-from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
-from mesoSPIM.src.mesoSPIM_RemoteControl_Commands import self_test
-from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import (
+from mesoSPIM.src.remote_control import config as config
+from mesoSPIM.src.remote_control.commands import self_test
+from mesoSPIM.src.remote_control.servers import (
     Acceptor,
     FrameReader,
     McpAdapter,

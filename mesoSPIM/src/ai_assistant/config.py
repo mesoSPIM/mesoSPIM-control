@@ -20,9 +20,9 @@ PROVIDERS = {
     "Gemini": {
         "kind": "google",
         "model": "gemini-3.5-flash-lite",  # 250K input tokens/min free tier, native tool calling
-        # No fallback model: the evaluation showed gemini-3.1-flash-lite obeying a note planted in the
-        # state readout six times out of six, where the chosen model never did. A stand-in the
-        # operator did not evaluate is worse than a rate-limit error they can see and retry.
+        # No fallback model: a stand-in can obey a note planted in the state readout that the chosen
+        # model ignores. A model the operator did not choose is worse than a rate-limit error they
+        # can see and retry.
         "key_env": "GEMINI_API_KEY",
         "vision": True,
     },
@@ -36,7 +36,7 @@ PROVIDERS = {
 }
 DEFAULT_PROVIDER = "Gemini"
 
-# Local mode: model files in a folder, served by mesoSPIM itself (see mesoSPIM_AiAssistent_Local).
+# Local mode: model files in a folder, served by mesoSPIM itself (see local.py).
 MODELS_FOLDER_CONFIG_KEY = "ai_assistant_models_folder"  # optional attribute of the microscope config
 MODEL_SUFFIXES = (".gguf",)
 LOCAL_SERVER_POLL_MS = 500
@@ -68,7 +68,7 @@ CALLED_NOTHING_CHALLENGE = (
     "you did, set, moved, stopped, opened or closed anything, that is not true yet: call the tool now. If your "
     "reply only answers, asks the operator a question, or declines, answer with the single word SAME and your "
     "reply goes to the operator as it is.")
-# A reply with no letter or digit in it (Gemini once answered a refusal with "_", 1 in 948) goes
+# A reply with no letter or digit in it (a model can answer a refusal with "_") goes
 # back to the model once with this text; a second such reply reaches the operator as the fallback.
 EMPTY_REPLY_CHALLENGE = "Your reply is empty: tell the operator in a sentence what happened in this turn."
 EMPTY_REPLY_FALLBACK = "The model gave no answer for this turn."
@@ -135,13 +135,13 @@ TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope 
 # Commands the tab asks the operator about before they run (Run / Cancel), whatever the model was
 # told: the stage moves that cross the full range and can collide faster than anyone can react.
 # Long runs are not gated in code; the model summarises and asks only when something looks off
-# (see assistant_manual.md), and Stop microscope ends them.
+# (see manual.md), and Stop microscope ends them.
 CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition")
 
-# What TurnGuard holds a turn to (see mesoSPIM_AiAssistent). The moves and the argument that maps
+# What TurnGuard holds a turn to (see assistant.py). The moves and the argument that maps
 # axis to number; the commands that end a running activity; and the words by which the dispatcher's
-# refusals are told apart. test_ai_assistent.py pins those words to the real refusals, so a change
-# of wording there fails a test here instead of silently disarming the guard.
+# refusals are told apart. These words must match the refusals in remote_control/: a change of
+# wording there silently disarms the guard.
 MOVE_ARGS = {"move_absolute": "targets", "move_relative": "deltas"}
 STOP_COMMANDS = ("stop", "stop_activity", "time_lapse_stop")
 # How often one turn may change the light on the sample before the next change waits for the
@@ -179,11 +179,10 @@ OPTIONS_ADVICE = ("configured_options lists the instrument's own values. Correct
 BUSY_FROM_GUI = "from the GUI"
 
 POLL_INTERVAL_S = 0.15
-# Every turn is appended to a JSONL file in this folder (a config attribute may point elsewhere):
-# the prompt, each tool call with its arguments and result, the reply. Results are cut to this
-# many characters and an image's base64 is replaced by its size.
-TRACES_FOLDER_CONFIG_KEY = "ai_assistant_traces_folder"
-TRACE_RESULT_CHARS = 2000
+# Nothing of the chat is written to disk: the conversation lives in memory until Clear all or
+# Disconnect. A tool result kept for recall_turn is cut to this many characters, an image's base64
+# replaced by its size.
+RECALL_RESULT_CHARS = 2000
 MAX_HISTORY_TURNS = 50  # older turns (and their tool results) are dropped from what the model sees; compaction keeps them cheap
 # Within the memory, the newest turns are kept in full; older ones keep a one-line readout instead
 # of the whole state block and have long tool results shortened. Twenty readouts of 500 tokens

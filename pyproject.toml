@@ -56,6 +56,6 @@ ai-assistant-local = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1", "llama-cpp-p
 mesospim-control = "mesoSPIM.mesoSPIM_Control:run"
 
 [tool.pytest.ini_options]
-# The Remote Control and AI Assistant suites run on a Qt substitute, which cannot share an
-# interpreter with the real-Qt tests: run them by folder, or with mesoSPIM/test/remote_control/run.py.
+# The Remote Control and AI Assistant folders hold real-PyQt scripts and operator-gated live tests:
+# run them with mesoSPIM/test/remote_control/run.py.
 norecursedirs = ["*.egg", ".*", "build", "dist", "venv", "ai_assistant", "remote_control"]

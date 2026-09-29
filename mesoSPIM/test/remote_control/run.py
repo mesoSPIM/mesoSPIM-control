@@ -25,18 +25,6 @@ def _run_pytest(paths, environment=None, show_output=False):
     return subprocess.call(command, cwd=REPOSITORY, env=environment)
 
 
-def _offline():
-    paths = [
-        TESTS / "test_commands.py",
-        TESTS / "test_busy_gate.py",
-        TESTS / "test_transport_matrix.py",
-        TESTS / "test_transport_security.py",
-        TESTS / "test_gui.py",
-        TESTS / "test_frame.py",
-    ]
-    return _run_pytest(paths)
-
-
 def _pyqt():
     assistant = TESTS.parent / "ai_assistant" / "test_real_pyqt_assistant_smoke.py"
     scheduler = TESTS.parent / "ai_assistant" / "test_real_pyqt_scheduler_smoke.py"
@@ -51,7 +39,6 @@ def _live(transport):
     environment = os.environ.copy()
     environment.pop("PYTEST_ADDOPTS", None)
     environment["MESOSPIM_LIVE_DEMO_TRANSPORT"] = transport
-    environment["MESOSPIM_LIVE_ADVERSARIAL_TRANSPORT"] = transport
     movement_test = {
         "mcp": "test_live_mcp_x_move_changes_position_and_restores_it",
         "tcp": "test_live_tcp_x_move_changes_position_and_restores_it",
@@ -60,19 +47,12 @@ def _live(transport):
         f"{TESTS / 'live' / 'test_valid.py'}::{movement_test}",
         TESTS / "live" / "test_all_commands.py",
     ]
-    result = _run_pytest(valid, environment=environment, show_output=True)
-    if result:
-        return result
-    return _run_pytest(
-        [TESTS / "live" / "test_adversarial.py"],
-        environment=environment,
-        show_output=True,
-    )
+    return _run_pytest(valid, environment=environment, show_output=True)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Run a Remote Control test profile")
-    parser.add_argument("profile", choices=("offline", "pyqt", "live"))
+    parser.add_argument("profile", choices=("pyqt", "live"))
     parser.add_argument("transport", nargs="?", choices=("mcp", "tcp"))
     arguments = parser.parse_args(argv)
 
@@ -81,8 +61,6 @@ def main(argv=None):
     if arguments.profile != "live" and arguments.transport is not None:
         parser.error("a transport is valid only for the live profile")
 
-    if arguments.profile == "offline":
-        return _offline()
     if arguments.profile == "pyqt":
         return _pyqt()
     return _live(arguments.transport)

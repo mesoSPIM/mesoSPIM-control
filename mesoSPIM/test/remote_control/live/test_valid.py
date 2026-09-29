@@ -1,7 +1,7 @@
 """Opt-in valid live MCP and TCP tests with state restoration.
 
 This module is never allowed to move a device unless both explicit safety gates
-are set. It is separate from normal CI and from the adversarial corpus.
+are set. It is separate from normal CI.
 """
 
 from __future__ import annotations

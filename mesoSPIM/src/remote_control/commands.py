@@ -27,8 +27,8 @@ import math
 import os
 import time
 
-from . import mesoSPIM_RemoteControl_Config as config
-from .mesoSPIM_RemoteControl_Dispatcher import (
+from . import config
+from .dispatcher import (
     command,
     complete,
     fail,
@@ -546,7 +546,7 @@ def _camera_pixels(core):
 
 
 def _make_acquisition_list(rows):
-    from .utils.acquisitions import Acquisition, AcquisitionList
+    from ..utils.acquisitions import Acquisition, AcquisitionList
 
     out = AcquisitionList([])
     for raw in rows:
@@ -622,7 +622,7 @@ def check_writer_suffix(row, label):
     Core has stopped the stage-position polling, and Core does not resume the polling on that error:
     the position freezes, and a remote move then waits for it for good. A writer mesoSPIM does not
     know is left to Core."""
-    from .plugins.utils import get_image_writer_class_from_name
+    from ..plugins.utils import get_image_writer_class_from_name
 
     if not isinstance(row, dict) or not isinstance(row.get("filename"), str):
         return
@@ -1122,7 +1122,7 @@ def _accept_get_frame(core, args):
 
 def _run_get_frame(core, args):
     """The last frame mesoSPIM displayed, as numbers and (optionally) a small PNG."""
-    from .mesoSPIM_RemoteControl_Frame import describe_frame
+    from .frame import describe_frame
 
     queue = getattr(core, "frame_queue_display", None)
     if not queue:
@@ -2276,7 +2276,7 @@ class SimCore:
 def self_test(source):
     """Smoke-check that the loaded config's limits are actually enforced, over the same run() both
     transports use. Takes a core-like object (reads its cfg). Returns (ok, report_lines)."""
-    from .mesoSPIM_RemoteControl_Dispatcher import run
+    from .dispatcher import run
 
     sim = SimCore(getattr(source, "cfg", None))
     report, ok = [], True

@@ -20,8 +20,8 @@ Maintainer (2026):
 
 from PyQt5 import QtCore, QtWidgets
 
-from . import mesoSPIM_RemoteControl_Config as config
-from . import mesoSPIM_RemoteControl_Dispatcher as dispatcher
+from . import config
+from . import dispatcher
 
 
 class RemoteControlGUI(QtWidgets.QWidget):

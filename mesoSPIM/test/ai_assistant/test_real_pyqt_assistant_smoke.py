@@ -1,5 +1,5 @@
 """Real-PyQt smoke test for the AI Assistant tab and window: builds them offscreen, never a
-worker, a model or a server. Checks what the fake-Qt unit tests cannot: that the setup grid
+worker, a model or a server. Checks that the setup grid
 re-places the key without duplicating it, shows the right fields per type and preset in both
 model boxes, lines the boxes up, stays within the main window's width; that the window lays its
 controls out as designed and appears only when connected; and that Enter sends while Shift+Enter
@@ -20,8 +20,8 @@ try:
 except ModuleNotFoundError as error:
     raise SystemExit("test_real_pyqt_assistant_smoke.py requires PyQt5") from error
 
-from mesoSPIM.src.mesoSPIM_AiAssistent_GUI import CLOUD_MODE, LOCAL_MODE, SAME_AS_LANGUAGE, AiAssistentGUI
-from mesoSPIM.src.mesoSPIM_RemoteControl_GUI import RemoteControlGUI
+from mesoSPIM.src.ai_assistant.gui import CLOUD_MODE, LOCAL_MODE, SAME_AS_LANGUAGE, AiAssistantGUI
+from mesoSPIM.src.remote_control.gui import RemoteControlGUI
 
 MAIN_WINDOW_WIDTH = 964  # the designed width of mesoSPIM_MainWindow.ui
 SLACK = 80               # the boxes may run a little past it; the window is wider in practice
@@ -74,7 +74,7 @@ def items_for(grid, widget):
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = Window()
-    tab = AiAssistentGUI(window)
+    tab = AiAssistantGUI(window)
     window.TabWidget.setCurrentWidget(tab)
     window.show()
     app.processEvents()

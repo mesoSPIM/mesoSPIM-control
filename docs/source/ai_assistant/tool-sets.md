@@ -27,5 +27,4 @@ command not in the set is not offered to the model at all, so it cannot be talke
 model is told which set it runs with and what that set leaves out, so a request for one gets
 "not in this tool set" rather than a stand-in.
 
-The sets are defined in `mesoSPIM_AiAssistent_Config.py` (`TOOL_PROFILES`, `REGULAR_ARGS`);
-`test_ai_assistent.py` checks that Regular offers and withholds what this page says.
+The sets are defined in `mesoSPIM/src/ai_assistant/config.py` (`TOOL_PROFILES`, `REGULAR_ARGS`).

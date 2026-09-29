@@ -1212,25 +1212,25 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_update_gui_from_state.emit()
 
     # Remote Control and AI Assistant: their controllers live on Core's thread, so the tabs start and
-    # stop them through these slots. The code is in mesoSPIM_RemoteControl_*.py and mesoSPIM_AiAssistent*.py.
+    # stop them through these slots. The code is in remote_control/ and ai_assistant/.
     @QtCore.pyqtSlot(str, str, int, str)
     def start_remote_control(self, mode, host, port, token):
-        from .mesoSPIM_RemoteControl_Servers import start_for_core
+        from .remote_control.servers import start_for_core
         start_for_core(self, mode, host, port, token)
 
     @QtCore.pyqtSlot()
     def stop_remote_control(self):
-        from .mesoSPIM_RemoteControl_Servers import stop_for_core
+        from .remote_control.servers import stop_for_core
         stop_for_core(self)
 
     @QtCore.pyqtSlot()
     def start_ai_assistant(self):
-        from .mesoSPIM_AiAssistent import start_assistant_for_core
+        from .ai_assistant.assistant import start_assistant_for_core
         start_assistant_for_core(self)
 
     @QtCore.pyqtSlot()
     def stop_ai_assistant(self):
-        from .mesoSPIM_AiAssistent import stop_assistant_for_core
+        from .ai_assistant.assistant import stop_assistant_for_core
         stop_assistant_for_core(self)
 
     def lightsheet_alignment_mode(self):

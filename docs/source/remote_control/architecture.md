@@ -30,12 +30,15 @@ one-operation rule, and produces the public reply.
 
 ## Files
 
+All in `mesoSPIM/src/remote_control/`:
+
 ```text
-mesoSPIM_RemoteControl_Config.py     constants, defaults, and shared names
-mesoSPIM_RemoteControl_Dispatcher.py operation state, dispatch, JSON, and errors
-mesoSPIM_RemoteControl_Commands.py   validation, limits, and 56 commands
-mesoSPIM_RemoteControl_Servers.py    Core-thread routing, TCP, MCP, startup, and shutdown
-mesoSPIM_RemoteControl_GUI.py        operator controls and acquisition-table bridge
+config.py      constants, defaults, and shared names
+dispatcher.py  operation state, dispatch, JSON, and errors
+commands.py    validation, limits, and 56 commands
+frame.py       the frame readouts (get_frame, get_snapshot)
+servers.py     Core-thread routing, TCP, MCP, startup, and shutdown
+gui.py         operator controls and acquisition-table bridge
 ```
 
 Existing files receive only integration hooks:
@@ -109,9 +112,9 @@ protected by one lock and one Core-owned operation record.
 
 ## Extending the command set
 
-> **Extension rule:** add new remote calls to `mesoSPIM_RemoteControl_Commands.py`. Do not add
+> **Extension rule:** add new remote calls to `remote_control/commands.py`. Do not add
 > command-specific branches to the TCP server, MCP server, dispatcher, Core integration hooks, or
-> MainWindow. A command registered once in `_Commands.py` is available through both transports.
+> MainWindow. A command registered once in `commands.py` is available through both transports.
 
 Each new command should have three small parts:
 

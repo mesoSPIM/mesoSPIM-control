@@ -6,7 +6,7 @@ dispatcher, validation rules, operation gate, and command results. A session bin
 transport; starting or stopping it remains an explicit operator action in the GUI.
 
 The server layer understands wire formats but not microscope command semantics. Commands and
-hardware limits remain in ``mesoSPIM_RemoteControl_Commands``. Shutdown closes the acceptor before
+hardware limits remain in ``remote_control.commands``. Shutdown closes the acceptor before
 the listener so a late or stalled request cannot actuate the microscope after the operator stops
 remote control.
 
@@ -27,11 +27,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from PyQt5 import QtCore, QtNetwork
 
-from . import mesoSPIM_RemoteControl_Config as config
+from . import config
 
 # Importing Commands fills the dispatcher registry before either server accepts requests.
-from . import mesoSPIM_RemoteControl_Commands  # noqa: F401
-from .mesoSPIM_RemoteControl_Dispatcher import (
+from . import commands  # noqa: F401
+from .dispatcher import (
     EMERGENCY,
     PROCESSING,
     STOPPING,
@@ -48,7 +48,7 @@ from .mesoSPIM_RemoteControl_Dispatcher import (
     parse_call,
     error_info,
 )
-from .mesoSPIM_RemoteControl_Commands import self_test
+from .commands import self_test
 
 
 logger = logging.getLogger(__name__)

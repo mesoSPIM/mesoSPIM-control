@@ -8,7 +8,7 @@ are mutually exclusive.
 
 The window is the chat, styled like a coding-agent chat: your question bold on its own panel, the
 answer plain under the commands it ran when Show tool calls is on. Images stay out of the chat: a
-frame goes to the vision model and the trace. Enter submits; the input disables during a turn
+frame goes to the vision model only. Enter submits; the input disables during a turn
 (single-flight); Cancel prompt stops the assistant, Stop microscope stops the instrument.
 
 Maintainer (2026):
@@ -26,10 +26,10 @@ import time
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from . import mesoSPIM_AiAssistent_Config as config
-from . import mesoSPIM_RemoteControl_Config as rc_config
-from .mesoSPIM_AiAssistent import AssistantWorker, Endpoint, Scheduler, traces_folder
-from .mesoSPIM_AiAssistent_Local import LocalModelServer, list_models, models_folder, projector_for
+from . import config
+from ..remote_control import config as rc_config
+from .assistant import AssistantWorker, Endpoint, Scheduler
+from .local import LocalModelServer, list_models, models_folder, projector_for
 
 LOCAL_MODE = "Local AI"
 CLOUD_MODE = "Cloud AI"
@@ -247,24 +247,24 @@ class AssistantWindow(QtWidgets.QWidget):
     def __init__(self, tab, font):
         super().__init__(tab.main_window, QtCore.Qt.Window)
         self.tab = tab
-        self.setObjectName("AiAssistentWindow")
+        self.setObjectName("AiAssistantWindow")
         self.setWindowTitle("mesoSPIM AI Assistant")
         self.setStyleSheet("QPushButton { padding: 3px 9px; }"
-                           "QPushButton#AiAssistentStopButton { color: #ff4d4d; font-weight: bold; }")
+                           "QPushButton#AiAssistantStopButton { color: #ff4d4d; font-weight: bold; }")
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
 
         self.output = QtWidgets.QTextEdit(self)
         self.output.setReadOnly(True)
-        self.output.setObjectName("AiAssistentOutput")
+        self.output.setObjectName("AiAssistantOutput")
         self.output.setFont(font)
         self.output.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)          # wrap; no horizontal bar
         self.output.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)   # scrollbar from the start
         layout.addWidget(self.output, 1)
 
         self.status = QtWidgets.QLabel("", self)
-        self.status.setObjectName("AiAssistentStatus")
+        self.status.setObjectName("AiAssistantStatus")
         self.status.setFont(font)
         self.status.setVisible(False)                             # shown only while a turn runs
         layout.addWidget(self.status)
@@ -289,14 +289,14 @@ class AssistantWindow(QtWidgets.QWidget):
 
         self.input = _Input(self)
         self.input.setPlaceholderText("Ask the microscope…")
-        self.input.setObjectName("AiAssistentInput")
+        self.input.setObjectName("AiAssistantInput")
         self.input.setFont(font)
         self.input.returnPressed.connect(tab.on_submit)
         self.interrupt = QtWidgets.QPushButton("Cancel prompt", self)
         self.interrupt.setFont(font)
         self.interrupt.clicked.connect(tab.on_interrupt)      # always clickable; a no-op between turns
         self.stop_button = QtWidgets.QPushButton("Stop microscope", self)
-        self.stop_button.setObjectName("AiAssistentStopButton")
+        self.stop_button.setObjectName("AiAssistantStopButton")
         self.stop_button.setFont(font)
         self.stop_button.clicked.connect(tab.on_stop_microscope)   # always enabled: the emergency stop
         self.clear_button = QtWidgets.QPushButton("Clear context", self)
@@ -330,7 +330,7 @@ class AssistantWindow(QtWidgets.QWidget):
         self.tab.on_window_closed()
 
 
-class AiAssistentGUI(QtWidgets.QWidget):
+class AiAssistantGUI(QtWidgets.QWidget):
     """The tab: setup and the session, shaped like the Remote Control tab. One Setup AI assistant
     box (Language model, Vision model, Preferences), a status line, and Connect and Disconnect;
     the chat is in the AssistantWindow, which Connect opens."""
@@ -341,7 +341,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         super().__init__(parent.TabWidget)
         self.main_window = parent
         self.core = parent.core
-        self.setObjectName("AiAssistentTabWidget")
+        self.setObjectName("AiAssistantTabWidget")
         self._worker = None
         self._thread = None
         self._state = "idle"                    # idle, starting (a local model loads), ready; the status line shows it
@@ -397,7 +397,6 @@ class AiAssistentGUI(QtWidgets.QWidget):
         self._worker.sig_error.connect(self._on_error)
         self._worker.sig_done.connect(self._on_done)
         self._apply_options()
-        self._worker.trace_folder = traces_folder(getattr(self.core, "cfg", None))
         self._worker.scheduler = self.scheduler
         self._thread.start()
         return True
@@ -438,7 +437,7 @@ class AiAssistentGUI(QtWidgets.QWidget):
         status_row.setSpacing(8)
         status_row.addWidget(_field_label("Status", group, font, gap=0))
         self.status_label = QtWidgets.QLabel(group)
-        self.status_label.setObjectName("AiAssistentStatusLabel")
+        self.status_label.setObjectName("AiAssistantStatusLabel")
         self.status_label.setFont(font)
         self.status_label.setWordWrap(True)
         status_row.addWidget(self.status_label, 1)

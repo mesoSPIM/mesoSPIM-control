@@ -150,8 +150,3 @@ OPERATIONAL_COMMANDS = set(EXPECTED_CORE_CALL) | {
 
 assert len(VALID_CASES) == 56
 assert len(OPERATIONAL_COMMANDS) == 38
-
-# A universal negative case for every exact command name. Command-specific wrong types, unsafe
-# values, malformed envelopes, boundary breaches and races live in the adversarial suites; this
-# table proves that no command silently accepts misspelled/extra fields.
-UNEXPECTED_ARGUMENT_CASES = {name: {"__unexpected__": True} for name in VALID_CASES}

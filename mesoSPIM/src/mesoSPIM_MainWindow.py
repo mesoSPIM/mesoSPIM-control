@@ -25,8 +25,8 @@ from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this li
 from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
 from .mesoSPIM_State import mesoSPIM_StateSingleton
 from .mesoSPIM_Core import mesoSPIM_Core
-from .mesoSPIM_RemoteControl_GUI import RemoteControlGUI
-from .mesoSPIM_AiAssistent_GUI import AiAssistentGUI
+from .remote_control.gui import RemoteControlGUI
+from .ai_assistant.gui import AiAssistantGUI
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
 from .utils.config_loader import check_zoom_keys, is_demo
@@ -287,7 +287,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         #self.log_display_handler.flushOnClose = False #discontinued
         logger.info('Closing the application')
         self.remote_control.shutdown()
-        self.ai_assistent.shutdown()
+        self.ai_assistant.shutdown()
         self.camera_window.close()
         self.acquisition_manager_window.close()
         if self.optimizer:
@@ -636,7 +636,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         # The Remote Control and AI Assistant tabs; all their code is in their own modules.
         self.remote_control = RemoteControlGUI(self)
-        self.ai_assistent = AiAssistentGUI(self)
+        self.ai_assistant = AiAssistantGUI(self)
 
         ''' Timelapse tab '''
         self.AsFastAsPossibleCheckBox.toggled.connect(self.toggle_timelapse_interval)

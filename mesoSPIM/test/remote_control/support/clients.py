@@ -9,8 +9,8 @@ import json
 import socket
 import urllib.request
 
-from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
-from mesoSPIM.src import mesoSPIM_RemoteControl_Servers as srv
+from mesoSPIM.src.remote_control import config as config
+from mesoSPIM.src.remote_control import servers as srv
 
 frame = srv.frame
 FrameReader = srv.FrameReader

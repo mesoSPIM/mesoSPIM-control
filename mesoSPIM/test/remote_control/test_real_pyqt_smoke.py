@@ -17,11 +17,11 @@ try:
 except ModuleNotFoundError as error:
     raise SystemExit("real_pyqt_smoke.py requires PyQt5") from error
 
-from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
-from mesoSPIM.src.mesoSPIM_RemoteControl_Commands import COMMANDS
-from mesoSPIM.src.mesoSPIM_RemoteControl_Dispatcher import complete, operation_snapshot, run
-from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
-from mesoSPIM.src.mesoSPIM_RemoteControl_GUI import RemoteControlGUI
+from mesoSPIM.src.remote_control import config as config
+from mesoSPIM.src.remote_control.commands import COMMANDS
+from mesoSPIM.src.remote_control.dispatcher import complete, operation_snapshot, run
+from mesoSPIM.src.remote_control.servers import Acceptor
+from mesoSPIM.src.remote_control.gui import RemoteControlGUI
 
 
 class Core(QtCore.QObject):

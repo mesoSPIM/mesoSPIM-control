@@ -1,1 +1,1 @@
-"""Offline tests for the AI Assistant."""
+"""Real-PyQt tests for the AI Assistant."""

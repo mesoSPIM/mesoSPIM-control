@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from mesoSPIM.test.remote_control.support.clients import mcp_call
-from mesoSPIM.src import mesoSPIM_RemoteControl_Config as config
+from mesoSPIM.src.remote_control import config as config
 
 
 def network_timeout():

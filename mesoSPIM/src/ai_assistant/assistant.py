@@ -24,11 +24,11 @@ from pathlib import Path
 
 from PyQt5 import QtCore
 
-from .mesoSPIM_RemoteControl_Dispatcher import COMMANDS, READ, WAIT, COMPLETED, FAILED, STOPPED, error_info
-from .mesoSPIM_RemoteControl_Servers import Acceptor
-from .mesoSPIM_RemoteControl_Commands import self_test
-from . import mesoSPIM_AiAssistent_Config as config
-from . import mesoSPIM_RemoteControl_Config as rc_config
+from ..remote_control.dispatcher import COMMANDS, READ, WAIT, COMPLETED, FAILED, STOPPED, error_info
+from ..remote_control.servers import Acceptor
+from ..remote_control.commands import self_test
+from . import config
+from ..remote_control import config as rc_config
 
 logger = logging.getLogger(__name__)
 
@@ -272,9 +272,9 @@ class TurnGuard:
         return self._sync() and self.busy_from_gui and name in config.STOP_COMMANDS
 
     def is_one_change_too_many(self, name):
-        """True when this turn has already changed this light setting as often as a turn may: asked
-        to double the intensity of a dim frame once, a 12B went 20, 40, 80, 100 because the next
-        frame looked no better. The light on the sample is the operator's to escalate."""
+        """True when this turn has already changed this light setting as often as a turn may: a model
+        asked to double the intensity once can keep doubling while the next frame looks no better.
+        The light on the sample is the operator's to escalate."""
         return self._sync() and self.light_changes.get(name, 0) >= config.LIGHT_CHANGES_PER_TURN.get(name, 1 << 30)
 
     def take_fresh_snap(self):
@@ -564,10 +564,8 @@ def vision_answer(endpoint, image, question, stats):
 
     agent = Agent(
         build_model(endpoint),
-        # What to take from the picture comes first and says nothing of stretching: told the frame
-        # was "contrast-stretched" and "cannot show exposure", gemma4:12b answered which of three
-        # spots is brightest with "all appear equally bright because the image is contrast-stretched",
-        # on every scaling tried, and compared them as soon as those words were gone.
+        # What to take from the picture comes first and says nothing of stretching: a model told the
+        # frame is contrast-stretched judges brightness by that word instead of by the picture.
         instructions="You are looking at one frame from a light-sheet microscope camera. Answer the "
                      "operator's question about it in a few sentences. Judge from the picture what is "
                      "in it: shapes, counts, positions, focus, artefacts, and which parts are brighter "
@@ -1030,18 +1028,11 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     return tools
 
 
-def traces_folder(cfg):
-    """Where turns are recorded: the microscope config's ``ai_assistant_traces_folder`` when
-    set, else ``~/mesoSPIM/assistant_traces``."""
-    configured = getattr(cfg, config.TRACES_FOLDER_CONFIG_KEY, None)
-    return configured or os.path.join(os.path.expanduser("~"), "mesoSPIM", "assistant_traces")
-
-
 def _brief(content):
-    """A tool result for the record: text, an image's base64 replaced by its size, cut short."""
+    """A tool result for the session memory: text, an image's base64 replaced by its size, cut short."""
     text = content if isinstance(content, str) else json.dumps(content, default=str)
     text = re.sub(r'"base64": ?"([^"]*)"', lambda m: f'"base64": "<{len(m.group(1))} chars>"', text)
-    return text[:config.TRACE_RESULT_CHARS]
+    return text[:config.RECALL_RESULT_CHARS]
 
 
 def turn_trace(messages):
@@ -1061,7 +1052,7 @@ def turn_trace(messages):
 
 def served_models(messages):
     """The names of the models that answered in these messages, in order of first appearance: the
-    fallback model rolls in silently on a rate limit, and a trace should say who really answered."""
+    fallback model rolls in silently on a rate limit, and the operator is told who really answered."""
     names = []
     for message in messages:
         name = getattr(message, "model_name", None)
@@ -1070,21 +1061,12 @@ def served_models(messages):
     return names
 
 
-def write_trace(folder, record):
-    """Append one turn to today's JSONL file in the folder."""
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, time.strftime("assistant-%Y-%m-%d.jsonl"))
-    with open(path, "a", encoding="utf-8") as sink:
-        sink.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
-
-
 _STATE_BLOCK = re.compile(r"\s*<microscope_state>.*?</microscope_state>\s*", re.DOTALL)
 
 
 def without_state_block(reply):
     """The reply without any <microscope_state> block a model copied from its input: the manual
-    forbids quoting it, and a small model does it anyway. The evaluation scores the raw reply, so
-    the habit stays visible there; the operator is spared the JSON."""
+    forbids quoting it, and a small model does it anyway; the operator is spared the JSON."""
     return _STATE_BLOCK.sub("\n", reply).strip() if reply else reply
 
 
@@ -1138,7 +1120,7 @@ def build_system_prompt(acceptor=None, profile=None, axes=None):
     kind. What each does and its argument shape are in its tool description and schema, which the
     model receives anyway; the prompt does not repeat them, which keeps it small enough for a local
     model's context alongside the conversation."""
-    preamble = (Path(__file__).parent / "assistant_manual.md").read_text(encoding="utf-8")
+    preamble = (Path(__file__).parent / "manual.md").read_text(encoding="utf-8")
     offered = offered_commands(profile)
     lines = [f"- {label}: {', '.join(cmd.name for cmd in offered if cmd.kind == kind)}"
              for kind, label in _KINDS if any(cmd.kind == kind for cmd in offered)]
@@ -1301,7 +1283,7 @@ def _build_one(endpoint, model_id):
 
 def throttled(model, interval_s):
     """The model with at least `interval_s` seconds between its requests, for a host with a tight
-    per-minute limit: a free tier's input-tokens-per-minute cap (16,000 on Gemma 4) allows two or
+    per-minute limit: a free tier's input-tokens-per-minute cap can allow only two or
     three requests a minute at this prompt size, and one turn fires several. Spacing the requests
     themselves is what lets such a turn complete; a pause between turns cannot reach inside one."""
     import asyncio
@@ -1461,14 +1443,11 @@ class AssistantWorker(QtCore.QObject):
         self.cancel = threading.Event()
         self._loop = None                # the worker's event loop, made by the first turn and kept
         self._turn = None                # (event loop, task) of the turn in progress: what Cancel cancels
-        self._fired = []                 # the tool calls of the turn in progress, as they fire
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit, cancel=self.cancel)
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
         self.look_image_bin = config.LOOK_BIN
         self.axes = dict(config.DEFAULT_AXES)            # what a positive move does to the sample in the image
         self._agent_axes = None                          # the axes the agent was built with
-        self.trace_folder = None                           # set by the tab: every turn is recorded there
-        self.session = time.strftime("%Y-%m-%dT%H:%M:%S")  # names the conversation in the record
 
     def configure(self, endpoint, vision_endpoint=None, profile=None):
         """Use another endpoint (and reader for frames, and tool profile) from the next turn on;
@@ -1487,7 +1466,6 @@ class AssistantWorker(QtCore.QObject):
 
     def reset(self):
         """Forget the conversation (Clear all). Called between turns, like configure."""
-        self.session = time.strftime("%Y-%m-%dT%H:%M:%S")
         self._history = []
         self.store = SessionStore()
         if self.eyes is not None:
@@ -1496,10 +1474,8 @@ class AssistantWorker(QtCore.QObject):
 
     @QtCore.pyqtSlot(str)
     def run_turn(self, text):
-        started = time.monotonic()
         try:
             self.cancel.clear()
-            self._fired = []
             if self._agent is None or self._agent_axes != self.axes:      # the axes are in the prompt
                 self._agent_axes = dict(self.axes)
                 self._agent = build_agent(self._acceptor, self.cancel, on_call=self._emit_tool,
@@ -1515,17 +1491,15 @@ class AssistantWorker(QtCore.QObject):
                                                            message_history=self._history))
             self.store.finish(result.new_messages(), result.output)
             self._history = trim_history(result.all_messages(), self.max_history_turns)
-            self._record(text, result.new_messages(), started, reply=result.output)
             chosen = self._endpoint.model if self._endpoint else None
             others = [name for name in served_models(result.new_messages()) if name != chosen]
             if others:   # the operator must know: another model is not the one they evaluated
                 self.sig_served.emit(f"{', '.join(others)} answered this turn, standing in for {chosen}")
             self.sig_reply.emit(without_state_block(result.output))
         except asyncio.CancelledError:
-            self._record(text, [], started, error="cancelled")
+            pass
         except Exception as error:
             logger.exception("AI Assistant turn failed")
-            self._record(text, [], started, error=describe_error(error))
             self.sig_error.emit(describe_error(error))
         finally:
             self.sig_done.emit()
@@ -1546,37 +1520,10 @@ class AssistantWorker(QtCore.QObject):
         finally:
             self._turn = None
 
-    def _record(self, prompt, messages, started, reply=None, error=None):
-        """One line per turn in the traces folder, so what the assistant did can be read back
-        later. Recording never fails a turn."""
-        if not self.trace_folder:
-            return
-        endpoint = self._endpoint
-        current = self.store.turns[-1] if self.store.turns else {}
-        record = {
-            "time": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "session": self.session,                                        # one conversation, until Clear or Disconnect
-            "turn": current.get("turn"),
-            "provider": endpoint.provider if endpoint else None,
-            "model": endpoint.model if endpoint else None,
-            "profile": self._profile,
-            "prompt": prompt,
-            "tools": turn_trace(messages) if messages else self._fired,   # a turn cut short: what it started
-            "served": served_models(messages),
-            "reply": reply,
-            "error": error,
-            "readout": current.get("readout"),                              # the state the model was given
-            "seconds": round(time.monotonic() - started, 2),
-        }
-        try:
-            write_trace(self.trace_folder, record)
-        except OSError as problem:
-            logger.warning("could not record the assistant turn in %s: %s", self.trace_folder, problem)
 
     def _emit_tool(self, name, args):
         """Called at the tool boundary (worker thread) as each command fires; the queued signal
         delivers it to the GUI so tool calls stream in live rather than all at the end of the turn."""
-        self._fired.append({"tool": name, "args": json.loads(args)})
         self.sig_tool.emit(name, args)
 
     def interrupt(self):

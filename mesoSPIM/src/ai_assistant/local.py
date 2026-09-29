@@ -21,7 +21,7 @@ import subprocess
 import sys
 import tempfile
 
-from . import mesoSPIM_AiAssistent_Config as config
+from . import config
 
 
 def models_folder(cfg):

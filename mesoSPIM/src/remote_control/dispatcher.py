@@ -8,8 +8,8 @@ Clients poll ``get_progress`` for the terminal result. This module also provides
 parser shared by the wire protocols.
 
 Command names, hardware calls, and microscope-specific limits belong in
-``mesoSPIM_RemoteControl_Commands``. Socket handling belongs in
-``mesoSPIM_RemoteControl_Servers``. Keeping those concerns out of this module makes the dispatcher
+``remote_control.commands``. Socket handling belongs in
+``remote_control.servers``. Keeping those concerns out of this module makes the dispatcher
 small enough to reason about and ensures TCP and MCP follow the same execution rules.
 
 Maintainer (2026):
@@ -24,7 +24,7 @@ import threading
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from . import mesoSPIM_RemoteControl_Config as config
+from . import config
 
 
 # --- Public errors and command definitions ---

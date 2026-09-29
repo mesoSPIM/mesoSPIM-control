@@ -1,13 +1,11 @@
 """Real-PyQt smoke test for the assistant's schedules: the tab's own QTimer, in a running Qt
 event loop, fires a due schedule as a turn on the real worker thread, which runs a real agent
 (against a scripted model, never a network) whose tool dispatches through a real Acceptor on the
-Core thread; Stop microscope clears the schedules and nothing fires after it. The fake-Qt unit
-tests call the tick by hand; this is the timer itself."""
+Core thread; Stop microscope clears the schedules and nothing fires after it."""
 from __future__ import annotations
 
 import os
 import sys
-import tempfile
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,11 +19,11 @@ try:
 except ModuleNotFoundError as error:
     raise SystemExit("test_real_pyqt_scheduler_smoke.py requires PyQt5") from error
 
-from mesoSPIM.src import mesoSPIM_AiAssistent as ai
-from mesoSPIM.src import mesoSPIM_AiAssistent_Config as config
-from mesoSPIM.src.mesoSPIM_AiAssistent_GUI import AiAssistentGUI
-from mesoSPIM.src.mesoSPIM_RemoteControl_GUI import RemoteControlGUI
-from mesoSPIM.src.mesoSPIM_RemoteControl_Servers import Acceptor
+from mesoSPIM.src.ai_assistant import assistant as ai
+from mesoSPIM.src.ai_assistant import config as config
+from mesoSPIM.src.ai_assistant.gui import AiAssistantGUI
+from mesoSPIM.src.remote_control.gui import RemoteControlGUI
+from mesoSPIM.src.remote_control.servers import Acceptor
 
 EVERY_S = config.SCHEDULE_MIN_SECONDS          # the shortest schedule the tab allows
 WATCH_S = 2.5 * EVERY_S                        # long enough for two firings
@@ -42,7 +40,7 @@ class Core(QtCore.QObject):
     def __init__(self):
         super().__init__()
         self.state = {"state": "idle"}
-        self.cfg = SimpleNamespace(version="pyqt-smoke", ai_assistant_traces_folder=tempfile.mkdtemp(prefix="traces_"))
+        self.cfg = SimpleNamespace(version="pyqt-smoke")
         self._remote_session = {"operation": None, "counter": 0}
         self._remote_control = None
         self._assistant_acceptor = None
@@ -129,7 +127,7 @@ def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     ai.build_model = lambda endpoint: scripted_model()             # no network in this test
     window = Window()
-    tab = AiAssistentGUI(window)
+    tab = AiAssistantGUI(window)
     window.TabWidget.setCurrentWidget(tab)
     window.show()
     app.processEvents()
