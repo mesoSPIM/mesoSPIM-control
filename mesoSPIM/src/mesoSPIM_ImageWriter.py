@@ -367,7 +367,10 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         # Place holder prior to image processing plugins
         if acq['processing'] == 'MAX':
             try:
-                self.tiff_mip_writer.write(self.mip_image.T[::-1]) # Transform image before saving
+                px_size_um = self.cfg.pixelsize[acq['zoom']]
+                self.tiff_mip_writer.write(self.mip_image.T[::-1], # Transform image before saving
+                                           resolution=(1. / px_size_um, 1. / px_size_um),
+                                           metadata={'unit': 'um'})
                 self.tiff_mip_writer.close()
             except Exception as e:
                 logger.error(f'{e}')
