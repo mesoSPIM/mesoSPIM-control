@@ -17,11 +17,13 @@ logger = logging.getLogger(__name__)
 try:
     import nidaqmx
     import nidaqmx.system  # the driver check below needs this submodule, do not rely on Task pulling it in
-    from nidaqmx.constants import AcquisitionType, LineGrouping, TaskMode
+    from nidaqmx.constants import AcquisitionType, LineGrouping, TaskMode, RegenerationMode, Level
+    from nidaqmx.errors import DaqError
     NIDAQMX_AVAILABLE = True
 except ImportError as error:
     nidaqmx = None
-    AcquisitionType = LineGrouping = TaskMode = None
+    AcquisitionType = LineGrouping = TaskMode = RegenerationMode = Level = None
+    DaqError = Exception
     NIDAQMX_AVAILABLE = False
     logger.info(f"The 'nidaqmx' package is not available ({error}). "
                 f"NI hardware cannot be used, demo mode is unaffected.")

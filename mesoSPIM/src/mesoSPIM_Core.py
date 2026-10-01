@@ -243,6 +243,19 @@ class mesoSPIM_Core(QtCore.QObject):
         else: # Default all other stages to TTL False
             self.TTL_mode_enabled_in_cfg = False
 
+        # Continuous-regeneration waveform mode, selected by
+        # cfg.acquisition_hardware['waveform_mode'] == 'continuous'. The whole stack is
+        # launched by one master trigger, so the stage must step on hardware TTL:
+        # requires ASI TTL stepping, otherwise falls back to the default 'stepped' mode.
+        self.continuous_acq_mode = False
+        if self.cfg.acquisition_hardware.get('waveform_mode', 'stepped') == 'continuous':
+            if self.TTL_mode_enabled_in_cfg is True:
+                self.continuous_acq_mode = True
+                logger.info("Waveform mode: CONTINUOUS regeneration (one hardware launch per stack).")
+            else:
+                logger.warning("waveform_mode='continuous' requires ASI TTL stepping "
+                               "(asi_parameters['ttl_motion_enabled']=True). Falling back to 'stepped'.")
+
         self.metadata_file = None
         # self.acquisition_list_rotation_position = {}
         self.state['state'] = 'idle'
@@ -725,10 +738,20 @@ class mesoSPIM_Core(QtCore.QObject):
         self.waveformer.stop_tasks()
         self.waveformer.close_tasks()
 
-    def prepare_image_series(self):
-        '''Prepares an image series without waveform update'''
-        self.waveformer.create_tasks()
-        self.waveformer.write_waveforms_to_tasks()
+    def prepare_image_series(self, n_planes=None):
+        '''Prepares an image series without waveform update.
+
+        Stepped mode: the tasks are created here and started/triggered/stopped once per plane.
+        Continuous mode: the tasks for the whole stack are created, written and armed here,
+        and launched later by a single master trigger in _run_acquisition_continuous().
+        '''
+        if self.continuous_acq_mode and n_planes is not None:
+            self.waveformer.create_tasks_continuous(n_planes)
+            self.waveformer.write_waveforms_to_tasks()
+            self.waveformer.start_tasks()  # arm AO and counters; nothing runs until the master trigger
+        else:
+            self.waveformer.create_tasks()
+            self.waveformer.write_waveforms_to_tasks()
 
     @log_cpu_core
     def snap_image_in_series(self, laser_blanking=True):
@@ -748,7 +771,17 @@ class mesoSPIM_Core(QtCore.QObject):
     @log_cpu_core
     def close_image_series(self):
         '''Cleans up after series without waveform update'''
-        self.waveformer.close_tasks()
+        if self.continuous_acq_mode:
+            # The AO task may still be regenerating: stop it first (stopping twice is harmless),
+            # then hold the outputs at the sweep end, as a finished stepped sweep would.
+            self.waveformer.stop_tasks()
+            self.waveformer.close_tasks()
+            try:
+                self.waveformer.park_ao_outputs()
+            except Exception as e:
+                logger.error(f"Parking the AO outputs after a continuous stack failed: {e}")
+        else:
+            self.waveformer.close_tasks()
         logger.debug("close_image_series() finished")
 
     def live(self):
@@ -1047,6 +1080,11 @@ class mesoSPIM_Core(QtCore.QObject):
             self.move_absolute({'theta_abs': target_rotation}, wait_until_done=True)
         
         self.move_absolute(startpoint, wait_until_done=True)
+        # The move above can take tens of seconds and pumps no events, so the GUI is
+        # frozen throughout it. Pump here so a Stop pressed during the move is seen
+        # (run_acquisition() acts on it); no early return, or close_acquisition()
+        # would run against an image series that was never opened.
+        QtWidgets.QApplication.processEvents()
         self.serial_worker.stage.report_position() # Last Position update before acquisition starts for proper tile view display, directly from the Core thread
         self.sig_status_message.emit('Setting Filter & Shutter')
         self.set_shutterconfig(acq['shutterconfig'])
@@ -1077,8 +1115,34 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_status_message.emit('Preparing camera: Allocating memory')
         self.sig_prepare_image_series.emit(acq, acq_list) # signal to the Camera
         self.image_writer.prepare_acquisition(acq, acq_list)
-        self.prepare_image_series()
+        if self.continuous_acq_mode:
+            self._warn_if_camera_slower_than_sweep()
+        self.prepare_image_series(acq.get_image_count())
         self.sig_write_metadata.emit(acq, acq_list)
+
+    def _warn_if_camera_slower_than_sweep(self):
+        '''Continuous mode triggers the camera every sweeptime with no slack: warn if a frame cannot fit.
+
+        Only knows the Photometrics line-delay scan mode, where a frame takes at least
+        exposure + rows x scan_line_delay x 10.26 us. A camera still busy when the next
+        trigger arrives drops it, and the stack then ends short.
+        '''
+        cp = getattr(self.cfg, 'camera_parameters', {})
+        if getattr(self.cfg, 'camera', '') != 'Photometrics' or cp.get('scan_mode') != 1:
+            return
+        try:
+            y_binning = int(str(self.state['camera_binning']).split('x')[-1])
+            rows = cp['y_pixels'] // y_binning
+            frame_time = self.state['camera_exposure_time'] + rows * cp['scan_line_delay'] * 10.26e-6
+            period = self.state['sweeptime']
+        except Exception as e:
+            logger.debug(f"Camera timing check skipped: {e}")
+            return
+        if frame_time > period:
+            logger.warning(f"Continuous mode: a camera frame takes at least {frame_time * 1e3:.1f} ms "
+                           f"(exposure {self.state['camera_exposure_time'] * 1e3:.0f} ms + {rows} rows x "
+                           f"scan_line_delay {cp['scan_line_delay']}), longer than the {period * 1e3:.1f} ms sweep. "
+                           f"The camera will miss triggers; shorten the exposure or scan_line_delay.")
 
     def run_acquisition(self, acq, acq_list):
         """Execute a single acquisition: start waveforms, trigger the camera, and collect frames.
@@ -1092,6 +1156,20 @@ class mesoSPIM_Core(QtCore.QObject):
             acq (Acquisition): Acquisition descriptor for the current volume.
             acq_list (AcquisitionList): Full list (provides tile/channel/rotation context).
         """
+        # Deliver a Stop queued during the long, pump-free prepare phase before any light
+        # is switched on. sig_state_request is a QueuedConnection and the Core thread's
+        # event loop is not running here, so without this pump a continuous stack would
+        # be launched in full and only then aborted.
+        QtWidgets.QApplication.processEvents()
+        if self.stopflag:
+            logger.info('Acquisition aborted before launch (Stop pending).')
+            self.image_acq_start_time = self.image_acq_end_time = time.time()
+            self.image_acq_start_time_string = self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+            self._abort_image_series(acq, acq_list)
+            return
+        if self.continuous_acq_mode:
+            self._run_acquisition_continuous(acq, acq_list)
+            return
         steps = acq.get_image_count()
         self.sig_status_message.emit('Running Acquisition')
         self.open_shutters()
@@ -1162,6 +1240,88 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.close_shutters()
 
+    def _abort_image_series(self, acq, acq_list):
+        '''On Stop: release the DAQ tasks and let the camera and writer close the series.
+
+        Same sequence as the stepped loop's Stop branch; close_acquisition() skips the
+        series cleanup when stopflag is set, so it has to happen here.
+        '''
+        self.close_image_series()
+        self._camera_end_done = False
+        self._writer_end_done = False
+        self.sig_end_image_series.emit(acq, acq_list)
+        self._wait_for_end_image_series()
+
+    def _run_acquisition_continuous(self, acq, acq_list):
+        """Run one stack in continuous-regeneration mode.
+
+        The DAQ tasks were created and armed in prepare_image_series(). Open the shutters,
+        enable the laser once for the whole stack, fire ONE master trigger, then drain
+        camera frames until every plane has arrived. The stage steps on its TTL pulse
+        train: no per-plane waveform start/stop and no per-plane serial move.
+
+        Args:
+            acq (Acquisition): Acquisition descriptor for the current volume.
+            acq_list (AcquisitionList): Full acquisition list.
+        """
+        steps = acq.get_image_count()
+        period = getattr(self.waveformer, 'continuous_plane_period', self.state['sweeptime'])
+        self.sig_status_message.emit('Running Acquisition (continuous)')
+        self.open_shutters()
+        self.image_acq_start_time = time.time()
+        self.image_acq_start_time_string = time.strftime("%Y%m%d-%H%M%S")
+        self.laserenabler.enable(self.state['laser'])  # once for the whole stack
+
+        base_count = self.image_count
+        try:
+            self.waveformer.launch_continuous()
+            # The hardware finishes after steps * period; allow for the last frame's
+            # readout and the writer hand-off before declaring frames missing.
+            deadline = time.time() + steps * period + 10.0
+            while self.camera_worker.cur_image < steps and not self.stopflag:
+                prev = self.camera_worker.cur_image
+                # One drain request at a time: Photometrics returns one frame per call,
+                # Hamamatsu the whole backlog.
+                self.sig_add_images_to_image_series.emit(acq, acq_list)
+                wait_start = time.time()
+                while self.camera_worker.cur_image == prev and not self.stopflag:
+                    QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+                    time.sleep(0.002)
+                    if time.time() - wait_start > 2.0 or time.time() > deadline:
+                        break
+
+                cur = min(self.camera_worker.cur_image, steps)
+                self.image_count = base_count + cur
+                time_passed = time.time() - self.start_time
+                if self.image_count > 0 and self.image_count % 100 == 0 and time_passed > 0:
+                    self.state['current_framerate'] = self.image_count / time_passed
+                if cur % 5 == 0 or cur >= steps:
+                    time_remaining = time_passed / max(self.image_count, 1) * (self.total_image_count - self.image_count)
+                    self.send_progress(self.acquisition_count, self.total_acquisition_count,
+                                       cur, steps, self.total_image_count, self.image_count,
+                                       convert_seconds_to_string(time_passed),
+                                       convert_seconds_to_string(time_remaining))
+                if time.time() > deadline:
+                    # The trigger trains are hardware-timed: frames that have not arrived by
+                    # now were never exposed. The stage still stepped on every TTL, so the
+                    # z positions of the frames that did arrive can no longer be trusted.
+                    logger.error(f"Continuous acquisition: camera delivered {self.camera_worker.cur_image} of "
+                                 f"{steps} frames; it missed triggers, so the z positions of this stack are not reliable.")
+                    break
+        finally:
+            try:
+                self.waveformer.stop_tasks()  # stop the free-running AO regeneration
+            except Exception as e:
+                logger.error(f"stop_tasks() in continuous mode failed: {e}")
+            self.laserenabler.disable_all()
+
+        self.image_count = base_count + min(self.camera_worker.cur_image, steps)
+        self.image_acq_end_time = time.time()
+        self.image_acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
+        self.close_shutters()
+        if self.stopflag:
+            self._abort_image_series(acq, acq_list)
+
     def close_acquisition(self, acq, acq_list):
         """Finalise a single acquisition: flush the image series, collect timing, and increment the counter.
 
@@ -1188,7 +1348,9 @@ class mesoSPIM_Core(QtCore.QObject):
 
         self.acq_end_time = time.time()
         self.acq_end_time_string = time.strftime("%Y%m%d-%H%M%S")
-        self.state['current_framerate'] = acq.get_image_count() / (self.image_acq_end_time - self.image_acq_start_time)
+        stack_elapsed = self.image_acq_end_time - self.image_acq_start_time
+        if stack_elapsed > 0:  # zero when Stop arrived before launch
+            self.state['current_framerate'] = acq.get_image_count() / stack_elapsed
         self.append_timing_info_to_metadata(acq)
         self.acquisition_count += 1
 

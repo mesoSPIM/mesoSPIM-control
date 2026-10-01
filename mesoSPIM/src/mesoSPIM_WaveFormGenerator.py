@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 '''National Instruments Imports (optional: demo mode runs without them)'''
 from .utils.ni_daqmx import nidaqmx, require_nidaqmx
-from .utils.ni_daqmx import AcquisitionType, TaskMode, LineGrouping
+from .utils.ni_daqmx import AcquisitionType, TaskMode, LineGrouping, RegenerationMode, Level, DaqError
 
 '''mesoSPIM imports'''
-from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square
+from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square, samples_per_sweep
 from .utils.utility_functions import log_cpu_core, timed
 
 from PyQt5 import QtCore
@@ -153,7 +153,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     def calculate_samples(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
-        self.samples = int(samplerate*sweeptime)
+        self.samples = samples_per_sweep(samplerate, sweeptime)
 
     def create_etl_waveforms(self):
         samplerate, sweeptime = self.state.get_parameter_list(['samplerate', 'sweeptime'])
@@ -586,6 +586,250 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.master_trigger_task.close()
         logger.debug("All tasks closed")
 
+    # ------------------------------------------------------------------
+    # Continuous-regeneration mode (acquisition_hardware['waveform_mode'] = 'continuous')
+    #
+    # Instead of arming, triggering, waiting for and stopping the DAQ tasks once per
+    # plane, the whole stack is configured once and launched by one master trigger:
+    #   * the AO task runs CONTINUOUS with regeneration: the one-sweep buffer repeats;
+    #   * the camera trigger is a FINITE counter pulse train of n_planes pulses;
+    #   * the stage trigger is a FINITE pulse train of n_planes-1 TTL steps.
+    # Planes stay orthogonal to z (step-and-shoot); only the per-plane software
+    # overhead goes away. Works on the PXI-6733 and the cDAQ NI-9264, which support
+    # regeneration but not native retriggering.
+    #
+    # The counters MUST share the AO waveform's period exactly, or the light-sheet
+    # sweep slides against the camera's rolling shutter a little more on every plane
+    # (the progressive right-edge blur seen on the first bench tests). So:
+    #   1. preferred: the counters count ticks of the AO sample clock itself
+    #      (period = samples ticks), which is drift-free by construction;
+    #   2. fallback, if the device cannot route the AO sample clock to the counter:
+    #      time-based pulses at the AO's actual (coerced) period, read back from the
+    #      driver, and the launch is refused if the residual drift over the stack
+    #      exceeds half a sample.
+    # ------------------------------------------------------------------
+    MAX_STACK_DRIFT_SAMPLES = 0.5
+
+    def _uses_stage_trigger(self):
+        stage_type = self.cfg.stage_parameters['stage_type'].lower()
+        return 'asi' in stage_type or stage_type == 'mixed'
+
+    def _reserve(self, task):
+        '''Verify and reserve a task now, so coerced rates and routing errors are known before launch.
+
+        Reserve, not commit: on cDAQ the NI 9401 refuses to commit one task while another
+        task on the same module is committed (DAQmx -201133); every task has to be
+        reserved before any of them is committed, which start_tasks() then does.
+        '''
+        task.control(TaskMode.TASK_RESERVE)
+
+    _CONTINUOUS_TASK_ATTRS = ('master_trigger_task', 'galvo_etl_laser_task', 'galvo_etl_task', 'laser_task',
+                              'camera_trigger_task', 'stage_trigger_task')
+
+    @timed
+    def create_tasks_continuous(self, n_planes):
+        """Create the DAQ tasks for a whole stack launched by a single master trigger.
+
+        On any failure every task created so far is closed again, so a half-built
+        set never holds the device reserved for the next acquisition.
+
+        Args:
+            n_planes (int): Number of planes (camera frames) in the stack.
+        """
+        for attr in self._CONTINUOUS_TASK_ATTRS:
+            setattr(self, attr, None)
+        try:
+            self._create_tasks_continuous(n_planes)
+        except Exception:
+            for attr in self._CONTINUOUS_TASK_ATTRS:
+                task = getattr(self, attr, None)
+                if task is not None:
+                    try:
+                        task.close()
+                    except Exception:
+                        pass
+                    setattr(self, attr, None)
+            raise
+
+    def _create_tasks_continuous(self, n_planes):
+        ah = self.cfg.acquisition_hardware
+        self.calculate_samples()
+        samplerate = self.state['samplerate']
+        samples = self.samples
+        n_planes = int(n_planes)
+        for name in ('galvo_and_etl_waveforms', 'laser_waveforms'):
+            length = getattr(self, name).shape[-1]
+            if length != samples:
+                raise RuntimeError(f"[continuous] {name} has {length} samples per sweep, expected {samples}; "
+                                   f"the regenerated AO buffer would not match the trigger period.")
+
+        self.ao_cards = 1 if ah['galvo_etl_task_line'].split('/')[-2] == ah['laser_task_line'].split('/')[-2] else 2
+        logger.info(f"[continuous] {n_planes} planes, {samples} samples/sweep at {samplerate} S/s, "
+                    f"{self.ao_cards} AO card(s).")
+
+        self.master_trigger_task = nidaqmx.Task()
+        self.master_trigger_task.do_channels.add_do_chan(ah['master_trigger_out_line'],
+                                                         line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+        if self.cfg.waveformgeneration == 'cDAQ':
+            self.master_trigger_task.control(TaskMode.TASK_RESERVE) # cDAQ requirement
+
+        '''AO: CONTINUOUS with regeneration. The task that drives the galvos and ETLs is the timing reference.'''
+        def make_ao_task(lines, vmax, trigger_source, clock_source=None):
+            task = nidaqmx.Task()
+            try:
+                task.ao_channels.add_ao_voltage_chan(lines, min_val=-vmax, max_val=vmax)
+                kwargs = dict(rate=samplerate, sample_mode=AcquisitionType.CONTINUOUS, samps_per_chan=samples)
+                if clock_source:
+                    kwargs['source'] = clock_source
+                task.timing.cfg_samp_clk_timing(**kwargs)
+                task.out_stream.regen_mode = RegenerationMode.ALLOW_REGENERATION
+                task.triggers.start_trigger.cfg_dig_edge_start_trig(trigger_source)
+                self._reserve(task)
+            except Exception:
+                task.close()
+                raise
+            return task
+
+        if self.ao_cards == 1:
+            self.galvo_etl_laser_task = make_ao_task(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'],
+                                                     self.MAX_GALVO_ETL_VOLT, ah['galvo_etl_task_trigger_source'])
+            ref_task = self.galvo_etl_laser_task
+        else:
+            self.galvo_etl_task = make_ao_task(ah['galvo_etl_task_line'], self.MAX_GALVO_ETL_VOLT,
+                                               ah['galvo_etl_task_trigger_source'])
+            ref_task = self.galvo_etl_task
+            # Lock the laser card to the galvo/ETL card's sample clock, otherwise two
+            # independent oscillators drift apart over the stack as well.
+            try:
+                self.laser_task = make_ao_task(ah['laser_task_line'], self.state['max_laser_voltage'],
+                                               ah['laser_task_trigger_source'],
+                                               clock_source=ref_task.timing.samp_clk_term)
+                logger.info(f"[continuous] laser AO clocked from {ref_task.timing.samp_clk_term}")
+            except DaqError as e:
+                logger.warning(f"[continuous] laser AO cannot use the galvo/ETL sample clock ({e}); "
+                               f"using its own clock, so lasers may drift against the galvos over long stacks.")
+                self.laser_task = make_ao_task(ah['laser_task_line'], self.state['max_laser_voltage'],
+                                               ah['laser_task_trigger_source'])
+
+        ao_rate = ref_task.timing.samp_clk_rate  # actual (coerced) rate, may differ from the requested one
+        ao_clock = ref_task.timing.samp_clk_term
+        self.continuous_plane_period = samples / ao_rate
+        if abs(ao_rate - samplerate) > 1e-6 * samplerate:
+            logger.warning(f"[continuous] AO sample clock coerced from {samplerate} to {ao_rate} S/s")
+
+        '''Counters: camera (n_planes pulses) and stage (n_planes-1 steps).'''
+        camera_pulse_percent, camera_delay_percent = self.state.get_parameter_list(['camera_pulse_%', 'camera_delay_%'])
+        pulses = [('camera_trigger_task', ah['camera_trigger_out_line'], ah['camera_trigger_source'],
+                   camera_delay_percent, camera_pulse_percent, n_planes)]
+        if self._uses_stage_trigger():
+            assert hasattr(self.cfg, 'asi_parameters'), "Config file with an ASI stage must contain 'asi_parameters' dictionary"
+            read = lambda key: self.parent.read_config_parameter(key, self.cfg.asi_parameters)
+            pulses.append(('stage_trigger_task', read('stage_trigger_out_line'), read('stage_trigger_source'),
+                           read('stage_trigger_delay_%'), read('stage_trigger_pulse_%'), max(n_planes - 1, 1)))
+
+        try:
+            for attr, line, trig, delay_pct, pulse_pct, count in pulses:
+                setattr(self, attr, self._make_tick_counter(line, ao_clock, samples, delay_pct, pulse_pct, count))
+            self.continuous_timing_mode = 'ao_sample_clock_ticks'
+            logger.info(f"[continuous] counters clocked from the AO sample clock {ao_clock}: "
+                        f"period {samples} ticks = {self.continuous_plane_period * 1e3:.4f} ms, drift-free")
+        except DaqError as e:
+            logger.warning(f"[continuous] cannot clock the counters from {ao_clock} ({e}); "
+                           f"falling back to time-based counter pulses matched to the AO period.")
+            for attr, *_ in pulses:
+                task = getattr(self, attr, None)
+                if task is not None:
+                    try:
+                        task.close()
+                    except Exception:
+                        pass
+                    setattr(self, attr, None)
+            for attr, line, trig, delay_pct, pulse_pct, count in pulses:
+                setattr(self, attr, self._make_time_counter(line, trig, ao_rate, samples, delay_pct, pulse_pct, count, n_planes))
+            self.continuous_timing_mode = 'time_matched'
+
+    def _make_tick_counter(self, line, ao_clock, samples, delay_pct, pulse_pct, count):
+        '''Pulse train counting AO sample-clock ticks: rising edges at delay + k*samples.'''
+        high = max(2, int(round(samples * pulse_pct * 0.01)))
+        low = samples - high
+        delay = max(2, int(round(samples * delay_pct * 0.01)))
+        if low < 2:
+            raise ValueError(f"[continuous] pulse of {pulse_pct}% leaves no low time in a {samples}-tick period")
+        task = nidaqmx.Task()
+        try:
+            task.co_channels.add_co_pulse_chan_ticks(line, source_terminal=ao_clock, idle_state=Level.LOW,
+                                                     initial_delay=delay, low_ticks=low, high_ticks=high)
+            task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.FINITE, samps_per_chan=count)
+            # No start trigger on purpose: the AO sample clock only ticks once the AO task
+            # has been triggered, so an armed counter starts on exactly the first AO sample.
+            # A digital start trigger would be sampled on this slow external source and
+            # could miss the short master pulse.
+            self._reserve(task)
+        except Exception:
+            task.close()
+            raise
+        return task
+
+    def _make_time_counter(self, line, trigger_source, ao_rate, samples, delay_pct, pulse_pct, count, n_planes):
+        '''Fallback: time-based pulse train at the AO's actual period, refused if it would drift.'''
+        period = samples / ao_rate
+        task = nidaqmx.Task()
+        try:
+            ch = task.co_channels.add_co_pulse_chan_freq(line, freq=1.0 / period,
+                                                         duty_cycle=min(max(pulse_pct * 0.01, 1e-3), 0.999),
+                                                         initial_delay=delay_pct * 0.01 * period)
+            task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.FINITE, samps_per_chan=count)
+            task.triggers.start_trigger.cfg_dig_edge_start_trig(trigger_source)
+            self._reserve(task)
+            actual_period = 1.0 / ch.co_pulse_freq  # coerced to the counter timebase
+        except Exception:
+            task.close()
+            raise
+        drift_samples = abs(actual_period - period) * n_planes * ao_rate
+        logger.info(f"[continuous] {line}: counter period {actual_period * 1e3:.6f} ms vs AO {period * 1e3:.6f} ms, "
+                    f"drift over {n_planes} planes = {drift_samples:.3f} samples")
+        if drift_samples > self.MAX_STACK_DRIFT_SAMPLES:
+            task.close()
+            raise RuntimeError(f"[continuous] {line} cannot match the AO period: the light sheet would drift "
+                               f"{drift_samples:.1f} samples against the camera over {n_planes} planes. "
+                               f"Choose a sweeptime that is a whole number of counter-timebase ticks, "
+                               f"or use waveform_mode 'stepped'.")
+        return task
+
+    def launch_continuous(self):
+        """Fire the single master trigger that launches the whole hardware-timed stack.
+
+        Call after write_waveforms_to_tasks() and start_tasks(), and after the shutters
+        are open and the laser is enabled, so the first plane is not dark.
+        """
+        logger.debug("[continuous] firing single master trigger for the whole stack")
+        self.master_trigger_task.write([False, True, True, True, True, True, False], auto_start=True)
+
+    def wait_for_stack_done(self, timeout=-1.0):
+        """Block until the finite camera pulse train has emitted all its pulses."""
+        self.camera_trigger_task.wait_until_done(timeout=timeout)
+
+    def park_ao_outputs(self):
+        """Hold every AO line at the last sample of its waveform after a continuous stack.
+
+        Stopping a regenerating task leaves each line at whatever sample was playing,
+        e.g. a laser modulation voltage mid-pulse. A stepped (finite) sweep always ends
+        on its last sample -- lasers off, galvos and ETLs at the sweep end -- so park there.
+        Call only after close_tasks(), when the AO lines are free.
+        """
+        ah = self.cfg.acquisition_hardware
+        if self.ao_cards == 1:
+            groups = [(ah['galvo_etl_task_line'] + ',' + ah['laser_task_line'], self.MAX_GALVO_ETL_VOLT,
+                       np.vstack((self.galvo_and_etl_waveforms, self.laser_waveforms))[:, -1])]
+        else:
+            groups = [(ah['galvo_etl_task_line'], self.MAX_GALVO_ETL_VOLT, self.galvo_and_etl_waveforms[:, -1]),
+                      (ah['laser_task_line'], self.state['max_laser_voltage'], self.laser_waveforms[:, -1])]
+        for lines, vmax, values in groups:
+            with nidaqmx.Task() as task:
+                task.ao_channels.add_ao_voltage_chan(lines, min_val=-vmax, max_val=vmax)
+                task.write([float(v) for v in values], auto_start=True)
+        logger.debug("[continuous] AO outputs parked at the sweep-end values")
+
 
 class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
     """Demo subclass of mesoSPIM_WaveFormGenerator class
@@ -631,3 +875,19 @@ class mesoSPIM_DemoWaveFormGenerator(mesoSPIM_WaveFormGenerator):
         """Demo: closes the tasks for triggering, analog and counter outputs. """
         logger.debug("Demo: close tasks")
         pass
+
+    def create_tasks_continuous(self, n_planes):
+        """Demo: no DAQ tasks; keep the period bookkeeping the Core relies on."""
+        logger.debug(f"Demo: create continuous tasks ({n_planes} planes)")
+        self.calculate_samples()
+        self.continuous_plane_period = self.samples / self.state['samplerate']
+        self.continuous_timing_mode = 'demo'
+
+    def launch_continuous(self):
+        logger.debug("Demo: launch continuous")
+
+    def wait_for_stack_done(self, timeout=-1.0):
+        logger.debug("Demo: wait for stack done")
+
+    def park_ao_outputs(self):
+        logger.debug("Demo: park AO outputs")

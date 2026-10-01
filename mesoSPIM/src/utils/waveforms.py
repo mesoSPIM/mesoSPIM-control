@@ -14,6 +14,18 @@ Author: Fabian Voigt
 from scipy import signal
 import numpy as np
 
+
+def samples_per_sweep(samplerate, sweeptime):
+    '''Number of AO samples in one sweep.
+
+    Rounded, not truncated: samplerate*sweeptime is a float product, and e.g.
+    25000*0.073 evaluates to 1824.9999999999998. Truncating it gave 1824 samples, so in
+    continuous-regeneration mode the AO buffer repeated every 72.96 ms while the camera
+    was triggered every 73 ms, and the light-sheet sweep slid 40 us earlier on every plane.
+    Every waveform and DAQ task must use this one function so their lengths agree.
+    '''
+    return int(round(samplerate * sweeptime))
+
 def single_pulse(
     samplerate=100000,  # in samples/second
     sweeptime=0.4,      # in seconds
@@ -44,7 +56,7 @@ def single_pulse(
     '''
 
     # get an integer number of samples
-    samples = int(np.floor(np.multiply(samplerate, sweeptime)))
+    samples = samples_per_sweep(samplerate, sweeptime)
     # create an array just containing the offset voltage:
     array = np.zeros((samples))+offset
 
@@ -88,7 +100,7 @@ def tunable_lens_ramp(
     sum_perc = delay + rise + fall
     assert sum_perc <= 100, ValueError(f"ETL Delay, Ramp rising and Ramp falling % amount to {sum_perc} %")
     # get an integer number of samples
-    samples = int(np.floor(np.multiply(samplerate, sweeptime)))
+    samples = samples_per_sweep(samplerate, sweeptime)
     # create an array just containing the negative amplitude voltage:
     array = np.zeros(samples)-amplitude + offset
 
@@ -128,7 +140,7 @@ def sawtooth(
     galvosignal =  sawtooth(100000, 0.4, 199, 3.67, 0, 50, np.pi)
     '''
 
-    samples =  int(samplerate*sweeptime)
+    samples = samples_per_sweep(samplerate, sweeptime)
     dutycycle = dutycycle/100       # the signal.sawtooth width parameter has to be between 0 and 1
     t = np.linspace(0, sweeptime, samples)
     # Using the signal toolbox from scipy for the sawtooth:
@@ -151,7 +163,7 @@ def square(
     Returns a numpy array with a rectangular waveform
     """
 
-    samples =  int(samplerate*sweeptime)
+    samples = samples_per_sweep(samplerate, sweeptime)
     dutycycle = dutycycle/100       # the signal.square duty parameter has to be between 0 and 1
     t = np.linspace(0, sweeptime, samples)
 

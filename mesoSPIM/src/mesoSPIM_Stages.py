@@ -1916,7 +1916,8 @@ class mesoSPIM_ASI_Stages(mesoSPIM_Stage):
                 else:
                     logger.error(f'Axis {axis} not in the axes list, check config file for ASI stages')
             command += '\r'
-            self.asi_stages._send_command(command.encode('ascii'))
+            with self._serial_lock:
+                self.asi_stages._send_command(command.encode('ascii'))
         else:
             print("INFO: 'speed' not found in config file, 'asi_parameters' dictionary, using default values.")
 
@@ -2471,7 +2472,12 @@ class mesoSPIM_Mixed_Stages(mesoSPIM_Stage):
 
     def enable_ttl_motion(self, boolean):
         if self.ttl_motion_enabled_during_acq:
-            self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
+            if self.ttl_motion_currently_enabled == boolean:
+                logger.debug(f'TTL Motion already {boolean}, skipping redundant command')
+                return
+            # Same port as the GUI thread's position polling: take the lock (see mesoSPIM_ASI_Stages).
+            with self._serial_lock:
+                self.asi_stages.enable_ttl_mode(self.ttl_cards, boolean)
             self.ttl_motion_currently_enabled = boolean
             logger.info('TTL Motion currently enabled: ' + str(boolean))
             self.state['ttl_movement_enabled_during_acq'] = boolean
