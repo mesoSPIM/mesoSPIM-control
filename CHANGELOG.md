@@ -1,4 +1,4 @@
-## Unreleased
+## Unreleased [1.27.0]
 ### New Features ✨
 - 💎 **Remote Control tab (TCP and MCP)**: control the running microscope from a script or an MCP client, over a password-protected loopback TCP protocol or an MCP server. One operation runs at a time, every command is checked against the instrument's limits before it reaches Core, and the emergency stop is never blocked. See `docs/source/remote_control/`.
 - 💎 **AI Assistant tab (optional)**: a chat window that drives the microscope in plain language through the Remote Control commands, with a cloud model (Gemini, OpenAI, Anthropic or any OpenAI-style server) or a local GGUF model. It can look at camera frames, run scheduled instructions, and asks the operator before large stage moves. The chat is kept in memory only, never saved. Install with `pip install -e ".[ai-assistant]"`. See `docs/source/ai_assistant/`.
