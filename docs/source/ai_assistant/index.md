@@ -185,25 +185,20 @@ loaded.
   told or talked into. Starting a run is not gated: the model is instructed to summarise and ask
   only when the state shows something off (empty list, missing folder, short disk, pending
   warning), and Stop microscope ends a run at any time.
-- **Five rules are held in code for the length of a turn** (`TurnGuard`), because
-  small local models read them and do otherwise. After a move is refused for a movement limit, no
-  other target for that axis is taken until the operator's next message: a 4B model answered
-  "z=999999 refused" with a move to z=25000 and reported success. After a command is refused
-  because the operator is running something from the GUI, a stop waits for **Run** in the same
-  bar as the three moves above: a 1B model stopped a running time lapse in order to take a look.
-  A stop the operator asks for is never gated. A turn may change the laser intensity, or the
-  exposure, twice; a third change waits for **Run** too: asked to double the intensity of a dim
-  frame once, a 12B model went 20, 40, 80, 100 because the next frame looked no better. And a
-  `look` right after a `snap` reads that frame instead of exposing the sample again. And a value
-  the operator did not give waits for **Run**: "make it brighter" sent as 20 %, "change the
-  filter" sent as the one other filter, 180 % clamped to 100. A value counts as theirs when it is
-  in their words (this turn or earlier, in any unit the manual converts), or made from a readout
-  value by an operation they named (double, halve, back to what it was, an amount further); every
-  model tested invented one now and then, whatever the manual said. A refusal also carries its
-  advice ("say so and wait; do not stop it") where the model reads it next.
+- **Five rules are held in code for the length of a turn** (`TurnGuard`), because a model can
+  read a rule and still break it. After a move is refused for a movement limit, no other target
+  on that axis is taken until the operator's next message. After a command is refused because the
+  operator is running something from the GUI, a stop waits for **Run** in the same bar as the
+  three moves above. A turn may change the laser intensity, or the exposure, twice; a third change
+  waits for **Run**. A `look` right after a `snap` reads that frame instead of exposing the sample
+  again. A value the operator did not give waits for **Run** ("make it brighter" sent as 20 %,
+  "change the filter" sent as the one other filter); a value counts as theirs when it is in their
+  words, this turn or earlier and in any unit the manual converts, or made from a readout value
+  by an operation they named (double, halve, back to what it was, an amount further). A stop the
+  operator asks for is never held back. A refusal carries its advice ("say so and wait; do not
+  stop it") where the model reads it next.
 - **A reply that called no tool goes back to the model once, and the tab says when it sent
-  nothing.** Small models write "I have stopped the time lapse" having called nothing, and
-  whether they do turns on the wording of unrelated lines of the manual, so no wording cures it.
+  nothing.** A model can report an action it never took ("I have stopped the time lapse").
   A turn that ends without a tool call is handed back with that fact: the model calls the tool
   after all, or answers with one word and its first reply reaches the operator unchanged (one
   short extra request on turns that send no command; `CALLED_NOTHING_CHALLENGE`, empty switches
