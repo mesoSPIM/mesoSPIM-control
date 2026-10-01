@@ -1,4 +1,4 @@
-"""Run the reviewer-facing Remote Control test profiles.
+"""Run the Remote Control test profiles.
 
 This runner never starts or stops mesoSPIM, MCP, or TCP. Live profiles require the operator to
 start exactly one transport in the GUI and to provide the safety environment variables documented

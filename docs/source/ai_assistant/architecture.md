@@ -126,14 +126,6 @@ and no value the operator did not give: a number or option in their words, or ar
 named on a readout value, passes; "brighter" sent as 20 % waits for **Run**. A reply that called
 no tool is handed back once, and the tab says when a turn sent nothing to the microscope.
 
-## The voice
-
-The manual speaks to the operator as *you*, gives each rule its reason, and on a refusal asks for
-the next step ("propose one fix as a question") instead of stopping; a manual written as orders
-got answers in kind. Two things to watch when softening a rule: a model told to ask may ask where
-it was allowed to correct (a listed option spelled differently), and may "help" by clamping an
-out-of-range value to the limit; both exceptions are named in the manual.
-
 ## Context and memory
 
 Every operator message carries the instrument's readout in a `<microscope_state>` block, so the

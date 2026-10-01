@@ -1,6 +1,6 @@
 # Testing Remote Control
 
-Remote Control has three reviewer-facing test commands. Run them from the repository root.
+Remote Control has three test commands. Run them from the repository root.
 
 Install pytest once if it is not already available in the mesoSPIM environment:
 

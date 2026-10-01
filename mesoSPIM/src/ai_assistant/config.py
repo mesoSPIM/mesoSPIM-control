@@ -19,7 +19,7 @@ Maintainer (2026):
 PROVIDERS = {
     "Gemini": {
         "kind": "google",
-        "model": "gemini-3.5-flash-lite",  # 250K input tokens/min free tier, native tool calling
+        "model": "gemini-3.5-flash-lite",  # native tool calling and vision
         # No fallback model: a stand-in can obey a note planted in the state readout that the chosen
         # model ignores. A model the operator did not choose is worse than a rate-limit error they
         # can see and retry.
