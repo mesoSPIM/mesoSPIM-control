@@ -1278,16 +1278,18 @@ class mesoSPIM_Core(QtCore.QObject):
             # The hardware finishes after steps * period; allow for the last frame's
             # readout and the writer hand-off before declaring frames missing.
             deadline = time.time() + steps * period + 10.0
+            requests = getattr(self.camera_worker, 'drain_requests_done', 0)
             while self.camera_worker.cur_image < steps and not self.stopflag:
-                prev = self.camera_worker.cur_image
-                # One drain request at a time: Photometrics returns one frame per call,
-                # Hamamatsu the whole backlog.
+                # Exactly one drain request outstanding at a time: each call takes every
+                # frame already buffered, and a request queued behind a slow one would
+                # only wait out the camera's poll timeout once the frames have stopped.
+                requests += 1
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
-                wait_start = time.time()
-                while self.camera_worker.cur_image == prev and not self.stopflag:
+                while getattr(self.camera_worker, 'drain_requests_done', requests) < requests and not self.stopflag:
                     QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
                     time.sleep(0.002)
-                    if time.time() - wait_start > 2.0 or time.time() > deadline:
+                    if time.time() > deadline + 30.0:  # backstop: the camera call itself is bounded by its poll timeout
+                        logger.error("Continuous acquisition: camera drain request did not return")
                         break
 
                 cur = min(self.camera_worker.cur_image, steps)
@@ -1316,6 +1318,10 @@ class mesoSPIM_Core(QtCore.QObject):
                     logger.error(f"Continuous acquisition: {delivered} of {steps} frames delivered; {where}. "
                                  f"The z positions of this stack are not reliable.")
                     break
+        except Exception:
+            # Uncaught, this reaches only the console: the log would just end after stop_tasks.
+            logger.exception("Continuous acquisition failed")
+            raise
         finally:
             try:
                 self.waveformer.stop_tasks()  # stop the free-running AO regeneration

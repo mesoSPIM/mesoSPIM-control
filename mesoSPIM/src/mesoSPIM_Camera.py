@@ -170,11 +170,18 @@ class mesoSPIM_Camera(QtCore.QObject):
         '''
         logger.info('Camera: Preparing Image Series')
         self.stopflag = False
+        self.drain_requests_done = 0  # add_images_to_series() calls completed; the Core paces requests on it
         #self.image_writer.prepare_acquisition(acq, acq_list)
         self.max_frame = acq.get_image_count()
         self.processing_options_string = acq['processing']
-        self.camera.initialize_image_series()
-        self.cur_image = 0
+        self.cur_image = 0  # before the camera call: the Core polls it even if that call fails
+        try:
+            self.camera.initialize_image_series()
+        except Exception:
+            # Raised in a Qt slot this would only reach the console, and the Core would
+            # launch a stack the camera is not ready for. Log it where it can be found.
+            logger.exception('Camera: initialize_image_series() failed')
+            raise
         logger.info(f'Camera: Finished Preparing Image Series')
         self.start_time = time.time()
         
@@ -184,6 +191,12 @@ class mesoSPIM_Camera(QtCore.QObject):
     @timed
     @log_cpu_core
     def add_images_to_series(self, acq, acq_list):
+        try:
+            self._add_images_to_series(acq, acq_list)
+        finally:
+            self.drain_requests_done = getattr(self, 'drain_requests_done', 0) + 1
+
+    def _add_images_to_series(self, acq, acq_list):
         if self.cur_image == 0:
             logger.debug('Thread name during add images: '+ QtCore.QThread.currentThread().objectName())
 
@@ -666,9 +679,27 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         # overwritten, so at continuous frame rates this is the slack for drain hiccups:
         # PyVCAM's default of 16 frames is only 1.3 s at 12 FPS.
         buffer_frames = int(self.cfg.camera_parameters.get('series_buffer_frames', 16))
-        self.pvcam.start_live(buffer_frame_count=buffer_frames, reset_frame_counter=True)
+        # Keep the buffer under 2 GiB: a 100-frame (3 GB) buffer of 5056x2960 frames made
+        # start_live() fail on 2026-10-01, consistent with a signed 32-bit buffer size.
+        frame_bytes = self.x_pixels * self.y_pixels * 2
+        max_frames = max(1, (2**31 - 1) // frame_bytes)
+        if buffer_frames > max_frames:
+            logger.warning(f'Photometrics: series_buffer_frames={buffer_frames} '
+                           f'({buffer_frames * frame_bytes / 2**30:.2f} GiB) exceeds the 2 GiB buffer limit; '
+                           f'using {max_frames} frames')
+            buffer_frames = max_frames
+        try:
+            self.pvcam.start_live(buffer_frame_count=buffer_frames, reset_frame_counter=True)
+        except Exception:
+            if buffer_frames <= 16:
+                raise
+            logger.exception(f'Photometrics: start_live() with a {buffer_frames}-frame buffer failed; '
+                             f'retrying with the PyVCAM default of 16 frames')
+            buffer_frames = 16
+            self.pvcam.start_live(buffer_frame_count=buffer_frames, reset_frame_counter=True)
         self.max_frame_count = 0  # highest PVCAM frame counter seen: frames the camera captured
-        logger.info(f'Photometrics image series: circular buffer of {buffer_frames} frames')
+        logger.info(f'Photometrics image series: circular buffer of {buffer_frames} frames '
+                    f'({buffer_frames * frame_bytes / 2**30:.2f} GiB)')
 
     def get_images_in_series(self):
         '''Return every frame already buffered, waiting up to SERIES_POLL_TIMEOUT_MS for the first one.

@@ -21,6 +21,13 @@ from mesoSPIM.src.plugins.FilterWheelApi import FilterWheelPlugin
 def count_domain_to_uint16(image: np.ndarray) -> np.ndarray:
     """Convert count-domain image data to uint16 with clipping."""
     image = np.asarray(image)
+    # Integer data needs no NaN handling or rounding. The float path below costs ~53 ms
+    # per 5056x2960 frame, which on the camera thread made continuous acquisition at
+    # 12 FPS drop frames even with only the pass-through Identity processor enabled.
+    if image.dtype == np.uint16:
+        return image
+    if np.issubdtype(image.dtype, np.integer):
+        return np.clip(image, 0, 65535).astype(np.uint16)
     image = np.nan_to_num(image, nan=0.0, posinf=65535.0, neginf=0.0)
     image = np.clip(np.rint(image), 0, 65535)
     return image.astype(np.uint16, copy=False)

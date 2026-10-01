@@ -7,6 +7,7 @@ that never came, so the camera thread never closed the series and the writer nev
 import collections
 import types
 import numpy as np
+from PyQt5 import QtCore
 
 from mesoSPIM.src.mesoSPIM_Camera import mesoSPIM_PhotometricsCamera, mesoSPIM_Camera
 
@@ -24,7 +25,11 @@ class FakePVCam:
         self.counter += 1
         self.buffer.append(self.counter)
 
+    fail_above = None  # frames; mimic a start_live() that rejects large buffers
+
     def start_live(self, buffer_frame_count=16, reset_frame_counter=False):
+        if self.fail_above is not None and buffer_frame_count > self.fail_above:
+            raise RuntimeError('pl_exp_setup_cont failed')
         self.started_with = buffer_frame_count
 
     def poll_frame(self, timeout_ms=-1, oldestFrame=True, copyData=True):
@@ -39,6 +44,7 @@ def make_camera(fake, **camera_parameters):
     cam = mesoSPIM_PhotometricsCamera.__new__(mesoSPIM_PhotometricsCamera)
     cam.pvcam = fake
     cam.camera_exposure_time = 0.01
+    cam.x_pixels, cam.y_pixels = 2960, 5056  # Iris 15: 29.9 MB per frame
     cam.cfg = types.SimpleNamespace(camera_parameters=camera_parameters)
     return cam
 
@@ -72,8 +78,21 @@ def test_circular_buffer_size_comes_from_the_config():
     fake = FakePVCam()
     make_camera(fake).initialize_image_series()
     assert fake.started_with == 16
-    make_camera(fake, series_buffer_frames=100).initialize_image_series()
-    assert fake.started_with == 100
+    make_camera(fake, series_buffer_frames=64).initialize_image_series()
+    assert fake.started_with == 64
+
+
+def test_circular_buffer_is_capped_below_2_GiB():
+    fake = FakePVCam()
+    make_camera(fake, series_buffer_frames=100).initialize_image_series()  # 3 GB failed on the rig
+    assert fake.started_with == 71 and 71 * 2960 * 5056 * 2 < 2**31
+
+
+def test_falls_back_to_16_frames_if_the_buffer_is_refused():
+    fake = FakePVCam()
+    fake.fail_above = 32
+    make_camera(fake, series_buffer_frames=64).initialize_image_series()
+    assert fake.started_with == 16
 
 
 class _Sig:
@@ -86,6 +105,7 @@ class _Sig:
 
 def make_worker(images_per_call):
     w = mesoSPIM_Camera.__new__(mesoSPIM_Camera)
+    QtCore.QObject.__init__(w)  # skip __init__: it needs a full Core parent
     calls = iter(images_per_call)
     w.camera = types.SimpleNamespace(get_images_in_series=lambda: next(calls))
     w.stopflag, w.cur_image, w.max_frame = False, 0, 5
@@ -105,3 +125,23 @@ def test_worker_ignores_an_empty_drain_and_never_overfills():
         add(w, None, None)
     assert w.cur_image == 5 and len(w.frame_queue) == 5   # 3 + 2: capped at max_frame
     assert w.sig_write_images.n == 2                       # the empty drain wrote nothing
+
+
+def test_identity_conversion_of_uint16_is_free_and_exact():
+    from mesoSPIM.src.plugins.utils import count_domain_to_uint16
+    img = np.random.default_rng(0).integers(0, 65536, (64, 64), dtype=np.uint16)
+    assert count_domain_to_uint16(img) is img  # no 53 ms float round trip per camera frame
+    ints = np.array([-5, 0, 70000, 300], dtype=np.int32)
+    assert count_domain_to_uint16(ints).tolist() == [0, 0, 65535, 300]
+    floats = np.array([np.nan, -1.0, 2.6, 1e9])
+    assert count_domain_to_uint16(floats).tolist() == [0, 0, 3, 65535]
+
+
+def test_drain_counter_advances_even_when_the_drain_fails():
+    w = make_worker([])  # get_images_in_series raises StopIteration: a failing camera call
+    w.drain_requests_done = 0
+    try:
+        mesoSPIM_Camera.add_images_to_series(w, None, None)
+    except Exception:
+        pass
+    assert w.drain_requests_done == 1  # the Core must never wait on a request that died

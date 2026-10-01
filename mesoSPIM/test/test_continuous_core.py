@@ -44,14 +44,16 @@ def make_core(steps=20, deliver=None, stop_at=None, period=0.001):
     core.total_acquisition_count = 1
     core.state = {'sweeptime': period, 'laser': '488 nm'}
     core.continuous_acq_mode = True
-    core.camera_worker = types.SimpleNamespace(cur_image=0, camera=types.SimpleNamespace())
+    core.camera_worker = types.SimpleNamespace(cur_image=0, drain_requests_done=0, camera=types.SimpleNamespace())
     deliver = steps if deliver is None else deliver
 
     def drain(*a):  # the camera thread: one frame per drain request, until it stops getting triggers
+        assert core.camera_worker.drain_requests_done == core.sig_add_images_to_image_series.count - 1,             'a drain request was sent while the previous one was still outstanding'
         if core.camera_worker.cur_image < deliver:
             core.camera_worker.cur_image += 1
         if stop_at is not None and core.camera_worker.cur_image >= stop_at:
             core.stopflag = True
+        core.camera_worker.drain_requests_done += 1
 
     core.sig_add_images_to_image_series = Signal(drain)
     core.sig_end_image_series = Signal()
