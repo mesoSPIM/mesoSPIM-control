@@ -78,11 +78,7 @@ class RemoteControlGUI(QtWidgets.QWidget):
         parent.sig_stop_time_lapse.connect(self.on_window_stop)
         parent.installEventFilter(self)
         self.core.sig_remote_control_started.connect(self.on_started)
-        index = parent.TabWidget.indexOf(parent.TimelapseTabWidget)
-        if index >= 0:
-            parent.TabWidget.insertTab(index + 1, self, "Remote Control")
-        else:
-            parent.TabWidget.addTab(self, "Remote Control")
+        parent.TabWidget.addTab(self, "Remote Control")   # after the tabs of the .ui file; the AI Assistant follows
         self.refresh()
 
     def _build_ui(self):

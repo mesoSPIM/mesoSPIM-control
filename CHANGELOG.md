@@ -18,6 +18,7 @@
 - `pyqtgraph` is now pinned to `==0.13.7` in `pyproject.toml`, matching `requirements-conda-mamba.txt`.
 
 ### GUI Improvements 🖥️
+- Main window: tabs reordered to Movement, ETL, Parameters, Alignment, Timelapse, Scripting, Remote Control, AI Assistant. The window is 1000 px wide and nothing is clipped on the right; the Controls box (filter, zoom, shutter, laser) is now a layout that stretches with the window instead of fixed positions.
 - PSF analysis tool: axial (Z) fitting window is now a separate "Z fit window (µm)" control, independent of "Min dist betw beads (µm)", so it can be widened for beads with a broad/wiggly axial profile without also enlarging the lateral crop. Default increased 15→30 µm.
 - PSF analysis tool: separate "Histogram X max" and "Colorbar max" controls for axial vs. lateral FWHM, to adjust the histogram/map display ranges independently and redraw the existing results, without re-running the analysis.
 - PSF analysis tool: PNG export now prints median ± std as a text line above each histogram.

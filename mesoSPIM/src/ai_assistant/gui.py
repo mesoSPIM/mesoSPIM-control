@@ -128,12 +128,12 @@ class ModelPicker(QtWidgets.QGroupBox):
         self.provider.addItems(list(config.PROVIDERS))
         self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
         self.model = QtWidgets.QLineEdit("", self)
-        self.model.setMinimumWidth(186)                           # fits the preset model names
+        self.model.setMinimumWidth(120)                           # grows with the window
         self.key = QtWidgets.QLineEdit("", self)
         self.key.setEchoMode(QtWidgets.QLineEdit.Password)
-        self.key.setMinimumWidth(130)
+        self.key.setMinimumWidth(100)
         self.base_url = QtWidgets.QLineEdit("", self)
-        self.base_url.setMinimumWidth(200)                        # fits the preset address
+        self.base_url.setMinimumWidth(160)                        # grows with the window
         # An OpenAI-style server says nothing about what its model can do: the operator says
         # whether it accepts images. Unticked, look hands the model the numbers only.
         self.sees = QtWidgets.QCheckBox("Can see images", self)
@@ -149,9 +149,10 @@ class ModelPicker(QtWidgets.QGroupBox):
         self.key_label = _field_label("API key", self, font)
         self.base_url_label = _field_label("Base URL", self, font)
 
-        # Line one: the type and what names the model. Line two, cloud only: the key, after the
-        # base URL when there is one (_on_provider_changed). Columns 5 and 7 take the leftover
-        # width, so the model, the file, the URL and the key all grow with the window.
+        # Line one: the type and what names the model. Line two, cloud only: the key, or the base
+        # URL with the key on the line below it (_on_provider_changed), so an OpenAI-style server
+        # is no wider than any other provider. Columns 5 and 7 take the leftover width, so the
+        # model, the file, the URL and the key all grow with the window.
         grid = self.grid
         grid.addWidget(self.type_label, 0, 0)
         grid.addWidget(self.mode, 0, 1)
@@ -163,8 +164,8 @@ class ModelPicker(QtWidgets.QGroupBox):
         grid.addWidget(self.model_label, 0, 4)
         grid.addWidget(self.model, 0, 5, 1, 4)
         grid.addWidget(self.base_url_label, 1, 2)
-        grid.addWidget(self.base_url, 1, 3, 1, 3)
-        grid.addWidget(self.sees, 2, 3, 1, 3)
+        grid.addWidget(self.base_url, 1, 3, 1, 6)
+        grid.addWidget(self.sees, 3, 3, 1, 6)
         grid.setColumnStretch(5, 1)
         grid.setColumnStretch(7, 1)
 
@@ -211,12 +212,12 @@ class ModelPicker(QtWidgets.QGroupBox):
         else:
             placeholder = f"using {key_env} from the environment" if in_env else f"{name} API key"
         self.key.setPlaceholderText(placeholder)
-        # The key takes the whole second line, or the end of it after the base URL.
+        # The key takes the whole second line, or the third, under the base URL.
         self.grid.removeWidget(self.key_label)
         self.grid.removeWidget(self.key)
         if preset["kind"] == "openai-compatible":
-            self.grid.addWidget(self.key_label, 1, 6)
-            self.grid.addWidget(self.key, 1, 7, 1, 2)
+            self.grid.addWidget(self.key_label, 2, 2)
+            self.grid.addWidget(self.key, 2, 3, 1, 6)
         else:
             self.grid.addWidget(self.key_label, 1, 2)
             self.grid.addWidget(self.key, 1, 3, 1, 6)
@@ -500,7 +501,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         # Three pairs on one line, the leftover width after them.
         tool_set_label = _field_label("Tool set", preferences, font, gap=0)
         memory_label = _field_label("Memory", preferences, font)
-        image_label = _field_label("Bin image", preferences, font, gap=3 * PAIR_GAP)  # set apart
+        image_label = _field_label("Bin image", preferences, font, gap=2 * PAIR_GAP)  # set apart
         options.addWidget(tool_set_label, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(memory_label, 0, 2)

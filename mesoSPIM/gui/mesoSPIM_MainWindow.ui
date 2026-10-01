@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>964</width>
+    <width>1000</width>
     <height>1400</height>
    </rect>
   </property>
@@ -384,156 +384,132 @@
           <property name="title">
            <string>Controls</string>
           </property>
-          <widget class="QComboBox" name="FilterComboBox">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>40</y>
-             <width>471</width>
-             <height>51</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>14</pointsize>
-            </font>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="ShutterComboBox">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>700</x>
-             <y>40</y>
-             <width>191</width>
-             <height>51</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>14</pointsize>
-            </font>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="ZoomComboBox">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>490</x>
-             <y>40</y>
-             <width>201</width>
-             <height>51</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>14</pointsize>
-            </font>
-           </property>
-          </widget>
-          <widget class="QWidget" name="layoutWidget">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>100</y>
-             <width>881</width>
-             <height>36</height>
-            </rect>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <item>
-             <widget class="QComboBox" name="LaserComboBox">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>14</pointsize>
-               </font>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSlider" name="LaserIntensitySlider">
-              <property name="font">
-               <font>
-                <pointsize>16</pointsize>
-               </font>
-              </property>
-              <property name="autoFillBackground">
-               <bool>false</bool>
-              </property>
-              <property name="maximum">
-               <number>100</number>
-              </property>
-              <property name="pageStep">
-               <number>5</number>
-              </property>
-              <property name="value">
-               <number>1</number>
-              </property>
-              <property name="tracking">
-               <bool>false</bool>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="invertedAppearance">
-               <bool>false</bool>
-              </property>
-              <property name="invertedControls">
-               <bool>false</bool>
-              </property>
-              <property name="tickPosition">
-               <enum>QSlider::TicksBothSides</enum>
-              </property>
-              <property name="tickInterval">
-               <number>10</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="LaserIntensitySpinBox">
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>14</pointsize>
-               </font>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-              <property name="suffix">
-               <string> %</string>
-              </property>
-              <property name="maximum">
-               <number>100</number>
-              </property>
-              <property name="value">
-               <number>0</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
+          <layout class="QGridLayout" name="ControlGridLayout" columnstretch="4,2,2">
+           <item row="0" column="0">
+            <widget class="QComboBox" name="FilterComboBox">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="ZoomComboBox">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QComboBox" name="ShutterComboBox">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QComboBox" name="LaserComboBox">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="LaserIntensitySlider">
+               <property name="font">
+                <font>
+                 <pointsize>16</pointsize>
+                </font>
+               </property>
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="pageStep">
+                <number>5</number>
+               </property>
+               <property name="value">
+                <number>1</number>
+               </property>
+               <property name="tracking">
+                <bool>false</bool>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="invertedAppearance">
+                <bool>false</bool>
+               </property>
+               <property name="invertedControls">
+                <bool>false</bool>
+               </property>
+               <property name="tickPosition">
+                <enum>QSlider::TicksBothSides</enum>
+               </property>
+               <property name="tickInterval">
+                <number>10</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="LaserIntensitySpinBox">
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="suffix">
+                <string> %</string>
+               </property>
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="value">
+                <number>0</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </widget>
         </item>
         <item row="7" column="0" colspan="2">
@@ -2147,34 +2123,6 @@ Focus</string>
               </item>
              </layout>
             </widget>
-           </widget>
-          </widget>
-          <widget class="QWidget" name="ScriptingTabWidget">
-           <attribute name="title">
-            <string>Scripting</string>
-           </attribute>
-           <widget class="QPushButton" name="openScriptEditorButton">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>10</y>
-              <width>251</width>
-              <height>41</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>14</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>New Scripting Editor</string>
-            </property>
            </widget>
           </widget>
           <widget class="QWidget" name="ParameterTabWidget">
@@ -3835,6 +3783,34 @@ Est. timelapse duration (hh:mm:ss): --:--:--</string>
             </property>
            </widget>
           </widget>
+          <widget class="QWidget" name="ScriptingTabWidget">
+           <attribute name="title">
+            <string>Scripting</string>
+           </attribute>
+           <widget class="QPushButton" name="openScriptEditorButton">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>10</y>
+              <width>251</width>
+              <height>41</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>New Scripting Editor</string>
+            </property>
+           </widget>
+          </widget>
          </widget>
         </item>
        </layout>
@@ -3855,7 +3831,7 @@ Est. timelapse duration (hh:mm:ss): --:--:--</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>964</width>
+     <width>1000</width>
      <height>37</height>
     </rect>
    </property>

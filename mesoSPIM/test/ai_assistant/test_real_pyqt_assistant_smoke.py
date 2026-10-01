@@ -23,8 +23,8 @@ except ModuleNotFoundError as error:
 from mesoSPIM.src.ai_assistant.gui import CLOUD_MODE, LOCAL_MODE, SAME_AS_LANGUAGE, AiAssistantGUI
 from mesoSPIM.src.remote_control.gui import RemoteControlGUI
 
-MAIN_WINDOW_WIDTH = 964  # the designed width of mesoSPIM_MainWindow.ui
-SLACK = 80               # the boxes may run a little past it; the window is wider in practice
+MAIN_WINDOW_WIDTH = 1000  # the designed width of mesoSPIM_MainWindow.ui
+FRAME = 56                # the window's border, scroll bar and tab margins around the tab
 
 
 class Core(QtCore.QObject):
@@ -90,11 +90,11 @@ def main():
     assert items_for(grid, language.key) == 1 and items_for(grid, language.key_label) == 1
     width_cloud = tab.minimumSizeHint().width()
 
-    # OpenAI-style: the base URL takes the start of the line and the key moves after it, once.
+    # OpenAI-style: the base URL takes the second line and the key moves to the third, once.
     language.provider.setCurrentText("OpenAI-style")
     app.processEvents()
     assert language.base_url.isVisible() and language.key.isVisible()
-    assert cell_of(grid, language.base_url) == (1, 3, 3) and cell_of(grid, language.key) == (1, 7, 2)
+    assert cell_of(grid, language.base_url) == (1, 3, 6) and cell_of(grid, language.key) == (2, 3, 6)
     assert items_for(grid, language.key) == 1 and items_for(grid, language.key_label) == 1
     assert language.key.placeholderText() == "optional"
     width_server = tab.minimumSizeHint().width()
@@ -162,8 +162,8 @@ def main():
     fonts = bool(QtGui.QFontDatabase().families())
     if fonts:
         for name, width in (("cloud", width_cloud), ("local", width_local)):
-            assert width <= MAIN_WINDOW_WIDTH + SLACK, f"{name} setup needs {width} px"
-        assert width_server <= MAIN_WINDOW_WIDTH + 2 * SLACK, f"OpenAI-style setup needs {width_server} px"
+            assert width <= MAIN_WINDOW_WIDTH - FRAME, f"{name} setup needs {width} px"
+        assert width_server <= MAIN_WINDOW_WIDTH - FRAME, f"OpenAI-style setup needs {width_server} px"
 
     # The input box: Enter sends, Shift+Enter starts a new line, as editors do. Only the key
     # handling is under test, so the tab's own submit slot is detached first.
