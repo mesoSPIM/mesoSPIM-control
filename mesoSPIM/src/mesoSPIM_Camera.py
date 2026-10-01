@@ -192,7 +192,10 @@ class mesoSPIM_Camera(QtCore.QObject):
                 logger.debug(f'Adding images to series')
                 images = self.camera.get_images_in_series()
                 logger.debug(f'Got {len(images)} images')
-                
+                if not images:
+                    return  # timed out waiting for a frame; the caller decides whether to ask again
+                images = images[:self.max_frame - self.cur_image]
+
                 if self.processor_chain.is_enabled:
                     images = [self.processor_chain.process(img) for img in images]
                 
@@ -646,16 +649,45 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         frame , _ , _ = self.pvcam.poll_frame()
         return frame['pixel_data']
     
+    # Longest wait for one frame in an image series. Generous for any sweeptime, but finite:
+    # with WAIT_FOREVER a drain request that no frame answers (e.g. the last request of a
+    # continuous stack that came up short) blocked the camera thread for good, so it never
+    # ran end_image_series() and the image writer was never finalized.
+    SERIES_POLL_TIMEOUT_MS = 5000
+    # Frames taken per drain call: everything already buffered, so a slow round trip from
+    # the Core cannot limit the frame rate. Bounded so one call cannot starve the writer.
+    SERIES_MAX_FRAMES_PER_CALL = 16
+
     def initialize_image_series(self):
         ''' The Photometrics cameras expect integer exposure times, otherwise they default to the minimum value '''
         exp_time_ms = int(self.camera_exposure_time * 1000)
         self.pvcam.exp_time = exp_time_ms
-        self.pvcam.start_live()
+        # PVCAM circular buffer. When frames are not drained fast enough the oldest are
+        # overwritten, so at continuous frame rates this is the slack for drain hiccups:
+        # PyVCAM's default of 16 frames is only 1.3 s at 12 FPS.
+        buffer_frames = int(self.cfg.camera_parameters.get('series_buffer_frames', 16))
+        self.pvcam.start_live(buffer_frame_count=buffer_frames, reset_frame_counter=True)
+        self.max_frame_count = 0  # highest PVCAM frame counter seen: frames the camera captured
+        logger.info(f'Photometrics image series: circular buffer of {buffer_frames} frames')
 
     def get_images_in_series(self):
-        # print('Exp Time in series:', self.pvcam.exp_time)
-        frame , _ , _ = self.pvcam.poll_frame()
-        return [frame['pixel_data']]
+        '''Return every frame already buffered, waiting up to SERIES_POLL_TIMEOUT_MS for the first one.
+
+        Returns an empty list on timeout.
+        '''
+        images = []
+        timeout_ms = self.SERIES_POLL_TIMEOUT_MS
+        while len(images) < self.SERIES_MAX_FRAMES_PER_CALL:
+            try:
+                frame, _, frame_count = self.pvcam.poll_frame(timeout_ms=timeout_ms)
+            except Exception as e:
+                if not images:
+                    logger.warning(f'Photometrics: no frame within {timeout_ms} ms ({e})')
+                break
+            self.max_frame_count = max(self.max_frame_count, int(frame_count))
+            images.append(frame['pixel_data'])
+            timeout_ms = 1  # after the first frame, take only what is already waiting
+        return images
     
     def close_image_series(self):
         logger.debug("Calling self.pvcam.finish()")

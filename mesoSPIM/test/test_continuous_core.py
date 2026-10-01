@@ -86,8 +86,17 @@ def test_missed_triggers_end_the_stack_and_are_reported(caplog):
     with caplog.at_level('ERROR'):
         core._run_acquisition_continuous(core.acq, None)
     assert core.camera_worker.cur_image <= 17
-    assert 'missed triggers' in caplog.text
+    assert 'most likely missed triggers' in caplog.text  # camera reported nothing more
     assert 'stop_tasks' in core.calls and 'laser_off' in core.calls
+
+
+def test_frames_lost_in_the_camera_buffer_are_reported_as_such(caplog):
+    core = make_core(steps=20, deliver=17)
+    core.waveformer.continuous_plane_period = -0.5
+    core.camera_worker.camera = types.SimpleNamespace(max_frame_count=20)  # PVCAM captured all 20
+    with caplog.at_level('ERROR'):
+        core._run_acquisition_continuous(core.acq, None)
+    assert 'overwritten' in caplog.text and 'series_buffer_frames' in caplog.text
 
 
 def test_stop_mid_stack_releases_tasks_and_closes_the_series():

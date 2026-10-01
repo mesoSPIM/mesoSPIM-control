@@ -1302,11 +1302,19 @@ class mesoSPIM_Core(QtCore.QObject):
                                        convert_seconds_to_string(time_passed),
                                        convert_seconds_to_string(time_remaining))
                 if time.time() > deadline:
-                    # The trigger trains are hardware-timed: frames that have not arrived by
-                    # now were never exposed. The stage still stepped on every TTL, so the
-                    # z positions of the frames that did arrive can no longer be trusted.
-                    logger.error(f"Continuous acquisition: camera delivered {self.camera_worker.cur_image} of "
-                                 f"{steps} frames; it missed triggers, so the z positions of this stack are not reliable.")
+                    # The trigger trains are hardware-timed, so the stage stepped on every TTL
+                    # regardless: with frames missing, the z position of each delivered frame
+                    # is no longer known. Say where the frames went if the camera can tell.
+                    delivered = self.camera_worker.cur_image
+                    captured = getattr(self.camera_worker.camera, 'max_frame_count', 0)
+                    if captured > delivered:
+                        where = (f"the camera captured at least {captured}, so {captured - delivered} were overwritten "
+                                 f"in its circular buffer before they were drained (raise "
+                                 f"camera_parameters['series_buffer_frames'])")
+                    else:
+                        where = "the camera did not report capturing more, so it most likely missed triggers"
+                    logger.error(f"Continuous acquisition: {delivered} of {steps} frames delivered; {where}. "
+                                 f"The z positions of this stack are not reliable.")
                     break
         finally:
             try:

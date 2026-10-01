@@ -380,6 +380,21 @@ class OMEZarrWriterMP(ImageWriter):
 
         self.metadata_file_info()
 
+    # Width of the column bands used by _copy_into_slot(). 256 measured fastest on the
+    # 5056x2960 frame; 64-512 are all within ~20%, so it needs no per-machine tuning.
+    _COPY_BAND_COLS = 256
+
+    @classmethod
+    def _copy_into_slot(cls, dst: np.ndarray, frame: np.ndarray) -> None:
+        """np.copyto(dst, frame), banded by columns when the source is strided. Bit-identical."""
+        if frame.flags['C_CONTIGUOUS']:
+            np.copyto(dst, frame)
+            return
+        ncols = dst.shape[-1]
+        for i in range(0, ncols, cls._COPY_BAND_COLS):
+            j = min(i + cls._COPY_BAND_COLS, ncols)
+            np.copyto(dst[..., i:j], frame[..., i:j])
+
     def write_frame(self, data: WriteImage):
         frame = data.image
 
@@ -396,9 +411,12 @@ class OMEZarrWriterMP(ImageWriter):
         slot = self._free_q.get()
         wait_ms = (time.perf_counter() - t0) * 1000
 
-        # Copy the frame into shared memory
+        # Copy the frame into shared memory. The caller passes image.T[::-1], a
+        # non-contiguous view: a flat np.copyto() walks it with a full-row stride and
+        # thrashes cache/TLB (~60 ms per 5056x2960 frame); 256-column bands copy the same
+        # bytes in ~9 ms, which also frees the GIL for the camera thread.
         t0 = time.perf_counter()
-        np.copyto(self._ring[slot], frame)
+        self._copy_into_slot(self._ring[slot], frame)
         copy_ms = (time.perf_counter() - t0) * 1000
 
         # Tell writer process which slot to read
