@@ -138,14 +138,17 @@ class OMEZarrWriterMPTCZYX(OMEZarrWriterMP):
 
     @staticmethod
     def split_time_index(uri: str) -> tuple[str, int]:
-        '''The acquisition path without its '_Time###' mark, and the time index (0 without one).'''
-        path = Path(uri)
-        matches = list(_TIME_SUFFIX.finditer(path.name))
+        '''The acquisition path without its '_Time###' mark, and the time index (0 without one).
+
+        Only the name changes: the folder part is kept as given, separators included, so the
+        same path comes back on every operating system.'''
+        name = Path(uri).name
+        matches = list(_TIME_SUFFIX.finditer(name))
         if not matches:
             return uri, 0
         last = matches[-1]
-        name = path.name[:last.start()] + path.name[last.end():]
-        return str(path.with_name(name)), int(last.group(1))
+        folder = uri[:len(uri) - len(name)]
+        return folder + name[:last.start()] + name[last.end():], int(last.group(1))
 
     @staticmethod
     def channel_label(laser: str) -> str:
