@@ -8,6 +8,13 @@ Assistant and a network transport are mutually exclusive — only one controller
 
 This builds on [Remote Control](../remote_control/index.md); read that first.
 
+```{figure} ../../screenshots/AIAssistantTab.png
+:alt: AI Assistant tab in the Main window
+:width: 60%
+
+The AI Assistant tab: language and vision model, preferences, coordinate system, and Connect.
+```
+
 ```{toctree}
 :maxdepth: 1
 

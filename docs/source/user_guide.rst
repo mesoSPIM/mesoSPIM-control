@@ -45,6 +45,13 @@ Main window
    Main window (Movement tab): menu bar, mode tabs, stage controls, position
    read-out, illumination controls, and acquisition/progress controls.
 
+The tabs, from left to right: **Movement**, **ETL**, **Parameters**,
+**Alignment**, **Timelapse** (see :doc:`timelapse`), **Scripting**,
+**Remote Control** (see :doc:`remote_control/index`) and **AI Assistant**
+(see :doc:`ai_assistant/index`). The position read-out, the Controls box and
+the Live / Snap / Run / STOP buttons below the tabs stay visible on every tab,
+and stretch with the window.
+
 Stage controls
 ~~~~~~~~~~~~~~
 

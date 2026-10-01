@@ -4,6 +4,13 @@ TCP and MCP expose the same 56 commands. They use the same names, arguments, lim
 state, and error codes. The operator chooses one transport in the Remote Control tab; both cannot
 run together.
 
+```{figure} ../../screenshots/RemoteControlTab.png
+:alt: Remote Control tab in the Main window
+:width: 60%
+
+The Remote Control tab: protocol, host, port, password, status, and Start / Stop.
+```
+
 Call `get_manual`, `get_info`, and `get_limits` before making changes. `get_manual` returns this same
 accepted/rejected-and-poll workflow over both transports, together with a command list generated
 from the running command registry.
