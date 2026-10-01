@@ -1,15 +1,15 @@
 """
 The Data viewer: the acquisition being written, shown as it lands (View > Open Data Viewer).
 
-The window itself comes from the separate ``mesospim_view`` package, a neuroglancer page
-driven from Python (https://github.com/thomdehoog/ZMART-viewer). It watches the folder
+The window itself is the ``mesospim_viewer`` package beside this module, a neuroglancer
+page driven from Python. It watches the folder
 the acquisition list saves into -- the newest ``.ome.zarr`` acquisition in it by default,
 with a dropdown for earlier ones -- and reads the stores the ``MP_OME_Zarr_TCZYX_Writer``
 writes: one (t, c, z, y, x) store per tile.
 
 This module is all mesoSPIM-control holds of it: two lines in mesoSPIM_Control.py call
 ``prepare_qt`` before the QApplication exists, and the main window's menu action calls
-``open_window``. Without the package installed, the menu entry says how to get it.
+``open_window``. Without PyQtWebEngine installed, the menu entry says how to get it.
 """
 import logging
 
@@ -18,9 +18,8 @@ from PyQt5 import QtCore, QtWidgets
 logger = logging.getLogger(__name__)
 
 INSTALL_HINT = (
-    "The Data viewer needs the 'mesospim_view' package and PyQtWebEngine:\n"
-    '    pip install "git+https://github.com/thomdehoog/ZMART-viewer"\n'
-    "    pip install PyQtWebEngine"
+    "The Data viewer needs PyQtWebEngine, the web view for PyQt5:\n"
+    '    pip install -e ".[data-viewer]"   (or: pip install PyQtWebEngine)'
 )
 
 
@@ -57,7 +56,7 @@ def open_window(main_window):
         window.raise_()
         return window
     try:
-        from mesospim_view.window import make_window_class
+        from mesoSPIM.src.mesospim_viewer.window import make_window_class
     except ImportError as error:
         main_window.display_warning(f"{INSTALL_HINT}\n\n({error})")
         return None

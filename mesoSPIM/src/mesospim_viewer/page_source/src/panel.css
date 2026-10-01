@@ -1,0 +1,175 @@
+/* The simple interface: a control panel down the right-hand edge and two
+   sliders on the picture. Colours come from page.css. The engine's own
+   window-with-histogram and colour controls are mounted inside the rows and
+   dressed here to sit in the panel's style. */
+
+.mesospim-panel {
+  background: var(--panel-bg);
+  border-left: 1px solid var(--panel-border);
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+.panel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* -- the top of the panel: what is shown, and the fold button ---------------- */
+.panel-head { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.panel-head .title { flex: 1; font-size: 15px; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The unfold button sits on the picture while the panel is folded away. */
+#fold {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  width: 30px; height: 28px;
+  display: none;
+  align-items: center; justify-content: center;
+  background: var(--overlay-bg);
+  border: 1px solid var(--control-border);
+  color: var(--text-primary);
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--subtle-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.card h2 {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.row { display: flex; align-items: center; gap: 8px; }
+
+/* -- icon buttons: fold, eyes ------------------------------------------------- */
+button.icon {
+  width: 28px; height: 26px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  color: var(--text-primary); cursor: pointer;
+}
+button.icon:hover { background: var(--control-bg); border-color: var(--control-border); }
+button.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+button.icon.off { color: var(--text-muted); }
+
+/* -- segmented controls; the 2D/3D switch is one, floating top left on the picture */
+.segmented { display: flex; width: 100%; border: 1px solid var(--control-border); border-radius: 6px; overflow: hidden; }
+.stage-overlay > .segmented.view {
+  position: absolute; top: 12px; left: 12px; z-index: 5; width: auto;
+  background: var(--overlay-bg); backdrop-filter: blur(4px);
+}
+.stage-overlay > .segmented.view button { padding: 5px 16px; background: transparent; }
+.stage-overlay > .segmented.view button.on { background: var(--accent); }
+.segmented button {
+  flex: 1; padding: 6px 0;
+  background: var(--control-bg); border: 0; color: var(--text-primary);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.segmented button + button { border-left: 1px solid var(--control-border); }
+.segmented button.on { background: var(--accent); color: #fff; }
+
+/* -- the acquisition dropdown ------------------------------------------------- */
+select.chooser {
+  width: 100%; padding: 6px 8px; box-sizing: border-box;
+  background: var(--control-bg); color: var(--text-bright);
+  border: 1px solid var(--control-border); border-radius: 6px; font: inherit; font-weight: 600;
+}
+
+/* -- the 3D card: labelled rows of controls --------------------------------- */
+.row.labelled { gap: 10px; margin-top: 6px; }
+.row.labelled > .label { flex: 0 0 72px; color: var(--text-muted); font-size: 12px; }
+.row.labelled > .segmented { flex: 1; }
+.row.labelled > .segmented button { padding: 4px 0; font-weight: 500; font-size: 12px; }
+.row.labelled > input[type="range"] { flex: 1; accent-color: var(--accent); margin: 0; }
+.row.labelled > .reading { flex: 0 0 56px; text-align: right; font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.row.labelled > input[type="checkbox"] { accent-color: var(--accent); }
+.row.labelled.disabled { opacity: 0.4; pointer-events: none; }
+.card.volume h2 { margin-bottom: 2px; }
+
+/* -- the channels: one card per acquisition, one block per channel ----------- */
+.group { display: flex; flex-direction: column; }
+.group > .row.head { padding-bottom: 6px; }
+.group .name { flex: 1; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group .count { color: var(--text-muted); font-size: 12px; }
+
+.channel { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 10px 0; border-top: 1px solid var(--subtle-border); }
+.channel .label { flex: 1; color: var(--text-bright); font-weight: 500; }
+.channel .swatch {
+  width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.25); cursor: pointer;
+  box-shadow: 0 0 0 2px var(--card-bg);
+}
+.channel .swatch:hover { border-color: #fff; }
+.channel.hidden .label, .channel.hidden .swatch { opacity: 0.35; }
+.channel.hidden .controls { opacity: 0.35; pointer-events: none; }
+
+/* The engine's controls, laid out our way: the histogram full width with the
+   window's black and white points as handles, the numbers beneath, the auto
+   buttons as small chips. The colour input is driven by the swatch above. */
+.controls { display: flex; flex-direction: column; gap: 4px; }
+.controls .neuroglancer-tab-content { display: contents; }
+.controls .neuroglancer-layer-control-container { display: block; margin: 0; }
+.controls .neuroglancer-layer-control-label-container { display: none; }
+.controls .neuroglancer-invlerp-widget { display: flex; flex-direction: column; width: 100%; gap: 3px; }
+.controls .neuroglancer-invlerp-legend-panel { display: none; }
+.controls .neuroglancer-invlerp-cdfpanel {
+  position: relative; display: block; width: 100%; height: 40px; box-sizing: border-box;
+  background: #0a0c10; border: 1px solid var(--subtle-border); border-radius: 4px;
+}
+.controls .neuroglancer-invlerp-widget-bounds { display: flex; align-items: center; width: 100%; }
+.controls .neuroglancer-invlerp-widget-range-bounds { color: var(--text-primary); }
+.controls .neuroglancer-invlerp-widget-window-bounds { color: var(--text-muted); font-size: 11px; }
+.controls .neuroglancer-invlerp-widget-bound { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: inherit; padding: 0; }
+.controls .neuroglancer-invlerp-widget-window-bound { color: var(--text-muted); }
+.controls .neuroglancer-invlerp-widget-range-bound { color: var(--text-bright); }
+.controls .neuroglancer-invlerp-range-finder-button-container { display: flex; gap: 4px; margin-top: 2px; }
+.controls .neuroglancer-invlerp-range-finder-button {
+  font: inherit; font-size: 11px; padding: 2px 7px; margin: 0;
+  background: var(--control-bg); border: 1px solid var(--control-border); border-radius: 4px; color: var(--text-primary); cursor: pointer;
+}
+.controls .neuroglancer-invlerp-range-finder-button:hover { border-color: var(--accent); }
+.controls .neuroglancer-layer-control-container:has(input[type="color"]) { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; }
+
+/* -- the sliders on the picture: depth upright at the right edge, time along the bottom */
+.stage-overlay { position: absolute; inset: 0; pointer-events: none; }
+.stage-overlay > * { pointer-events: auto; }
+.axis-slider {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--overlay-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  color: var(--text-bright);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: blur(4px);
+}
+.axis-slider[hidden] { display: none; }
+.axis-slider .name { font-weight: 600; color: var(--text-muted); }
+.axis-slider input[type="range"] { accent-color: var(--accent); margin: 0; }
+#slider-t { left: 50%; bottom: 12px; transform: translateX(-50%); }
+#slider-t input { width: 260px; }
+#slider-z { right: 12px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+#slider-z input { writing-mode: vertical-lr; direction: rtl; height: 220px; width: 16px; }

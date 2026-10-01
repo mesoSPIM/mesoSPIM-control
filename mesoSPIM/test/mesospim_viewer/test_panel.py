@@ -1,0 +1,351 @@
+"""The simple interface: our panel over a bare engine, driven in a headless Chromium.
+
+Every control writes engine layer state and nothing else, so each test asks the
+engine what changed rather than the panel.
+"""
+
+from __future__ import annotations
+
+import time
+
+import pytest
+
+from mesoSPIM.src.mesospim_viewer import Viewer
+
+
+def _shown(view: Viewer):
+    view.fit()
+    return view.start()
+
+
+def test_the_panel_lists_channels_by_acquisition_with_the_engines_own_controls(pages, stacks):
+    view = Viewer(ui="simple")
+    for stack in stacks:
+        view.add(stack, layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        seen = page.evaluate(
+            """() => ({
+              chrome: document.documentElement.dataset.chrome,
+              nativePanel: document.querySelector('.neuroglancer-layer-panel') !== null,
+              groups: [...document.querySelectorAll('.group')].map(g => g.dataset.group),
+              rows: [...document.querySelectorAll('.channel')].map(r => r.dataset.layer),
+              windows: [...document.querySelectorAll('.channel .controls .neuroglancer-invlerp-widget, .channel .controls [class*="invlerp"]')].length,
+              swatches: [...document.querySelectorAll('.channel .swatch')].map(s => s.style.background),
+              scaleBar: window.viewer.showScaleBar.value, axes: window.viewer.showAxisLines.value,
+            })"""
+        )
+        assert seen["chrome"] == "simple" and seen["nativePanel"] is False
+        assert seen["groups"] == ["overview"]
+        assert seen["rows"] == ["overview · 488", "overview · 561"]
+        assert seen["windows"] >= 2, "each row carries the engine's window control"
+        assert seen["swatches"] == ["rgb(0, 255, 102)", "rgb(255, 51, 255)"]
+        assert seen["scaleBar"] is True and seen["axes"] is False
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_the_eye_hides_a_channel_and_the_group_eye_hides_them_all(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        visible = "() => window.viewer.layerManager.managedLayers.map(m => m.visible)"
+        assert page.evaluate(visible) == [True, True]
+        page.click('.channel[data-layer="overview · 561"] button.eye')
+        assert page.evaluate(visible) == [True, False]
+        assert page.evaluate(
+            "() => document.querySelector('.channel[data-layer=\"overview · 561\"]').classList.contains('hidden')"
+        )
+        page.click('.group[data-group="overview"] > .row > button.eye')
+        assert page.evaluate(visible) == [False, False]
+        page.click('.group[data-group="overview"] > .row > button.eye')
+        assert page.evaluate(visible) == [True, True]
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_2d_and_3d_swap_the_layout_and_the_volume_rendering(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        state = "() => ({layout: window.viewer.layout.toJSON(), modes: window.viewer.layerManager.managedLayers.map(m => m.layer.volumeRenderingMode.toJSON() ?? 'off'), on: [...document.querySelectorAll('.view button.on')].map(b => b.dataset.layout)})"
+        assert page.evaluate(state) == {"layout": "xy", "modes": ["off", "off"], "on": ["xy"]}
+        page.click('.view button[data-layout="3d"]')
+        assert page.evaluate(state) == {"layout": "3d", "modes": ["max", "max"], "on": ["3d"]}
+        page.click('.view button[data-layout="xy"]')
+        assert page.evaluate(state) == {"layout": "xy", "modes": ["off", "off"], "on": ["xy"]}
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_the_sliders_step_through_depth_and_time(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        sliders = "() => Object.fromEntries([...document.querySelectorAll('.axis-slider')].map(s => [s.id, {hidden: s.hidden, min: s.querySelector('input').min, max: s.querySelector('input').max, reading: s.querySelector('.reading').textContent}]))"
+        seen = page.evaluate(sliders)
+        assert (
+            seen["slider-z"]["min"] == "0"
+            and seen["slider-z"]["max"] == "23"
+            and not seen["slider-z"]["hidden"]
+        )
+        assert (
+            seen["slider-t"]["min"] == "0"
+            and seen["slider-t"]["max"] == "2"
+            and not seen["slider-t"]["hidden"]
+        )
+        assert seen["slider-z"]["reading"].endswith("/ 24") and seen["slider-t"][
+            "reading"
+        ].endswith("/ 3")
+
+        page.evaluate(
+            "() => { const i = document.querySelector('#slider-t input'); i.value = '2'; i.dispatchEvent(new Event('input')); }"
+        )
+        page.evaluate(
+            "() => { const i = document.querySelector('#slider-z input'); i.value = '5'; i.dispatchEvent(new Event('input')); }"
+        )
+        position = page.evaluate(
+            "() => { const v = window.viewer; const s = v.navigationState.position.coordinateSpace.value; const p = v.navigationState.position.value; return Object.fromEntries(s.names.map((n, i) => [n, p[i]])); }"
+        )
+        assert position["t"] == pytest.approx(2.5) and position["z"] == pytest.approx(5.5)
+        assert page.evaluate(sliders)["slider-z"]["reading"] == "6 / 24"
+
+        # Python moving the camera moves the slider too
+        view.look_at(z=12 * 5.0)  # micrometres: 5 um planes
+        deadline = time.time() + 5
+        while time.time() < deadline and page.evaluate(sliders)["slider-z"]["reading"] != "13 / 24":
+            time.sleep(0.1)
+        assert page.evaluate(sliders)["slider-z"]["reading"] == "13 / 24"
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_adjustments_in_the_panel_survive_a_tile_landing(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        page.click('.channel[data-layer="overview · 561"] button.eye')
+        page.click('.view button[data-layout="3d"]')
+        # the detail slider to its top step, the gain up a little
+        page.evaluate(
+            """() => {
+              const detail = document.querySelector('.card.volume input.detail');
+              detail.value = detail.max;
+              detail.dispatchEvent(new Event('input'));
+              const gain = document.querySelector('.card.volume input.gain');
+              gain.value = '2';
+              gain.dispatchEvent(new Event('input'));
+            }"""
+        )
+        view.add(stacks[1], layer="overview")
+        deadline = time.time() + 20
+        sources = (
+            "() => window.viewer.layerManager.managedLayers.map(m => m.layer.dataSources.length)"
+        )
+        while time.time() < deadline and page.evaluate(sources) != [2, 2]:
+            time.sleep(0.2)
+        assert page.evaluate(sources) == [2, 2]
+        assert page.evaluate(
+            "() => window.viewer.layerManager.managedLayers.map(m => m.visible)"
+        ) == [True, False]
+        assert page.evaluate(
+            "() => window.viewer.layerManager.managedLayers.map(m => m.layer.volumeRenderingMode.toJSON())"
+        ) == ["max", "max"]
+        assert page.evaluate(
+            "() => window.viewer.layerManager.managedLayers.map(m => [m.layer.volumeRenderingDepthSamplesTarget.value, m.layer.volumeRenderingGain.value])"
+        ) == [[1024, 2], [1024, 2]]
+        assert page.evaluate(
+            "() => [...document.querySelectorAll('.channel')].map(r => r.classList.contains('hidden'))"
+        ) == [False, True]
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_the_panel_folds_away_and_comes_back(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        width = (
+            "() => document.querySelector('.mesospim-panel')?.getBoundingClientRect().width ?? 0"
+        )
+        picture = (
+            "() => window.viewer.display.panels.values().next().value.renderViewport.logicalWidth"
+        )
+        assert page.evaluate(width) > 250
+        narrow = page.evaluate(picture)
+        page.click(".panel-head button.fold")
+        time.sleep(0.5)
+        assert page.evaluate(width) == 0
+        assert page.evaluate(picture) > narrow, "the picture takes the room the panel gave up"
+        page.click("#fold")
+        time.sleep(0.5)
+        assert page.evaluate(width) > 250
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_the_histogram_is_drawn_inside_the_row(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        time.sleep(1.5)
+        drawn = page.evaluate(
+            """() => [...document.querySelectorAll('.channel .neuroglancer-invlerp-cdfpanel canvas')].map(c => {
+              const r = c.getBoundingClientRect();
+              const ctx = c.getContext('2d'); const px = ctx.getImageData(0, 0, c.width, c.height).data;
+              let lit = 0; for (let i = 0; i < px.length; i += 4) if (px[i] + px[i + 1] + px[i + 2] > 60) lit++;
+              return { width: r.width, height: r.height, lit }; })"""
+        )
+        assert len(drawn) == 2
+        for canvas in drawn:
+            assert canvas["width"] > 200 and 30 <= canvas["height"] <= 50, canvas
+            assert canvas["lit"] > 50, "the engine drew the histogram into the row"
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_the_dropdown_offers_the_sessions_acquisitions_and_reports_a_choice(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    chosen = []
+    view.on_choice(chosen.append)
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        assert page.evaluate("() => document.querySelector('.card.acquisition').hidden") is True
+
+        view.offer_acquisitions(["run_03", "run_02", "run_01"], 0)
+        deadline = time.time() + 5
+        options = "() => [...document.querySelectorAll('.card.acquisition option')].map(o => o.textContent)"
+        while time.time() < deadline and len(page.evaluate(options)) != 3:
+            time.sleep(0.1)
+        assert page.evaluate(options) == ["run_03  (current)", "run_02", "run_01"]
+        assert page.evaluate("() => document.querySelector('.card.acquisition').hidden") is False
+        # the dropdown sits above the view switch
+        assert page.evaluate(
+            "() => [...document.querySelectorAll('.panel-body > .card')].map(c => c.className)"
+        )[:1] == ["card acquisition"]
+        assert page.evaluate(
+            "() => document.querySelector('.stage-overlay > .segmented.view') !== null"
+        )
+
+        page.select_option("select.chooser", "2")
+        deadline = time.time() + 5
+        while time.time() < deadline and not chosen:
+            time.sleep(0.1)
+        assert chosen == [2]
+
+        view.offer_acquisitions(["run_03", "run_02", "run_01"], 2)
+        deadline = time.time() + 5
+        while (
+            time.time() < deadline
+            and page.evaluate("() => document.querySelector('select.chooser').value") != "2"
+        ):
+            time.sleep(0.1)
+        assert page.evaluate("() => document.querySelector('select.chooser').value") == "2"
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def test_the_3d_card_drives_projection_detail_gain_planes_and_the_look(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="overview")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        assert page.evaluate("() => document.querySelector('.card.volume').hidden") is True
+        page.click('.view button[data-layout="3d"]')
+        assert page.evaluate("() => document.querySelector('.card.volume').hidden") is False
+        assert page.evaluate("() => window.viewer.showPerspectiveSliceViews.value") is False, (
+            "a pure volume"
+        )
+
+        def layers(expression: str):
+            return page.evaluate(
+                f"() => window.viewer.layerManager.managedLayers.map(m => m.layer).map(l => {expression})"
+            )
+
+        assert page.evaluate("() => document.getElementById('slider-t').hidden") is False
+        page.click('.card.volume button[data-mode="on"]')
+        assert layers("l.volumeRenderingMode.toJSON()") == ["on", "on"]
+        assert (
+            page.evaluate("() => document.querySelector('.card.volume button.on').dataset.mode")
+            == "on"
+        )
+        page.click('.card.volume button[data-mode="max"]')
+        assert layers("l.volumeRenderingMode.toJSON()") == [
+            "max",
+            "max",
+        ]
+
+        page.evaluate(
+            "() => { const i = document.querySelector('.card.volume input.detail'); i.value = '3'; i.dispatchEvent(new Event('input')); }"
+        )
+        assert layers("l.volumeRenderingDepthSamplesTarget.value") == [
+            256,
+            256,
+        ]
+        assert (
+            page.evaluate(
+                "() => document.querySelector('.card.volume input.detail + .reading').textContent"
+            )
+            == "256 steps"
+        )
+
+        page.evaluate(
+            "() => { const i = document.querySelector('.card.volume input.gain'); i.value = '2.5'; i.dispatchEvent(new Event('input')); }"
+        )
+        assert layers("l.volumeRenderingGain.value") == [2.5, 2.5]
+
+        page.click(".card.volume input.slices")
+        assert page.evaluate("() => window.viewer.showPerspectiveSliceViews.value") is True
+
+        orientation = "() => window.viewer.projectionOrientation.toJSON() ?? [0, 0, 0, 1]"
+        page.click('.card.volume button[data-look="front"]')
+        assert page.evaluate(orientation) == pytest.approx([-0.7071, 0, 0, 0.7071], abs=1e-3)
+        page.click('.card.volume button[data-look="top"]')
+        assert page.evaluate(orientation) == [0, 0, 0, 1]
+        page.click('.view button[data-layout="xy"]')
+        assert page.evaluate("() => document.querySelector('.card.volume').hidden") is True
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()

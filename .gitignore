@@ -42,3 +42,5 @@ docs/build_log.txt
 PROJECT_CONTEXT.md
 .claude/skills
 CLAUDE.md
+# The Data viewer page's build tools (mesoSPIM/src/mesospim_viewer/page_source)
+node_modules/

@@ -194,7 +194,7 @@ The Main window menu bar also has:
   measuring field flatness and axial chromatic aberration from z-stacks of a
   Ronchi grating.
 * **View → Open Data Viewer** — the acquisition being written, shown as it
-  lands; see :doc:`data_viewer` (needs the ``mesospim_view`` package).
+  lands; see :doc:`data_viewer` (needs PyQtWebEngine).
 
 Running an acquisition
 ~~~~~~~~~~~~~~~~~~~~~~

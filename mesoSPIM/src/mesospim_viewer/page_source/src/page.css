@@ -1,0 +1,65 @@
+/* The page is the viewer: the engine fills the window, nothing else is drawn
+   unless the simple interface mounts its panel beside it (panel.css). */
+:root {
+  --page-bg: #0b0d10;
+  --panel-bg: #0d1015;
+  --card-bg: #141922;
+  --control-bg: #1b222b;
+  --panel-border: #2b3440;
+  --control-border: #303a46;
+  --subtle-border: #1f2630;
+  --text-bright: #f2f5f8;
+  --text-primary: #c9d1d9;
+  --text-muted: #8b95a3;
+  --accent: #2f81f7;
+  --accent-selection: #1f3a5f;
+  --overlay-bg: rgba(12, 15, 19, 0.82);
+  --slider-track: #3a444f;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--page-bg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text-primary);
+}
+
+/* Sized with width and height rather than insets: the engine sets
+   `position: relative` on the mount itself, which would cancel inset sizing. */
+#engine {
+  width: 100%;
+  height: 100%;
+}
+
+/* The engine sizes itself by assuming it fills the page body; mounted inside a
+   box of our own it would collapse to its toolbar, so it is told to fill the box. */
+.neuroglancer-viewer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Transparent ground for embedding between a host's own surfaces: the engine
+   leaves alpha at zero where no image was acquired (see scripts/patch_neuroglancer.mjs),
+   and the page must not paint anything of its own underneath. */
+html[data-transparent],
+html[data-transparent] body,
+html[data-transparent] .neuroglancer-viewer,
+html[data-transparent] .neuroglancer-layer-group-viewer,
+html[data-transparent] .neuroglancer-panel {
+  background: transparent !important;
+}
+
+/* Without the engine's own chrome, its in-picture widgets go too, so a host or
+   our own panel is not fighting a second set of controls. */
+html[data-chrome="bare"] .neuroglancer-data-panel-layout-controls,
+html[data-chrome="bare"] .neuroglancer-display-dimensions-widget,
+html[data-chrome="bare"] .maximize-button,
+html[data-chrome="simple"] .neuroglancer-data-panel-layout-controls,
+html[data-chrome="simple"] .neuroglancer-display-dimensions-widget,
+html[data-chrome="simple"] .maximize-button {
+  display: none !important;
+}

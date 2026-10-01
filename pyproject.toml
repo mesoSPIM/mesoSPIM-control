@@ -48,6 +48,10 @@ ai-assistant = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1"]
 # release page for anything beyond a few billion parameters.
 ai-assistant-local = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1", "llama-cpp-python[server]>=0.3"]
 
+# The Data viewer window (View > Open Data Viewer) only: the web view for PyQt5. The viewer
+# itself, mesoSPIM/src/mesospim_viewer, comes with mesoSPIM-control, its page already built.
+data-viewer = ["PyQtWebEngine==5.15.7"]
+
 [project.urls]
 "Homepage" = "http://mesospim.org"
 "Source code" = "https://github.com/mesoSPIM/mesoSPIM-control"

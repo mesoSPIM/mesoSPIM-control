@@ -8,9 +8,8 @@ folder the acquisition list saves into, and a dropdown at the top of its panel
 switches to an earlier acquisition of the session (pick the one marked
 *current* to follow the newest again).
 
-The window is a neuroglancer page driven from Python, from the separate
-`mesospim_view <https://github.com/thomdehoog/ZMART-viewer/tree/main/mesospim_view>`_
-package. It reads the layout the ``MP_OME_Zarr_TCZYX_Writer`` produces: one
+The window is a neuroglancer page driven from Python, the ``mesospim_viewer``
+package in ``mesoSPIM/src/mesospim_viewer/``. It reads the layout the ``MP_OME_Zarr_TCZYX_Writer`` produces: one
 ``.ome.zarr`` group per acquisition holding one ``(t, c, z, y, x)`` store per
 tile (see :doc:`file_formats`). Stores from the other writers are not shown.
 
@@ -34,13 +33,12 @@ In the mesoSPIM Python environment:
 
 .. code-block:: bash
 
-   pip install "git+https://github.com/thomdehoog/ZMART-viewer"
-   pip install PyQtWebEngine
+   pip install -e ".[data-viewer]"     # or: pip install PyQtWebEngine
 
-The first brings the package with its page built in (no Node needed); the
-second is the web view for PyQt5, which PyQt5 itself does not include.
-mesoSPIM imports it at start-up when present, so restart mesoSPIM after
-installing. Without either, the menu entry shows a message saying what is
+The viewer comes with mesoSPIM-control, its page already built (no Node
+needed). What is added is the web view for PyQt5, which PyQt5 itself does not
+include. mesoSPIM imports it at start-up when present, so restart mesoSPIM
+after installing. Without it, the menu entry shows a message saying what is
 missing and nothing else changes.
 
 Testing it
@@ -50,14 +48,14 @@ Before the first real acquisition, from a Python prompt in that environment:
 
 .. code-block:: python
 
-   import mesospim_view, PyQt5.QtWebEngineWidgets   # both must import
-   mesospim_view.Viewer().page_built                # must be True
+   from mesoSPIM.src import mesospim_viewer; import PyQt5.QtWebEngineWidgets   # both must import
+   mesospim_viewer.Viewer().page_built                                         # must be True
 
 Then, without the microscope, a pretend run in the Data viewer window:
 
 .. code-block:: bash
 
-   python -m mesospim_view.demo --live --window
+   python -m mesoSPIM.src.mesospim_viewer.demo --live --window
 
 It writes four two-channel tiles and then appends time points to them, one
 stack every two seconds. What to look for:
@@ -86,13 +84,13 @@ If something is wrong
   usually WebGL in the Qt web view. Set
   ``QTWEBENGINE_CHROMIUM_FLAGS=--ignore-gpu-blocklist`` in the environment
   before starting, and try ``--disable-gpu-driver-bug-workarounds`` after
-  that. ``python -m mesospim_view.demo --live`` (without ``--window``) shows
+  that. ``python -m mesoSPIM.src.mesospim_viewer.demo --live`` (without ``--window``) shows
   the same run in the system browser: if the browser draws and Qt does not,
   it is Qt's GPU path and not the viewer.
-* **The menu entry says the package is missing** although it is installed:
+* **The menu entry says PyQtWebEngine is missing** although it is installed:
   it was installed into a different Python environment than the one mesoSPIM
-  runs in. ``python -c "import mesospim_view; print(mesospim_view.__file__)"``
-  from the mesoSPIM environment tells.
+  runs in. ``python -c "import PyQt5.QtWebEngineWidgets"`` from the mesoSPIM
+  environment tells.
 * **"QtWebEngineWidgets must be imported before a QCoreApplication instance is
   created"**: PyQtWebEngine was installed after mesoSPIM was started, or the
   ``mesoSPIM_DataViewer.prepare_qt()`` call at the top of ``mesoSPIM_Control.py``
@@ -100,6 +98,7 @@ If something is wrong
 * **Nothing appears for an acquisition** written with another writer: only
   the tczyx layout is read. Check the acquisition folder holds
   ``<Sample>.ome.zarr/Mag…_Tile…_Sh…_Rot….ome.zarr`` stores.
-* **The data viewer's own tests** live in the ZMART-viewer repository:
-  ``python -m pytest tests/mesospim``
-  there, with a Chromium for the picture tests.
+* **The data viewer's own tests**: ``python -m pytest mesoSPIM/test/mesospim_viewer``,
+  with Playwright and a Chromium for the picture tests (they skip, saying so,
+  without them). Changing the page itself needs Node: see
+  ``mesoSPIM/src/mesospim_viewer/README.md``.
