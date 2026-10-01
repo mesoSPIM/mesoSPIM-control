@@ -27,7 +27,7 @@ class OMEZarrWriter(ImageWriter):
     '''
     Write Tiles as OME-Zarr
     Each tile is written into a different folder inside a larger .ome.zarr folder.
-    This writer also produces a BigStitcher XML file (only for ome zarr v0.4) for easy import into BigStitcher
+    This writer also produces a BigStitcher XML file (any ome_version) for easy import into BigStitcher
 
 
     OME.ZARR parameters
@@ -143,7 +143,7 @@ class OMEZarrWriter(ImageWriter):
             'base_chunks': ((64, 256, 256), 'Chunk size (z,y,x) at multiscale level 0. Bigger chunks = fewer files and better IO'),
             'target_chunks': ((64, 64, 64), 'Chunk size (z,y,x) at the smallest multiscale level'),
             'async_finalize': (True, 'True: start the next tile while the multiscale finishes. Set False if slow IO fills the RAM'),
-            'write_big_stitcher_xml': (True, 'BigStitcher XML for drag-and-drop import (ome_version 0.4 only)'),
+            'write_big_stitcher_xml': (True, 'BigStitcher XML for drag-and-drop import'),
             'flip_xyz': ((False, False, False), 'Match BigStitcher coordinates to the mesoSPIM axes'),
             'transpose_xy': (False, 'Swap x and y for correct BigStitcher tile positions'),
         }
@@ -195,7 +195,7 @@ class OMEZarrWriter(ImageWriter):
             zarr_version = 2 if ome_version == "0.4" else 3
             zarr.open_group(req.uri, mode="a", zarr_version=zarr_version)
 
-            if write_big_stitcher_xml and ome_version == "0.4":
+            if write_big_stitcher_xml:
                 # the BigStitcher XML overhead
                 self.xml_writer = XmlWriter(self.big_stitcher_xml_filename,
                                             nsetups=len(acq_list),
@@ -203,7 +203,8 @@ class OMEZarrWriter(ImageWriter):
                                             nchannels=req.num_channels,
                                             nangles=req.num_rotations,
                                             ntiles=req.num_tiles,
-                                            ntimes=1)
+                                            ntimes=1,
+                                            zarr_version=zarr_version)
             else:
                 self.xml_writer = None
 

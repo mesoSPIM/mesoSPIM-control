@@ -636,8 +636,10 @@ class Live3DPyramidWriter:
 
 
 class XmlWriter:
-    def __init__(self, filename, nsetups=1, nilluminations=1, nchannels=1, ntiles=1, nangles=1, ntimes=1):
+    def __init__(self, filename, nsetups=1, nilluminations=1, nchannels=1, ntiles=1, nangles=1, ntimes=1,
+                 zarr_version=2):
         self.filename = filename
+        self.zarr_version = zarr_version  # 2 for OME-Zarr 0.4, 3 for OME-Zarr 0.5
         self.nsetups = nsetups
         self.group_names = []
         self.nilluminations = nilluminations
@@ -770,6 +772,10 @@ class XmlWriter:
         imgload = ET.SubElement(seqdesc, 'ImageLoader')
         imgload.set('format', 'bdv.multimg.zarr')
         imgload.set('version', '3.0')
+        # BigStitcher (multiview-reconstruction XmlIoAllenOMEZarrLoader) opens the container
+        # with its Zarr v3 reader only when zarr.version is 'ZarrV3'; without the attribute
+        # it falls back to Zarr v2 and reports 'No container exists' for OME-Zarr 0.5 data.
+        imgload.set('zarr.version', 'ZarrV3' if self.zarr_version == 3 else 'ZarrV2')
         data_type = ET.SubElement(imgload, 'zarr')
         zgroups = ET.SubElement(imgload, 'zgroups')
         data_type.set('type', 'relative')
