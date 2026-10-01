@@ -285,13 +285,15 @@ def _named(option, words):
 
 
 class TurnGuard:
-    """Four rules of the manual, kept in code for the length of one request, because a small model
-    reads them and does otherwise. After a move was refused for a movement limit, no other target
-    for that axis is taken: a different number is a different instruction, and the operator gives
+    """Five rules of the manual, kept in code for the length of one request, because a model can read
+    a rule and still break it. After a move was refused for a movement limit, no other target for
+    that axis is taken: a different number is a different instruction, and the operator gives
     those. After a command was refused because the operator is running something from the GUI, a
-    stop is theirs to confirm, not the model's way to make room. A look right after a snap reads
-    that frame instead of exposing the sample a second time. And a value the operator did not give
-    ("brighter" sent as 20, "change the filter" sent as the one other filter) waits for their Run.
+    stop is theirs to confirm, not the model's way to make room. The laser intensity and the
+    exposure change at most LIGHT_CHANGES_PER_WINDOW times in LIGHT_WINDOW_S without the operator's
+    Run. A look right after a snap reads that frame instead of exposing the sample a second time.
+    And a value the operator did not give ("brighter" sent as 20, "change the filter" sent as the
+    one other filter) waits for their Run.
 
     A request is what one typed message set going, over its scheduled and continued turns (see
     requests.py); its turns are in the session store. The operator's values are the numbers and
@@ -1229,9 +1231,8 @@ _ROW_UPDATE_SCHEMA = {
 
 def _row_update_tool(acceptor, install, on_call):
     """Change the named keys of one row and hand the whole list to set_acquisition_list, so the
-    rest of the row is the instrument's, never retyped. On the Windows demo a rename through
-    set_acquisition_list rewrote the zoom, the focus and the planes. `install` is the tool body
-    of set_acquisition_list, so its checks, the gate and the advice all apply."""
+    rest of the row is the instrument's, never retyped. `install` is the tool body of
+    set_acquisition_list, so its checks, the gate and the advice all apply."""
     from pydantic_ai import Tool
     known = set(COMMANDS["set_acquisition_list"].schema["properties"]["acquisitions"]["items"]["properties"])
 
@@ -1435,8 +1436,8 @@ def tokens_of(usage):
 
 
 def served_models(messages):
-    """The names of the models that answered in these messages, in order of first appearance: the
-    fallback model rolls in silently on a rate limit, and the operator is told who really answered."""
+    """The names of the models that answered in these messages, in order of first appearance: a
+    gateway may route a request to another model, and the operator is told who really answered."""
     names = []
     for message in messages:
         name = getattr(message, "model_name", None)
@@ -1511,7 +1512,9 @@ def build_system_prompt(acceptor=None, profile=None, axes=None, measured=False):
     """The hand-written preamble (units, frames, safety) plus the offered commands grouped by
     kind. What each does and its argument shape are in its tool description and schema, which the
     model receives anyway; the prompt does not repeat them, which keeps it small enough for a local
-    model's context alongside the conversation."""
+    model's context alongside the conversation. manual.md speaks to the operator as "you" and
+    gives each rule its reason; a softened rule can make a model ask where it may correct, or clamp
+    an out-of-range value, and the manual names both exceptions."""
     preamble = (Path(__file__).parent / "manual.md").read_text(encoding="utf-8")
     offered = offered_commands(profile)
     lines = [f"- {label}: {', '.join(cmd.name for cmd in offered if cmd.kind == kind)}"
@@ -1625,7 +1628,6 @@ class Endpoint:
     model: str
     api_key: str = field(default="", repr=False)
     base_url: str = ""
-    fallback_model: str = ""
     vision: bool = False  # may be shown a camera frame (the `look` side call)
     request_interval_s: float = 0.0  # at least this long between requests; 0 is no spacing
 
@@ -1644,7 +1646,6 @@ class Endpoint:
             model=model.strip() or preset["model"],
             api_key=key,
             base_url=base_url.strip() or preset.get("base_url", ""),
-            fallback_model=preset.get("fallback_model", ""),
             vision=bool(preset.get("vision", False)) if vision is None else bool(vision),
             request_interval_s=float(preset.get("request_interval_s", 0) or 0),
         )
@@ -1695,23 +1696,18 @@ def throttled(model, interval_s):
 
 
 def build_model(endpoint):
-    """The endpoint's model, wrapped with its fallback (if the preset names one) so a rate-limited
-    or unavailable primary rolls over transparently, and throttled when the endpoint asks for it."""
-    primary = _build_one(endpoint, endpoint.model)
-    if endpoint.fallback_model:
-        from pydantic_ai.models.fallback import FallbackModel
-        primary = FallbackModel(primary, _build_one(endpoint, endpoint.fallback_model))
+    """The endpoint's model, throttled when the endpoint asks for it."""
+    model = _build_one(endpoint, endpoint.model)
     if endpoint.request_interval_s > 0:
-        primary = throttled(primary, endpoint.request_interval_s)
-    return primary
+        model = throttled(model, endpoint.request_interval_s)
+    return model
 
 
 def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=None,
                 vision_endpoint=None, image_bin=None, profile=None, store=None, scheduler=None,
                 vision_session=None, axes=None, requests=None, measured=False):
-    """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
-    GUI never passes it; the offline eval harness uses it to drive the very same agent against a
-    scripted model."""
+    """`endpoint` is what the tab chose (the default preset when None). `model` overrides it: the
+    GUI never passes it; the offline evaluation drives this same agent with a scripted model."""
     from pydantic_ai import Agent
     from pydantic_ai.capabilities import ProcessHistory
     if model is None:
@@ -1819,7 +1815,7 @@ class AssistantWorker(QtCore.QObject):
     sig_reply = QtCore.pyqtSignal(str)
     sig_tool = QtCore.pyqtSignal(str, str)   # tool name, args-json
     sig_confirm = QtCore.pyqtSignal(str, str)  # a confirm-first command waits for Run / Cancel
-    sig_served = QtCore.pyqtSignal(str)      # another model than the chosen one answered (the fallback)
+    sig_served = QtCore.pyqtSignal(str)      # another model than the chosen one answered (a gateway's substitute)
     sig_error = QtCore.pyqtSignal(str)
     sig_done = QtCore.pyqtSignal()
     sig_continue = QtCore.pyqtSignal(str, int)   # a wait is over: the continuation turn of this request
@@ -1907,9 +1903,8 @@ class AssistantWorker(QtCore.QObject):
                                           store=self.store, scheduler=self.scheduler, vision_session=self.eyes,
                                           axes=self._agent_axes, requests=self.requests,
                                           measured=self.measured_values)
-            # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
-            # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
-            # every tool call the first attempt already made.
+            # No whole-turn retry: it would re-run every tool call the first attempt already made.
+            # A rate limit or outage reaches the operator as an error they can see and retry.
             prompt = with_state(self._acceptor, text, self.store, self.scheduler, self.requests, origin)
             result = self._run_cancellable(self._agent.run(prompt, message_history=self._history))
             self.store.finish(result.new_messages(), result.output)

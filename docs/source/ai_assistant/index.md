@@ -143,19 +143,48 @@ the frame live shows instead of taking a snap.
 
 **Schedules.** "Take a snap every three minutes", "in ten minutes close the shutters", "at 15:00
 start the list": the assistant sets a named schedule (`schedule`; `cancel_schedule` removes one,
-or all), and the tab's own timer fires each due instruction as a turn of its own, marked
-`[scheduled 'name']` in the transcript, through the same tools, gate and refusals as anything
-typed, never while a turn runs. The readout carries the clock and the schedules, the model's only
-clock. Stop microscope and Disconnect clear every schedule; at most ten, none more often than
-every five seconds.
+or all), and the tab's own timer fires each due instruction as a turn of its own, shown in the
+transcript as a muted line ("⏱ Scheduled: snap every minute · take a snap"), through the same
+tools, gate and refusals as anything typed, never while a turn runs. Above the input, each schedule
+has a row with how often it fires and a countdown to its next firing ("next in 0:42", or "due,
+after this turn" while a turn runs), and **Cancel schedule** ends that one alone. The readout
+carries the clock and the schedules, the model's only clock. Stop microscope and Disconnect clear
+every schedule; at most ten, none more often than every five seconds.
 
-**The eyes remember.** The vision model has a conversation of its own for the session: every
-look is a turn in it, with the frame, its time, the settings it was taken with and its numbers,
-so "is this sharper than before?" and "has the sample moved since the first frame?" are answered
-by looking, and `ask_eyes` puts a question to the frames seen without taking a new one. The
-last eight frames stay attached as images; older turns keep their text. Clear context and
-Disconnect clear the eyes with the transcript. A scheduled "look and tell me if anything changed"
-is one look into a memory of the previous ones.
+**Requests and waiting.** A typed message opens a request; its schedules and waits come back as
+turns of the same request, written by the machine. "Run the list and look at the result" runs the
+list, then `wait`s until the run is done, idle, or a number of seconds has passed; the request
+continues on its own in a turn that starts with the wait's result, shown as a muted line ("↻
+Request 2 continues: ..."). One wait is pending at a time, at most 30 per request. The request
+line above the input shows the open request's turns, tokens, what it waits for and its plan (a
+checklist the model writes in its first reply), with **Cancel request**. Cancel request, Stop
+microscope, Clear context and Disconnect end it. A number the model wrote into a schedule or a
+continuation is not the operator's: it waits for **Run**.
+
+**Frames and the map.** Every frame a look, a snap or live delivers is kept for the session as a
+small copy with its number, time, position and settings, and code adds its measures: focus, peak,
+and the offset of the sample from the centre with the stage move that would centre it. `look`
+takes `frames` ("last 3", "1,7", "3-10") and compares them (image shift, focus, peak); the vision
+model sees exactly those frames and keeps only its text afterwards. The readout carries the
+history in brief and a map made from it: per zoom and light, where the frames put the sample, its
+best focus from the focus curve, the last good light and labelled places. The vision model has a
+conversation of its own for the session, so `ask_eyes` puts a question to the frames seen without
+taking a new one. Clear context and Disconnect clear the frames and the eyes with the transcript.
+
+**Calibrate.** Until calibrated, the move that centres the sample uses the nominal pixel size and
+the coordinate system below. `calibrate` (confirm-first, one **Run** for the block) moves x and y by
+a tenth of the field and back, measures how the image moved, and keeps the result per zoom beside
+the configuration, in a git-ignored file. Centring moves then use the measured scale and
+direction, which also corrects a coordinate system set the wrong way round.
+
+**Measured values (off by default).** With `ai_assistant_measured_values = True` in the microscope
+config, a value that follows from the assistant's own fresh measurement may pass without **Run**:
+a move within 20 % of the frame's centring move (at most one field), a focus move to the map's
+best focus or a search step of at most 100 µm within 300 µm of the start, an intensity or exposure
+within a factor of two of the frame's. Each next measured offset must be smaller than the last,
+at most eight measured moves per request, and the newest frame must be newer than the last move
+or setting; anything else waits for **Run**. Leave it off until it has been tried on the
+instrument with an operator present.
 
 **The coordinate system.** The box under Preferences says what a positive move on x, y and z
 does to the sample in the image: right or left, up or down, toward or away from the camera.
@@ -185,25 +214,20 @@ loaded.
   told or talked into. Starting a run is not gated: the model is instructed to summarise and ask
   only when the state shows something off (empty list, missing folder, short disk, pending
   warning), and Stop microscope ends a run at any time.
-- **Five rules are held in code for the length of a turn** (`TurnGuard`), because
-  small local models read them and do otherwise. After a move is refused for a movement limit, no
-  other target for that axis is taken until the operator's next message: a 4B model answered
-  "z=999999 refused" with a move to z=25000 and reported success. After a command is refused
-  because the operator is running something from the GUI, a stop waits for **Run** in the same
-  bar as the three moves above: a 1B model stopped a running time lapse in order to take a look.
-  A stop the operator asks for is never gated. A turn may change the laser intensity, or the
-  exposure, twice; a third change waits for **Run** too: asked to double the intensity of a dim
-  frame once, a 12B model went 20, 40, 80, 100 because the next frame looked no better. And a
-  `look` right after a `snap` reads that frame instead of exposing the sample again. And a value
-  the operator did not give waits for **Run**: "make it brighter" sent as 20 %, "change the
-  filter" sent as the one other filter, 180 % clamped to 100. A value counts as theirs when it is
-  in their words (this turn or earlier, in any unit the manual converts), or made from a readout
-  value by an operation they named (double, halve, back to what it was, an amount further); every
-  model tested invented one now and then, whatever the manual said. A refusal also carries its
-  advice ("say so and wait; do not stop it") where the model reads it next.
+- **Five rules are held in code for the length of a request** (`TurnGuard`), because a model can
+  read a rule and still break it. After a move is refused for a movement limit, no other target
+  on that axis is taken until the operator's next message. After a command is refused because the
+  operator is running something from the GUI, a stop waits for **Run** in the same bar as the
+  three moves above. A request may change the laser intensity, or the exposure, twice in ten
+  minutes; a third change waits for **Run**. A `look` right after a `snap` reads that frame instead of exposing the sample
+  again. A value the operator did not give waits for **Run** ("make it brighter" sent as 20 %,
+  "change the filter" sent as the one other filter); a value counts as theirs when it is in their
+  words, this turn or earlier and in any unit the manual converts, or made from a readout value
+  by an operation they named (double, halve, back to what it was, an amount further). A stop the
+  operator asks for is never held back. A refusal carries its advice ("say so and wait; do not
+  stop it") where the model reads it next.
 - **A reply that called no tool goes back to the model once, and the tab says when it sent
-  nothing.** Small models write "I have stopped the time lapse" having called nothing, and
-  whether they do turns on the wording of unrelated lines of the manual, so no wording cures it.
+  nothing.** A model can report an action it never took ("I have stopped the time lapse").
   A turn that ends without a tool call is handed back with that fact: the model calls the tool
   after all, or answers with one word and its first reply reaches the operator unchanged (one
   short extra request on turns that send no command; `CALLED_NOTHING_CHALLENGE`, empty switches
