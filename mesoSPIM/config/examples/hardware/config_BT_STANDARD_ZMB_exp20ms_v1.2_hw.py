@@ -1,22 +1,3 @@
-"""
-config_BT_STANDARD_ZMB_exp20ms_v1.2 (PXI-6733 benchtop) in continuous-regeneration mode at 12 FPS.
-
-Changes against config_BT_STANDARD_ZMB_exp20ms_v1.2.py:
-- acquisition_hardware['waveform_mode'] = 'continuous': one hardware launch per stack instead of
-  arming, triggering and stopping the DAQ tasks on every plane. Requires ASI TTL stepping
-  (asi_parameters['ttl_motion_enabled'] = True, as in the original).
-- startup['sweeptime'] 0.26734 -> 0.08333 s: 8333 samples at 100 kS/s = 83.33 ms per plane,
-  12.0 FPS. In continuous mode the frame rate is exactly samplerate / round(samplerate * sweeptime).
-- startup['average_frame_rate'] 3.1 -> 12.0 (initial estimate for the acquisition-time prediction).
-
-Everything else, including all waveform percentages and camera settings, is unchanged.
-
-CAMERA NOT RETUNED: in Line Delay scan mode a frame takes at least
-exposure + rows x scan_line_delay x 10.26 us = 20 ms + 2960 x 61.6 us = ~202 ms, which does not
-fit in an 83 ms sweep. The camera will miss triggers (mesoSPIM logs a warning before each stack)
-until camera_exposure_time and/or camera_parameters['scan_line_delay'] are reduced; the ETL ramp
-(etl_*_ramp_rising_%) must then be re-matched to the new rolling-shutter duration.
-"""
 import numpy as np
 
 logging_level = 'DEBUG' # 'INFO' or 'DEBUG'
@@ -72,12 +53,7 @@ acquisition_hardware = {'master_trigger_out_line' : 'PXI1Slot4/port0/line0',
                         'galvo_etl_task_line' : 'PXI1Slot4/ao0:3',
                         'galvo_etl_task_trigger_source' : '/PXI1Slot4/PFI0',
                         'laser_task_line' :  'PXI1Slot4/ao4:7',
-                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0',
-                        # 'stepped' (default): DAQ tasks armed, triggered and stopped on every plane.
-                        # 'continuous': one hardware launch per stack; the counters are clocked from the
-                        # AO sample clock so camera and light sheet cannot drift apart. Needs ASI TTL stepping.
-                        'waveform_mode' : 'continuous',
-                        }
+                        'laser_task_trigger_source' : '/PXI1Slot4/PFI0'}
 
 '''
 Human interface device (Joystick)
@@ -391,7 +367,7 @@ When setting up a new mesoSPIM, make sure that:
 startup = {
 'state' : 'init', # 'init', 'idle' , 'live', 'snap', 'running_script'
 'samplerate' : 100000,
-'sweeptime' : 0.08333, # 12 FPS: 8333 samples at 100 kS/s = 83.33 ms per plane (was 0.26734)
+'sweeptime' : 0.26734,
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-benchtop.csv',
 'filepath' : 'F:/Test/file.tif',
@@ -445,5 +421,5 @@ startup = {
 'camera_display_acquisition_subsampling': 2,
 'camera_binning':'1x1',
 'camera_sensor_mode':'ASLM',
-'average_frame_rate': 12.0, # continuous mode, 1/sweeptime (was 3.1)
+'average_frame_rate': 3.1,
 }
