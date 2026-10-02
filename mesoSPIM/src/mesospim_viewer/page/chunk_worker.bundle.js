@@ -1,75 +1,37 @@
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __commonJS = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __export = (target2, all) => {
+  for (var name in all)
+    __defProp(target2, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target2) => (target2 = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target2, "default", { value: mod, enumerable: true }) : target2,
+  mod
+));
+
 // src/legacy_browser.js
-var define2 = (target2, name, value) => {
-  if (target2 && !(name in target2)) {
-    Object.defineProperty(target2, name, { value, writable: true, configurable: true });
-  }
-};
-if (typeof AbortSignal !== "undefined") {
-  define2(AbortSignal.prototype, "throwIfAborted", function throwIfAborted() {
-    if (this.aborted) {
-      throw this.reason !== void 0 ? this.reason : new DOMException("signal is aborted without reason", "AbortError");
-    }
-  });
-  define2(AbortSignal, "any", function any3(signals) {
-    const controller = new AbortController();
-    for (const signal of signals) {
-      if (signal.aborted) {
-        controller.abort(signal.reason);
-        return controller.signal;
-      }
-    }
-    const onAbort = (event) => controller.abort(event.target.reason);
-    for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
-    return controller.signal;
-  });
-  define2(AbortSignal, "timeout", function timeout(ms) {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(new DOMException("signal timed out", "TimeoutError")), ms);
-    return controller.signal;
-  });
-}
-if (typeof AggregateError === "undefined") {
-  globalThis.AggregateError = class AggregateError extends Error {
-    constructor(errors2, message) {
-      super(message);
-      this.name = "AggregateError";
-      this.errors = Array.from(errors2);
-    }
-  };
-}
-define2(Promise, "any", function any(promises) {
-  return new Promise((resolve, reject) => {
-    const list2 = Array.from(promises);
-    const errors2 = new Array(list2.length);
-    let pending2 = list2.length;
-    if (!pending2) reject(new AggregateError([], "All promises were rejected"));
-    list2.forEach((promise, i) => Promise.resolve(promise).then(resolve, (error) => {
-      errors2[i] = error;
-      if (--pending2 === 0) reject(new AggregateError(errors2, "All promises were rejected"));
-    }));
-  });
-});
-define2(Promise, "withResolvers", function withResolvers() {
-  let resolve, reject;
-  const promise = new this((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-});
-define2(Object, "hasOwn", (object, key) => Object.prototype.hasOwnProperty.call(object, key));
-var groupBy = (items, key) => {
-  const groups = /* @__PURE__ */ new Map();
-  let i = 0;
-  for (const item of items) {
-    const k = key(item, i++);
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(item);
-  }
-  return groups;
-};
-define2(Map, "groupBy", groupBy);
-define2(Object, "groupBy", (items, key) => Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(groupBy(items, key))));
 function at(index) {
   const n = Math.trunc(index) || 0;
   const i = n < 0 ? this.length + n : n;
@@ -82,29 +44,6 @@ function findLast(predicate, self2) {
 function findLastIndex(predicate, self2) {
   for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return i;
   return -1;
-}
-var typedArray = Object.getPrototypeOf(Int8Array.prototype);
-for (const proto of [Array.prototype, typedArray, String.prototype]) define2(proto, "at", at);
-for (const proto of [Array.prototype, typedArray]) {
-  define2(proto, "findLast", findLast);
-  define2(proto, "findLastIndex", findLastIndex);
-}
-define2(String.prototype, "replaceAll", function replaceAll(pattern, replacement) {
-  if (pattern instanceof RegExp) {
-    if (!pattern.global) throw new TypeError("replaceAll must be called with a global RegExp");
-    return this.replace(pattern, replacement);
-  }
-  const literal = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return this.replace(new RegExp(literal, "g"), replacement);
-});
-if (typeof Element !== "undefined") {
-  let replaceChildren = function(...nodes) {
-    while (this.lastChild) this.removeChild(this.lastChild);
-    if (nodes.length) this.append(...nodes);
-  };
-  for (const proto of [Element.prototype, Document.prototype, DocumentFragment.prototype]) {
-    define2(proto, "replaceChildren", replaceChildren);
-  }
 }
 function clone(value, seen) {
   if (value === null || typeof value !== "object") return value;
@@ -133,171 +72,114 @@ function clone(value, seen) {
   seen.set(value, copy7);
   return copy7;
 }
-if (typeof globalThis.structuredClone === "undefined") {
-  globalThis.structuredClone = (value) => clone(value, /* @__PURE__ */ new Map());
-}
-
-// node_modules/neuroglancer/lib/chunk_worker.bundle.js
-var define22 = (target2, name, value) => {
-  if (target2 && !(name in target2)) {
-    Object.defineProperty(target2, name, { value, writable: true, configurable: true });
-  }
-};
-if (typeof AbortSignal !== "undefined") {
-  define22(AbortSignal.prototype, "throwIfAborted", function throwIfAborted() {
-    if (this.aborted) {
-      throw this.reason !== void 0 ? this.reason : new DOMException("signal is aborted without reason", "AbortError");
-    }
-  });
-  define22(AbortSignal, "any", function any3(signals) {
-    const controller = new AbortController();
-    for (const signal of signals) {
-      if (signal.aborted) {
-        controller.abort(signal.reason);
+var define2, groupBy, typedArray;
+var init_legacy_browser = __esm({
+  "src/legacy_browser.js"() {
+    define2 = (target2, name, value) => {
+      if (target2 && !(name in target2)) {
+        Object.defineProperty(target2, name, { value, writable: true, configurable: true });
+      }
+    };
+    if (typeof AbortSignal !== "undefined") {
+      define2(AbortSignal.prototype, "throwIfAborted", function throwIfAborted() {
+        if (this.aborted) {
+          throw this.reason !== void 0 ? this.reason : new DOMException("signal is aborted without reason", "AbortError");
+        }
+      });
+      define2(AbortSignal, "any", function any3(signals) {
+        const controller = new AbortController();
+        for (const signal of signals) {
+          if (signal.aborted) {
+            controller.abort(signal.reason);
+            return controller.signal;
+          }
+        }
+        const onAbort = (event) => controller.abort(event.target.reason);
+        for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
         return controller.signal;
+      });
+      define2(AbortSignal, "timeout", function timeout(ms) {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(new DOMException("signal timed out", "TimeoutError")), ms);
+        return controller.signal;
+      });
+    }
+    if (typeof AggregateError === "undefined") {
+      globalThis.AggregateError = class AggregateError extends Error {
+        constructor(errors2, message) {
+          super(message);
+          this.name = "AggregateError";
+          this.errors = Array.from(errors2);
+        }
+      };
+    }
+    define2(Promise, "any", function any(promises) {
+      return new Promise((resolve, reject) => {
+        const list2 = Array.from(promises);
+        const errors2 = new Array(list2.length);
+        let pending2 = list2.length;
+        if (!pending2) reject(new AggregateError([], "All promises were rejected"));
+        list2.forEach((promise, i) => Promise.resolve(promise).then(resolve, (error) => {
+          errors2[i] = error;
+          if (--pending2 === 0) reject(new AggregateError(errors2, "All promises were rejected"));
+        }));
+      });
+    });
+    define2(Promise, "withResolvers", function withResolvers() {
+      let resolve, reject;
+      const promise = new this((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    });
+    define2(Object, "hasOwn", (object, key) => Object.prototype.hasOwnProperty.call(object, key));
+    groupBy = (items, key) => {
+      const groups = /* @__PURE__ */ new Map();
+      let i = 0;
+      for (const item of items) {
+        const k = key(item, i++);
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(item);
+      }
+      return groups;
+    };
+    define2(Map, "groupBy", groupBy);
+    define2(Object, "groupBy", (items, key) => Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(groupBy(items, key))));
+    typedArray = Object.getPrototypeOf(Int8Array.prototype);
+    for (const proto of [Array.prototype, typedArray, String.prototype]) define2(proto, "at", at);
+    for (const proto of [Array.prototype, typedArray]) {
+      define2(proto, "findLast", findLast);
+      define2(proto, "findLastIndex", findLastIndex);
+    }
+    define2(String.prototype, "replaceAll", function replaceAll(pattern, replacement) {
+      if (pattern instanceof RegExp) {
+        if (!pattern.global) throw new TypeError("replaceAll must be called with a global RegExp");
+        return this.replace(pattern, replacement);
+      }
+      const literal = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return this.replace(new RegExp(literal, "g"), replacement);
+    });
+    if (typeof Element !== "undefined") {
+      let replaceChildren = function(...nodes) {
+        while (this.lastChild) this.removeChild(this.lastChild);
+        if (nodes.length) this.append(...nodes);
+      };
+      for (const proto of [Element.prototype, Document.prototype, DocumentFragment.prototype]) {
+        define2(proto, "replaceChildren", replaceChildren);
       }
     }
-    const onAbort = (event) => controller.abort(event.target.reason);
-    for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
-    return controller.signal;
-  });
-  define22(AbortSignal, "timeout", function timeout(ms) {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(new DOMException("signal timed out", "TimeoutError")), ms);
-    return controller.signal;
-  });
-}
-if (typeof AggregateError === "undefined") {
-  globalThis.AggregateError = class AggregateError extends Error {
-    constructor(errors2, message) {
-      super(message);
-      this.name = "AggregateError";
-      this.errors = Array.from(errors2);
+    if (typeof globalThis.structuredClone === "undefined") {
+      globalThis.structuredClone = (value) => clone(value, /* @__PURE__ */ new Map());
     }
-  };
-}
-define22(Promise, "any", function any2(promises) {
-  return new Promise((resolve, reject) => {
-    const list2 = Array.from(promises);
-    const errors2 = new Array(list2.length);
-    let pending2 = list2.length;
-    if (!pending2) reject(new AggregateError([], "All promises were rejected"));
-    list2.forEach((promise, i) => Promise.resolve(promise).then(resolve, (error) => {
-      errors2[i] = error;
-      if (--pending2 === 0) reject(new AggregateError(errors2, "All promises were rejected"));
-    }));
-  });
+  }
 });
-define22(Promise, "withResolvers", function withResolvers2() {
-  let resolve, reject;
-  const promise = new this((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-});
-define22(Object, "hasOwn", (object, key) => Object.prototype.hasOwnProperty.call(object, key));
-var groupBy2 = (items, key) => {
-  const groups = /* @__PURE__ */ new Map();
-  let i = 0;
-  for (const item of items) {
-    const k = key(item, i++);
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(item);
-  }
-  return groups;
-};
-define22(Map, "groupBy", groupBy2);
-define22(Object, "groupBy", (items, key) => Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(groupBy2(items, key))));
-function at2(index) {
-  const n = Math.trunc(index) || 0;
-  const i = n < 0 ? this.length + n : n;
-  return i < 0 || i >= this.length ? void 0 : this[i];
-}
-function findLast2(predicate, self2) {
-  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return this[i];
-  return void 0;
-}
-function findLastIndex2(predicate, self2) {
-  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return i;
-  return -1;
-}
-var typedArray2 = Object.getPrototypeOf(Int8Array.prototype);
-for (const proto of [Array.prototype, typedArray2, String.prototype]) define22(proto, "at", at2);
-for (const proto of [Array.prototype, typedArray2]) {
-  define22(proto, "findLast", findLast2);
-  define22(proto, "findLastIndex", findLastIndex2);
-}
-define22(String.prototype, "replaceAll", function replaceAll2(pattern, replacement) {
-  if (pattern instanceof RegExp) {
-    if (!pattern.global) throw new TypeError("replaceAll must be called with a global RegExp");
-    return this.replace(pattern, replacement);
-  }
-  const literal = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return this.replace(new RegExp(literal, "g"), replacement);
-});
-function clone2(value, seen) {
-  if (value === null || typeof value !== "object") return value;
-  if (seen.has(value)) return seen.get(value);
-  let copy7;
-  if (ArrayBuffer.isView(value)) copy7 = value.slice();
-  else if (value instanceof ArrayBuffer) copy7 = value.slice(0);
-  else if (value instanceof Date) copy7 = new Date(value.getTime());
-  else if (value instanceof RegExp) copy7 = new RegExp(value.source, value.flags);
-  else if (value instanceof Map) {
-    copy7 = /* @__PURE__ */ new Map();
-    seen.set(value, copy7);
-    for (const [k, v] of value) copy7.set(clone2(k, seen), clone2(v, seen));
-    return copy7;
-  } else if (value instanceof Set) {
-    copy7 = /* @__PURE__ */ new Set();
-    seen.set(value, copy7);
-    for (const v of value) copy7.add(clone2(v, seen));
-    return copy7;
-  } else {
-    copy7 = Array.isArray(value) ? [] : {};
-    seen.set(value, copy7);
-    for (const key of Object.keys(value)) copy7[key] = clone2(value[key], seen);
-    return copy7;
-  }
-  seen.set(value, copy7);
-  return copy7;
-}
-if (typeof globalThis.structuredClone === "undefined") {
-  globalThis.structuredClone = (value) => clone2(value, /* @__PURE__ */ new Map());
-}
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-};
-var __export = (target2, all) => {
-  for (var name in all)
-    __defProp(target2, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target2) => (target2 = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target2, "default", { value: mod, enumerable: true }) : target2,
-  mod
-));
+
+// node_modules/core-js/internals/global-this.js
 var require_global_this = __commonJS({
   "node_modules/core-js/internals/global-this.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var check2 = function(it) {
       return it && it.Math === Math && it;
     };
@@ -309,16 +191,22 @@ var require_global_this = __commonJS({
     })() || Function("return this")();
   }
 });
+
+// node_modules/core-js/internals/path.js
 var require_path = __commonJS({
   "node_modules/core-js/internals/path.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     module.exports = globalThis2;
   }
 });
+
+// node_modules/core-js/internals/fails.js
 var require_fails = __commonJS({
   "node_modules/core-js/internals/fails.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = function(exec) {
       try {
         return !!exec();
@@ -328,9 +216,12 @@ var require_fails = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/function-bind-native.js
 var require_function_bind_native = __commonJS({
   "node_modules/core-js/internals/function-bind-native.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var fails = require_fails();
     module.exports = !fails(function() {
       var test = function() {
@@ -339,9 +230,12 @@ var require_function_bind_native = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/function-uncurry-this.js
 var require_function_uncurry_this = __commonJS({
   "node_modules/core-js/internals/function-uncurry-this.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var NATIVE_BIND = require_function_bind_native();
     var FunctionPrototype = Function.prototype;
     var call = FunctionPrototype.call;
@@ -353,17 +247,23 @@ var require_function_uncurry_this = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/is-null-or-undefined.js
 var require_is_null_or_undefined = __commonJS({
   "node_modules/core-js/internals/is-null-or-undefined.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = function(it) {
       return it === null || it === void 0;
     };
   }
 });
+
+// node_modules/core-js/internals/require-object-coercible.js
 var require_require_object_coercible = __commonJS({
   "node_modules/core-js/internals/require-object-coercible.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isNullOrUndefined = require_is_null_or_undefined();
     var $TypeError = TypeError;
     module.exports = function(it) {
@@ -372,9 +272,12 @@ var require_require_object_coercible = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/to-object.js
 var require_to_object = __commonJS({
   "node_modules/core-js/internals/to-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var requireObjectCoercible = require_require_object_coercible();
     var $Object = Object;
     module.exports = function(argument) {
@@ -382,9 +285,12 @@ var require_to_object = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/has-own-property.js
 var require_has_own_property = __commonJS({
   "node_modules/core-js/internals/has-own-property.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var toObject = require_to_object();
     var hasOwnProperty2 = uncurryThis({}.hasOwnProperty);
@@ -393,15 +299,21 @@ var require_has_own_property = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/is-pure.js
 var require_is_pure = __commonJS({
   "node_modules/core-js/internals/is-pure.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = false;
   }
 });
+
+// node_modules/core-js/internals/define-global-property.js
 var require_define_global_property = __commonJS({
   "node_modules/core-js/internals/define-global-property.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var defineProperty = Object.defineProperty;
     module.exports = function(key, value) {
@@ -414,9 +326,12 @@ var require_define_global_property = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/shared-store.js
 var require_shared_store = __commonJS({
   "node_modules/core-js/internals/shared-store.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var IS_PURE = require_is_pure();
     var globalThis2 = require_global_this();
     var defineGlobalProperty = require_define_global_property();
@@ -431,9 +346,12 @@ var require_shared_store = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/shared.js
 var require_shared = __commonJS({
   "node_modules/core-js/internals/shared.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var store = require_shared_store();
     var create6 = Object.create || Object;
     module.exports = function(key, value) {
@@ -441,9 +359,12 @@ var require_shared = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/uid.js
 var require_uid = __commonJS({
   "node_modules/core-js/internals/uid.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var id = 0;
     var postfix = Math.random();
@@ -453,18 +374,24 @@ var require_uid = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/environment-user-agent.js
 var require_environment_user_agent = __commonJS({
   "node_modules/core-js/internals/environment-user-agent.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var navigator2 = globalThis2.navigator;
     var userAgent = navigator2 && navigator2.userAgent;
     module.exports = userAgent ? String(userAgent) : "";
   }
 });
+
+// node_modules/core-js/internals/environment-v8-version.js
 var require_environment_v8_version = __commonJS({
   "node_modules/core-js/internals/environment-v8-version.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var userAgent = require_environment_user_agent();
     var process = globalThis2.process;
@@ -487,9 +414,12 @@ var require_environment_v8_version = __commonJS({
     module.exports = version;
   }
 });
+
+// node_modules/core-js/internals/symbol-constructor-detection.js
 var require_symbol_constructor_detection = __commonJS({
   "node_modules/core-js/internals/symbol-constructor-detection.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var V8_VERSION = require_environment_v8_version();
     var fails = require_fails();
     var globalThis2 = require_global_this();
@@ -501,16 +431,22 @@ var require_symbol_constructor_detection = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/use-symbol-as-uid.js
 var require_use_symbol_as_uid = __commonJS({
   "node_modules/core-js/internals/use-symbol-as-uid.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var NATIVE_SYMBOL = require_symbol_constructor_detection();
     module.exports = NATIVE_SYMBOL && !Symbol.sham && typeof Symbol.iterator == "symbol";
   }
 });
+
+// node_modules/core-js/internals/well-known-symbol.js
 var require_well_known_symbol = __commonJS({
   "node_modules/core-js/internals/well-known-symbol.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var shared = require_shared();
     var hasOwn = require_has_own_property();
@@ -528,16 +464,22 @@ var require_well_known_symbol = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/well-known-symbol-wrapped.js
 var require_well_known_symbol_wrapped = __commonJS({
   "node_modules/core-js/internals/well-known-symbol-wrapped.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var wellKnownSymbol = require_well_known_symbol();
     exports.f = wellKnownSymbol;
   }
 });
+
+// node_modules/core-js/internals/descriptors.js
 var require_descriptors = __commonJS({
   "node_modules/core-js/internals/descriptors.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var fails = require_fails();
     module.exports = !fails(function() {
       return Object.defineProperty({}, 1, { get: function() {
@@ -546,9 +488,12 @@ var require_descriptors = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/is-callable.js
 var require_is_callable = __commonJS({
   "node_modules/core-js/internals/is-callable.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var documentAll = typeof document == "object" && document.all;
     module.exports = typeof documentAll == "undefined" && documentAll !== void 0 ? function(argument) {
       return typeof argument == "function" || argument === documentAll;
@@ -557,18 +502,24 @@ var require_is_callable = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/is-object.js
 var require_is_object = __commonJS({
   "node_modules/core-js/internals/is-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isCallable = require_is_callable();
     module.exports = function(it) {
       return typeof it == "object" ? it !== null : isCallable(it);
     };
   }
 });
+
+// node_modules/core-js/internals/document-create-element.js
 var require_document_create_element = __commonJS({
   "node_modules/core-js/internals/document-create-element.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var isObject2 = require_is_object();
     var document2 = globalThis2.document;
@@ -578,9 +529,12 @@ var require_document_create_element = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/ie8-dom-define.js
 var require_ie8_dom_define = __commonJS({
   "node_modules/core-js/internals/ie8-dom-define.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var fails = require_fails();
     var createElement = require_document_create_element();
@@ -593,9 +547,12 @@ var require_ie8_dom_define = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/v8-prototype-define-bug.js
 var require_v8_prototype_define_bug = __commonJS({
   "node_modules/core-js/internals/v8-prototype-define-bug.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var fails = require_fails();
     module.exports = DESCRIPTORS && fails(function() {
@@ -607,9 +564,12 @@ var require_v8_prototype_define_bug = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/an-object.js
 var require_an_object = __commonJS({
   "node_modules/core-js/internals/an-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isObject2 = require_is_object();
     var $String = String;
     var $TypeError = TypeError;
@@ -619,9 +579,12 @@ var require_an_object = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/function-call.js
 var require_function_call = __commonJS({
   "node_modules/core-js/internals/function-call.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var NATIVE_BIND = require_function_bind_native();
     var call = Function.prototype.call;
     module.exports = NATIVE_BIND ? call.bind(call) : function() {
@@ -629,9 +592,12 @@ var require_function_call = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/get-built-in.js
 var require_get_built_in = __commonJS({
   "node_modules/core-js/internals/get-built-in.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var isCallable = require_is_callable();
     var aFunction = function(argument) {
@@ -642,16 +608,22 @@ var require_get_built_in = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-is-prototype-of.js
 var require_object_is_prototype_of = __commonJS({
   "node_modules/core-js/internals/object-is-prototype-of.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     module.exports = uncurryThis({}.isPrototypeOf);
   }
 });
+
+// node_modules/core-js/internals/is-symbol.js
 var require_is_symbol = __commonJS({
   "node_modules/core-js/internals/is-symbol.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var getBuiltIn = require_get_built_in();
     var isCallable = require_is_callable();
     var isPrototypeOf = require_object_is_prototype_of();
@@ -665,9 +637,12 @@ var require_is_symbol = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/try-to-string.js
 var require_try_to_string = __commonJS({
   "node_modules/core-js/internals/try-to-string.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var $String = String;
     module.exports = function(argument) {
       try {
@@ -678,9 +653,12 @@ var require_try_to_string = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/a-callable.js
 var require_a_callable = __commonJS({
   "node_modules/core-js/internals/a-callable.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isCallable = require_is_callable();
     var tryToString = require_try_to_string();
     var $TypeError = TypeError;
@@ -690,9 +668,12 @@ var require_a_callable = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/get-method.js
 var require_get_method = __commonJS({
   "node_modules/core-js/internals/get-method.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var aCallable = require_a_callable();
     var isNullOrUndefined = require_is_null_or_undefined();
     module.exports = function(V, P) {
@@ -701,9 +682,12 @@ var require_get_method = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/ordinary-to-primitive.js
 var require_ordinary_to_primitive = __commonJS({
   "node_modules/core-js/internals/ordinary-to-primitive.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var call = require_function_call();
     var isCallable = require_is_callable();
     var isObject2 = require_is_object();
@@ -717,9 +701,12 @@ var require_ordinary_to_primitive = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/to-primitive.js
 var require_to_primitive = __commonJS({
   "node_modules/core-js/internals/to-primitive.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var call = require_function_call();
     var isObject2 = require_is_object();
     var isSymbol2 = require_is_symbol();
@@ -743,9 +730,12 @@ var require_to_primitive = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/to-property-key.js
 var require_to_property_key = __commonJS({
   "node_modules/core-js/internals/to-property-key.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var toPrimitive = require_to_primitive();
     var isSymbol2 = require_is_symbol();
     module.exports = function(argument) {
@@ -754,9 +744,12 @@ var require_to_property_key = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-define-property.js
 var require_object_define_property = __commonJS({
   "node_modules/core-js/internals/object-define-property.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var IE8_DOM_DEFINE = require_ie8_dom_define();
     var V8_PROTOTYPE_DEFINE_BUG = require_v8_prototype_define_bug();
@@ -798,9 +791,12 @@ var require_object_define_property = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/well-known-symbol-define.js
 var require_well_known_symbol_define = __commonJS({
   "node_modules/core-js/internals/well-known-symbol-define.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var path = require_path();
     var hasOwn = require_has_own_property();
     var wrappedWellKnownSymbolModule = require_well_known_symbol_wrapped();
@@ -813,9 +809,12 @@ var require_well_known_symbol_define = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-property-is-enumerable.js
 var require_object_property_is_enumerable = __commonJS({
   "node_modules/core-js/internals/object-property-is-enumerable.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var $propertyIsEnumerable = {}.propertyIsEnumerable;
     var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
     var NASHORN_BUG = getOwnPropertyDescriptor && !$propertyIsEnumerable.call({ 1: 2 }, 1);
@@ -825,9 +824,12 @@ var require_object_property_is_enumerable = __commonJS({
     } : $propertyIsEnumerable;
   }
 });
+
+// node_modules/core-js/internals/create-property-descriptor.js
 var require_create_property_descriptor = __commonJS({
   "node_modules/core-js/internals/create-property-descriptor.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = function(bitmap, value) {
       return {
         enumerable: !(bitmap & 1),
@@ -838,9 +840,12 @@ var require_create_property_descriptor = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/classof-raw.js
 var require_classof_raw = __commonJS({
   "node_modules/core-js/internals/classof-raw.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var toString = uncurryThis({}.toString);
     var stringSlice = uncurryThis("".slice);
@@ -849,9 +854,12 @@ var require_classof_raw = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/indexed-object.js
 var require_indexed_object = __commonJS({
   "node_modules/core-js/internals/indexed-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var fails = require_fails();
     var classof = require_classof_raw();
@@ -864,9 +872,12 @@ var require_indexed_object = __commonJS({
     } : $Object;
   }
 });
+
+// node_modules/core-js/internals/to-indexed-object.js
 var require_to_indexed_object = __commonJS({
   "node_modules/core-js/internals/to-indexed-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var IndexedObject = require_indexed_object();
     var requireObjectCoercible = require_require_object_coercible();
     module.exports = function(it) {
@@ -874,9 +885,12 @@ var require_to_indexed_object = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-get-own-property-descriptor.js
 var require_object_get_own_property_descriptor = __commonJS({
   "node_modules/core-js/internals/object-get-own-property-descriptor.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var call = require_function_call();
     var propertyIsEnumerableModule = require_object_property_is_enumerable();
@@ -897,9 +911,12 @@ var require_object_get_own_property_descriptor = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/modules/es.symbol.dispose.js
 var require_es_symbol_dispose = __commonJS({
   "node_modules/core-js/modules/es.symbol.dispose.js"() {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var defineWellKnownSymbol = require_well_known_symbol_define();
     var defineProperty = require_object_define_property().f;
@@ -915,38 +932,53 @@ var require_es_symbol_dispose = __commonJS({
     var descriptor;
   }
 });
+
+// node_modules/core-js/es/symbol/dispose.js
 var require_dispose = __commonJS({
   "node_modules/core-js/es/symbol/dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_dispose();
     var WrappedWellKnownSymbolModule = require_well_known_symbol_wrapped();
     module.exports = WrappedWellKnownSymbolModule.f("dispose");
   }
 });
+
+// node_modules/core-js/stable/symbol/dispose.js
 var require_dispose2 = __commonJS({
   "node_modules/core-js/stable/symbol/dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/core-js/modules/esnext.symbol.dispose.js
 var require_esnext_symbol_dispose = __commonJS({
   "node_modules/core-js/modules/esnext.symbol.dispose.js"() {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_dispose();
   }
 });
+
+// node_modules/core-js/actual/symbol/dispose.js
 var require_dispose3 = __commonJS({
   "node_modules/core-js/actual/symbol/dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_dispose2();
     require_esnext_symbol_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/core-js/modules/es.symbol.async-dispose.js
 var require_es_symbol_async_dispose = __commonJS({
   "node_modules/core-js/modules/es.symbol.async-dispose.js"() {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var defineWellKnownSymbol = require_well_known_symbol_define();
     var defineProperty = require_object_define_property().f;
@@ -962,38 +994,53 @@ var require_es_symbol_async_dispose = __commonJS({
     var descriptor;
   }
 });
+
+// node_modules/core-js/es/symbol/async-dispose.js
 var require_async_dispose = __commonJS({
   "node_modules/core-js/es/symbol/async-dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_async_dispose();
     var WrappedWellKnownSymbolModule = require_well_known_symbol_wrapped();
     module.exports = WrappedWellKnownSymbolModule.f("asyncDispose");
   }
 });
+
+// node_modules/core-js/stable/symbol/async-dispose.js
 var require_async_dispose2 = __commonJS({
   "node_modules/core-js/stable/symbol/async-dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_async_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/core-js/modules/esnext.symbol.async-dispose.js
 var require_esnext_symbol_async_dispose = __commonJS({
   "node_modules/core-js/modules/esnext.symbol.async-dispose.js"() {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_async_dispose();
   }
 });
+
+// node_modules/core-js/actual/symbol/async-dispose.js
 var require_async_dispose3 = __commonJS({
   "node_modules/core-js/actual/symbol/async-dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_async_dispose2();
     require_esnext_symbol_async_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/fflate/lib/browser.cjs
 var require_browser = __commonJS({
   "node_modules/fflate/lib/browser.cjs"(exports) {
     "use strict";
+    init_legacy_browser();
     exports.deflate = deflate;
     exports.deflateSync = deflateSync;
     exports.inflate = inflate;
@@ -3336,9 +3383,12 @@ var require_browser = __commonJS({
     }
   }
 });
+
+// node_modules/nifti-reader-js/dist/src/nifti-extension.js
 var require_nifti_extension = __commonJS({
   "node_modules/nifti-reader-js/dist/src/nifti-extension.js"(exports) {
     "use strict";
+    init_legacy_browser();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NIFTIEXTENSION = void 0;
     var NIFTIEXTENSION = class {
@@ -3372,9 +3422,12 @@ var require_nifti_extension = __commonJS({
     exports.NIFTIEXTENSION = NIFTIEXTENSION;
   }
 });
+
+// node_modules/nifti-reader-js/dist/src/utilities.js
 var require_utilities = __commonJS({
   "node_modules/nifti-reader-js/dist/src/utilities.js"(exports) {
     "use strict";
+    init_legacy_browser();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Utils = void 0;
     var nifti_extension_1 = require_nifti_extension();
@@ -3506,9 +3559,12 @@ var require_utilities = __commonJS({
     exports.Utils = Utils;
   }
 });
+
+// node_modules/nifti-reader-js/dist/src/nifti1.js
 var require_nifti1 = __commonJS({
   "node_modules/nifti-reader-js/dist/src/nifti1.js"(exports) {
     "use strict";
+    init_legacy_browser();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NIFTI1 = void 0;
     var utilities_1 = require_utilities();
@@ -4274,9 +4330,12 @@ var require_nifti1 = __commonJS({
     exports.NIFTI1 = NIFTI12;
   }
 });
+
+// node_modules/nifti-reader-js/dist/src/nifti2.js
 var require_nifti2 = __commonJS({
   "node_modules/nifti-reader-js/dist/src/nifti2.js"(exports) {
     "use strict";
+    init_legacy_browser();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NIFTI2 = void 0;
     var nifti1_1 = require_nifti1();
@@ -4609,9 +4668,12 @@ var require_nifti2 = __commonJS({
     exports.NIFTI2 = NIFTI2;
   }
 });
+
+// node_modules/nifti-reader-js/dist/src/nifti.js
 var require_nifti = __commonJS({
   "node_modules/nifti-reader-js/dist/src/nifti.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k22) {
       if (k22 === void 0) k22 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -4760,8 +4822,11 @@ var require_nifti = __commonJS({
     exports.readExtensionData = readExtensionData;
   }
 });
+
+// node_modules/crc-32/crc32c.js
 var require_crc32c = __commonJS({
   "node_modules/crc-32/crc32c.js"(exports) {
+    init_legacy_browser();
     var CRC32C;
     (function(factory) {
       if (typeof DO_NOT_EXPORT_CRC === "undefined") {
@@ -4856,8 +4921,11 @@ var require_crc32c = __commonJS({
     });
   }
 });
+
+// node_modules/crc-32/crc32.js
 var require_crc32 = __commonJS({
   "node_modules/crc-32/crc32.js"(exports) {
+    init_legacy_browser();
     var CRC32;
     (function(factory) {
       if (typeof DO_NOT_EXPORT_CRC === "undefined") {
@@ -4952,15 +5020,52 @@ var require_crc32 = __commonJS({
     });
   }
 });
+
+// node_modules/neuroglancer/lib/chunk_worker.bundle.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/polyfills.js
+init_legacy_browser();
 var import_dispose = __toESM(require_dispose3(), 1);
 var import_async_dispose = __toESM(require_async_dispose3(), 1);
+
+// node_modules/neuroglancer/lib/shared_watchable_value.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/trackable_value.js
+init_legacy_browser();
+
+// node_modules/lodash-es/lodash.js
+init_legacy_browser();
+
+// node_modules/lodash-es/isSymbol.js
+init_legacy_browser();
+
+// node_modules/lodash-es/_baseGetTag.js
+init_legacy_browser();
+
+// node_modules/lodash-es/_Symbol.js
+init_legacy_browser();
+
+// node_modules/lodash-es/_root.js
+init_legacy_browser();
+
+// node_modules/lodash-es/_freeGlobal.js
+init_legacy_browser();
 var freeGlobal = typeof global == "object" && global && global.Object === Object && global;
 var freeGlobal_default = freeGlobal;
+
+// node_modules/lodash-es/_root.js
 var freeSelf = typeof self == "object" && self && self.Object === Object && self;
 var root = freeGlobal_default || freeSelf || Function("return this")();
 var root_default = root;
+
+// node_modules/lodash-es/_Symbol.js
 var Symbol2 = root_default.Symbol;
 var Symbol_default = Symbol2;
+
+// node_modules/lodash-es/_getRawTag.js
+init_legacy_browser();
 var objectProto = Object.prototype;
 var hasOwnProperty = objectProto.hasOwnProperty;
 var nativeObjectToString = objectProto.toString;
@@ -4983,12 +5088,17 @@ function getRawTag(value) {
   return result;
 }
 var getRawTag_default = getRawTag;
+
+// node_modules/lodash-es/_objectToString.js
+init_legacy_browser();
 var objectProto2 = Object.prototype;
 var nativeObjectToString2 = objectProto2.toString;
 function objectToString(value) {
   return nativeObjectToString2.call(value);
 }
 var objectToString_default = objectToString;
+
+// node_modules/lodash-es/_baseGetTag.js
 var nullTag = "[object Null]";
 var undefinedTag = "[object Undefined]";
 var symToStringTag2 = Symbol_default ? Symbol_default.toStringTag : void 0;
@@ -4999,15 +5109,29 @@ function baseGetTag(value) {
   return symToStringTag2 && symToStringTag2 in Object(value) ? getRawTag_default(value) : objectToString_default(value);
 }
 var baseGetTag_default = baseGetTag;
+
+// node_modules/lodash-es/isObjectLike.js
+init_legacy_browser();
 function isObjectLike(value) {
   return value != null && typeof value == "object";
 }
 var isObjectLike_default = isObjectLike;
+
+// node_modules/lodash-es/isSymbol.js
 var symbolTag = "[object Symbol]";
 function isSymbol(value) {
   return typeof value == "symbol" || isObjectLike_default(value) && baseGetTag_default(value) == symbolTag;
 }
 var isSymbol_default = isSymbol;
+
+// node_modules/lodash-es/toNumber.js
+init_legacy_browser();
+
+// node_modules/lodash-es/_baseTrim.js
+init_legacy_browser();
+
+// node_modules/lodash-es/_trimmedEndIndex.js
+init_legacy_browser();
 var reWhitespace = /\s/;
 function trimmedEndIndex(string2) {
   var index = string2.length;
@@ -5016,16 +5140,23 @@ function trimmedEndIndex(string2) {
   return index;
 }
 var trimmedEndIndex_default = trimmedEndIndex;
+
+// node_modules/lodash-es/_baseTrim.js
 var reTrimStart = /^\s+/;
 function baseTrim(string2) {
   return string2 ? string2.slice(0, trimmedEndIndex_default(string2) + 1).replace(reTrimStart, "") : string2;
 }
 var baseTrim_default = baseTrim;
+
+// node_modules/lodash-es/isObject.js
+init_legacy_browser();
 function isObject(value) {
   var type = typeof value;
   return value != null && (type == "object" || type == "function");
 }
 var isObject_default = isObject;
+
+// node_modules/lodash-es/toNumber.js
 var NAN = 0 / 0;
 var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
 var reIsBinary = /^0b[01]+$/i;
@@ -5050,10 +5181,18 @@ function toNumber(value) {
   return isBinary || reIsOctal.test(value) ? freeParseInt(value.slice(2), isBinary ? 2 : 8) : reIsBadHex.test(value) ? NAN : +value;
 }
 var toNumber_default = toNumber;
+
+// node_modules/lodash-es/debounce.js
+init_legacy_browser();
+
+// node_modules/lodash-es/now.js
+init_legacy_browser();
 var now = function() {
   return root_default.Date.now();
 };
 var now_default = now;
+
+// node_modules/lodash-es/debounce.js
 var FUNC_ERROR_TEXT = "Expected a function";
 var nativeMax = Math.max;
 var nativeMin = Math.min;
@@ -5139,6 +5278,9 @@ function debounce(func, wait, options) {
   return debounced;
 }
 var debounce_default = debounce;
+
+// node_modules/lodash-es/throttle.js
+init_legacy_browser();
 var FUNC_ERROR_TEXT2 = "Expected a function";
 function throttle(func, wait, options) {
   var leading = true, trailing = true;
@@ -5156,6 +5298,9 @@ function throttle(func, wait, options) {
   });
 }
 var throttle_default = throttle;
+
+// node_modules/neuroglancer/lib/util/disposable.js
+init_legacy_browser();
 var DEBUG_REF_COUNTS = false;
 function invokeDisposer(disposer) {
   if (typeof disposer === "object") {
@@ -5242,6 +5387,9 @@ var RefCountedValue = class extends RefCounted {
     this.value = value;
   }
 };
+
+// node_modules/neuroglancer/lib/util/signal.js
+init_legacy_browser();
 var Signal = class {
   handlers = /* @__PURE__ */ new Set();
   /**
@@ -5304,6 +5452,8 @@ var Signal = class {
 };
 var NullarySignal = class extends Signal {
 };
+
+// node_modules/neuroglancer/lib/trackable_value.js
 var WatchableValue = class {
   constructor(value_) {
     this.value_ = value_;
@@ -5355,6 +5505,12 @@ function registerNested(f, ...watchables) {
     }
   };
 }
+
+// node_modules/neuroglancer/lib/worker_rpc.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/abort.js
+init_legacy_browser();
 function scopedAbortCallback(signal, callback) {
   if (signal === void 0) return void 0;
   if (signal.aborted) {
@@ -5443,6 +5599,9 @@ function raceWithAbort(promise, signal) {
     );
   });
 }
+
+// node_modules/neuroglancer/lib/util/progress_listener.js
+init_legacy_browser();
 var ProgressSpan = class {
   constructor(listener, options) {
     this.listener = listener;
@@ -5566,6 +5725,8 @@ var MultiConsumerProgressListener = class {
     }
   }
 };
+
+// node_modules/neuroglancer/lib/worker_rpc.js
 var IS_WORKER = !(typeof Window !== "undefined" && self instanceof Window);
 var DEBUG = false;
 var DEBUG_MESSAGES = false;
@@ -5882,6 +6043,8 @@ registerRPC("SharedObject.new", function(x) {
   const obj = new constructorFunction(rpc2, x);
   --obj.refCount;
 });
+
+// node_modules/neuroglancer/lib/shared_watchable_value.js
 var __defProp2 = Object.defineProperty;
 var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target2, key, kind) => {
@@ -5960,6 +6123,12 @@ registerRPC(CHANGED_RPC_METHOD_ID, function(x) {
   obj.base.value = x.value;
   obj.updatingValue_ = false;
 });
+
+// node_modules/neuroglancer/lib/chunk_manager/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/chunk_manager/base.js
+init_legacy_browser();
 var ChunkState = /* @__PURE__ */ ((ChunkState2) => {
   ChunkState2[ChunkState2["GPU_MEMORY"] = 0] = "GPU_MEMORY";
   ChunkState2[ChunkState2["SYSTEM_MEMORY"] = 1] = "SYSTEM_MEMORY";
@@ -6009,6 +6178,9 @@ var CHUNK_MANAGER_RPC_ID = "ChunkManager";
 var CHUNK_SOURCE_INVALIDATE_RPC_ID = "ChunkSource.invalidate";
 var REQUEST_CHUNK_STATISTICS_RPC_ID = "ChunkQueueManager.requestChunkStatistics";
 var CHUNK_LAYER_STATISTICS_RPC_ID = "ChunkManager.chunkLayerStatistics";
+
+// node_modules/neuroglancer/lib/util/linked_list.js
+init_legacy_browser();
 function linkedListOperations(options) {
   const { next: NEXT, prev: PREV } = options;
   return {
@@ -6064,6 +6236,15 @@ function linkedListOperations(options) {
     }
   };
 }
+
+// node_modules/neuroglancer/lib/util/memoize.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/json.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/bigint.js
+init_legacy_browser();
 function bigintCompare(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -6076,6 +6257,15 @@ function randomUint64() {
   return uint64FromLowHigh(low, high);
 }
 var UINT64_MAX = 0xffffffffffffffffn;
+
+// node_modules/neuroglancer/lib/util/geom.js
+init_legacy_browser();
+
+// node_modules/gl-matrix/esm/index.js
+init_legacy_browser();
+
+// node_modules/gl-matrix/esm/common.js
+init_legacy_browser();
 var EPSILON = 1e-6;
 var ARRAY_TYPE = typeof Float32Array !== "undefined" ? Float32Array : Array;
 var RANDOM = Math.random;
@@ -6087,11 +6277,13 @@ if (!Math.hypot) Math.hypot = function() {
   }
   return Math.sqrt(y);
 };
+
+// node_modules/gl-matrix/esm/mat3.js
 var mat3_exports = {};
 __export(mat3_exports, {
   add: () => add,
   adjoint: () => adjoint,
-  clone: () => clone22,
+  clone: () => clone2,
   copy: () => copy,
   create: () => create,
   determinant: () => determinant,
@@ -6122,6 +6314,7 @@ __export(mat3_exports, {
   translate: () => translate,
   transpose: () => transpose
 });
+init_legacy_browser();
 function create() {
   var out = new ARRAY_TYPE(9);
   if (ARRAY_TYPE != Float32Array) {
@@ -6149,7 +6342,7 @@ function fromMat4(out, a) {
   out[8] = a[10];
   return out;
 }
-function clone22(a) {
+function clone2(a) {
   var out = new ARRAY_TYPE(9);
   out[0] = a[0];
   out[1] = a[1];
@@ -6517,11 +6710,13 @@ function equals(a, b) {
 }
 var mul = multiply;
 var sub = subtract;
+
+// node_modules/gl-matrix/esm/mat4.js
 var mat4_exports = {};
 __export(mat4_exports, {
   add: () => add2,
   adjoint: () => adjoint2,
-  clone: () => clone222,
+  clone: () => clone3,
   copy: () => copy2,
   create: () => create2,
   determinant: () => determinant2,
@@ -6567,6 +6762,7 @@ __export(mat4_exports, {
   translate: () => translate2,
   transpose: () => transpose2
 });
+init_legacy_browser();
 function create2() {
   var out = new ARRAY_TYPE(16);
   if (ARRAY_TYPE != Float32Array) {
@@ -6589,7 +6785,7 @@ function create2() {
   out[15] = 1;
   return out;
 }
-function clone222(a) {
+function clone3(a) {
   var out = new ARRAY_TYPE(16);
   out[0] = a[0];
   out[1] = a[1];
@@ -7713,11 +7909,13 @@ function equals2(a, b) {
 }
 var mul2 = multiply2;
 var sub2 = subtract2;
+
+// node_modules/gl-matrix/esm/quat.js
 var quat_exports = {};
 __export(quat_exports, {
   add: () => add5,
   calculateW: () => calculateW,
-  clone: () => clone5,
+  clone: () => clone6,
   conjugate: () => conjugate,
   copy: () => copy5,
   create: () => create5,
@@ -7755,13 +7953,16 @@ __export(quat_exports, {
   squaredLength: () => squaredLength3,
   str: () => str5
 });
+init_legacy_browser();
+
+// node_modules/gl-matrix/esm/vec3.js
 var vec3_exports = {};
 __export(vec3_exports, {
   add: () => add3,
   angle: () => angle,
   bezier: () => bezier,
   ceil: () => ceil,
-  clone: () => clone3,
+  clone: () => clone4,
   copy: () => copy3,
   create: () => create3,
   cross: () => cross,
@@ -7806,6 +8007,7 @@ __export(vec3_exports, {
   transformQuat: () => transformQuat,
   zero: () => zero
 });
+init_legacy_browser();
 function create3() {
   var out = new ARRAY_TYPE(3);
   if (ARRAY_TYPE != Float32Array) {
@@ -7815,7 +8017,7 @@ function create3() {
   }
   return out;
 }
-function clone3(a) {
+function clone4(a) {
   var out = new ARRAY_TYPE(3);
   out[0] = a[0];
   out[1] = a[1];
@@ -8147,11 +8349,13 @@ var forEach = (function() {
     return a;
   };
 })();
+
+// node_modules/gl-matrix/esm/vec4.js
 var vec4_exports = {};
 __export(vec4_exports, {
   add: () => add4,
   ceil: () => ceil2,
-  clone: () => clone4,
+  clone: () => clone5,
   copy: () => copy4,
   create: () => create4,
   cross: () => cross2,
@@ -8191,6 +8395,7 @@ __export(vec4_exports, {
   transformQuat: () => transformQuat2,
   zero: () => zero2
 });
+init_legacy_browser();
 function create4() {
   var out = new ARRAY_TYPE(4);
   if (ARRAY_TYPE != Float32Array) {
@@ -8201,7 +8406,7 @@ function create4() {
   }
   return out;
 }
-function clone4(a) {
+function clone5(a) {
   var out = new ARRAY_TYPE(4);
   out[0] = a[0];
   out[1] = a[1];
@@ -8487,6 +8692,8 @@ var forEach2 = (function() {
     return a;
   };
 })();
+
+// node_modules/gl-matrix/esm/quat.js
 function create5() {
   var out = new ARRAY_TYPE(4);
   if (ARRAY_TYPE != Float32Array) {
@@ -8706,7 +8913,7 @@ function fromEuler(out, x, y, z) {
 function str5(a) {
   return "quat(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ")";
 }
-var clone5 = clone4;
+var clone6 = clone5;
 var fromValues5 = fromValues4;
 var copy5 = copy4;
 var set5 = set4;
@@ -8775,6 +8982,9 @@ var setAxes = (function() {
     return normalize3(out, fromMat3(out, matr));
   };
 })();
+
+// node_modules/neuroglancer/lib/util/array.js
+init_legacy_browser();
 function filterArrayInplace(array2, predicate) {
   const length22 = array2.length;
   let outIndex = 0;
@@ -8832,6 +9042,8 @@ function arraysEqual(a, b) {
   }
   return true;
 }
+
+// node_modules/neuroglancer/lib/util/geom.js
 var identityMat4 = mat4_exports.create();
 var kAxes = [
   vec3_exports.fromValues(1, 0, 0),
@@ -9017,6 +9229,8 @@ function getViewFrustrumDepthRange(projectionMat) {
   return depth;
 }
 var tempVec3 = vec3_exports.create();
+
+// node_modules/neuroglancer/lib/util/json.js
 function verifyFloat(obj) {
   const t = typeof obj;
   if (t === "number" || t === "string") {
@@ -9262,6 +9476,8 @@ function parseUint64(obj) {
   }
   return n;
 }
+
+// node_modules/neuroglancer/lib/util/memoize.js
 var Memoize = class {
   map = /* @__PURE__ */ new Map();
   /**
@@ -9346,6 +9562,9 @@ function asyncMemoizeWithProgress(getter) {
     }
   };
 }
+
+// node_modules/neuroglancer/lib/util/pairing_heap.js
+init_legacy_browser();
 function makePairingHeapOperations(options) {
   const { child: CHILD, next: NEXT, prev: PREV, compare } = options;
   function combineChildren(node) {
@@ -9470,6 +9689,8 @@ function makePairingHeapOperations(options) {
     removedEntries
   };
 }
+
+// node_modules/neuroglancer/lib/chunk_manager/backend.js
 var __defProp3 = Object.defineProperty;
 var __getOwnPropDesc3 = Object.getOwnPropertyDescriptor;
 var __decorateClass2 = (decorators, target2, key, kind) => {
@@ -10532,6 +10753,15 @@ registerPromiseRPC(
     return Promise.resolve({ value: results });
   }
 );
+
+// node_modules/neuroglancer/lib/kvstore/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/credentials_provider/shared_counterpart.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/credentials_provider/index.js
+init_legacy_browser();
 var CredentialsProvider = class extends RefCounted {
 };
 function makeCachedCredentialsGetter(getUncached) {
@@ -10566,10 +10796,15 @@ var CachingCredentialsManager = class extends RefCounted {
     );
   }
 };
+
+// node_modules/neuroglancer/lib/credentials_provider/shared_common.js
+init_legacy_browser();
 var CREDENTIALS_PROVIDER_RPC_ID = "CredentialsProvider";
 var CREDENTIALS_PROVIDER_GET_RPC_ID = "CredentialsProvider.get";
 var CREDENTIALS_MANAGER_RPC_ID = "CredentialsManager";
 var CREDENTIALS_MANAGER_GET_RPC_ID = "CredentialsManager.get";
+
+// node_modules/neuroglancer/lib/credentials_provider/shared_counterpart.js
 var __defProp4 = Object.defineProperty;
 var __getOwnPropDesc4 = Object.getOwnPropertyDescriptor;
 var __decorateClass3 = (decorators, target2, key, kind) => {
@@ -10642,9 +10877,23 @@ var SharedCredentialsManagerCounterpart = class extends SharedObjectCounterpart 
 SharedCredentialsManagerCounterpart = __decorateClass3([
   registerSharedObject(CREDENTIALS_MANAGER_RPC_ID)
 ], SharedCredentialsManagerCounterpart);
+
+// node_modules/neuroglancer/lib/kvstore/context.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/auto_detect.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/index.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/string.js
+init_legacy_browser();
 function defaultStringCompare(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+
+// node_modules/neuroglancer/lib/kvstore/index.js
 var NotFoundError = class extends Error {
   constructor(handle, options) {
     super(`${handle.getUrl()} not found`, options);
@@ -10732,6 +10981,9 @@ function normalizeListResponse(response) {
   response.directories.sort(defaultStringCompare);
   return response;
 }
+
+// node_modules/neuroglancer/lib/kvstore/url.js
+init_legacy_browser();
 function kvstoreEnsureDirectoryPipelineUrl(url) {
   const m = url.match(
     /^((?:.*?\|)?)([a-zA-Z][a-zA-Z0-9-+.]*)(?:(:[^?#|]*)((?:[?#][^|]*)?))?$/
@@ -10868,6 +11120,8 @@ function getBaseHttpUrlAndPath(url) {
     path: decodeURIComponent(parsed.pathname.substring(1))
   };
 }
+
+// node_modules/neuroglancer/lib/kvstore/auto_detect.js
 function composeMatchFunctions(specs) {
   return async (options) => {
     const matches = [];
@@ -10942,6 +11196,8 @@ var AutoDetectRegistry = class {
     return composeAutoDetectFileSpecs(specs);
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/context.js
 var KvStoreContext = class {
   baseKvStoreProviders = /* @__PURE__ */ new Map();
   kvStoreAdapterProviders = /* @__PURE__ */ new Map();
@@ -11023,6 +11279,9 @@ var KvStoreContext = class {
     );
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/register.js
+init_legacy_browser();
 var KvStoreProviderRegistry = class {
   baseKvStoreProviders = [];
   kvStoreAdapterProviders = [];
@@ -11053,11 +11312,16 @@ var KvStoreProviderRegistry = class {
   }
 };
 var frontendBackendIsomorphicKvStoreProviderRegistry = new KvStoreProviderRegistry();
+
+// node_modules/neuroglancer/lib/kvstore/shared_common.js
+init_legacy_browser();
 var SHARED_KVSTORE_CONTEXT_RPC_ID = "SharedKvStoreContext";
 var STAT_RPC_ID = "SharedKvStoreContext.stat";
 var READ_RPC_ID = "SharedKvStoreContext.read";
 var LIST_RPC_ID = "SharedKvStoreContext.list";
 var COMPLETE_URL_RPC_ID = "SharedKvStoreContext.completeUrl";
+
+// node_modules/neuroglancer/lib/kvstore/backend.js
 var __defProp5 = Object.defineProperty;
 var __getOwnPropDesc5 = Object.getOwnPropertyDescriptor;
 var __decorateClass4 = (decorators, target2, key, kind) => {
@@ -11097,10 +11361,21 @@ function WithSharedKvStoreContextCounterpart(Base) {
     }
   };
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/render_layer_backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/render_layer_common.js
+init_legacy_browser();
 var RENDERED_VIEW_ADD_LAYER_RPC_ID = "rendered_view.addLayer";
 var RENDERED_VIEW_REMOVE_LAYER_RPC_ID = "rendered_view.removeLayer";
 var PROJECTION_PARAMETERS_RPC_ID = "SharedProjectionParameters";
 var PROJECTION_PARAMETERS_CHANGED_RPC_METHOD_ID = "SharedProjectionParameters.changed";
+
+// node_modules/neuroglancer/lib/render_layer_backend.js
 var __defProp6 = Object.defineProperty;
 var __getOwnPropDesc6 = Object.getOwnPropertyDescriptor;
 var __decorateClass5 = (decorators, target2, key, kind) => {
@@ -11158,6 +11433,18 @@ registerRPC(PROJECTION_PARAMETERS_CHANGED_RPC_METHOD_ID, function(x) {
   Object.assign(value, x.value);
   obj.changed.dispatch(oldValue, value);
 });
+
+// node_modules/neuroglancer/lib/sliceview/base.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/navigation_state.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/coordinate_transform.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/matrix.js
+init_legacy_browser();
 function identity4(a, lda, n) {
   for (let i = 0; i < n; ++i) {
     const start = lda * i;
@@ -11255,6 +11542,9 @@ function inverse3(b, ldb, a, lda, n) {
   copy6(b, ldb, a, lda, n, n);
   return inverseInplace(b, ldb, n);
 }
+
+// node_modules/neuroglancer/lib/util/si_units.js
+init_legacy_browser();
 var preferredSiPrefixes = [
   { prefix: "Y", exponent: 24, longPrefix: "yotta" },
   { prefix: "Z", exponent: 21, longPrefix: "zetta" },
@@ -11295,6 +11585,9 @@ for (const { prefix, exponent } of siPrefixesWithAlternatives) {
     supportedUnits.set(`${prefix}${unit}`, { unit, exponent });
   }
 }
+
+// node_modules/neuroglancer/lib/util/vector.js
+init_legacy_browser();
 function add6(out, a, b) {
   const rank = out.length;
   for (let i = 0; i < rank; ++i) {
@@ -11333,6 +11626,8 @@ function max3(out, a, b) {
 var kEmptyFloat32Vec = new Float32Array(0);
 var kEmptyFloat64Vec = new Float64Array(0);
 var kFloat64Vec3Of1 = Float64Array.of(1, 1, 1);
+
+// node_modules/neuroglancer/lib/coordinate_transform.js
 function makeCoordinateSpace(space) {
   const { names, units, scales } = space;
   const {
@@ -11440,6 +11735,14 @@ function computeCombinedBounds(boundingBoxes, outputRank) {
   );
   return { lowerBounds, upperBounds, voxelCenterAtIntegerCoordinates };
 }
+
+// node_modules/neuroglancer/lib/util/trackable.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/trackable_enum.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/navigation_state.js
 var tempVec32 = vec3_exports.create();
 var tempQuat = quat_exports.create();
 function displayDimensionRenderInfosEqual(a, b) {
@@ -11454,6 +11757,27 @@ function validateDisplayDimensionRenderInfoProperty(obj, expected) {
   }
   return false;
 }
+
+// node_modules/neuroglancer/lib/projection_parameters.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/display_context.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/animation_frame_debounce.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/framerate.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/trackable_screenshot_mode.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/webgl/context.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/render_coordinate_transform.js
+init_legacy_browser();
 var zeroRankChannelSpace = {
   channelCoordinateSpace: emptyValidCoordinateSpace,
   shape: new Uint32Array(0),
@@ -11522,6 +11846,9 @@ function get3dModelToDisplaySpaceMatrix(out, displayDimensionRenderInfo, transfo
     );
   }
 }
+
+// node_modules/neuroglancer/lib/sliceview/chunk_layout.js
+init_legacy_browser();
 var ChunkLayout = class _ChunkLayout {
   /**
    * Size of each chunk in "chunk" coordinates.
@@ -11582,6 +11909,9 @@ var ChunkLayout = class _ChunkLayout {
     );
   }
 };
+
+// node_modules/neuroglancer/lib/util/data_type.js
+init_legacy_browser();
 var DataType = /* @__PURE__ */ ((DataType2) => {
   DataType2[DataType2["UINT8"] = 0] = "UINT8";
   DataType2[DataType2["INT8"] = 1] = "INT8";
@@ -11669,6 +11999,8 @@ function makeDataTypeArrayView(dataType, buffer, byteOffset = 0, byteLength = bu
     byteLength / bytesPerElement
   );
 }
+
+// node_modules/neuroglancer/lib/sliceview/base.js
 var DEBUG_VISIBLE_SOURCES = false;
 var DEBUG_CHUNK_VISIBILITY = false;
 var tempMat4 = mat4_exports.create();
@@ -12084,6 +12416,9 @@ function getNormalizedChunkLayout(projectionParameters, chunkLayout) {
   mat4_exports.invert(invTransform, transform2);
   return tempChunkLayout;
 }
+
+// node_modules/neuroglancer/lib/util/erf.js
+init_legacy_browser();
 function erf(x) {
   const a1 = 0.254829592;
   const a2 = -0.284496736;
@@ -12095,6 +12430,9 @@ function erf(x) {
   const y = 1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
   return Math.sign(x) * y;
 }
+
+// node_modules/neuroglancer/lib/util/velocity_estimation.js
+init_legacy_browser();
 var VELOCITY_HALF_LIFE_MS = 50;
 var MODEL_HALF_LIFE_MS = 1e3;
 var VelocityEstimator = class {
@@ -12156,6 +12494,9 @@ var VelocityEstimator = class {
     }
   }
 };
+
+// node_modules/neuroglancer/lib/visibility_priority/backend.js
+init_legacy_browser();
 function withSharedVisibility(Base) {
   return class extends Base {
     visibility;
@@ -12178,6 +12519,8 @@ function getPriorityTier(visibility) {
 function getBasePriority(visibility) {
   return visibility === Number.POSITIVE_INFINITY ? 0 : visibility * PREFETCH_PRIORITY_MULTIPLIER;
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend.js
 var __defProp7 = Object.defineProperty;
 var __getOwnPropDesc7 = Object.getOwnPropertyDescriptor;
 var __decorateClass6 = (decorators, target2, key, kind) => {
@@ -12586,7 +12929,15 @@ registerPromiseRPC(
     }
   }
 );
+
+// node_modules/neuroglancer/lib/perspective_view/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/perspective_view/base.js
+init_legacy_browser();
 var PERSPECTIVE_VIEW_RPC_ID = "perspective_view/PerspectiveView";
+
+// node_modules/neuroglancer/lib/perspective_view/backend.js
 var __defProp8 = Object.defineProperty;
 var __getOwnPropDesc8 = Object.getOwnPropertyDescriptor;
 var __decorateClass7 = (decorators, target2, key, kind) => {
@@ -12613,6 +12964,12 @@ PerspectiveViewBackend = __decorateClass7([
 ], PerspectiveViewBackend);
 var PerspectiveViewRenderLayerBackend = class extends RenderLayerBackend {
 };
+
+// node_modules/neuroglancer/lib/volume_rendering/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/volume_rendering/base.js
+init_legacy_browser();
 var VOLUME_RENDERING_RENDER_LAYER_RPC_ID = "volume_rendering/VolumeRenderingRenderLayer";
 var VOLUME_RENDERING_RENDER_LAYER_UPDATE_SOURCES_RPC_ID = "volume_rendering/VolumeRenderingRenderLayer/update";
 var DEBUG_CHUNK_LEVEL = false;
@@ -12685,6 +13042,8 @@ function forEachVisibleVolumeRenderingChunk(projectionParameters, localPosition,
     }
   );
 }
+
+// node_modules/neuroglancer/lib/volume_rendering/backend.js
 var __defProp9 = Object.defineProperty;
 var __getOwnPropDesc9 = Object.getOwnPropertyDescriptor;
 var __decorateClass8 = (decorators, target2, key, kind) => {
@@ -12818,6 +13177,12 @@ registerRPC(VOLUME_RENDERING_RENDER_LAYER_UPDATE_SOURCES_RPC_ID, function(x) {
   attachment.state.displayDimensionRenderInfo = x.displayDimensionRenderInfo;
   layer.chunkManager.scheduleUpdateChunkPriorities();
 });
+
+// node_modules/neuroglancer/lib/annotation/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/annotation/base.js
+init_legacy_browser();
 var ANNOTATION_METADATA_CHUNK_SOURCE_RPC_ID = "annotation.MetadataChunkSource";
 var ANNOTATION_SUBSET_GEOMETRY_CHUNK_SOURCE_RPC_ID = "annotation.SubsetGeometryChunkSource";
 var ANNOTATION_REFERENCE_ADD_RPC_ID = "annotation.reference.add";
@@ -12897,6 +13262,18 @@ function forEachVisibleAnnotationChunk(projectionParameters, localPosition, rend
     totalPhysicalDensity = newTotalPhysicalDensity;
   }
 }
+
+// node_modules/neuroglancer/lib/segmentation_display_state/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/shared_disjoint_sets.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/disjoint_sets.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/segmentation_graph/segment_id.js
+init_legacy_browser();
 var VisibleSegmentEquivalencePolicy = /* @__PURE__ */ ((VisibleSegmentEquivalencePolicy2) => {
   VisibleSegmentEquivalencePolicy2[VisibleSegmentEquivalencePolicy2["MIN_REPRESENTATIVE"] = 0] = "MIN_REPRESENTATIVE";
   VisibleSegmentEquivalencePolicy2[VisibleSegmentEquivalencePolicy2["MAX_REPRESENTATIVE"] = 1] = "MAX_REPRESENTATIVE";
@@ -12904,6 +13281,8 @@ var VisibleSegmentEquivalencePolicy = /* @__PURE__ */ ((VisibleSegmentEquivalenc
   VisibleSegmentEquivalencePolicy2[VisibleSegmentEquivalencePolicy2["NONREPRESENTATIVE_EXCLUDED"] = 4] = "NONREPRESENTATIVE_EXCLUDED";
   return VisibleSegmentEquivalencePolicy2;
 })(VisibleSegmentEquivalencePolicy || {});
+
+// node_modules/neuroglancer/lib/util/disjoint_sets.js
 var Entry = class {
   constructor(value) {
     this.value = value;
@@ -13086,6 +13465,8 @@ var DisjointUint64Sets = class {
     return sets.map((set6) => set6.map((element) => element.toString()));
   }
 };
+
+// node_modules/neuroglancer/lib/shared_disjoint_sets.js
 var __defProp10 = Object.defineProperty;
 var __getOwnPropDesc10 = Object.getOwnPropertyDescriptor;
 var __decorateClass9 = (decorators, target2, key, kind) => {
@@ -13238,6 +13619,15 @@ registerRPC(DELETE_SET_METHOD_ID, function(x) {
     obj.changed.dispatch();
   }
 });
+
+// node_modules/neuroglancer/lib/uint64_map.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/gpu_hash/hash_table.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/gpu_hash/hash_function.js
+init_legacy_browser();
 var k1 = 3432918353;
 var k2 = 461845907;
 function hashCombine(state, value) {
@@ -13251,6 +13641,9 @@ function hashCombine(state, value) {
   state = state * 5 + 3864292196 >>> 0;
   return state;
 }
+
+// node_modules/neuroglancer/lib/util/random.js
+init_legacy_browser();
 function getRandomHexString(numBits = 128) {
   const numValues = Math.ceil(numBits / 32);
   const data = new Uint32Array(numValues);
@@ -13275,6 +13668,8 @@ function getRandomValues(array2) {
   }
   return array2;
 }
+
+// node_modules/neuroglancer/lib/gpu_hash/hash_table.js
 var NUM_ALTERNATIVES = 3;
 var DEFAULT_LOAD_FACTOR = 0.8;
 var DEBUG2 = false;
@@ -13645,6 +14040,8 @@ var HashMapUint64 = class extends HashTableBase {
   }
 };
 HashMapUint64.prototype.entryStride = 2;
+
+// node_modules/neuroglancer/lib/uint64_map.js
 var __defProp11 = Object.defineProperty;
 var __getOwnPropDesc11 = Object.getOwnPropertyDescriptor;
 var __decorateClass10 = (decorators, target2, key, kind) => {
@@ -13746,6 +14143,9 @@ registerRPC("Uint64Map.clear", function(x) {
     obj.changed.dispatch();
   }
 });
+
+// node_modules/neuroglancer/lib/uint64_set.js
+init_legacy_browser();
 var __defProp12 = Object.defineProperty;
 var __getOwnPropDesc12 = Object.getOwnPropertyDescriptor;
 var __decorateClass11 = (decorators, target2, key, kind) => {
@@ -13882,6 +14282,9 @@ registerRPC("Uint64Set.clear", function(x) {
     obj.changed.dispatch();
   }
 });
+
+// node_modules/neuroglancer/lib/segmentation_display_state/base.js
+init_legacy_browser();
 var VISIBLE_SEGMENTS_STATE_PROPERTIES = [
   "visibleSegments",
   "segmentEquivalences",
@@ -13941,6 +14344,8 @@ function forEachVisibleSegment(state, callback) {
     }
   }
 }
+
+// node_modules/neuroglancer/lib/segmentation_display_state/backend.js
 function receiveVisibleSegmentsState(rpc2, options, target2 = {}) {
   for (const property of VISIBLE_SEGMENTS_STATE_PROPERTIES) {
     target2[property] = rpc2.get(options[property]);
@@ -13980,6 +14385,8 @@ var withSegmentationLayerBackendState = (Base) => class SegmentationLayerState e
     );
   }
 };
+
+// node_modules/neuroglancer/lib/annotation/backend.js
 var __defProp13 = Object.defineProperty;
 var __getOwnPropDesc13 = Object.getOwnPropertyDescriptor;
 var __decorateClass12 = (decorators, target2, key, kind) => {
@@ -14391,6 +14798,21 @@ registerRPC(ANNOTATION_RENDER_LAYER_UPDATE_SEGMENTATION_RPC_ID, function(x) {
   const obj = this.get(x.id);
   obj.segmentationStates.value = obj.getSegmentationState(x.segmentationStates);
 });
+
+// node_modules/neuroglancer/lib/datasource/enabled_backend_modules.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/boss/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/boss/api.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/credentials_provider/http_request.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/http_request.js
+init_legacy_browser();
 var HttpError = class _HttpError extends Error {
   url;
   status;
@@ -14475,6 +14897,8 @@ function isNotFoundError(e) {
   if (!(e instanceof HttpError)) return false;
   return e.status === 0 || e.status === 403 || e.status === 404;
 }
+
+// node_modules/neuroglancer/lib/credentials_provider/http_request.js
 var maxCredentialsAttempts = 3;
 async function fetchOkWithCredentials(credentialsProvider, input, init, applyCredentials2, errorHandler2) {
   var _a;
@@ -14515,6 +14939,8 @@ function fetchOkWithCredentialsAdapter(credentialsProvider, applyCredentials2, e
     errorHandler2
   );
 }
+
+// node_modules/neuroglancer/lib/datasource/boss/api.js
 async function fetchWithBossCredentials(credentialsProvider, input, init) {
   return fetchOk(input, init).catch((error) => {
     if (error.status !== 500 && error.status !== 401 && error.status !== 403 && error.status !== 504) {
@@ -14539,6 +14965,9 @@ async function fetchWithBossCredentials(credentialsProvider, input, init) {
     );
   });
 }
+
+// node_modules/neuroglancer/lib/datasource/boss/base.js
+init_legacy_browser();
 var BossSourceParameters = class {
   baseUrl;
   collection;
@@ -14561,6 +14990,12 @@ var MeshSourceParameters = class {
     return `boss:mesh:${parameters.baseUrl}`;
   }
 };
+
+// node_modules/neuroglancer/lib/mesh/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/mesh/base.js
+init_legacy_browser();
 var MESH_LAYER_RPC_ID = "mesh/MeshLayer";
 var MULTISCALE_MESH_LAYER_RPC_ID = "mesh/MultiscaleMeshLayer";
 var FRAGMENT_SOURCE_RPC_ID = "mesh/FragmentSource";
@@ -14571,6 +15006,12 @@ var VertexPositionFormat = /* @__PURE__ */ ((VertexPositionFormat2) => {
   VertexPositionFormat2[VertexPositionFormat2["uint16"] = 2] = "uint16";
   return VertexPositionFormat2;
 })(VertexPositionFormat || {});
+
+// node_modules/neuroglancer/lib/mesh/multiscale.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/zorder.js
+init_legacy_browser();
 function getOctreeChildIndex(x, y, z) {
   return x & 1 | y << 1 & 2 | z << 2 & 4;
 }
@@ -14648,6 +15089,8 @@ function zorder3LessThan(x0, y0, z0, x1, y1, z1) {
   }
   return mostSignificant0 < mostSignificant1;
 }
+
+// node_modules/neuroglancer/lib/mesh/multiscale.js
 function getDesiredMultiscaleMeshChunks(manifest, modelViewProjection, clippingPlanes, detailCutoff, viewportWidth, viewportHeight, callback) {
   const { octree, lodScales, chunkGridSpatialOrigin, chunkShape } = manifest;
   const maxLod = lodScales.length - 1;
@@ -14746,6 +15189,9 @@ function getDesiredMultiscaleMeshChunks(manifest, modelViewProjection, clippingP
   }
   handleChunk(maxLod, octree.length / 5 - 1, 0);
 }
+
+// node_modules/neuroglancer/lib/mesh/triangle_strips.js
+init_legacy_browser();
 var DEBUG_TIMING = false;
 function normalizeTriangleVertexOrder(indices) {
   let maxVertex = 0;
@@ -14955,6 +15401,9 @@ function computeTriangleStrips(indices, subChunkOffsets) {
   }
   return shrunkOutput;
 }
+
+// node_modules/neuroglancer/lib/util/endian.js
+init_legacy_browser();
 var Endianness = /* @__PURE__ */ ((Endianness2) => {
   Endianness2[Endianness2["LITTLE"] = 0] = "LITTLE";
   Endianness2[Endianness2["BIG"] = 1] = "BIG";
@@ -15031,6 +15480,8 @@ function convertEndian(array2, source, elementBytes, target2 = ENDIANNESS) {
       break;
   }
 }
+
+// node_modules/neuroglancer/lib/mesh/backend.js
 var __defProp14 = Object.defineProperty;
 var __getOwnPropDesc14 = Object.getOwnPropertyDescriptor;
 var __decorateClass13 = (decorators, target2, key, kind) => {
@@ -15652,11 +16103,28 @@ function computeOctreeChildOffsets(octree, childStart, childEnd, parentEnd) {
     octree[parentNode * 5 + 4] += childNode;
   }
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/bossNpz.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/postprocess.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/encode_compressed_segmentation_request.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/index.js
+init_legacy_browser();
 function asyncComputation(id) {
   return { id };
 }
+
+// node_modules/neuroglancer/lib/async_computation/encode_compressed_segmentation_request.js
 var encodeCompressedSegmentationUint32 = asyncComputation("encodeCompressedSegmentationUint32");
 var encodeCompressedSegmentationUint64 = asyncComputation("encodeCompressedSegmentationUint64");
+
+// node_modules/neuroglancer/lib/async_computation/request.js
+init_legacy_browser();
 var numWorkers = 0;
 var freeWorkers = [];
 var pendingTasks = /* @__PURE__ */ new Map();
@@ -15730,6 +16198,8 @@ function requestAsyncComputation(request, signal, transfer, ...args) {
   }
   return promise;
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/postprocess.js
 async function postProcessRawData(chunk, signal, data) {
   const { spec } = chunk.source;
   if (spec.compressedSegmentationBlockSize !== void 0) {
@@ -15771,6 +16241,9 @@ async function postProcessRawData(chunk, signal, data) {
     chunk.data = data;
   }
 }
+
+// node_modules/neuroglancer/lib/util/gzip.js
+init_legacy_browser();
 function isGzipFormat(data) {
   const view = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   return view.length >= 3 && view[0] === 31 && view[1] === 139 && view[2] === 8;
@@ -15793,6 +16266,12 @@ function decodeGzipStream(response, format, signal) {
     signal
   });
 }
+
+// node_modules/neuroglancer/lib/util/npy.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/numpy_dtype.js
+init_legacy_browser();
 var supportedDataTypes = /* @__PURE__ */ new Map();
 supportedDataTypes.set("|u1", {
   endianness: Endianness.LITTLE,
@@ -15840,6 +16319,8 @@ function parseNumpyDtype(typestr) {
   }
   return dtype;
 }
+
+// node_modules/neuroglancer/lib/util/npy.js
 var NumpyArray = class {
   constructor(data, shape, dataType, fortranOrder) {
     this.data = data;
@@ -15904,6 +16385,8 @@ function parseNpy(x) {
     headerObject.fortran_order === true
   );
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/bossNpz.js
 async function decodeBossNpzChunk(chunk, signal, response) {
   const parseResult = parseNpy(
     new Uint8Array(await decodeGzip(response, "deflate"))
@@ -15927,7 +16410,15 @@ async function decodeBossNpzChunk(chunk, signal, response) {
   }
   await postProcessRawData(chunk, signal, parseResult.data);
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/jpeg.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_jpeg_request.js
+init_legacy_browser();
 var decodeJpeg = asyncComputation("decodeJpeg");
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/jpeg.js
 async function decodeJpegChunk(chunk, signal, response) {
   const chunkDataSize = chunk.chunkDataSize;
   const { uint8Array: decoded } = await requestAsyncComputation(
@@ -15943,6 +16434,9 @@ async function decodeJpegChunk(chunk, signal, response) {
   );
   await postProcessRawData(chunk, signal, decoded);
 }
+
+// node_modules/neuroglancer/lib/sliceview/volume/backend.js
+init_legacy_browser();
 var VolumeChunk = class extends SliceViewChunk {
   source = null;
   data;
@@ -16016,6 +16510,8 @@ var VolumeChunkSource = class extends SliceViewChunkSourceBackend {
   }
 };
 VolumeChunkSource.prototype.chunkConstructor = VolumeChunk;
+
+// node_modules/neuroglancer/lib/datasource/boss/backend.js
 var __defProp15 = Object.defineProperty;
 var __getOwnPropDesc15 = Object.getOwnPropertyDescriptor;
 var __decorateClass14 = (decorators, target2, key, kind) => {
@@ -16112,6 +16608,18 @@ var BossMeshSource = class extends BossSource(
 BossMeshSource = __decorateClass14([
   registerSharedObject()
 ], BossMeshSource);
+
+// node_modules/neuroglancer/lib/datasource/brainmaps/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/annotation/index.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/color.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/float32_to_string.js
+init_legacy_browser();
 var tempArray = new Float32Array(1);
 function float32ToString(x) {
   tempArray[0] = x;
@@ -16125,9 +16633,14 @@ function float32ToString(x) {
   }
   return x.toString();
 }
+
+// node_modules/neuroglancer/lib/util/hex.js
+init_legacy_browser();
 function hexEncodeByte(x) {
   return ("0" + x.toString(16)).slice(-2);
 }
+
+// node_modules/neuroglancer/lib/util/color.js
 function parseColorSerialization(x) {
   const rgbaPattern = /^rgba\(([0-9]+), ([0-9]+), ([0-9]+), (0(?:\.[0-9]+)?)\)$/;
   {
@@ -16217,9 +16730,17 @@ function serializeColor(x) {
   result += `, ${float32ToString(x[3])})`;
   return result;
 }
+
+// node_modules/neuroglancer/lib/util/lerp.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/float.js
+init_legacy_browser();
 var denormMin = 2 ** -1074;
 var float64Buf = new Float64Array(1);
 var uint32Buf = new Uint32Array(float64Buf.buffer);
+
+// node_modules/neuroglancer/lib/util/lerp.js
 var defaultDataTypeRange = {
   [DataType.UINT8]: [0, 255],
   [DataType.INT8]: [-128, 127],
@@ -16230,6 +16751,8 @@ var defaultDataTypeRange = {
   [DataType.UINT64]: [0n, 0xffffffffffffffffn],
   [DataType.FLOAT32]: [0, 1]
 };
+
+// node_modules/neuroglancer/lib/annotation/index.js
 var AnnotationType = /* @__PURE__ */ ((AnnotationType2) => {
   AnnotationType2[AnnotationType2["POINT"] = 0] = "POINT";
   AnnotationType2[AnnotationType2["LINE"] = 1] = "LINE";
@@ -17056,6 +17579,12 @@ var AnnotationSerializer = class {
     return serializeAnnotations(this.annotations, this.propertySerializers);
   }
 };
+
+// node_modules/neuroglancer/lib/datasource/brainmaps/api.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/credentials_provider/oauth2.js
+init_legacy_browser();
 function applyCredentials(credentials, init) {
   if (!credentials.accessToken) return init;
   const headers = new Headers(init.headers);
@@ -17100,6 +17629,8 @@ function fetchOkWithOAuth2CredentialsAdapter(credentialsProvider) {
     errorHandler
   );
 }
+
+// node_modules/neuroglancer/lib/datasource/brainmaps/api.js
 function makeRequest(instance2, credentialsProvider, path, init = {}) {
   return fetchOkWithOAuth2Credentials(
     credentialsProvider,
@@ -17107,6 +17638,9 @@ function makeRequest(instance2, credentialsProvider, path, init = {}) {
     init
   );
 }
+
+// node_modules/neuroglancer/lib/datasource/brainmaps/base.js
+init_legacy_browser();
 var VolumeChunkEncoding = /* @__PURE__ */ ((VolumeChunkEncoding22) => {
   VolumeChunkEncoding22[VolumeChunkEncoding22["RAW"] = 0] = "RAW";
   VolumeChunkEncoding22[VolumeChunkEncoding22["JPEG"] = 1] = "JPEG";
@@ -17156,7 +17690,15 @@ var AnnotationSpatialIndexSourceParameters = class {
   changestack;
   static RPC_ID = "brainmaps/AnnotationSpatialIndex";
 };
+
+// node_modules/neuroglancer/lib/skeleton/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/skeleton/base.js
+init_legacy_browser();
 var SKELETON_LAYER_RPC_ID = "skeleton/SkeletonLayer";
+
+// node_modules/neuroglancer/lib/skeleton/backend.js
 var __defProp16 = Object.defineProperty;
 var __getOwnPropDesc16 = Object.getOwnPropertyDescriptor;
 var __decorateClass15 = (decorators, target2, key, kind) => {
@@ -17305,10 +17847,16 @@ function decodeSkeletonVertexPositionsAndIndices(chunk, data, endianness, vertex
   chunk.vertexPositions = meshData.vertexPositions;
   chunk.indices = meshData.indices;
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/compressed_segmentation.js
+init_legacy_browser();
 async function decodeCompressedSegmentationChunk(chunk, signal, response) {
   signal;
   chunk.data = new Uint32Array(response);
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/raw.js
+init_legacy_browser();
 async function decodeRawChunk(chunk, signal, response, endianness = ENDIANNESS, byteOffset = 0, byteLength = response.byteLength) {
   signal;
   const { spec } = chunk.source;
@@ -17330,6 +17878,8 @@ async function decodeRawChunk(chunk, signal, response, endianness = ENDIANNESS, 
   convertEndian(data, endianness, bytesPerElement);
   await postProcessRawData(chunk, signal, data);
 }
+
+// node_modules/neuroglancer/lib/datasource/brainmaps/backend.js
 var __defProp17 = Object.defineProperty;
 var __getOwnPropDesc17 = Object.getOwnPropertyDescriptor;
 var __decorateClass16 = (decorators, target2, key, kind) => {
@@ -18361,7 +18911,16 @@ var BrainmapsAnnotationSource = class extends BrainmapsSource(
 BrainmapsAnnotationSource = __decorateClass16([
   registerSharedObject()
 ], BrainmapsAnnotationSource);
+
+// node_modules/neuroglancer/lib/datasource/deepzoom/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_png_request.js
+init_legacy_browser();
 var decodePng = asyncComputation("decodePng");
+
+// node_modules/neuroglancer/lib/datasource/deepzoom/base.js
+init_legacy_browser();
 var ImageTileEncoding = /* @__PURE__ */ ((ImageTileEncoding2) => {
   ImageTileEncoding2[ImageTileEncoding2["JPG"] = 0] = "JPG";
   ImageTileEncoding2[ImageTileEncoding2["JPEG"] = 1] = "JPEG";
@@ -18376,6 +18935,8 @@ var ImageTileSourceParameters = class {
   overlap;
   static RPC_ID = "deepzoom/ImageTileSource";
 };
+
+// node_modules/neuroglancer/lib/datasource/deepzoom/backend.js
 var __defProp18 = Object.defineProperty;
 var __getOwnPropDesc18 = Object.getOwnPropertyDescriptor;
 var __decorateClass17 = (decorators, target2, key, kind) => {
@@ -18475,6 +19036,12 @@ var DeepzoomImageTileSource = class extends WithParameters(
 DeepzoomImageTileSource = __decorateClass17([
   registerSharedObject()
 ], DeepzoomImageTileSource);
+
+// node_modules/neuroglancer/lib/datasource/dvid/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/dvid/api.js
+init_legacy_browser();
 var DVIDInstance = class {
   constructor(baseUrl, nodeKey) {
     this.baseUrl = baseUrl;
@@ -18532,6 +19099,9 @@ function fetchWithDVIDCredentials(credentialsProvider, input, init) {
     }
   );
 }
+
+// node_modules/neuroglancer/lib/datasource/dvid/base.js
+init_legacy_browser();
 var VolumeChunkEncoding2 = /* @__PURE__ */ ((VolumeChunkEncoding22) => {
   VolumeChunkEncoding22[VolumeChunkEncoding22["JPEG"] = 0] = "JPEG";
   VolumeChunkEncoding22[VolumeChunkEncoding22["RAW"] = 1] = "RAW";
@@ -18557,6 +19127,9 @@ var SkeletonSourceParameters2 = class extends DVIDSourceParameters {
 var MeshSourceParameters3 = class extends DVIDSourceParameters {
   static RPC_ID = "dvid/MeshSource";
 };
+
+// node_modules/neuroglancer/lib/skeleton/decode_swc_skeleton.js
+init_legacy_browser();
 function decodeSwcSkeletonChunk(chunk, swcStr) {
   const swcObjects = parseSwc(swcStr);
   if (swcObjects.length < 1) {
@@ -18637,6 +19210,8 @@ var PointObj = class {
   radius;
   parent;
 };
+
+// node_modules/neuroglancer/lib/datasource/dvid/backend.js
 var __defProp19 = Object.defineProperty;
 var __getOwnPropDesc19 = Object.getOwnPropertyDescriptor;
 var __decorateClass18 = (decorators, target2, key, kind) => {
@@ -18767,6 +19342,21 @@ var DVIDVolumeChunkSource = class extends DVIDSource(
 DVIDVolumeChunkSource = __decorateClass18([
   registerSharedObject()
 ], DVIDVolumeChunkSource);
+
+// node_modules/neuroglancer/lib/datasource/graphene/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/graphene/base.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/http/common.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/http/read.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/byte_range/file_handle.js
+init_legacy_browser();
 function composeByteRangeRequest(outer, inner) {
   if (inner === void 0) {
     return { outer, inner: { offset: 0, length: outer.length } };
@@ -18837,6 +19427,8 @@ var FileByteRangeHandle = class {
     return `${this.base.getUrl()}|range:${offset}-${offset + length6}`;
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/http/read.js
 function getRangeHeader(request) {
   if (request === void 0) return void 0;
   return `bytes=${request.offset}-${request.offset + request.length - 1}`;
@@ -19023,6 +19615,8 @@ async function stat(store, key, url, options, fetchOkImpl = fetchOk) {
     return handleThrowIfMissing(store, key, options, e);
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/http/common.js
 var ReadableHttpKvStore = class {
   constructor(sharedKvStoreContext, baseUrl, baseUrlForDisplay = baseUrl, fetchOkImpl = fetchOk) {
     this.sharedKvStoreContext = sharedKvStoreContext;
@@ -19084,6 +19678,8 @@ function registerProviders(registry, httpKvStoreClass) {
     );
   }
 }
+
+// node_modules/neuroglancer/lib/datasource/graphene/base.js
 var GRAPHENE_MESH_NEW_SEGMENT_RPC_ID = "GrapheneMeshSource:NewSegment";
 var ChunkedGraphSourceParameters = class {
   url;
@@ -19135,6 +19731,12 @@ function getHttpSource(kvStoreContext, url) {
   }
   return { fetchOkImpl, baseUrl: joinBaseUrlAndPath(baseUrl, path) };
 }
+
+// node_modules/neuroglancer/lib/datasource/precomputed/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/precomputed/base.js
+init_legacy_browser();
 var VolumeChunkEncoding3 = /* @__PURE__ */ ((VolumeChunkEncoding22) => {
   VolumeChunkEncoding22[VolumeChunkEncoding22["RAW"] = 0] = "RAW";
   VolumeChunkEncoding22[VolumeChunkEncoding22["JPEG"] = 1] = "JPEG";
@@ -19188,6 +19790,15 @@ var AnnotationSourceParameters2 = class {
   type;
   static RPC_ID = "precomputed/AnnotationSource";
 };
+
+// node_modules/neuroglancer/lib/datasource/precomputed/sharded.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/chunk_manager/generic_file_source.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/object_id.js
+init_legacy_browser();
 var OBJECT_ID_SYMBOL = Symbol("objectId");
 var nextObjectId = 0;
 function getObjectId(x) {
@@ -19200,6 +19811,8 @@ function getObjectId(x) {
   }
   return "" + JSON.stringify(x);
 }
+
+// node_modules/neuroglancer/lib/chunk_manager/generic_file_source.js
 var AsyncCacheChunk = class extends Chunk {
   asyncMemoize;
   initialize(key) {
@@ -19283,6 +19896,9 @@ function getCachedDecodedUrl(sharedKvStoreContext, url, decodeFunction, options)
   );
   return cache.get(url, options);
 }
+
+// node_modules/neuroglancer/lib/kvstore/gzip/file_handle.js
+init_legacy_browser();
 var EXPECTED_HEADER_OVERHEAD = 100;
 var GzipFileHandle = class {
   constructor(base, format) {
@@ -19377,6 +19993,9 @@ var GzipFileHandle = class {
     return this.base.getUrl() + "|gzip";
   }
 };
+
+// node_modules/neuroglancer/lib/util/hash.js
+init_legacy_browser();
 function murmurHash3_x86_128Mix(h) {
   h ^= h >>> 16;
   h = Math.imul(h, 2246822507);
@@ -19425,6 +20044,8 @@ function murmurHash3_x86_128Hash64Bits_Bigint(seed, input) {
   h2 = h2 + h1 >>> 0;
   return BigInt(h1) | BigInt(h2) << BigInt(32);
 }
+
+// node_modules/neuroglancer/lib/datasource/precomputed/sharded.js
 var shardingHashFunctions = /* @__PURE__ */ new Map([
   [
     ShardingHashFunction.MURMURHASH3_X86_128,
@@ -19611,6 +20232,9 @@ function getShardedKvStoreIfApplicable(chunkSource, base, sharding) {
     new ShardedKvStore(chunkSource.chunkManager, base, sharding)
   );
 }
+
+// node_modules/neuroglancer/lib/mesh/draco/index.js
+init_legacy_browser();
 var decodeResult = void 0;
 var numPartitions = 0;
 var wasmModule;
@@ -19706,6 +20330,9 @@ async function decodeDraco(buffer) {
   }
   throw new Error(`Failed to decode draco mesh: ${code}`);
 }
+
+// node_modules/neuroglancer/lib/skeleton/decode_precomputed_skeleton.js
+init_legacy_browser();
 function decodeSkeletonChunk2(chunk, response, vertexAttributes) {
   const dv = new DataView(response);
   const numVertices = dv.getUint32(0, true);
@@ -19744,9 +20371,17 @@ function decodeSkeletonChunk2(chunk, response, vertexAttributes) {
   }
   chunk.vertexAttributes = attributes;
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/compresso.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_compresso_request.js
+init_legacy_browser();
 var decodeCompresso = asyncComputation(
   "decodeCompresso"
 );
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/compresso.js
 async function decodeCompressoChunk(chunk, signal, response) {
   const image = await requestAsyncComputation(
     decodeCompresso,
@@ -19756,7 +20391,15 @@ async function decodeCompressoChunk(chunk, signal, response) {
   );
   await decodeRawChunk(chunk, signal, image.buffer);
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/jxl.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_jxl_request.js
+init_legacy_browser();
 var decodeJxl = asyncComputation("decodeJxl");
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/jxl.js
 async function decodeJxlChunk(chunk, signal, response) {
   const chunkDataSize = chunk.chunkDataSize;
   const { uint8Array: decoded } = await requestAsyncComputation(
@@ -19771,6 +20414,9 @@ async function decodeJxlChunk(chunk, signal, response) {
   );
   await postProcessRawData(chunk, signal, decoded);
 }
+
+// node_modules/neuroglancer/lib/sliceview/backend_chunk_decoders/png.js
+init_legacy_browser();
 async function decodePngChunk(chunk, signal, response) {
   const chunkDataSize = chunk.chunkDataSize;
   const dataType = chunk.source.spec.dataType;
@@ -19795,6 +20441,8 @@ async function decodePngChunk(chunk, signal, response) {
   );
   await decodeRawChunk(chunk, signal, image.buffer);
 }
+
+// node_modules/neuroglancer/lib/datasource/precomputed/backend.js
 var __defProp20 = Object.defineProperty;
 var __getOwnPropDesc20 = Object.getOwnPropertyDescriptor;
 var __decorateClass19 = (decorators, target2, key, kind) => {
@@ -20644,6 +21292,8 @@ var PrecomputedAnnotationSourceBackend = class extends WithParameters(
 PrecomputedAnnotationSourceBackend = __decorateClass19([
   registerSharedObject()
 ], PrecomputedAnnotationSourceBackend);
+
+// node_modules/neuroglancer/lib/datasource/graphene/backend.js
 var __defProp21 = Object.defineProperty;
 var __getOwnPropDesc21 = Object.getOwnPropertyDescriptor;
 var __decorateClass20 = (decorators, target2, key, kind) => {
@@ -21010,12 +21660,24 @@ registerRPC(GRAPHENE_MESH_NEW_SEGMENT_RPC_ID, function(x) {
   const obj = this.get(x.rpcId);
   obj.addNewSegment(x.segment);
 });
+
+// node_modules/neuroglancer/lib/datasource/n5/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_blosc_request.js
+init_legacy_browser();
 var decodeBlosc = asyncComputation(
   "decodeBlosc"
 );
+
+// node_modules/neuroglancer/lib/async_computation/decode_zstd_request.js
+init_legacy_browser();
 var decodeZstd = asyncComputation(
   "decodeZstd"
 );
+
+// node_modules/neuroglancer/lib/datasource/n5/base.js
+init_legacy_browser();
 var VolumeChunkEncoding4 = /* @__PURE__ */ ((VolumeChunkEncoding22) => {
   VolumeChunkEncoding22[VolumeChunkEncoding22["RAW"] = 0] = "RAW";
   VolumeChunkEncoding22[VolumeChunkEncoding22["ZLIB"] = 1] = "ZLIB";
@@ -21029,6 +21691,8 @@ var VolumeChunkSourceParameters4 = class {
   encoding;
   static RPC_ID = "n5/VolumeChunkSource";
 };
+
+// node_modules/neuroglancer/lib/datasource/n5/backend.js
 var __defProp22 = Object.defineProperty;
 var __getOwnPropDesc22 = Object.getOwnPropertyDescriptor;
 var __decorateClass21 = (decorators, target2, key, kind) => {
@@ -21135,12 +21799,23 @@ var PrecomputedVolumeChunkSource2 = class extends WithParameters(
 PrecomputedVolumeChunkSource2 = __decorateClass21([
   registerSharedObject()
 ], PrecomputedVolumeChunkSource2);
+
+// node_modules/neuroglancer/lib/datasource/nifti/backend.js
+init_legacy_browser();
 var import_nifti_reader_js = __toESM(require_nifti(), 1);
+
+// node_modules/neuroglancer/lib/datasource/nifti/base.js
+init_legacy_browser();
 var GET_NIFTI_VOLUME_INFO_RPC_ID = "nifti/getNiftiVolumeInfo";
 var VolumeSourceParameters2 = class {
   url;
   static RPC_ID = "nifti/VolumeChunkSource";
 };
+
+// node_modules/neuroglancer/lib/sliceview/volume/base.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/nifti/backend.js
 var __defProp23 = Object.defineProperty;
 var __getOwnPropDesc23 = Object.getOwnPropertyDescriptor;
 var __decorateClass22 = (decorators, target2, key, kind) => {
@@ -21389,7 +22064,19 @@ var NiftiVolumeChunkSource = class extends WithParameters(
 NiftiVolumeChunkSource = __decorateClass22([
   registerSharedObject()
 ], NiftiVolumeChunkSource);
+
+// node_modules/neuroglancer/lib/datasource/obj/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/obj_mesh_request.js
+init_legacy_browser();
 var parseOBJFromArrayBuffer = asyncComputation("parseOBJFromArrayBuffer");
+
+// node_modules/neuroglancer/lib/single_mesh/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/single_mesh/base.js
+init_legacy_browser();
 var SINGLE_MESH_LAYER_RPC_ID = "single_mesh/SingleMeshLayer";
 var GET_SINGLE_MESH_INFO_RPC_ID = "single_mesh/getSingleMeshInfo";
 var SINGLE_MESH_CHUNK_KEY = "";
@@ -21400,6 +22087,8 @@ var SingleMeshSourceParametersWithInfo = class extends SingleMeshSourceParameter
   info;
   static RPC_ID = "single_mesh/SingleMeshSource";
 };
+
+// node_modules/neuroglancer/lib/single_mesh/backend.js
 var __defProp24 = Object.defineProperty;
 var __getOwnPropDesc24 = Object.getOwnPropertyDescriptor;
 var __decorateClass23 = (decorators, target2, key, kind) => {
@@ -21556,6 +22245,8 @@ registerPromiseRPC(
     return { value: mesh.info };
   }
 );
+
+// node_modules/neuroglancer/lib/datasource/obj/backend.js
 async function parse(readResponse, progressOptions) {
   const buffer = await readResponse.response.arrayBuffer();
   return requestAsyncComputation(
@@ -21569,7 +22260,16 @@ registerSingleMeshFactory("obj", {
   description: "OBJ",
   getMesh: (sharedKvStoreContext, url, options) => getCachedDecodedUrl(sharedKvStoreContext, url, parse, options)
 });
+
+// node_modules/neuroglancer/lib/util/false.js
+init_legacy_browser();
 var false_default = false;
+
+// node_modules/neuroglancer/lib/datasource/render/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/render/base.js
+init_legacy_browser();
 var RenderBaseSourceParameters = class {
   baseUrl;
   owner;
@@ -21586,6 +22286,8 @@ var TileChunkSourceParameters = class extends RenderSourceParameters {
   encoding;
   static RPC_ID = "render/TileChunkSource";
 };
+
+// node_modules/neuroglancer/lib/datasource/render/backend.js
 var __defProp25 = Object.defineProperty;
 var __getOwnPropDesc25 = Object.getOwnPropertyDescriptor;
 var __decorateClass24 = (decorators, target2, key, kind) => {
@@ -21704,7 +22406,15 @@ var TileChunkSource = class extends WithParameters(
 TileChunkSource = __decorateClass24([
   registerSharedObject()
 ], TileChunkSource);
+
+// node_modules/neuroglancer/lib/datasource/vtk/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/vtk_mesh_request.js
+init_legacy_browser();
 var parseVTKFromArrayBuffer = asyncComputation("parseVTKFromArrayBuffer");
+
+// node_modules/neuroglancer/lib/datasource/vtk/backend.js
 async function parse2(readResponse, progressOptions) {
   const buffer = await readResponse.response.arrayBuffer();
   return requestAsyncComputation(
@@ -21744,12 +22454,26 @@ registerSingleMeshFactory("vtk", {
     return result;
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/blosc/decode.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/decode.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/index.js
+init_legacy_browser();
 var CodecKind = /* @__PURE__ */ ((CodecKind2) => {
   CodecKind2[CodecKind2["arrayToArray"] = 0] = "arrayToArray";
   CodecKind2[CodecKind2["arrayToBytes"] = 1] = "arrayToBytes";
   CodecKind2[CodecKind2["bytesToBytes"] = 2] = "bytesToBytes";
   return CodecKind2;
 })(CodecKind || {});
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/decode.js
 var codecRegistry = {
   [CodecKind.arrayToArray]: /* @__PURE__ */ new Map(),
   [CodecKind.arrayToBytes]: /* @__PURE__ */ new Map(),
@@ -21845,6 +22569,8 @@ function applySharding(chunkManager, codecs, baseKvStore) {
   }
   return { kvStore, getChunkKey, decodeCodecs };
 }
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/blosc/decode.js
 registerCodec({
   name: "blosc",
   kind: CodecKind.bytesToBytes,
@@ -21858,6 +22584,9 @@ registerCodec({
     );
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/zstd/decode.js
+init_legacy_browser();
 registerCodec({
   name: "zstd",
   kind: CodecKind.bytesToBytes,
@@ -21871,6 +22600,9 @@ registerCodec({
     );
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/bytes/decode.js
+init_legacy_browser();
 registerCodec({
   name: "bytes",
   kind: CodecKind.arrayToBytes,
@@ -21895,6 +22627,9 @@ registerCodec({
     return data;
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/crc32c/decode.js
+init_legacy_browser();
 var checksumSize = 4;
 registerCodec({
   name: "crc32c",
@@ -21910,11 +22645,17 @@ registerCodec({
     return encoded.subarray(0, encoded.length - checksumSize);
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/base.js
+init_legacy_browser();
 var VolumeChunkSourceParameters5 = class {
   url;
   metadata;
   static RPC_ID = "zarr/VolumeChunkSource";
 };
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/gzip/decode.js
+init_legacy_browser();
 for (const [name, compressionFormat] of [
   ["gzip", "gzip"],
   ["zlib", "deflate"]
@@ -21930,6 +22671,18 @@ for (const [name, compressionFormat] of [
     }
   });
 }
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/sharding_indexed/decode.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/sharding_indexed/resolve.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/resolve.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/zarr/metadata/parse_util.js
+init_legacy_browser();
 function parseNameAndConfiguration(obj, parseName, parseConfiguration) {
   verifyObject(obj);
   const name = verifyObjectProperty(
@@ -21947,6 +22700,8 @@ function parseNameAndConfiguration(obj, parseName, parseConfiguration) {
   });
   return { name, configuration };
 }
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/resolve.js
 function getCodecResolver(obj) {
   const { name: resolver, configuration } = parseNameAndConfiguration(
     obj,
@@ -22063,11 +22818,19 @@ function parseCodecChainSpec(obj, decodedArrayInfo) {
     encodedSize
   };
 }
+
+// node_modules/neuroglancer/lib/datasource/zarr/metadata/parse.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/zarr/metadata/index.js
+init_legacy_browser();
 var ChunkKeyEncoding = /* @__PURE__ */ ((ChunkKeyEncoding22) => {
   ChunkKeyEncoding22[ChunkKeyEncoding22["DEFAULT"] = 0] = "DEFAULT";
   ChunkKeyEncoding22[ChunkKeyEncoding22["V2"] = 1] = "V2";
   return ChunkKeyEncoding22;
 })(ChunkKeyEncoding || {});
+
+// node_modules/neuroglancer/lib/datasource/zarr/metadata/parse.js
 function parseChunkShape(obj, rank) {
   return parseFixedLengthArray(new Array(rank), obj, (x) => {
     if (typeof x !== "number" || !Number.isInteger(x) || x <= 0) {
@@ -22100,6 +22863,8 @@ for (const unit of ["meter", "second"]) {
     UNITS.set(`${prefix}${unit[0]}`, unitInfo);
   }
 }
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/sharding_indexed/resolve.js
 var ShardIndexLocation = /* @__PURE__ */ ((ShardIndexLocation2) => {
   ShardIndexLocation2[ShardIndexLocation2["START"] = 0] = "START";
   ShardIndexLocation2[ShardIndexLocation2["END"] = 1] = "END";
@@ -22175,6 +22940,8 @@ registerCodec2({
     return configuration.subChunkCodecs.layoutInfo[0];
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/sharding_indexed/decode.js
 var MISSING_VALUE = BigInt("18446744073709551615");
 function makeIndexCache(chunkManager, base, configuration) {
   return new SimpleAsyncCache(chunkManager.addRef(), {
@@ -22287,6 +23054,9 @@ registerCodec({
     return new ShardedKvStore2(configuration, chunkManager, base);
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/codec/transpose/decode.js
+init_legacy_browser();
 registerCodec({
   name: "transpose",
   kind: CodecKind.arrayToArray,
@@ -22297,6 +23067,8 @@ registerCodec({
     return encoded;
   }
 });
+
+// node_modules/neuroglancer/lib/datasource/zarr/backend.js
 var __defProp26 = Object.defineProperty;
 var __getOwnPropDesc26 = Object.getOwnPropertyDescriptor;
 var __decorateClass25 = (decorators, target2, key, kind) => {
@@ -22365,6 +23137,15 @@ var ZarrVolumeChunkSource = class extends WithParameters(
 ZarrVolumeChunkSource = __decorateClass25([
   registerSharedObject()
 ], ZarrVolumeChunkSource);
+
+// node_modules/neuroglancer/lib/kvstore/enabled_backend_modules.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/byte_range/register.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/byte_range/index.js
+init_legacy_browser();
 function parseKey(key) {
   const m = key.match(/^([0-9]+)-([0-9]+)$/);
   if (m !== null) {
@@ -22404,6 +23185,8 @@ var ByteRangeKvStore = class {
     return true;
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/byte_range/register.js
 function byteRangeProvider() {
   return {
     scheme: "byte-range",
@@ -22422,6 +23205,12 @@ function byteRangeProvider() {
 frontendBackendIsomorphicKvStoreProviderRegistry.registerKvStoreAdapterProvider(
   byteRangeProvider
 );
+
+// node_modules/neuroglancer/lib/kvstore/gcs/register.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/gcs/index.js
+init_legacy_browser();
 var __knownSymbol = (name, symbol) => (symbol = Symbol[name]) ? symbol : Symbol.for("Symbol." + name);
 var __typeError = (msg) => {
   throw TypeError(msg);
@@ -22536,6 +23325,8 @@ var GcsKvStore = class {
     return true;
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/gcs/register.js
 function gcsProvider(_context) {
   return {
     scheme: "gs",
@@ -22556,6 +23347,12 @@ function gcsProvider(_context) {
 frontendBackendIsomorphicKvStoreProviderRegistry.registerBaseKvStoreProvider(
   gcsProvider
 );
+
+// node_modules/neuroglancer/lib/kvstore/gzip/register.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/gzip/index.js
+init_legacy_browser();
 var GzipKvStore = class {
   constructor(base, scheme, format) {
     this.base = base;
@@ -22605,6 +23402,8 @@ function registerAutoDetect(registry) {
     match: detectGzip
   });
 }
+
+// node_modules/neuroglancer/lib/kvstore/gzip/register.js
 function gzipProvider(scheme, format) {
   return {
     scheme,
@@ -22628,6 +23427,15 @@ frontendBackendIsomorphicKvStoreProviderRegistry.registerKvStoreAdapterProvider(
 registerAutoDetect(
   frontendBackendIsomorphicKvStoreProviderRegistry.autoDetectRegistry
 );
+
+// node_modules/neuroglancer/lib/kvstore/http/register_backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/http/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/proxy.js
+init_legacy_browser();
 registerPromiseRPC(
   STAT_RPC_ID,
   async function(options, progressOptions) {
@@ -22731,12 +23539,25 @@ registerPromiseRPC(
     };
   }
 );
+
+// node_modules/neuroglancer/lib/kvstore/http/backend.js
 var HttpKvStore = class extends ReadableHttpKvStore {
   list(prefix, options) {
     return proxyList(this.sharedKvStoreContext, this.getUrl(prefix), options);
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/http/register_backend.js
 registerProviders(backendOnlyKvStoreProviderRegistry, HttpKvStore);
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/register_backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/list.js
+init_legacy_browser();
 function getListResponseFromSnapshot(snapshot, prefix) {
   const { nodes } = snapshot;
   const startIndex = binarySearchLowerBound(
@@ -22784,6 +23605,15 @@ function getListResponseFromSnapshot(snapshot, prefix) {
   }
   return normalizeListResponse(response);
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/metadata_cache.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/manifest.js
+init_legacy_browser();
+
+// node_modules/valibot/dist/index.mjs
+init_legacy_browser();
 var store$4;
 var DEFAULT_CONFIG = {
   lang: void 0,
@@ -22896,6 +23726,7 @@ var ValiError = class extends Error {
 function isValiError(error) {
   return error instanceof ValiError;
 }
+var EMOJI_REGEX = new RegExp("^(?:[\\u{1F1E6}-\\u{1F1FF}]{2}|\\u{1F3F4}[\\u{E0061}-\\u{E007A}]{2}[\\u{E0030}-\\u{E0039}\\u{E0061}-\\u{E007A}]{1,3}\\u{E007F}|(?:\\p{Emoji}\\uFE0F\\u20E3?|\\p{Emoji_Modifier_Base}\\p{Emoji_Modifier}?|(?![\\p{Emoji_Modifier_Base}\\u{1F1E6}-\\u{1F1FF}])\\p{Emoji_Presentation})(?:\\u200D(?:\\p{Emoji}\\uFE0F\\u20E3?|\\p{Emoji_Modifier_Base}\\p{Emoji_Modifier}?|(?![\\p{Emoji_Modifier_Base}\\u{1F1E6}-\\u{1F1FF}])\\p{Emoji_Presentation}))*)+$", "u");
 // @__NO_SIDE_EFFECTS__
 function check(requirement, message$1) {
   return {
@@ -22982,11 +23813,11 @@ function getDefault(schema, dataset, config$1) {
   return typeof schema.default === "function" ? schema.default(dataset, config$1) : schema.default;
 }
 // @__NO_SIDE_EFFECTS__
-function any22() {
+function any2() {
   return _standardSchema({
     kind: "schema",
     type: "any",
-    reference: any22,
+    reference: any2,
     expects: "any",
     async: false,
     "~run"(dataset) {
@@ -23524,6 +24355,18 @@ function pipe(...pipe$1) {
     }
   });
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/decode_utils.js
+init_legacy_browser();
+
+// node_modules/msgpackr/index.js
+init_legacy_browser();
+
+// node_modules/msgpackr/pack.js
+init_legacy_browser();
+
+// node_modules/msgpackr/unpack.js
+init_legacy_browser();
 var decoder;
 try {
   decoder = new TextDecoder();
@@ -24601,6 +25444,8 @@ var FLOAT32_OPTIONS = {
 };
 var f32Array = new Float32Array(1);
 var u8Array = new Uint8Array(f32Array.buffer, 0, 4);
+
+// node_modules/msgpackr/pack.js
 var textEncoder;
 try {
   textEncoder = new TextEncoder();
@@ -25230,7 +26075,7 @@ var Packr = class extends Unpackr {
     };
     const writeRecord = this.useRecords === false ? writePlainObject : options.progressiveRecords && !useTwoByteRecords ? (
       // this is about 2% faster for highly stable structures, since it only requires one for-in loop (but much more expensive when new structure needs to be written)
-      ((object) => {
+      (object) => {
         let nextTransition, transition = structures.transitions || (structures.transitions = /* @__PURE__ */ Object.create(null));
         let objectOffset = position2++ - start;
         let wroteKeys;
@@ -25271,7 +26116,7 @@ var Packr = class extends Unpackr {
           else
             insertNewRecord(transition, Object.keys(object), objectOffset, 0);
         }
-      })
+      }
     ) : (object) => {
       let nextTransition, transition = structures.transitions || (structures.transitions = /* @__PURE__ */ Object.create(null));
       let newTransitions = 0;
@@ -25515,12 +26360,12 @@ extensions = [{
       writeBuffer(hasNodeBuffer ? Buffer.from(arrayBuffer) : new Uint8Array(arrayBuffer), allocateForWrite);
   }
 }, {
-  pack(typedArray22, allocateForWrite) {
-    let constructor = typedArray22.constructor;
+  pack(typedArray2, allocateForWrite) {
+    let constructor = typedArray2.constructor;
     if (constructor !== ByteArray && this.moreTypes)
-      writeExtBuffer(typedArray22, typedArrays.indexOf(constructor.name), allocateForWrite);
+      writeExtBuffer(typedArray2, typedArrays.indexOf(constructor.name), allocateForWrite);
     else
-      writeBuffer(typedArray22, allocateForWrite);
+      writeBuffer(typedArray2, allocateForWrite);
   }
 }, {
   pack(arrayBuffer, allocateForWrite) {
@@ -25535,8 +26380,8 @@ extensions = [{
     target2[position3] = 193;
   }
 }];
-function writeExtBuffer(typedArray22, type, allocateForWrite, encode2) {
-  let length6 = typedArray22.byteLength;
+function writeExtBuffer(typedArray2, type, allocateForWrite, encode2) {
+  let length6 = typedArray2.byteLength;
   if (length6 + 1 < 256) {
     var { target: target2, position: position3 } = allocateForWrite(4 + length6);
     target2[position3++] = 199;
@@ -25554,8 +26399,8 @@ function writeExtBuffer(typedArray22, type, allocateForWrite, encode2) {
   }
   target2[position3++] = 116;
   target2[position3++] = type;
-  if (!typedArray22.buffer) typedArray22 = new Uint8Array(typedArray22);
-  target2.set(new Uint8Array(typedArray22.buffer, typedArray22.byteOffset, typedArray22.byteLength), position3);
+  if (!typedArray2.buffer) typedArray2 = new Uint8Array(typedArray2);
+  target2.set(new Uint8Array(typedArray2.buffer, typedArray2.byteOffset, typedArray2.byteLength), position3);
 }
 function writeBuffer(buffer, allocateForWrite) {
   let length6 = buffer.byteLength;
@@ -25662,6 +26507,12 @@ var { NEVER, ALWAYS, DECIMAL_ROUND, DECIMAL_FIT } = FLOAT32_OPTIONS;
 var REUSE_BUFFER_MODE = 512;
 var RESET_BUFFER_MODE = 1024;
 var RESERVE_START_SPACE = 2048;
+
+// node_modules/msgpackr/iterators.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/crockford_base32.js
+init_legacy_browser();
 var ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 function crockfordBase32Encode(input) {
   const numBytes = input.length;
@@ -25679,6 +26530,8 @@ function crockfordBase32Encode(input) {
   }
   return output;
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/decode_utils.js
 var LATEST_KNOWN_SPEC_VERSION = 1;
 var MAGIC = Uint8Array.of(
   73,
@@ -25768,43 +26621,43 @@ async function decodeMsgpack(buffer, maxVersion, fileType, signal) {
     estimatedSize: buffer.byteLength * 3
   };
 }
-var DataId = /* @__PURE__ */ pipe(
-  /* @__PURE__ */ tuple([/* @__PURE__ */ instance(Uint8Array)]),
-  /* @__PURE__ */ transform((obj) => obj[0])
+var DataId = pipe(
+  tuple([instance(Uint8Array)]),
+  transform((obj) => obj[0])
 );
-var DataId12 = /* @__PURE__ */ pipe(
+var DataId12 = pipe(
   DataId,
-  /* @__PURE__ */ length5(12),
-  /* @__PURE__ */ transform(crockfordBase32Encode)
+  length5(12),
+  transform(crockfordBase32Encode)
 );
-var DataId8 = /* @__PURE__ */ pipe(
+var DataId8 = pipe(
   DataId,
-  /* @__PURE__ */ length5(8),
-  /* @__PURE__ */ transform(crockfordBase32Encode)
+  length5(8),
+  transform(crockfordBase32Encode)
 );
 var MIN_SAFE_INTEGER_BIGINT = BigInt(Number.MIN_SAFE_INTEGER);
 var MAX_SAFE_INTEGER_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
-var bigIntToSafeNumber = /* @__PURE__ */ pipe(
-  /* @__PURE__ */ bigint(),
-  /* @__PURE__ */ check(
+var bigIntToSafeNumber = pipe(
+  bigint(),
+  check(
     (x) => x >= MIN_SAFE_INTEGER_BIGINT && x <= MAX_SAFE_INTEGER_BIGINT,
     `Number outside supported range: [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`
   ),
-  /* @__PURE__ */ transform(Number)
+  transform(Number)
 );
-var Integer = /* @__PURE__ */ union([
+var Integer = union([
   bigIntToSafeNumber,
-  /* @__PURE__ */ pipe(/* @__PURE__ */ number(), /* @__PURE__ */ integer())
+  pipe(number(), integer())
 ]);
 function tupleToObject(entries) {
   const keys = Object.keys(entries);
-  return /* @__PURE__ */ pipe(
-    /* @__PURE__ */ array(/* @__PURE__ */ any22()),
-    /* @__PURE__ */ length5(keys.length),
-    /* @__PURE__ */ transform(
+  return pipe(
+    array(any2()),
+    length5(keys.length),
+    transform(
       (x) => Object.fromEntries(keys.map((key, i) => [key, x[i]]))
     ),
-    /* @__PURE__ */ strictObject(entries)
+    strictObject(entries)
   );
 }
 var ManifestId = DataId12;
@@ -25817,27 +26670,29 @@ function parseDecodedMsgpack(schema, name, decoded) {
       estimatedSize: decoded.estimatedSize
     };
   } catch (e) {
-    if (/* @__PURE__ */ isValiError(e)) {
+    if (isValiError(e)) {
       throw new Error(
-        `Error parsing icechunk ${name}: ${JSON.stringify(/* @__PURE__ */ flatten(e.issues))}`
+        `Error parsing icechunk ${name}: ${JSON.stringify(flatten(e.issues))}`
       );
     }
     throw e;
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/manifest.js
 var MANIFEST_FILE_TYPE = 2;
-var InlineChunkPayload = /* @__PURE__ */ strictObject({
-  Inline: /* @__PURE__ */ instance(Uint8Array)
+var InlineChunkPayload = strictObject({
+  Inline: instance(Uint8Array)
 });
-var Chunksum = /* @__PURE__ */ any22();
-var VirtualChunkLocation = /* @__PURE__ */ string();
+var Chunksum = any2();
+var VirtualChunkLocation = string();
 var VirtualChunkRef = tupleToObject({
   location: VirtualChunkLocation,
   offset: Integer,
   length: Integer,
   chunksum: Chunksum
 });
-var VirtualChunkRefPayload = /* @__PURE__ */ strictObject({
+var VirtualChunkRefPayload = strictObject({
   Virtual: VirtualChunkRef
 });
 var ChunkRef = tupleToObject({
@@ -25845,22 +26700,22 @@ var ChunkRef = tupleToObject({
   offset: Integer,
   length: Integer
 });
-var ChunkRefPayload = /* @__PURE__ */ strictObject({
+var ChunkRefPayload = strictObject({
   Ref: ChunkRef
 });
-var ChunkPayload = /* @__PURE__ */ pipe(
-  /* @__PURE__ */ map(/* @__PURE__ */ string(), /* @__PURE__ */ any22()),
-  /* @__PURE__ */ transform(Object.fromEntries),
-  /* @__PURE__ */ union([InlineChunkPayload, VirtualChunkRefPayload, ChunkRefPayload])
+var ChunkPayload = pipe(
+  map(string(), any2()),
+  transform(Object.fromEntries),
+  union([InlineChunkPayload, VirtualChunkRefPayload, ChunkRefPayload])
 );
 var Manifest = tupleToObject({
   id: ManifestId,
-  chunks: /* @__PURE__ */ map(
+  chunks: map(
     NodeId,
-    /* @__PURE__ */ map(
-      /* @__PURE__ */ pipe(
-        /* @__PURE__ */ array(Integer),
-        /* @__PURE__ */ transform((chunk) => chunk.join())
+    map(
+      pipe(
+        array(Integer),
+        transform((chunk) => chunk.join())
       ),
       ChunkPayload
     )
@@ -25878,6 +26733,9 @@ async function decodeManifest(buffer, signal) {
 function getManifestUrl(baseUrl, id) {
   return pipelineUrlJoin(baseUrl, `manifests/${id}`);
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/ref.js
+init_legacy_browser();
 function decodeRef(obj) {
   verifyObject(obj);
   if (Object.keys(obj).length !== 1) {
@@ -25899,6 +26757,9 @@ function isSnapshotId(id) {
 function isBranchRef(name) {
   return name.match(/^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{8}\.json$/) !== null;
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/snapshot.js
+init_legacy_browser();
 var SNAPSHOT_FILE_TYPE = 1;
 var SnapshotId = DataId12;
 var AttributesId = DataId12;
@@ -25910,25 +26771,25 @@ var ManifestFileInfo = tupleToObject({
 var AttributeFileInfo = tupleToObject({
   id: AttributesId
 });
-var UserAttributesSnapshot = /* @__PURE__ */ pipe(
-  /* @__PURE__ */ map(/* @__PURE__ */ string(), /* @__PURE__ */ any22()),
-  /* @__PURE__ */ transform(Object.fromEntries),
-  /* @__PURE__ */ union([
-    /* @__PURE__ */ strictObject({
-      Inline: /* @__PURE__ */ any22()
+var UserAttributesSnapshot = pipe(
+  map(string(), any2()),
+  transform(Object.fromEntries),
+  union([
+    strictObject({
+      Inline: any2()
     })
   ])
   // v.map(v.picklist(["Ref"]), UserAttributesRef),
 );
-var ChunkKeyEncoding2 = /* @__PURE__ */ picklist(["Slash", "Dot"]);
-var Configuration = /* @__PURE__ */ map(/* @__PURE__ */ string(), /* @__PURE__ */ any22());
+var ChunkKeyEncoding2 = picklist(["Slash", "Dot"]);
+var Configuration = map(string(), any2());
 var Codec = tupleToObject({
-  name: /* @__PURE__ */ string(),
+  name: string(),
   configuration: Configuration
 });
-var FillValue = /* @__PURE__ */ pipe(
-  /* @__PURE__ */ map(/* @__PURE__ */ string(), /* @__PURE__ */ any22()),
-  /* @__PURE__ */ transform((obj) => {
+var FillValue = pipe(
+  map(string(), any2()),
+  transform((obj) => {
     const values = Array.from(obj.values());
     if (values.length !== 1) {
       throw new Error(
@@ -25939,53 +26800,53 @@ var FillValue = /* @__PURE__ */ pipe(
   })
 );
 var StorageTransformer = tupleToObject({
-  name: /* @__PURE__ */ string(),
+  name: string(),
   configuration: Configuration
 });
-var DimensionNames = /* @__PURE__ */ array(/* @__PURE__ */ nullable(/* @__PURE__ */ string()));
+var DimensionNames = array(nullable(string()));
 var ZarrArrayMetadata = tupleToObject({
-  shape: /* @__PURE__ */ array(Integer),
-  dataType: /* @__PURE__ */ string(),
-  chunkShape: /* @__PURE__ */ array(Integer),
+  shape: array(Integer),
+  dataType: string(),
+  chunkShape: array(Integer),
   chunkKeyEncoding: ChunkKeyEncoding2,
   fillValue: FillValue,
-  codecs: /* @__PURE__ */ array(Codec),
-  storageTransformers: /* @__PURE__ */ array(StorageTransformer),
-  dimensionNames: /* @__PURE__ */ nullable(DimensionNames)
+  codecs: array(Codec),
+  storageTransformers: array(StorageTransformer),
+  dimensionNames: nullable(DimensionNames)
 });
-var ChunkIndices = /* @__PURE__ */ array(Integer);
-var ManifestExtents = /* @__PURE__ */ strictTuple([ChunkIndices, ChunkIndices]);
+var ChunkIndices = array(Integer);
+var ManifestExtents = strictTuple([ChunkIndices, ChunkIndices]);
 var ManifestRef = tupleToObject({
   objectId: ManifestId,
   extents: ManifestExtents
 });
-var NodeDataGroup = /* @__PURE__ */ picklist(["Group"]);
-var NodeDataArray = /* @__PURE__ */ strictObject({
+var NodeDataGroup = picklist(["Group"]);
+var NodeDataArray = strictObject({
   Array: tupleToObject({
     metadata: ZarrArrayMetadata,
-    manifests: /* @__PURE__ */ array(ManifestRef)
+    manifests: array(ManifestRef)
   })
 });
-var NodeData = /* @__PURE__ */ union([
+var NodeData = union([
   NodeDataGroup,
-  /* @__PURE__ */ pipe(
-    /* @__PURE__ */ map(/* @__PURE__ */ string(), /* @__PURE__ */ any22()),
-    /* @__PURE__ */ transform(Object.fromEntries),
+  pipe(
+    map(string(), any2()),
+    transform(Object.fromEntries),
     NodeDataArray
   )
 ]);
 var NodeSnapshot = tupleToObject({
   id: NodeId,
-  path: /* @__PURE__ */ pipe(
-    /* @__PURE__ */ string(),
-    /* @__PURE__ */ transform((s) => s === "/" ? "" : s.slice(1) + "/")
+  path: pipe(
+    string(),
+    transform((s) => s === "/" ? "" : s.slice(1) + "/")
   ),
   userAttributes: UserAttributesSnapshot,
   nodeData: NodeData
 });
-var Nodes = /* @__PURE__ */ pipe(
-  /* @__PURE__ */ map(/* @__PURE__ */ string(), NodeSnapshot),
-  /* @__PURE__ */ transform(
+var Nodes = pipe(
+  map(string(), NodeSnapshot),
+  transform(
     (obj) => Array.from(obj.values()).sort(
       (a, b) => defaultStringCompare(a.path, b.path)
     )
@@ -25993,13 +26854,13 @@ var Nodes = /* @__PURE__ */ pipe(
 );
 var Snapshot = tupleToObject({
   id: SnapshotId,
-  parentId: /* @__PURE__ */ nullable(SnapshotId),
-  flushedAt: /* @__PURE__ */ string(),
-  message: /* @__PURE__ */ string(),
-  metadata: /* @__PURE__ */ record(/* @__PURE__ */ string(), /* @__PURE__ */ any22()),
-  manifestFiles: /* @__PURE__ */ pipe(
-    /* @__PURE__ */ array(ManifestFileInfo),
-    /* @__PURE__ */ transform((obj) => {
+  parentId: nullable(SnapshotId),
+  flushedAt: string(),
+  message: string(),
+  metadata: record(string(), any2()),
+  manifestFiles: pipe(
+    array(ManifestFileInfo),
+    transform((obj) => {
       const map2 = /* @__PURE__ */ new Map();
       for (const entry of obj) {
         map2.set(entry.id, entry);
@@ -26007,7 +26868,7 @@ var Snapshot = tupleToObject({
       return map2;
     })
   ),
-  attributeFiles: /* @__PURE__ */ array(AttributeFileInfo),
+  attributeFiles: array(AttributeFileInfo),
   nodes: Nodes
 });
 async function decodeSnapshot(buffer, signal) {
@@ -26078,6 +26939,8 @@ function findNode(snapshot, path) {
 function getSnapshotUrl(baseUrl, id) {
   return pipelineUrlJoin(baseUrl, `snapshots/${id}`);
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/metadata_cache.js
 var __knownSymbol2 = (name, symbol) => (symbol = Symbol[name]) ? symbol : Symbol.for("Symbol." + name);
 var __typeError2 = (msg) => {
   throw TypeError(msg);
@@ -26306,6 +27169,9 @@ function resolveRefSpec(sharedKvStoreContext, url, refSpec, options) {
     options
   );
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/read.js
+init_legacy_browser();
 function resolveIcechunkPath(snapshot, path) {
   let nodePath;
   let chunk;
@@ -26439,6 +27305,9 @@ async function read3(sharedKvStoreContext, baseUrl, snapshot, path, options) {
   if (payload === void 0) return void 0;
   return readFromChunkPayload(sharedKvStoreContext, baseUrl, payload, options);
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/url.js
+init_legacy_browser();
 var BRANCH_PREFIX = "branch.";
 var TAG_PREFIX = "tag.";
 function getIcechunkUrl(options, key) {
@@ -26493,6 +27362,8 @@ function parseIcechunkUrl(parsedUrl, base) {
     throw new Error(`Invalid URL: ${parsedUrl.url}`, { cause: e });
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/backend.js
 var IcechunkKvStore = class {
   constructor(sharedKvStoreContext, baseUrl, refSpec) {
     this.sharedKvStoreContext = sharedKvStoreContext;
@@ -26552,6 +27423,9 @@ var IcechunkKvStore = class {
     return true;
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/complete_url.js
+init_legacy_browser();
 async function completeIcechunkUrl(_sharedKvStoreContext, options) {
   const { url } = options;
   const suffix = url.suffix ?? "";
@@ -26615,6 +27489,8 @@ async function completeIcechunkUrl(_sharedKvStoreContext, options) {
     ]
   };
 }
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/register_backend.js
 function icechunkProvider(sharedKvStoreContext) {
   return {
     scheme: "icechunk",
@@ -26634,6 +27510,12 @@ function icechunkProvider(sharedKvStoreContext) {
 backendOnlyKvStoreProviderRegistry.registerKvStoreAdapterProvider(
   icechunkProvider
 );
+
+// node_modules/neuroglancer/lib/kvstore/middleauth/register_backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/middleauth/common.js
+init_legacy_browser();
 var SCHEME_PREFIX = "middleauth+";
 function getMiddleAuthCredentialsProvider(credentialsManager, url) {
   return credentialsManager.getCredentialsProvider(
@@ -26677,7 +27559,12 @@ function registerProviders2(registry, httpKvStoreClass) {
     );
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/middleauth/register_backend.js
 registerProviders2(backendOnlyKvStoreProviderRegistry, HttpKvStore);
+
+// node_modules/neuroglancer/lib/kvstore/ngauth/register.js
+init_legacy_browser();
 function getNgauthCredentialsProvider(credentialsManager, authServer, bucket) {
   return false_default ? credentialsManager.getCredentialsProvider("gcs", { bucket }) : credentialsManager.getCredentialsProvider("ngauth_gcs", {
     authServer,
@@ -26719,7 +27606,25 @@ for (const scheme of ["http", "https"]) {
     (context) => gcsNgauthProvider(`${SCHEME_PREFIX2}${scheme}`, context)
   );
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/register_backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/list.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/btree.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/decode_utils.js
+init_legacy_browser();
 var import_crc32c = __toESM(require_crc32c(), 1);
+
+// node_modules/neuroglancer/lib/util/leb128.js
+init_legacy_browser();
 function decodeLeb128(array2, offset) {
   let result = 0;
   let shift = 0;
@@ -26749,6 +27654,8 @@ function decodeLeb128Bigint(array2, offset) {
   }
   throw new Error("Unexpected EOF");
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/decode_utils.js
 var CompressionMethod = /* @__PURE__ */ ((CompressionMethod2) => {
   CompressionMethod2[CompressionMethod2["UNCOMPRESSED"] = 0] = "UNCOMPRESSED";
   CompressionMethod2[CompressionMethod2["ZSTD"] = 1] = "ZSTD";
@@ -26923,6 +27830,12 @@ function readStructOfArrays(members, validate) {
     return structs;
   };
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/indirect_data_reference.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/key.js
+init_legacy_browser();
 var EMPTY_KEY = new Uint8Array(0);
 function compareArraysLexicographically(a, b) {
   const minLength = Math.min(a.length, b.length);
@@ -26960,6 +27873,8 @@ function concatKeys(...keys) {
 function keyStartsWith(key, prefix) {
   return key.length >= prefix.length && findFirstMismatch(key, prefix).offset === prefix.length;
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/indirect_data_reference.js
 function readDataFileId(reader, options) {
   const { dataFileTable } = options;
   const index = readLeb128(reader);
@@ -27077,6 +27992,8 @@ function readDataFileTable(reader, transitiveBaseUrl) {
   }
   return dataFileIds;
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/btree.js
 var BTREE_NODE_MAGIC_VALUE = 215687390;
 var BTREE_NODE_FORMAT_VERSION = 0;
 var MAX_BTREE_NODE_ARITY = 1024 * 1024;
@@ -27359,6 +28276,15 @@ function findBtreeInteriorEntry(entries, key) {
   }
   return entry;
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/metadata_cache.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/manifest.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/version_tree.js
+init_legacy_browser();
 var MAX_VERSION_TREE_ARITY_LOG2 = 16;
 function readVersionTreeLeafNode(reader, versionTreeArityLog2, dataFileTable) {
   const maxNumEntries = 2 ** versionTreeArityLog2;
@@ -27740,6 +28666,8 @@ function validateVersionTreeNodeReference(node, config, lastGenerationNumber, he
     );
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/manifest.js
 function decodeConfig(reader) {
   const uuid = readBytes(reader, 16).slice();
   const manifestKind = readLeb128(reader);
@@ -27897,6 +28825,8 @@ async function decodeManifest2(buffer, baseUrl, signal) {
     throw new Error(`Error decoding OCDBT manifest`, { cause: e });
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/metadata_cache.js
 var __knownSymbol3 = (name, symbol) => (symbol = Symbol[name]) ? symbol : Symbol.for("Symbol." + name);
 var __typeError3 = (msg) => {
   throw TypeError(msg);
@@ -28068,6 +28998,8 @@ function getVersionTreeNode(sharedKvStoreContext, location2, options) {
   );
   return cache.get(location2, options);
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/list.js
 var DEBUG3 = false;
 async function listRoot(sharedKvStoreContext, root2, prefix, options) {
   const entries = [];
@@ -28224,6 +29156,9 @@ async function listSubtree(nodeReference, height, inclusiveMinKey, subtreeCommon
     }
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/read.js
+init_legacy_browser();
 var DEBUG4 = false;
 async function findEntryInRoot(sharedKvStoreContext, root2, key, options) {
   if (locationIsMissing(root2.root.location)) {
@@ -28296,6 +29231,12 @@ async function readFromLeafNodeEntry(sharedKvStoreContext, entry, options) {
     { offset: Number(offset), length: Number(length6) }
   ).read(options);
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/read_version.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/version_specifier.js
+init_legacy_browser();
 function formatVersion(version) {
   if (version === void 0) return "HEAD";
   if ("generationNumber" in version) {
@@ -28414,6 +29355,8 @@ function parseCommitTimePrefix(versionString) {
   }
   return [getDate(0), getDate(1)];
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/read_version.js
 async function getRoot(sharedKvStoreContext, url, version, options) {
   const cache = sharedKvStoreContext.chunkManager.memoize.get(
     "ocdbt:version",
@@ -28611,6 +29554,9 @@ var findVersionUpperBoundImpl = findVersionImpl({
     return versionNodes[index];
   }
 });
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/url.js
+init_legacy_browser();
 function getOcdbtUrl(options, key) {
   const { version, baseUrl } = options;
   const versionString = version === void 0 ? "" : `@${formatVersion(version)}/`;
@@ -28630,6 +29576,8 @@ function parseOcdbtUrl(parsedUrl, base) {
     throw new Error(`Invalid URL: ${parsedUrl.url}`, { cause: e });
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/backend.js
 var OcdbtKvStore = class {
   constructor(sharedKvStoreContext, baseUrl, version) {
     this.sharedKvStoreContext = sharedKvStoreContext;
@@ -28699,6 +29647,12 @@ var OcdbtKvStore = class {
     return true;
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/complete_url.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/list_versions.js
+init_legacy_browser();
 var DEBUG5 = false;
 async function listVersions(sharedKvStoreContext, manifest, options) {
   var _a;
@@ -28801,6 +29755,8 @@ async function listVersions(sharedKvStoreContext, manifest, options) {
   results.sort((a, b) => bigintCompare(a.generationNumber, b.generationNumber));
   return { generationIndex: minGenerationIndex ?? 0n, versions: results };
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/complete_url.js
 async function listVersionsLimited(sharedKvStoreContext, manifest, minGenerationIndex, maxGenerationIndex, limit, options) {
   if (maxGenerationIndex <= minGenerationIndex + limit) {
     const { versions } = await listVersions(sharedKvStoreContext, manifest, {
@@ -28898,6 +29854,8 @@ async function completeOcdbtUrl(sharedKvStoreContext, options) {
   }
   return { offset: 1, completions: [{ value: `${version}/` }] };
 }
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/register_backend.js
 function ocdbtProvider(sharedKvStoreContext) {
   return {
     scheme: "ocdbt",
@@ -28917,6 +29875,18 @@ function ocdbtProvider(sharedKvStoreContext) {
 backendOnlyKvStoreProviderRegistry.registerKvStoreAdapterProvider(
   ocdbtProvider
 );
+
+// node_modules/neuroglancer/lib/kvstore/s3/register_backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/s3/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/s3/common.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/s3/list.js
+init_legacy_browser();
 var EXPECTED_XML_NAMESPACE_URIS = [
   "http://doc.s3.amazonaws.com/2006-03-01/",
   "http://s3.amazonaws.com/doc/2006-03-01/"
@@ -29064,6 +30034,8 @@ async function listS3CompatibleUrl(url, origin, memoize, fetchOkImpl, options) {
   }
   throw new Error(`Neither virtual hosted nor path-style S3 listing supported`);
 }
+
+// node_modules/neuroglancer/lib/kvstore/s3/common.js
 var __knownSymbol4 = (name, symbol) => (symbol = Symbol[name]) ? symbol : Symbol.for("Symbol." + name);
 var __typeError4 = (msg) => {
   throw TypeError(msg);
@@ -29221,12 +30193,25 @@ function registerProviders3(registry, s3KvStoreClass) {
     );
   }
 }
+
+// node_modules/neuroglancer/lib/kvstore/s3/backend.js
 var S3KvStore = class extends ReadableS3KvStore {
   list(prefix, options) {
     return proxyList(this.sharedKvStoreContext, this.getUrl(prefix), options);
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/s3/register_backend.js
 registerProviders3(backendOnlyKvStoreProviderRegistry, S3KvStore);
+
+// node_modules/neuroglancer/lib/kvstore/zip/register_backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/zip/backend.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/zip/metadata.js
+init_legacy_browser();
 var import_crc_32 = __toESM(require_crc32(), 1);
 var EOCDR_WITHOUT_COMMENT_SIZE = 22;
 var MAX_COMMENT_SIZE = 65535;
@@ -29696,6 +30681,8 @@ var ZipCompressionMethod = /* @__PURE__ */ ((ZipCompressionMethod2) => {
   ZipCompressionMethod2[ZipCompressionMethod2["DEFLATE"] = 8] = "DEFLATE";
   return ZipCompressionMethod2;
 })(ZipCompressionMethod || {});
+
+// node_modules/neuroglancer/lib/kvstore/zip/backend.js
 var __knownSymbol5 = (name, symbol) => (symbol = Symbol[name]) ? symbol : Symbol.for("Symbol." + name);
 var __typeError5 = (msg) => {
   throw TypeError(msg);
@@ -29901,6 +30888,8 @@ var ZipKvStore = class {
     return true;
   }
 };
+
+// node_modules/neuroglancer/lib/kvstore/zip/register_backend.js
 function zipProvider(sharedKvStoreContext) {
   return {
     scheme: "zip",
@@ -29918,6 +30907,9 @@ function zipProvider(sharedKvStoreContext) {
   };
 }
 backendOnlyKvStoreProviderRegistry.registerKvStoreAdapterProvider(zipProvider);
+
+// node_modules/neuroglancer/lib/worker_rpc_context.js
+init_legacy_browser();
 var rpc = new RPC(
   self,
   /*waitUntilReady=*/

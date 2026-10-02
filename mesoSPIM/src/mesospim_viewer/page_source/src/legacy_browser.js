@@ -7,7 +7,7 @@
 //
 // Each feature is added only where the browser lacks it, so a current browser
 // runs exactly as before. This file runs first in the page (main.js imports it
-// before anything else) and in both background workers (precompile-workers.mjs
+// before anything else) and in both background workers (scripts/neuroglancer.mjs
 // injects it), since the workers fetch and decode the image chunks. The build
 // also targets Chrome 83, which rewrites newer syntax; these are the runtime
 // features syntax rewriting cannot supply.

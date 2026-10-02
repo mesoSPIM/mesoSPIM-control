@@ -1,271 +1,3 @@
-// src/legacy_browser.js
-var define = (target, name, value) => {
-  if (target && !(name in target)) {
-    Object.defineProperty(target, name, { value, writable: true, configurable: true });
-  }
-};
-if (typeof AbortSignal !== "undefined") {
-  define(AbortSignal.prototype, "throwIfAborted", function throwIfAborted() {
-    if (this.aborted) {
-      throw this.reason !== void 0 ? this.reason : new DOMException("signal is aborted without reason", "AbortError");
-    }
-  });
-  define(AbortSignal, "any", function any3(signals) {
-    const controller = new AbortController();
-    for (const signal of signals) {
-      if (signal.aborted) {
-        controller.abort(signal.reason);
-        return controller.signal;
-      }
-    }
-    const onAbort = (event) => controller.abort(event.target.reason);
-    for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
-    return controller.signal;
-  });
-  define(AbortSignal, "timeout", function timeout(ms) {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(new DOMException("signal timed out", "TimeoutError")), ms);
-    return controller.signal;
-  });
-}
-if (typeof AggregateError === "undefined") {
-  globalThis.AggregateError = class AggregateError extends Error {
-    constructor(errors, message) {
-      super(message);
-      this.name = "AggregateError";
-      this.errors = Array.from(errors);
-    }
-  };
-}
-define(Promise, "any", function any(promises) {
-  return new Promise((resolve, reject) => {
-    const list = Array.from(promises);
-    const errors = new Array(list.length);
-    let pending = list.length;
-    if (!pending) reject(new AggregateError([], "All promises were rejected"));
-    list.forEach((promise, i) => Promise.resolve(promise).then(resolve, (error) => {
-      errors[i] = error;
-      if (--pending === 0) reject(new AggregateError(errors, "All promises were rejected"));
-    }));
-  });
-});
-define(Promise, "withResolvers", function withResolvers() {
-  let resolve, reject;
-  const promise = new this((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-});
-define(Object, "hasOwn", (object, key) => Object.prototype.hasOwnProperty.call(object, key));
-var groupBy = (items, key) => {
-  const groups = /* @__PURE__ */ new Map();
-  let i = 0;
-  for (const item of items) {
-    const k = key(item, i++);
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(item);
-  }
-  return groups;
-};
-define(Map, "groupBy", groupBy);
-define(Object, "groupBy", (items, key) => Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(groupBy(items, key))));
-function at(index) {
-  const n = Math.trunc(index) || 0;
-  const i = n < 0 ? this.length + n : n;
-  return i < 0 || i >= this.length ? void 0 : this[i];
-}
-function findLast(predicate, self2) {
-  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return this[i];
-  return void 0;
-}
-function findLastIndex(predicate, self2) {
-  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return i;
-  return -1;
-}
-var typedArray = Object.getPrototypeOf(Int8Array.prototype);
-for (const proto of [Array.prototype, typedArray, String.prototype]) define(proto, "at", at);
-for (const proto of [Array.prototype, typedArray]) {
-  define(proto, "findLast", findLast);
-  define(proto, "findLastIndex", findLastIndex);
-}
-define(String.prototype, "replaceAll", function replaceAll(pattern, replacement) {
-  if (pattern instanceof RegExp) {
-    if (!pattern.global) throw new TypeError("replaceAll must be called with a global RegExp");
-    return this.replace(pattern, replacement);
-  }
-  const literal = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return this.replace(new RegExp(literal, "g"), replacement);
-});
-if (typeof Element !== "undefined") {
-  let replaceChildren = function(...nodes) {
-    while (this.lastChild) this.removeChild(this.lastChild);
-    if (nodes.length) this.append(...nodes);
-  };
-  for (const proto of [Element.prototype, Document.prototype, DocumentFragment.prototype]) {
-    define(proto, "replaceChildren", replaceChildren);
-  }
-}
-function clone(value, seen) {
-  if (value === null || typeof value !== "object") return value;
-  if (seen.has(value)) return seen.get(value);
-  let copy;
-  if (ArrayBuffer.isView(value)) copy = value.slice();
-  else if (value instanceof ArrayBuffer) copy = value.slice(0);
-  else if (value instanceof Date) copy = new Date(value.getTime());
-  else if (value instanceof RegExp) copy = new RegExp(value.source, value.flags);
-  else if (value instanceof Map) {
-    copy = /* @__PURE__ */ new Map();
-    seen.set(value, copy);
-    for (const [k, v] of value) copy.set(clone(k, seen), clone(v, seen));
-    return copy;
-  } else if (value instanceof Set) {
-    copy = /* @__PURE__ */ new Set();
-    seen.set(value, copy);
-    for (const v of value) copy.add(clone(v, seen));
-    return copy;
-  } else {
-    copy = Array.isArray(value) ? [] : {};
-    seen.set(value, copy);
-    for (const key of Object.keys(value)) copy[key] = clone(value[key], seen);
-    return copy;
-  }
-  seen.set(value, copy);
-  return copy;
-}
-if (typeof globalThis.structuredClone === "undefined") {
-  globalThis.structuredClone = (value) => clone(value, /* @__PURE__ */ new Map());
-}
-
-// node_modules/neuroglancer/lib/async_computation.bundle.js
-var define2 = (target, name, value) => {
-  if (target && !(name in target)) {
-    Object.defineProperty(target, name, { value, writable: true, configurable: true });
-  }
-};
-if (typeof AbortSignal !== "undefined") {
-  define2(AbortSignal.prototype, "throwIfAborted", function throwIfAborted() {
-    if (this.aborted) {
-      throw this.reason !== void 0 ? this.reason : new DOMException("signal is aborted without reason", "AbortError");
-    }
-  });
-  define2(AbortSignal, "any", function any22(signals) {
-    const controller = new AbortController();
-    for (const signal of signals) {
-      if (signal.aborted) {
-        controller.abort(signal.reason);
-        return controller.signal;
-      }
-    }
-    const onAbort = (event) => controller.abort(event.target.reason);
-    for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
-    return controller.signal;
-  });
-  define2(AbortSignal, "timeout", function timeout(ms) {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(new DOMException("signal timed out", "TimeoutError")), ms);
-    return controller.signal;
-  });
-}
-if (typeof AggregateError === "undefined") {
-  globalThis.AggregateError = class AggregateError extends Error {
-    constructor(errors, message) {
-      super(message);
-      this.name = "AggregateError";
-      this.errors = Array.from(errors);
-    }
-  };
-}
-define2(Promise, "any", function any2(promises) {
-  return new Promise((resolve, reject) => {
-    const list = Array.from(promises);
-    const errors = new Array(list.length);
-    let pending = list.length;
-    if (!pending) reject(new AggregateError([], "All promises were rejected"));
-    list.forEach((promise, i) => Promise.resolve(promise).then(resolve, (error) => {
-      errors[i] = error;
-      if (--pending === 0) reject(new AggregateError(errors, "All promises were rejected"));
-    }));
-  });
-});
-define2(Promise, "withResolvers", function withResolvers2() {
-  let resolve, reject;
-  const promise = new this((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-});
-define2(Object, "hasOwn", (object, key) => Object.prototype.hasOwnProperty.call(object, key));
-var groupBy2 = (items, key) => {
-  const groups = /* @__PURE__ */ new Map();
-  let i = 0;
-  for (const item of items) {
-    const k = key(item, i++);
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(item);
-  }
-  return groups;
-};
-define2(Map, "groupBy", groupBy2);
-define2(Object, "groupBy", (items, key) => Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(groupBy2(items, key))));
-function at2(index) {
-  const n = Math.trunc(index) || 0;
-  const i = n < 0 ? this.length + n : n;
-  return i < 0 || i >= this.length ? void 0 : this[i];
-}
-function findLast2(predicate, self2) {
-  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return this[i];
-  return void 0;
-}
-function findLastIndex2(predicate, self2) {
-  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return i;
-  return -1;
-}
-var typedArray2 = Object.getPrototypeOf(Int8Array.prototype);
-for (const proto of [Array.prototype, typedArray2, String.prototype]) define2(proto, "at", at2);
-for (const proto of [Array.prototype, typedArray2]) {
-  define2(proto, "findLast", findLast2);
-  define2(proto, "findLastIndex", findLastIndex2);
-}
-define2(String.prototype, "replaceAll", function replaceAll2(pattern, replacement) {
-  if (pattern instanceof RegExp) {
-    if (!pattern.global) throw new TypeError("replaceAll must be called with a global RegExp");
-    return this.replace(pattern, replacement);
-  }
-  const literal = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return this.replace(new RegExp(literal, "g"), replacement);
-});
-function clone2(value, seen) {
-  if (value === null || typeof value !== "object") return value;
-  if (seen.has(value)) return seen.get(value);
-  let copy;
-  if (ArrayBuffer.isView(value)) copy = value.slice();
-  else if (value instanceof ArrayBuffer) copy = value.slice(0);
-  else if (value instanceof Date) copy = new Date(value.getTime());
-  else if (value instanceof RegExp) copy = new RegExp(value.source, value.flags);
-  else if (value instanceof Map) {
-    copy = /* @__PURE__ */ new Map();
-    seen.set(value, copy);
-    for (const [k, v] of value) copy.set(clone2(k, seen), clone2(v, seen));
-    return copy;
-  } else if (value instanceof Set) {
-    copy = /* @__PURE__ */ new Set();
-    seen.set(value, copy);
-    for (const v of value) copy.add(clone2(v, seen));
-    return copy;
-  } else {
-    copy = Array.isArray(value) ? [] : {};
-    seen.set(value, copy);
-    for (const key of Object.keys(value)) copy[key] = clone2(value[key], seen);
-    return copy;
-  }
-  seen.set(value, copy);
-  return copy;
-}
-if (typeof globalThis.structuredClone === "undefined") {
-  globalThis.structuredClone = (value) => clone2(value, /* @__PURE__ */ new Map());
-}
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -298,9 +30,156 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+
+// src/legacy_browser.js
+function at(index) {
+  const n = Math.trunc(index) || 0;
+  const i = n < 0 ? this.length + n : n;
+  return i < 0 || i >= this.length ? void 0 : this[i];
+}
+function findLast(predicate, self2) {
+  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return this[i];
+  return void 0;
+}
+function findLastIndex(predicate, self2) {
+  for (let i = this.length - 1; i >= 0; i--) if (predicate.call(self2, this[i], i, this)) return i;
+  return -1;
+}
+function clone(value, seen) {
+  if (value === null || typeof value !== "object") return value;
+  if (seen.has(value)) return seen.get(value);
+  let copy;
+  if (ArrayBuffer.isView(value)) copy = value.slice();
+  else if (value instanceof ArrayBuffer) copy = value.slice(0);
+  else if (value instanceof Date) copy = new Date(value.getTime());
+  else if (value instanceof RegExp) copy = new RegExp(value.source, value.flags);
+  else if (value instanceof Map) {
+    copy = /* @__PURE__ */ new Map();
+    seen.set(value, copy);
+    for (const [k, v] of value) copy.set(clone(k, seen), clone(v, seen));
+    return copy;
+  } else if (value instanceof Set) {
+    copy = /* @__PURE__ */ new Set();
+    seen.set(value, copy);
+    for (const v of value) copy.add(clone(v, seen));
+    return copy;
+  } else {
+    copy = Array.isArray(value) ? [] : {};
+    seen.set(value, copy);
+    for (const key of Object.keys(value)) copy[key] = clone(value[key], seen);
+    return copy;
+  }
+  seen.set(value, copy);
+  return copy;
+}
+var define, groupBy, typedArray;
+var init_legacy_browser = __esm({
+  "src/legacy_browser.js"() {
+    define = (target, name, value) => {
+      if (target && !(name in target)) {
+        Object.defineProperty(target, name, { value, writable: true, configurable: true });
+      }
+    };
+    if (typeof AbortSignal !== "undefined") {
+      define(AbortSignal.prototype, "throwIfAborted", function throwIfAborted() {
+        if (this.aborted) {
+          throw this.reason !== void 0 ? this.reason : new DOMException("signal is aborted without reason", "AbortError");
+        }
+      });
+      define(AbortSignal, "any", function any2(signals) {
+        const controller = new AbortController();
+        for (const signal of signals) {
+          if (signal.aborted) {
+            controller.abort(signal.reason);
+            return controller.signal;
+          }
+        }
+        const onAbort = (event) => controller.abort(event.target.reason);
+        for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
+        return controller.signal;
+      });
+      define(AbortSignal, "timeout", function timeout(ms) {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(new DOMException("signal timed out", "TimeoutError")), ms);
+        return controller.signal;
+      });
+    }
+    if (typeof AggregateError === "undefined") {
+      globalThis.AggregateError = class AggregateError extends Error {
+        constructor(errors, message) {
+          super(message);
+          this.name = "AggregateError";
+          this.errors = Array.from(errors);
+        }
+      };
+    }
+    define(Promise, "any", function any(promises) {
+      return new Promise((resolve, reject) => {
+        const list = Array.from(promises);
+        const errors = new Array(list.length);
+        let pending = list.length;
+        if (!pending) reject(new AggregateError([], "All promises were rejected"));
+        list.forEach((promise, i) => Promise.resolve(promise).then(resolve, (error) => {
+          errors[i] = error;
+          if (--pending === 0) reject(new AggregateError(errors, "All promises were rejected"));
+        }));
+      });
+    });
+    define(Promise, "withResolvers", function withResolvers() {
+      let resolve, reject;
+      const promise = new this((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    });
+    define(Object, "hasOwn", (object, key) => Object.prototype.hasOwnProperty.call(object, key));
+    groupBy = (items, key) => {
+      const groups = /* @__PURE__ */ new Map();
+      let i = 0;
+      for (const item of items) {
+        const k = key(item, i++);
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(item);
+      }
+      return groups;
+    };
+    define(Map, "groupBy", groupBy);
+    define(Object, "groupBy", (items, key) => Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(groupBy(items, key))));
+    typedArray = Object.getPrototypeOf(Int8Array.prototype);
+    for (const proto of [Array.prototype, typedArray, String.prototype]) define(proto, "at", at);
+    for (const proto of [Array.prototype, typedArray]) {
+      define(proto, "findLast", findLast);
+      define(proto, "findLastIndex", findLastIndex);
+    }
+    define(String.prototype, "replaceAll", function replaceAll(pattern, replacement) {
+      if (pattern instanceof RegExp) {
+        if (!pattern.global) throw new TypeError("replaceAll must be called with a global RegExp");
+        return this.replace(pattern, replacement);
+      }
+      const literal = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return this.replace(new RegExp(literal, "g"), replacement);
+    });
+    if (typeof Element !== "undefined") {
+      let replaceChildren = function(...nodes) {
+        while (this.lastChild) this.removeChild(this.lastChild);
+        if (nodes.length) this.append(...nodes);
+      };
+      for (const proto of [Element.prototype, Document.prototype, DocumentFragment.prototype]) {
+        define(proto, "replaceChildren", replaceChildren);
+      }
+    }
+    if (typeof globalThis.structuredClone === "undefined") {
+      globalThis.structuredClone = (value) => clone(value, /* @__PURE__ */ new Map());
+    }
+  }
+});
+
+// node_modules/core-js/internals/global-this.js
 var require_global_this = __commonJS({
   "node_modules/core-js/internals/global-this.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var check = function(it) {
       return it && it.Math === Math && it;
     };
@@ -312,16 +191,22 @@ var require_global_this = __commonJS({
     })() || Function("return this")();
   }
 });
+
+// node_modules/core-js/internals/path.js
 var require_path = __commonJS({
   "node_modules/core-js/internals/path.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     module.exports = globalThis2;
   }
 });
+
+// node_modules/core-js/internals/fails.js
 var require_fails = __commonJS({
   "node_modules/core-js/internals/fails.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = function(exec) {
       try {
         return !!exec();
@@ -331,9 +216,12 @@ var require_fails = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/function-bind-native.js
 var require_function_bind_native = __commonJS({
   "node_modules/core-js/internals/function-bind-native.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var fails = require_fails();
     module.exports = !fails(function() {
       var test = function() {
@@ -342,9 +230,12 @@ var require_function_bind_native = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/function-uncurry-this.js
 var require_function_uncurry_this = __commonJS({
   "node_modules/core-js/internals/function-uncurry-this.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var NATIVE_BIND = require_function_bind_native();
     var FunctionPrototype = Function.prototype;
     var call = FunctionPrototype.call;
@@ -356,17 +247,23 @@ var require_function_uncurry_this = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/is-null-or-undefined.js
 var require_is_null_or_undefined = __commonJS({
   "node_modules/core-js/internals/is-null-or-undefined.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = function(it) {
       return it === null || it === void 0;
     };
   }
 });
+
+// node_modules/core-js/internals/require-object-coercible.js
 var require_require_object_coercible = __commonJS({
   "node_modules/core-js/internals/require-object-coercible.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isNullOrUndefined = require_is_null_or_undefined();
     var $TypeError = TypeError;
     module.exports = function(it) {
@@ -375,9 +272,12 @@ var require_require_object_coercible = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/to-object.js
 var require_to_object = __commonJS({
   "node_modules/core-js/internals/to-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var requireObjectCoercible = require_require_object_coercible();
     var $Object = Object;
     module.exports = function(argument) {
@@ -385,9 +285,12 @@ var require_to_object = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/has-own-property.js
 var require_has_own_property = __commonJS({
   "node_modules/core-js/internals/has-own-property.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var toObject = require_to_object();
     var hasOwnProperty = uncurryThis({}.hasOwnProperty);
@@ -396,15 +299,21 @@ var require_has_own_property = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/is-pure.js
 var require_is_pure = __commonJS({
   "node_modules/core-js/internals/is-pure.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = false;
   }
 });
+
+// node_modules/core-js/internals/define-global-property.js
 var require_define_global_property = __commonJS({
   "node_modules/core-js/internals/define-global-property.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var defineProperty = Object.defineProperty;
     module.exports = function(key, value) {
@@ -417,9 +326,12 @@ var require_define_global_property = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/shared-store.js
 var require_shared_store = __commonJS({
   "node_modules/core-js/internals/shared-store.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var IS_PURE = require_is_pure();
     var globalThis2 = require_global_this();
     var defineGlobalProperty = require_define_global_property();
@@ -434,9 +346,12 @@ var require_shared_store = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/shared.js
 var require_shared = __commonJS({
   "node_modules/core-js/internals/shared.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var store = require_shared_store();
     var create = Object.create || Object;
     module.exports = function(key, value) {
@@ -444,9 +359,12 @@ var require_shared = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/uid.js
 var require_uid = __commonJS({
   "node_modules/core-js/internals/uid.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var id = 0;
     var postfix = Math.random();
@@ -456,18 +374,24 @@ var require_uid = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/environment-user-agent.js
 var require_environment_user_agent = __commonJS({
   "node_modules/core-js/internals/environment-user-agent.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var navigator2 = globalThis2.navigator;
     var userAgent = navigator2 && navigator2.userAgent;
     module.exports = userAgent ? String(userAgent) : "";
   }
 });
+
+// node_modules/core-js/internals/environment-v8-version.js
 var require_environment_v8_version = __commonJS({
   "node_modules/core-js/internals/environment-v8-version.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var userAgent = require_environment_user_agent();
     var process = globalThis2.process;
@@ -490,9 +414,12 @@ var require_environment_v8_version = __commonJS({
     module.exports = version;
   }
 });
+
+// node_modules/core-js/internals/symbol-constructor-detection.js
 var require_symbol_constructor_detection = __commonJS({
   "node_modules/core-js/internals/symbol-constructor-detection.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var V8_VERSION = require_environment_v8_version();
     var fails = require_fails();
     var globalThis2 = require_global_this();
@@ -504,16 +431,22 @@ var require_symbol_constructor_detection = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/use-symbol-as-uid.js
 var require_use_symbol_as_uid = __commonJS({
   "node_modules/core-js/internals/use-symbol-as-uid.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var NATIVE_SYMBOL = require_symbol_constructor_detection();
     module.exports = NATIVE_SYMBOL && !Symbol.sham && typeof Symbol.iterator == "symbol";
   }
 });
+
+// node_modules/core-js/internals/well-known-symbol.js
 var require_well_known_symbol = __commonJS({
   "node_modules/core-js/internals/well-known-symbol.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var shared = require_shared();
     var hasOwn = require_has_own_property();
@@ -531,16 +464,22 @@ var require_well_known_symbol = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/well-known-symbol-wrapped.js
 var require_well_known_symbol_wrapped = __commonJS({
   "node_modules/core-js/internals/well-known-symbol-wrapped.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var wellKnownSymbol = require_well_known_symbol();
     exports.f = wellKnownSymbol;
   }
 });
+
+// node_modules/core-js/internals/descriptors.js
 var require_descriptors = __commonJS({
   "node_modules/core-js/internals/descriptors.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var fails = require_fails();
     module.exports = !fails(function() {
       return Object.defineProperty({}, 1, { get: function() {
@@ -549,9 +488,12 @@ var require_descriptors = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/is-callable.js
 var require_is_callable = __commonJS({
   "node_modules/core-js/internals/is-callable.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var documentAll = typeof document == "object" && document.all;
     module.exports = typeof documentAll == "undefined" && documentAll !== void 0 ? function(argument) {
       return typeof argument == "function" || argument === documentAll;
@@ -560,18 +502,24 @@ var require_is_callable = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/is-object.js
 var require_is_object = __commonJS({
   "node_modules/core-js/internals/is-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isCallable = require_is_callable();
     module.exports = function(it) {
       return typeof it == "object" ? it !== null : isCallable(it);
     };
   }
 });
+
+// node_modules/core-js/internals/document-create-element.js
 var require_document_create_element = __commonJS({
   "node_modules/core-js/internals/document-create-element.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var isObject = require_is_object();
     var document2 = globalThis2.document;
@@ -581,9 +529,12 @@ var require_document_create_element = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/ie8-dom-define.js
 var require_ie8_dom_define = __commonJS({
   "node_modules/core-js/internals/ie8-dom-define.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var fails = require_fails();
     var createElement = require_document_create_element();
@@ -596,9 +547,12 @@ var require_ie8_dom_define = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/v8-prototype-define-bug.js
 var require_v8_prototype_define_bug = __commonJS({
   "node_modules/core-js/internals/v8-prototype-define-bug.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var fails = require_fails();
     module.exports = DESCRIPTORS && fails(function() {
@@ -610,9 +564,12 @@ var require_v8_prototype_define_bug = __commonJS({
     });
   }
 });
+
+// node_modules/core-js/internals/an-object.js
 var require_an_object = __commonJS({
   "node_modules/core-js/internals/an-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isObject = require_is_object();
     var $String = String;
     var $TypeError = TypeError;
@@ -622,9 +579,12 @@ var require_an_object = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/function-call.js
 var require_function_call = __commonJS({
   "node_modules/core-js/internals/function-call.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var NATIVE_BIND = require_function_bind_native();
     var call = Function.prototype.call;
     module.exports = NATIVE_BIND ? call.bind(call) : function() {
@@ -632,9 +592,12 @@ var require_function_call = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/get-built-in.js
 var require_get_built_in = __commonJS({
   "node_modules/core-js/internals/get-built-in.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var isCallable = require_is_callable();
     var aFunction = function(argument) {
@@ -645,16 +608,22 @@ var require_get_built_in = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-is-prototype-of.js
 var require_object_is_prototype_of = __commonJS({
   "node_modules/core-js/internals/object-is-prototype-of.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     module.exports = uncurryThis({}.isPrototypeOf);
   }
 });
+
+// node_modules/core-js/internals/is-symbol.js
 var require_is_symbol = __commonJS({
   "node_modules/core-js/internals/is-symbol.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var getBuiltIn = require_get_built_in();
     var isCallable = require_is_callable();
     var isPrototypeOf = require_object_is_prototype_of();
@@ -668,9 +637,12 @@ var require_is_symbol = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/try-to-string.js
 var require_try_to_string = __commonJS({
   "node_modules/core-js/internals/try-to-string.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var $String = String;
     module.exports = function(argument) {
       try {
@@ -681,9 +653,12 @@ var require_try_to_string = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/a-callable.js
 var require_a_callable = __commonJS({
   "node_modules/core-js/internals/a-callable.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var isCallable = require_is_callable();
     var tryToString = require_try_to_string();
     var $TypeError = TypeError;
@@ -693,9 +668,12 @@ var require_a_callable = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/get-method.js
 var require_get_method = __commonJS({
   "node_modules/core-js/internals/get-method.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var aCallable = require_a_callable();
     var isNullOrUndefined = require_is_null_or_undefined();
     module.exports = function(V, P) {
@@ -704,9 +682,12 @@ var require_get_method = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/ordinary-to-primitive.js
 var require_ordinary_to_primitive = __commonJS({
   "node_modules/core-js/internals/ordinary-to-primitive.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var call = require_function_call();
     var isCallable = require_is_callable();
     var isObject = require_is_object();
@@ -720,9 +701,12 @@ var require_ordinary_to_primitive = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/to-primitive.js
 var require_to_primitive = __commonJS({
   "node_modules/core-js/internals/to-primitive.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var call = require_function_call();
     var isObject = require_is_object();
     var isSymbol = require_is_symbol();
@@ -746,9 +730,12 @@ var require_to_primitive = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/to-property-key.js
 var require_to_property_key = __commonJS({
   "node_modules/core-js/internals/to-property-key.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var toPrimitive = require_to_primitive();
     var isSymbol = require_is_symbol();
     module.exports = function(argument) {
@@ -757,9 +744,12 @@ var require_to_property_key = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-define-property.js
 var require_object_define_property = __commonJS({
   "node_modules/core-js/internals/object-define-property.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var IE8_DOM_DEFINE = require_ie8_dom_define();
     var V8_PROTOTYPE_DEFINE_BUG = require_v8_prototype_define_bug();
@@ -801,9 +791,12 @@ var require_object_define_property = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/well-known-symbol-define.js
 var require_well_known_symbol_define = __commonJS({
   "node_modules/core-js/internals/well-known-symbol-define.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var path = require_path();
     var hasOwn = require_has_own_property();
     var wrappedWellKnownSymbolModule = require_well_known_symbol_wrapped();
@@ -816,9 +809,12 @@ var require_well_known_symbol_define = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-property-is-enumerable.js
 var require_object_property_is_enumerable = __commonJS({
   "node_modules/core-js/internals/object-property-is-enumerable.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var $propertyIsEnumerable = {}.propertyIsEnumerable;
     var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
     var NASHORN_BUG = getOwnPropertyDescriptor && !$propertyIsEnumerable.call({ 1: 2 }, 1);
@@ -828,9 +824,12 @@ var require_object_property_is_enumerable = __commonJS({
     } : $propertyIsEnumerable;
   }
 });
+
+// node_modules/core-js/internals/create-property-descriptor.js
 var require_create_property_descriptor = __commonJS({
   "node_modules/core-js/internals/create-property-descriptor.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     module.exports = function(bitmap, value) {
       return {
         enumerable: !(bitmap & 1),
@@ -841,9 +840,12 @@ var require_create_property_descriptor = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/classof-raw.js
 var require_classof_raw = __commonJS({
   "node_modules/core-js/internals/classof-raw.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var toString = uncurryThis({}.toString);
     var stringSlice = uncurryThis("".slice);
@@ -852,9 +854,12 @@ var require_classof_raw = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/indexed-object.js
 var require_indexed_object = __commonJS({
   "node_modules/core-js/internals/indexed-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var uncurryThis = require_function_uncurry_this();
     var fails = require_fails();
     var classof = require_classof_raw();
@@ -867,9 +872,12 @@ var require_indexed_object = __commonJS({
     } : $Object;
   }
 });
+
+// node_modules/core-js/internals/to-indexed-object.js
 var require_to_indexed_object = __commonJS({
   "node_modules/core-js/internals/to-indexed-object.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var IndexedObject = require_indexed_object();
     var requireObjectCoercible = require_require_object_coercible();
     module.exports = function(it) {
@@ -877,9 +885,12 @@ var require_to_indexed_object = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/internals/object-get-own-property-descriptor.js
 var require_object_get_own_property_descriptor = __commonJS({
   "node_modules/core-js/internals/object-get-own-property-descriptor.js"(exports) {
     "use strict";
+    init_legacy_browser();
     var DESCRIPTORS = require_descriptors();
     var call = require_function_call();
     var propertyIsEnumerableModule = require_object_property_is_enumerable();
@@ -900,9 +911,12 @@ var require_object_get_own_property_descriptor = __commonJS({
     };
   }
 });
+
+// node_modules/core-js/modules/es.symbol.dispose.js
 var require_es_symbol_dispose = __commonJS({
   "node_modules/core-js/modules/es.symbol.dispose.js"() {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var defineWellKnownSymbol = require_well_known_symbol_define();
     var defineProperty = require_object_define_property().f;
@@ -918,38 +932,53 @@ var require_es_symbol_dispose = __commonJS({
     var descriptor;
   }
 });
+
+// node_modules/core-js/es/symbol/dispose.js
 var require_dispose = __commonJS({
   "node_modules/core-js/es/symbol/dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_dispose();
     var WrappedWellKnownSymbolModule = require_well_known_symbol_wrapped();
     module.exports = WrappedWellKnownSymbolModule.f("dispose");
   }
 });
+
+// node_modules/core-js/stable/symbol/dispose.js
 var require_dispose2 = __commonJS({
   "node_modules/core-js/stable/symbol/dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/core-js/modules/esnext.symbol.dispose.js
 var require_esnext_symbol_dispose = __commonJS({
   "node_modules/core-js/modules/esnext.symbol.dispose.js"() {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_dispose();
   }
 });
+
+// node_modules/core-js/actual/symbol/dispose.js
 var require_dispose3 = __commonJS({
   "node_modules/core-js/actual/symbol/dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_dispose2();
     require_esnext_symbol_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/core-js/modules/es.symbol.async-dispose.js
 var require_es_symbol_async_dispose = __commonJS({
   "node_modules/core-js/modules/es.symbol.async-dispose.js"() {
     "use strict";
+    init_legacy_browser();
     var globalThis2 = require_global_this();
     var defineWellKnownSymbol = require_well_known_symbol_define();
     var defineProperty = require_object_define_property().f;
@@ -965,38 +994,53 @@ var require_es_symbol_async_dispose = __commonJS({
     var descriptor;
   }
 });
+
+// node_modules/core-js/es/symbol/async-dispose.js
 var require_async_dispose = __commonJS({
   "node_modules/core-js/es/symbol/async-dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_async_dispose();
     var WrappedWellKnownSymbolModule = require_well_known_symbol_wrapped();
     module.exports = WrappedWellKnownSymbolModule.f("asyncDispose");
   }
 });
+
+// node_modules/core-js/stable/symbol/async-dispose.js
 var require_async_dispose2 = __commonJS({
   "node_modules/core-js/stable/symbol/async-dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_async_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/core-js/modules/esnext.symbol.async-dispose.js
 var require_esnext_symbol_async_dispose = __commonJS({
   "node_modules/core-js/modules/esnext.symbol.async-dispose.js"() {
     "use strict";
+    init_legacy_browser();
     require_es_symbol_async_dispose();
   }
 });
+
+// node_modules/core-js/actual/symbol/async-dispose.js
 var require_async_dispose3 = __commonJS({
   "node_modules/core-js/actual/symbol/async-dispose.js"(exports, module) {
     "use strict";
+    init_legacy_browser();
     var parent = require_async_dispose2();
     require_esnext_symbol_async_dispose();
     module.exports = parent;
   }
 });
+
+// node_modules/numcodecs/dist/chunk-INHXZS53.js
 var __toBinary;
 var init_chunk_INHXZS53 = __esm({
   "node_modules/numcodecs/dist/chunk-INHXZS53.js"() {
+    init_legacy_browser();
     __toBinary = /* @__PURE__ */ (() => {
       var table = new Uint8Array(128);
       for (var i = 0; i < 64; i++)
@@ -1015,20 +1059,16 @@ var init_chunk_INHXZS53 = __esm({
     })();
   }
 });
+
+// node_modules/numcodecs/dist/blosc.js
 var blosc_exports = {};
 __export(blosc_exports, {
   default: () => blosc_default
 });
-var blosc_codec;
-var blosc_codec_default;
-var blosc_codec_default2;
-var COMPRESSORS;
-var emscriptenModule;
-var init;
-var Blosc;
-var blosc_default;
+var blosc_codec, blosc_codec_default, blosc_codec_default2, COMPRESSORS, emscriptenModule, init, Blosc, blosc_default;
 var init_blosc = __esm({
   "node_modules/numcodecs/dist/blosc.js"() {
+    init_legacy_browser();
     init_chunk_INHXZS53();
     blosc_codec = (() => {
       var _scriptDir = typeof document !== "undefined" && document.currentScript ? document.currentScript.src : void 0;
@@ -1918,21 +1958,16 @@ var init_blosc = __esm({
     blosc_default = Blosc;
   }
 });
+
+// node_modules/numcodecs/dist/zstd.js
 var zstd_exports = {};
 __export(zstd_exports, {
   default: () => zstd_default
 });
-var zstd_codec;
-var zstd_codec_default;
-var zstd_codec_default2;
-var DEFAULT_CLEVEL;
-var MAX_CLEVEL;
-var emscriptenModule2;
-var init2;
-var Zstd;
-var zstd_default;
+var zstd_codec, zstd_codec_default, zstd_codec_default2, DEFAULT_CLEVEL, MAX_CLEVEL, emscriptenModule2, init2, Zstd, zstd_default;
 var init_zstd = __esm({
   "node_modules/numcodecs/dist/zstd.js"() {
+    init_legacy_browser();
     init_chunk_INHXZS53();
     zstd_codec = (() => {
       var _a;
@@ -2705,13 +2740,33 @@ var init_zstd = __esm({
     zstd_default = Zstd;
   }
 });
+
+// node_modules/neuroglancer/lib/async_computation.bundle.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/polyfills.js
+init_legacy_browser();
 var import_dispose = __toESM(require_dispose3(), 1);
 var import_async_dispose = __toESM(require_async_dispose3(), 1);
+
+// node_modules/neuroglancer/lib/async_computation/encode_compressed_segmentation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/encode_compressed_segmentation_request.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/index.js
+init_legacy_browser();
 function asyncComputation(id) {
   return { id };
 }
+
+// node_modules/neuroglancer/lib/async_computation/encode_compressed_segmentation_request.js
 var encodeCompressedSegmentationUint32 = asyncComputation("encodeCompressedSegmentationUint32");
 var encodeCompressedSegmentationUint64 = asyncComputation("encodeCompressedSegmentationUint64");
+
+// node_modules/neuroglancer/lib/async_computation/handler.js
+init_legacy_browser();
 var handlers = /* @__PURE__ */ new Map();
 function setupChannel(port) {
   self.onmessage = async (msg) => {
@@ -2738,6 +2793,15 @@ setupChannel(self);
 function registerAsyncComputation(request, handler) {
   handlers.set(request.id, handler);
 }
+
+// node_modules/neuroglancer/lib/sliceview/compressed_segmentation/encode_uint32.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/sliceview/compressed_segmentation/encode_common.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/util/array.js
+init_legacy_browser();
 function getFortranOrderStrides(size, baseStride = 1) {
   const length2 = size.length;
   const strides = new Array(length2);
@@ -2794,6 +2858,8 @@ var TypedArrayBuilder = class {
     this.length -= end - start;
   }
 };
+
+// node_modules/neuroglancer/lib/sliceview/compressed_segmentation/encode_common.js
 var BLOCK_HEADER_SIZE = 2;
 function newCache() {
   return /* @__PURE__ */ new Map();
@@ -3024,6 +3090,11 @@ function encodeBlock(rawData, inputOffset, inputStrides, blockSize, actualSize, 
     rawData instanceof Uint32Array ? 1 : 2
   );
 }
+
+// node_modules/neuroglancer/lib/sliceview/compressed_segmentation/encode_uint64.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/encode_compressed_segmentation.js
 var tempBuffer = new TypedArrayBuilder(Uint32Array, 2e4);
 registerAsyncComputation(
   encodeCompressedSegmentationUint32,
@@ -3041,7 +3112,22 @@ registerAsyncComputation(
     return { value: tempBuffer.view };
   }
 );
+
+// node_modules/neuroglancer/lib/datasource/enabled_async_computation_modules.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/boss/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_jpeg.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_jpeg_request.js
+init_legacy_browser();
 var decodeJpeg = asyncComputation("decodeJpeg");
+
+// node_modules/neuroglancer/lib/third_party/jpgjs/jpg.js
+init_legacy_browser();
 function loadURLasArrayBuffer(path, callback) {
   if (path.indexOf("data:") === 0) {
     var offset = path.indexOf("base64,") + 7;
@@ -7017,15 +7103,15 @@ var PDFJS;
       }
       return bitmap;
     }
-    function decodeBitmap(mmr, width, height, templateIndex, prediction, skip, at22, decodingContext) {
+    function decodeBitmap(mmr, width, height, templateIndex, prediction, skip, at2, decodingContext) {
       if (mmr) {
         error("JBIG2 error: MMR encoding is not supported");
       }
-      if (templateIndex === 0 && !skip && !prediction && at22.length === 4 && at22[0].x === 3 && at22[0].y === -1 && at22[1].x === -3 && at22[1].y === -1 && at22[2].x === 2 && at22[2].y === -2 && at22[3].x === -2 && at22[3].y === -2) {
+      if (templateIndex === 0 && !skip && !prediction && at2.length === 4 && at2[0].x === 3 && at2[0].y === -1 && at2[1].x === -3 && at2[1].y === -1 && at2[2].x === 2 && at2[2].y === -2 && at2[3].x === -2 && at2[3].y === -2) {
         return decodeBitmapTemplate0(width, height, decodingContext);
       }
       var useskip = !!skip;
-      var template = CodingTemplates[templateIndex].concat(at22);
+      var template = CodingTemplates[templateIndex].concat(at2);
       template.sort(function(a, b) {
         return a.y - b.y || a.x - b.x;
       });
@@ -7115,10 +7201,10 @@ var PDFJS;
       }
       return bitmap;
     }
-    function decodeRefinement(width, height, templateIndex, referenceBitmap, offsetX, offsetY, prediction, at22, decodingContext) {
+    function decodeRefinement(width, height, templateIndex, referenceBitmap, offsetX, offsetY, prediction, at2, decodingContext) {
       var codingTemplate = RefinementTemplates[templateIndex].coding;
       if (templateIndex === 0) {
-        codingTemplate = codingTemplate.concat([at22[0]]);
+        codingTemplate = codingTemplate.concat([at2[0]]);
       }
       var codingTemplateLength = codingTemplate.length;
       var codingTemplateX = new Int32Array(codingTemplateLength);
@@ -7130,7 +7216,7 @@ var PDFJS;
       }
       var referenceTemplate = RefinementTemplates[templateIndex].reference;
       if (templateIndex === 0) {
-        referenceTemplate = referenceTemplate.concat([at22[1]]);
+        referenceTemplate = referenceTemplate.concat([at2[1]]);
       }
       var referenceTemplateLength = referenceTemplate.length;
       var referenceTemplateX = new Int32Array(referenceTemplateLength);
@@ -7183,7 +7269,7 @@ var PDFJS;
       }
       return bitmap;
     }
-    function decodeSymbolDictionary(huffman, refinement, symbols, numberOfNewSymbols, numberOfExportedSymbols, huffmanTables, templateIndex, at22, refinementTemplateIndex, refinementAt, decodingContext) {
+    function decodeSymbolDictionary(huffman, refinement, symbols, numberOfNewSymbols, numberOfExportedSymbols, huffmanTables, templateIndex, at2, refinementTemplateIndex, refinementAt, decodingContext) {
       if (huffman) {
         error("JBIG2 error: huffman is not supported");
       }
@@ -7260,7 +7346,7 @@ var PDFJS;
               templateIndex,
               false,
               null,
-              at22,
+              at2,
               decodingContext
             );
           }
@@ -7529,7 +7615,7 @@ var PDFJS;
     function processSegment(segment, visitor) {
       var header = segment.header;
       var data = segment.data, position = segment.start, end = segment.end;
-      var args, at22, i, atLength;
+      var args, at2, i, atLength;
       switch (header.type) {
         case 0:
           var dictionary = {};
@@ -7547,26 +7633,26 @@ var PDFJS;
           position += 2;
           if (!dictionary.huffman) {
             atLength = dictionary.template === 0 ? 4 : 1;
-            at22 = [];
+            at2 = [];
             for (i = 0; i < atLength; i++) {
-              at22.push({
+              at2.push({
                 x: readInt8(data, position),
                 y: readInt8(data, position + 1)
               });
               position += 2;
             }
-            dictionary.at = at22;
+            dictionary.at = at2;
           }
           if (dictionary.refinement && !dictionary.refinementTemplate) {
-            at22 = [];
+            at2 = [];
             for (i = 0; i < 2; i++) {
-              at22.push({
+              at2.push({
                 x: readInt8(data, position),
                 y: readInt8(data, position + 1)
               });
               position += 2;
             }
-            dictionary.refinementAt = at22;
+            dictionary.refinementAt = at2;
           }
           dictionary.numberOfExportedSymbols = readUint32(data, position);
           position += 4;
@@ -7610,15 +7696,15 @@ var PDFJS;
             textRegion.huffmanRefinementSizeSelector = !!(textRegionHuffmanFlags & 14);
           }
           if (textRegion.refinement && !textRegion.refinementTemplate) {
-            at22 = [];
+            at2 = [];
             for (i = 0; i < 2; i++) {
-              at22.push({
+              at2.push({
                 x: readInt8(data, position),
                 y: readInt8(data, position + 1)
               });
               position += 2;
             }
-            textRegion.refinementAt = at22;
+            textRegion.refinementAt = at2;
           }
           textRegion.numberOfSymbolInstances = readUint32(data, position);
           position += 4;
@@ -7638,15 +7724,15 @@ var PDFJS;
           genericRegion.prediction = !!(genericRegionSegmentFlags & 8);
           if (!genericRegion.mmr) {
             atLength = genericRegion.template === 0 ? 4 : 1;
-            at22 = [];
+            at2 = [];
             for (i = 0; i < atLength; i++) {
-              at22.push({
+              at2.push({
                 x: readInt8(data, position),
                 y: readInt8(data, position + 1)
               });
               position += 2;
             }
-            genericRegion.at = at22;
+            genericRegion.at = at2;
           }
           args = [genericRegion, data, position, end];
           break;
@@ -7955,6 +8041,8 @@ var PDFJS;
 var JpegDecoder = PDFJS.JpegImage;
 var JpxDecoder = PDFJS.JpxImage;
 var Jbig2Decoder = PDFJS.Jbig2Image;
+
+// node_modules/neuroglancer/lib/async_computation/decode_jpeg.js
 registerAsyncComputation(
   decodeJpeg,
   async (data, width, height, area, numComponents, convertToGrayscale) => {
@@ -8009,7 +8097,22 @@ registerAsyncComputation(
     };
   }
 );
+
+// node_modules/neuroglancer/lib/datasource/brainmaps/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/deepzoom/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_png.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_png_request.js
+init_legacy_browser();
 var decodePng = asyncComputation("decodePng");
+
+// node_modules/neuroglancer/lib/sliceview/png/index.js
+init_legacy_browser();
 var libraryEnv = {
   emscripten_notify_memory_growth: () => {
   },
@@ -8188,6 +8291,8 @@ async function decompressPng(buffer, width, height, area, numComponents, bytesPe
     m.exports.free(imagePtr);
   }
 }
+
+// node_modules/neuroglancer/lib/async_computation/decode_png.js
 registerAsyncComputation(
   decodePng,
   async (data, width, height, area, numComponents, bytesPerPixel, convertToGrayscale) => {
@@ -8203,25 +8308,62 @@ registerAsyncComputation(
     return { value: result, transfer: [result.uint8Array.buffer] };
   }
 );
+
+// node_modules/neuroglancer/lib/datasource/dvid/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/graphene/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/n5/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_blosc.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_blosc_request.js
+init_legacy_browser();
 var decodeBlosc = asyncComputation(
   "decodeBlosc"
 );
+
+// node_modules/neuroglancer/lib/async_computation/decode_blosc.js
 registerAsyncComputation(decodeBlosc, async (data) => {
   const { default: Blosc3 } = await Promise.resolve().then(() => (init_blosc(), blosc_exports));
   const codec = Blosc3.fromConfig({ id: "blosc" });
   const result = await codec.decode(data);
   return { value: result, transfer: [result.buffer] };
 });
+
+// node_modules/neuroglancer/lib/async_computation/decode_zstd.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_zstd_request.js
+init_legacy_browser();
 var decodeZstd = asyncComputation(
   "decodeZstd"
 );
+
+// node_modules/neuroglancer/lib/async_computation/decode_zstd.js
 registerAsyncComputation(decodeZstd, async (data) => {
   const { default: Zstd3 } = await Promise.resolve().then(() => (init_zstd(), zstd_exports));
   const codec = Zstd3.fromConfig({ id: "blosc" });
   const result = await codec.decode(data);
   return { value: result, transfer: [result.buffer] };
 });
+
+// node_modules/neuroglancer/lib/datasource/obj/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/obj_mesh.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/obj_mesh_request.js
+init_legacy_browser();
 var parseOBJFromArrayBuffer = asyncComputation("parseOBJFromArrayBuffer");
+
+// node_modules/neuroglancer/lib/util/gzip.js
+init_legacy_browser();
 function isGzipFormat(data) {
   const view = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   return view.length >= 3 && view[0] === 31 && view[1] === 139 && view[2] === 8;
@@ -8256,6 +8398,8 @@ async function maybeDecompressGzip(data) {
   }
   return byteView;
 }
+
+// node_modules/neuroglancer/lib/async_computation/obj_mesh.js
 registerAsyncComputation(
   parseOBJFromArrayBuffer,
   async (buffer) => {
@@ -8301,7 +8445,19 @@ registerAsyncComputation(
     };
   }
 );
+
+// node_modules/neuroglancer/lib/datasource/precomputed/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_jxl.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_jxl_request.js
+init_legacy_browser();
 var decodeJxl = asyncComputation("decodeJxl");
+
+// node_modules/neuroglancer/lib/sliceview/jxl/index.js
+init_legacy_browser();
 var libraryEnv2 = {};
 var jxlModulePromise;
 async function getJxlModulePromise() {
@@ -8413,6 +8569,8 @@ async function decompressJxl(buffer, area, numComponents, bytesPerPixel) {
     }
   }
 }
+
+// node_modules/neuroglancer/lib/async_computation/decode_jxl.js
 registerAsyncComputation(
   decodeJxl,
   async (data, area, numComponents, bytesPerPixel) => {
@@ -8425,9 +8583,18 @@ registerAsyncComputation(
     return { value: result, transfer: [result.uint8Array.buffer] };
   }
 );
+
+// node_modules/neuroglancer/lib/async_computation/decode_compresso.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/decode_compresso_request.js
+init_legacy_browser();
 var decodeCompresso = asyncComputation(
   "decodeCompresso"
 );
+
+// node_modules/neuroglancer/lib/sliceview/compresso/index.js
+init_legacy_browser();
 var libraryEnv3 = {
   emscripten_notify_memory_growth: () => {
   },
@@ -8514,11 +8681,28 @@ async function decompressCompresso(buffer) {
     m.exports.free(imagePtr);
   }
 }
+
+// node_modules/neuroglancer/lib/async_computation/decode_compresso.js
 registerAsyncComputation(decodeCompresso, async (data) => {
   const result = await decompressCompresso(data);
   return { value: result, transfer: [result.buffer] };
 });
+
+// node_modules/neuroglancer/lib/datasource/render/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/datasource/vtk/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/vtk_mesh.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/async_computation/vtk_mesh_request.js
+init_legacy_browser();
 var parseVTKFromArrayBuffer = asyncComputation("parseVTKFromArrayBuffer");
+
+// node_modules/neuroglancer/lib/datasource/vtk/parse.js
+init_legacy_browser();
 var maxHeaderLength = 1e3;
 var vtkHeaderPattern = /^[ \t]*#[ \t]+vtk[ \t]+DataFile[ \t]+Version[ \t]+([^\s]+)[ \t]*\n(.*)\n[ \t]*(ASCII|BINARY)[ \t]*\n[ \t]*DATASET[ \t]+([^ ]+)[ \t]*\n/;
 var pointDataHeaderPattern = /^[ \t]*POINT_DATA[ \t]+([0-9]+)[ \t]*$/;
@@ -8745,6 +8929,8 @@ function parseVTK(data) {
     `VTK data format ${JSON.stringify(dataFormat)} is not supported.`
   );
 }
+
+// node_modules/neuroglancer/lib/async_computation/vtk_mesh.js
 registerAsyncComputation(
   parseVTKFromArrayBuffer,
   async (buffer) => {
@@ -8759,3 +8945,15 @@ registerAsyncComputation(
     };
   }
 );
+
+// node_modules/neuroglancer/lib/datasource/zarr/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/enabled_async_computation_modules.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/icechunk/async_computation.js
+init_legacy_browser();
+
+// node_modules/neuroglancer/lib/kvstore/ocdbt/async_computation.js
+init_legacy_browser();

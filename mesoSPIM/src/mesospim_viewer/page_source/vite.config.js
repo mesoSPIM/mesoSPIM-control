@@ -1,6 +1,10 @@
 import { defineConfig } from "vite";
+import { neuroglancerForQt } from "./scripts/neuroglancer.mjs";
 
 export default defineConfig({
+  // Compiles the engine's workers and applies its few edits while building,
+  // leaving node_modules as npm installed it (scripts/neuroglancer.mjs).
+  plugins: [neuroglancerForQt()],
   build: {
     // Into the Python package, so that `pip install` ships the page with it.
     outDir: "../page",

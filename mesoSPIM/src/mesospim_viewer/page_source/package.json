@@ -5,8 +5,7 @@
   "type": "module",
   "description": "A native neuroglancer page driven by mesospim_viewer (Python).",
   "scripts": {
-    "postinstall": "node scripts/patch_neuroglancer.mjs",
-    "build": "node scripts/patch_neuroglancer.mjs && node scripts/precompile-workers.mjs && vite build && node scripts/copy-async-worker.mjs",
+    "build": "vite build",
     "dev": "vite"
   },
   "dependencies": {
