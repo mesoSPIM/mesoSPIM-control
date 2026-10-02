@@ -45,9 +45,9 @@ def _measure(layer: Layer, placement: Placement) -> None:
             layer.measured[label] = window
 
 
-# The built page lives inside the package (page_source/ builds into it), so an
+# The built page lives inside the package (source/ builds into it), so an
 # installed copy of the package carries its page.
-PAGE_DIR = Path(__file__).resolve().parent / "page"
+PAGE_DIR = Path(__file__).resolve().parent / "build"
 
 # How the page dresses the engine: with neuroglancer's own panels ("full"),
 # with our panel on the right and the sliders on the picture ("simple"), or as

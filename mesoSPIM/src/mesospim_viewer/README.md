@@ -75,7 +75,7 @@ across:
 - **The transparent 2D ground**, as four small opt-in edits to the pinned
   engine, the same edits the ZMART viewer 0.2.1 carries.
 
-Both live in `page_source/scripts/neuroglancer.mjs`, and are applied while the
+Both live in `source/scripts/neuroglancer.mjs`, and are applied while the
 page is built, never to the installed engine, so building twice makes the same
 page. Nothing else is patched.
 
@@ -163,7 +163,7 @@ layers together on the graphics card. The panel lists them as
 ## How it works
 
 ```
-Python                                    the page (page_source/)
+Python                                    the page (source/)
 ------                                    -----------------------
 Viewer.add / remove / set_layout  --->    GET /api/state?since=N   (long poll)
   builds neuroglancer layer JSON            brings layers into line, keeping the
@@ -191,11 +191,11 @@ Viewer.on_pick                    <---    POST /api/pick   (a double-click)
 - `viewer.py` is the API. Every change publishes a new version; the page waits
   on `/api/state` for it, so a change is on screen within a frame, with no
   polling while nothing happens.
-- `page_source/src/main.js` is the page. It builds a stock viewer
+- `source/src/main.js` is the page. It builds a stock viewer
   (`makeDefaultViewer` plus the default bindings), applies states, reports
   back. A layer whose revision moved has its stores forgotten from the
   engine's memo before it is rebuilt, so a grown store is read afresh.
-- `page_source/src/panel.js` is the simple interface: registered as one of
+- `source/src/panel.js` is the simple interface: registered as one of
   the engine's own side panels (only a panel inside the engine's canvas gets
   a histogram drawn), with the view switch, the channel rows and the sliders.
   Every control reads and writes engine layer state, the same state the
@@ -274,13 +274,13 @@ the two apart: if the browser draws and Qt does not, it is Qt's GPU path.
 ## Building and testing
 
 ```
-cd mesoSPIM/src/mesospim_viewer/page_source && npm ci && npm run build   # the page lands in ../page/
+cd mesoSPIM/src/mesospim_viewer/source && npm ci && npm run build   # the page lands in ../build/
 python -m mesoSPIM.src.mesospim_viewer.demo                              # four tiles in a browser
 python -m pytest mesoSPIM/test/mesospim_viewer
 ```
 
-Only changing the page needs Node: edit `page_source/`, build, and commit the
-rebuilt `page/` with it. The Python side is developed and tested without Node,
+Only changing the page needs Node: edit `source/`, build, and commit the
+rebuilt `build/` with it. The Python side is developed and tested without Node,
 and the microscope PC runs the committed page.
 
 The picture tests drive a headless Chromium and assert what is drawn: four

@@ -1,13 +1,13 @@
 """The built page: what is committed is what the build makes, every time.
 
-The page in ``mesospim_viewer/page`` is built from ``page_source`` and committed,
+The page in ``mesospim_viewer/build`` is built from ``source`` and committed,
 so a mesoSPIM installation needs no Node.js. That only holds if building the
 same sources twice gives the same files, and if building leaves the installed
 engine (``node_modules``) exactly as npm put it there: otherwise a second build,
 or a build on another machine, quietly makes a different page.
 
 The first test reads only the committed page and always runs. The second builds
-the page twice and needs Node.js and ``npm ci`` in ``page_source``; it skips,
+the page twice and needs Node.js and ``npm ci`` in ``source``; it skips,
 saying so, without them.
 """
 
@@ -23,7 +23,7 @@ import pytest
 
 from mesoSPIM.src.mesospim_viewer import PAGE_DIR
 
-SOURCE_DIR = PAGE_DIR.parent / "page_source"
+SOURCE_DIR = PAGE_DIR.parent / "source"
 ENGINE_LIB = SOURCE_DIR / "node_modules" / "neuroglancer" / "lib"
 
 # esbuild names each module it bundles in a comment; the shims for the Qt window's
@@ -63,7 +63,7 @@ def _npm() -> str | None:
 
 @pytest.mark.skipif(
     _npm() is None or not (SOURCE_DIR / "node_modules" / "vite").is_dir(),
-    reason="needs Node.js and `npm ci` in mesoSPIM/src/mesospim_viewer/page_source",
+    reason="needs Node.js and `npm ci` in mesoSPIM/src/mesospim_viewer/source",
 )
 def test_building_twice_gives_the_committed_page_and_leaves_the_engine_untouched(tmp_path):
     engine_before = _digest(ENGINE_LIB)

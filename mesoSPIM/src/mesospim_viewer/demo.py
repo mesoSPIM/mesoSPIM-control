@@ -421,7 +421,7 @@ def main(argv: list[str] | None = None) -> int:
     view.fit()
     url = view.start()
     if not view.page_built:
-        print("the page is not built: run `npm ci && npm run build` in mesoSPIM/src/mesospim_viewer/page_source first")
+        print("the page is not built: run `npm ci && npm run build` in mesoSPIM/src/mesospim_viewer/source first")
     print(f"serving {len(tiles)} tiles at {url}")
     if not args.no_open:
         view.open_in_browser()

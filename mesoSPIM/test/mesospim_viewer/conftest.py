@@ -141,7 +141,7 @@ def browser():
 @pytest.fixture
 def pages(browser) -> Pages:
     if not (PAGE_DIR / "index.html").is_file():
-        pytest.skip("the mesoSPIM page is not built: npm ci && npm run build in mesoSPIM/src/mesospim_viewer/page_source")
+        pytest.skip("the mesoSPIM page is not built: npm ci && npm run build in mesoSPIM/src/mesospim_viewer/source")
     held = Pages(browser)
     yield held
     held.close()

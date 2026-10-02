@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [neuroglancerForQt()],
   build: {
     // Into the Python package, so that `pip install` ships the page with it.
-    outDir: "../page",
+    outDir: "../build",
     emptyOutDir: true,
     // The engine's background worker must be a real file, never a data: URL:
     // a data:-URL worker has no origin, so the absolute-path fetches it makes

@@ -44,6 +44,6 @@
 # reports the project as majority Jupyter Notebook rather than Python.
 *.ipynb linguist-vendored
 
-# The Data viewer's built page: generated from page_source/ by `npm run build`,
+# The Data viewer's built page: generated from source/ by `npm run build`,
 # committed so the microscope PC needs no Node. Collapsed in diffs.
-mesoSPIM/src/mesospim_viewer/page/** linguist-generated
+mesoSPIM/src/mesospim_viewer/build/** linguist-generated
