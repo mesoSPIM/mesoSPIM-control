@@ -227,7 +227,9 @@ def test_an_acquired_dataset_is_shown_as_it_is_and_nothing_new_is_followed(tmp_p
 # binding to Qt.
 
 
-@pytest.fixture
+# One QApplication for the session: Qt WebEngine cannot start again in a process
+# whose first QApplication has gone, and crashes the process when asked to.
+@pytest.fixture(scope="session")
 def qt_app():
     if not os.environ.get("MESOSPIM_VIEWER_QT_TESTS"):
         pytest.skip("set MESOSPIM_VIEWER_QT_TESTS=1 to drive the Qt window (needs OpenGL)")
