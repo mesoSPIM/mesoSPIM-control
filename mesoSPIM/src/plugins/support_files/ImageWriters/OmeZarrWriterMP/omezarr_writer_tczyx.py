@@ -241,6 +241,10 @@ class Live3DPyramidWriterTCZYX(Live3DPyramidWriter):
         )
 
         self.levels = spec.levels
+        # The parent can write whole shards straight to disk, but that shortcut does not know
+        # which time point and channel a stack belongs to. Every write here therefore goes
+        # through the StackWindows, which put it in its place.
+        self.fast_writers = [None] * self.levels
         self.z_counts = [0] * self.levels
         self.buffers = [None] * self.levels
         self.buf_fill = [0] * self.levels
