@@ -78,12 +78,21 @@ button.icon.off { color: var(--text-muted); }
 
 /* -- segmented controls; the 2D/3D switch is one, floating top left on the picture */
 .segmented { display: flex; width: 100%; border: 1px solid var(--control-border); border-radius: 6px; overflow: hidden; }
-.stage-overlay > .segmented.view {
-  position: absolute; top: 12px; left: 12px; z-index: 5; width: auto;
+/* The top left of the picture: the 2D/3D switch, and Show all beside it. */
+.stage-overlay > .tools { position: absolute; top: 12px; left: 12px; z-index: 5; display: flex; align-items: stretch; }
+.stage-overlay > .tools > * + * { margin-left: 8px; }
+.tools > .segmented.view { width: auto; background: var(--overlay-bg); backdrop-filter: blur(4px); }
+.tools > .segmented.view button { padding: 5px 16px; background: transparent; }
+.tools > .segmented.view button.on { background: var(--accent); }
+.tools > button.show-all {
+  padding: 5px 14px;
   background: var(--overlay-bg); backdrop-filter: blur(4px);
+  border: 1px solid var(--control-border); border-radius: 6px;
+  color: var(--text-bright); font: inherit; font-weight: 600; cursor: pointer;
 }
-.stage-overlay > .segmented.view button { padding: 5px 16px; background: transparent; }
-.stage-overlay > .segmented.view button.on { background: var(--accent); }
+.tools > button.show-all:hover { border-color: var(--accent); }
+.tools > button.show-all[hidden] { display: none; }
+
 .segmented button {
   flex: 1; padding: 6px 0;
   background: var(--control-bg); border: 0; color: var(--text-primary);

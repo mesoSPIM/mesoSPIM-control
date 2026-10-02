@@ -30,10 +30,16 @@ that starts is on screen within a second and is read again as its chunks land
 and once more when they stop, a time point appended to it likewise, and a new
 acquisition starting is switched to, unless an older one was picked from the
 dropdown. That logic is `Follower` in `watch.py` and is tested without Qt;
-`window.py` gives it a window and a timer. While the operator has not panned or
-zoomed, the page keeps framing every tile as more land; once they have, the
-view is left where they put it, until a fit is asked for again (the 2D/3D
-switch, or `Viewer.fit()`, which switching acquisitions calls).
+`window.py` gives it a window and a timer.
+
+**Overview mode.** While the operator has not panned or zoomed, the page keeps
+framing every picture shown, zooming out as more tiles land. Once they have
+panned or zoomed, the view is left where they put it, and a **Show all**
+button appears beside the 2D/3D switch: it frames everything at once and
+returns to overview mode. The 2D/3D switch
+and `Viewer.fit()` (which switching acquisitions calls) do the same. Stepping
+through planes or time points does not count as moving the view, and the time
+point is left alone: an acquisition opens on its first one.
 
 Three dresses, chosen with `Viewer(ui=...)`: `"simple"` (the default of the
 Data viewer window) is our own panel down the right-hand edge over a bare
@@ -172,6 +178,7 @@ Viewer.add / remove / set_layout  --->    GET /api/state?since=N   (long poll)
 Viewer.look_at / fit              --->    camera, applied once the sources settled
 Viewer.position, on_view          <---    POST /api/view   (camera, debounced)
 Viewer.on_pick                    <---    POST /api/pick   (a double-click)
+Viewer.on_choice                  <---    POST /api/choose (the dropdown)
                                           GET  /data/<key>/...   (store bytes)
 ```
 
@@ -197,7 +204,8 @@ Viewer.on_pick                    <---    POST /api/pick   (a double-click)
   engine's memo before it is rebuilt, so a grown store is read afresh.
 - `source/src/panel.js` is the simple interface: registered as one of
   the engine's own side panels (only a panel inside the engine's canvas gets
-  a histogram drawn), with the view switch, the channel rows and the sliders.
+  a histogram drawn), with the view switch, Show all, the channel rows and
+  the sliders.
   Every control reads and writes engine layer state, the same state the
   native panel edits, so the operator's adjustments survive Python's updates
   by the same rule.

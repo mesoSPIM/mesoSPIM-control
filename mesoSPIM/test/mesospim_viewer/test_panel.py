@@ -261,7 +261,7 @@ def test_the_dropdown_offers_the_sessions_acquisitions_and_reports_a_choice(page
             "() => [...document.querySelectorAll('.panel-body > .card')].map(c => c.className)"
         )[:1] == ["card acquisition"]
         assert page.evaluate(
-            "() => document.querySelector('.stage-overlay > .segmented.view') !== null"
+            "() => document.querySelector('.stage-overlay .segmented.view') !== null"
         )
 
         page.select_option("select.chooser", "2")
@@ -450,3 +450,65 @@ def test_an_acquisition_opens_on_its_first_time_point(pages, stacks):
         page.close()
     finally:
         view.stop()
+
+
+# Where the camera looks, in micrometres, how far it is zoomed out, and whether
+# the Show all button is offered.
+OVERVIEW = """() => {
+  const n = window.viewer.navigationState, space = n.position.coordinateSpace.value;
+  const at = (axis) => { const i = space.names.indexOf(axis); return n.position.value[i] * space.scales[i] * 1e6; };
+  const button = document.querySelector('#show-all');
+  return { x: at('x'), y: at('y'), zoom: n.zoomFactor.value, showAll: !!button && !button.hidden };
+}"""
+
+
+def _until(page, script: str, wanted, timeout_s: float = 10.0):
+    deadline = time.time() + timeout_s
+    seen = page.evaluate(script)
+    while time.time() < deadline and seen != wanted:
+        time.sleep(0.1)
+        seen = page.evaluate(script)
+    return seen
+
+
+def test_show_all_appears_once_the_view_is_moved_and_frames_everything_again(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="first")
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        time.sleep(0.5)
+        fitted = page.evaluate(OVERVIEW)
+        assert fitted["showAll"] is False, "nothing to bring back while the view frames everything"
+        assert fitted["x"] == pytest.approx(80, abs=2)
+
+        # The operator zooms in: the view is theirs, and Show all is offered.
+        box = page.locator(".neuroglancer-rendered-data-panel").first.bounding_box()
+        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.keyboard.down("Control")
+        page.mouse.wheel(0, -300)
+        page.keyboard.up("Control")
+        assert _until(page, "() => !document.querySelector('#show-all').hidden", True)
+        theirs = page.evaluate(OVERVIEW)
+        assert theirs["zoom"] < fitted["zoom"]
+
+        # Another acquisition arrives: the view stays where the operator put it.
+        view.add(stacks[1], layer="second")
+        page.wait_for_function("() => window.viewer.layerManager.managedLayers.length === 4")
+        pages.drawn(page, layers=4)
+        time.sleep(1.0)
+        assert page.evaluate(OVERVIEW) == theirs
+
+        # Show all frames both and hands the view back to overview mode.
+        page.click("#show-all")
+        time.sleep(0.5)
+        both = page.evaluate(OVERVIEW)
+        assert both["showAll"] is False
+        assert both["x"] == pytest.approx((0 + 144 + 160) / 2, abs=2)
+        assert both["zoom"] > fitted["zoom"]
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+

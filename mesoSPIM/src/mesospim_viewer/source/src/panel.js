@@ -438,7 +438,24 @@ class ControlPanel extends SidePanel {
   }
 }
 
-export function mountPanel(viewer, { fit }) {
+// -- Show all: back to the view that frames every picture -------------------------
+
+function showAllButton(fit, framing) {
+  const button = element("button", "show-all", "Show all");
+  button.type = "button";
+  button.id = "show-all";
+  button.title = "Zoom out to show every picture, and keep doing so as new ones arrive";
+  button.addEventListener("click", () => fit());
+  // Offered only while the view is the operator's: otherwise it already shows all.
+  const reflect = () => {
+    button.hidden = framing.following;
+  };
+  framing.listeners.push(reflect);
+  reflect();
+  return button;
+}
+
+export function mountPanel(viewer, { fit, framing }) {
   const manager = viewer.sidePanelManager;
   const location = new TrackableSidePanelLocation(
     { side: "right", col: 0, row: 0, flex: 1, size: 330, minSize: 260, visible: true },
@@ -475,8 +492,11 @@ export function mountPanel(viewer, { fit }) {
     location.visible = true;
   });
   overlay.appendChild(unfold);
-  // The 2D/3D switch sits on the picture, top left, where the eye goes first.
-  overlay.appendChild(viewSwitch(viewer, fit));
+  // The 2D/3D switch sits on the picture, top left, where the eye goes first,
+  // and Show all beside it.
+  const tools = element("div", "tools");
+  tools.append(viewSwitch(viewer, fit), showAllButton(fit, framing));
+  overlay.appendChild(tools);
   const reflect = () => {
     unfold.style.display = location.visible ? "none" : "flex";
   };

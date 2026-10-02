@@ -11,7 +11,8 @@
  * 3. reports the camera to `/api/view` and a double-click to `/api/pick`.
  *
  * Until the operator pans or zooms, the view keeps framing everything shown,
- * so tiles landing during an acquisition come into view as they arrive.
+ * so tiles landing during an acquisition come into view as they arrive. The
+ * Show all button brings that back.
  *
  * Everything about what is shown -- which stores, where they sit, how their
  * channels mix -- is decided in Python and arrives as ordinary neuroglancer
@@ -96,7 +97,7 @@ function buildViewer(ui) {
     viewer.display.scheduleRedraw();
   }
   if (ui.chrome === "simple") {
-    viewer.panel = mountPanel(viewer, { fit: () => fitEverything(viewer) });
+    viewer.panel = mountPanel(viewer, { fit: () => fitEverything(viewer), framing });
   }
   window.viewer = viewer;
   return viewer;
@@ -176,8 +177,20 @@ function moveTo(viewer, named) {
 
 // The view frames everything shown, again after every change, until the
 // operator pans or zooms it: then it is theirs, until a fit is asked for
-// (Python's fit(), or the 2D/3D switch) and it follows again.
-const framing = { following: true, fitting: false, fitted: null };
+// (Python's fit(), the Show all button, or the 2D/3D switch) and it follows
+// again. The panel hears when that changes, to offer Show all only when the
+// view is the operator's.
+const framing = {
+  following: true,
+  fitting: false,
+  fitted: null,
+  listeners: [],
+  follow(following) {
+    if (following === this.following) return;
+    this.following = following;
+    for (const listener of this.listeners) listener(following);
+  },
+};
 
 // What the operator moves when they pan or zoom: the two axes across the
 // screen and the zoom of both views. Depth and time are left out, so stepping
@@ -199,7 +212,7 @@ function watchOperator(viewer) {
     const held = framing.fitted;
     const changed = now.length !== held.length ||
       now.some((value, i) => Math.abs(value - held[i]) > 1e-6 * Math.max(1, Math.abs(held[i])));
-    if (changed) framing.following = false;
+    if (changed) framing.follow(false);
   };
   viewer.navigationState.changed.add(moved);
   viewer.perspectiveNavigationState.changed.add(moved);
@@ -213,7 +226,7 @@ function fitEverything(viewer) {
     framing.fitting = false;
   }
   framing.fitted = framed(viewer);
-  framing.following = true;
+  framing.follow(true);
 }
 
 function fitCamera(viewer) {
