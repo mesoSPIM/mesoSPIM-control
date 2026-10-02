@@ -124,7 +124,7 @@ def test_the_sliders_step_through_depth_and_time(pages, stacks):
         position = page.evaluate(
             "() => { const v = window.viewer; const s = v.navigationState.position.coordinateSpace.value; const p = v.navigationState.position.value; return Object.fromEntries(s.names.map((n, i) => [n, p[i]])); }"
         )
-        assert position["t"] == pytest.approx(2.5) and position["z"] == pytest.approx(5.5)
+        assert position["t"] == pytest.approx(2.0) and position["z"] == pytest.approx(5.0)
         assert page.evaluate(sliders)["slider-z"]["reading"] == "6 / 24"
 
         # Python moving the camera moves the slider too
@@ -345,6 +345,68 @@ def test_the_3d_card_drives_projection_detail_gain_planes_and_the_look(pages, st
         assert page.evaluate(orientation) == [0, 0, 0, 1]
         page.click('.view button[data-layout="xy"]')
         assert page.evaluate("() => document.querySelector('.card.volume').hidden") is True
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
+def _numbered(path):
+    """A store whose every voxel says where it is: 1000 per time point plus 200 per plane."""
+    import json
+
+    import numpy as np
+
+    from mesoSPIM.src.mesospim_viewer.demo import _write_array
+
+    data = np.zeros((3, 1, 4, 64, 64), np.uint16)
+    for t in range(3):
+        for z in range(4):
+            data[t, 0, z] = 1000 * (t + 1) + 200 * z
+    _write_array(path / "0", data, (1, 1, 1, 64, 64))
+    axes = [{"name": "t", "type": "time"}, {"name": "c", "type": "channel"}]
+    axes += [{"name": name, "type": "space", "unit": "micrometer"} for name in "zyx"]
+    scale = {"type": "scale", "scale": [1, 1, 1, 1, 1]}
+    (path / ".zgroup").write_text('{"zarr_format": 2}')
+    (path / ".zattrs").write_text(
+        json.dumps({"multiscales": [{"version": "0.4", "axes": axes, "datasets": [{"path": "0", "coordinateTransformations": [scale]}]}]})
+    )
+    return path
+
+
+# What the middle of the picture says, in the numbering of _numbered.
+READ_MIDDLE = """() => {
+  const display = window.viewer.display; display.draw();
+  const box = document.querySelector('.neuroglancer-rendered-data-panel').getBoundingClientRect();
+  const canvas = display.canvas.getBoundingClientRect();
+  const x = Math.round(box.left + box.width / 2 - canvas.left);
+  const y = Math.round(display.canvas.height - (box.top + box.height / 2 - canvas.top));
+  const pixel = new Uint8Array(4);
+  display.gl.readPixels(x, y, 1, 1, display.gl.RGBA, display.gl.UNSIGNED_BYTE, pixel);
+  return pixel[1] / 255 * 5000;
+}"""
+
+
+def test_the_sliders_show_the_plane_and_time_point_they_name(pages, tmp_path):
+    view = Viewer(ui="simple")
+    view.add(_numbered(tmp_path / "numbered.ome.zarr"), layer="numbered", window=(0, 5000), colours=["#ffffff"])
+    url = _shown(view)
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=1)
+        for t in range(3):
+            for z in range(4):
+                page.evaluate(
+                    f"() => {{ for (const [id, v] of [['#slider-t', {t}], ['#slider-z', {z}]]) {{"
+                    " const i = document.querySelector(id + ' input'); i.value = String(v); i.dispatchEvent(new Event('input')); } }"
+                )
+                time.sleep(0.3)  # the engine asks for the new plane's chunks on its next frame
+                pages.drawn(page, layers=1)
+                readings = page.evaluate(
+                    "() => ['#slider-t', '#slider-z'].map(id => document.querySelector(id + ' .reading').textContent)"
+                )
+                assert readings == [f"{t + 1} / 3", f"{z + 1} / 4"]
+                assert page.evaluate(READ_MIDDLE) == pytest.approx(1000 * (t + 1) + 200 * z, abs=30), (t, z)
         assert not errors, errors
         page.close()
     finally:

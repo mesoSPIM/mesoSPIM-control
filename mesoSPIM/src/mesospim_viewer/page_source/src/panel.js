@@ -386,7 +386,8 @@ function axisSlider(viewer, stage, axis, id) {
     const high = space.bounds.upperBounds[index];
     if (!Number.isFinite(low) || !Number.isFinite(high) || high - low <= 1) return null;
     // Bounds run from the first voxel's near edge to the last one's far edge
-    // (-0.5 .. n - 0.5); the slider steps through the voxel indices 0 .. n - 1.
+    // (-0.5 .. n - 0.5), so voxel i is centred on i and the slider steps
+    // through the voxel indices 0 .. n - 1.
     return { index, low: Math.round(low + 0.5), high: Math.round(high - 0.5) };
   };
   const reflect = () => {
@@ -395,7 +396,8 @@ function axisSlider(viewer, stage, axis, id) {
     if (found === null) return;
     input.min = String(found.low);
     input.max = String(found.high);
-    const value = Math.round(position.value[found.index] - 0.5);
+    // The voxel the engine draws: the one whose span holds the position.
+    const value = Math.floor(position.value[found.index] + 0.5);
     if (document.activeElement !== input) input.value = String(value);
     reading.textContent = `${value + 1} / ${found.high - found.low + 1}`;
   };
@@ -403,7 +405,7 @@ function axisSlider(viewer, stage, axis, id) {
     const found = where();
     if (found === null) return;
     const next = Float32Array.from(position.value);
-    next[found.index] = Number(input.value) + 0.5;
+    next[found.index] = Number(input.value);
     position.value = next;
   });
   position.changed.add(reflect);
