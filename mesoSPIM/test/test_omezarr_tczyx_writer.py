@@ -163,3 +163,75 @@ def test_the_plugin_registers_beside_the_mp_writer():
     assert isinstance(OMEZarrWriterMPTCZYX(), ImageWriter)
     assert OMEZarrWriterMPTCZYX.name() == 'MP_OME_Zarr_TCZYX_Writer'
     assert OMEZarrWriterMPTCZYX.file_names().IncludeChannel is False
+
+
+def test_the_fast_shard_writer_puts_a_stack_at_its_time_point_and_channel(tmp_path):
+    """The fast writer compresses and writes whole shards itself, which is what lets the
+    microscope save sharded OME-Zarr at full speed. A tczyx store holds one stack per time
+    point and channel, so the writer has to put each shard there and nowhere else."""
+    from zarr.codecs import BloscCodec
+    from mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriterMP.omezarr_writer import FastShardWriter
+
+    root = zarr.open_group(str(tmp_path / "tile.ome.zarr"), mode="w", zarr_format=3)
+    array = root.create_array(
+        name="0", shape=(2, 2, 8, 40, 24), chunks=(1, 1, 4, 16, 16), shards=(1, 1, 8, 32, 32),
+        dtype="uint16", compressors=[BloscCodec(cname="zstd", clevel=5)],
+    )
+    writer = FastShardWriter.for_array(array, lead=(1, 0))
+    assert writer is not None, "a sharded, compressed tczyx array takes the fast path"
+    assert writer.can_write(0, 8) and not writer.can_write(0, 4)
+
+    stack = np.arange(8 * 40 * 24, dtype=np.uint16).reshape(8, 40, 24)
+    writer.write(0, stack)
+
+    assert np.array_equal(array[1, 0], stack), "the stack is read back where it was written"
+    for t, c in ((0, 0), (0, 1), (1, 1)):
+        assert not array[t, c].any(), f"time point {t}, channel {c} is left untouched"
+
+
+def test_without_a_place_the_fast_shard_writer_refuses_a_tczyx_array(tmp_path):
+    """Written without a time point and channel, a shard would land in the wrong place."""
+    from zarr.codecs import BloscCodec
+    from mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriterMP.omezarr_writer import FastShardWriter
+
+    root = zarr.open_group(str(tmp_path / "tile.ome.zarr"), mode="w", zarr_format=3)
+    array = root.create_array(
+        name="0", shape=(2, 2, 8, 40, 24), chunks=(1, 1, 4, 16, 16), shards=(1, 1, 8, 32, 32),
+        dtype="uint16", compressors=[BloscCodec(cname="zstd", clevel=5)],
+    )
+    assert FastShardWriter.for_array(array) is None
+
+
+def test_a_sharded_tczyx_store_is_written_through_the_fast_shard_writer(tmp_path):
+    """Two channels of one time point, written as the writer process writes them but in one
+    process: each stack takes the fast path and is read back at its own channel."""
+    from zarr.codecs import BloscCodec
+    from mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriterMP.omezarr_writer import (
+        ChunkScheme, PyramidSpec,
+    )
+    from mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriterMP.omezarr_writer_tczyx import (
+        TCZYX, Live3DPyramidWriterTCZYX,
+    )
+
+    planes, y, x = 16, 64, 48
+    path = tmp_path / "Mag1_Tile0_Sh0_Rot0.ome.zarr"
+    stacks = {}
+    for c in (0, 1):
+        writer = Live3DPyramidWriterTCZYX(
+            PyramidSpec(z_size_estimate=planes, y=y, x=x, levels=2),
+            TCZYX(t=0, c=c, n_channels=2, channel_labels=("488", "561"), channel_colors=("00FF66", "FFBF1A")),
+            path=str(path), chunk_scheme=ChunkScheme(base=(8, 32, 32), target=(8, 32, 32)),
+            compressor=BloscCodec(cname="zstd", clevel=5), shard_shape=(8, 64, 64),
+            async_close=False, max_inflight_chunks=1,
+        )
+        assert writer.fast_writers[0] is not None, "level 0 takes the fast path"
+        rng = np.random.default_rng(c)
+        stacks[c] = rng.integers(0, 4000, size=(planes, y, x), dtype=np.uint16)
+        for plane in stacks[c]:
+            writer.push_slice(plane)
+        writer.close()
+
+    level0 = zarr.open_group(str(path), mode="r")["0"]
+    assert level0.shape == (1, 2, planes, y, x)
+    for c in (0, 1):
+        assert np.array_equal(level0[0, c], stacks[c]), f"channel {c} is read back as written"

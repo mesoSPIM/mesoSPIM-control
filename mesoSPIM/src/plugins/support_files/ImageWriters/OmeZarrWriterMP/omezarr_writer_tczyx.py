@@ -23,7 +23,7 @@ import zarr
 
 from . import omezarr_writer as base
 from .omezarr_writer import (
-    STORE_PATH, ChunkScheme, FlushPad, Live3DPyramidWriter, PyramidSpec,
+    STORE_PATH, ChunkScheme, FastShardWriter, FlushPad, Live3DPyramidWriter, PyramidSpec,
     _ensure_v2_compressor, ceil_div, compute_xy_only_levels, level_factors, lower_priority,
     pick_shards_for_level,
 )
@@ -241,10 +241,10 @@ class Live3DPyramidWriterTCZYX(Live3DPyramidWriter):
         )
 
         self.levels = spec.levels
-        # The parent can write whole shards straight to disk, but that shortcut does not know
-        # which time point and channel a stack belongs to. Every write here therefore goes
-        # through the StackWindows, which put it in its place.
-        self.fast_writers = [None] * self.levels
+        # Whole shards are compressed and written straight to disk, as the parent does, each
+        # at this stack's time point and channel. A store without that layout (zarr v2, or
+        # not sharded and compressed) has no fast writer and goes through the StackWindows.
+        self.fast_writers = [FastShardWriter.for_array(w.array, lead=(w.t, w.c)) for w in self.arrs]
         self.z_counts = [0] * self.levels
         self.buffers = [None] * self.levels
         self.buf_fill = [0] * self.levels

@@ -385,10 +385,14 @@ class FastShardWriter:
     Only used when the array is sharded with codecs [bytes(little), blosc] and index codecs
     [bytes(little), crc32c] at the end -- what init_ome_zarr creates when compression is set --
     and only for slabs that cover whole shards in z. Everything else goes through zarr.
+
+    An array may have leading axes before (z, y, x), such as the time point and channel of a
+    tczyx store. Each shard is then one step deep along them, and `lead` says which step a
+    writer writes to, so every shard lands at its own time point and channel.
     """
 
     @classmethod
-    def for_array(cls, arr):
+    def for_array(cls, arr, lead=()):
         try:
             from zarr.codecs import BytesCodec, Crc32cCodec
             from zarr.codecs.sharding import ShardingCodecIndexLocation
@@ -406,16 +410,22 @@ class FastShardWriter:
                 return None
             if sc.index_location != ShardingCodecIndexLocation.end or np.dtype(arr.dtype) != np.dtype('<u2'):
                 return None
-            return cls(arr, sc)
+            n = len(lead)
+            if arr.ndim != 3 + n:
+                return None
+            if any(s != 1 for s in tuple(arr.shards)[:n]) or any(c != 1 for c in tuple(sc.chunk_shape)[:n]):
+                return None
+            return cls(arr, sc, lead)
         except Exception:
             return None
 
-    def __init__(self, arr, sharding_codec):
+    def __init__(self, arr, sharding_codec, lead=()):
         from crc32c import crc32c
         self._crc32c = crc32c
         self.arr = arr
-        self.shard = tuple(arr.shards)
-        self.chunk = tuple(sharding_codec.chunk_shape)
+        self.lead = tuple(lead)
+        self.shard = tuple(arr.shards)[len(self.lead):]
+        self.chunk = tuple(sharding_codec.chunk_shape)[len(self.lead):]
         self.cps = tuple(s // c for s, c in zip(self.shard, self.chunk))  # chunks per shard
         self.blosc = sharding_codec.codecs[1]._blosc_codec
         self.fill = arr.metadata.fill_value
@@ -432,7 +442,7 @@ class FastShardWriter:
         return self.blosc.encode(np.ascontiguousarray(view).view(np.uint8).reshape(-1))
 
     def write(self, z0: int, buf3d: np.ndarray):
-        _, Y, X = self.arr.shape
+        Y, X = self.arr.shape[-2:]
         shz, shy, shx = self.shard
         chz, chy, chx = self.chunk
         iz = z0 // shz
@@ -462,7 +472,7 @@ class FastShardWriter:
                 offset += len(data)
             index_bytes = index.tobytes()
             crc = np.uint32(self._crc32c(index_bytes)).astype('<u4').tobytes()
-            path = self.dir / self.arr.metadata.encode_chunk_key((iz, sy, sx))
+            path = self.dir / self.arr.metadata.encode_chunk_key(self.lead + (iz, sy, sx))
             path.parent.mkdir(parents=True, exist_ok=True)
             tmp = path.with_name(path.name + '.partial')
             with open(tmp, 'wb') as f:
