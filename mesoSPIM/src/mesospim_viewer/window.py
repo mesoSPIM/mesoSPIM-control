@@ -140,7 +140,7 @@ def make_window_class():
                 try:
                     self.opened.add(path)
                 except (NotAStore, OSError) as why:
-                    refused.append(str(why))
+                    refused.append(refusal(path, why))
             self.viewer.say("\n".join(refused))
 
         def closeEvent(self, event) -> None:  # noqa: N802 -- Qt's name
@@ -149,6 +149,18 @@ def make_window_class():
             super().closeEvent(event)
 
     return DataViewerWindow
+
+
+def refusal(path: Path, error: Exception) -> str:
+    """One short sentence saying why a dropped folder was not shown, naming only the folder.
+
+    A store the viewer recognises but cannot show says why in a few words; for
+    anything else it is enough to know that the folder is not one the viewer opens.
+    """
+    reason = getattr(error, "reason", None)
+    if reason:
+        return f"{path.name} can't be shown: {reason}."
+    return f"{path.name} isn't an OME-Zarr folder the viewer can open."
 
 
 def _local_paths(mime) -> list[Path]:

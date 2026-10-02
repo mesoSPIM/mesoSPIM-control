@@ -291,11 +291,11 @@ def test_a_remove_request_and_a_message_pass_between_page_and_python(tiles):
         assert answer["notice"] == {"text": "", "count": 0}
 
         view.on_remove(removed.append)
-        view.say("tile_9.ome.zarr was not opened: it holds no image.")
+        view.say("tile_9.ome.zarr isn't an OME-Zarr folder the viewer can open.")
         status, _, body = _get(f"{url}api/state?since={answer['version']}&wait=5")
         answer = json.loads(body)
         assert answer["ui"]["removable"] is True
-        assert answer["notice"] == {"text": "tile_9.ome.zarr was not opened: it holds no image.", "count": 1}
+        assert answer["notice"] == {"text": "tile_9.ome.zarr isn't an OME-Zarr folder the viewer can open.", "count": 1}
 
         request = urllib.request.Request(
             f"{url}api/remove",

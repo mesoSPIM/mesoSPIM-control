@@ -44,6 +44,19 @@ def channel_of(store: Store) -> Channel | None:
     return None
 
 
+def free_name(viewer: Viewer, name: str) -> str:
+    """``name``, or, when the viewer already shows something under it, a numbered one.
+
+    Two acquisitions of the same name -- the same sample on two days, say -- are
+    then two blocks in the panel, never one block mixing both.
+    """
+    free, number = name, 1
+    while free in viewer.layers:
+        number += 1
+        free = f"{name} ({number})"
+    return free
+
+
 def _is_zarr_group(path: Path) -> bool:
     return path.is_dir() and ((path / "zarr.json").is_file() or (path / ".zgroup").is_file())
 
@@ -213,6 +226,8 @@ class Follower:
         # acquisition is the current one, and the dropdown says so.
         self.live = live
         self.listed: list[Acquisition] = []
+        # Acquisitions the operator took off the view: left out of the dropdown.
+        self.removed: set[Path] = set()
         self.watcher: Watcher | None = None
         self.following = True
         self._offered: tuple[tuple[str, ...], int] | None = None
@@ -240,7 +255,7 @@ class Follower:
     def poll(self) -> bool:
         """One look at the disk; True when the list of acquisitions changed."""
         with self._lock:
-            listed = self.acquisitions.list()
+            listed = [a for a in self.acquisitions.list() if a.path not in self.removed]
             relisted = [a.path for a in listed] != [a.path for a in self.listed]
             self.listed = listed
             if self.following and listed and self.shown != listed[0].path:
@@ -256,7 +271,9 @@ class Follower:
                 if self.watcher.acquisition == acquisition.path:
                     return
                 self.watcher.forget()
-            self.watcher = Watcher(self.viewer, acquisition.path)
+            self.watcher = Watcher(
+                self.viewer, acquisition.path, layer=free_name(self.viewer, acquisition.name)
+            )
             self.watcher.poll()
             self.viewer.fit()
             self._offer()
@@ -272,18 +289,26 @@ class Follower:
         self.following = True
         self.poll()
 
-    def put_away(self) -> None:
+    def remove_shown(self) -> None:
         """Take the acquisition shown off the viewer, as its remove button asks.
 
-        The dropdown stays, with nothing picked in it, so picking any entry shows
-        that acquisition again.
+        It leaves the dropdown too, and the next acquisition down is shown in its
+        place, or the one above when it was the last, so the view is not left
+        empty while the dropdown still offers something.
         """
         with self._lock:
-            if self.watcher is not None:
+            at = self.shown_index
+            if self.watcher is None or at == -1:
+                return
+            self.removed.add(self.listed[at].path)
+            del self.listed[at]
+            self.following = False
+            if self.listed:
+                self.show(self.listed[min(at, len(self.listed) - 1)])
+            else:
                 self.watcher.forget()
                 self.watcher = None
-            self.following = False
-            self._offer()
+                self._offer()
 
     def _offer(self) -> None:
         """The dropdown in the panel: the session's acquisitions, and the one shown."""
@@ -344,7 +369,12 @@ class Opened:
         """
         path = Path(path).expanduser()
         with self._lock:
-            store = _is_store(path)
+            try:
+                store = read_store(path)
+            except NotSupported:
+                raise  # an image in a form this viewer does not read: the error says which
+            except NotAStore as why:
+                store, unreadable = None, why  # not one image: a folder of them, looked at below
             if store is not None:
                 name = self._name_for(path)
                 self.viewer.add(path, layer=name, channel=channel_of(store))
@@ -360,6 +390,8 @@ class Opened:
                 return [name]
             for tile in watcher.stores():
                 read_store(tile)  # none could be shown: the first one's error says why
+            if unreadable.reason:
+                raise unreadable  # a store, but a broken one
             raise NotAStore(
                 f"{path} is not a dataset the viewer can open. Pick a .ome.zarr folder "
                 "(one tile, or one acquisition holding tiles), or a folder holding acquisitions."
@@ -370,7 +402,7 @@ class Opened:
         with self._lock:
             follower = self.follower
             if follower is not None and follower.watcher is not None and follower.watcher.layer_name == name:
-                follower.put_away()
+                follower.remove_shown()
                 return True
             self.shown.pop(name, None)
             return self.viewer.remove(name)
@@ -380,12 +412,7 @@ class Opened:
         for name, held in self.shown.items():
             if held == path:
                 return name
-        base = Acquisition(path, 0).name
-        name, number = base, 1
-        while name in self.viewer.layers:
-            number += 1
-            name = f"{base} ({number})"
-        return name
+        return free_name(self.viewer, Acquisition(path, 0).name)
 
 
 def _is_store(path: Path) -> Store | None:

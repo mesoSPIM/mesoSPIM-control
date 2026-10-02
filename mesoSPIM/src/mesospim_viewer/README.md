@@ -49,10 +49,16 @@ added). Every folder is added to what is shown, never in its place: each tile
 sits where its own metadata puts it, channels of the same name share one
 contrast row within each acquisition, and time points join the time slider.
 Each acquisition gets its own block in the panel, with a **remove** button
-that takes it off the view again; a folder dropped twice is shown once, and a
-second acquisition with the same name as one already shown is numbered,
-`run_a (2)`. A folder the viewer cannot read does not stop the others: the
-window says in a sentence on the picture why it was not opened. The live window
+that takes it off the view again. Removing the acquisition picked in the
+dropdown (a window opened on a folder of acquisitions) takes it out of the
+dropdown as well and shows the next one down, or the one above when it was the
+last. A folder dropped twice is shown once, and a second acquisition with the
+same name as one already shown, dropped or picked in the dropdown, is numbered,
+`run_a (2)`. A folder the viewer cannot read does not stop the others: one
+short sentence on the picture names it and says why, such as "notes isn't an
+OME-Zarr folder the viewer can open." or, for a store it recognises but cannot
+show, "newer.ome.zarr can't be shown: it is OME-NGFF 0.6, which the viewer does
+not read yet." The live window
 refuses drops and has no remove buttons, so what it shows is always what the
 microscope is writing. In Qt a page never learns the paths of files dropped
 onto it, so the window takes the drop itself (`Opened.add` and

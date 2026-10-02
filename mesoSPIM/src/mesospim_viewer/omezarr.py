@@ -61,7 +61,15 @@ class NotAStore(ValueError):
     arrays are chunked or sharded is not looked at, but for a quick picture a
     chunk should hold one time point of one channel, as the acquisition software
     writes them.
+
+    ``reason`` is set where the folder is recognised as an OME-Zarr store but
+    cannot be shown: why, in a few words without the path, for a sentence that
+    names the folder itself. It is None for a folder that is no store at all.
     """
+
+    def __init__(self, message: str, reason: str | None = None) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class NotSupported(NotAStore):
@@ -225,11 +233,14 @@ def _check_axes(root: Path, axes: tuple[Axis, ...]) -> None:
     if names != in_order or not {"z", "y", "x"} <= set(names):
         raise NotSupported(
             f"{root} declares axes {names}; accepted are {list(AXES)} or some of them, "
-            "in that order, always with z, y and x"
+            "in that order, always with z, y and x",
+            reason=f"its axes are {', '.join(names)}, not t, c, z, y, x or some of them in that order",
         )
     for axis in axes:
         if axis.name == "c" and axis.type != "channel":
-            raise NotSupported(f"{root}: axis c must be of type 'channel'")
+            raise NotSupported(
+                f"{root}: axis c must be of type 'channel'", reason="its axis c is not of type channel"
+            )
 
 
 def read_store(path: str | Path) -> Store:
@@ -247,7 +258,9 @@ def read_store(path: str | Path) -> Store:
     else:
         raise NotAStore(f"{root} holds neither zarr.json nor .zattrs")
     if not isinstance(attrs, dict):
-        raise NotAStore(f"{root}: the store's attributes could not be read")
+        raise NotAStore(
+            f"{root}: the store's attributes could not be read", reason="its metadata could not be read"
+        )
 
     ome = attrs.get("ome") if isinstance(attrs.get("ome"), dict) else attrs
     multiscales = ome.get("multiscales")
@@ -260,12 +273,15 @@ def read_store(path: str | Path) -> Store:
         # page is built on (2.41) does not read it yet, so neither does this viewer.
         raise NotSupported(
             f"{root} is OME-NGFF {version}, which this viewer does not read yet; "
-            "accepted are 0.4 on zarr v2 and 0.5 on zarr v3"
+            "accepted are 0.4 on zarr v2 and 0.5 on zarr v3",
+            reason=f"it is OME-NGFF {version}, which the viewer does not read yet",
         )
     if VERSIONS.get(version) != fmt:
         raise NotSupported(
             f"{root} is OME-NGFF {version or 'of no stated version'!s} on {fmt}; "
-            "accepted are 0.4 on zarr v2 and 0.5 on zarr v3"
+            "accepted are 0.4 on zarr v2 and 0.5 on zarr v3",
+            reason=f"it is OME-NGFF {version or 'of no stated version'!s} on {fmt}, "
+            "not 0.4 on zarr v2 or 0.5 on zarr v3",
         )
 
     axes = tuple(
@@ -281,7 +297,9 @@ def read_store(path: str | Path) -> Store:
     rank = len(axes)
     datasets = multiscale.get("datasets")
     if not isinstance(datasets, list) or not datasets or not isinstance(datasets[0], dict):
-        raise NotSupported(f"{root}: the multiscale names no datasets")
+        raise NotSupported(
+            f"{root}: the multiscale names no datasets", reason="its metadata names no image data"
+        )
     level0 = datasets[0]
     inner_scale, inner_translation = _transforms(rank, level0.get("coordinateTransformations"))
     outer_scale, outer_translation = _transforms(rank, multiscale.get("coordinateTransformations"))
@@ -293,7 +311,10 @@ def read_store(path: str | Path) -> Store:
     level_path = root / str(level0.get("path", "0"))
     shape = _array_shape(level_path)
     if shape is None or len(shape) != rank:
-        raise NotSupported(f"{root}: level {level0.get('path', '0')!s} has no readable array shape")
+        raise NotSupported(
+            f"{root}: level {level0.get('path', '0')!s} has no readable array shape",
+            reason="its image data could not be read",
+        )
 
     omero = ome.get("omero", attrs.get("omero"))
     channels = _omero_channels(omero)

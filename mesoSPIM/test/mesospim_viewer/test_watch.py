@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from pathlib import Path
@@ -268,15 +269,38 @@ def test_dropped_folders_are_added_beside_what_is_shown(tmp_path):
         write_tile(newer / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 4000), seed=7)
         assert opened.add(both) == ["run_c", "run_d"]
 
-        # What cannot be shown says why, and leaves what is shown alone.
+        # What cannot be shown says why, in one short sentence naming only the
+        # folder, and leaves what is shown alone.
+        from mesoSPIM.src.mesospim_viewer.window import refusal
+
+        def refused(path):
+            with pytest.raises(NotAStore) as caught:
+                opened.add(path)
+            return refusal(path, caught.value)
+
         (tmp_path / "notes").mkdir()
-        with pytest.raises(NotAStore, match="not a dataset the viewer can open"):
-            opened.add(tmp_path / "notes")
+        assert refused(tmp_path / "notes") == "notes isn't an OME-Zarr folder the viewer can open."
         broken = tmp_path / "broken.ome.zarr"
         broken.mkdir()
         (broken / ".zattrs").write_text("{not json")
-        with pytest.raises(NotAStore, match="broken.ome.zarr is not a dataset the viewer can open"):
-            opened.add(broken)
+        assert refused(broken) == "broken.ome.zarr can't be shown: its metadata could not be read."
+        newer_format = write_tile(tmp_path / "newer.ome.zarr", origin_um=(0, 0, 0), seed=8)
+        attrs = json.loads((newer_format / ".zattrs").read_text())
+        attrs["multiscales"][0]["version"] = "0.6"
+        (newer_format / ".zattrs").write_text(json.dumps(attrs))
+        assert refused(newer_format) == (
+            "newer.ome.zarr can't be shown: it is OME-NGFF 0.6, which the viewer does not read yet."
+        )
+        # An acquisition whose tiles cannot be read says why its tiles could not.
+        odd = an_acquisition(tmp_path / "odd", "run_x")
+        attrs["multiscales"][0]["version"] = "0.4"
+        attrs["multiscales"][0]["axes"][1]["type"] = "space"
+        tile = write_tile(odd / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=9)
+        (tile / ".zattrs").write_text(json.dumps(attrs))
+        assert refused(odd) == "run_x.ome.zarr can't be shown: its axis c is not of type channel."
+        assert refusal(tmp_path / "gone", OSError("no such folder")) == (
+            "gone isn't an OME-Zarr folder the viewer can open."
+        )
         assert view.layers == ["run_a", "run_b", "single", "run_a (2)", "run_c", "run_d"]
     finally:
         view.stop()
@@ -305,19 +329,29 @@ def test_the_remove_button_takes_one_acquisition_off_the_view(tmp_path):
     finally:
         view.stop()
 
-    # In a folder of acquisitions, removing the one picked in the dropdown leaves
-    # the dropdown with nothing picked; picking an entry shows it again.
-    older = an_acquisition(tmp_path / "session", "run_c")
-    write_tile(older / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=3)
+    # In a folder of acquisitions, removing the one picked in the dropdown takes it
+    # out of the dropdown and shows the next one down, or the one above when it
+    # was the last; the dropdown empties only when none remain.
+    session = tmp_path / "session"
+    for seed, name in enumerate(["run_c", "run_d", "run_e"]):
+        write_tile(an_acquisition(session, name) / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=seed)
+        time.sleep(0.05)
     view = Viewer()
     try:
-        opened = Opened(view, tmp_path / "session")
+        opened = Opened(view, session)
+        choices = lambda: view._server.scene.choices
+        assert view.layers == ["run_e"]
+        assert opened.remove("run_e") is True
+        assert view.layers == ["run_d"]
+        assert choices() == {"names": ["run_d", "run_c"], "current": 0, "live": False}
+        view._server.choice_reported({"index": 1})
         assert view.layers == ["run_c"]
         assert opened.remove("run_c") is True
+        assert view.layers == ["run_d"]
+        assert choices() == {"names": ["run_d"], "current": 0, "live": False}
+        assert opened.remove("run_d") is True
         assert view.layers == []
-        assert view._server.scene.choices == {"names": ["run_c"], "current": -1, "live": False}
-        view._server.choice_reported({"index": 0})
-        assert view.layers == ["run_c"]
+        assert choices() == {"names": [], "current": -1, "live": False}
     finally:
         view.stop()
 
@@ -328,6 +362,35 @@ def test_the_remove_button_takes_one_acquisition_off_the_view(tmp_path):
 
         Follower(view, tmp_path / "session").poll()
         assert view._server.scene.ui.get("removable") is None
+    finally:
+        view.stop()
+
+
+def test_the_dropdown_numbers_an_acquisition_whose_name_a_drop_already_shows(tmp_path):
+    from mesoSPIM.src.mesospim_viewer import Opened
+
+    session = tmp_path / "session"
+    older = an_acquisition(session, "run_a")
+    write_tile(older / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=1)
+    time.sleep(0.05)
+    newer = an_acquisition(session, "run_b")
+    write_tile(newer / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 500), seed=2)
+    dropped = an_acquisition(tmp_path / "day1", "run_a")
+    write_tile(dropped / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 1000), seed=3)
+
+    view = Viewer()
+    try:
+        opened = Opened(view, session)
+        assert opened.add(dropped) == ["run_a"]
+        # The dropdown's run_a is a different acquisition: it gets a block of its own.
+        view._server.choice_reported({"index": 1})
+        assert view.layers == ["run_a", "run_a (2)"]
+        assert view.stores("run_a")[0].path.parent == dropped
+        assert view.stores("run_a (2)")[0].path.parent == older
+        # Its remove button is the dropdown's: the next one down is shown instead.
+        assert opened.remove("run_a (2)") is True
+        assert view.layers == ["run_a", "run_b"]
+        assert view._server.scene.choices["names"] == ["run_b"]
     finally:
         view.stop()
 
@@ -526,7 +589,7 @@ def test_folders_dropped_on_the_window_are_added_and_can_be_removed(tmp_path, qt
         assert _drag(qt, window, [second, tmp_path / "notes"]) == (True, True)
         both = _page_until(qt, view, lambda s: s["groups"] == ["run_a", "run_b"] and s["x"] > 500)
         assert window.viewer.layers == ["run_a", "run_b"]
-        assert both["notice"] is not None and "notes is not a dataset the viewer can open" in both["notice"]
+        assert both["notice"] == "notes isn't an OME-Zarr folder the viewer can open."
         # Overview mode: the view zoomed out to frame both acquisitions.
         assert both["x"] == pytest.approx((0 + 1160) / 2, abs=2)
         assert both["zoom"] > alone["zoom"] * 3

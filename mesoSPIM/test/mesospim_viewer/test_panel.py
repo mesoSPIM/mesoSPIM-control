@@ -533,14 +533,14 @@ def test_each_acquisition_has_a_remove_button_where_python_takes_removals(pages,
 
         # A message from Python is shown on the picture, and can be closed.
         notice = "() => { const n = document.querySelector('#notice'); return n && !n.hidden ? n.querySelector('.text').textContent : null; }"
-        view.say("notes was not opened: it is not a dataset the viewer can open.")
-        assert _until(page, notice, "notes was not opened: it is not a dataset the viewer can open.") == (
-            "notes was not opened: it is not a dataset the viewer can open."
+        view.say("notes isn't an OME-Zarr folder the viewer can open.")
+        assert _until(page, notice, "notes isn't an OME-Zarr folder the viewer can open.") == (
+            "notes isn't an OME-Zarr folder the viewer can open."
         )
         page.click("#notice .close")
         assert page.evaluate(notice) is None
-        view.say("notes was not opened: it is not a dataset the viewer can open.")
-        assert _until(page, notice, "notes was not opened: it is not a dataset the viewer can open.") is not None
+        view.say("notes isn't an OME-Zarr folder the viewer can open.")
+        assert _until(page, notice, "notes isn't an OME-Zarr folder the viewer can open.") is not None
         view.say("")
         assert _until(page, notice, None) is None
         assert not errors, errors
