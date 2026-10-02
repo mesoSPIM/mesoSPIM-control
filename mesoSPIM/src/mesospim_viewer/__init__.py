@@ -1,6 +1,6 @@
 """A small neuroglancer view for the mesoSPIM control software.
 
-Stdlib-only Python that serves a handful of OME-Zarr stores to a native
+Python that serves a handful of OME-Zarr stores to a native
 neuroglancer page, places them by transform, mixes each store's channels in one
 layer, and reports the camera back. See README.md beside this file.
 """

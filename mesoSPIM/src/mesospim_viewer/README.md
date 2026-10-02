@@ -76,8 +76,9 @@ Both live in `page_source/scripts/neuroglancer.mjs`, and are applied while the
 page is built, never to the installed engine, so building twice makes the same
 page. Nothing else is patched.
 
-Left out, on purpose: live refresh and growth patches, contrast measured in
-Python (the engine's own histogram does it), the composed `.zmartview.zarr`
+Left out, on purpose: live refresh and growth patches, contrast measured over
+the whole dataset (one coarse sample sets the start, the engine's own histogram
+does the rest), the composed `.zmartview.zarr`
 picture, baking, publication and revision bookkeeping, the React interface,
 and every server route but three.
 
@@ -121,7 +122,17 @@ the other stores or the operator's adjustments.
 Placement reads the store's own `scale` and `translation` (per-dataset and
 multiscale-level transformations composed the way the format says). The
 `omero` block, when present, names and colours the channels and sets their
-starting window; `add()` can override all three.
+starting window; `add()` can override all three. A channel left without a
+window -- the acquisition software's writers leave it out -- would otherwise
+start on the whole 0..65535 range, where a camera's few thousand counts look
+black. Such a channel's window is measured once from its data instead, as the
+Min-Max button would set it: the darkest and brightest voxel of the coarsest
+copy in the first store that holds data, through up to 16 planes of its first
+time point (`sample_window()`, with the `zarr` package mesoSPIM-control already
+installs). In the live window a store the microscope has only just begun is
+measured again as data lands, and a channel that arrives later is measured on
+its own. The window is then left alone, so the picture keeps its brightness
+while tiles land.
 
 `read_store()` raises `NotAStore` with a plain reason for anything else.
 

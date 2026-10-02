@@ -8,13 +8,14 @@ the page is not built or no browser is available.
 from __future__ import annotations
 
 import json
+import re
 import time
 import urllib.request
 
 import pytest
 
 from mesoSPIM.src.mesospim_viewer import Channel, NotAStore, Viewer, channel_shader, read_store
-from mesoSPIM.src.mesospim_viewer.demo import write_tile
+from mesoSPIM.src.mesospim_viewer.demo import write_store, write_tile
 
 # -- reading a store -------------------------------------------------------------
 
@@ -523,3 +524,94 @@ def test_a_tile_among_others_draws_as_it_does_alone(pages, tiles):
             assert among[i][channel] == pytest.approx(alone[i][channel], abs=3.0), (
                 f"block {i}: alone {alone[i]}, among others {among[i]}"
             )
+
+
+# -- the contrast on opening -----------------------------------------------------
+
+
+def _range(layer: dict) -> tuple[float, float] | None:
+    """The black and white points a layer's shader starts from, or None."""
+    found = re.search(r"range=\[([-\d.e+]+), ([-\d.e+]+)\]", layer["shader"])
+    return (float(found.group(1)), float(found.group(2))) if found else None
+
+
+def _empty(store) -> None:
+    """Take every chunk out of a store, as when the writer has only just made it."""
+    for level in store.iterdir():
+        if level.is_dir():
+            for chunk in level.iterdir():
+                if not chunk.name.startswith("."):
+                    chunk.unlink()
+
+
+def test_without_a_window_in_the_store_the_contrast_is_set_from_the_data(tmp_path):
+    store = write_store(tmp_path / "plain.ome.zarr", axes="tczyx")  # an omero block, no window
+    assert all(channel.window is None for channel in read_store(store).channels)
+    view = Viewer()
+    try:
+        view.add(store, layer="run")
+        windows = [_range(layer) for layer in view.state["layers"]]
+    finally:
+        view.stop()
+    # The pretend cells sit on a ground of 400 and peak at 12400 in each channel; the
+    # coarsest copy of the image averages the peaks down a little.
+    for low, high in windows:
+        assert low == 400.0
+        assert 2000.0 < high <= 12400.0
+
+
+def test_a_window_in_the_store_wins(tiles):
+    view = Viewer()
+    try:
+        view.add(tiles[0], layer="run")
+        assert [_range(layer) for layer in view.state["layers"]] == [(380.0, 12400.0)] * 2
+    finally:
+        view.stop()
+
+
+def test_a_store_without_data_yet_gets_its_contrast_once_data_lands(tmp_path):
+    store = write_store(tmp_path / "landing.ome.zarr", axes="tczyx")
+    _empty(store)
+    view = Viewer()
+    try:
+        view.add(store, layer="run")
+        assert [_range(layer) for layer in view.state["layers"]] == [None, None]
+        write_store(store, axes="tczyx")
+        view.add(store, layer="run")  # what the watcher does when the store has grown
+        first = [_range(layer) for layer in view.state["layers"]]
+        assert all(window is not None and window[0] == 400.0 for window in first)
+        # Decided once: a brighter tile landing later does not move it.
+        bright = write_store(tmp_path / "bright.ome.zarr", axes="tczyx", seed=5)
+        _scale(bright, 4)
+        view.add(bright, layer="run")
+        assert [_range(layer) for layer in view.state["layers"]] == first
+    finally:
+        view.stop()
+
+
+def test_a_channel_arriving_later_gets_its_own_contrast(tmp_path):
+    view = Viewer()
+    try:
+        green = write_store(tmp_path / "t0_488.ome.zarr", axes="zyx", channel=0)
+        view.add(green, layer="run", channel=read_store(green).channels[0])
+        assert [_range(layer) is not None for layer in view.state["layers"]] == [True]
+        magenta = write_store(tmp_path / "t0_561.ome.zarr", axes="zyx", channel=1)
+        _scale(magenta, 2)
+        view.add(magenta, layer="run", channel=read_store(magenta).channels[0])
+        green_window, magenta_window = [_range(layer) for layer in view.state["layers"]]
+        assert magenta_window[0] == 800.0 and magenta_window[1] > green_window[1]
+    finally:
+        view.stop()
+
+
+def _scale(store, factor: int) -> None:
+    """Multiply every voxel of a pretend uncompressed store by ``factor``."""
+    import numpy as np
+
+    for level in store.iterdir():
+        if not level.is_dir():
+            continue
+        for chunk in level.rglob("*"):
+            if chunk.is_file() and not chunk.name.startswith(".") and chunk.name != "zarr.json":
+                data = np.frombuffer(chunk.read_bytes(), dtype="<u2") * factor
+                chunk.write_bytes(data.astype("<u2").tobytes())

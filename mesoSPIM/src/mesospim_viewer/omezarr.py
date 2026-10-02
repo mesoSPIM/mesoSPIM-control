@@ -1,18 +1,25 @@
-"""The little a viewer needs to know about an OME-Zarr store, read with the
-standard library only.
+"""The little a viewer needs to know about an OME-Zarr store.
 
 Neuroglancer reads the store itself; this module reads just enough of the same
 metadata to *place* the store (its axes, voxel size and translation) and to
-*name* its channels (the ``omero`` block, when there is one). Both OME-Zarr
-generations are read: 0.4 on zarr v2 (``.zattrs``) and 0.5 on zarr v3
-(``zarr.json``).
+*name* its channels (the ``omero`` block, when there is one), with the standard
+library only. Both OME-Zarr generations are read: 0.4 on zarr v2 (``.zattrs``)
+and 0.5 on zarr v3 (``zarr.json``).
+
+One thing reads image data: :func:`sample_window`, for a channel whose store
+gives no contrast window, looks at a small coarse sample of its pixels. It uses
+the ``zarr`` package mesoSPIM-control writes its stores with, and does without
+when it is missing.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # OME axis unit spellings, and what neuroglancer turns them into: a base SI unit
 # and a factor. Mirrors OME_UNITS in neuroglancer's datasource/zarr/ome.js.
@@ -103,6 +110,7 @@ class Store:
     translation: tuple[float, ...]  # level 0, per axis, in the written unit
     shape: tuple[int, ...]  # level 0
     channels: tuple[Channel, ...]
+    levels: tuple[str, ...] = ()  # the pyramid's array paths, finest first
 
     @property
     def name(self) -> str:
@@ -297,4 +305,59 @@ def read_store(path: str | Path) -> Store:
         translation=tuple(translation),
         shape=tuple(shape),
         channels=tuple(channels),
+        levels=tuple(
+            str(dataset.get("path", index))
+            for index, dataset in enumerate(datasets)
+            if isinstance(dataset, dict)
+        ),
     )
+
+
+# How many planes of the coarsest copy are looked at to set a channel's contrast.
+SAMPLE_PLANES = 16
+
+
+def sample_window(store: Store, channel: int | None = None) -> tuple[float, float] | None:
+    """The darkest and brightest value of one channel, in a small coarse sample.
+
+    For a channel whose store gives no contrast window: the writers of the
+    acquisition software leave it out, and the engine's default of the whole
+    0..65535 range shows a camera's few thousand counts as nearly black. The
+    sample is what the operator's Min-Max button would find on a picture of the
+    whole stack: the coarsest copy in the store's pyramid, at the first time
+    point, through up to ``SAMPLE_PLANES`` planes spread over the depth.
+
+    ``channel`` is the index along the store's channel axis (None for a store
+    without one). Voxels still at the array's fill value have not been written
+    yet and are left out, so a store the microscope has only just begun gives
+    None, as does one whose sample is flat or that cannot be read; the caller
+    asks again when more has landed.
+    """
+    try:
+        import numpy as np
+        import zarr
+    except ImportError:
+        logger.info("zarr is not installed: the contrast of %s is not set from its data", store.path)
+        return None
+    level = store.levels[-1] if store.levels else "0"
+    try:
+        array = zarr.open_array(store=str(store.path / level), mode="r")
+        selection = []
+        for axis, length in zip(store.axes, array.shape):
+            if axis.name == "t":
+                selection.append(0)
+            elif axis.is_channel:
+                selection.append(channel or 0)
+            elif axis.name == "z" and length > SAMPLE_PLANES:
+                selection.append(np.linspace(0, length - 1, SAMPLE_PLANES).round().astype(int))
+            else:
+                selection.append(slice(None))
+        sample = np.asarray(array.get_orthogonal_selection(tuple(selection)))
+    except Exception as error:  # noqa: BLE001 -- a store being written may be half there
+        logger.debug("no contrast sample from %s: %s", store.path, error)
+        return None
+    written = sample[sample != array.fill_value] if array.fill_value is not None else sample
+    if written.size == 0:
+        return None
+    low, high = float(written.min()), float(written.max())
+    return (low, high) if high > low else None

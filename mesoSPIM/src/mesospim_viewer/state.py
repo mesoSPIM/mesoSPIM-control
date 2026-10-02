@@ -14,7 +14,7 @@ have a word for.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from .omezarr import Channel, Store
 
@@ -162,6 +162,10 @@ class Layer:
     It becomes one engine layer per channel. ``revision`` is bumped when a store
     on disk has grown, so the page re-reads it; the page strips it before the
     engine sees the layer.
+
+    ``measured`` holds, by channel label, the contrast window measured from the
+    data for a channel that was given none (see :func:`omezarr.sample_window`).
+    A window given by the store or by the caller always comes first.
     """
 
     name: str
@@ -169,6 +173,31 @@ class Layer:
     channels: list[Channel] | None = None
     visible: bool = True
     revision: int = 0
+    measured: dict[str, tuple[float, float]] = field(default_factory=dict)
+
+    def unwindowed(self, placement: Placement) -> list[tuple[str, int | None]]:
+        """The channels of this layer that ``placement``'s store holds and that have no
+        contrast window yet: each as its label and its index along the store's channel
+        axis (None for a store without one)."""
+        store = placement.store
+        if placement.channel is not None:
+            label = placement.channel.label
+            shown = next(p.channel for p in self.placements if p.channel and p.channel.label == label)
+            if shown.window is not None or label in self.measured:
+                return []
+            return [(label, 0 if store.channel_axis is not None else None)]
+        wanting = []
+        for index, channel in enumerate(channels_for(self.placements[0].store, self.channels)):
+            if index >= store.channel_count or channel.window is not None:
+                continue
+            if channel.label not in self.measured:
+                wanting.append((channel.label, index if store.channel_axis is not None else None))
+        return wanting
+
+    def _windowed(self, channel: Channel) -> Channel:
+        if channel.window is not None or channel.label not in self.measured:
+            return channel
+        return replace(channel, window=self.measured[channel.label])
 
     def to_json(self) -> list[dict]:
         if not self.placements:
@@ -178,7 +207,9 @@ class Layer:
         first = self.placements[0].store
         sources = [source_json(placement) for placement in self.placements]
         return [
-            self._engine_layer(channel, sources, index if first.channel_axis is not None else None)
+            self._engine_layer(
+                self._windowed(channel), sources, index if first.channel_axis is not None else None
+            )
             for index, channel in enumerate(channels_for(first, self.channels))
         ]
 
@@ -210,7 +241,7 @@ class Layer:
             sources = [source_json(placement) for placement in placements]
             # A store that has a channel axis of its own holds this channel at index 0.
             pinned = 0 if placements[0].store.channel_axis is not None else None
-            layers.append(self._engine_layer(shown, sources, pinned))
+            layers.append(self._engine_layer(self._windowed(shown), sources, pinned))
         return layers
 
     def _engine_layer(self, channel: Channel, sources: list[dict], pinned: int | None) -> dict:

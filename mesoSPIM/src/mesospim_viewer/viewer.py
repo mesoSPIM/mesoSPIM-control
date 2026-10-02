@@ -20,7 +20,7 @@ import webbrowser
 from pathlib import Path
 from typing import Callable
 
-from .omezarr import Channel, Store, read_store
+from .omezarr import Channel, Store, read_store, sample_window
 from .server import ViewServer
 from .state import LAYOUTS, Layer, Placement, state_json
 
@@ -34,6 +34,15 @@ def read_again(placement: Placement) -> Placement:
         origin=placement.origin,
         channel=placement.channel,
     )
+
+
+def _measure(layer: Layer, placement: Placement) -> None:
+    """Measure a contrast window, from this store's data, for each channel of the
+    layer it holds that has none yet."""
+    for label, index in layer.unwindowed(placement):
+        window = sample_window(placement.store, index)
+        if window is not None:
+            layer.measured[label] = window
 
 
 # The built page lives inside the package (page_source/ builds into it), so an
@@ -137,6 +146,12 @@ class Viewer:
         when a writer saves one store per tile and channel: it names that channel
         (``"488"``, or a :class:`Channel`). The layer then shows one channel row
         per name, each made of the stores given that name.
+
+        A channel that is given no contrast window, by the store or here, gets
+        one from its data, as the Min-Max button would set it: from the first
+        store of the layer that holds any data yet (see
+        :func:`~.omezarr.sample_window`). It is set once and then left alone,
+        so the picture does not change its brightness while tiles land.
         """
         store = read_store(path)
         name = layer or store.name
@@ -165,6 +180,7 @@ class Viewer:
                 # its place among the layer's sources.
                 held.placements[at] = placement
                 held.revision += 1
+            _measure(held, placement)
             self._publish()
         return name
 
@@ -181,6 +197,8 @@ class Viewer:
                 if layer is None or name == layer:
                     held.placements = [read_again(p) for p in held.placements]
                     held.revision += 1
+                    for placement in held.placements:
+                        _measure(held, placement)
             self._publish()
 
     def remove(self, layer: str) -> bool:
