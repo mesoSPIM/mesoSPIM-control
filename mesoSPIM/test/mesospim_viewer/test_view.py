@@ -36,13 +36,15 @@ def test_the_reader_refuses_what_is_not_in_the_contract(tmp_path):
     with pytest.raises(NotAStore):
         read_store(tmp_path)  # nothing there
 
-    czyx = tmp_path / "czyx.ome.zarr"
-    write_tile(czyx, origin_um=(0, 0, 0), seed=1)
-    attrs = json.loads((czyx / ".zattrs").read_text())
-    attrs["multiscales"][0]["axes"].pop(0)
-    (czyx / ".zattrs").write_text(json.dumps(attrs))
+    # Axes may be left out, but not put in another order.
+    tczxy = tmp_path / "tczxy.ome.zarr"
+    write_tile(tczxy, origin_um=(0, 0, 0), seed=1)
+    attrs = json.loads((tczxy / ".zattrs").read_text())
+    axes = attrs["multiscales"][0]["axes"]
+    axes[3], axes[4] = axes[4], axes[3]
+    (tczxy / ".zattrs").write_text(json.dumps(attrs))
     with pytest.raises(NotAStore, match="axes"):
-        read_store(czyx)
+        read_store(tczxy)
 
     old = tmp_path / "old.ome.zarr"
     write_tile(old, origin_um=(0, 0, 0), seed=1)

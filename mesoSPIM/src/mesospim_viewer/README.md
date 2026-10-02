@@ -78,8 +78,26 @@ and every server route but three.
 ## The data contract
 
 A store is accepted when it is OME-NGFF **0.4 on zarr v2** or **0.5 on zarr
-v3**, with exactly the axes **`t, c, z, y, x`** in that order and `c` of type
-`channel`. A store holding one channel is fine; so is one holding several.
+v3**, with the axes **`t, c, z, y, x`**, or some of them in that order, always
+with `z, y, x`: so `(z, y, x)`, `(c, z, y, x)` and `(t, z, y, x)` open as well.
+An axis that is left out counts as one step long, and `c`, when present, must
+be of type `channel`. OME-NGFF 0.6 is not read yet: it describes axes and
+transformations differently, and the neuroglancer release the page is built on
+(2.41) does not read it either. Such a store is refused with a sentence saying so.
+
+Some writers save one store per tile *and* channel, each without a `c` axis.
+Such a store says which channel it holds in its own `omero` block, with one
+entry, and stores with the same label are shown as one channel. The channel is
+taken only from inside the store, never from its file name. A store without an
+`omero` block cannot be told apart from the others, so all of them are then
+shown as one channel.
+
+**Which layout is quick to show.** What costs time is the number of stores,
+not which axes they have: every store is set up on its own when it is shown.
+One store per position with all its channels and time points inside it
+(`t, c, z, y, x`, as `MP_OME_Zarr_TCZYX_Writer` writes) stays quick with
+hundreds of positions. A dataset split into one store per channel, or per
+time point, opens too, but becomes slow as the number of stores grows.
 
 How the arrays are chunked and sharded is the writer's choice, and the viewer
 does not look. **One chunk (and one shard) per time point and channel** is the

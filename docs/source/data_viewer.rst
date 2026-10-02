@@ -25,9 +25,35 @@ window title always says which form a window is: *Live data viewer* or
 *Acquired dataset*.
 
 The window is a neuroglancer page driven from Python, the ``mesospim_viewer``
-package in ``mesoSPIM/src/mesospim_viewer/``. It reads the layout the ``MP_OME_Zarr_TCZYX_Writer`` produces: one
-``.ome.zarr`` group per acquisition holding one ``(t, c, z, y, x)`` store per
-tile (see :doc:`file_formats`). Stores from the other writers are not shown.
+package in ``mesoSPIM/src/mesospim_viewer/``.
+
+Which data it can show
+----------------------
+
+The **live data viewer** reads the layout the ``MP_OME_Zarr_TCZYX_Writer``
+produces: one ``.ome.zarr`` group per acquisition holding one
+``(t, c, z, y, x)`` store per tile (see :doc:`file_formats`).
+
+An **acquired dataset** can be any OME-Zarr image in version 0.4 or 0.5, with
+the axes ``t, c, z, y, x`` or some of them in that order, as long as ``z, y, x``
+are there. So ``(z, y, x)``, ``(c, z, y, x)`` and ``(t, z, y, x)`` open too. An
+axis that is missing simply counts as one step long. OME-Zarr 0.6 is not read
+yet; the viewer says so if you pick one.
+
+When a dataset holds one store per tile *and* per channel, the viewer needs to
+know which channel each store holds. It reads this from the ``omero`` block
+inside the store, never from the file name. Stores without that information
+cannot be told apart, so their channels are then shown on top of each other as
+one channel.
+
+.. note::
+
+   **For a quick viewer, keep one store per position.** What makes the viewer
+   slow is the number of stores, not which axes they have, because every store
+   is set up on its own when it is shown. One store per position, with all its
+   channels and time points inside it (``t, c, z, y, x``), stays quick even with
+   hundreds of positions. A dataset split into one store per channel or per time
+   point opens too, but takes longer the more stores it has.
 
 What is on screen
 -----------------
@@ -115,9 +141,13 @@ If something is wrong
   created"**: PyQtWebEngine was installed after mesoSPIM was started, or the
   ``mesoSPIM_DataViewer.prepare_qt()`` call at the top of ``mesoSPIM_Control.py``
   was removed. Restart mesoSPIM.
-* **Nothing appears for an acquisition** written with another writer: only
-  the tczyx layout is read. Check the acquisition folder holds
-  ``<Sample>.ome.zarr/Mag…_Tile…_Sh…_Rot….ome.zarr`` stores.
+* **Nothing appears in the live data viewer** for an acquisition written with
+  another writer: the live viewer reads only the tczyx layout. Check the
+  acquisition folder holds ``<Sample>.ome.zarr/Mag…_Tile…_Sh…_Rot….ome.zarr``
+  stores, or open the data with **Open Acquired Dataset...** instead.
+* **All channels look the same in an acquired dataset**: the dataset holds one
+  store per channel, and the stores do not say which channel they hold (they
+  have no ``omero`` block). The viewer then cannot tell them apart.
 * **The data viewer's own tests**: ``python -m pytest mesoSPIM/test/mesospim_viewer``,
   with Playwright and a Chromium for the picture tests (they skip, saying so,
   without them). Changing the page itself needs Node: see

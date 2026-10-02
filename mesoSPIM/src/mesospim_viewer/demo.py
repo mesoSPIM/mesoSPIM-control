@@ -72,14 +72,8 @@ def _write_array(folder: Path, data, chunk_shape) -> None:
         )
 
 
-def write_tile(
-    path: Path, *, origin_um: tuple[float, float, float], seed: int, timepoints: int = 1
-) -> Path:
-    """One two-channel tile at ``origin_um`` (z, y, x), as OME-Zarr 0.4 with axes t, c, z, y, x.
-
-    With ``timepoints`` above one the cells drift a little from frame to frame,
-    which is what a time slider needs to show anything.
-    """
+def _cells(seed: int, timepoints: int):
+    """Pretend cells in two channels, as uint16 shaped (t, c, z, y, x)."""
     import numpy as np
 
     rng = np.random.default_rng(seed)
@@ -107,7 +101,143 @@ def write_tile(
             peak = float(shifted[c].max()) or 1.0
             out[c] = np.clip(400 + shifted[c] / peak * 12000, 0, 65535).astype(np.uint16)
         frames.append(out)
-    out = np.stack(frames)  # t, c, z, y, x
+    return np.stack(frames)
+
+
+def _write_array_v3(folder: Path, data, chunk_shape, names) -> None:
+    """A zarr v3 array with no compression: one file per chunk under ``c/``, C order."""
+    import numpy as np
+
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "zarr.json").write_text(
+        json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": list(data.shape),
+                "data_type": "uint16",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": list(chunk_shape)},
+                },
+                "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
+                "fill_value": 0,
+                "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
+                "dimension_names": list(names),
+            }
+        )
+    )
+    counts = [-(-n // c) for n, c in zip(data.shape, chunk_shape, strict=True)]
+    for index in np.ndindex(*counts):
+        window = tuple(slice(i * c, (i + 1) * c) for i, c in zip(index, chunk_shape, strict=True))
+        piece = data[window]
+        if piece.shape != tuple(chunk_shape):
+            full = np.zeros(chunk_shape, dtype=np.uint16)
+            full[tuple(slice(0, n) for n in piece.shape)] = piece
+            piece = full
+        chunk = folder.joinpath("c", *(str(i) for i in index))
+        chunk.parent.mkdir(parents=True, exist_ok=True)
+        chunk.write_bytes(piece.astype("<u2").tobytes(order="C"))
+
+
+_AXIS_JSON = {
+    "t": {"name": "t", "type": "time", "unit": "second"},
+    "c": {"name": "c", "type": "channel"},
+    "z": {"name": "z", "type": "space", "unit": "micrometer"},
+    "y": {"name": "y", "type": "space", "unit": "micrometer"},
+    "x": {"name": "x", "type": "space", "unit": "micrometer"},
+}
+_OMERO = {
+    "488": {"label": "488", "color": "00FF66"},
+    "561": {"label": "561", "color": "FF33FF"},
+}
+
+
+def write_store(
+    path: Path,
+    *,
+    axes: str = "tczyx",
+    version: str = "0.4",
+    origin_um: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    seed: int = 0,
+    timepoints: int = 1,
+    channel: int = 0,
+    omero: bool = True,
+) -> Path:
+    """One pretend tile with the axes given, as OME-Zarr ``version`` (0.4 or 0.5).
+
+    ``axes`` is ``"tczyx"`` or a part of it in that order, such as ``"zyx"`` or
+    ``"czyx"``. A store without ``c`` holds the one channel ``channel`` (0 is 488,
+    1 is 561), and with ``omero`` says so in its omero block, as a writer saving
+    one store per tile and channel should. Without ``t`` it holds the first time
+    point. 0.4 is written on zarr v2, 0.5 on zarr v3.
+    """
+    if version not in ("0.4", "0.5"):
+        raise ValueError("version must be 0.4 or 0.5")
+    data = _cells(seed, timepoints)
+    if "t" not in axes:
+        data = data[:1]
+    if "c" not in axes:
+        data = data[:, channel : channel + 1]
+    labels = ["488", "561"] if "c" in axes else [["488", "561"][channel]]
+    data = data.reshape([n for n, name in zip(data.shape, "tczyx") if name in axes])
+    if path.exists():
+        shutil.rmtree(path)
+    leading = len(axes) - 3
+    datasets = []
+    for level, held in enumerate(_pyramid(data)):
+        factor = 2**level
+        chunks = (*([1] * (leading + 1)), min(64, held.shape[-2]), min(64, held.shape[-1]))
+        if version == "0.4":
+            _write_array(path / str(level), held, chunks)
+        else:
+            _write_array_v3(path / str(level), held, chunks, axes)
+        datasets.append(
+            {
+                "path": str(level),
+                "coordinateTransformations": [
+                    {
+                        "type": "scale",
+                        "scale": [
+                            *([1.0] * leading),
+                            VOXEL_UM[0],
+                            VOXEL_UM[1] * factor,
+                            VOXEL_UM[2] * factor,
+                        ],
+                    },
+                    {"type": "translation", "translation": [*([0.0] * leading), *origin_um]},
+                ],
+            }
+        )
+    multiscale = {"name": path.name, "axes": [_AXIS_JSON[a] for a in axes], "datasets": datasets}
+    block = {"channels": [dict(_OMERO[label], active=True) for label in labels]}
+    if version == "0.4":
+        attrs = {"multiscales": [dict(multiscale, version="0.4")]}
+        if omero:
+            attrs["omero"] = block
+        (path / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
+        (path / ".zattrs").write_text(json.dumps(attrs, indent=1))
+    else:
+        ome = {"version": "0.5", "multiscales": [multiscale]}
+        if omero:
+            ome["omero"] = block
+        (path / "zarr.json").write_text(
+            json.dumps(
+                {"zarr_format": 3, "node_type": "group", "attributes": {"ome": ome}}, indent=1
+            )
+        )
+    return path
+
+
+def write_tile(
+    path: Path, *, origin_um: tuple[float, float, float], seed: int, timepoints: int = 1
+) -> Path:
+    """One two-channel tile at ``origin_um`` (z, y, x), as OME-Zarr 0.4 with axes t, c, z, y, x.
+
+    With ``timepoints`` above one the cells drift a little from frame to frame,
+    which is what a time slider needs to show anything.
+    """
+    out = _cells(seed, timepoints)  # t, c, z, y, x
 
     if path.exists():
         shutil.rmtree(path)

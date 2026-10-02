@@ -22,6 +22,17 @@ from .omezarr import Channel, Store
 # white; several take turns around a palette that reads well when overlaid.
 PALETTE = ("#00ff66", "#ff33ff", "#33ccff", "#ffbf1a", "#ff4d4d", "#a0a0ff", "#ffffff")
 
+# False colours by excitation wavelength in nanometres, the same the mesoSPIM
+# OME-Zarr writer puts into a store's omero block.
+WAVELENGTH_COLOURS = {
+    "405": "#5a73ff",
+    "488": "#00ff66",
+    "561": "#ffbf1a",
+    "640": "#ff33ff",
+    "647": "#ff33ff",
+    "785": "#ffffff",
+}
+
 LAYOUTS = ("xy", "yz", "xz", "4panel", "3d", "xy-3d", "yz-3d", "xz-3d")
 
 
@@ -39,6 +50,10 @@ class Placement:
     url: str
     offset: dict[str, float] = field(default_factory=dict)
     origin: dict[str, float] | None = None
+    # For a store that holds one channel of its acquisition, when a writer saves one
+    # store per tile *and* channel: which channel it is, as its own metadata says.
+    # Stores of different channels then feed different channel layers.
+    channel: Channel | None = None
 
     def shift_voxels(self, index: int) -> float:
         axis = self.store.axes[index]
@@ -156,25 +171,64 @@ class Layer:
     def to_json(self) -> list[dict]:
         if not self.placements:
             raise ValueError(f"layer {self.name!r} has no stores")
+        if any(placement.channel is not None for placement in self.placements):
+            return self._split_channels_json()
         first = self.placements[0].store
         sources = [source_json(placement) for placement in self.placements]
         return [
-            {
-                "type": "image",
-                "name": channel_layer_name(self.name, channel),
-                "source": sources,
-                # Which channel of the store this layer reads: the engine keeps
-                # the c axis as a per-layer dimension, pinned here.
-                "localPosition": [index],
-                "shader": channel_shader(channel),
-                # Composited over one another by their brightness (see channel_shader).
-                "blend": "default",
-                "opacity": 1.0,
-                "visible": self.visible and channel.active,
-                "_revision": self.revision,
-            }
+            self._engine_layer(channel, sources, index if first.channel_axis is not None else None)
             for index, channel in enumerate(channels_for(first, self.channels))
         ]
+
+    def _split_channels_json(self) -> list[dict]:
+        """One engine layer per channel, each reading only the stores of that channel.
+
+        For acquisitions saved as one store per tile and channel. Stores in order of
+        arrival; channels in the order they were first seen, coloured by wavelength
+        where the label is one (``"488"``), else from the palette.
+        """
+        groups: dict[str, tuple[Channel, list[Placement]]] = {}
+        for placement in self.placements:
+            channel = placement.channel or Channel(label="channel 0")
+            groups.setdefault(channel.label, (channel, []))[1].append(placement)
+        layers = []
+        for index, (channel, placements) in enumerate(groups.values()):
+            color = (
+                channel.color
+                or WAVELENGTH_COLOURS.get(channel.label.split()[0])
+                or (PALETTE[-1] if len(groups) == 1 else PALETTE[index % (len(PALETTE) - 1)])
+            )
+            shown = Channel(
+                label=channel.label,
+                color=color,
+                window=channel.window,
+                limits=channel.limits,
+                active=channel.active,
+            )
+            sources = [source_json(placement) for placement in placements]
+            # A store that has a channel axis of its own holds this channel at index 0.
+            pinned = 0 if placements[0].store.channel_axis is not None else None
+            layers.append(self._engine_layer(shown, sources, pinned))
+        return layers
+
+    def _engine_layer(self, channel: Channel, sources: list[dict], pinned: int | None) -> dict:
+        layer = {
+            "type": "image",
+            "name": channel_layer_name(self.name, channel),
+            "source": sources,
+            "shader": channel_shader(channel),
+            # Composited over one another by their brightness (see channel_shader).
+            "blend": "default",
+            "opacity": 1.0,
+            "visible": self.visible and channel.active,
+            "_revision": self.revision,
+        }
+        if pinned is not None:
+            # Which channel of the store this layer reads: the engine keeps the c
+            # axis as a per-layer dimension, pinned here. A store without a c axis
+            # has nothing to pin.
+            layer["localPosition"] = [pinned]
+        return layer
 
 
 def state_json(layers: list[Layer], *, layout: str = "xy") -> dict:

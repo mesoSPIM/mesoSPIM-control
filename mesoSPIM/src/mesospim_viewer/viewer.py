@@ -32,6 +32,7 @@ def read_again(placement: Placement) -> Placement:
         url=placement.url,
         offset=placement.offset,
         origin=placement.origin,
+        channel=placement.channel,
     )
 
 
@@ -121,6 +122,7 @@ class Viewer:
         colours: list[str] | None = None,
         window: tuple[float, float] | None = None,
         visible: bool = True,
+        channel: str | Channel | None = None,
     ) -> str:
         """Show an OME-Zarr store, and return the name of the layer it joined.
 
@@ -130,11 +132,20 @@ class Viewer:
         store's own units. ``channels``, ``colours`` and ``window`` override what
         the store declares about its channels; the first store in a layer
         decides these for the layer.
+
+        ``channel`` is for a store that holds just one channel of its acquisition,
+        when a writer saves one store per tile and channel: it names that channel
+        (``"488"``, or a :class:`Channel`). The layer then shows one channel row
+        per name, each made of the stores given that name.
         """
         store = read_store(path)
         name = layer or store.name
         url = self._url_for(store)
-        placement = Placement(store=store, url=url, offset=dict(offset or {}), origin=origin)
+        if isinstance(channel, str):
+            channel = Channel(label=channel)
+        placement = Placement(
+            store=store, url=url, offset=dict(offset or {}), origin=origin, channel=channel
+        )
         declared = self._channels(store, channels, colours, window)
         with self._lock:
             held = self._layers.get(name)

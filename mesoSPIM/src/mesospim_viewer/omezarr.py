@@ -47,11 +47,21 @@ _UNITS: dict[str, tuple[str, float]] = {
 class NotAStore(ValueError):
     """The path does not hold OME-Zarr this viewer accepts.
 
-    Accepted: OME-NGFF 0.4 on zarr v2 or 0.5 on zarr v3, with exactly the five
-    axes ``t, c, z, y, x`` in that order. That is the shape the acquisition
-    software writes, and holding every store to it keeps the rest of the code
-    free of special cases. How the arrays are chunked or sharded is not looked
-    at: a chunk per time point and channel is the layout the viewer reads best.
+    Accepted: OME-NGFF 0.4 on zarr v2, or 0.5 on zarr v3, whose axes are
+    ``t, c, z, y, x`` or some of them, in that order, always with ``z, y, x``.
+    So a ``(t, c, z, y, x)`` store opens, and so do ``(z, y, x)``, ``(c, z, y, x)``
+    and ``(t, z, y, x)``: an axis that is left out counts as one step long. How the
+    arrays are chunked or sharded is not looked at, but for a quick picture a
+    chunk should hold one time point of one channel, as the acquisition software
+    writes them.
+    """
+
+
+class NotSupported(NotAStore):
+    """The path is an OME-Zarr image, but in a form this viewer does not read.
+
+    Kept apart from a folder that is no image at all, so that such a store is
+    reported as what it is rather than mistaken for a folder of acquisitions.
     """
 
 
@@ -200,6 +210,20 @@ def _array_shape(level: Path) -> list[int] | None:
     return None
 
 
+def _check_axes(root: Path, axes: tuple[Axis, ...]) -> None:
+    """Refuse axes other than ``t, c, z, y, x`` or an in-order part of them with z, y, x."""
+    names = [axis.name for axis in axes]
+    in_order = [name for name in AXES if name in names]
+    if names != in_order or not {"z", "y", "x"} <= set(names):
+        raise NotSupported(
+            f"{root} declares axes {names}; accepted are {list(AXES)} or some of them, "
+            "in that order, always with z, y and x"
+        )
+    for axis in axes:
+        if axis.name == "c" and axis.type != "channel":
+            raise NotSupported(f"{root}: axis c must be of type 'channel'")
+
+
 def read_store(path: str | Path) -> Store:
     """Describe the OME-Zarr store at ``path``."""
     root = Path(path).expanduser().resolve()
@@ -223,8 +247,15 @@ def read_store(path: str | Path) -> Store:
         raise NotAStore(f"{root} carries no OME multiscales metadata")
     multiscale = multiscales[0]
     version = str(ome.get("version", multiscale.get("version", "")))
+    if version.startswith("0.6"):
+        # 0.6 moved the axes and reshaped the transformations; the neuroglancer the
+        # page is built on (2.41) does not read it yet, so neither does this viewer.
+        raise NotSupported(
+            f"{root} is OME-NGFF {version}, which this viewer does not read yet; "
+            "accepted are 0.4 on zarr v2 and 0.5 on zarr v3"
+        )
     if VERSIONS.get(version) != fmt:
-        raise NotAStore(
+        raise NotSupported(
             f"{root} is OME-NGFF {version or 'of no stated version'!s} on {fmt}; "
             "accepted are 0.4 on zarr v2 and 0.5 on zarr v3"
         )
@@ -238,16 +269,11 @@ def read_store(path: str | Path) -> Store:
         for i, axis in enumerate(multiscale.get("axes", []))
         if isinstance(axis, dict)
     )
-    if tuple(axis.name for axis in axes) != AXES:
-        raise NotAStore(
-            f"{root} declares axes {[axis.name for axis in axes]}; accepted is exactly {list(AXES)}"
-        )
-    if axes[1].type != "channel":
-        raise NotAStore(f"{root}: axis c must be of type 'channel'")
+    _check_axes(root, axes)
     rank = len(axes)
     datasets = multiscale.get("datasets")
     if not isinstance(datasets, list) or not datasets or not isinstance(datasets[0], dict):
-        raise NotAStore(f"{root}: the multiscale names no datasets")
+        raise NotSupported(f"{root}: the multiscale names no datasets")
     level0 = datasets[0]
     inner_scale, inner_translation = _transforms(rank, level0.get("coordinateTransformations"))
     outer_scale, outer_translation = _transforms(rank, multiscale.get("coordinateTransformations"))
@@ -259,7 +285,7 @@ def read_store(path: str | Path) -> Store:
     level_path = root / str(level0.get("path", "0"))
     shape = _array_shape(level_path)
     if shape is None or len(shape) != rank:
-        raise NotAStore(f"{root}: level {level0.get('path', '0')!s} has no readable array shape")
+        raise NotSupported(f"{root}: level {level0.get('path', '0')!s} has no readable array shape")
 
     omero = ome.get("omero", attrs.get("omero"))
     channels = _omero_channels(omero)

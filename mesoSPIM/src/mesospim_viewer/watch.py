@@ -23,10 +23,25 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .omezarr import NotAStore, read_store
+from .omezarr import Channel, NotAStore, NotSupported, Store, read_store
 from .viewer import Viewer
 
 STORE_SUFFIX = ".ome.zarr"
+
+
+def channel_of(store: Store) -> Channel | None:
+    """The channel a one-channel store holds, from its own metadata, or None.
+
+    Some writers save one store per tile *and* channel, each without a channel
+    axis. Such a store says which channel it holds in its ``omero`` block, with
+    exactly one entry; that label, colour and window are used, and stores with
+    the same label are shown as one channel. A store with a channel axis says
+    what its channels are itself and is left alone, and so is a store without
+    an omero block: nothing in it says which channel it is.
+    """
+    if store.channel_axis is None and len(store.channels) == 1:
+        return store.channels[0]
+    return None
 
 
 def _is_zarr_group(path: Path) -> bool:
@@ -66,6 +81,8 @@ class Acquisitions:
             # A tile store has multiscales itself; an acquisition holds tile stores.
             try:
                 read_store(path)
+            except NotSupported:
+                continue  # an image, only not one this viewer reads
             except NotAStore:
                 found.append(Acquisition(path=path, started=entry.stat().st_ctime))
         return sorted(found, key=lambda a: (a.started, a.name), reverse=True)
@@ -146,7 +163,7 @@ class Watcher:
             except NotAStore:
                 continue
             if self.shapes.get(path) != store.shape:
-                self.viewer.add(path, layer=self.layer_name)
+                self.viewer.add(path, layer=self.layer_name, channel=channel_of(store))
                 self.shapes[path] = store.shape
                 self.writing[path] = _Writing(_fingerprint(path), now, now)
                 changed.append(path)
@@ -159,7 +176,7 @@ class Watcher:
                 held.fingerprint, held.changed_at, held.dirty = seen, now, True
             quiet = now - held.changed_at >= self.settle_s
             if held.dirty and (quiet or now - held.read_at >= self.refresh_s):
-                self.viewer.add(path, layer=self.layer_name)
+                self.viewer.add(path, layer=self.layer_name, channel=channel_of(store))
                 held.read_at, held.dirty = now, False
                 changed.append(path)
             if quiet and not held.dirty:
@@ -280,11 +297,13 @@ class Opened:
         self.path = Path(path).expanduser()
         self.follower: Follower | None = None
         try:
-            read_store(self.path)
+            store = read_store(self.path)
+        except NotSupported:
+            raise  # an image in a form this viewer does not read: the error says which
         except NotAStore:
-            pass
+            pass  # not one image: a folder of them, looked at below
         else:
-            self.viewer.add(self.path, layer=Acquisition(self.path, 0).name)
+            self.viewer.add(self.path, layer=Acquisition(self.path, 0).name, channel=channel_of(store))
             self.viewer.fit()
             return
         # Acquisitions are looked for first: a tile store is never counted as one, so a
@@ -295,9 +314,12 @@ class Opened:
             self.follower.poll()
             self.follower.following = False
             return
-        if Watcher(viewer, self.path).poll():
+        watcher = Watcher(viewer, self.path)
+        if watcher.poll():
             self.viewer.fit()
             return
+        for path in watcher.stores():
+            read_store(path)  # none could be shown: the first one's error says why
         raise NotAStore(
             f"{self.path} is not a dataset the viewer can open. Pick a .ome.zarr folder "
             "(one tile, or one acquisition holding tiles), or a folder holding acquisitions."
