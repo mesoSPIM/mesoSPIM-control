@@ -173,3 +173,8 @@ select.chooser {
 #slider-t input { width: 260px; }
 #slider-z { right: 12px; top: 50%; transform: translateY(-50%); flex-direction: column; }
 #slider-z input { writing-mode: vertical-lr; direction: rtl; height: 220px; width: 16px; }
+/* The Data viewer window (Qt WebEngine, Chromium 83) ignores writing-mode on a slider and drew
+   the depth slider lying flat, 16 pixels wide, so it could hardly be moved. This asks that
+   browser for its own upright slider, first plane at the bottom as above; current browsers
+   draw the same either way. */
+#slider-z input { -webkit-appearance: slider-vertical; }
