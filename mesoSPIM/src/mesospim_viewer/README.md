@@ -208,11 +208,13 @@ GPU, set `QTWEBENGINE_CHROMIUM_FLAGS="--ignore-gpu-blocklist"` before Qt starts.
 ## Installing on the microscope PC
 
 The viewer comes with mesoSPIM-control, its page already built, so no Node
-is needed there. The one extra is the web view for PyQt5, which is not part of
-PyQt5 itself. In the mesoSPIM environment:
+is needed there. The web view for PyQt5 that it draws in, PyQtWebEngine, is not
+part of PyQt5 itself, but it is installed together with mesoSPIM-control. An
+environment set up before the viewer existed may not have it yet; then, in the
+mesoSPIM environment, install it and restart mesoSPIM:
 
 ```
-pip install -e ".[data-viewer]"     # or: pip install PyQtWebEngine
+pip install PyQtWebEngine==5.15.7
 ```
 
 Then, in mesoSPIM-control, `View > Open Data Viewer`. Before the first real

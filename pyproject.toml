@@ -32,7 +32,10 @@ dependencies = [
     "psutil>=7.0.0",
     "zarr==3.1.3",
     "scikit-learn>=1.8.0",
-    "typer>=0.25.0"
+    "typer>=0.25.0",
+    # The web view for PyQt5, which the Data viewer window (View > Open Data Viewer) draws in.
+    # PyQt5 does not include it, so it is listed here to be installed with everything else.
+    "PyQtWebEngine==5.15.7"
 ]
 
 [project.optional-dependencies]
@@ -47,10 +50,6 @@ ai-assistant = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1"]
 # Serving a local .gguf model from the AI Assistant tab; use a GPU wheel from the llama-cpp-python
 # release page for anything beyond a few billion parameters.
 ai-assistant-local = ["pydantic-ai==2.14.1", "anthropic>=0.108,<1", "llama-cpp-python[server]>=0.3"]
-
-# The Data viewer window (View > Open Data Viewer) only: the web view for PyQt5. The viewer
-# itself, mesoSPIM/src/mesospim_viewer, comes with mesoSPIM-control, its page already built.
-data-viewer = ["PyQtWebEngine==5.15.7"]
 
 [project.urls]
 "Homepage" = "http://mesospim.org"

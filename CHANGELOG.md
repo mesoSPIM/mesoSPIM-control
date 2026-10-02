@@ -13,7 +13,7 @@
 
 ### New Features ✨
 - **MP_OME_Zarr_TCZYX_Writer**: a mode of the multi-process OME-Zarr writer that writes one `(t, c, z, y, x)` store per tile: channels along `c`, time points of a time lapse appended along `t`, stage position and channel names/colours in the OME metadata. No chunk or shard spans a channel or a time point, and every shard is written in one go. Configured with `MP_OME_Zarr_TCZYX_Writer = {...}`; see `docs/source/file_formats.rst`.
-- **Data viewer** (`View → Open Data Viewer`): a window that shows the acquisition being written as it lands, following the newest acquisition of the data folder with a dropdown for earlier ones; 2D/3D, per-channel window and colour, depth and time sliders. It reads the `MP_OME_Zarr_TCZYX_Writer` layout; the viewer is `mesoSPIM/src/mesospim_viewer/`, its page committed already built, and the window needs only PyQtWebEngine (`pip install -e ".[data-viewer]"`; see `docs/source/data_viewer.rst`). Without it the menu entry says so.
+- **Data viewer** (`View → Open Data Viewer`): a window that shows the acquisition being written as it lands, following the newest acquisition of the data folder with a dropdown for earlier ones; 2D/3D, per-channel window and colour, depth and time sliders. It reads the `MP_OME_Zarr_TCZYX_Writer` layout; the viewer is `mesoSPIM/src/mesospim_viewer/`, its page committed already built, and the window needs only PyQtWebEngine, which is now installed with mesoSPIM-control (see `docs/source/data_viewer.rst`). Without it the menu entry says so.
 
 ### Bugfixes 🐛
 - Waveforms are now `round(samplerate * sweeptime)` samples long instead of truncated: `25000 * 0.073` evaluates to `1824.9999999999998`, which gave 1824 samples and a 72.96 ms waveform for a 73 ms sweep.

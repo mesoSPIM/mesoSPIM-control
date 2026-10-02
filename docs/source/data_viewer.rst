@@ -29,17 +29,21 @@ What is on screen
 Installing
 ----------
 
-In the mesoSPIM Python environment:
+Nothing extra is needed. The viewer comes with mesoSPIM-control, its page
+already built (no Node needed), and the web view for PyQt5 that it draws in,
+PyQtWebEngine, is installed together with mesoSPIM-control, both by
+``pip install -e .`` and by ``pip install -r requirements-conda-mamba.txt``.
+
+An environment set up before the viewer existed does not have it yet. In
+that case, install it into the mesoSPIM Python environment and restart
+mesoSPIM, because mesoSPIM loads the web view only at start-up:
 
 .. code-block:: bash
 
-   pip install -e ".[data-viewer]"     # or: pip install PyQtWebEngine
+   pip install PyQtWebEngine==5.15.7
 
-The viewer comes with mesoSPIM-control, its page already built (no Node
-needed). What is added is the web view for PyQt5, which PyQt5 itself does not
-include. mesoSPIM imports it at start-up when present, so restart mesoSPIM
-after installing. Without it, the menu entry shows a message saying what is
-missing and nothing else changes.
+If it is missing, the menu entry shows a message saying so, and nothing else
+changes.
 
 Testing it
 ----------
