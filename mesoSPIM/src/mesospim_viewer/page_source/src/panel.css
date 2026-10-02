@@ -14,15 +14,20 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   padding: 10px;
   box-sizing: border-box;
   overflow-y: auto;
   min-height: 0;
 }
+/* Spacing between the cards and the controls is given by margins on every item
+   after the first, not by flex gaps: the Data viewer window (Qt WebEngine,
+   Chromium 83) knows no gaps in flex rows and columns, and drew the cards, and
+   each swatch and its name, touching. */
+.panel-body > * + * { margin-top: 10px; }
 
 /* -- the top of the panel: what is shown, and the fold button ---------------- */
-.panel-head { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.panel-head { display: flex; align-items: center; min-height: 28px; }
+.panel-head > * + * { margin-left: 8px; }
 .panel-head .title { flex: 1; font-size: 15px; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The unfold button sits on the picture while the panel is folded away. */
@@ -57,7 +62,8 @@
   color: var(--text-muted);
 }
 
-.row { display: flex; align-items: center; gap: 8px; }
+.row { display: flex; align-items: center; }
+.row > * + * { margin-left: 8px; }
 
 /* -- icon buttons: fold, eyes ------------------------------------------------- */
 button.icon {
@@ -94,11 +100,12 @@ select.chooser {
 }
 
 /* -- the 3D card: labelled rows of controls --------------------------------- */
-.row.labelled { gap: 10px; margin-top: 6px; }
+.row.labelled { margin-top: 6px; }
+.row.labelled > * + * { margin-left: 10px; }
 .row.labelled > .label { flex: 0 0 72px; color: var(--text-muted); font-size: 12px; }
 .row.labelled > .segmented { flex: 1; }
 .row.labelled > .segmented button { padding: 4px 0; font-weight: 500; font-size: 12px; }
-.row.labelled > input[type="range"] { flex: 1; margin: 0; }
+.row.labelled > input[type="range"] { flex: 1; margin-top: 0; margin-bottom: 0; margin-right: 0; }
 .row.labelled > .reading { flex: 0 0 56px; text-align: right; font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .row.labelled > input[type="checkbox"] { accent-color: var(--accent); }
 .row.labelled.disabled { opacity: 0.4; pointer-events: none; }
@@ -110,7 +117,8 @@ select.chooser {
 .group .name { flex: 1; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group .count { color: var(--text-muted); font-size: 12px; }
 
-.channel { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 10px 0; border-top: 1px solid var(--subtle-border); }
+.channel { display: flex; flex-direction: column; padding: 8px 0 10px 0; border-top: 1px solid var(--subtle-border); }
+.channel > * + * { margin-top: 6px; }
 .channel .label { flex: 1; color: var(--text-bright); font-weight: 500; }
 .channel .swatch {
   width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto;
@@ -124,11 +132,13 @@ select.chooser {
 /* The engine's controls, laid out our way: the histogram full width with the
    window's black and white points as handles, the numbers beneath, the auto
    buttons as small chips. The colour input is driven by the swatch above. */
-.controls { display: flex; flex-direction: column; gap: 4px; }
+.controls { display: flex; flex-direction: column; }
 .controls .neuroglancer-tab-content { display: contents; }
 .controls .neuroglancer-layer-control-container { display: block; margin: 0; }
+.controls .neuroglancer-layer-control-container + .neuroglancer-layer-control-container { margin-top: 4px; }
 .controls .neuroglancer-layer-control-label-container { display: none; }
-.controls .neuroglancer-invlerp-widget { display: flex; flex-direction: column; width: 100%; gap: 3px; }
+.controls .neuroglancer-invlerp-widget { display: flex; flex-direction: column; width: 100%; }
+.controls .neuroglancer-invlerp-widget > * + * { margin-top: 3px; }
 .controls .neuroglancer-invlerp-legend-panel { display: none; }
 .controls .neuroglancer-invlerp-cdfpanel {
   position: relative; display: block; width: 100%; height: 40px; box-sizing: border-box;
@@ -140,7 +150,8 @@ select.chooser {
 .controls .neuroglancer-invlerp-widget-bound { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: inherit; padding: 0; }
 .controls .neuroglancer-invlerp-widget-window-bound { color: var(--text-muted); }
 .controls .neuroglancer-invlerp-widget-range-bound { color: var(--text-bright); }
-.controls .neuroglancer-invlerp-range-finder-button-container { display: flex; gap: 4px; margin-top: 2px; }
+.controls .neuroglancer-invlerp-range-finder-button-container { display: flex; margin-top: 5px; }
+.controls .neuroglancer-invlerp-range-finder-button + .neuroglancer-invlerp-range-finder-button { margin-left: 4px; }
 .controls .neuroglancer-invlerp-range-finder-button {
   font: inherit; font-size: 11px; padding: 2px 7px; margin: 0;
   background: var(--control-bg); border: 1px solid var(--control-border); border-radius: 4px; color: var(--text-primary); cursor: pointer;
