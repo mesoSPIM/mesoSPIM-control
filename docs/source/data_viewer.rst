@@ -147,7 +147,10 @@ If something is wrong
   stores, or open the data with **Open Acquired Dataset...** instead.
 * **All channels look the same in an acquired dataset**: the dataset holds one
   store per channel, and the stores do not say which channel they hold (they
-  have no ``omero`` block). The viewer then cannot tell them apart.
+  have no ``omero`` block). The viewer then cannot tell them apart. This is the
+  case for data from the ``OME_Zarr_Writer`` and ``MP_OME_Zarr_Writer`` written
+  before they started saving the channel in each store; data written since
+  shows each channel as its own row.
 * **The data viewer's own tests**: ``python -m pytest mesoSPIM/test/mesospim_viewer``,
   with Playwright and a Chromium for the picture tests (they skip, saying so,
   without them). Changing the page itself needs Node: see

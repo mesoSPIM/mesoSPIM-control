@@ -19,7 +19,7 @@ from mesoSPIM.src.plugins.support_files.ImageWriters.OmeZarrWriter.omezarr_write
     Live3DPyramidWriter, plan_levels,
     compute_xy_only_levels, FlushPad,
     BloscCodec, BloscShuffle,
-    XmlWriter
+    XmlWriter, CHANNEL_COLORS
 )
 
 
@@ -275,7 +275,10 @@ class OMEZarrWriter(ImageWriter):
             flush_pad=FlushPad.DUPLICATE_LAST,  # keeps alignment, no RMW
             async_close=async_finalize,
             translation=(acq['z_start'], acq['y_pos'], acq['x_pos']),
-            ome_version=ome_version
+            ome_version=ome_version,
+            # Each store holds one channel; its omero block says which one.
+            channel_label=laser,
+            channel_color=CHANNEL_COLORS.get(laser),
         )
 
         self.metadata_file_info()

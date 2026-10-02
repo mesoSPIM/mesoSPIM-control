@@ -113,6 +113,13 @@ writing happens:
 Both save multi-resolution pyramids natively, with compression, and can
 optionally emit an XML file for drag-and-drop stitching in BigStitcher.
 
+Each tile subgroup holds one channel as a ``(z, y, x)`` image. So that other
+software can tell the channels apart without reading the file names, each
+subgroup also carries an ``omero`` block with that one channel: its laser line
+as the label (for example ``"488"``) and a matching false colour. The
+:doc:`Data viewer <data_viewer>` reads it to show each channel as its own row.
+Data written before this was added has no ``omero`` block.
+
 .. code-block:: python
 
    OME_Zarr_Writer = {

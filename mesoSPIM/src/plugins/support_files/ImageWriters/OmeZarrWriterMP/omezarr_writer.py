@@ -228,6 +228,11 @@ def pick_shards_for_level(
     return tuple(out)
 
 # ---------- Zarr v3 init (multiscales 0.5) ----------
+# Default false colours for a channel's omero entry, by excitation wavelength (nm).
+# The same as the MP_OME_Zarr_TCZYX_Writer uses.
+CHANNEL_COLORS = {'405': '5A73FF', '488': '00FF66', '561': 'FFBF1A', '640': 'FF33FF', '647': 'FF33FF', '785': 'FFFFFF'}
+
+
 def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                   chunk_scheme: ChunkScheme = ChunkScheme(),
                   compressor=None,
@@ -235,7 +240,9 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                   translation: Tuple[int, int, int] = (0,0,0), # in units
                   xy_levels: int = 0,
                   shard_shape: Tuple[int,int,int] | None = None,
-                  ome_version: str = "0.5"):
+                  ome_version: str = "0.5",
+                  channel_label: str | None = None,
+                  channel_color: str | None = None):
 
     # Map OME-NGFF version to Zarr store version
     zarr_version = 2 if ome_version == "0.4" else 3
@@ -318,8 +325,16 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
         {"name": "y", "type": "space", "unit": unit},
         {"name": "x", "type": "space", "unit": unit},
     ]
+    # This store holds one channel of the acquisition, so the omero block names that one
+    # channel. Viewers read it to tell the stores of different channels apart.
+    omero = None
+    if channel_label:
+        channel = {"label": channel_label, "active": True}
+        if channel_color:
+            channel["color"] = channel_color
+        omero = {"channels": [channel]}
     if ome_version == "0.5":
-        root.attrs["ome"] = {
+        ome = {
             "version": "0.5",
             "multiscales": [{
                 "axes": axes,
@@ -328,6 +343,9 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                 "type": "image",
             }],
         }
+        if omero:
+            ome["omero"] = omero
+        root.attrs["ome"] = ome
     else:
         # OME-Zarr 0.4 stores multiscales at top level
         root.attrs["multiscales"] = [{
@@ -336,6 +354,8 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
             "datasets": datasets,
             "name": "image",
         }]
+        if omero:
+            root.attrs["omero"] = omero
     return root, arrs
 
 
@@ -474,7 +494,9 @@ class Live3DPyramidWriter:
                  async_close: bool = True,
                  shard_shape: Tuple[int, int, int] | None = None,
                  translation: Tuple[int,int,int] = (0,0,0),
-                 ome_version: str = "0.5"):
+                 ome_version: str = "0.5",
+                 channel_label: str | None = None,
+                 channel_color: str | None = None):
 
         self.spec = spec
         self.chunk_scheme = chunk_scheme
@@ -490,6 +512,7 @@ class Live3DPyramidWriter:
             voxel_size=voxel_size, xy_levels=self.xy_levels,
             shard_shape=shard_shape, translation=translation,
             ome_version=ome_version,
+            channel_label=channel_label, channel_color=channel_color,
         )
 
         self.levels = spec.levels
