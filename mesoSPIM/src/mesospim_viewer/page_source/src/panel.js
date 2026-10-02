@@ -55,7 +55,6 @@ function acquisitionCard() {
   card.appendChild(element("h2", null, "Acquisition"));
   const select = document.createElement("select");
   select.className = "chooser";
-  select.title = "The acquisition shown: the current one, or an earlier one of this session";
   select.addEventListener("change", () => {
     fetch("/api/choose", {
       method: "POST",
@@ -71,11 +70,16 @@ function acquisitionCard() {
     card.hidden = names.length === 0;
     if (key === offered) return;
     offered = key;
+    const live = choices.live !== false;
+    select.title = live
+      ? "The acquisition shown: the current one, or an earlier one of this session"
+      : "The acquisition shown, from those in this folder";
     select.replaceChildren();
     names.forEach((name, index) => {
       const option = document.createElement("option");
       option.value = String(index);
-      option.textContent = index === 0 ? `${name}  (current)` : name;
+      // Only where the microscope is writing is the newest the current acquisition.
+      option.textContent = index === 0 && live ? `${name} (current)` : name;
       select.appendChild(option);
     });
     select.value = String(choices.current ?? 0);

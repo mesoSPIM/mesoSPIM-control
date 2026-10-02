@@ -206,9 +206,12 @@ class Follower:
     can go wrong is here and testable without Qt.
     """
 
-    def __init__(self, viewer: Viewer, root: str | Path) -> None:
+    def __init__(self, viewer: Viewer, root: str | Path, *, live: bool = True) -> None:
         self.viewer = viewer
         self.acquisitions = Acquisitions(root)
+        # Whether the microscope is writing into this folder: then the newest
+        # acquisition is the current one, and the dropdown says so.
+        self.live = live
         self.listed: list[Acquisition] = []
         self.watcher: Watcher | None = None
         self.following = True
@@ -274,7 +277,7 @@ class Follower:
         offer = (tuple(self.names), self.shown_index)
         if offer != self._offered:
             self._offered = offer
-            self.viewer.offer_acquisitions(list(offer[0]), offer[1])
+            self.viewer.offer_acquisitions(list(offer[0]), offer[1], live=self.live)
 
 
 class Opened:
@@ -310,7 +313,7 @@ class Opened:
         # folder of tiles falls through to the next case.
         if Acquisitions(self.path).list():
             # The follower gives the dropdown; it is looked at once and then left still.
-            self.follower = Follower(viewer, self.path)
+            self.follower = Follower(viewer, self.path, live=False)
             self.follower.poll()
             self.follower.following = False
             return

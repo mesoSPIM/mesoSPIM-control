@@ -154,10 +154,10 @@ def test_the_follower_stays_on_the_newest_acquisition_until_an_older_one_is_chos
         assert follower.following is True
 
         # The panel's dropdown is fed by the follower and drives it back.
-        assert view._server.scene.choices == {"names": ["run_b", "run_a"], "current": 0}
+        assert view._server.scene.choices == {"names": ["run_b", "run_a"], "current": 0, "live": True}
         view._server.choice_reported({"index": 1})
         assert follower.shown == older and follower.following is False
-        assert view._server.scene.choices == {"names": ["run_b", "run_a"], "current": 1}
+        assert view._server.scene.choices == {"names": ["run_b", "run_a"], "current": 1, "live": True}
     finally:
         view.stop()
 
@@ -197,7 +197,8 @@ def test_an_acquired_dataset_is_shown_as_it_is_and_nothing_new_is_followed(tmp_p
     try:
         opened = Opened(view, tmp_path)
         assert opened.follower.shown == newer and opened.follower.following is False
-        assert view._server.scene.choices == {"names": ["run_b", "run_a"], "current": 0}
+        # Nothing is being acquired here: the newest is not called the current one.
+        assert view._server.scene.choices == {"names": ["run_b", "run_a"], "current": 0, "live": False}
         view._server.choice_reported({"index": 1})
         assert opened.follower.shown == older
         time.sleep(0.05)

@@ -38,7 +38,7 @@ class Scene:
         self.camera: dict = {}
         self.ui: dict = {}
         # The acquisitions the panel offers in its dropdown, and which is shown.
-        self.choices: dict = {"names": [], "current": -1}
+        self.choices: dict = {"names": [], "current": -1, "live": True}
 
     def publish(self, state: dict) -> int:
         with self._changed:
@@ -47,10 +47,10 @@ class Scene:
             self._changed.notify_all()
             return self.version
 
-    def offer(self, names: list[str], current: int) -> int:
+    def offer(self, names: list[str], current: int, live: bool = True) -> int:
         with self._changed:
             self.version += 1
-            self.choices = {"names": list(names), "current": current}
+            self.choices = {"names": list(names), "current": current, "live": live}
             self._changed.notify_all()
             return self.version
 

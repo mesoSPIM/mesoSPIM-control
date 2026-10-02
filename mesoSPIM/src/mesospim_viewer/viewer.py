@@ -272,12 +272,16 @@ class Viewer:
 
     # -- the acquisition dropdown ------------------------------------------------
 
-    def offer_acquisitions(self, names: list[str], current: int = 0) -> None:
+    def offer_acquisitions(self, names: list[str], current: int = 0, *, live: bool = True) -> None:
         """Fill the panel's dropdown: the acquisitions of the session, newest first,
-        and which of them is shown. An empty list hides the dropdown."""
+        and which of them is shown. An empty list hides the dropdown.
+
+        ``live`` says the folder is being acquired into, so the newest entry is
+        marked as the current acquisition; for a folder opened from disk it is not.
+        """
         self.start()
         assert self._server is not None
-        self._server.scene.offer(names, current)
+        self._server.scene.offer(names, current, live)
 
     def on_choice(self, listener: Callable[[int], None]) -> None:
         """Hear the operator pick an entry of that dropdown, by index."""

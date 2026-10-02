@@ -254,7 +254,7 @@ def test_the_dropdown_offers_the_sessions_acquisitions_and_reports_a_choice(page
         options = "() => [...document.querySelectorAll('.card.acquisition option')].map(o => o.textContent)"
         while time.time() < deadline and len(page.evaluate(options)) != 3:
             time.sleep(0.1)
-        assert page.evaluate(options) == ["run_03  (current)", "run_02", "run_01"]
+        assert page.evaluate(options) == ["run_03 (current)", "run_02", "run_01"]
         assert page.evaluate("() => document.querySelector('.card.acquisition').hidden") is False
         # the dropdown sits above the view switch
         assert page.evaluate(
@@ -278,6 +278,13 @@ def test_the_dropdown_offers_the_sessions_acquisitions_and_reports_a_choice(page
         ):
             time.sleep(0.1)
         assert page.evaluate("() => document.querySelector('select.chooser').value") == "2"
+
+        # A folder of acquisitions opened from disk: nothing there is being acquired.
+        view.offer_acquisitions(["run_03", "run_02", "run_01"], 0, live=False)
+        deadline = time.time() + 5
+        while time.time() < deadline and page.evaluate(options)[0] != "run_03":
+            time.sleep(0.1)
+        assert page.evaluate(options) == ["run_03", "run_02", "run_01"]
         assert not errors, errors
         page.close()
     finally:
