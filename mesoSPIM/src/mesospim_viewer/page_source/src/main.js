@@ -10,6 +10,9 @@
  *    the operator's own adjustments on layers that did not change;
  * 3. reports the camera to `/api/view` and a double-click to `/api/pick`.
  *
+ * Until the operator pans or zooms, the view keeps framing everything shown,
+ * so tiles landing during an acquisition come into view as they arrive.
+ *
  * Everything about what is shown -- which stores, where they sit, how their
  * channels mix -- is decided in Python and arrives as ordinary neuroglancer
  * layer JSON.
@@ -171,7 +174,49 @@ function moveTo(viewer, named) {
   position.value = target;
 }
 
+// The view frames everything shown, again after every change, until the
+// operator pans or zooms it: then it is theirs, until a fit is asked for
+// (Python's fit(), or the 2D/3D switch) and it follows again.
+const framing = { following: true, fitting: false, fitted: null };
+
+// What the operator moves when they pan or zoom: the two axes across the
+// screen and the zoom of both views. Depth and time are left out, so stepping
+// through planes or time points does not stop the view from following.
+function framed(viewer) {
+  const { position, pose, zoomFactor } = viewer.navigationState;
+  const drawn = Array.from(pose.displayDimensionRenderInfo.value?.displayDimensionIndices ?? []);
+  return [
+    ...drawn.slice(0, 2).filter((axis) => axis >= 0).map((axis) => position.value[axis]),
+    zoomFactor.value,
+    viewer.perspectiveNavigationState.zoomFactor.value,
+  ];
+}
+
+function watchOperator(viewer) {
+  const moved = () => {
+    if (framing.fitting || !framing.fitted) return;
+    const now = framed(viewer);
+    const held = framing.fitted;
+    const changed = now.length !== held.length ||
+      now.some((value, i) => Math.abs(value - held[i]) > 1e-6 * Math.max(1, Math.abs(held[i])));
+    if (changed) framing.following = false;
+  };
+  viewer.navigationState.changed.add(moved);
+  viewer.perspectiveNavigationState.changed.add(moved);
+}
+
 function fitEverything(viewer) {
+  framing.fitting = true;
+  try {
+    fitCamera(viewer);
+  } finally {
+    framing.fitting = false;
+  }
+  framing.fitted = framed(viewer);
+  framing.following = true;
+}
+
+function fitCamera(viewer) {
   const { position, pose, zoomFactor } = viewer.navigationState;
   const space = globalSpace(viewer);
   if (!space?.rank) return;
@@ -302,28 +347,25 @@ async function follow(viewer, first) {
   let version = -1;
   let cameraVersion = first?.cameraVersion ?? 0;
   let answer = first;
-  let shownAnything = false;
   for (;;) {
     if (answer && answer.version !== version) {
       version = answer.version;
       viewer.panel?.setChoices(answer.choices);
       const state = answer.state ?? {};
       if (state.layout && viewer.layout.toJSON() !== state.layout) viewer.layout.restoreState(state.layout);
-      const hadLayers = viewer.layerManager.managedLayers.length > 0;
       applyLayers(viewer, state.layers ?? []);
       const camera = answer.cameraVersion !== cameraVersion ? answer.camera ?? {} : null;
       cameraVersion = answer.cameraVersion;
-      const firstPicture = !hadLayers && !shownAnything && (state.layers ?? []).length > 0;
-      shownAnything = shownAnything || firstPicture;
       // Axes are named, and the engine can only find a name once a source has
       // said what its axes are: so this waits for the sources, then chooses the
-      // axes on screen, and only then moves or fits the camera.
+      // axes on screen, and only then moves or fits the camera. A view still
+      // following the picture is fitted again, to take in what has just landed.
       whenSettled(viewer).then(() => {
         if (state.displayDimensions) {
           viewer.navigationState.pose.displayDimensions.restoreState(state.displayDimensions);
         }
         if (camera?.position) moveTo(viewer, camera.position);
-        if (camera?.fit || (!camera && firstPicture)) fitEverything(viewer);
+        if (camera?.fit || (!camera?.position && framing.following)) fitEverything(viewer);
       });
     }
     try {
@@ -344,6 +386,7 @@ async function main() {
   }
   const viewer = buildViewer(readUi(first));
   bindReports(viewer);
+  watchOperator(viewer);
   await follow(viewer, first);
 }
 

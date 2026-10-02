@@ -30,7 +30,10 @@ that starts is on screen within a second and is read again as its chunks land
 and once more when they stop, a time point appended to it likewise, and a new
 acquisition starting is switched to, unless an older one was picked from the
 dropdown. That logic is `Follower` in `watch.py` and is tested without Qt;
-`window.py` gives it a window and a timer.
+`window.py` gives it a window and a timer. While the operator has not panned or
+zoomed, the page keeps framing every tile as more land; once they have, the
+view is left where they put it, until a fit is asked for again (the 2D/3D
+switch, or `Viewer.fit()`, which switching acquisitions calls).
 
 Three dresses, chosen with `Viewer(ui=...)`: `"simple"` (the default of the
 Data viewer window) is our own panel down the right-hand edge over a bare

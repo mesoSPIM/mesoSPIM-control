@@ -615,3 +615,62 @@ def _scale(store, factor: int) -> None:
             if chunk.is_file() and not chunk.name.startswith(".") and chunk.name != "zarr.json":
                 data = np.frombuffer(chunk.read_bytes(), dtype="<u2") * factor
                 chunk.write_bytes(data.astype("<u2").tobytes())
+
+
+def _camera_settles(page, *, timeout_s: float = 10.0) -> dict:
+    """The camera once it has stopped moving for half a second."""
+    deadline = time.time() + timeout_s
+    seen = page.evaluate(CAMERA)
+    while time.time() < deadline:
+        time.sleep(0.5)
+        now = page.evaluate(CAMERA)
+        if now == seen:
+            return now
+        seen = now
+    return seen
+
+
+def test_the_view_refits_as_tiles_arrive_until_the_operator_moves_it(pages, tiles):
+    view = Viewer(ui="simple")
+    view.add(tiles[0], layer="run")
+    view.fit()
+    url = view.start()
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        one = _camera_settles(page)
+
+        # A second tile lands to the right: the view widens to show both.
+        view.add(tiles[1], layer="run")
+        page.wait_for_function("() => window.viewer.layerManager.managedLayers[0].layer.dataSources.length === 2")
+        pages.drawn(page, layers=2)
+        two = _camera_settles(page)
+        assert two["zoom"] > one["zoom"] * 1.3, (one, two)
+        assert two["position"][3] == pytest.approx((0 + 144 + 160) / 2, abs=2)  # x, between both
+
+        # The operator zooms in (control and the mouse wheel): from now on the view is theirs.
+        box = page.locator(".neuroglancer-rendered-data-panel").first.bounding_box()
+        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.keyboard.down("Control")
+        page.mouse.wheel(0, -300)
+        page.keyboard.up("Control")
+        theirs = _camera_settles(page)
+        assert theirs["zoom"] < two["zoom"]
+        view.add(tiles[2], layer="run")
+        page.wait_for_function("() => window.viewer.layerManager.managedLayers[0].layer.dataSources.length === 3")
+        pages.drawn(page, layers=2)
+        assert _camera_settles(page) == theirs
+
+        # Asking for a fit hands the view back: it frames everything and follows again.
+        view.fit()
+        refit = _camera_settles(page)
+        assert refit["zoom"] > theirs["zoom"]
+        view.add(tiles[3], layer="run")
+        page.wait_for_function("() => window.viewer.layerManager.managedLayers[0].layer.dataSources.length === 4")
+        pages.drawn(page, layers=2)
+        four = _camera_settles(page)
+        assert four["position"][2] == pytest.approx((0 + 144 + 160) / 2, abs=2)  # y, between both rows
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
