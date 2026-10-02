@@ -27,8 +27,15 @@
  *    at zero outside acquired pixels and at one inside them, whatever the
  *    channel weights, and keep an opaque picture opaque under translucent
  *    annotations and scale bars. Without the flag the engine behaves exactly
- *    as shipped. Only frontend modules are touched: nothing here reaches the
- *    workers.
+ *    as shipped.
+ *
+ * 3. Every tile laid over the picture the same way. The engine draws each
+ *    tile of a layer on its own and stock neuroglancer draws the first one
+ *    without blending; the page's channels carry their brightness in the
+ *    alpha, so that first tile looked brighter than the others. Here every
+ *    tile of a layer with the default blending is blended, the first one too.
+ *
+ * Only frontend modules are touched: nothing here reaches the workers.
  *
  * Every edit is anchored on the stock text, and the build stops with a message
  * when an anchor is missing: the pinned engine version has then moved.
@@ -82,6 +89,24 @@ emit(sampledColor * uColorFactor, 0u);`,
 // A transparent ground uses binary coverage, independently of channel weights.
 if (uBackgroundColor.a == 0.0) sampledColor.a = float(sampledColor.a > 0.0);
 emit(sampledColor * uColorFactor, 0u);`,
+  },
+  {
+    // Every tile is laid over what is already drawn, the first one too. The
+    // engine draws each tile of a layer on its own, and stock neuroglancer
+    // draws the very first of them without blending, as if it were opaque:
+    // with brightness in the alpha (state.py), that first tile came out
+    // brighter, with larger cells, than every other tile of the layer. Over
+    // the empty picture, blending gives what an opaque first tile gave
+    // before, so opaque layers look exactly as shipped. The alpha is
+    // accumulated as coverage, so a dark pixel still counts as imaged.
+    module: "sliceview/volume/image_renderlayer.js",
+    anchor: `    if (blendModeValue === BLEND_MODES.ADDITIVE || renderLayerNum > 0) {`,
+    replacement: (anchor) => `    if (blendModeValue === BLEND_MODES.DEFAULT) {
+      gl.enable(gl.BLEND);
+      gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      return;
+    }
+${anchor}`,
   },
   {
     // The chunk worker is the one compiled here, at the page's root.

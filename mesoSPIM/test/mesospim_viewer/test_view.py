@@ -172,7 +172,7 @@ def test_the_shader_is_the_engines_own_with_the_stores_window_and_colour():
     shader = channel_shader(Channel("a", "#00ff00", window=(100, 2000), limits=(0, 65535)))
     assert "#uicontrol invlerp contrast(range=[100.0, 2000.0], window=[0.0, 65535.0])" in shader
     assert '#uicontrol vec3 color color(default="#00ff00")' in shader
-    assert "emitRGBA(vec4(color * value, max(value, 1.0 / 255.0)))" in shader
+    assert "emitRGBA(vec4(color, max(value, 1.0 / 255.0)))" in shader
     assert channel_shader(Channel("b", "#ff00ff")).startswith("#uicontrol invlerp contrast()")
 
 
@@ -454,3 +454,72 @@ def test_a_transparent_ground_is_clear_outside_the_tiles_and_opaque_inside(pages
         page.close()
     finally:
         view.stop()
+
+
+# The middle of the canvas, in blocks: each block's mean green (the 488 channel)
+# and magenta (561), so two pictures can be compared place by place.
+READ_BLOCKS = """(share) => {
+  const display = window.viewer.display; display.draw();
+  const gl = display.gl, canvas = display.canvas;
+  const w = canvas.width, h = canvas.height;
+  const pixels = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  const n = 8, x0 = Math.round(w * (1 - share) / 2), y0 = Math.round(h * (1 - share) / 2);
+  const bw = Math.floor(w * share / n), bh = Math.floor(h * share / n);
+  const blocks = [];
+  for (let by = 0; by < n; by++) for (let bx = 0; bx < n; bx++) {
+    let green = 0, magenta = 0;
+    for (let y = y0 + by * bh; y < y0 + (by + 1) * bh; y++) for (let x = x0 + bx * bw; x < x0 + (bx + 1) * bw; x++) {
+      const i = (y * w + x) * 4;
+      green += pixels[i + 1]; magenta += (pixels[i] + pixels[i + 2]) / 2;
+    }
+    blocks.push([green / (bw * bh), magenta / (bw * bh)]);
+  }
+  return blocks;
+}"""
+
+CAMERA = """() => { const n = window.viewer.navigationState;
+  return { position: Array.from(n.position.value), zoom: n.zoomFactor.value }; }"""
+
+SET_CAMERA = """(camera) => { const n = window.viewer.navigationState;
+  n.position.value = Float32Array.from(camera.position); n.zoomFactor.value = camera.zoom; }"""
+
+
+def test_a_tile_among_others_draws_as_it_does_alone(pages, tiles):
+    """Every tile of a layer is drawn the same way, not only the first one.
+
+    The engine draws each tile of a layer separately, the first straight onto
+    the empty picture and every later one over what is already there. Tile 1
+    is shown alone, then as the second of four, with the same camera: the
+    middle of the tile, away from the overlaps, must look the same.
+    """
+    pictures = []
+    camera = None
+    for shown in ([tiles[1]], tiles):
+        view = Viewer(ui="bare")
+        for tile in shown:
+            view.add(tile, layer="overview")
+        url = view.start()
+        try:
+            page, errors = pages.open(url)
+            pages.drawn(page, layers=2)
+            if camera is None:
+                view.look_at(x=144.0 + 80.0, y=80.0, z=12 * 5.0)  # the middle of tile 1
+                time.sleep(1.0)
+                camera = page.evaluate(CAMERA)
+            else:
+                page.evaluate(SET_CAMERA, camera)
+            pages.drawn(page, layers=2)
+            time.sleep(1.0)
+            pictures.append(page.evaluate(READ_BLOCKS, 0.5))
+            assert not errors, errors
+            page.close()
+        finally:
+            view.stop()
+    alone, among = pictures
+    assert sum(green > 5 for green, _ in alone) > 10, alone
+    for i in range(len(alone)):
+        for channel in (0, 1):
+            assert among[i][channel] == pytest.approx(alone[i][channel], abs=3.0), (
+                f"block {i}: alone {alone[i]}, among others {among[i]}"
+            )

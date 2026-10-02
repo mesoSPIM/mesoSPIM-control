@@ -65,12 +65,16 @@ across:
   and colour as `#uicontrol` values rather than shader text. One layer per
   channel is neuroglancer's own multichannel arrangement; compositing rather
   than adding is what keeps overlapping tiles from summing to a bright seam
-  and dense channels from clipping to white.
+  and dense channels from clipping to white. For that, one edit to the pinned
+  engine lays every tile over the picture the same way: stock neuroglancer
+  draws the first tile of a layer without blending, which made it look
+  brighter than the others.
 - **The transparent 2D ground**, as four small opt-in edits to the pinned
-  engine (`page_source/scripts/neuroglancer.mjs`, the same edits the
-  ZMART viewer 0.2.1 carries). They are applied while the page is built, never
-  to the installed engine, so building twice makes the same page. Nothing
-  else is patched.
+  engine, the same edits the ZMART viewer 0.2.1 carries.
+
+Both live in `page_source/scripts/neuroglancer.mjs`, and are applied while the
+page is built, never to the installed engine, so building twice makes the same
+page. Nothing else is patched.
 
 Left out, on purpose: live refresh and growth patches, contrast measured in
 Python (the engine's own histogram does it), the composed `.zmartview.zarr`

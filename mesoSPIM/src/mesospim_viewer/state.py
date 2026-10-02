@@ -121,13 +121,15 @@ def channel_shader(channel: Channel) -> str:
     """One channel's program, with the store's window and colour as the controls'
     starting values.
 
-    Brightness rides in the alpha as well as the colour, and the layers are
-    composited over one another rather than added: a dim pixel lets the channel
-    beneath show through, a bright one covers it, so channels mix without the
-    sum ever clipping to white, and two tiles of one acquisition that overlap
-    do not add up to a bright seam along the join. The alpha never quite
-    reaches zero inside a tile, so a transparent ground still shows acquired
-    black as black.
+    Brightness rides in the alpha, and the layers are composited over one
+    another rather than added: a dim pixel lets the channel beneath show
+    through, a bright one covers it, so channels mix without the sum ever
+    clipping to white, and two tiles of one acquisition that overlap do not add
+    up to a bright seam along the join. The colour itself is emitted at full
+    strength: the engine multiplies it by the alpha when it lays the pixel over
+    the picture, so multiplying it here as well would square the brightness.
+    The alpha never quite reaches zero inside a tile, so a transparent ground
+    still shows acquired black as black.
     """
     parameters = []
     if channel.window:
@@ -142,7 +144,7 @@ def channel_shader(channel: Channel) -> str:
             f'#uicontrol vec3 color color(default="{channel.color}")',
             "void main() {",
             "  float value = contrast();",
-            "  emitRGBA(vec4(color * value, max(value, 1.0 / 255.0)));",
+            "  emitRGBA(vec4(color, max(value, 1.0 / 255.0)));",
             "}",
             "",
         ]
