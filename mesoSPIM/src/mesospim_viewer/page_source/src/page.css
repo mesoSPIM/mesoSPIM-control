@@ -43,7 +43,7 @@ body {
 }
 
 /* Transparent ground for embedding between a host's own surfaces: the engine
-   leaves alpha at zero where no image was acquired (see scripts/patch_neuroglancer.mjs),
+   leaves alpha at zero where no image was acquired (see scripts/neuroglancer.mjs),
    and the page must not paint anything of its own underneath. */
 html[data-transparent],
 html[data-transparent] body,

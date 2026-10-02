@@ -281,3 +281,45 @@ def test_the_window_shows_the_page_and_follows_on_its_timer(tmp_path, qt_app):
         assert window.follower.shown == newer and window.follower.following
     finally:
         window.close()
+
+
+def _evaluate(qt, view, script: str, timeout_s: float = 20.0):
+    """Run ``script`` in the window's page and return its result."""
+    answer = []
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        view.page().runJavaScript(script, answer.append)
+        _spin(qt, 0.3)
+        if answer and answer[-1] is not None:
+            return answer[-1]
+        answer.clear()
+    return None
+
+
+# Where each part of the time slider sits, once the slider is shown.
+SLIDER_PARTS = """(() => {
+  const box = document.querySelector('#slider-t');
+  if (!box || box.hidden) return null;
+  const at = (part) => { const r = box.querySelector(part).getBoundingClientRect(); return [r.left, r.right]; };
+  return { name: at('.name'), input: at('input'), reading: at('.reading') };
+})()"""
+
+
+def test_the_window_draws_the_time_slider_clear_of_its_label(tmp_path, qt_app):
+    """The window's old browser (Chromium 83) has no gaps in flex rows: the slider
+    must keep its label and its reading apart some other way."""
+    app, qt = qt_app
+    from mesoSPIM.src.mesospim_viewer.window import make_window_class
+
+    write_tile(tmp_path / "timelapse.ome.zarr", origin_um=(0, 0, 0), seed=1, timepoints=3)
+    window = make_window_class()(tmp_path / "timelapse.ome.zarr", live=False)
+    try:
+        window.resize(1200, 800)
+        window.show()
+        view = window.findChild(qt.QWebEngineView)
+        parts = _evaluate(qt, view, SLIDER_PARTS)
+        assert parts is not None, "the time slider never appeared"
+        assert parts["input"][0] - parts["name"][1] >= 6, parts
+        assert parts["reading"][0] - parts["input"][1] >= 6, parts
+    finally:
+        window.close()

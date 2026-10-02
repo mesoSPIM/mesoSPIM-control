@@ -98,7 +98,7 @@ select.chooser {
 .row.labelled > .label { flex: 0 0 72px; color: var(--text-muted); font-size: 12px; }
 .row.labelled > .segmented { flex: 1; }
 .row.labelled > .segmented button { padding: 4px 0; font-weight: 500; font-size: 12px; }
-.row.labelled > input[type="range"] { flex: 1; accent-color: var(--accent); margin: 0; }
+.row.labelled > input[type="range"] { flex: 1; margin: 0; }
 .row.labelled > .reading { flex: 0 0 56px; text-align: right; font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .row.labelled > input[type="checkbox"] { accent-color: var(--accent); }
 .row.labelled.disabled { opacity: 0.4; pointer-events: none; }
@@ -156,7 +156,6 @@ select.chooser {
   z-index: 4;
   display: flex;
   align-items: center;
-  gap: 8px;
   padding: 6px 10px;
   background: var(--overlay-bg);
   border: 1px solid var(--control-border);
@@ -168,13 +167,46 @@ select.chooser {
 }
 .axis-slider[hidden] { display: none; }
 .axis-slider .name { font-weight: 600; color: var(--text-muted); }
-.axis-slider input[type="range"] { accent-color: var(--accent); margin: 0; }
+/* The label and the reading are kept apart from the slider by margins: the Data
+   viewer window (Qt WebEngine, Chromium 83) knows no gaps in flex rows, and drew
+   the label under the slider's thumb. */
 #slider-t { left: 50%; bottom: 12px; transform: translateX(-50%); }
-#slider-t input { width: 260px; }
+#slider-t input { width: 260px; margin: 0 10px; }
 #slider-z { right: 12px; top: 50%; transform: translateY(-50%); flex-direction: column; }
-#slider-z input { writing-mode: vertical-lr; direction: rtl; height: 220px; width: 16px; }
-/* The Data viewer window (Qt WebEngine, Chromium 83) ignores writing-mode on a slider and drew
-   the depth slider lying flat, 16 pixels wide, so it could hardly be moved. This asks that
-   browser for its own upright slider, first plane at the bottom as above; current browsers
-   draw the same either way. */
-#slider-z input { -webkit-appearance: slider-vertical; }
+/* Upright: a level slider turned a quarter, first plane at the bottom. Chromium 83
+   ignores writing-mode on a slider, and its own upright slider cannot be dressed;
+   turned, the slider is the same in every browser. The margins give the turned
+   slider its upright room, plus the spacing from the label and the reading. */
+#slider-z input { width: 220px; transform: rotate(-90deg); margin: 112px -102px; }
+
+/* -- every slider of the page, dressed by the page itself ---------------------
+   Chromium 83 ignores accent-color and would draw them plain grey, so the track
+   and the thumb are drawn here; current browsers draw them the same. */
+.mesospim-panel input[type="range"],
+.axis-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.mesospim-panel input[type="range"]::-webkit-slider-runnable-track,
+.axis-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-track);
+}
+.mesospim-panel input[type="range"]::-webkit-slider-thumb,
+.axis-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--text-bright);
+  box-sizing: border-box;
+}
+.mesospim-panel input[type="range"]:focus,
+.axis-slider input[type="range"]:focus { outline: none; }
