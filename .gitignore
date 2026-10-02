@@ -42,3 +42,8 @@ docs/build_log.txt
 PROJECT_CONTEXT.md
 .claude/skills
 CLAUDE.md
+# The Data viewer page's build tools (mesoSPIM/src/mesospim_viewer/source)
+node_modules/
+# The Data viewer's built page is committed, so that mesoSPIM runs without Node;
+# this keeps the rule above that ignores build folders from hiding it.
+!mesoSPIM/src/mesospim_viewer/build/
