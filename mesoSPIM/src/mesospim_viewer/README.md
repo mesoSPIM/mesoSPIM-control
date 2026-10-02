@@ -19,7 +19,8 @@ view.open_in_browser()
 And for a folder the microscope is writing into, the **Data viewer window**:
 
 ```
-python -m mesoSPIM.src.mesospim_viewer.window /path/to/data        # or, from mesoSPIM-control: View > Open Data Viewer
+python -m mesoSPIM.src.mesospim_viewer.window /path/to/data        # or, from mesoSPIM-control: View > Open Live Data Viewer
+python -m mesoSPIM.src.mesospim_viewer.window --acquired /path/to/Sample.ome.zarr   # View > Open Acquired Dataset...
 python -m mesoSPIM.src.mesospim_viewer.demo --live                 # a pretend run, followed as it lands
 ```
 
@@ -217,7 +218,7 @@ mesoSPIM environment, install it and restart mesoSPIM:
 pip install PyQtWebEngine==5.15.7
 ```
 
-Then, in mesoSPIM-control, `View > Open Data Viewer`. Before the first real
+Then, in mesoSPIM-control, `View > Open Live Data Viewer`. Before the first real
 run, three quick checks from a Python prompt in that environment:
 
 ```python

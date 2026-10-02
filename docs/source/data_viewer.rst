@@ -1,12 +1,28 @@
 Data viewer
 ===========
 
-**View → Open Data Viewer** opens a separate window that shows the acquisition
-being written, as it is written: every tile and every time point is on screen
-within a second of landing on disk. It follows the newest acquisition in the
-folder the acquisition list saves into, and a dropdown at the top of its panel
-switches to an earlier acquisition of the session (pick the one marked
+The Data viewer comes in two forms, both in the **View** menu.
+
+**View → Open Live Data Viewer** opens a separate window that shows the
+acquisition being written, as it is written: every tile and every time point is
+on screen within a second of landing on disk. It follows the newest acquisition
+in the folder the acquisition list saves into, and a dropdown at the top of its
+panel switches to an earlier acquisition of the session (pick the one marked
 *current* to follow the newest again).
+
+**View → Open Acquired Dataset...** asks for a dataset that is already on disk
+and shows it as it is, in a window of its own. Nothing is followed: if more
+data arrives in that folder later, this window does not change. You can pick:
+
+* one acquisition, the ``<Sample>.ome.zarr`` folder holding its tiles, to see
+  all the tiles together;
+* one tile, a ``Mag…_Tile…_Sh…_Rot….ome.zarr`` store, to see it on its own;
+* a data folder holding several acquisitions, to see the newest, with the
+  dropdown to switch between them.
+
+Several acquired datasets can be open at once, each in its own window. The
+window title always says which form a window is: *Live data viewer* or
+*Acquired dataset*.
 
 The window is a neuroglancer page driven from Python, the ``mesospim_viewer``
 package in ``mesoSPIM/src/mesospim_viewer/``. It reads the layout the ``MP_OME_Zarr_TCZYX_Writer`` produces: one

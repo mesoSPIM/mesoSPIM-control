@@ -465,6 +465,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.actionOpen_Acquisition_Manager.triggered.connect(self.acquisition_manager_window.show)
         self.actionOpen_Tile_Overview.triggered.connect(self.tile_view_window.show)
         self.actionOpen_Data_Viewer.triggered.connect(lambda: mesoSPIM_DataViewer.open_window(self))
+        self.actionOpen_Acquired_Dataset.triggered.connect(lambda: mesoSPIM_DataViewer.open_acquired_dataset(self))
         self.actionCascade_windows.triggered.connect(self.cascade_all_windows)
 
         # Add Processor Chain menu item to Plugins menu

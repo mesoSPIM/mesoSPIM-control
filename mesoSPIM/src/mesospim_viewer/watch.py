@@ -258,3 +258,47 @@ class Follower:
         if offer != self._offered:
             self._offered = offer
             self.viewer.offer_acquisitions(list(offer[0]), offer[1])
+
+
+class Opened:
+    """What the window shows for a dataset opened from disk, without following anything.
+
+    Three kinds of folder can be opened, and each is shown as it is now:
+
+    - one tile store (a ``.ome.zarr`` with its own image data) is shown on its own;
+    - one acquisition (a ``.ome.zarr`` holding tile stores, or any folder that holds
+      tile stores directly) is shown with all its tiles;
+    - a data folder holding acquisitions shows the newest, and the dropdown in the
+      panel switches between them. A new acquisition appearing there is not
+      switched to: that is what the live window is for.
+
+    Anything else raises :class:`NotAStore`, with a sentence saying what was expected.
+    """
+
+    def __init__(self, viewer: Viewer, path: str | Path) -> None:
+        self.viewer = viewer
+        self.path = Path(path).expanduser()
+        self.follower: Follower | None = None
+        try:
+            read_store(self.path)
+        except NotAStore:
+            pass
+        else:
+            self.viewer.add(self.path, layer=Acquisition(self.path, 0).name)
+            self.viewer.fit()
+            return
+        # Acquisitions are looked for first: a tile store is never counted as one, so a
+        # folder of tiles falls through to the next case.
+        if Acquisitions(self.path).list():
+            # The follower gives the dropdown; it is looked at once and then left still.
+            self.follower = Follower(viewer, self.path)
+            self.follower.poll()
+            self.follower.following = False
+            return
+        if Watcher(viewer, self.path).poll():
+            self.viewer.fit()
+            return
+        raise NotAStore(
+            f"{self.path} is not a dataset the viewer can open. Pick a .ome.zarr folder "
+            "(one tile, or one acquisition holding tiles), or a folder holding acquisitions."
+        )

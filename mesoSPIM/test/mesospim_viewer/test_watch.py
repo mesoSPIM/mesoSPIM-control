@@ -162,6 +162,61 @@ def test_the_follower_stays_on_the_newest_acquisition_until_an_older_one_is_chos
         view.stop()
 
 
+
+def test_an_acquired_dataset_is_shown_as_it_is_and_nothing_new_is_followed(tmp_path):
+    from mesoSPIM.src.mesospim_viewer import NotAStore, Opened
+
+    older = an_acquisition(tmp_path, "run_a")
+    tile = write_tile(older / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=1)
+    write_tile(older / "Mag1_Tile1_Sh0_Rot0.ome.zarr", origin_um=(0, 144, 0), seed=2)
+    time.sleep(0.05)
+    newer = an_acquisition(tmp_path, "run_b")
+    write_tile(newer / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=3)
+
+    # One acquisition: all its tiles, in one layer named after it, and no dropdown.
+    view = Viewer()
+    try:
+        opened = Opened(view, older)
+        assert view.layers == ["run_a"] and len(view.stores("run_a")) == 2
+        assert opened.follower is None
+        assert view._server.scene.choices["names"] == [], "no dropdown for a single acquisition"
+    finally:
+        view.stop()
+
+    # One tile store on its own.
+    view = Viewer()
+    try:
+        Opened(view, tile)
+        assert view.layers == ["Mag1_Tile0_Sh0_Rot0"] and len(view.stores("Mag1_Tile0_Sh0_Rot0")) == 1
+    finally:
+        view.stop()
+
+    # A data folder: the newest is shown, the dropdown offers the rest, and a newer
+    # acquisition appearing later is not switched to.
+    view = Viewer()
+    try:
+        opened = Opened(view, tmp_path)
+        assert opened.follower.shown == newer and opened.follower.following is False
+        assert view._server.scene.choices == {"names": ["run_b", "run_a"], "current": 0}
+        view._server.choice_reported({"index": 1})
+        assert opened.follower.shown == older
+        time.sleep(0.05)
+        newest = an_acquisition(tmp_path, "run_c")
+        write_tile(newest / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=4)
+        assert opened.follower.shown == older
+    finally:
+        view.stop()
+
+    # A folder with nothing the viewer can show says so.
+    (tmp_path / "empty").mkdir()
+    view = Viewer()
+    try:
+        with pytest.raises(NotAStore, match="not a dataset the viewer can open"):
+            Opened(view, tmp_path / "empty")
+    finally:
+        view.stop()
+
+
 # -- the Qt window ---------------------------------------------------------------
 #
 # QtWebEngine aborts the whole process when it cannot create an OpenGL context

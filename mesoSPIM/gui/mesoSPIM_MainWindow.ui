@@ -3866,6 +3866,7 @@ Est. timelapse duration (hh:mm:ss): --:--:--</string>
     <addaction name="actionOpen_Acquisition_Manager"/>
     <addaction name="actionOpen_Tile_Overview"/>
     <addaction name="actionOpen_Data_Viewer"/>
+    <addaction name="actionOpen_Acquired_Dataset"/>
     <addaction name="actionCascade_windows"/>
    </widget>
    <widget class="QMenu" name="menuPlugins">
@@ -3968,10 +3969,18 @@ Est. timelapse duration (hh:mm:ss): --:--:--</string>
   </action>
   <action name="actionOpen_Data_Viewer">
    <property name="text">
-    <string>Open Data Viewer</string>
+    <string>Open Live Data Viewer</string>
    </property>
    <property name="toolTip">
-    <string>Show the acquisition being written, tile by tile and time point by time point (needs the mesospim_view package)</string>
+    <string>Show the acquisition being written, tile by tile and time point by time point, as it lands</string>
+   </property>
+  </action>
+  <action name="actionOpen_Acquired_Dataset">
+   <property name="text">
+    <string>Open Acquired Dataset...</string>
+   </property>
+   <property name="toolTip">
+    <string>Show a dataset already on disk (a .ome.zarr folder), as it is, in a window of its own</string>
    </property>
   </action>
  </widget>

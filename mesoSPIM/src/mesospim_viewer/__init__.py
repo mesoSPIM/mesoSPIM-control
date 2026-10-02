@@ -8,7 +8,7 @@ layer, and reports the camera back. See README.md beside this file.
 from .omezarr import Axis, Channel, NotAStore, Store, read_store
 from .state import LAYOUTS, Layer, Placement, channel_shader, source_json, state_json
 from .viewer import PAGE_DIR, Viewer
-from .watch import Acquisition, Acquisitions, Follower, Watcher
+from .watch import Acquisition, Acquisitions, Follower, Opened, Watcher
 
 __all__ = [
     "Axis",
@@ -22,6 +22,7 @@ __all__ = [
     "Viewer",
     "Watcher",
     "Follower",
+    "Opened",
     "Acquisition",
     "Acquisitions",
     "channel_shader",
