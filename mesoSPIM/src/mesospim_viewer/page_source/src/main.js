@@ -32,7 +32,7 @@ import {
 } from "neuroglancer/unstable/ui/default_clipboard_handling.js";
 import { makeLayer, deleteLayer } from "neuroglancer/unstable/layer/index.js";
 import { registerActionListener } from "neuroglancer/unstable/util/event_action_map.js";
-import { mountPanel } from "./panel.js";
+import { mountPanel, SEPARATOR } from "./panel.js";
 import "./page.css";
 
 const POLL_WAIT_S = 25;
@@ -258,6 +258,25 @@ function fitCamera(viewer) {
   if (boxFit > 0) viewer.perspectiveNavigationState.zoomFactor.value = boxFit * FIT_MARGIN;
 }
 
+// An acquisition opens on its first time point. Left to itself the engine
+// starts in the middle of every axis it does not draw, which for a time-lapse
+// is a time point in the middle of the run. Later, the time point is the
+// operator's: a tile landing in an acquisition already shown leaves it alone.
+function toFirstTimePoint(viewer) {
+  const { position } = viewer.navigationState;
+  const space = globalSpace(viewer);
+  const axis = space?.names?.indexOf("t") ?? -1;
+  if (axis === -1 || !Number.isFinite(space.bounds.lowerBounds[axis])) return;
+  const start = Float32Array.from(position.value);
+  // Time point i is drawn over i - 0.5 .. i + 0.5; the first starts at the lower bound.
+  start[axis] = space.bounds.lowerBounds[axis] + 0.5;
+  position.value = start;
+}
+
+function acquisitionsOf(layers) {
+  return new Set(layers.map((layer) => layer.name.split(SEPARATOR)[0]));
+}
+
 // -- the layers ----------------------------------------------------------------
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -347,6 +366,7 @@ async function follow(viewer, first) {
   let version = -1;
   let cameraVersion = first?.cameraVersion ?? 0;
   let answer = first;
+  let shown = new Set();
   for (;;) {
     if (answer && answer.version !== version) {
       version = answer.version;
@@ -356,6 +376,9 @@ async function follow(viewer, first) {
       applyLayers(viewer, state.layers ?? []);
       const camera = answer.cameraVersion !== cameraVersion ? answer.camera ?? {} : null;
       cameraVersion = answer.cameraVersion;
+      const acquisitions = acquisitionsOf(state.layers ?? []);
+      const opened = [...acquisitions].some((name) => !shown.has(name));
+      shown = acquisitions;
       // Axes are named, and the engine can only find a name once a source has
       // said what its axes are: so this waits for the sources, then chooses the
       // axes on screen, and only then moves or fits the camera. A view still
@@ -364,6 +387,7 @@ async function follow(viewer, first) {
         if (state.displayDimensions) {
           viewer.navigationState.pose.displayDimensions.restoreState(state.displayDimensions);
         }
+        if (opened) toFirstTimePoint(viewer);
         if (camera?.position) moveTo(viewer, camera.position);
         if (camera?.fit || (!camera?.position && framing.following)) fitEverything(viewer);
       });

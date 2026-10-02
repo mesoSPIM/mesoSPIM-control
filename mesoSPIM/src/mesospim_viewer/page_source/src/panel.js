@@ -19,7 +19,7 @@ import { SidePanel } from "neuroglancer/unstable/ui/side_panel.js";
 import { TrackableSidePanelLocation } from "neuroglancer/unstable/ui/side_panel_location.js";
 import "./panel.css";
 
-const SEPARATOR = " · "; // between acquisition and channel in a layer's name (state.py)
+export const SEPARATOR = " · "; // between acquisition and channel in a layer's name (state.py)
 
 const ICONS = {
   eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',

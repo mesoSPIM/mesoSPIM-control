@@ -411,3 +411,35 @@ def test_the_sliders_show_the_plane_and_time_point_they_name(pages, tmp_path):
         page.close()
     finally:
         view.stop()
+
+
+def test_an_acquisition_opens_on_its_first_time_point(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="run_01")
+    url = _shown(view)
+    reading = "() => document.querySelector('#slider-t .reading').textContent"
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=2)
+        page.wait_for_function(f"() => ({reading})() === '1 / 3'", timeout=5000)
+
+        # The operator's choice stays while more tiles of the same acquisition land...
+        page.evaluate(
+            "() => { const i = document.querySelector('#slider-t input'); i.value = '2'; i.dispatchEvent(new Event('input')); }"
+        )
+        view.add(stacks[1], layer="run_01")
+        page.wait_for_function("() => window.viewer.layerManager.managedLayers[0].layer.dataSources.length === 2")
+        pages.drawn(page, layers=2)
+        time.sleep(0.5)
+        assert page.evaluate(reading) == "3 / 3"
+
+        # ...and another acquisition opens on its own first time point.
+        view.remove("run_01")
+        view.add(stacks[0], layer="run_02")
+        page.wait_for_function("() => window.viewer.layerManager.managedLayers[0]?.name.startsWith('run_02')")
+        pages.drawn(page, layers=2)
+        page.wait_for_function(f"() => ({reading})() === '1 / 3'", timeout=5000)
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
