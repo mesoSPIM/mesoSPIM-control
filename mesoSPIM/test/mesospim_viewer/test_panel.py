@@ -512,3 +512,38 @@ def test_show_all_appears_once_the_view_is_moved_and_frames_everything_again(pag
     finally:
         view.stop()
 
+
+def test_each_acquisition_has_a_remove_button_where_python_takes_removals(pages, stacks):
+    view = Viewer(ui="simple")
+    view.add(stacks[0], layer="first")
+    view.add(stacks[1], layer="second")
+    url = _shown(view)
+    buttons = "() => [...document.querySelectorAll('.group .remove')].map(b => b.closest('.group').dataset.group)"
+    try:
+        page, errors = pages.open(url, width=1100, height=700)
+        pages.drawn(page, layers=4)
+        assert page.evaluate(buttons) == [], "no remove buttons where nothing can be removed"
+
+        view.on_remove(view.remove)
+        assert _until(page, buttons, ["first", "second"]) == ["first", "second"]
+        page.click('.group[data-group="first"] .remove')
+        assert _until(page, "() => window.viewer.layerManager.managedLayers.map(m => m.name)",
+                      ["second · 488", "second · 561"]) == ["second · 488", "second · 561"]
+        assert view.layers == ["second"]
+
+        # A message from Python is shown on the picture, and can be closed.
+        notice = "() => { const n = document.querySelector('#notice'); return n && !n.hidden ? n.querySelector('.text').textContent : null; }"
+        view.say("notes was not opened: it is not a dataset the viewer can open.")
+        assert _until(page, notice, "notes was not opened: it is not a dataset the viewer can open.") == (
+            "notes was not opened: it is not a dataset the viewer can open."
+        )
+        page.click("#notice .close")
+        assert page.evaluate(notice) is None
+        view.say("notes was not opened: it is not a dataset the viewer can open.")
+        assert _until(page, notice, "notes was not opened: it is not a dataset the viewer can open.") is not None
+        view.say("")
+        assert _until(page, notice, None) is None
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()

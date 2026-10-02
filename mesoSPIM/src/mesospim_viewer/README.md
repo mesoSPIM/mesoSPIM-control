@@ -33,13 +33,30 @@ dropdown. That logic is `Follower` in `watch.py` and is tested without Qt;
 `window.py` gives it a window and a timer.
 
 **Overview mode.** While the operator has not panned or zoomed, the page keeps
-framing every picture shown, zooming out as more tiles land. Once they have
-panned or zoomed, the view is left where they put it, and a **Show all**
-button appears beside the 2D/3D switch: it frames everything at once and
-returns to overview mode. The 2D/3D switch
+framing every picture shown, zooming out as more tiles land or more datasets
+are dropped on the window. Once they have panned or zoomed, the view is left
+where they put it, and a **Show all** button appears beside the 2D/3D switch:
+it frames everything at once and returns to overview mode. The 2D/3D switch
 and `Viewer.fit()` (which switching acquisitions calls) do the same. Stepping
 through planes or time points does not count as moving the view, and the time
 point is left alone: an acquisition opens on its first one.
+
+**Dropping datasets onto the window.** The window for an acquired dataset
+(`--acquired`, or `View > Open Acquired Dataset...`) takes OME-Zarr folders
+dragged onto it from the file manager, one or several at once: a single tile
+store, a whole acquisition, or a folder holding acquisitions (each of them is
+added). Every folder is added to what is shown, never in its place: each tile
+sits where its own metadata puts it, channels of the same name share one
+contrast row within each acquisition, and time points join the time slider.
+Each acquisition gets its own block in the panel, with a **remove** button
+that takes it off the view again; a folder dropped twice is shown once, and a
+second acquisition with the same name as one already shown is numbered,
+`run_a (2)`. A folder the viewer cannot read does not stop the others: the
+window says in a sentence on the picture why it was not opened. The live window
+refuses drops and has no remove buttons, so what it shows is always what the
+microscope is writing. In Qt a page never learns the paths of files dropped
+onto it, so the window takes the drop itself (`Opened.add` and
+`Opened.remove` in `watch.py`, tested without Qt).
 
 Three dresses, chosen with `Viewer(ui=...)`: `"simple"` (the default of the
 Data viewer window) is our own panel down the right-hand edge over a bare
@@ -176,9 +193,11 @@ Viewer.add / remove / set_layout  --->    GET /api/state?since=N   (long poll)
   (state.py)                                operator's own adjustments on layers
                                             Python did not change
 Viewer.look_at / fit              --->    camera, applied once the sources settled
+Viewer.say                        --->    a message on the picture
 Viewer.position, on_view          <---    POST /api/view   (camera, debounced)
 Viewer.on_pick                    <---    POST /api/pick   (a double-click)
 Viewer.on_choice                  <---    POST /api/choose (the dropdown)
+Viewer.on_remove                  <---    POST /api/remove (a remove button)
                                           GET  /data/<key>/...   (store bytes)
 ```
 
@@ -187,7 +206,8 @@ Viewer.on_choice                  <---    POST /api/choose (the dropdown)
   in it newest first, `Watcher` polls one of them and adds a new tile, re-reads
   one that is still being written every ten seconds and once it has gone
   quiet, and one whose shape grew at once; `Follower` keeps a viewer on the
-  newest.
+  newest; `Opened` shows datasets from disk, adds dropped ones beside them
+  and takes one off again.
 - `state.py` turns placed stores into neuroglancer state: one engine layer per
   channel, over the same sources. A shifted source carries a `transform` whose
   translation column holds the shift, in voxels. Each layer's shader is the
@@ -204,8 +224,8 @@ Viewer.on_choice                  <---    POST /api/choose (the dropdown)
   engine's memo before it is rebuilt, so a grown store is read afresh.
 - `source/src/panel.js` is the simple interface: registered as one of
   the engine's own side panels (only a panel inside the engine's canvas gets
-  a histogram drawn), with the view switch, Show all, the channel rows and
-  the sliders.
+  a histogram drawn), with the view switch, Show all, the channel rows, the
+  remove buttons, the message on the picture and the sliders.
   Every control reads and writes engine layer state, the same state the
   native panel edits, so the operator's adjustments survive Python's updates
   by the same rule.

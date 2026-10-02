@@ -279,6 +279,35 @@ def test_the_server_serves_store_bytes_with_ranges_and_the_scene(tiles):
         view.stop()
 
 
+def test_a_remove_request_and_a_message_pass_between_page_and_python(tiles):
+    view = Viewer()
+    view.add(tiles[0], layer="overview")
+    url = view.start()
+    removed = []
+    try:
+        status, _, body = _get(f"{url}api/state?since=-1")
+        answer = json.loads(body)
+        assert "removable" not in answer["ui"]
+        assert answer["notice"] == {"text": "", "count": 0}
+
+        view.on_remove(removed.append)
+        view.say("tile_9.ome.zarr was not opened: it holds no image.")
+        status, _, body = _get(f"{url}api/state?since={answer['version']}&wait=5")
+        answer = json.loads(body)
+        assert answer["ui"]["removable"] is True
+        assert answer["notice"] == {"text": "tile_9.ome.zarr was not opened: it holds no image.", "count": 1}
+
+        request = urllib.request.Request(
+            f"{url}api/remove",
+            data=json.dumps({"name": "overview"}).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(request, timeout=5).read()
+        assert removed == ["overview"]
+    finally:
+        view.stop()
+
+
 def test_reports_from_the_page_come_back_in_micrometres(tiles):
     view = Viewer()
     view.add(tiles[0], layer="overview")

@@ -93,6 +93,20 @@ button.icon.off { color: var(--text-muted); }
 .tools > button.show-all:hover { border-color: var(--accent); }
 .tools > button.show-all[hidden] { display: none; }
 
+/* A message on the picture, top centre, such as why a dropped folder did not open. */
+#notice {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 6;
+  max-width: 50%;
+  display: flex; align-items: flex-start;
+  padding: 6px 6px 6px 12px;
+  background: var(--overlay-bg); backdrop-filter: blur(4px);
+  border: 1px solid #a3742c; border-radius: 8px;
+  color: var(--text-bright); font-size: 13px; line-height: 1.4;
+  white-space: pre-line; overflow-wrap: anywhere;
+}
+#notice[hidden] { display: none; }
+#notice > * + * { margin-left: 8px; }
+#notice .text { flex: 1; padding-top: 3px; }
 .segmented button {
   flex: 1; padding: 6px 0;
   background: var(--control-bg); border: 0; color: var(--text-primary);
@@ -125,6 +139,7 @@ select.chooser {
 .group > .row.head { padding-bottom: 6px; }
 .group .name { flex: 1; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group .count { color: var(--text-muted); font-size: 12px; }
+.group .remove:hover { color: #ff7b72; }
 
 .channel { display: flex; flex-direction: column; padding: 8px 0 10px 0; border-top: 1px solid var(--subtle-border); }
 .channel > * + * { margin-top: 6px; }

@@ -11,8 +11,8 @@
  * 3. reports the camera to `/api/view` and a double-click to `/api/pick`.
  *
  * Until the operator pans or zooms, the view keeps framing everything shown,
- * so tiles landing during an acquisition come into view as they arrive. The
- * Show all button brings that back.
+ * so tiles landing during an acquisition, or datasets dropped onto the window,
+ * come into view as they arrive. The Show all button brings that back.
  *
  * Everything about what is shown -- which stores, where they sit, how their
  * channels mix -- is decided in Python and arrives as ordinary neuroglancer
@@ -384,6 +384,8 @@ async function follow(viewer, first) {
     if (answer && answer.version !== version) {
       version = answer.version;
       viewer.panel?.setChoices(answer.choices);
+      viewer.panel?.setRemovable(answer.ui?.removable === true);
+      viewer.panel?.setNotice(answer.notice);
       const state = answer.state ?? {};
       if (state.layout && viewer.layout.toJSON() !== state.layout) viewer.layout.restoreState(state.layout);
       applyLayers(viewer, state.layers ?? []);

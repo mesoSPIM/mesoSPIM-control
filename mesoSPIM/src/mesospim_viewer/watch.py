@@ -272,6 +272,19 @@ class Follower:
         self.following = True
         self.poll()
 
+    def put_away(self) -> None:
+        """Take the acquisition shown off the viewer, as its remove button asks.
+
+        The dropdown stays, with nothing picked in it, so picking any entry shows
+        that acquisition again.
+        """
+        with self._lock:
+            if self.watcher is not None:
+                self.watcher.forget()
+                self.watcher = None
+            self.following = False
+            self._offer()
+
     def _offer(self) -> None:
         """The dropdown in the panel: the session's acquisitions, and the one shown."""
         offer = (tuple(self.names), self.shown_index)
@@ -281,7 +294,7 @@ class Follower:
 
 
 class Opened:
-    """What the window shows for a dataset opened from disk, without following anything.
+    """What the window shows for datasets opened from disk, without following anything.
 
     Three kinds of folder can be opened, and each is shown as it is now:
 
@@ -293,37 +306,96 @@ class Opened:
       switched to: that is what the live window is for.
 
     Anything else raises :class:`NotAStore`, with a sentence saying what was expected.
+
+    More folders can be added afterwards, as the window does for folders dropped
+    onto it (:meth:`add`), and any acquisition can be taken off again
+    (:meth:`remove`, which the panel's remove buttons call).
     """
 
     def __init__(self, viewer: Viewer, path: str | Path) -> None:
         self.viewer = viewer
         self.path = Path(path).expanduser()
         self.follower: Follower | None = None
-        try:
-            store = read_store(self.path)
-        except NotSupported:
-            raise  # an image in a form this viewer does not read: the error says which
-        except NotAStore:
-            pass  # not one image: a folder of them, looked at below
-        else:
-            self.viewer.add(self.path, layer=Acquisition(self.path, 0).name, channel=channel_of(store))
+        # Which folder each shown acquisition came from, by its layer name, so the
+        # same folder dropped again is recognised and another one of the same name
+        # gets a name of its own.
+        self.shown: dict[str, Path] = {}
+        # add() runs in the window, remove() on the page's request: one at a time.
+        self._lock = threading.RLock()
+        if _is_store(self.path) or not Acquisitions(self.path).list():
+            self.add(self.path)
             self.viewer.fit()
-            return
-        # Acquisitions are looked for first: a tile store is never counted as one, so a
-        # folder of tiles falls through to the next case.
-        if Acquisitions(self.path).list():
+        else:
             # The follower gives the dropdown; it is looked at once and then left still.
             self.follower = Follower(viewer, self.path, live=False)
             self.follower.poll()
             self.follower.following = False
-            return
-        watcher = Watcher(viewer, self.path)
-        if watcher.poll():
-            self.viewer.fit()
-            return
-        for path in watcher.stores():
-            read_store(path)  # none could be shown: the first one's error says why
-        raise NotAStore(
-            f"{self.path} is not a dataset the viewer can open. Pick a .ome.zarr folder "
-            "(one tile, or one acquisition holding tiles), or a folder holding acquisitions."
-        )
+        self.viewer.on_remove(self.remove)
+
+    def add(self, path: str | Path) -> list[str]:
+        """Show one more dataset beside what is shown, and return its acquisitions' names.
+
+        Nothing shown is replaced: each tile is placed by its own metadata, so
+        datasets acquired at different places sit side by side, and channels of
+        the same name share one contrast row within each acquisition. A data
+        folder holding acquisitions adds every one of them, oldest first. The
+        view is not moved here: the page takes in what has landed for as long
+        as the operator has not moved it themselves.
+        """
+        path = Path(path).expanduser()
+        with self._lock:
+            store = _is_store(path)
+            if store is not None:
+                name = self._name_for(path)
+                self.viewer.add(path, layer=name, channel=channel_of(store))
+                self.shown[name] = path
+                return [name]
+            acquisitions = Acquisitions(path).list()
+            if acquisitions:
+                return [name for a in reversed(acquisitions) for name in self.add(a.path)]
+            name = self._name_for(path)
+            watcher = Watcher(self.viewer, path, layer=name)
+            if watcher.poll():
+                self.shown[name] = path
+                return [name]
+            for tile in watcher.stores():
+                read_store(tile)  # none could be shown: the first one's error says why
+            raise NotAStore(
+                f"{path} is not a dataset the viewer can open. Pick a .ome.zarr folder "
+                "(one tile, or one acquisition holding tiles), or a folder holding acquisitions."
+            )
+
+    def remove(self, name: str) -> bool:
+        """Take one acquisition off the view, by its name in the panel."""
+        with self._lock:
+            follower = self.follower
+            if follower is not None and follower.watcher is not None and follower.watcher.layer_name == name:
+                follower.put_away()
+                return True
+            self.shown.pop(name, None)
+            return self.viewer.remove(name)
+
+    def _name_for(self, path: Path) -> str:
+        """The folder's own name, or, when another folder of that name is shown, a numbered one."""
+        for name, held in self.shown.items():
+            if held == path:
+                return name
+        base = Acquisition(path, 0).name
+        name, number = base, 1
+        while name in self.viewer.layers:
+            number += 1
+            name = f"{base} ({number})"
+        return name
+
+
+def _is_store(path: Path) -> Store | None:
+    """The tile store at ``path``, or None when the folder is not one image.
+
+    An image in a form this viewer does not read raises, saying which.
+    """
+    try:
+        return read_store(path)
+    except NotSupported:
+        raise
+    except NotAStore:
+        return None

@@ -218,6 +218,120 @@ def test_an_acquired_dataset_is_shown_as_it_is_and_nothing_new_is_followed(tmp_p
         view.stop()
 
 
+def _sources(view: Viewer, layer: str) -> list[dict]:
+    """The sources the page is asked to show for one acquisition's first channel."""
+    first = next(spec for spec in view.state["layers"] if spec["name"].startswith(layer + " · "))
+    return first["source"]
+
+
+def test_dropped_folders_are_added_beside_what_is_shown(tmp_path):
+    from mesoSPIM.src.mesospim_viewer import NotAStore, Opened
+
+    first = an_acquisition(tmp_path / "day1", "run_a")
+    write_tile(first / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=1)
+    second = an_acquisition(tmp_path / "day2", "run_b")
+    write_tile(second / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 1000), seed=2)
+    write_tile(second / "Mag1_Tile1_Sh0_Rot0.ome.zarr", origin_um=(0, 144, 1000), seed=3)
+    loose = write_tile(tmp_path / "loose" / "single.ome.zarr", origin_um=(0, 500, 0), seed=4, timepoints=3)
+    # The same acquisition name on another day: a second block, never merged into the first.
+    again = an_acquisition(tmp_path / "day3", "run_a")
+    write_tile(again / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 2000), seed=5)
+
+    view = Viewer()
+    try:
+        opened = Opened(view, first)
+        assert opened.add(second) == ["run_b"]
+        assert opened.add(loose) == ["single"]
+        assert opened.add(again) == ["run_a (2)"]
+        assert view.layers == ["run_a", "run_b", "single", "run_a (2)"]
+        assert [s.path.name for s in view.stores("run_b")] == ["Mag1_Tile0_Sh0_Rot0.ome.zarr", "Mag1_Tile1_Sh0_Rot0.ome.zarr"]
+        # Each placed by its own metadata: the viewer shifts none of them.
+        assert [s.translation[-3:] for s in view.stores("run_b")] == [(0, 0, 1000), (0, 144, 1000)]
+        assert all("transform" not in source for source in _sources(view, "run_b"))
+        assert view.stores("run_a (2)")[0].translation[-3:] == (0, 0, 2000)
+        # Channels share one contrast row per name within each acquisition, as before.
+        assert [spec["name"] for spec in view.state["layers"]][:4] == [
+            "run_a · 488", "run_a · 561", "run_b · 488", "run_b · 561"
+        ]
+        assert view.stores("single")[0].shape[0] == 3, "its time points reach the time slider"
+
+        # The same folder dropped twice is the same block, read again.
+        assert opened.add(second) == ["run_b"]
+        assert view.layers == ["run_a", "run_b", "single", "run_a (2)"]
+
+        # A folder that holds acquisitions adds each of them, oldest first.
+        both = tmp_path / "session"
+        older = an_acquisition(both, "run_c")
+        write_tile(older / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 3000), seed=6)
+        time.sleep(0.05)
+        newer = an_acquisition(both, "run_d")
+        write_tile(newer / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 4000), seed=7)
+        assert opened.add(both) == ["run_c", "run_d"]
+
+        # What cannot be shown says why, and leaves what is shown alone.
+        (tmp_path / "notes").mkdir()
+        with pytest.raises(NotAStore, match="not a dataset the viewer can open"):
+            opened.add(tmp_path / "notes")
+        broken = tmp_path / "broken.ome.zarr"
+        broken.mkdir()
+        (broken / ".zattrs").write_text("{not json")
+        with pytest.raises(NotAStore, match="broken.ome.zarr is not a dataset the viewer can open"):
+            opened.add(broken)
+        assert view.layers == ["run_a", "run_b", "single", "run_a (2)", "run_c", "run_d"]
+    finally:
+        view.stop()
+
+
+def test_the_remove_button_takes_one_acquisition_off_the_view(tmp_path):
+    from mesoSPIM.src.mesospim_viewer import Opened
+
+    first = an_acquisition(tmp_path / "day1", "run_a")
+    write_tile(first / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=1)
+    second = an_acquisition(tmp_path / "day2", "run_b")
+    write_tile(second / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 1000), seed=2)
+
+    view = Viewer()
+    try:
+        opened = Opened(view, first)
+        opened.add(second)
+        # The page offers a remove button only where something listens for it.
+        assert view._server.scene.ui.get("removable") is True
+        view._server.remove_reported({"name": "run_a"})
+        assert view.layers == ["run_b"]
+        assert [spec["name"] for spec in view.state["layers"]] == ["run_b · 488", "run_b · 561"]
+        # Dropped again after removal, it comes back under its own name.
+        assert opened.add(first) == ["run_a"]
+        assert opened.remove("nothing such") is False
+    finally:
+        view.stop()
+
+    # In a folder of acquisitions, removing the one picked in the dropdown leaves
+    # the dropdown with nothing picked; picking an entry shows it again.
+    older = an_acquisition(tmp_path / "session", "run_c")
+    write_tile(older / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=3)
+    view = Viewer()
+    try:
+        opened = Opened(view, tmp_path / "session")
+        assert view.layers == ["run_c"]
+        assert opened.remove("run_c") is True
+        assert view.layers == []
+        assert view._server.scene.choices == {"names": ["run_c"], "current": -1, "live": False}
+        view._server.choice_reported({"index": 0})
+        assert view.layers == ["run_c"]
+    finally:
+        view.stop()
+
+    # The live window offers no remove button.
+    view = Viewer()
+    try:
+        from mesoSPIM.src.mesospim_viewer import Follower
+
+        Follower(view, tmp_path / "session").poll()
+        assert view._server.scene.ui.get("removable") is None
+    finally:
+        view.stop()
+
+
 # -- the Qt window ---------------------------------------------------------------
 #
 # QtWebEngine aborts the whole process when it cannot create an OpenGL context
@@ -323,5 +437,144 @@ def test_the_window_draws_the_time_slider_clear_of_its_label(tmp_path, qt_app):
         assert parts is not None, "the time slider never appeared"
         assert parts["input"][0] - parts["name"][1] >= 6, parts
         assert parts["reading"][0] - parts["input"][1] >= 6, parts
+    finally:
+        window.close()
+
+
+def _drag(qt, window, paths: list[Path]) -> tuple[bool, bool]:
+    """Drag ``paths`` onto the window's picture and let go, as the file manager does.
+
+    The events go to the widget Qt hands a drag to, the web view's own drawing
+    surface; return whether the drag was let in and whether the drop was taken.
+    """
+    QtCore, QtGui = qt.QtCore, qt.QtGui
+    view = window.findChild(qt.QWebEngineView)
+    target = view.focusProxy() or view
+    mime = QtCore.QMimeData()
+    mime.setUrls([QtCore.QUrl.fromLocalFile(str(path)) for path in paths])
+    at = QtCore.QPoint(200, 200)
+    enter = QtGui.QDragEnterEvent(at, QtCore.Qt.CopyAction, mime, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier)
+    qt.QtWidgets.QApplication.sendEvent(target, enter)
+    if not enter.isAccepted():
+        return False, False
+    drop = QtGui.QDropEvent(QtCore.QPointF(at), QtCore.Qt.CopyAction, mime, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier)
+    qt.QtWidgets.QApplication.sendEvent(target, drop)
+    return True, drop.isAccepted()
+
+
+# What the window's page shows: the panel's acquisition blocks, the message on
+# the picture, whether Show all is offered, and where the camera looks.
+PAGE = """(() => {
+  const v = window.viewer; if (!v?.layerManager) return null;
+  const n = v.navigationState, space = n.position.coordinateSpace.value;
+  if (!space?.rank) return null;
+  const at = (axis) => { const i = space.names.indexOf(axis); return n.position.value[i] * space.scales[i] * 1e6; };
+  const notice = document.querySelector('#notice'), showAll = document.querySelector('#show-all');
+  return JSON.stringify({
+    groups: [...document.querySelectorAll('.group')].map(g => g.dataset.group),
+    removable: document.querySelectorAll('.group .remove').length,
+    notice: notice && !notice.hidden ? notice.querySelector('.text').textContent : null,
+    showAll: !!showAll && !showAll.hidden,
+    x: at('x'), zoom: n.zoomFactor.value,
+    loaded: v.layerManager.managedLayers.every(m => (m.layer?.dataSources ?? []).every(s => s.loadState !== undefined)),
+  });
+})()"""
+
+
+def _page_until(qt, view, wanted, timeout_s: float = 60.0) -> dict:
+    """The page's state once ``wanted`` holds and nothing has moved for a second
+    (or the last state seen, for the assert to show)."""
+    import json
+
+    def look():
+        raw = _evaluate(qt, view, PAGE)
+        return json.loads(raw) if raw else None
+
+    deadline = time.monotonic() + timeout_s
+    seen = None
+    while time.monotonic() < deadline:
+        seen = look()
+        if seen and seen["loaded"] and wanted(seen):
+            _spin(qt, 1.0)
+            if look() == seen:
+                return seen
+        _spin(qt, 0.2)
+    return seen
+
+
+def test_folders_dropped_on_the_window_are_added_and_can_be_removed(tmp_path, qt_app):
+    app, qt = qt_app
+    from mesoSPIM.src.mesospim_viewer.window import make_window_class
+
+    first = an_acquisition(tmp_path / "day1", "run_a")
+    write_tile(first / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=1)
+    second = an_acquisition(tmp_path / "day2", "run_b")
+    write_tile(second / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 1000), seed=2)
+    third = write_tile(tmp_path / "day3" / "single.ome.zarr", origin_um=(0, 0, 2000), seed=3)
+    (tmp_path / "notes").mkdir()
+
+    window = make_window_class()(first, live=False)
+    try:
+        window.resize(1200, 800)
+        window.show()
+        view = window.findChild(qt.QWebEngineView)
+        alone = _page_until(qt, view, lambda s: s["groups"] == ["run_a"])
+        assert alone["x"] == pytest.approx(80, abs=2) and alone["showAll"] is False
+
+        # Two folders at once, one of them not a dataset: the other still opens,
+        # beside the first, and the window says in a sentence why one did not.
+        assert _drag(qt, window, [second, tmp_path / "notes"]) == (True, True)
+        both = _page_until(qt, view, lambda s: s["groups"] == ["run_a", "run_b"] and s["x"] > 500)
+        assert window.viewer.layers == ["run_a", "run_b"]
+        assert both["notice"] is not None and "notes is not a dataset the viewer can open" in both["notice"]
+        # Overview mode: the view zoomed out to frame both acquisitions.
+        assert both["x"] == pytest.approx((0 + 1160) / 2, abs=2)
+        assert both["zoom"] > alone["zoom"] * 3
+        assert both["removable"] == 2
+
+        # The operator zooms in: from then on the view stays, and Show all is offered.
+        _evaluate(qt, view, "(() => { window.viewer.navigationState.zoomFactor.value /= 4; return 1; })()")
+        theirs = _page_until(qt, view, lambda s: s["showAll"])
+        assert theirs["showAll"] is True
+        assert _drag(qt, window, [third]) == (True, True)
+        three = _page_until(qt, view, lambda s: len(s["groups"]) == 3)
+        assert three["groups"] == ["run_a", "run_b", "single"]
+        assert (three["x"], three["zoom"]) == (pytest.approx(theirs["x"]), pytest.approx(theirs["zoom"]))
+        assert three["notice"] is None, "a drop that fully opened clears the old message"
+
+        # Show all frames everything again.
+        _evaluate(qt, view, "(() => { document.querySelector('#show-all').click(); return 1; })()")
+        everything = _page_until(qt, view, lambda s: not s["showAll"])
+        assert everything["x"] == pytest.approx((0 + 2160) / 2, abs=2)
+
+        # The remove button on a block takes that acquisition off the view.
+        _evaluate(qt, view, """(() => { document.querySelector('.group[data-group="run_b"] .remove').click(); return 1; })()""")
+        _page_until(qt, view, lambda s: s["groups"] == ["run_a", "single"])
+        assert window.viewer.layers == ["run_a", "single"]
+    finally:
+        window.close()
+
+
+def test_the_live_window_refuses_a_drop_and_offers_no_remove_button(tmp_path, qt_app):
+    app, qt = qt_app
+    from mesoSPIM.src.mesospim_viewer.window import make_window_class
+
+    run = an_acquisition(tmp_path / "data", "run_a")
+    write_tile(run / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=1)
+    other = an_acquisition(tmp_path / "elsewhere", "run_b")
+    write_tile(other / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 1000), seed=2)
+
+    window = make_window_class()(tmp_path / "data")
+    try:
+        window.resize(1200, 800)
+        window.show()
+        view = window.findChild(qt.QWebEngineView)
+        page = view.url().toString()
+        shown = _page_until(qt, view, lambda s: s["groups"] == ["run_a"])
+        assert shown["removable"] == 0
+        assert _drag(qt, window, [other]) == (False, False)
+        _spin(qt, 1.5)
+        assert window.viewer.layers == ["run_a"]
+        assert view.url().toString() == page, "the page was not replaced by the dropped folder"
     finally:
         window.close()

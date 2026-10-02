@@ -14,7 +14,10 @@ window and a timer.
 
 **An acquired dataset** is shown as it is on disk, with no timer and nothing
 followed: see :class:`~mesoSPIM.src.mesospim_viewer.watch.Opened` for what can
-be opened.
+be opened. More datasets can be dragged onto this window from the file manager,
+one or several folders at once: each is shown beside what is there, and each
+acquisition's block in the panel has a button that takes it off the view again.
+The live window takes no drops, so what it shows is always the microscope's.
 
 The window title says which of the two a window is, so the two are never confused.
 
@@ -28,6 +31,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from .omezarr import NotAStore
 from .viewer import Viewer, _qt
 from .watch import Follower, Opened
 
@@ -38,6 +42,8 @@ def make_window_class():
     """The window class, built once Qt is known to be importable."""
     qt = _qt()
     QtCore, QtWidgets = qt.QtCore, qt.QtWidgets
+    events = getattr(QtCore.QEvent, "Type", QtCore.QEvent)
+    DRAGGING = (events.DragEnter, events.DragMove, events.DragLeave, events.Drop)
 
     class DataViewerWindow(QtWidgets.QWidget):
         """The viewer over a data folder (live) or over one dataset from disk (acquired).
@@ -82,7 +88,12 @@ def make_window_class():
 
             layout = QtWidgets.QVBoxLayout(self)
             layout.setContentsMargins(0, 0, 0, 0)
-            layout.addWidget(self.viewer.qt_widget(self), 1)
+            self.web = self.viewer.qt_widget(self)
+            layout.addWidget(self.web, 1)
+            # In Qt, files dragged onto a web page reach the page without their
+            # paths, so drops are taken here, from the web view: its drawing
+            # surface passes every drag up to it.
+            self.web.installEventFilter(self)
 
             # Only the live window looks at the disk again; an acquired dataset is read once.
             self.timer = QtCore.QTimer(self)
@@ -99,12 +110,52 @@ def make_window_class():
             if self.live and self.follower is not None:
                 self.follower.poll()
 
+        def eventFilter(self, watched, event) -> bool:  # noqa: N802 -- Qt's name
+            """Take folders dragged onto the picture, and keep every drag from the page.
+
+            The page never sees a drag: it could do nothing with a folder
+            without its path. The live window refuses every drop.
+            """
+            if watched is not self.web or event.type() not in DRAGGING:
+                return super().eventFilter(watched, event)
+            if event.type() == events.DragLeave:
+                return True
+            paths = _local_paths(event.mimeData())
+            if self.opened is None or not paths:
+                event.ignore()
+                return True
+            event.acceptProposedAction()
+            if event.type() == events.Drop:
+                self.drop(paths)
+            return True
+
+        def drop(self, paths: list[Path]) -> None:
+            """Show each dropped folder beside what is shown.
+
+            A folder that cannot be shown does not stop the others: the picture
+            says in a sentence why it was not opened, until the next drop.
+            """
+            refused = []
+            for path in paths:
+                try:
+                    self.opened.add(path)
+                except (NotAStore, OSError) as why:
+                    refused.append(str(why))
+            self.viewer.say("\n".join(refused))
+
         def closeEvent(self, event) -> None:  # noqa: N802 -- Qt's name
             self.timer.stop()
             self.viewer.stop()
             super().closeEvent(event)
 
     return DataViewerWindow
+
+
+def _local_paths(mime) -> list[Path]:
+    """The files and folders a drag carries from the file manager."""
+    if mime is None or not mime.hasUrls():
+        return []
+    return [Path(url.toLocalFile()) for url in mime.urls() if url.isLocalFile()]
 
 
 def main(argv: list[str] | None = None) -> int:

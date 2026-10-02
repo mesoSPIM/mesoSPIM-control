@@ -289,6 +289,26 @@ class Viewer:
         assert self._server is not None
         self._server.choice_listeners.append(listener)
 
+    def on_remove(self, listener: Callable[[str], None]) -> None:
+        """Hear the operator ask to take an acquisition off the view, by its layer name.
+
+        The panel gives each acquisition a remove button only once something
+        listens, so a window that cannot take acquisitions away offers none.
+        """
+        self.start()
+        assert self._server is not None
+        self._server.remove_listeners.append(listener)
+        self._server.scene.dress(removable=True)
+
+    def say(self, text: str) -> None:
+        """Show a message on the picture, such as why a folder could not be opened.
+
+        An empty text takes the message away.
+        """
+        self.start()
+        assert self._server is not None
+        self._server.scene.say(text)
+
     # -- windows ---------------------------------------------------------------
 
     def open_in_browser(self) -> str:

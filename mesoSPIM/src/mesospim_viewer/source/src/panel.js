@@ -25,6 +25,7 @@ const ICONS = {
   eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff: '<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.3A11 11 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.2 3.7"/><path d="M6.6 6.6A16 16 0 0 0 2 12s3.5 6 10 6a10 10 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
   fold: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
 };
 
 function iconButton(icon, title) {
@@ -49,19 +50,21 @@ function splitName(name) {
 
 // -- the acquisition: the session's runs, newest first --------------------------
 
+function post(route, payload) {
+  fetch(route, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch(() => undefined);
+}
+
 function acquisitionCard() {
   const card = element("section", "card acquisition");
   card.hidden = true;
   card.appendChild(element("h2", null, "Acquisition"));
   const select = document.createElement("select");
   select.className = "chooser";
-  select.addEventListener("change", () => {
-    fetch("/api/choose", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ index: Number(select.value) }),
-    }).catch(() => undefined);
-  });
+  select.addEventListener("change", () => post("/api/choose", { index: Number(select.value) }));
   card.appendChild(select);
   let offered = "";
   card.setChoices = (choices) => {
@@ -308,6 +311,9 @@ function channelsCard(viewer) {
   const body = element("div", "groups");
   card.appendChild(body);
   let rows = [];
+  // Whether Python takes acquisitions off the view: only then does each block
+  // carry a remove button (the window for looking at data, not the live one).
+  let removable = false;
   const rebuild = () => {
     for (const { dispose } of rows) dispose();
     rows = [];
@@ -331,6 +337,15 @@ function channelsCard(viewer) {
       });
       const tiles = layers[0]?.layer?.dataSources?.length ?? 0;
       head.append(eye, element("span", "name", group), element("span", "count", tiles === 1 ? "1 tile" : `${tiles} tiles`));
+      if (removable) {
+        const remove = iconButton("close", "Take this acquisition off the view");
+        remove.classList.add("remove");
+        remove.addEventListener("click", () => {
+          remove.disabled = true;
+          post("/api/remove", { name: group });
+        });
+        head.appendChild(remove);
+      }
       const reflectGroup = () => {
         const anyShown = layers.some((m) => m.visible);
         eye.classList.toggle("off", !anyShown);
@@ -364,6 +379,11 @@ function channelsCard(viewer) {
     }
   });
   rebuild();
+  card.setRemovable = (offered) => {
+    if (offered === removable) return;
+    removable = offered;
+    later();
+  };
   return card;
 }
 
@@ -433,7 +453,8 @@ class ControlPanel extends SidePanel {
     fold.addEventListener("click", () => this.close());
     head.append(title, fold);
     this.acquisitions = acquisitionCard();
-    body.append(head, this.acquisitions, volumeCard(viewer, fit), channelsCard(viewer));
+    this.channels = channelsCard(viewer);
+    body.append(head, this.acquisitions, volumeCard(viewer, fit), this.channels);
     this.addBody(body);
   }
 }
@@ -455,6 +476,30 @@ function showAllButton(fit, framing) {
   return button;
 }
 
+// -- a message on the picture, such as why a dropped folder did not open ---------
+
+function noticeBox() {
+  const box = element("div", "notice");
+  box.id = "notice";
+  box.hidden = true;
+  const text = element("span", "text", "");
+  const close = iconButton("close", "Close this message");
+  close.classList.add("close");
+  close.addEventListener("click", () => {
+    box.hidden = true;
+  });
+  box.append(text, close);
+  let shown = 0;
+  box.setNotice = (notice) => {
+    // A message is shown once, when it is new; once closed it stays closed.
+    if (!notice || notice.count === shown) return;
+    shown = notice.count;
+    text.textContent = notice.text;
+    box.hidden = !notice.text;
+  };
+  return box;
+}
+
 export function mountPanel(viewer, { fit, framing }) {
   const manager = viewer.sidePanelManager;
   const location = new TrackableSidePanelLocation(
@@ -462,11 +507,13 @@ export function mountPanel(viewer, { fit, framing }) {
   );
   let panel = null;
   let choices = null;
+  let removable = false;
   manager.registerPanel({
     location,
     makePanel: () => {
       panel = new ControlPanel(manager, location, viewer, fit);
       panel.acquisitions.setChoices(choices);
+      panel.channels.setRemovable(removable);
       return panel;
     },
   });
@@ -497,6 +544,8 @@ export function mountPanel(viewer, { fit, framing }) {
   const tools = element("div", "tools");
   tools.append(viewSwitch(viewer, fit), showAllButton(fit, framing));
   overlay.appendChild(tools);
+  const notice = noticeBox();
+  overlay.appendChild(notice);
   const reflect = () => {
     unfold.style.display = location.visible ? "none" : "flex";
   };
@@ -522,5 +571,10 @@ export function mountPanel(viewer, { fit, framing }) {
       choices = offered;
       panel?.acquisitions.setChoices(offered);
     },
+    setRemovable(offered) {
+      removable = offered;
+      panel?.channels.setRemovable(offered);
+    },
+    setNotice: notice.setNotice,
   };
 }
