@@ -51,12 +51,18 @@ class FakeCollection:
 
 class FakeTiming:
     def __init__(self, task):
-        self.task, self.samp_clk_rate, self.samp_clk_term, self.cfg = task, None, None, {}
+        self.task, self.samp_clk_rate, self._term, self.cfg = task, None, None, {}
+
+    @property
+    def samp_clk_term(self):
+        if FakeNI.refuse_clock_term:
+            raise FakeDaqError('Specified property is not supported by the device (-200452)')
+        return self._term
 
     def cfg_samp_clk_timing(self, rate, **kw):
         self.cfg = dict(rate=rate, **kw)
         self.samp_clk_rate = FakeNI.coerce_rate(rate)
-        self.samp_clk_term = '/Dev1/ao/SampleClock'
+        self._term = '/Dev1/ao/SampleClock'
 
     def cfg_implicit_timing(self, **kw):
         self.cfg = kw
@@ -97,6 +103,7 @@ class FakeTask:
 class FakeNI:
     tasks = []
     refuse_tick_source = False
+    refuse_clock_term = False  # PXI-6733: DAQmx_SampClk_Term not readable
     coerce_rate = staticmethod(lambda r: r)
     coerce_freq = staticmethod(lambda f: f)
     Task = FakeTask
@@ -106,6 +113,7 @@ class FakeNI:
 def ni(monkeypatch):
     FakeNI.tasks = []
     FakeNI.refuse_tick_source = False
+    FakeNI.refuse_clock_term = False
     FakeNI.coerce_rate = staticmethod(lambda r: r)
     FakeNI.coerce_freq = staticmethod(lambda f: f)
     monkeypatch.setattr(W, 'nidaqmx', FakeNI)
@@ -194,6 +202,14 @@ def test_counters_count_ao_sample_clock_ticks(ni, rig, samplerate, sweeptime):
     assert cam.kw['initial_delay'] == round(wf.samples * 0.10)
     assert stage.kw['initial_delay'] == round(wf.samples * 0.925)
     assert wf.continuous_plane_period == pytest.approx(wf.samples / samplerate)
+
+
+def test_names_the_ao_clock_when_the_device_cannot_report_it(ni):
+    ni.refuse_clock_term = True
+    wf = make_waveformer(PXI_6733, 100000, 0.08333)
+    wf.create_tasks_continuous(601)
+    assert wf.continuous_timing_mode == 'ao_sample_clock_ticks'
+    assert {ch.kw['source_terminal'] for ch in counters(ni)} == {'/PXI1Slot4/ao/SampleClock'}
 
 
 def test_falls_back_to_time_matched_counters(ni):

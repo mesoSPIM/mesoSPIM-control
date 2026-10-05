@@ -321,7 +321,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
         if self.running_flag:
             try:
                 self.writer.abort()
-                self.metadata_file.close()
+                if hasattr(self, 'metadata_file'):  # absent if the acquisition failed before write_metadata()
+                    self.metadata_file.close()
             except Exception as e:
                 logger.error(f'{e}')
             self.parent.sig_status_message.emit("Writing terminated, files closed")
