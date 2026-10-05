@@ -43,6 +43,8 @@ class FakeCollection:
         return ch
 
     def add_co_pulse_chan_freq(self, line, **kw):
+        if FakeNI.refuse_freq:
+            raise FakeDaqError('Desired finite pulse train generation is not possible (-200305)')
         ch = FakeChannel('freq', line=line, **kw)
         ch.co_pulse_freq = FakeNI.coerce_freq(kw['freq'])
         self.task.channels.append(ch)
@@ -104,6 +106,7 @@ class FakeNI:
     tasks = []
     refuse_tick_source = False
     refuse_clock_term = False  # PXI-6733: DAQmx_SampClk_Term not readable
+    refuse_freq = False  # PXI-6733: no free paired counter for a finite time-based train
     coerce_rate = staticmethod(lambda r: r)
     coerce_freq = staticmethod(lambda f: f)
     Task = FakeTask
@@ -114,6 +117,7 @@ def ni(monkeypatch):
     FakeNI.tasks = []
     FakeNI.refuse_tick_source = False
     FakeNI.refuse_clock_term = False
+    FakeNI.refuse_freq = False
     FakeNI.coerce_rate = staticmethod(lambda r: r)
     FakeNI.coerce_freq = staticmethod(lambda f: f)
     monkeypatch.setattr(W, 'nidaqmx', FakeNI)
@@ -222,6 +226,14 @@ def test_falls_back_to_time_matched_counters(ni):
     assert 1.0 / cam.kw['freq'] == pytest.approx(8333 / 100000)  # the AO's period, not 1/sweeptime
     assert wf.camera_trigger_task.trigger == '/PXI1Slot4/PFI0'
     assert not any(t.closed for t in (wf.camera_trigger_task, wf.stage_trigger_task, wf.galvo_etl_laser_task))
+
+
+def test_two_counter_device_is_refused_with_a_clear_message(ni):
+    ni.refuse_tick_source = ni.refuse_freq = True  # what the PXI-6733 did on 2026-10-05
+    wf = make_waveformer(PXI_6733, 100000, 0.08333)
+    with pytest.raises(RuntimeError, match="waveform_mode'] = 'stepped'"):
+        wf.create_tasks_continuous(601)
+    assert ni.tasks and all(t.closed for t in ni.tasks)
 
 
 def test_fallback_uses_the_coerced_ao_rate(ni):

@@ -641,6 +641,8 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         try:
             self._create_tasks_continuous(n_planes)
         except Exception:
+            # Raised in a Qt slot this would only reach the console, not the log
+            logger.exception("[continuous] DAQ task setup failed")
             for attr in self._CONTINUOUS_TASK_ATTRS:
                 task = getattr(self, attr, None)
                 if task is not None:
@@ -744,8 +746,16 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                     except Exception:
                         pass
                     setattr(self, attr, None)
-            for attr, line, trig, delay_pct, pulse_pct, count in pulses:
-                setattr(self, attr, self._make_time_counter(line, trig, ao_rate, samples, delay_pct, pulse_pct, count, n_planes))
+            try:
+                for attr, line, trig, delay_pct, pulse_pct, count in pulses:
+                    setattr(self, attr, self._make_time_counter(line, trig, ao_rate, samples, delay_pct, pulse_pct, count, n_planes))
+            except DaqError as e2:
+                # Seen on the PXI-6733 (2026-10-05): DAQ-STC devices pair two counters for every
+                # finite pulse train, so their two counters cannot make both the camera and stage trains.
+                raise RuntimeError(f"[continuous] the DAQ device cannot generate the camera and stage pulse "
+                                   f"trains for {n_planes} planes ({e2}). Devices with only two counters that "
+                                   f"pair them for finite pulse trains, such as the PXI-6733, cannot run "
+                                   f"continuous mode: set acquisition_hardware['waveform_mode'] = 'stepped'.") from e2
             self.continuous_timing_mode = 'time_matched'
 
     @staticmethod
