@@ -1,5 +1,32 @@
 import numpy as np
 
+'''
+Microscope metadata
+Stored in acquisition metadata sidecars and does not change mesoSPIM behavior.
+Add or remove keys as needed for your microscope.
+'''
+microscope_parameters = {
+            'name': 'BT mesoSPIM ZMB',
+            'institution': 'University of Zurich',
+            'location': 'Demo room',
+            'instrument_id': 'BT-001',
+            'notes': 'Example configuration for demo mode',
+            'objective_parameters': {
+                        'name': 'Demo objective',
+                        'model_number': 'DEMO-001',
+                        'magnification': '1x',
+                        'numerical_aperture': 0.28,
+                        'working_distance_mm': 34,
+                        'immersion_medium': 'air',
+                        'design_refractive_index': 1.0,
+                        'coverglass_thickness_mm': 0.17,
+                        },
+            'users': {
+                        'authorized': ['Doe, John', 'Doe, Jane', 'Chewbacca'],
+                        'owner': 'Demo Operator',
+                        }
+            }
+
 logging_level = 'DEBUG' # 'INFO' or 'DEBUG'
 
 '''
@@ -22,9 +49,9 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
-              'enable_loading_buttons' : True,
+              'enable_loading_buttons' : False,
               'flip_XYZFT_button_polarity': (True, True, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
-              'button_sleep_ms_xyzft' : (0, 0, 0, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
+              'button_sleep_ms_xyzft' : (300, 300, 300, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'usb_webcam_ID': 0, # open USB web-camera (if available): 0 (first cam), 1 (second cam), ...
               'flip_auto_LR_illumination': False, # flip the polarity of the "Auto L/R illumination" button in Acquisition Manager
                }
@@ -147,14 +174,14 @@ Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 '''
 
 stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
-                    'y_load_position': 35000,
-                    'y_unload_position': -20000,
-                    'x_center_position': 500,
-                    'z_center_position': 28000,
-                    'x_max' : 25000,
-                    'x_min' : -25000,
-                    'y_max' : 550000,
-                    'y_min' : -25000,
+                    'y_load_position': 10000,
+                    'y_unload_position': 0,
+                    'x_center_position': -3377,
+                    'z_center_position': 0,
+                    'x_max' : 26000,
+                    'x_min' : -22000,
+                    'y_max' : 80000,
+                    'y_min' : 0,
                     'z_max' : 50000,
                     'z_min' : -55000,
                     'f_max' : 50000,
@@ -315,7 +342,7 @@ to make mesoSPSIM pause after each tile acquisition until the multiscale is fini
 '''
 OME_Zarr_Writer = {
     'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': False, #True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd', # None, 'zstd', 'lz4'
     'compression_level': 5, # 1-9
     'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
@@ -329,7 +356,7 @@ OME_Zarr_Writer = {
 
 MP_OME_Zarr_Writer = {
     'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': False, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd',  # None, 'zstd', 'lz4'
     'compression_level': 5,  # 1-9
     'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
@@ -337,7 +364,7 @@ MP_OME_Zarr_Writer = {
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (128, 5056//4, 2960//2),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-    'async_finalize': False,  # True, False
+    'async_finalize': True,  # True, False
 
     # BigStitcher Specific Options
     'write_big_stitcher_xml': True,  # True, False
@@ -349,7 +376,7 @@ MP_OME_Zarr_Writer = {
          
     # Write cache options. Write tile data to cache then move to acquisition folder
     # None acquires data direct to acquisition folder.
-    'write_cache': 'F:/mesoSPIM_CACHE', # None, 'e:/path/to/fast/ssd/write/cache'
+    'write_cache': None, # None, 'e:/path/to/fast/ssd/write/cache'
 }
 
 '''
@@ -371,8 +398,8 @@ startup = {
 'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0},
 'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters-benchtop.csv',
 'filepath' : 'F:/Test/file.tif',
-'folder' : 'F:/Test/',
-'snap_folder' : 'X:/',
+'folder' : 'F:\\TEMP',
+'snap_folder' : 'F:\\SNAPSHOTS',
 'file_prefix' : '',
 'file_suffix' : '000001',
 'zoom' : '5x',
@@ -395,13 +422,13 @@ startup = {
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
 'galvo_l_frequency' : 99.9,
-'galvo_l_amplitude' : 0.8, #0.8V at 5x
-'galvo_l_offset' : -0.38,
+'galvo_l_amplitude' : 0.83, #0.8V at 5x
+'galvo_l_offset' : 0.20,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/7,
 'galvo_r_frequency' : 99.9,
-'galvo_r_amplitude' : 0.8, #0.8V at 5x
-'galvo_r_offset' : 0.15,
+'galvo_r_amplitude' : 0.83, #0.8V at 5x
+'galvo_r_offset' : -0.32,
 'galvo_r_duty_cycle' : 50,
 'galvo_r_phase' : np.pi/7,
 'laser_l_delay_%' : 10,
