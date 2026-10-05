@@ -27,7 +27,7 @@ class FakePVCam:
 
     fail_above = None  # frames; mimic a start_live() that rejects large buffers
 
-    def start_live(self, buffer_frame_count=16, reset_frame_counter=False):
+    def start_live(self, buffer_frame_count=16):  # PyVCAM 2.1.6: no reset_frame_counter
         if self.fail_above is not None and buffer_frame_count > self.fail_above:
             raise RuntimeError('pl_exp_setup_cont failed')
         self.started_with = buffer_frame_count
@@ -37,7 +37,7 @@ class FakePVCam:
         if not self.buffer:
             raise RuntimeError('Frame timeout')  # what PyVCAM does when timeout_ms expires
         n = self.buffer.popleft()
-        return {'pixel_data': np.full((4, 4), n, np.uint16)}, 12.0, self.counter
+        return {'pixel_data': np.full((4, 4), n, np.uint16)}, 12.0, n  # PyVCAM stamps each frame at capture
 
 
 def make_camera(fake, **camera_parameters):
@@ -65,6 +65,17 @@ def test_drains_the_whole_backlog_in_one_call():
     assert [int(i[0, 0]) for i in images] == [1, 2, 3, 4, 5]  # oldest first, none skipped
     assert fake.timeouts[0] == cam.SERIES_POLL_TIMEOUT_MS and set(fake.timeouts[1:]) == {1}
     assert cam.max_frame_count == 5
+
+
+def test_frame_count_is_per_series_when_pyvcam_never_resets_it():
+    fake = FakePVCam(n_buffered=0)
+    fake.counter = 100  # frames from earlier stacks: PyVCAM < 2.2 keeps counting
+    for _ in range(3):
+        fake.capture()
+    cam = make_camera(fake)
+    cam.initialize_image_series()
+    cam.get_images_in_series()
+    assert cam.max_frame_count == 3
 
 
 def test_one_call_is_bounded():

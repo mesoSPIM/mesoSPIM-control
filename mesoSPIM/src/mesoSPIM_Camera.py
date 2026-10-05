@@ -689,15 +689,18 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
                            f'using {max_frames} frames')
             buffer_frames = max_frames
         try:
-            self.pvcam.start_live(buffer_frame_count=buffer_frames, reset_frame_counter=True)
+            self.pvcam.start_live(buffer_frame_count=buffer_frames)
         except Exception:
             if buffer_frames <= 16:
                 raise
             logger.exception(f'Photometrics: start_live() with a {buffer_frames}-frame buffer failed; '
                              f'retrying with the PyVCAM default of 16 frames')
             buffer_frames = 16
-            self.pvcam.start_live(buffer_frame_count=buffer_frames, reset_frame_counter=True)
-        self.max_frame_count = 0  # highest PVCAM frame counter seen: frames the camera captured
+            self.pvcam.start_live(buffer_frame_count=buffer_frames)
+        self.max_frame_count = 0  # frames the camera captured this series
+        # PyVCAM < 2.2 (2.1.6 on the rig) has no reset_frame_counter and never resets frame_count,
+        # so count from the first frame of the series (TypeError on 2026-10-05)
+        self.first_frame_count = None
         logger.info(f'Photometrics image series: circular buffer of {buffer_frames} frames '
                     f'({buffer_frames * frame_bytes / 2**30:.2f} GiB)')
 
@@ -715,7 +718,10 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
                 if not images:
                     logger.warning(f'Photometrics: no frame within {timeout_ms} ms ({e})')
                 break
-            self.max_frame_count = max(self.max_frame_count, int(frame_count))
+            # ponytail: undercounts if frames were overwritten before the first poll
+            if self.first_frame_count is None:
+                self.first_frame_count = int(frame_count)
+            self.max_frame_count = max(self.max_frame_count, int(frame_count) - self.first_frame_count + 1)
             images.append(frame['pixel_data'])
             timeout_ms = 1  # after the first frame, take only what is already waiting
         return images
