@@ -10,7 +10,7 @@ Stored in acquisition metadata sidecars and does not change mesoSPIM behavior.
 Add or remove keys as needed for your microscope.
 '''
 microscope_parameters = {
-            'name': 'BT mesoSPIM ZMB',
+            'name': 'V6-Revolver mesoSPIM ZMB',
             'institution': 'University of Zurich',
             'location': 'Demo room',
             'instrument_id': 'V6-Revolver',
