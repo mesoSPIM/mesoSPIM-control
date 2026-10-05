@@ -18,3 +18,4 @@ psutil>=7.0.0
 zarr==3.1.3
 scikit-learn>=1.8.0
 typer>=0.25.0
+pyvcam==2.2.4
