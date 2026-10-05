@@ -548,6 +548,14 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
 
         self.const = const
         self.pvc = pvc
+        from importlib.metadata import version
+        pyvcam_version = version('pyvcam')
+        logger.info(f'PyVCAM version: {pyvcam_version}')
+        # Image series need 2.2+: reset_frame_counter and a live-mode frame backlog. 2.1.x keeps
+        # only the latest frame, so frames are lost whenever the drain falls behind.
+        if tuple(int(x) for x in pyvcam_version.split('.')[:2]) < (2, 2):
+            logger.warning(f'PyVCAM {pyvcam_version} is older than the tested 2.2.4 and can drop frames '
+                           f'in image series; upgrade with: pip install pyvcam==2.2.4')
 
         pvc.init_pvcam()
         self.pvcam = [cam for cam in Camera.detect_camera()][0]

@@ -40,6 +40,9 @@ dependencies = [
 # file with 'waveformgeneration', 'shutter' or 'laser' set to 'NI' or 'cDAQ'. Demo mode runs
 # without it; requirements-conda-mamba.txt still installs it directly.
 ni = ["nidaqmx==1.0.1"]
+# Photometrics cameras only; also needs the PVCAM runtime. 2.2+ is required for image series
+# (reset_frame_counter, live-mode frame backlog); 2.1.x keeps only the latest frame.
+photometrics = ["pyvcam==2.2.4"]
 # The AI Assistant tab only. Imported lazily, so the application starts and every other feature
 # works without it; the tab reports the missing module when the operator sends a first message.
 # anthropic 1.x moved to another HTTP client library that pydantic-ai 2.14 does not pass it.

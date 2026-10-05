@@ -52,7 +52,7 @@ Cameras
        Use `HCImage <https://hcimage.com/download/>`_ to test camera connectivity.
    * - Photometrics (PVCAM)
      - `PVCAM and PVCAM-SDK <https://www.teledynevisionsolutions.com/products/pvcam-sdk-amp-driver/?model=PVCAM-SDK>`_
-       plus the `PyVCAM <https://github.com/Photometrics/PyVCAM>`_ Python package (requires MS Visual C++ 14.0+).
+       plus the `PyVCAM <https://github.com/Photometrics/PyVCAM>`_ Python package, version 2.2.4: ``pip install pyvcam==2.2.4`` (older 2.1.x releases can drop frames in image series).
    * - PCO cameras
      - ``pip install pco`` (version ≥ 0.1.3 recommended).
 
