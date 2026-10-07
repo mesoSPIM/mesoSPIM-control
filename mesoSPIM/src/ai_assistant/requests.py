@@ -103,6 +103,8 @@ class Requests:
             request = self.current
             if request is None or request.ended:
                 raise ValueError("there is no request to continue")
+            if request.wait is not None:
+                raise ValueError("this turn already waits: end it now with one short sentence")
             if self.waiting is not None and self.waiting is not request:
                 raise ValueError(f"request {self.waiting.number} is already waiting; one wait at a time")
             if request.continuations >= config.CONTINUATIONS_MAX:
