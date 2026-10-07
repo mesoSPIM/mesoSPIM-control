@@ -288,6 +288,20 @@ class AssistantWindow(QtWidgets.QWidget):
             widget.setVisible(False)
         layout.addLayout(confirm)
 
+        # The open request: its turns, tokens, wait and plan, with a Cancel of its own. Hidden
+        # while there is none.
+        request = QtWidgets.QHBoxLayout()
+        self.request_label = QtWidgets.QLabel(self)
+        self.request_label.setFont(font)
+        self.request_cancel = QtWidgets.QPushButton("Cancel request", self)
+        self.request_cancel.setFont(font)
+        self.request_cancel.clicked.connect(tab.on_cancel_request)
+        request.addWidget(self.request_label, 1)
+        request.addWidget(self.request_cancel)
+        for widget in (self.request_label, self.request_cancel):
+            widget.setVisible(False)
+        layout.addLayout(request)
+
         self.input = _Input(self)
         self.input.setPlaceholderText("Ask the microscope…")
         self.input.setObjectName("AiAssistantInput")
@@ -337,6 +351,8 @@ class AiAssistantGUI(QtWidgets.QWidget):
     the chat is in the AssistantWindow, which Connect opens."""
 
     sig_run_turn = QtCore.pyqtSignal(str)
+    sig_run_machine_turn = QtCore.pyqtSignal(str, int)   # a schedule or a continuation, for its request
+    sig_check_continuation = QtCore.pyqtSignal()
 
     def __init__(self, parent):
         super().__init__(parent.TabWidget)
@@ -355,6 +371,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self._models_folder = models_folder(getattr(self.core, "cfg", None))
         self._single_shot = QtCore.QTimer.singleShot   # injectable for tests
         self._blocks = []                       # oldest first: HTML, or a finished answer's turn dict
+        self._continuations = []                # (text, request) of waits that are over, for the next tick
         self._active = None                     # the running turn: {"tools", "reply", "error"}
         self.scheduler = Scheduler()            # the assistant's schedules; the tick below fires them
         self._tick = QtCore.QTimer(self)
@@ -391,6 +408,9 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self._worker.moveToThread(self._thread)
         self._run_turn_slot = self._worker.run_turn
         self.sig_run_turn.connect(self._run_turn_slot, QtCore.Qt.QueuedConnection)
+        self.sig_run_machine_turn.connect(self._worker.run_machine_turn, QtCore.Qt.QueuedConnection)
+        self.sig_check_continuation.connect(self._worker.check_continuation, QtCore.Qt.QueuedConnection)
+        self._worker.sig_continue.connect(self._on_continue)
         self._worker.sig_reply.connect(self._on_reply)
         self._worker.sig_tool.connect(self._on_tool)
         self._worker.sig_confirm.connect(self._on_confirm)
@@ -616,6 +636,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         if self._running:
             self._set_running(False)
         self.scheduler.clear()                  # nothing fires into a session that is gone
+        self._continuations = []
         self._blocks, self._active = [], None
         self._render()
         self._set_connect_state("idle")
@@ -634,6 +655,8 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self._worker.interrupt()
         if self._run_turn_slot is not None:
             self.sig_run_turn.disconnect(self._run_turn_slot)
+            self.sig_run_machine_turn.disconnect(self._worker.run_machine_turn)
+            self.sig_check_continuation.disconnect(self._worker.check_continuation)
             self._run_turn_slot = None
         self._thread.quit()
         if not self._thread.wait(3000):         # still inside a model call: let it be, never qFatal
@@ -825,22 +848,64 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.chat_window.input.clear()
         self._submit(text)
 
-    def _submit(self, text):
-        """One turn: typed, or a schedule that fell due."""
+    def _submit(self, text, request=None):
+        """One turn: typed (a new request), or written by the machine for `request`: a schedule
+        that fell due, or a wait that is over."""
         self._blocks.append(self._user_block(text))
         self._active = {"tools": [], "reply": None, "error": None}
         self._set_running(True)
         self._render()
-        self.sig_run_turn.emit(text)
+        if request is None:
+            self.sig_run_turn.emit(text)
+        else:
+            self.sig_run_machine_turn.emit(text, request)
 
     def fire_due_schedule(self):
-        """Every second while connected: the first schedule that is due runs as a turn of its own,
-        marked as such in the transcript, never while a turn runs (it waits for the next tick)."""
+        """Every second while connected, never while a turn runs (it waits for the next tick): a
+        continuation that came due, else the first schedule that is due, runs as a turn of its own,
+        marked as such in the transcript; while a request waits, the worker is asked whether its
+        wait is over."""
+        self._show_request()
         if self._state != "ready" or self._running:
+            return
+        if self._continuations:
+            self._submit(*self._continuations.pop(0))
             return
         item = self.scheduler.pop_due()
         if item is not None:
-            self._submit(config.SCHEDULED_TURN.format(name=item["name"], instruction=item["instruction"]))
+            self._submit(config.SCHEDULED_TURN.format(name=item["name"], instruction=item["instruction"]),
+                         item.get("request") or 0)
+        elif self._worker is not None and self._worker.requests.waiting is not None:
+            self.sig_check_continuation.emit()
+
+    def _on_continue(self, text, request):
+        self._continuations.append((text, request))
+        self.fire_due_schedule()
+
+    def on_cancel_request(self):
+        """The request line's Cancel: the request ends, its wait with it; a turn of it in flight is
+        cancelled as Cancel does. The microscope is not stopped."""
+        if self._running:
+            self.on_interrupt()
+        if self._worker is not None:
+            self._worker.requests.end("cancelled by the operator")
+        self._continuations = []
+        self._show_request()
+
+    def _show_request(self):
+        """The request line: the open request's number, turns, tokens, wait and plan."""
+        request = self._worker.requests.open() if self._worker is not None else None
+        window = self.chat_window
+        for widget in (window.request_label, window.request_cancel):
+            widget.setVisible(request is not None)
+        if request is None:
+            return
+        text = f"Request {request.number}: {request.turns} turns, {request.tokens:,} tokens"
+        if request.wait:
+            text += f", waiting until {request.wait['until']}"
+        if request.plan:
+            text += "\n" + "\n".join(request.plan)
+        window.request_label.setText(text)
 
     def on_interrupt(self):
         if not self._running:
@@ -861,6 +926,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.main_window.stop_acquisition_and_timelapse()
         self.main_window.sig_stop_movement.emit()
         self.scheduler.clear()                  # a stop is a stop: nothing scheduled fires after it
+        self._continuations = []                # and no wait continues (the worker ended the request)
         self._show_confirmation(False)
         self._blocks.append(self._note_block("[stop microscope]"))
         self._render()
@@ -871,9 +937,11 @@ class AiAssistantGUI(QtWidgets.QWidget):
             return                                  # not while a turn runs
         self._blocks = []
         self._active = None
+        self._continuations = []
         if self._worker is not None:
             self._worker.reset()
         self._render()
+        self._show_request()
 
     # --- confirm-first commands ---
     def _show_confirmation(self, visible):
@@ -930,6 +998,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
             self._active = None
         self._set_running(False)
         self._render()
+        self._show_request()
 
     def shutdown(self):
         """Called by MainWindow on app exit: release the session as Disconnect does. The

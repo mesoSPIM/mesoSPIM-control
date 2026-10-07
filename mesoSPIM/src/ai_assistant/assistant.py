@@ -31,6 +31,7 @@ from ..remote_control.commands import self_test
 from ..remote_control.frame import array_of, to_png
 from . import config
 from .frames import Calibration, FrameHistory, field_um, flag, nominal_scale, sample_map, shift
+from .requests import Requests
 from ..remote_control import config as rc_config
 
 logger = logging.getLogger(__name__)
@@ -283,7 +284,7 @@ def _named(option, words):
 
 
 class TurnGuard:
-    """Four rules of the manual, kept in code for the length of one turn, because a small model
+    """Four rules of the manual, kept in code for the length of one request, because a small model
     reads them and does otherwise. After a move was refused for a movement limit, no other target
     for that axis is taken: a different number is a different instruction, and the operator gives
     those. After a command was refused because the operator is running something from the GUI, a
@@ -291,32 +292,42 @@ class TurnGuard:
     that frame instead of exposing the sample a second time. And a value the operator did not give
     ("brighter" sent as 20, "change the filter" sent as the one other filter) waits for their Run.
 
-    A turn is one operator message, counted by the session store; without a store there is no turn
-    to count and the guard lets everything through."""
+    A request is what one typed message set going, over its scheduled and continued turns (see
+    requests.py); its turns are in the session store. The operator's values are the numbers and
+    options in what they typed, never in text the machine wrote (a schedule's instruction, a
+    continuation). A request's light changes are counted over LIGHT_WINDOW_S. Without a
+    store there is no request to follow and the guard lets everything through. With `requests`, a
+    turn that has asked to wait may not touch the instrument again."""
 
-    def __init__(self, store=None):
+    def __init__(self, store=None, requests=None):
         self._store = store
-        self._turn = None
+        self._requests = requests
+        self._request = None
         self._clear()
 
     def _clear(self):
         self.refused_axes = set()
         self.busy_from_gui = False
         self.fresh_snap = False
-        self.light_changes = {}
-        self.set_this_turn = set()       # numbers the turn has set so far: current values for its arithmetic
+        self.set_this_turn = set()       # numbers the request has set so far: current values for its arithmetic
+        self._light_times = {}           # command -> times of the request's changes, on the store's clock
 
     def _sync(self):
-        if self._store is None:
+        if self._store is None or not self._store.turns:
             return False
-        turn = len(self._store.turns)
-        if turn != self._turn:
-            self._turn = turn
+        latest = self._store.turns[-1]
+        request = latest.get("request", latest["turn"])
+        if request != self._request:
+            self._request = request
             self._clear()
         return True
 
     def before(self, name, args):
         """The refusal this call gets, shaped like any tool error, or None to let it through."""
+        if (self._requests is not None and self._requests.is_waiting()
+                and (name == "look" or (name in COMMANDS and COMMANDS[name].kind != READ))):
+            return {"error": {"code": "refused", "message": "this turn has asked to wait; end it with a short reply. "
+                                                            "The request continues when the wait is over."}}
         if not self._sync() or name not in config.MOVE_ARGS:
             return None
         asked = (args or {}).get(config.MOVE_ARGS[name])
@@ -336,8 +347,9 @@ class TurnGuard:
         if not self._sync() or name not in config.VALUE_COMMANDS:
             return None
         turns = self._store.turns
-        words = " ".join(t["prompt"] for t in turns).lower()
-        current = turns[-1]["prompt"].lower()
+        typed = [t for t in turns if t.get("origin", "operator") == "operator"]
+        words = " ".join(t["prompt"] for t in typed).lower()
+        current = next((t["prompt"] for t in typed if t.get("request", t["turn"]) == self._request), "").lower()
         given = _numbers_in(words)
         now = _numbers_of(turns[-1].get("readout")) | self.set_this_turn
         allowed = {n * factor for n in given for factor in config.UNIT_FACTORS}
@@ -364,10 +376,17 @@ class TurnGuard:
         return self._sync() and self.busy_from_gui and name in config.STOP_COMMANDS
 
     def is_one_change_too_many(self, name):
-        """True when this turn has already changed this light setting as often as a turn may: a model
-        asked to double the intensity once can keep doubling while the next frame looks no better.
-        The light on the sample is the operator's to escalate."""
-        return self._sync() and self.light_changes.get(name, 0) >= config.LIGHT_CHANGES_PER_TURN.get(name, 1 << 30)
+        """True when this request has changed this light setting as often as LIGHT_WINDOW_S allows: a
+        model asked to double the intensity once can keep doubling while the next frame looks no
+        better, and over hours of a time lapse a count per turn would mean nothing. The light on
+        the sample is the operator's to escalate."""
+        return self._sync() and len(self._recent_light(name)) >= config.LIGHT_CHANGES_PER_WINDOW.get(name, 1 << 30)
+
+    def _recent_light(self, name):
+        since = self._store.clock() - config.LIGHT_WINDOW_S
+        recent = [t for t in self._light_times.get(name, []) if t > since]
+        self._light_times[name] = recent
+        return recent
 
     def take_fresh_snap(self):
         """True, once, when the last thing done to the instrument in this turn was a snap."""
@@ -386,8 +405,10 @@ class TurnGuard:
         if error and error.get("code") == "validation" and config.LIMIT_REFUSAL in message and name in config.MOVE_ARGS:
             asked = (args or {}).get(config.MOVE_ARGS[name])
             self.refused_axes |= set(asked) if isinstance(asked, dict) else set()
-        if name in config.LIGHT_CHANGES_PER_TURN and not error:
-            self.light_changes[name] = self.light_changes.get(name, 0) + 1
+        if name in config.LIGHT_CHANGES_PER_WINDOW and not error:
+            self._light_times.setdefault(name, []).append(self._store.clock())
+        if self._requests is not None and not error and name in COMMANDS and COMMANDS[name].kind != READ:
+            self._requests.started(_operation_id(outcome))
         if name in config.VALUE_COMMANDS and not error:
             values = (args or {}).get(config.MOVE_ARGS[name], {}) if name in config.MOVE_ARGS else (args or {})
             self.set_this_turn |= _numbers_of({k: v for k, v in values.items() if k not in config.NOT_VALUES}
@@ -396,6 +417,12 @@ class TurnGuard:
             self.fresh_snap = isinstance(outcome, dict) and outcome.get("status") == COMPLETED
         elif name == "look" or (name in COMMANDS and COMMANDS[name].kind != READ):
             self.fresh_snap = False           # the instrument changed, or the frame was read
+
+
+def _operation_id(outcome):
+    """The id of the operation a result reports, from a wait's top level or an accepted reply."""
+    operation = outcome.get("operation") if isinstance(outcome, dict) else None
+    return operation.get("id") if isinstance(operation, dict) else operation
 
 
 def _advice(name, code, message):
@@ -483,8 +510,9 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None, 
             return refused                                               # nobody to ask is not a yes
         if guard.is_one_change_too_many(name) and (gate is None or not gate.ask(name, args)):
             return json.dumps({"error": {"code": "refused", "message": (
-                f"the operator did not confirm another {name} in this turn. It has been changed "
-                f"{config.LIGHT_CHANGES_PER_TURN[name]} times already; tell them what the frames showed and stop.")}})
+                f"the operator did not confirm another {name}. It has been changed "
+                f"{config.LIGHT_CHANGES_PER_WINDOW[name]} times in the last ten minutes; tell them what the frames "
+                "showed and stop.")}})
         value = guard.value_not_the_operators(name, args)
         if value is not None and (gate is None or not gate.ask(name, args)):
             return json.dumps({"error": {"code": "refused", "message": (
@@ -874,9 +902,14 @@ class SessionStore:
         self.clock = clock
         self.frames = FrameHistory(clock, calibration)
 
-    def begin(self, prompt, snapshot):
-        self.turns.append({"turn": len(self.turns) + 1, "time": hms(self.clock()),
-                           "prompt": prompt, "readout": snapshot, "tools": [], "reply": None})
+    def begin(self, prompt, snapshot, origin="operator", request=None):
+        """Open a turn: `origin` is "operator" for typed text, "machine" for a fired schedule or a
+        continuation; `request` the number of the request it belongs to."""
+        entry = {"turn": len(self.turns) + 1, "time": hms(self.clock()), "prompt": prompt, "origin": origin,
+                 "readout": snapshot, "tools": [], "reply": None}
+        if request is not None:
+            entry["request"] = request
+        self.turns.append(entry)
         return len(self.turns)
 
     def finish(self, messages, reply):
@@ -987,7 +1020,7 @@ class Scheduler:
         self._lock = threading.Lock()
         self._items = {}                      # name -> {"name", "instruction", "every_seconds"|"in_seconds"|"at", "next"}
 
-    def add(self, name, instruction, every_seconds=None, in_seconds=None, at=None):
+    def add(self, name, instruction, every_seconds=None, in_seconds=None, at=None, request=None):
         name, instruction = (name or "").strip(), (instruction or "").strip()
         if not name or not instruction:
             raise ValueError("a schedule needs a name and an instruction")
@@ -997,7 +1030,7 @@ class Scheduler:
             raise ValueError("give exactly one of every_seconds, in_seconds or at")
         key, value = given[0]
         now = self.clock()
-        item = {"name": name, "instruction": instruction}
+        item = {"name": name, "instruction": instruction, "request": request}
         if key == "at":
             item["at"] = _clock_time(value)
             item["next"] = _next_occurrence(item["at"], now)
@@ -1101,15 +1134,16 @@ _CANCEL_SCHEDULE_SCHEMA = {
 }
 
 
-def _schedule_tools(scheduler, on_call):
+def _schedule_tools(scheduler, on_call, requests=None):
     from pydantic_ai import Tool
 
     def schedule(name="", instruction="", every_seconds=None, in_seconds=None, at=None) -> str:
         args = {"name": name, "instruction": instruction, "every_seconds": every_seconds, "in_seconds": in_seconds, "at": at}
         if on_call is not None:
             on_call("schedule", json.dumps({k: v for k, v in args.items() if v is not None}))
+        request = requests.current.number if requests is not None and requests.current is not None else None
         try:
-            return json.dumps({"scheduled": scheduler.add(**args)})
+            return json.dumps({"scheduled": scheduler.add(**args, request=request)})
         except ValueError as error:
             return json.dumps({"error": {"code": "validation", "message": str(error)}})
 
@@ -1132,6 +1166,36 @@ def _schedule_tools(scheduler, on_call):
         Tool.from_schema(cancel_schedule, name="cancel_schedule", json_schema=_CANCEL_SCHEDULE_SCHEMA,
                          description="Cancel a schedule by its name, or every one with 'all'."),
     ]
+
+
+_WAIT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "until": {"type": "string", "description": "'done' (what the request started has ended), 'idle', or seconds"},
+        "max_s": {"type": "integer", "minimum": config.SCHEDULE_MIN_SECONDS},
+    },
+    "required": ["until"],
+    "additionalProperties": False,
+}
+
+
+def _wait_tool(requests, on_call):
+    """wait: end the turn and continue the request when a condition holds (see requests.py)."""
+    from pydantic_ai import Tool
+
+    def wait(until="done", max_s=None) -> str:
+        if on_call is not None:
+            on_call("wait", json.dumps({k: v for k, v in (("until", until), ("max_s", max_s)) if v is not None}))
+        try:
+            pending = requests.wait(until, max_s)
+        except ValueError as error:
+            return json.dumps({"error": {"code": "validation", "message": str(error)}})
+        if pending is None:
+            return json.dumps({"done": True, "note": "nothing this request started is running; go on now"})
+        return json.dumps({"waiting": {"until": pending["until"], "max_s": int(pending["max_s"])},
+                           "note": config.WAIT_NOTE})
+
+    return Tool.from_schema(wait, name="wait", json_schema=_WAIT_SCHEMA, description=config.TOOL_DESCRIPTIONS["wait"])
 
 
 _ROW_UPDATE_SCHEMA = {
@@ -1203,7 +1267,8 @@ def _narrowed(cmd, keys):
 
 
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision_endpoint=None,
-                image_bin=None, profile=None, store=None, scheduler=None, vision_session=None, axes=None):
+                image_bin=None, profile=None, store=None, scheduler=None, vision_session=None, axes=None,
+                requests=None):
     """One passthrough tool per offered command (see offered_commands). The tool list is derived
     from COMMANDS and the profile — never hand-maintained.
 
@@ -1214,7 +1279,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     from pydantic_ai import Tool
     regular = (profile or config.DEFAULT_TOOL_PROFILE) == "Regular"
     narrow = config.REGULAR_ARGS if regular else {}
-    guard = TurnGuard(store)             # one for all the tools: what one call rules out for the next
+    guard = TurnGuard(store, requests)   # one for all the tools: what one call rules out for the next
     trail = StateTrail(acceptor, store)  # and one readout they report changes against
     clock = scheduler.clock if scheduler is not None else time.time
     history = store.frames if store is not None else None
@@ -1243,7 +1308,9 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     if store is not None:
         tools += _store_tools(store, on_call)
     if scheduler is not None:
-        tools += _schedule_tools(scheduler, on_call)
+        tools += _schedule_tools(scheduler, on_call, requests)
+    if requests is not None:
+        tools.append(_wait_tool(requests, on_call))
     if endpoint is not None:
         eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see
 
@@ -1339,6 +1406,14 @@ def turn_trace(messages):
     return [dict(calls[call_id], result=returns.get(call_id)) for call_id in order]
 
 
+def tokens_of(usage):
+    """The tokens a run took, in and out; from the provider's details when pydantic-ai left the
+    totals at 0 (a model its price table does not know)."""
+    counted = (usage.input_tokens or 0) + (usage.output_tokens or 0)
+    details = getattr(usage, "details", None) or {}
+    return counted or sum(v for k, v in details.items() if k.endswith(("_prompt_tokens", "_candidates_tokens")))
+
+
 def served_models(messages):
     """The names of the models that answered in these messages, in order of first appearance: the
     fallback model rolls in silently on a rate limit, and the operator is told who really answered."""
@@ -1365,13 +1440,15 @@ def _block_json(value):
     return json.dumps(value).replace("<", "\\u003c")
 
 
-def with_state(acceptor, text, store=None, scheduler=None):
+def with_state(acceptor, text, store=None, scheduler=None, requests=None, origin="operator"):
     """The current microscope readout, then the operator's message: data the model can rely on
     instead of calling reads first, with the operator's words last, where a model weighs text
     most, so that a note in a folder name inside the readout does not read as the request. Sent
     without the block if the readout fails. With a store, the turn is opened in it. With a
     scheduler, the readout also carries the clock and the schedules set, the model's only clock;
-    with frames in the store, the frame history in brief and the map derived from it."""
+    with frames in the store, the frame history in brief and the map derived from it; with
+    `requests`, the request this turn belongs to (its words, turn, plan and wait), and the turn is
+    stored as typed by the operator or written by the machine (`origin`)."""
     try:
         snapshot = acceptor.dispatch("get_snapshot", {})
     except Exception:
@@ -1380,8 +1457,11 @@ def with_state(acceptor, text, store=None, scheduler=None):
         snapshot = dict(snapshot, clock=hms(scheduler.clock()), schedules=scheduler.listing())
     if snapshot is not None and store is not None and store.frames.frames:
         snapshot = dict(snapshot, frames=store.frames.listing(), map=sample_map(store.frames))
+    request = requests.current if requests is not None else None
+    if snapshot is not None and request is not None and (origin != "operator" or request.plan or request.wait):
+        snapshot = dict(snapshot, request=request.brief(requests.clock()))   # typed: the words follow anyway
     if store is not None:
-        store.begin(text, snapshot)
+        store.begin(text, snapshot, origin, request.number if request is not None else None)
     if snapshot is None:
         return text
     return f"<microscope_state>\n{_block_json(snapshot)}\n</microscope_state>\n\n{text}"
@@ -1608,7 +1688,7 @@ def build_model(endpoint):
 
 def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=None,
                 vision_endpoint=None, image_bin=None, profile=None, store=None, scheduler=None,
-                vision_session=None, axes=None):
+                vision_session=None, axes=None, requests=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -1623,7 +1703,8 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
     agent = Agent(model, instructions=build_system_prompt(profile=profile, axes=axes),
                   tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, gate=gate,
                                     vision_endpoint=vision_endpoint, image_bin=image_bin, profile=profile,
-                                    store=store, scheduler=scheduler, vision_session=vision_session, axes=axes),
+                                    store=store, scheduler=scheduler, vision_session=vision_session, axes=axes,
+                                    requests=requests),
                   capabilities=[ProcessHistory(compact_history)],
                   model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
                   retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
@@ -1721,6 +1802,7 @@ class AssistantWorker(QtCore.QObject):
     sig_served = QtCore.pyqtSignal(str)      # another model than the chosen one answered (the fallback)
     sig_error = QtCore.pyqtSignal(str)
     sig_done = QtCore.pyqtSignal()
+    sig_continue = QtCore.pyqtSignal(str, int)   # a wait is over: the continuation turn of this request
 
     def __init__(self, acceptor):
         super().__init__()
@@ -1731,6 +1813,7 @@ class AssistantWorker(QtCore.QObject):
         self._agent = None
         self._history = []
         self.store = SessionStore(self.now, Calibration())   # every turn in full, and the frames
+        self.requests = Requests(self.now)    # what each typed message set going
         self.scheduler = None            # set by the tab, which owns the timer that fires the schedules
         self.eyes = None                 # the vision model's own conversation, made by configure()
         self.cancel = threading.Event()
@@ -1765,12 +1848,33 @@ class AssistantWorker(QtCore.QObject):
         """Forget the conversation (Clear all). Called between turns, like configure."""
         self._history = []
         self.store = SessionStore(self.now, Calibration())
+        self.requests.end("cleared")
+        self.requests = Requests(self.now)
         if self.eyes is not None:
             self.eyes.reset()            # the eyes forget the frames with the transcript
         self._agent = None               # the tools close over the store
 
     @QtCore.pyqtSlot(str)
     def run_turn(self, text):
+        """A typed message: a new request."""
+        self.requests.typed(text)
+        self._run_one(text, "operator")
+
+    @QtCore.pyqtSlot(str, int)
+    def run_machine_turn(self, text, request):
+        """A turn the machine wrote for a request: a schedule that fell due, or a continuation."""
+        self.requests.machine(request)
+        self._run_one(text, "machine")
+
+    @QtCore.pyqtSlot()
+    def check_continuation(self):
+        """The tab's tick, between turns: when the pending wait is over, ask for its turn."""
+        due = self.requests.due(self._acceptor.dispatch)
+        if due is not None:
+            request, result = due
+            self.sig_continue.emit(config.CONTINUATION_TURN.format(number=request.number, result=result), request.number)
+
+    def _run_one(self, text, origin):
         try:
             self.cancel.clear()
             if self._agent is None or self._agent_axes != self.axes:      # the axes are in the prompt
@@ -1780,13 +1884,14 @@ class AssistantWorker(QtCore.QObject):
                                           vision_endpoint=self._vision_endpoint,
                                           image_bin=lambda: self.look_image_bin, profile=self._profile,
                                           store=self.store, scheduler=self.scheduler, vision_session=self.eyes,
-                                          axes=self._agent_axes)
+                                          axes=self._agent_axes, requests=self.requests)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.
-            result = self._run_cancellable(self._agent.run(with_state(self._acceptor, text, self.store, self.scheduler),
-                                                           message_history=self._history))
+            prompt = with_state(self._acceptor, text, self.store, self.scheduler, self.requests, origin)
+            result = self._run_cancellable(self._agent.run(prompt, message_history=self._history))
             self.store.finish(result.new_messages(), result.output)
+            self.requests.finish_turn(result.output, tokens_of(result.usage))
             self._history = trim_history(result.all_messages(), self.max_history_turns)
             chosen = self._endpoint.model if self._endpoint else None
             others = [name for name in served_models(result.new_messages()) if name != chosen]
@@ -1830,6 +1935,7 @@ class AssistantWorker(QtCore.QObject):
         already started keeps running; stopping the instrument is stop_microscope, a separate decision."""
         self.cancel.set()
         self.gate.answer(False)
+        self.requests.end("cancelled")
         turn = self._turn
         if turn is not None:
             loop, task = turn

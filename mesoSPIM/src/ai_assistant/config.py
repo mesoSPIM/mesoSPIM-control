@@ -118,6 +118,7 @@ TOOL_DESCRIPTIONS = {
     # the stage and leaves live running.
     "stop": "Stops the stage only; live or an acquisition runs on (stop_activity ends it).",
     "stop_activity": "Ends live, an acquisition or a time lapse.",
+    "wait": "End this turn; the request goes on in a new turn when the wait is over, with the result.",
     "update_acquisition_row": "Change named keys of one acquisition row; the rest stays. To rename or edit "
                               "a row use this, never set_acquisition_list.",
     "snap": "Save one frame to the snap folder, without looking at it. To see the sample, call look, "
@@ -148,9 +149,10 @@ CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition", "calibra
 # wording there silently disarms the guard.
 MOVE_ARGS = {"move_absolute": "targets", "move_relative": "deltas"}
 STOP_COMMANDS = ("stop", "stop_activity", "time_lapse_stop")
-# How often one turn may change the light on the sample before the next change waits for the
-# operator's Run: twice covers "set it to 30, snap, put it back"; a third is an escalation.
-LIGHT_CHANGES_PER_TURN = {"set_intensity": 2, "set_camera": 2}
+# How often the light on the sample may change within LIGHT_WINDOW_S before the next change waits
+# for the operator's Run: twice covers "set it to 30, snap, put it back"; a third is an escalation.
+LIGHT_CHANGES_PER_WINDOW = {"set_intensity": 2, "set_camera": 2}
+LIGHT_WINDOW_S = 600
 LIMIT_REFUSAL = "outside the allowed range"
 # The fourth rule: a value a turn sends is the operator's. It counts as theirs when it is in their
 # words (this turn or an earlier one, in um or mm, s or ms or us, digits or number words), or made
@@ -230,6 +232,13 @@ RUNS_ON_ITS_OWN_NOTE = ("{what} is under way and ends by itself; get_progress re
 SCHEDULE_MIN_SECONDS = 5
 SCHEDULES_MAX = 10
 SCHEDULED_TURN = "[scheduled '{name}'] {instruction}"
+# A request (requests.py): a wait leaves one continuation pending, at most WAIT_MAX_S, at most
+# CONTINUATIONS_MAX per request; its turn starts with CONTINUATION_TURN. A plan keeps PLAN_STEPS_MAX.
+WAIT_MAX_S = 4 * 3600
+CONTINUATIONS_MAX = 30
+CONTINUATION_TURN = "[continuation of request {number}] {result}"
+WAIT_NOTE = "End this turn now with one short sentence; the request continues when the wait is over."
+PLAN_STEPS_MAX = 12
 # At least this many seconds between requests to the model, for a host with a tight per-minute
 # limit; 0 is no spacing. The microscope config may set it with the attribute named here, and a
 # provider preset may carry "request_interval_s".
