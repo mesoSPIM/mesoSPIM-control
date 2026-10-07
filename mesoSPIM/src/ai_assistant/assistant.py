@@ -39,7 +39,12 @@ _TERMINAL = {COMPLETED, FAILED, STOPPED}
 _PROMPT_ONLY = {"get_manual"}
 
 
-def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config):
+def hms(seconds):
+    """A time on the assistant's clock (epoch seconds) as the operator reads it, HH:MM:SS."""
+    return time.strftime("%H:%M:%S", time.localtime(seconds))
+
+
+def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config, clock=time.time):
     """Run one command and return a finished result. For WAIT commands the return always
     carries a consistent top-level `status` ('completed' / 'failed' / 'stopped' / 'still_running' /
     'cancelled'); READ/ACTION commands pass their own result through unchanged.
@@ -60,11 +65,11 @@ def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config):
     if op.get("status") in _TERMINAL:
         return {"status": op["status"], "operation": op_id, "result": result}
 
-    deadline = time.monotonic() + cfg.WAIT_CAP_S
+    deadline = clock() + cfg.WAIT_CAP_S
     until_stopped = name in getattr(cfg, "RUNS_UNTIL_STOPPED", ())
     on_its_own = name in getattr(cfg, "RUNS_ON_ITS_OWN", ())
     runs = COMMANDS[name].running_state if until_stopped or on_its_own else None
-    while time.monotonic() < deadline:
+    while clock() < deadline:
         if cancel.is_set():
             return {"status": "cancelled", "operation": op_id}      # interrupt() halts the hardware
         time.sleep(cfg.POLL_INTERVAL_S)
@@ -361,7 +366,7 @@ def shorten_result(name, result):
     return kept
 
 
-def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
+def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None, clock=time.time):
     """One passthrough tool body, closing over the command it dispatches. The keyword arguments
     ARE the command's wire args, so `move_absolute(targets={"x": 5000})` dispatches verbatim.
     `on_call` (if given) is invoked the moment the command fires, so the GUI can stream the
@@ -397,7 +402,7 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
                 f"{value} is not a value the operator gave, and they did not confirm it. Ask them which value "
                 "they want; do not choose one.")}})
         try:
-            outcome = shorten_result(name, dispatch_and_wait(acceptor, name, args, kind, cancel))
+            outcome = shorten_result(name, dispatch_and_wait(acceptor, name, args, kind, cancel, clock=clock))
         except Exception as error:
             code, message = error_info(error)
             outcome = {"error": {"code": code, "message": message}}
@@ -415,7 +420,7 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None):
     return _call
 
 
-def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None):
+def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None, clock=time.time):
     """Take a frame and describe it. The numbers come from get_frame and reach the main model
     always. The picture itself goes to a vision model in a separate call with the question, and
     only that answer comes back — the main conversation never carries images, so a text-only main
@@ -426,7 +431,7 @@ def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None):
     if snap and _running_mode(acceptor) is not None:
         snap = False                              # live shows frames already; a snap would take the loop over
     if snap:
-        done = dispatch_and_wait(acceptor, "snap", {"prefix": "assistant"}, WAIT, cancel)
+        done = dispatch_and_wait(acceptor, "snap", {"prefix": "assistant"}, WAIT, cancel, clock=clock)
         if done.get("status") != COMPLETED:
             return {"error": {"code": "execution", "message": f"snap did not complete: {done}"}}
         saved = (((done.get("result") or {}).get("operation") or {}).get("result") or {}).get("path")
@@ -472,8 +477,9 @@ class VisionSession:
     image, so the conversation stays about one frame's cost per look with a provider that caches
     the prefix. Cleared with the transcript. `model` overrides the endpoint's, for the tests."""
 
-    def __init__(self, endpoint, frames_kept=None, model=None):
+    def __init__(self, endpoint, frames_kept=None, model=None, clock=time.time):
         self.endpoint = endpoint
+        self.clock = clock
         self.frames_kept = config.VISION_FRAMES_KEPT if frames_kept is None else frames_kept
         self._model = model
         self._agent = None
@@ -486,7 +492,7 @@ class VisionSession:
         import base64
         from pydantic_ai import BinaryContent
         number = self.frames + 1                            # counted once the eyes have seen it
-        text = (f"Frame {number}, {time.strftime('%H:%M:%S')}."
+        text = (f"Frame {number}, {hms(self.clock())}."
                 + (f" Instrument: {context}" if context else "")
                 + f"\nQuestion: {question}\nFrame numbers: {json.dumps(stats)}")
         answer = self._run([text, BinaryContent(data=base64.b64decode(image["base64"]), media_type="image/png")])
@@ -616,11 +622,12 @@ class SessionStore:
     compact; what compaction leaves out is here, and the recall and search tools hand it back on
     request. Kept in memory for the session only; Clear all empties it."""
 
-    def __init__(self):
+    def __init__(self, clock=time.time):
         self.turns = []
+        self.clock = clock
 
     def begin(self, prompt, snapshot):
-        self.turns.append({"turn": len(self.turns) + 1, "time": time.strftime("%H:%M:%S"),
+        self.turns.append({"turn": len(self.turns) + 1, "time": hms(self.clock()),
                            "prompt": prompt, "readout": snapshot, "tools": [], "reply": None})
         return len(self.turns)
 
@@ -721,10 +728,14 @@ class Scheduler:
     every second and submits each due instruction as an ordinary turn, so it goes through the same
     tools, gate and refusals as anything typed, one at a time and never while a turn runs. The
     model cannot keep time; this does, and the readout shows the clock and what is scheduled.
-    Thread-safe: the tools add and cancel from the worker thread, the timer pops on the GUI's."""
+    Thread-safe: the tools add and cancel from the worker thread, the timer pops on the GUI's.
+
+    Its clock (epoch seconds, time.time by default) is the assistant's one clock: every time the
+    assistant reads about the instrument, the session or the schedules goes through it, so a
+    simulator that passes its own decides when time passes."""
 
     def __init__(self, clock=time.time):
-        self._clock = clock
+        self.clock = clock
         self._lock = threading.Lock()
         self._items = {}                      # name -> {"name", "instruction", "every_seconds"|"in_seconds"|"at", "next"}
 
@@ -737,7 +748,7 @@ class Scheduler:
         if len(given) != 1:
             raise ValueError("give exactly one of every_seconds, in_seconds or at")
         key, value = given[0]
-        now = self._clock()
+        now = self.clock()
         item = {"name": name, "instruction": instruction}
         if key == "at":
             item["at"] = _clock_time(value)
@@ -768,7 +779,7 @@ class Scheduler:
     def pop_due(self):
         """The schedule that is due first, if any is due: a repeating one is set for its next time,
         a one-off is removed. One at a time, so the tab runs one turn per tick."""
-        now = self._clock()
+        now = self.clock()
         with self._lock:
             due = sorted((item for item in self._items.values() if item["next"] <= now), key=lambda i: i["next"])
             if not due:
@@ -781,7 +792,7 @@ class Scheduler:
             return dict(item)
 
     def listing(self):
-        now = self._clock()
+        now = self.clock()
         with self._lock:
             items = sorted(self._items.values(), key=lambda i: i["next"])
         return [self._listed(item, now) for item in items]
@@ -790,7 +801,7 @@ class Scheduler:
     def _listed(item, now):
         listed = {key: item[key] for key in ("name", "instruction", "every_seconds", "in_seconds", "at") if key in item}
         listed["due_in_s"] = int(max(0.0, item["next"] - now))
-        listed["due_at"] = time.strftime("%H:%M:%S", time.localtime(item["next"]))
+        listed["due_at"] = hms(item["next"])
         return listed
 
 
@@ -956,10 +967,11 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     regular = (profile or config.DEFAULT_TOOL_PROFILE) == "Regular"
     narrow = config.REGULAR_ARGS if regular else {}
     guard = TurnGuard(store)             # one for all the tools: what one call rules out for the next
+    clock = scheduler.clock if scheduler is not None else time.time
     tools = []
     installs = {}
     for cmd in offered_commands(profile):
-        fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate, guard)
+        fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate, guard, clock)
         installs[cmd.name] = fn
         schema = cmd.schema
         if cmd.name in narrow:
@@ -985,7 +997,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
             size = image_bin() if callable(image_bin) else image_bin  # a callable reads a live setting
             reuse = bool(snap) and guard.take_fresh_snap()  # snapped a moment ago: no second exposure
             try:
-                outcome = look(acceptor, eyes, question, snap and not reuse, cancel, size, eyes=vision_session)
+                outcome = look(acceptor, eyes, question, snap and not reuse, cancel, size, eyes=vision_session, clock=clock)
                 if reuse and outcome.get("available"):
                     outcome["frame"] = ("the one snapped a moment ago in this turn, not a second exposure; look "
                                         "takes its own snap, so next time call look alone")
@@ -1087,7 +1099,7 @@ def with_state(acceptor, text, store=None, scheduler=None):
     except Exception:
         snapshot = None
     if snapshot is not None and scheduler is not None:
-        snapshot = dict(snapshot, clock=time.strftime("%H:%M:%S"), schedules=scheduler.listing())
+        snapshot = dict(snapshot, clock=hms(scheduler.clock()), schedules=scheduler.listing())
     if store is not None:
         store.begin(text, snapshot)
     if snapshot is None:
@@ -1293,6 +1305,7 @@ def throttled(model, interval_s):
         _last = 0.0
 
         async def request(self, messages, model_settings, model_request_parameters):
+            # Real time, not the assistant's clock: the host counts its limit in real seconds.
             # asyncio may wake a sleep up to one clock tick early (15.6 ms on Windows): sleep again.
             while (wait := Throttled._last + interval_s - time.monotonic()) > 0:
                 await asyncio.sleep(wait)
@@ -1437,7 +1450,7 @@ class AssistantWorker(QtCore.QObject):
         self._profile = config.DEFAULT_TOOL_PROFILE
         self._agent = None
         self._history = []
-        self.store = SessionStore()      # every turn in full, for recall_turn and search_history
+        self.store = SessionStore(self.now)   # every turn in full, for recall_turn and search_history
         self.scheduler = None            # set by the tab, which owns the timer that fires the schedules
         self.eyes = None                 # the vision model's own conversation, made by configure()
         self.cancel = threading.Event()
@@ -1457,7 +1470,11 @@ class AssistantWorker(QtCore.QObject):
         self._profile = profile or config.DEFAULT_TOOL_PROFILE
         self._agent = None
         reader = vision_endpoint or endpoint
-        self.eyes = VisionSession(reader) if reader is not None and reader.vision else None
+        self.eyes = VisionSession(reader, clock=self.now) if reader is not None and reader.vision else None
+
+    def now(self):
+        """The scheduler's clock, which the tab sets after the worker is made."""
+        return self.scheduler.clock() if self.scheduler is not None else time.time()
 
     def set_profile(self, profile):
         """Switch tool sets between turns; the agent is rebuilt with the next message."""
@@ -1467,7 +1484,7 @@ class AssistantWorker(QtCore.QObject):
     def reset(self):
         """Forget the conversation (Clear all). Called between turns, like configure."""
         self._history = []
-        self.store = SessionStore()
+        self.store = SessionStore(self.now)
         if self.eyes is not None:
             self.eyes.reset()            # the eyes forget the frames with the transcript
         self._agent = None               # the tools close over the store
