@@ -22,6 +22,7 @@ import numpy as np
 # stays cheap.
 _STRETCH = (1.0, 99.5)
 _MAX_SAMPLES = 1_000_000
+_FOCUS_SIDE = 512   # the focus measure bins the frame to about this many pixels on its longer side
 
 
 def _sample(frame):
@@ -58,20 +59,29 @@ def frame_stats(frame):
         "saturated_fraction": float(np.mean(sample >= full_scale)),
         "bright_fraction": float(bright.mean()),
         "signal_centroid": centroid,  # 0..1 of height and width, None when the frame is flat
-        "focus_measure": focus_measure(sample),
+        "focus_measure": focus_measure(frame),
     }
 
 
-def focus_measure(sample):
-    """Variance of a Laplacian: higher is sharper. Only comparable between frames of the same scene
-    at the same zoom, which is what a focus search does."""
-    if sample.shape[0] < 3 or sample.shape[1] < 3:
+def focus_measure(frame):
+    """Laplacian energy over the squared signal: higher is sharper, and the same at any intensity
+    or exposure. The second derivative answers to detail, not to a smooth body or a gradient in the
+    background. The brightest 0.1% is clipped and the frame binned to about _FOCUS_SIDE pixels, so a
+    hot pixel or a saturated patch does not decide it; the camera noise's share, estimated from the
+    pixel-to-pixel differences, is taken off, so a dim frame far from focus does not read sharp.
+    Only comparable between frames of the same scene at the same zoom, which is what a focus search
+    does."""
+    frame = np.minimum(frame, np.percentile(_sample(frame), 99.9))
+    binned = bin_frame(frame, max(2, int(np.ceil(max(frame.shape) / _FOCUS_SIDE))))
+    if binned.shape[0] < 3 or binned.shape[1] < 3:
         return 0.0
-    laplacian = (
-        sample[:-2, 1:-1] + sample[2:, 1:-1] + sample[1:-1, :-2] + sample[1:-1, 2:] - 4 * sample[1:-1, 1:-1]
-    )
-    scale = float(sample.max() - sample.min()) or 1.0
-    return float(laplacian.var() / (scale * scale))
+    laplacian = (binned[:-2, 1:-1] + binned[2:, 1:-1] + binned[1:-1, :-2] + binned[1:-1, 2:]
+                 - 4 * binned[1:-1, 1:-1])
+    across = np.diff(binned, axis=1)
+    noise = 1.4826 * float(np.median(np.abs(across - np.median(across)))) / np.sqrt(2)   # one pixel's noise
+    energy = float(np.mean(laplacian ** 2)) - 20 * noise ** 2                         # a Laplacian of noise: 20 times
+    signal = float(np.mean(np.clip(binned - np.percentile(binned, 10), 0, None)))
+    return max(energy, 0.0) / signal ** 2 if signal > 0 else 0.0
 
 
 def bin_frame(frame, factor):
