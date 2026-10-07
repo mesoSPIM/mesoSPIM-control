@@ -179,6 +179,16 @@ OPTIONS_ADVICE = ("configured_options lists the instrument's own values. Correct
 BUSY_FROM_GUI = "from the GUI"
 
 POLL_INTERVAL_S = 0.15
+# A setter answers {} as soon as Core accepts it, and Core applies the value later, on other threads.
+# So the assistant reads the keys a setter set until they read as asked or READ_BACK_S passes, and
+# the result carries what they read as "changed".
+SETTERS = ("set_laser", "set_intensity", "set_filter", "set_zoom", "set_shutterconfig", "set_camera", "set_etl",
+           "set_galvo", "set_laser_timing", "set_state")
+READ_BACK_S = 3.0
+# Every result of an instrument tool ends with the readout keys that changed since the model last
+# saw them (the turn's readout, then each result), as "state_changed"; these parts are compared.
+TRAIL_KEYS = ("state", "position", "optics", "camera", "etl", "zeroed_axes", "time_lapse",
+              "acquisition_list.rows", "acquisition_list.selected_row")
 # Nothing of the chat is written to disk: the conversation lives in memory until Clear all or
 # Disconnect. A tool result kept for recall_turn is cut to this many characters, an image's base64
 # replaced by its size.

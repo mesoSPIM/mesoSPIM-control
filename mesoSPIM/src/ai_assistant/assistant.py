@@ -87,6 +87,90 @@ def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config, clock=time
             "note": "operation exceeds the wait cap; call get_progress to check on it."}
 
 
+def _asked_values(name, args):
+    """The state keys a setter sets, with the values asked; empty for any other command."""
+    if name not in config.SETTERS:
+        return {}
+    values = (args or {}).get("settings") if name == "set_state" else args
+    return {key: value for key, value in values.items() if key not in config.NOT_VALUES} if isinstance(values, dict) else {}
+
+
+def _reads_as(value, asked):
+    if isinstance(value, (int, float)) and isinstance(asked, (int, float)) and not isinstance(value, bool):
+        return abs(value - asked) <= 1e-9 * max(1.0, abs(asked))
+    return value == asked
+
+
+def read_back(acceptor, asked, cancel, cfg=config, clock=time.time):
+    """What Core holds for the keys a setter set: read until every key reads as asked, or for
+    READ_BACK_S at most. None when the instrument does not know one of the keys."""
+    deadline = clock() + cfg.READ_BACK_S
+    while True:
+        try:
+            values = acceptor.dispatch("get_state_all", {"keys": list(asked)})
+        except Exception:
+            return None
+        values = {key: values.get(key) for key in asked}
+        if all(_reads_as(values[key], value) for key, value in asked.items()) or cancel.is_set() or clock() >= deadline:
+            return values
+        time.sleep(cfg.POLL_INTERVAL_S)
+
+
+def _trail_view(snapshot):
+    """The readout's TRAIL_KEYS as flat dotted keys: optics.intensity, position.x."""
+    out = {}
+    for key in config.TRAIL_KEYS:
+        group, _, leaf = key.partition(".")
+        value = (snapshot or {}).get(group)
+        if leaf:
+            out[key] = value.get(leaf) if isinstance(value, dict) else None
+        elif isinstance(value, dict):
+            out.update({f"{group}.{name}": item for name, item in value.items()})
+        else:
+            out[key] = value
+    return out
+
+
+class StateTrail:
+    """The readout keys that changed since the model last saw them: the turn's readout (from the
+    session store), then each result. A move's new position otherwise sits three levels deep in
+    its result, and a setting's effect, or anything the operator changed meanwhile, nowhere."""
+
+    def __init__(self, acceptor, store=None):
+        self._acceptor = acceptor
+        self._store = store
+        self._turn = None
+        self._seen = None
+        self._lock = threading.Lock()      # the calls of one reply run on threads of their own
+
+    def since_last(self):
+        with self._lock:
+            try:
+                now = _trail_view(self._acceptor.dispatch("get_snapshot", {}))
+            except Exception:
+                return {}
+            if self._store is not None and self._store.turns and len(self._store.turns) != self._turn:
+                self._turn = len(self._store.turns)
+                readout = self._store.turns[-1].get("readout")
+                self._seen = _trail_view(readout) if readout else None
+            seen, self._seen = self._seen, now
+            return {} if seen is None else {key: value for key, value in now.items() if seen.get(key) != value}
+
+
+def with_changes(outcome, trail, changed=None):
+    """The result with `changed` (the setter's keys as read back) and then the other readout keys
+    that changed since the last result, so that every result ends with them."""
+    if not isinstance(outcome, dict):
+        return outcome
+    if changed is not None:
+        outcome["changed"] = changed
+    moved = {key: value for key, value in trail.since_last().items()
+             if key.rpartition(".")[2] not in (changed or {})}
+    if moved:
+        outcome["state_changed"] = moved
+    return outcome
+
+
 def describe_error(error):
     """A turn failure the operator can act on.
 
@@ -366,14 +450,16 @@ def shorten_result(name, result):
     return kept
 
 
-def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None, clock=time.time):
+def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None, clock=time.time, trail=None):
     """One passthrough tool body, closing over the command it dispatches. The keyword arguments
     ARE the command's wire args, so `move_absolute(targets={"x": 5000})` dispatches verbatim.
     `on_call` (if given) is invoked the moment the command fires, so the GUI can stream the
     activity live. Dispatch errors (out-of-range, busy) are returned to the model as data so it
     can self-correct, not raised. A confirm-first command first asks the operator through `gate`,
-    and so does a stop that would end the operator's own run (see TurnGuard)."""
+    and so does a stop that would end the operator's own run (see TurnGuard). A call that reached
+    the instrument returns with the readout keys it changed (see with_changes)."""
     guard = guard or TurnGuard()
+    trail = trail or StateTrail(acceptor)
 
     def _call(**args) -> str:
         """See the tool description (the command's hint)."""
@@ -415,6 +501,11 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None, 
             running = acceptor.dispatch("get_state_all", {"keys": ["state"]}).get("state")
             if running and running != "idle":
                 outcome["note"] = config.STAGE_STOP_NOTE.format(state=running)
+        asked = _asked_values(name, args)
+        changed = None
+        if asked and isinstance(outcome, dict) and "error" not in outcome:
+            changed = read_back(acceptor, asked, cancel, clock=clock)
+        outcome = with_changes(outcome, trail, changed)
         guard.after(name, args, outcome)
         return json.dumps(outcome)
     return _call
@@ -967,11 +1058,12 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     regular = (profile or config.DEFAULT_TOOL_PROFILE) == "Regular"
     narrow = config.REGULAR_ARGS if regular else {}
     guard = TurnGuard(store)             # one for all the tools: what one call rules out for the next
+    trail = StateTrail(acceptor, store)  # and one readout they report changes against
     clock = scheduler.clock if scheduler is not None else time.time
     tools = []
     installs = {}
     for cmd in offered_commands(profile):
-        fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate, guard, clock)
+        fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate, guard, clock, trail)
         installs[cmd.name] = fn
         schema = cmd.schema
         if cmd.name in narrow:
@@ -1004,7 +1096,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
             except Exception as error:  # busy, shutting down: data for the model, like every tool
                 code, message = error_info(error)
                 outcome = {"error": {"code": code, "message": message}}
-            outcome = with_advice("look", outcome)
+            outcome = with_changes(with_advice("look", outcome), trail)
             guard.after("look", {}, outcome)
             return json.dumps(outcome)
 
