@@ -243,6 +243,22 @@ PLAN_STEPS_MAX = 12
 # limit; 0 is no spacing. The microscope config may set it with the attribute named here, and a
 # provider preset may carry "request_interval_s".
 REQUEST_INTERVAL_CONFIG_KEY = "ai_assistant_request_interval_s"
+# Measured values through the turn guard (measured.py): off unless the microscope config sets the
+# attribute named here to True, after a check on the instrument with an operator present.
+MEASURED_VALUES_CONFIG_KEY = "ai_assistant_measured_values"
+MEASURED_TOLERANCE = 0.2
+MEASURED_SLACK_UM = 5.0     # how much one image direction's offset may grow while the whole shrinks
+MEASURED_MOVES_MAX = 8
+MEASURED_FOCUS_STEP_UM = 100
+MEASURED_FOCUS_RANGE_UM = 300
+MEASURED_LIGHT_FACTOR = 2
+MEASURED_SECTION = (
+    "\n\n# Measured values\n\nOn this microscope a value that follows from a fresh measurement goes "
+    "through without the operator's Run: a centring move equal to the newest frame's centre_move_um, while "
+    "each next offset is smaller; a focus move to the map's best focus, or a search step of at most 100 um "
+    "within 300 um of where the request began; an intensity or exposure within a factor of two of the "
+    "frame's. Fresh means the frame was taken after the last move or setting, so look after each one. "
+    "Anything else still waits for Run.")
 # The coordinate system, as the operator sees it: what a positive move on each axis does to the
 # sample in the image, so that "up", "left" and "closer" mean one thing. Chosen in the tab's
 # Coordinate system box; the microscope config may set the start-up choice with the attribute

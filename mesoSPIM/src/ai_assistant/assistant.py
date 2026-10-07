@@ -31,6 +31,7 @@ from ..remote_control.commands import self_test
 from ..remote_control.frame import array_of, to_png
 from . import config
 from .frames import Calibration, FrameHistory, field_um, flag, nominal_scale, sample_map, shift
+from .measured import MeasuredValues
 from .requests import Requests
 from ..remote_control import config as rc_config
 
@@ -297,12 +298,16 @@ class TurnGuard:
     options in what they typed, never in text the machine wrote (a schedule's instruction, a
     continuation). A request's light changes are counted over LIGHT_WINDOW_S. Without a
     store there is no request to follow and the guard lets everything through. With `requests`, a
-    turn that has asked to wait may not touch the instrument again."""
+    turn that has asked to wait may not touch the instrument again. With `measured` (a setting,
+    off by default), a value that follows from a fresh measurement within its bounds passes as if
+    the operator had given it (see measured.py)."""
 
-    def __init__(self, store=None, requests=None):
+    def __init__(self, store=None, requests=None, measured=False):
         self._store = store
         self._requests = requests
         self._request = None
+        self._measured = MeasuredValues(store.frames) if measured and store is not None else None
+        self._measured_now = None        # (name, frame) of a measured value let through, until its result
         self._clear()
 
     def _clear(self):
@@ -320,6 +325,9 @@ class TurnGuard:
         if request != self._request:
             self._request = request
             self._clear()
+            if self._measured is not None:
+                first = next(t for t in self._store.turns if t.get("request", t["turn"]) == request)
+                self._measured.reset(((first.get("readout") or {}).get("position") or {}).get("f"))
         return True
 
     def before(self, name, args):
@@ -366,10 +374,17 @@ class TurnGuard:
                 continue
             if isinstance(value, (int, float)):
                 if not any(abs(abs(value) - a) <= 1e-6 * max(1.0, abs(a)) for a in allowed):
-                    return f"{key}={value}"
+                    return self._unless_measured(name, args, f"{key}={value}")
             elif isinstance(value, str) and not _named(value, words):
                 return f"{key}={value!r}"
         return None
+
+    def _unless_measured(self, name, args, value):
+        """`value`, or None when the setting lets measured values through and this one follows."""
+        if self._measured is not None and self._measured.allows(name, args):
+            self._measured_now = (name, self._store.frames.frames[-1])
+            return None
+        return value
 
     def stop_is_the_operators(self, name):
         """True for a stop that would end what the operator is running from the GUI."""
@@ -407,6 +422,11 @@ class TurnGuard:
             self.refused_axes |= set(asked) if isinstance(asked, dict) else set()
         if name in config.LIGHT_CHANGES_PER_WINDOW and not error:
             self._light_times.setdefault(name, []).append(self._store.clock())
+        if self._measured is not None and not error and (name in config.MOVE_ARGS or name in config.SETTERS):
+            if self._measured_now is not None and self._measured_now[0] == name:
+                self._measured.took(name, self._measured_now[1])
+            self._measured.changed()                 # any frame before it is no longer fresh
+        self._measured_now = None
         if self._requests is not None and not error and name in COMMANDS and COMMANDS[name].kind != READ:
             self._requests.started(_operation_id(outcome))
         if name in config.VALUE_COMMANDS and not error:
@@ -1268,7 +1288,7 @@ def _narrowed(cmd, keys):
 
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision_endpoint=None,
                 image_bin=None, profile=None, store=None, scheduler=None, vision_session=None, axes=None,
-                requests=None):
+                requests=None, measured=False):
     """One passthrough tool per offered command (see offered_commands). The tool list is derived
     from COMMANDS and the profile — never hand-maintained.
 
@@ -1279,7 +1299,7 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     from pydantic_ai import Tool
     regular = (profile or config.DEFAULT_TOOL_PROFILE) == "Regular"
     narrow = config.REGULAR_ARGS if regular else {}
-    guard = TurnGuard(store, requests)   # one for all the tools: what one call rules out for the next
+    guard = TurnGuard(store, requests, measured)   # one for all the tools: what one call rules out for the next
     trail = StateTrail(acceptor, store)  # and one readout they report changes against
     clock = scheduler.clock if scheduler is not None else time.time
     history = store.frames if store is not None else None
@@ -1487,7 +1507,7 @@ def axes_section(axes):
             "see in the image: convert them to signed moves with this, and say which axis and sign you used.")
 
 
-def build_system_prompt(acceptor=None, profile=None, axes=None):
+def build_system_prompt(acceptor=None, profile=None, axes=None, measured=False):
     """The hand-written preamble (units, frames, safety) plus the offered commands grouped by
     kind. What each does and its argument shape are in its tool description and schema, which the
     model receives anyway; the prompt does not repeat them, which keeps it small enough for a local
@@ -1504,7 +1524,7 @@ def build_system_prompt(acceptor=None, profile=None, axes=None):
         prompt += (f" It does not offer: {', '.join(hidden)}. The Full tool set does. When a request needs one "
                    "of them, say exactly that, and stop: never call another command in its place and never "
                    "report a result you did not get.")
-    return prompt + axes_section(axes)
+    return prompt + axes_section(axes) + (config.MEASURED_SECTION if measured else "")
 
 
 def trim_history(messages, max_turns):
@@ -1688,7 +1708,7 @@ def build_model(endpoint):
 
 def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=None,
                 vision_endpoint=None, image_bin=None, profile=None, store=None, scheduler=None,
-                vision_session=None, axes=None, requests=None):
+                vision_session=None, axes=None, requests=None, measured=False):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it — the
     GUI never passes it; the offline eval harness uses it to drive the very same agent against a
     scripted model."""
@@ -1700,11 +1720,11 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
     # message history we carry across turns. ProcessHistory compacts the older turns before
     # every model request, mid-turn ones included, and the compacted history is what the run
     # keeps, so an old turn is compacted once and stays so.
-    agent = Agent(model, instructions=build_system_prompt(profile=profile, axes=axes),
+    agent = Agent(model, instructions=build_system_prompt(profile=profile, axes=axes, measured=measured),
                   tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, gate=gate,
                                     vision_endpoint=vision_endpoint, image_bin=image_bin, profile=profile,
                                     store=store, scheduler=scheduler, vision_session=vision_session, axes=axes,
-                                    requests=requests),
+                                    requests=requests, measured=measured),
                   capabilities=[ProcessHistory(compact_history)],
                   model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
                   retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
@@ -1824,6 +1844,7 @@ class AssistantWorker(QtCore.QObject):
         self.look_image_bin = config.LOOK_BIN
         self.axes = dict(config.DEFAULT_AXES)            # what a positive move does to the sample in the image
         self._agent_axes = None                          # the axes the agent was built with
+        self.measured_values = False                     # the tab reads it from the microscope config
 
     def configure(self, endpoint, vision_endpoint=None, profile=None):
         """Use another endpoint (and reader for frames, and tool profile) from the next turn on;
@@ -1884,7 +1905,8 @@ class AssistantWorker(QtCore.QObject):
                                           vision_endpoint=self._vision_endpoint,
                                           image_bin=lambda: self.look_image_bin, profile=self._profile,
                                           store=self.store, scheduler=self.scheduler, vision_session=self.eyes,
-                                          axes=self._agent_axes, requests=self.requests)
+                                          axes=self._agent_axes, requests=self.requests,
+                                          measured=self.measured_values)
             # No whole-turn retry: FallbackModel already rolls a rate-limited/unavailable primary
             # over to the fallback within one run, and retrying the turn would re-stream (and re-run)
             # every tool call the first attempt already made.

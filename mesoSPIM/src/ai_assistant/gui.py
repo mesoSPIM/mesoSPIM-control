@@ -419,6 +419,8 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self._worker.sig_done.connect(self._on_done)
         self._apply_options()
         self._worker.scheduler = self.scheduler
+        self._worker.measured_values = bool(getattr(getattr(self.core, "cfg", None), config.MEASURED_VALUES_CONFIG_KEY,
+                                                    False))
         self._thread.start()
         return True
 
