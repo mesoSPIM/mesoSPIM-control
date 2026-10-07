@@ -115,9 +115,10 @@ def to_png(frame, max_size=None, bin_factor=None):
     return buffer.getvalue(), image.size
 
 
-def describe_frame(frame, max_size=1024, include_image=True, bin_factor=None):
+def describe_frame(frame, max_size=1024, include_image=True, bin_factor=None, array_side=None):
     """The `get_frame` document: stats always (from the full frame), the PNG (base64) when asked
-    for, binned by ``bin_factor`` or bounded by ``max_size``."""
+    for, binned by ``bin_factor`` or bounded by ``max_size``, and with ``array_side`` the frame
+    itself as 16-bit values, binned so its longer side is at most that (a small copy to keep)."""
     frame = np.asarray(frame)
     if frame.ndim != 2 or frame.size == 0:
         raise ValueError(f"expected a 2-D frame, got shape {frame.shape}")
@@ -131,4 +132,15 @@ def describe_frame(frame, max_size=1024, include_image=True, bin_factor=None):
             "stretch_percentiles": list(_STRETCH),
             "base64": base64.b64encode(png).decode("ascii"),
         }
+    if array_side:
+        factor = int(np.ceil(max(frame.shape) / array_side))
+        small = np.clip(np.rint(bin_frame(frame, factor)), 0, 65535).astype("<u2")
+        document["array"] = {"shape": list(small.shape), "bin": factor,
+                             "base64": base64.b64encode(small.tobytes()).decode("ascii")}
     return document
+
+
+def array_of(document):
+    """The 16-bit frame in a get_frame document's "array"."""
+    array = document["array"]
+    return np.frombuffer(base64.b64decode(array["base64"]), dtype="<u2").reshape(array["shape"])

@@ -14,6 +14,7 @@ Maintainer (2026):
 
 import asyncio
 import json
+import math
 import re
 import logging
 import os
@@ -27,7 +28,9 @@ from PyQt5 import QtCore
 from ..remote_control.dispatcher import COMMANDS, READ, WAIT, COMPLETED, FAILED, STOPPED, error_info
 from ..remote_control.servers import Acceptor
 from ..remote_control.commands import self_test
+from ..remote_control.frame import array_of, to_png
 from . import config
+from .frames import Calibration, FrameHistory, field_um, flag, nominal_scale, sample_map, shift
 from ..remote_control import config as rc_config
 
 logger = logging.getLogger(__name__)
@@ -511,83 +514,214 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None, 
     return _call
 
 
-def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None, clock=time.time):
+def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None, clock=time.time,
+         history=None, axes=None, frames=None, label=None):
     """Take a frame and describe it. The numbers come from get_frame and reach the main model
     always. The picture itself goes to a vision model in a separate call with the question, and
     only that answer comes back — the main conversation never carries images, so a text-only main
     model can still look, and a frame from three turns ago cannot mislead later. With `eyes` (a
-    VisionSession) that call is a turn in the vision model's own conversation, which has seen the
-    session's earlier frames and can compare; without, it is one stateless call."""
+    VisionSession) that call is a turn in the vision model's own conversation; without, it is one
+    stateless call.
+
+    With a frame `history`, the new frame is kept there with code's measures, `frames` chooses
+    recorded frames to show with it ("last 3", "1,7", "3-10"), and the result compares
+    them; `snap` false with nothing running shows recorded frames instead of taking one."""
     saved = None
-    if snap and _running_mode(acceptor) is not None:
+    running = _running_mode(acceptor)
+    if snap and running is not None:
         snap = False                              # live shows frames already; a snap would take the loop over
-    if snap:
-        done = dispatch_and_wait(acceptor, "snap", {"prefix": "assistant"}, WAIT, cancel, clock=clock)
-        if done.get("status") != COMPLETED:
-            return {"error": {"code": "execution", "message": f"snap did not complete: {done}"}}
-        saved = (((done.get("result") or {}).get("operation") or {}).get("result") or {}).get("path")
-    frame = acceptor.dispatch("get_frame", {"include_image": endpoint.vision, "bin": image_bin or config.LOOK_BIN})
-    if not frame.get("available"):
-        return {"available": False, "note": "no frame yet; take a snap first"}
-    result = {"available": True, "stats": frame["stats"]}
+    fresh_needed = snap or running is not None or history is None or not history.frames
+    frame = fresh = None
+    if fresh_needed:
+        if snap:
+            done = dispatch_and_wait(acceptor, "snap", {"prefix": "assistant"}, WAIT, cancel, clock=clock)
+            if done.get("status") != COMPLETED:
+                return {"error": {"code": "execution", "message": f"snap did not complete: {done}"}}
+            saved = (((done.get("result") or {}).get("operation") or {}).get("result") or {}).get("path")
+        request = {"include_image": endpoint.vision, "bin": image_bin or config.LOOK_BIN}
+        if history is not None:
+            request["array_side"] = config.FRAME_COPY_SIDE
+        frame = acceptor.dispatch("get_frame", request)
+        if not frame.get("available"):
+            return {"available": False, "note": "no frame yet; take a snap first"}
+        if history is not None:
+            source = running or "look"
+            fresh = history.add(array_of(frame), frame["stats"], source, _frame_readout(acceptor), axes or {}, label)
+    try:
+        shown = history.pick(_frames_wanted(frames)) if history is not None and frames is not None else []
+    except ValueError as error:
+        return {"error": {"code": "validation", "message": str(error)}}
+    if fresh is not None and all(f is not fresh for f in shown):
+        shown.append(fresh)
+    if history is not None and not shown:
+        shown = [history.frames[-1]]
+    if label and fresh is None and shown:
+        shown[-1]["label"] = str(label)
+    result = {"available": True}
+    if frame is not None:
+        result["stats"] = frame["stats"]
     if saved:
         result["file"] = saved                    # in the turn's record: the frame this look saw can be found again
-    elif snap is False and _running_mode(acceptor) is not None:
-        result["source"] = f"the latest frame of the running {_running_mode(acceptor)}, no snap taken"
-    image = frame.get("image")
-    if image is None:
+    elif running is not None:
+        result["source"] = f"the latest frame of the running {running}, no snap taken"
+    if len(shown) == 1 and frame is not None:
+        result["kept"] = {k: v for k, v in history.brief(shown[0]).items()
+                          if k not in ("time", "position", "settings", "peak", "mean", "saturated", "focus")}
+    elif shown:
+        result["frames"] = [history.brief(f) for f in shown]
+        result["changes"] = history.compare(shown)
+    if not endpoint.vision:
         result["note"] = "this model cannot see images; decide from the numbers"
     elif question:
         try:
             if eyes is not None:
-                result["answer"] = eyes.look(image, question, frame["stats"], _frame_context(acceptor))
+                pictures = [(_eyes_text(history, f), _png_of(f, frame if f is fresh else None)) for f in shown] or \
+                           [(f"Frame numbers: {json.dumps(frame['stats'])}", frame["image"]["base64"])]
+                result["answer"] = eyes.look(pictures, question, _frame_context(acceptor))
                 result["frames_seen"] = eyes.frames
             else:
-                result["answer"] = vision_answer(endpoint, image, question, frame["stats"])
+                result["answer"] = vision_answer(endpoint, frame["image"], question, frame["stats"])
         except Exception as error:
             result["vision_error"] = describe_error(error)
     return result
 
 
-def _frame_context(acceptor):
-    """What a picture depends on, from the readout: the state, the position, the optics and the
-    camera, as compact JSON; empty when the readout fails."""
+def calibrate(acceptor, cancel, history, axes, step_um=None, clock=time.time):
+    """Measure how the image moves with the stage at this zoom: snap, move x by a small step,
+    snap, move back, the same on y, and from the image shifts (phase correlation of the frames'
+    copies) keep the scale for the zoom in the history's calibration, so that centring moves are
+    measured rather than nominal. The moves are code's, one block under the operator's one Run."""
+    readout = _frame_readout(acceptor)
+    zoom, field = (readout.get("optics") or {}).get("zoom"), field_um(readout)
+    if zoom is None or field is None:
+        return {"error": {"code": "execution", "message": "the zoom or the camera's pixel size is not in the readout"}}
+    step = float(step_um or round(config.CALIBRATE_STEP_FRACTION * field[0]))
+
+    def snapped():
+        done = dispatch_and_wait(acceptor, "snap", {"prefix": "calibrate"}, WAIT, cancel, clock=clock)
+        if done.get("status") != COMPLETED:
+            raise RuntimeError(f"snap did not complete: {done.get('status')}")
+        document = acceptor.dispatch("get_frame", {"include_image": False, "array_side": config.FRAME_COPY_SIDE})
+        return history.add(array_of(document), document["stats"], "calibrate", _frame_readout(acceptor), axes)
+
+    def moved(axis, delta):
+        done = dispatch_and_wait(acceptor, "move_relative", {"deltas": {axis: delta}}, WAIT, cancel, clock=clock)
+        if done.get("status") != COMPLETED:
+            raise RuntimeError(f"the {axis} move of {delta} um did not complete: {done.get('status')}")
+
+    try:
+        start = snapped()
+        if flag(start):
+            return {"error": {"code": "refused", "message": f"frame {start['n']}: {flag(start)}; calibrate needs a "
+                                                            "visible sample that is not saturated"}}
+        rows, report, used = [], {"zoom": zoom, "step_um": step}, [start["n"]]
+        for axis in ("x", "y"):
+            moved(axis, step)
+            after = snapped()
+            moved(axis, -step)
+            used.append(after["n"])
+            found = shift(start["image"], after["image"])
+            if found is None or found["confidence"] < config.CALIBRATE_CONFIDENCE_MIN:
+                return {"error": {"code": "execution", "message": (
+                    f"the image shift for {axis} could not be measured (frames {start['n']} and {after['n']}); "
+                    "the sample may have too little detail or have left the field")}}
+            height, width = start["image"].shape
+            right, up = found["right"] / width / step, -found["down"] / height / step
+            rows.append([right, up])
+            image_um = math.hypot(found["right"] * field[0] / width, found["down"] * field[1] / height)
+            # 1 when the pixel size in the configuration is right
+            report[axis] = {"sample_moves": _direction(right, up), "image_um_per_stage_um": round(image_um / step, 3)}
+    except (RuntimeError, ValueError) as error:
+        return {"error": {"code": "execution", "message": str(error)}}
+    nominal = nominal_scale(readout, axes)
+    report["matches_the_coordinate_system"] = bool(nominal) and all(
+        _direction(*rows[i]) == _direction(*nominal[i]) for i in range(2))
+    history.calibration.store(zoom, rows, hms(clock()), step)
+    report["frames"] = used
+    report["note"] = "kept for this zoom; frame measures and the map now use it"
+    return report
+
+
+def _direction(right, up):
+    """Which way a positive move carries the sample in the image."""
+    if abs(right) >= abs(up):
+        return "right" if right > 0 else "left"
+    return "up" if up > 0 else "down"
+
+
+def _frames_wanted(frames):
+    """look's `frames` as FrameHistory.pick takes it: "last 3" a count, "4" or "1,7" frame
+    numbers, "3-10" a range of them."""
+    if isinstance(frames, str):
+        text = frames.strip().lower()
+        last = re.fullmatch(r"last\s*(\d+)", text)
+        if last:
+            return int(last.group(1))
+        if re.fullmatch(r"\d+(\s*,\s*\d+)*", text):
+            return [int(n) for n in text.split(",")]
+    return frames
+
+
+def _eyes_text(history, entry):
+    """What the eyes are told about a frame: its number, time, label, where and how it was taken,
+    and code's measures."""
+    brief = history.brief(entry)
+    head = f"Frame {brief['n']}, {brief['time']}, {brief['source']}" + (f", labelled {brief['label']!r}" if "label" in brief else "")
+    rest = {k: v for k, v in brief.items() if k not in ("n", "time", "source", "label")}
+    return f"{head}. {json.dumps(rest, separators=(',', ':'))}"
+
+
+def _png_of(entry, frame):
+    """The frame's picture for the eyes: the full one when it was just taken, else its small copy."""
+    if frame is not None and frame.get("image"):
+        return frame["image"]["base64"]
+    import base64
+    png, _ = to_png(entry["image"], max_size=config.FRAME_COPY_SIDE)
+    return base64.b64encode(png).decode("ascii")
+
+
+def _frame_readout(acceptor):
+    """The readout a frame was taken in: state, position, optics and camera; empty when it fails."""
     try:
         snapshot = acceptor.dispatch("get_snapshot", {}) or {}
     except Exception:
-        return ""
-    kept = {key: snapshot[key] for key in config.VISION_CONTEXT_KEYS if key in snapshot}
+        return {}
+    return {key: snapshot[key] for key in config.VISION_CONTEXT_KEYS if key in snapshot}
+
+
+def _frame_context(acceptor):
+    """What a picture depends on, from the readout, as compact JSON; empty when the readout fails."""
+    kept = _frame_readout(acceptor)
     return json.dumps(kept, default=str, separators=(",", ":")) if kept else ""
 
 
 class VisionSession:
     """The eyes: the vision model's own conversation for the session. Every look is a turn in it,
-    with the frame, its time, the settings and the numbers, so the eyes can compare the current
-    frame with earlier ones and be asked about the session's frames without a new frame. The last
-    VISION_FRAMES_KEPT frames stay attached as images; older turns keep their text and lose the
-    image, so the conversation stays about one frame's cost per look with a provider that caches
-    the prefix. Cleared with the transcript. `model` overrides the endpoint's, for the tests."""
+    with the frames it asks about, each with its number, time, settings and code's numbers, so the
+    eyes can compare them and be asked about the session's frames without a new one. Once answered,
+    a turn keeps its text and loses its images: the frames to compare are the ones a look attaches,
+    and a look costs the frames it shows. Cleared with the transcript. `model` overrides the
+    endpoint's, for the tests."""
 
-    def __init__(self, endpoint, frames_kept=None, model=None, clock=time.time):
+    def __init__(self, endpoint, model=None, clock=time.time):
         self.endpoint = endpoint
         self.clock = clock
-        self.frames_kept = config.VISION_FRAMES_KEPT if frames_kept is None else frames_kept
         self._model = model
         self._agent = None
         self._history = []
         self._loop = None                                  # the eyes' own event loop: the model's HTTP client is bound to it
         self._lock = threading.Lock()                      # one question at a time, from whichever thread asks
-        self.frames = 0                                    # frames seen this session
+        self.frames = 0                                    # looks answered this session
 
-    def look(self, image, question, stats, context=""):
+    def look(self, pictures, question, context=""):
+        """`pictures`: (what the frame is, its PNG as base64) for each frame to show, oldest first."""
         import base64
         from pydantic_ai import BinaryContent
-        number = self.frames + 1                            # counted once the eyes have seen it
-        text = (f"Frame {number}, {hms(self.clock())}."
-                + (f" Instrument: {context}" if context else "")
-                + f"\nQuestion: {question}\nFrame numbers: {json.dumps(stats)}")
-        answer = self._run([text, BinaryContent(data=base64.b64decode(image["base64"]), media_type="image/png")])
-        self.frames = number
+        parts = [f"{hms(self.clock())}." + (f" Instrument now: {context}" if context else "")]
+        for text, png in pictures:
+            parts += [text, BinaryContent(data=base64.b64decode(png), media_type="image/png")]
+        answer = self._run(parts + [f"Question: {question}"])
+        self.frames += 1
         return answer
 
     def ask(self, question):
@@ -606,12 +740,12 @@ class VisionSession:
         with self._lock:
             if self._agent is None:
                 self._agent = Agent(self._model or build_model(self.endpoint),
-                                    instructions=config.EYES_INSTRUCTIONS.format(kept=self.frames_kept),
+                                    instructions=config.EYES_INSTRUCTIONS,
                                     model_settings={"temperature": config.MODEL_TEMPERATURE})
             if self._loop is None:
                 self._loop = asyncio.new_event_loop()
             result = self._loop.run_until_complete(self._agent.run(prompt, message_history=self._history))
-            self._history = detach_old_frames(result.all_messages(), self.frames_kept)
+            self._history = detach_old_frames(result.all_messages(), 0)
             return result.output
 
 
@@ -636,6 +770,12 @@ def detach_old_frames(messages, kept):
     return out
 
 
+_CALIBRATE_SCHEMA = {
+    "type": "object",
+    "properties": {"step_um": {"type": "number", "minimum": 5, "maximum": 2000,
+                               "description": "the test move on x and on y; a tenth of the field when omitted"}},
+    "additionalProperties": False,
+}
 _ASK_EYES_SCHEMA = {
     "type": "object",
     "properties": {"question": {"type": "string", "description": "what to compare or recall across the frames seen"}},
@@ -679,7 +819,9 @@ _LOOK_SCHEMA = {
     "type": "object",
     "properties": {
         "question": {"type": "string", "description": "what to check in the image"},
-        "snap": {"type": "boolean", "description": "take a new frame first (default true); false reuses the last one"},
+        "snap": {"type": "boolean", "description": "take a new frame first (default true); false shows recorded frames"},
+        "frames": {"type": "string", "description": "recorded frames to show as well: 'last 3', '1,7', '3-10'"},
+        "label": {"type": "string", "description": "a name for the new frame, to find it again: 'before'"},
     },
     "required": ["question"],
     "additionalProperties": False,
@@ -701,6 +843,19 @@ def hidden_commands(profile=None):
     return [name for name in COMMANDS if name not in offered and name not in _PROMPT_ONLY]
 
 
+def _keeping_snaps(fn, acceptor, history, axes):
+    """The snap tool, keeping each frame it took in the history and naming its number."""
+    def _call(**args) -> str:
+        outcome = json.loads(fn(**args))
+        if isinstance(outcome, dict) and outcome.get("status") == COMPLETED:
+            frame = acceptor.dispatch("get_frame", {"include_image": False, "array_side": config.FRAME_COPY_SIDE})
+            if frame.get("available"):
+                entry = history.add(array_of(frame), frame["stats"], "snap", _frame_readout(acceptor), axes)
+                outcome["kept"] = {"n": entry["n"]}
+        return json.dumps(outcome)
+    return _call
+
+
 def _row_arguments(schema):
     """The argument names under which a command takes acquisition rows: a list or a single row."""
     properties = schema.get("properties", {})
@@ -711,11 +866,13 @@ class SessionStore:
     """Every turn of the session in full: the operator's words, the readout the model was given,
     the tool calls with their results, the reply. The memory the model carries keeps older turns
     compact; what compaction leaves out is here, and the recall and search tools hand it back on
-    request. Kept in memory for the session only; Clear all empties it."""
+    request. Kept in memory for the session only; Clear all empties it. The frames of the session
+    are its frame history."""
 
-    def __init__(self, clock=time.time):
+    def __init__(self, clock=time.time, calibration=None):
         self.turns = []
         self.clock = clock
+        self.frames = FrameHistory(clock, calibration)
 
     def begin(self, prompt, snapshot):
         self.turns.append({"turn": len(self.turns) + 1, "time": hms(self.clock()),
@@ -1046,7 +1203,7 @@ def _narrowed(cmd, keys):
 
 
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision_endpoint=None,
-                image_bin=None, profile=None, store=None, scheduler=None, vision_session=None):
+                image_bin=None, profile=None, store=None, scheduler=None, vision_session=None, axes=None):
     """One passthrough tool per offered command (see offered_commands). The tool list is derived
     from COMMANDS and the profile — never hand-maintained.
 
@@ -1060,16 +1217,23 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     guard = TurnGuard(store)             # one for all the tools: what one call rules out for the next
     trail = StateTrail(acceptor, store)  # and one readout they report changes against
     clock = scheduler.clock if scheduler is not None else time.time
+    history = store.frames if store is not None else None
+    axes = axes or dict(config.DEFAULT_AXES)
     tools = []
     installs = {}
     for cmd in offered_commands(profile):
         fn = _tool_fn(acceptor, cmd.name, cmd.kind, cancel, on_call, gate, guard, clock, trail)
+        if cmd.name == "snap" and history is not None:
+            fn = _keeping_snaps(fn, acceptor, history, axes)
         installs[cmd.name] = fn
         schema = cmd.schema
         if cmd.name in narrow:
             keys = narrow[cmd.name]
             schema = _narrowed(cmd, keys)
             fn = _only_keys(fn, cmd.name, keys)
+        if cmd.name in config.CODE_ONLY_ARGS:
+            schema = dict(schema, properties={k: v for k, v in schema["properties"].items()
+                                              if k not in config.CODE_ONLY_ARGS[cmd.name]})
         if cmd.name in config.ROWS_BY_REFERENCE:
             schema = _rows_by_reference(schema)
         description = config.TOOL_DESCRIPTIONS.get(cmd.name, cmd.hint or cmd.name)
@@ -1083,13 +1247,15 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     if endpoint is not None:
         eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see
 
-        def _look_now(question, snap):
+        def _look_now(question, snap, frames, label):
             if on_call is not None:
-                on_call("look", json.dumps({"question": question, "snap": snap}))
+                on_call("look", json.dumps({k: v for k, v in (("question", question), ("snap", snap), ("frames", frames),
+                                                              ("label", label)) if v is not None}))
             size = image_bin() if callable(image_bin) else image_bin  # a callable reads a live setting
             reuse = bool(snap) and guard.take_fresh_snap()  # snapped a moment ago: no second exposure
             try:
-                outcome = look(acceptor, eyes, question, snap and not reuse, cancel, size, eyes=vision_session, clock=clock)
+                outcome = look(acceptor, eyes, question, snap and not reuse, cancel, size, eyes=vision_session, clock=clock,
+                               history=history, axes=axes, frames=frames, label=label)
                 if reuse and outcome.get("available"):
                     outcome["frame"] = ("the one snapped a moment ago in this turn, not a second exposure; look "
                                         "takes its own snap, so next time call look alone")
@@ -1100,18 +1266,37 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
             guard.after("look", {}, outcome)
             return json.dumps(outcome)
 
-        async def _look(question="", snap=True) -> str:
+        async def _look(question="", snap=True, frames=None, label=None) -> str:
             # On a thread the turn does not wait on: Cancel ends the turn at once, and a vision
             # answer that comes later is dropped.
-            return await asyncio.to_thread(_look_now, question, snap)
+            return await asyncio.to_thread(_look_now, question, snap, frames, label)
 
         tools.append(Tool.from_schema(
             _look, name="look", json_schema=_LOOK_SCHEMA,
-            description="Takes a snap itself (or reuses the last frame with snap=false) and describes it: numbers about "
-                        "exposure, focus and where the signal is, plus, when the model can see, an answer to "
-                        "`question` about the image. Use it to check the sample, the field of view or the exposure. "
-                        "The eyes remember this session's earlier frames: ask them to compare.",
+            description="Takes a snap and describes it: exposure, focus, where the signal is and the move that would "
+                        "centre it, and, when the model can see, an answer to `question`. Frames are numbered and kept; "
+                        "`frames` shows recorded ones too and compares them.",
         ))
+        if history is not None and history.calibration is not None:
+            def _calibrate_now(step_um):
+                if on_call is not None:
+                    on_call("calibrate", json.dumps({"step_um": step_um} if step_um else {}))
+                if cancel.is_set():
+                    return json.dumps({"status": "cancelled"})
+                if gate is None or not gate.ask("calibrate", {"step_um": step_um} if step_um else {}):
+                    return json.dumps({"error": {"code": "refused", "message": "the operator did not confirm calibrate"}})
+                outcome = with_changes(with_advice("calibrate", calibrate(acceptor, cancel, history, axes, step_um, clock)),
+                                       trail)
+                guard.after("calibrate", {}, outcome)
+                return json.dumps(outcome)
+
+            async def calibrate_tool(step_um=None) -> str:
+                return await asyncio.to_thread(_calibrate_now, step_um)
+            tools.append(Tool.from_schema(
+                calibrate_tool, name="calibrate", json_schema=_CALIBRATE_SCHEMA,
+                description="Measures how the image moves with the stage at this zoom (small x and y moves and back) "
+                            "so centring moves are calibrated. Needs a visible sample; asks for Run.",
+            ))
         if vision_session is not None and eyes.vision:
             def _ask_now(question):
                 if on_call is not None:
@@ -1185,13 +1370,16 @@ def with_state(acceptor, text, store=None, scheduler=None):
     instead of calling reads first, with the operator's words last, where a model weighs text
     most, so that a note in a folder name inside the readout does not read as the request. Sent
     without the block if the readout fails. With a store, the turn is opened in it. With a
-    scheduler, the readout also carries the clock and the schedules set, the model's only clock."""
+    scheduler, the readout also carries the clock and the schedules set, the model's only clock;
+    with frames in the store, the frame history in brief and the map derived from it."""
     try:
         snapshot = acceptor.dispatch("get_snapshot", {})
     except Exception:
         snapshot = None
     if snapshot is not None and scheduler is not None:
         snapshot = dict(snapshot, clock=hms(scheduler.clock()), schedules=scheduler.listing())
+    if snapshot is not None and store is not None and store.frames.frames:
+        snapshot = dict(snapshot, frames=store.frames.listing(), map=sample_map(store.frames))
     if store is not None:
         store.begin(text, snapshot)
     if snapshot is None:
@@ -1435,7 +1623,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
     agent = Agent(model, instructions=build_system_prompt(profile=profile, axes=axes),
                   tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, gate=gate,
                                     vision_endpoint=vision_endpoint, image_bin=image_bin, profile=profile,
-                                    store=store, scheduler=scheduler, vision_session=vision_session),
+                                    store=store, scheduler=scheduler, vision_session=vision_session, axes=axes),
                   capabilities=[ProcessHistory(compact_history)],
                   model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
                   retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
@@ -1542,7 +1730,7 @@ class AssistantWorker(QtCore.QObject):
         self._profile = config.DEFAULT_TOOL_PROFILE
         self._agent = None
         self._history = []
-        self.store = SessionStore(self.now)   # every turn in full, for recall_turn and search_history
+        self.store = SessionStore(self.now, Calibration())   # every turn in full, and the frames
         self.scheduler = None            # set by the tab, which owns the timer that fires the schedules
         self.eyes = None                 # the vision model's own conversation, made by configure()
         self.cancel = threading.Event()
@@ -1576,7 +1764,7 @@ class AssistantWorker(QtCore.QObject):
     def reset(self):
         """Forget the conversation (Clear all). Called between turns, like configure."""
         self._history = []
-        self.store = SessionStore(self.now)
+        self.store = SessionStore(self.now, Calibration())
         if self.eyes is not None:
             self.eyes.reset()            # the eyes forget the frames with the transcript
         self._agent = None               # the tools close over the store

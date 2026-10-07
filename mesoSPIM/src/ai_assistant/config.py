@@ -12,6 +12,8 @@ Maintainer (2026):
     thomdehoog@gmail.com
 """
 
+from pathlib import Path
+
 # vision: the model can be shown a camera frame; the `look` tool sends it one in a side call.
 # kind: which Pydantic AI model class is built. "OpenAI-style" is any server speaking the OpenAI
 # chat API (Ollama >= 0.22, vLLM, LM Studio, a company gateway) and needs a base URL; a key only
@@ -129,6 +131,8 @@ TOOL_DESCRIPTIONS = {
 ROWS_BY_REFERENCE = ("get_disk_space", "check_motion_limits", "acquire_start")
 # In Regular, the ETL is set by its voltages only; its delay and ramps are the machine's timing.
 REGULAR_ARGS = {"set_etl": ("etl_l_amplitude", "etl_l_offset", "etl_r_amplitude", "etl_r_offset")}
+# Arguments the assistant's own code uses and the model never needs, withheld in every tool set.
+CODE_ONLY_ARGS = {"get_frame": ("array_side",)}
 DEFAULT_TOOL_PROFILE = "Regular"
 TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope config: "Regular" or "Full"
 
@@ -136,7 +140,7 @@ TOOLS_CONFIG_KEY = "ai_assistant_tools"  # optional attribute of the microscope 
 # told: the stage moves that cross the full range and can collide faster than anyone can react.
 # Long runs are not gated in code; the model summarises and asks only when something looks off
 # (see manual.md), and Stop microscope ends them.
-CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition")
+CONFIRM_FIRST = ("load_sample", "unload_sample", "preview_acquisition", "calibrate")
 
 # What TurnGuard holds a turn to (see assistant.py). The moves and the argument that maps
 # axis to number; the commands that end a running activity; and the words by which the dispatcher's
@@ -237,20 +241,39 @@ REQUEST_INTERVAL_CONFIG_KEY = "ai_assistant_request_interval_s"
 AXIS_CHOICES = {"x": ("right", "left"), "y": ("up", "down"), "z": ("toward the camera", "away from the camera")}
 DEFAULT_AXES = {"x": "right", "y": "up", "z": "toward the camera"}
 AXES_CONFIG_KEY = "ai_assistant_axes"
-# The eyes: the vision model's own conversation for the session, which sees every frame a look
-# takes, in order, so it can compare with earlier ones. The newest frames stay attached as images;
-# older turns keep their text (time, settings, numbers, and what the eyes said) and lose the image.
-VISION_FRAMES_KEPT = 8
+# The frame history (frames.py): a small copy of every frame a look, a snap or live delivered, its
+# longer side at most FRAME_COPY_SIDE pixels, the oldest dropped past FRAME_HISTORY_BYTES (about a
+# hundred 256-pixel copies). A look shows the eyes at most LOOK_FRAMES_MAX of them.
+FRAME_COPY_SIDE = 256
+FRAME_HISTORY_BYTES = 100 * 256 * 256 * 2
+LOOK_FRAMES_MAX = 16
+# The map, derived from the history: frames whose brightest pixel is less than MAP_SIGNAL_MIN of
+# full scale above the background, or more than MAP_SATURATED_MAX saturated, are left out; frames within MAP_SAME_PLACE_UM on x, y and z share
+# a focus curve; the place is the median of the last MAP_PLACE_FRAMES; MAP_GROUPS settings at most.
+MAP_SIGNAL_MIN = 0.003
+MAP_SATURATED_MAX = 0.01
+MAP_PEAK_GOOD_MAX = 0.9
+MAP_SAME_PLACE_UM = 25.0
+MAP_PLACE_FRAMES = 5
+MAP_GROUPS = 2
+# Where `calibrate` keeps the measured scale per zoom: beside the microscope's configuration. Its test
+# move is CALIBRATE_STEP_FRACTION of the field; a phase correlation peak below CALIBRATE_CONFIDENCE_MIN
+# is no measurement.
+CALIBRATION_FILE = Path(__file__).resolve().parents[2] / "config" / "ai_assistant_calibration.json"
+CALIBRATE_STEP_FRACTION = 0.1
+CALIBRATE_CONFIDENCE_MIN = 0.05
+# The eyes: the vision model's own conversation for the session. A look attaches the frames it asks
+# about, each with its number, time, settings and code's measures; once answered, a turn keeps its
+# text and loses its images.
 VISION_CONTEXT_KEYS = ("state", "position", "optics", "camera")   # what a picture depends on, from the readout
 EYES_INSTRUCTIONS = (
-    "You are the eyes of an assistant at a light-sheet microscope: you see every frame it looks at in "
-    "this session, in order, each with its time, the instrument's settings and the frame's numbers. "
-    "Answer the question about the current frame in a few sentences. Judge from the picture what is "
-    "in it: shapes, counts, positions, focus, artefacts, and which parts are brighter or darker than "
-    "others. Only whether the exposure is right comes from the numbers, since each picture is scaled "
-    "to its own range: a saturated_fraction above a few percent is saturated; a max below about a "
-    "tenth of full_scale is underexposed. Compare with earlier frames when asked, or when a change "
-    "matters (focus, position, brightness, a new artefact), and say which frame you compare with, by "
-    "its number and time. With one frame seen, say there is no earlier frame to compare with; never "
-    "say it has not moved or not changed. Frames older than the last {kept} are no longer attached; "
-    "their numbers and your earlier answers remain, and a comparison with them rests on those.")
+    "You are the eyes of an assistant at a light-sheet microscope. Each look shows you one or more "
+    "frames, oldest first, each with its number, time, position, settings and measures, and asks a "
+    "question. Answer it in a few sentences. Judge from the pictures what is in them: shapes, counts, "
+    "positions, focus, artefacts, and which parts are brighter or darker than others. Only whether "
+    "the exposure is right comes from the measures, since each picture is scaled to its own range: a "
+    "saturated fraction above a few percent (0.03) is saturated; a peak below about 0.1 of full scale "
+    "is underexposed. With several frames, compare them and name each by its number. With one frame "
+    "and no earlier one shown, say there is no earlier frame to compare with; never say it has not "
+    "moved or not changed. Earlier turns keep your answers but not their pictures: a comparison with "
+    "a frame not shown now rests on those answers.")
