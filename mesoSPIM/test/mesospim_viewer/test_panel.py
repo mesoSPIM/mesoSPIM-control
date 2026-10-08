@@ -175,7 +175,7 @@ def test_adjustments_in_the_panel_survive_a_tile_landing(pages, stacks):
         ) == ["max", "max"]
         assert page.evaluate(
             "() => window.viewer.layerManager.managedLayers.map(m => [m.layer.volumeRenderingDepthSamplesTarget.value, m.layer.volumeRenderingGain.value])"
-        ) == [[1024, 2], [1024, 2]]
+        ) == [[65536, 2], [65536, 2]]
         assert page.evaluate(
             "() => [...document.querySelectorAll('.channel')].map(r => r.classList.contains('hidden'))"
         ) == [False, True]

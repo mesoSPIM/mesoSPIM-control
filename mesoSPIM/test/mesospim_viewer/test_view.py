@@ -216,15 +216,33 @@ def test_layers_can_be_hidden_removed_and_relaid(tiles):
 
 
 def test_showing_a_store_again_or_refreshing_bumps_its_revision(tiles):
+    """A store read again is given to the page under a new address each time, so
+    the engine reads it afresh rather than from what it kept of the old one; a
+    store that did not change keeps its address."""
     view = Viewer()
     view.add(tiles[0], layer="overview")
+    view.add(tiles[1], layer="overview")
     try:
+        first = view.state["layers"][0]["source"][0]["url"]
         assert view.state["layers"][0]["_revision"] == 0
+        assert re.search(r"/data/\d+/\|zarr2:$", first), first
         view.add(tiles[0], layer="overview")
         assert view.state["layers"][0]["_revision"] == 1
-        assert len(view.state["layers"][0]["source"]) == 1
+        assert len(view.state["layers"][0]["source"]) == 2
+        again = view.state["layers"][0]["source"][0]["url"]
+        assert again != first and again.endswith(".1/|zarr2:"), again
+        other = view.state["layers"][0]["source"][1]["url"]
+        assert re.search(r"/data/\d+/\|zarr2:$", other), "the other tile was not read again"
         view.refresh()
         assert view.state["layers"][0]["_revision"] == 2
+        assert all(
+            source["url"].endswith(".2/|zarr2:") for source in view.state["layers"][0]["source"]
+        )
+        # Every address names the same store on the server.
+        url = view.start()
+        for source in view.state["layers"][0]["source"]:
+            status, _, _ = _get(source["url"].split("|")[0] + ".zattrs")
+            assert status == 200, source["url"]
     finally:
         view.stop()
 
@@ -466,6 +484,57 @@ def test_a_store_that_gains_a_time_point_is_read_again(pages, tmp_path):
         view.stop()
 
 
+# Pixels in a channel's colour (green for 488, magenta for 561): neither the grey
+# ground outside the picture, nor the yellow box around it, nor black.
+COLOURED_PIXELS = """() => {
+  const display = window.viewer.display; display.draw();
+  const gl = display.gl, canvas = display.canvas;
+  const pixels = new Uint8Array(canvas.width * canvas.height * 4);
+  gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  let coloured = 0;
+  for (let i = 0; i < pixels.length; i += 4) if (Math.abs(pixels[i] - pixels[i + 1]) > 40) coloured++;
+  return coloured;
+}"""
+
+
+def test_a_store_shown_before_its_chunks_landed_draws_them_once_read_again(pages, tmp_path):
+    """What the live window does for every stack: the store is shown the moment the
+    writer has made its arrays, when every chunk is still missing, and read again
+    as the chunks land. The engine keeps what it found missing, so the second
+    reading must not go through what it kept of the first."""
+    store = write_tile(tmp_path / "landing.ome.zarr", origin_um=(0, 0, 0), seed=3)
+    chunks = {
+        chunk: chunk.read_bytes()
+        for level in store.iterdir() if level.is_dir()
+        for chunk in level.iterdir() if not chunk.name.startswith(".")
+    }
+    for chunk in chunks:
+        chunk.unlink()
+    view = Viewer(ui="bare")
+    view.add(store, layer="landing")
+    url = view.start()
+    try:
+        page, errors = pages.open(url)
+        pages.drawn(page, layers=2)
+        time.sleep(1.0)
+        # Only the engine's red axis line is coloured while nothing is on disk.
+        assert page.evaluate(COLOURED_PIXELS) < 2000, "nothing on disk, nothing drawn"
+        for chunk, data in chunks.items():
+            chunk.write_bytes(data)
+        view.add(store, layer="landing")  # what the watcher does when files landed
+        deadline = time.time() + 20
+        coloured = 0
+        while time.time() < deadline and coloured < 5000:
+            time.sleep(0.5)
+            pages.drawn(page, layers=2)
+            coloured = page.evaluate(COLOURED_PIXELS)
+        assert coloured > 5000, "the chunks that landed are not drawn"
+        assert not errors, errors
+        page.close()
+    finally:
+        view.stop()
+
+
 def test_a_transparent_ground_is_clear_outside_the_tiles_and_opaque_inside(pages, tiles):
     view = Viewer(transparent=True, ui="bare")
     view.add(tiles[0], layer="overview")
@@ -616,6 +685,33 @@ def test_a_store_without_data_yet_gets_its_contrast_once_data_lands(tmp_path):
         assert [_range(layer) for layer in view.state["layers"]] == first
     finally:
         view.stop()
+
+
+def test_the_contrast_comes_from_the_finest_copy_written_yet(tmp_path):
+    """The coarsest copy is the last to get its chunks while a stack is written, so
+    a store whose coarsest copies are still empty is measured on a finer one."""
+    from mesoSPIM.src.mesospim_viewer import omezarr
+
+    store = write_store(tmp_path / "landing.ome.zarr", axes="tczyx")
+    levels = read_store(store).levels
+    assert len(levels) >= 3
+    for level in levels[1:]:  # only the finest copy holds anything
+        _empty_level(store, level)
+    window = omezarr.sample_window(read_store(store))
+    assert window is not None and window[0] == 400.0, window
+    # ... unless its planes are too big to read for a sample.
+    cap = omezarr.SAMPLE_BYTES
+    omezarr.SAMPLE_BYTES = 1
+    try:
+        assert omezarr.sample_window(read_store(store)) is None
+    finally:
+        omezarr.SAMPLE_BYTES = cap
+
+
+def _empty_level(store, level: str) -> None:
+    for chunk in (store / level).iterdir():
+        if not chunk.name.startswith("."):
+            chunk.unlink()
 
 
 def test_a_channel_arriving_later_gets_its_own_contrast(tmp_path):

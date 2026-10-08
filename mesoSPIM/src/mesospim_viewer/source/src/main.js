@@ -323,19 +323,11 @@ function carryAdjustments(spec, before, held) {
   return merged;
 }
 
-// The engine remembers what it read about a store for as long as the page
-// lives, so a store that has grown on disk would be rebuilt from the old
-// description. Forgetting its entries makes the next layer read it again;
-// holders of decoded image (the entries naming a constructor) are left alone.
-function forgetStore(viewer, url) {
-  const remembered = viewer.chunkManager?.memoize?.map;
-  const folder = url.split("|")[0];
-  if (!remembered || !folder) return;
-  for (const key of [...remembered.keys()]) {
-    if (key.includes(folder) && !key.includes('"constructorId"')) remembered.delete(key);
-  }
-}
-
+// The engine remembers what it read of a store for as long as the page lives:
+// its description, its chunks, and the shards and shard indexes it found
+// missing. So a store that has grown on disk is not read again under the same
+// address; Python gives it a new one (viewer.py, _url_for), and the layer is
+// rebuilt over that like any other change.
 function applyLayers(viewer, specs) {
   const manager = viewer.layerManager;
   const wanted = new Set(specs.map((spec) => spec.name));
@@ -348,8 +340,8 @@ function applyLayers(viewer, specs) {
     const before = lastAsked.get(spec.name);
     let managed = manager.getLayerByName(spec.name);
     if (managed && before && same(before, spec)) return;
-    // `_revision` is Python's, not the engine's: it changes when a store has
-    // grown, so that an otherwise identical layer is read again.
+    // `_revision` is Python's count of how often the layer's stores were read
+    // again, not anything the engine knows.
     const { _revision, ...forEngine } = spec;
     let description = forEngine;
     if (managed) {
@@ -359,9 +351,6 @@ function applyLayers(viewer, specs) {
       if (managed.layer?.opacity) held.opacity = managed.layer.opacity.value;
       description = carryAdjustments(forEngine, before, held);
       deleteLayer(managed);
-      if (before && before._revision !== _revision) {
-        for (const source of spec.source ?? []) forgetStore(viewer, source.url ?? source);
-      }
     }
     managed = makeLayer(viewer.layerSpecification, spec.name, description);
     viewer.layerSpecification.add(managed, index);

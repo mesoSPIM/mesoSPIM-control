@@ -25,11 +25,11 @@ from .server import ViewServer
 from .state import LAYOUTS, Layer, Placement, state_json
 
 
-def read_again(placement: Placement) -> Placement:
-    """The same placement over the store as it is on disk now."""
+def read_again(placement: Placement, url: str | None = None) -> Placement:
+    """The same placement over the store as it is on disk now, at ``url`` if given."""
     return Placement(
         store=read_store(placement.store.path),
-        url=placement.url,
+        url=url or placement.url,
         offset=placement.offset,
         origin=placement.origin,
         channel=placement.channel,
@@ -155,13 +155,10 @@ class Viewer:
         """
         store = read_store(path)
         name = layer or store.name
-        url = self._url_for(store)
         if isinstance(channel, str):
             channel = Channel(label=channel)
-        placement = Placement(
-            store=store, url=url, offset=dict(offset or {}), origin=origin, channel=channel
-        )
         declared = self._channels(store, channels, colours, window)
+        key = self._register(store)  # starts the server, before the layer is half-made
         with self._lock:
             held = self._layers.get(name)
             if held is None:
@@ -172,14 +169,23 @@ class Viewer:
             at = next(
                 (i for i, p in enumerate(held.placements) if p.store.path == store.path), None
             )
+            if at is not None:
+                # The same store again means it has changed on disk -- chunks
+                # landed, or a time point was appended -- so the page must read
+                # it afresh: under a new address, so nothing the engine kept of
+                # the old one is reused. It keeps its place among the sources.
+                held.revision += 1
+            placement = Placement(
+                store=store,
+                url=self._store_url(key, store, held.revision if at is not None else 0),
+                offset=dict(offset or {}),
+                origin=origin,
+                channel=channel,
+            )
             if at is None:
                 held.placements.append(placement)
             else:
-                # The same store again means it has changed on disk -- a time
-                # point appended -- so the page must read it afresh. It keeps
-                # its place among the layer's sources.
                 held.placements[at] = placement
-                held.revision += 1
             _measure(held, placement)
             self._publish()
         return name
@@ -195,8 +201,10 @@ class Viewer:
         with self._lock:
             for name, held in self._layers.items():
                 if layer is None or name == layer:
-                    held.placements = [read_again(p) for p in held.placements]
                     held.revision += 1
+                    held.placements = [
+                        read_again(p, self._url_for(p.store, held.revision)) for p in held.placements
+                    ]
                     for placement in held.placements:
                         _measure(held, placement)
             self._publish()
@@ -336,10 +344,27 @@ class Viewer:
 
     # -- inside ----------------------------------------------------------------
 
-    def _url_for(self, store: Store) -> str:
+    def _url_for(self, store: Store, revision: int = 0) -> str:
+        """The address the page reads the store at.
+
+        A store read again after it grew gets a new address, ``<key>.<revision>``,
+        which the server resolves to the same folder: the engine keeps what it
+        read of a store for as long as the page lives -- chunks, and the shards
+        and shard indexes it found missing -- so under the old address it would
+        go on drawing the store as it was.
+        """
+        return self._store_url(self._register(store), store, revision)
+
+    def _register(self, store: Store) -> str:
+        """The key the server serves the store's folder under; the server is started for it."""
         self.start()
         assert self._server is not None
-        key = self._server.stores.register(store.path)
+        return self._server.stores.register(store.path)
+
+    def _store_url(self, key: str, store: Store, revision: int) -> str:
+        assert self._server is not None
+        if revision:
+            key = f"{key}.{revision}"
         return f"{self._server.url}data/{key}/|{store.format}:"
 
     @staticmethod

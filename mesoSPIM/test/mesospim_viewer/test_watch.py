@@ -76,36 +76,42 @@ def test_the_watcher_adds_tiles_as_they_land_and_rereads_a_grown_one(tmp_path):
 def test_a_tile_being_written_is_read_again_while_it_grows_and_once_it_has_settled(tmp_path):
     """The writer creates a tile's arrays when the stack starts and lands the chunks
     over the minutes after: the watcher shows the tile at once, reads it again
-    while chunks keep coming, and once more after the last one."""
+    while chunks keep coming, and once more after the last one. A quiet spell
+    does not end the watching: the first chunk comes only after the camera's
+    first few dozen frames, and at a slow frame rate the chunks come a long
+    way apart."""
     acquisition = an_acquisition(tmp_path, "run")
     view = Viewer()
-    watcher = Watcher(view, acquisition, settle_s=0.3, refresh_s=0.15)
+    watcher = Watcher(view, acquisition, settle_s=0.3, refresh_s=0.15, forget_s=1.2)
     try:
         tile = write_tile(acquisition / "Mag1_Tile0_Sh0_Rot0.ome.zarr", origin_um=(0, 0, 0), seed=1)
-        assert watcher.poll() == [tile], "shown the moment it can be read"
-        revision = view.state["layers"][0]["_revision"]
-
-        # nothing lands: not read again, and after a quiet spell no longer watched
-        time.sleep(0.35)
-        assert watcher.poll() == []
-        assert watcher.writing == {}
-        assert view.state["layers"][0]["_revision"] == revision
-
-        # a time point starting: the arrays grow first, the chunks land after
-        write_tile(tile, origin_um=(0, 0, 0), seed=1, timepoints=2)
-        landing = [tile / "0" / "1.1.0.0.0", tile / "0" / "1.1.1.0.0"]
+        # The arrays exist, the chunks are still to come.
+        landing = [tile / "0" / "0.0.0.0.0", tile / "0" / "0.1.0.0.0"]
         held_back = {chunk: chunk.read_bytes() for chunk in landing}
         for chunk in landing:
             chunk.unlink()
-        assert watcher.poll() == [tile], "a grown shape is shown at once"
+        assert watcher.poll() == [tile], "shown the moment it can be read"
         revision = view.state["layers"][0]["_revision"]
 
-        # chunks landing: read again every refresh_s while they keep coming...
+        # nothing lands for longer than the settle: still watched
+        time.sleep(0.35)
+        assert watcher.poll() == []
+        assert list(watcher.writing) == [tile]
+        assert view.state["layers"][0]["_revision"] == revision
+
+        # the first chunk, well after the settle: read again
         landing[0].write_bytes(held_back[landing[0]])
+        assert watcher.poll() == [tile]
+        assert view.state["layers"][0]["_revision"] == revision + 1
+        revision += 1
+
+        # chunks landing: read again every refresh_s while they keep coming...
+        landing[1].write_bytes(held_back[landing[1]])
         assert watcher.poll() == [], "too soon after the last read"
         time.sleep(0.2)
         assert watcher.poll() == [tile], "chunks came, and the last read is refresh_s ago"
         assert view.state["layers"][0]["_revision"] == revision + 1
+        landing[1].unlink()
         landing[1].write_bytes(held_back[landing[1]])
         time.sleep(0.05)
         assert watcher.poll() == []
@@ -114,9 +120,17 @@ def test_a_tile_being_written_is_read_again_while_it_grows_and_once_it_has_settl
         time.sleep(0.35)
         assert watcher.poll() == [tile]
         assert view.state["layers"][0]["_revision"] == revision + 2
-        assert watcher.writing == {}, "settled: not walked any more"
-        time.sleep(0.35)
+        assert list(watcher.writing) == [tile], "settled, and still watched"
+
+        # a time point starting: the arrays grow first, the chunks land after
+        write_tile(tile, origin_um=(0, 0, 0), seed=1, timepoints=2)
+        assert watcher.poll() == [tile], "a grown shape is shown at once"
+        assert [s.shape[0] for s in view.stores("run")] == [2]
+
+        # only a long quiet ends the watching
+        time.sleep(1.3)
         assert watcher.poll() == []
+        assert watcher.writing == {}, "forgotten: not walked any more"
     finally:
         view.stop()
 

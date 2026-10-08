@@ -116,8 +116,15 @@ class Stores:
             return key
 
     def resolve(self, key: str, relative: str) -> Path | None:
+        """The file ``relative`` of the store registered under ``key``.
+
+        ``<key>.<revision>`` names the same store: a store that has grown on disk
+        is given to the page under a new address (see ``Viewer._url_for``), so
+        that the engine reads it afresh instead of from what it remembers of the
+        old one, chunks and shard indexes it found missing included.
+        """
         with self._lock:
-            root = self._roots.get(key)
+            root = self._roots.get(key.partition(".")[0])
         if root is None:
             return None
         target = (root / relative).resolve() if relative else root

@@ -213,7 +213,10 @@ Viewer.on_remove                  <---    POST /api/remove (a remove button)
   one that is still being written every ten seconds and once it has gone
   quiet, and one whose shape grew at once; `Follower` keeps a viewer on the
   newest; `Opened` shows datasets from disk, adds dropped ones beside them
-  and takes one off again.
+  and takes one off again. A tile is watched for new files until it has had
+  none for two minutes: the writer lands a chunk of planes at a time, so its
+  first file comes only after the camera's first few dozen frames, and at a
+  slow frame rate a minute can pass between files.
 - `state.py` turns placed stores into neuroglancer state: one engine layer per
   channel, over the same sources. A shifted source carries a `transform` whose
   translation column holds the shift, in voxels. Each layer's shader is the
@@ -223,11 +226,15 @@ Viewer.on_remove                  <---    POST /api/remove (a remove button)
   byte ranges and ETags (sharded zarr v3 needs ranges), and the scene.
 - `viewer.py` is the API. Every change publishes a new version; the page waits
   on `/api/state` for it, so a change is on screen within a frame, with no
-  polling while nothing happens.
+  polling while nothing happens. A store read again after it grew is given
+  to the page under a new address (`/data/<key>.<revision>/`, the same
+  folder): the engine keeps what it read of a store for as long as the page
+  lives, the chunks and shards it found missing included, so under the old
+  address it would go on drawing the store as it first was.
 - `source/src/main.js` is the page. It builds a stock viewer
   (`makeDefaultViewer` plus the default bindings), applies states, reports
-  back. A layer whose revision moved has its stores forgotten from the
-  engine's memo before it is rebuilt, so a grown store is read afresh.
+  back. A layer is rebuilt when Python's description of it changes, which a
+  new store address is, with the operator's own adjustments carried over.
 - `source/src/panel.js` is the simple interface: registered as one of
   the engine's own side panels (only a panel inside the engine's canvas gets
   a histogram drawn), with the view switch, Show all, the channel rows, the

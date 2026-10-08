@@ -334,8 +334,12 @@ def read_store(path: str | Path) -> Store:
     )
 
 
-# How many planes of the coarsest copy are looked at to set a channel's contrast.
+# How many planes of a copy are looked at to set a channel's contrast.
 SAMPLE_PLANES = 16
+# A copy is sampled only while one plane of it costs at most this much to read. A
+# plane's chunks are decoded whole, so a plane of the finest copy of a big tile,
+# whose chunks run to hundreds of megabytes, is left alone.
+SAMPLE_BYTES = 32 * 2**20
 
 
 def sample_window(store: Store, channel: int | None = None) -> tuple[float, float] | None:
@@ -347,6 +351,12 @@ def sample_window(store: Store, channel: int | None = None) -> tuple[float, floa
     sample is what the operator's Min-Max button would find on a picture of the
     whole stack: the coarsest copy in the store's pyramid, at the first time
     point, through up to ``SAMPLE_PLANES`` planes spread over the depth.
+
+    While a store is being written, the coarsest copy is the last to get its
+    chunks -- one chunk of it covers a good part of the stack's depth -- so a
+    copy that holds nothing yet is passed over for the next finer one, as far
+    as one whose planes are still cheap to read (``SAMPLE_BYTES``). The
+    contrast is then set from the first planes to land.
 
     ``channel`` is the index along the store's channel axis (None for a store
     without one). Voxels still at the array's fill value have not been written
@@ -360,25 +370,41 @@ def sample_window(store: Store, channel: int | None = None) -> tuple[float, floa
     except ImportError:
         logger.info("zarr is not installed: the contrast of %s is not set from its data", store.path)
         return None
-    level = store.levels[-1] if store.levels else "0"
-    try:
-        array = zarr.open_array(store=str(store.path / level), mode="r")
-        selection = []
-        for axis, length in zip(store.axes, array.shape):
-            if axis.name == "t":
-                selection.append(0)
-            elif axis.is_channel:
-                selection.append(channel or 0)
-            elif axis.name == "z" and length > SAMPLE_PLANES:
-                selection.append(np.linspace(0, length - 1, SAMPLE_PLANES).round().astype(int))
-            else:
-                selection.append(slice(None))
-        sample = np.asarray(array.get_orthogonal_selection(tuple(selection)))
-    except Exception as error:  # noqa: BLE001 -- a store being written may be half there
-        logger.debug("no contrast sample from %s: %s", store.path, error)
-        return None
-    written = sample[sample != array.fill_value] if array.fill_value is not None else sample
-    if written.size == 0:
-        return None
-    low, high = float(written.min()), float(written.max())
-    return (low, high) if high > low else None
+    for level in reversed(store.levels or ("0",)):
+        try:
+            array = zarr.open_array(store=str(store.path / level), mode="r")
+            if _plane_bytes(store, array) > SAMPLE_BYTES:
+                return None  # and the finer copies cost more still
+            selection = []
+            for axis, length in zip(store.axes, array.shape):
+                if axis.name == "t":
+                    selection.append(0)
+                elif axis.is_channel:
+                    selection.append(channel or 0)
+                elif axis.name == "z" and length > SAMPLE_PLANES:
+                    selection.append(np.linspace(0, length - 1, SAMPLE_PLANES).round().astype(int))
+                else:
+                    selection.append(slice(None))
+            sample = np.asarray(array.get_orthogonal_selection(tuple(selection)))
+        except Exception as error:  # noqa: BLE001 -- a store being written may be half there
+            logger.debug("no contrast sample from %s/%s: %s", store.path, level, error)
+            return None
+        written = sample[sample != array.fill_value] if array.fill_value is not None else sample
+        if written.size == 0:
+            continue  # nothing of this copy is written yet
+        low, high = float(written.min()), float(written.max())
+        if high > low:
+            return (low, high)
+    return None
+
+
+def _plane_bytes(store: Store, array) -> int:
+    """What reading one plane of ``array`` decodes: every chunk the plane crosses, whole."""
+    chunks = tuple(array.chunks)
+    total = array.dtype.itemsize
+    for index, axis in enumerate(store.axes):
+        if axis.name == "z":
+            total *= chunks[index]
+        elif axis.name in ("y", "x"):
+            total *= array.shape[index]
+    return total

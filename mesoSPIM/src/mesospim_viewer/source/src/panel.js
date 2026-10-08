@@ -128,7 +128,11 @@ const LOOK_FROM = [
   ["Front", [-Math.SQRT1_2, 0, 0, Math.SQRT1_2]],
   ["Side", [0, Math.SQRT1_2, 0, Math.SQRT1_2]],
 ];
-const DETAIL_STEPS = [32, 64, 128, 256, 512, 1024];
+// Doubling, because the engine draws from the copy of the image whose voxels
+// are about the size of one step: each step of the slider is one finer copy.
+// The top step lets a stack thousands of voxels across draw from its finest
+// copy, for a card that can hold it.
+const DETAIL_STEPS = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 
 function imageLayers(viewer) {
   return viewer.layerManager.managedLayers

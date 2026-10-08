@@ -28,12 +28,16 @@ small helper the plain widget uses, so PyQt6 and PySide work as well.
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
+import threading
 from pathlib import Path
 
 from .omezarr import NotAStore
 from .viewer import Viewer, _qt
 from .watch import Follower, Opened
+
+logger = logging.getLogger(__name__)
 
 POLL_MS = 1000
 
@@ -96,7 +100,12 @@ def make_window_class():
             self.web.installEventFilter(self)
 
             # Only the live window looks at the disk again; an acquired dataset is read once.
+            # The look itself runs off the GUI thread: it walks the stores' folders
+            # and decodes a sample of a store for its contrast, which on a big tile
+            # takes long enough to be felt in the window.
             self.timer = QtCore.QTimer(self)
+            self._polling: threading.Thread | None = None
+            self._closing = False
             if live:
                 self.timer.timeout.connect(self.poll)
                 self.timer.start(POLL_MS)
@@ -107,8 +116,22 @@ def make_window_class():
             return self._viewer
 
         def poll(self) -> None:
-            if self.live and self.follower is not None:
-                self.follower.poll()
+            """One look at the disk, in the background; a look still going on is left to finish."""
+            if not self.live or self.follower is None or self._closing:
+                return
+            if self._polling is not None and self._polling.is_alive():
+                return
+            self._polling = threading.Thread(
+                target=self._poll_now, name="mesospim-view-poll", daemon=True
+            )
+            self._polling.start()
+
+        def _poll_now(self) -> None:
+            try:
+                if not self._closing:
+                    self.follower.poll()
+            except Exception:  # noqa: BLE001 -- the next look may well succeed
+                logger.exception("looking at %s failed", self.follower.root)
 
         def eventFilter(self, watched, event) -> bool:  # noqa: N802 -- Qt's name
             """Take folders dragged onto the picture, and keep every drag from the page.
@@ -144,7 +167,10 @@ def make_window_class():
             self.viewer.say("\n".join(refused))
 
         def closeEvent(self, event) -> None:  # noqa: N802 -- Qt's name
+            self._closing = True
             self.timer.stop()
+            if self._polling is not None:
+                self._polling.join(timeout=5.0)
             self.viewer.stop()
             super().closeEvent(event)
 

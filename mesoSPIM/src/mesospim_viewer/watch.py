@@ -131,7 +131,7 @@ def _fingerprint(root: Path) -> tuple[int, int]:
 
 @dataclass
 class _Writing:
-    """A store the microscope is still writing into, as far as the watcher can tell."""
+    """A store the microscope may still be writing into, as far as the watcher can tell."""
 
     fingerprint: tuple[int, int]
     changed_at: float  # when it was last seen gaining a file
@@ -152,6 +152,14 @@ class Watcher:
     come for ``settle_s`` seconds, so the picture ends complete. Stores that
     cannot be read yet -- being created at that very moment -- are simply
     looked at again next time.
+
+    A store is watched until it has gained nothing for ``forget_s`` seconds, a
+    long time on purpose: the writer lands a chunk of planes at a time, so a
+    store that was just created gets its first file only after the camera's
+    first few dozen frames, and at a slow frame rate a minute can pass between
+    one file and the next. The settle is only how soon a picture is completed
+    after its last file. A store forgotten and written again later -- the
+    next time point of a time lapse -- grows first, and that is seen anyway.
     """
 
     viewer: Viewer
@@ -159,6 +167,7 @@ class Watcher:
     layer: str | None = None
     settle_s: float = 3.0
     refresh_s: float = 10.0
+    forget_s: float = 120.0
     shapes: dict[Path, tuple[int, ...]] = field(default_factory=dict)
     writing: dict[Path, _Writing] = field(default_factory=dict)
 
@@ -192,7 +201,7 @@ class Watcher:
                 self.viewer.add(path, layer=self.layer_name, channel=channel_of(store))
                 held.read_at, held.dirty = now, False
                 changed.append(path)
-            if quiet and not held.dirty:
+            if not held.dirty and now - held.changed_at >= self.forget_s:
                 del self.writing[path]
         return changed
 
