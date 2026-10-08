@@ -5,6 +5,7 @@ author: Nikita Vladimirov, @nvladimus, 2021
 License: GPL-3
 '''
 
+import os
 import time
 import numpy as np
 from .utils.optimization import shannon_dct, fit_gaussian_1d, gaussian_1d
@@ -15,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.uic import loadUi
+
+GUI_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'gui')   # not the working folder
 
 
 class mesoSPIM_Optimizer(QtWidgets.QWidget):
@@ -63,7 +66,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.search_grid = self.metric_array = self.fit_grid = self.gaussian_values = None
         self.delay_s = 0.4  # time delay between snaps to avoid state update hickups, esp for heavy lens-camera assembly during AF
 
-        loadUi('gui/mesoSPIM_Optimizer.ui', self)
+        loadUi(os.path.join(GUI_DIRECTORY, 'mesoSPIM_Optimizer.ui'), self)
         self.setWindowTitle('mesoSPIM-Optimizer')
         self.show()
 
@@ -240,7 +243,7 @@ class mesoSPIM_Optimizer(QtWidgets.QWidget):
         self.plot_results()
 
     def create_results_window(self):
-        self.results_window = loadUi('gui/mesoSPIM_Optimizer_Results.ui')
+        self.results_window = loadUi(os.path.join(GUI_DIRECTORY, 'mesoSPIM_Optimizer_Results.ui'))
         self.results_window.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.results_window.setWindowTitle('Optimization results')
         # signal switchboard for results window
