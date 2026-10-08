@@ -119,7 +119,7 @@ def fired_turns(tab):
     """The transcript's scheduled turns that ran a tool."""
     blocks = tab._blocks
     return sum(1 for earlier, later in zip(blocks, blocks[1:])
-               if isinstance(earlier, str) and "[scheduled" in earlier
+               if isinstance(earlier, str) and "Scheduled:" in earlier
                and isinstance(later, dict) and any(name == "get_state" for name, _ in later["tools"]))
 
 
@@ -147,7 +147,7 @@ def main():
     elapsed = time.monotonic() - started
     assert elapsed >= 2 * EVERY_S - 1, f"two firings came too early: {elapsed:.1f} s"
     shown = tab.chat_window.output.toPlainText()
-    assert "[scheduled 'check'] check the state" in shown, shown[-300:]
+    assert "⏱ Scheduled: check · check the state" in shown and "[scheduled" not in shown, shown[-300:]
 
     tab.on_stop_microscope()
     assert tab.scheduler.listing() == [] and window.stops == 1

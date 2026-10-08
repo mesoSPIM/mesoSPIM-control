@@ -61,6 +61,35 @@ def _chat_sized(html):
     return re.sub(r"\s*font-size:\s*[\d.]+pt;", "", html)
 
 
+def _clock(seconds):
+    """A countdown as m:ss, or h:mm:ss from an hour."""
+    minutes, seconds = divmod(int(seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+
+
+def _period(seconds):
+    seconds = int(seconds)
+    if seconds % 3600 == 0:
+        return f"{seconds // 3600} h"
+    if seconds % 60 == 0:
+        return f"{seconds // 60} min"
+    return f"{seconds} s"
+
+
+def _schedule_text(item, running):
+    """One schedule row: its name, how often, and how long until it fires. A due schedule waits for
+    the turn that is running, since schedules fire only between turns."""
+    if "every_seconds" in item:
+        how = f"every {_period(item['every_seconds'])}"
+    elif "at" in item:
+        how = f"once at {item['at']}"
+    else:
+        how = "once"
+    when = "due, after this turn" if running and item["due_in_s"] == 0 else f"next in {_clock(item['due_in_s'])}"
+    return f"⏱ {item['name'].replace('_', ' ')} · {how} · {when}"
+
+
 class _Input(QtWidgets.QPlainTextEdit):
     """A two-line message box. Enter sends; Shift+Enter starts a new line. Offers the QLineEdit
     names the tab uses (text, setText, returnPressed) so the rest of the tab does not care."""
@@ -301,6 +330,12 @@ class AssistantWindow(QtWidgets.QWidget):
         for widget in (self.request_label, self.request_cancel):
             widget.setVisible(False)
         layout.addLayout(request)
+
+        # What is scheduled: one row per schedule with a countdown to its next firing and a Cancel
+        # of its own. Rows come and go with the schedules; none while nothing is scheduled.
+        self.schedules = QtWidgets.QVBoxLayout()
+        self.schedule_rows = {}                                   # name -> (row widget, label)
+        layout.addLayout(self.schedules)
 
         self.input = _Input(self)
         self.input.setPlaceholderText("Ask the microscope…")
@@ -638,6 +673,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         if self._running:
             self._set_running(False)
         self.scheduler.clear()                  # nothing fires into a session that is gone
+        self._show_schedules()
         self._continuations = []
         self._blocks, self._active = [], None
         self._render()
@@ -828,6 +864,11 @@ class AiAssistantGUI(QtWidgets.QWidget):
         # Qt drops a bottom margin before the next question's table: an empty line keeps the air.
         return f'<div style="margin:12px 0 0 8px;">{"".join(parts)}</div><p style="margin:0;">&nbsp;</p>'
 
+    def _machine_block(self, text):
+        """A turn the machine wrote, a schedule that fell due or a wait that is over: a muted line
+        where the operator's panel would be, since nobody typed it."""
+        return f'<div style="color:{_DIM};margin:14px 0 2px 0;">{_htmllib.escape(text)}</div>'
+
     def _note_block(self, text):
         return f'<div style="color:{_DIM};margin:3px 0;"><i>{_htmllib.escape(text)}</i></div>'
 
@@ -850,10 +891,11 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.chat_window.input.clear()
         self._submit(text)
 
-    def _submit(self, text, request=None):
+    def _submit(self, text, request=None, shown=None):
         """One turn: typed (a new request), or written by the machine for `request`: a schedule
-        that fell due, or a wait that is over."""
-        self._blocks.append(self._user_block(text))
+        that fell due, or a wait that is over. The model gets `text`; the transcript shows a
+        machine turn as `shown`."""
+        self._blocks.append(self._user_block(text) if request is None else self._machine_block(shown or text))
         self._active = {"tools": [], "reply": None, "error": None}
         self._set_running(True)
         self._render()
@@ -866,8 +908,9 @@ class AiAssistantGUI(QtWidgets.QWidget):
         """Every second while connected, never while a turn runs (it waits for the next tick): a
         continuation that came due, else the first schedule that is due, runs as a turn of its own,
         marked as such in the transcript; while a request waits, the worker is asked whether its
-        wait is over."""
+        wait is over. The schedule rows count down on the same tick."""
         self._show_request()
+        self._show_schedules()
         if self._state != "ready" or self._running:
             return
         if self._continuations:
@@ -876,13 +919,56 @@ class AiAssistantGUI(QtWidgets.QWidget):
         item = self.scheduler.pop_due()
         if item is not None:
             self._submit(config.SCHEDULED_TURN.format(name=item["name"], instruction=item["instruction"]),
-                         item.get("request") or 0)
+                         item.get("request") or 0,
+                         config.SCHEDULED_SHOWN.format(name=item["name"].replace("_", " "), instruction=item["instruction"]))
+            self._show_schedules()                  # the one that fired: its next time, or gone
         elif self._worker is not None and self._worker.requests.waiting is not None:
             self.sig_check_continuation.emit()
 
     def _on_continue(self, text, request):
-        self._continuations.append((text, request))
+        prefix = config.CONTINUATION_TURN.format(number=request, result="")
+        result = text[len(prefix):] if text.startswith(prefix) else text
+        self._continuations.append((text, request, config.CONTINUATION_SHOWN.format(number=request, result=result)))
         self.fire_due_schedule()
+
+    def _show_schedules(self):
+        """The schedule rows: each schedule's name, how often, and the countdown to its next
+        firing, with a Cancel of its own; a row per schedule, in the order they fire."""
+        window = self.chat_window
+        listing = self.scheduler.listing()
+        names = [item["name"] for item in listing]
+        if names != list(window.schedule_rows):     # one added, cancelled or fired for good, or the order changed
+            for row, _ in window.schedule_rows.values():
+                window.schedules.removeWidget(row)
+                row.hide()                          # gone now; deleteLater waits for the event loop
+                row.deleteLater()
+            window.schedule_rows = {name: self._schedule_row(name) for name in names}
+            for row, _ in window.schedule_rows.values():
+                window.schedules.addWidget(row)
+        for item in listing:
+            window.schedule_rows[item["name"]][1].setText(_schedule_text(item, self._running))
+
+    def _schedule_row(self, name):
+        font = self.chat_window.request_label.font()
+        row = QtWidgets.QWidget(self.chat_window)
+        line = QtWidgets.QHBoxLayout(row)
+        line.setContentsMargins(0, 0, 0, 0)
+        label = QtWidgets.QLabel(row)
+        label.setFont(font)
+        cancel = QtWidgets.QPushButton("Cancel schedule", row)
+        cancel.setFont(font)
+        cancel.clicked.connect(lambda: self.on_cancel_schedule(name))
+        line.addWidget(label, 1)
+        line.addWidget(cancel)
+        return row, label
+
+    def on_cancel_schedule(self, name):
+        """A schedule row's Cancel: that schedule only; a turn it already started runs on. The
+        model sees it gone in the next readout."""
+        if self.scheduler.cancel(name):
+            self._blocks.append(self._note_block(f"[schedule cancelled: {name.replace('_', ' ')}]"))
+            self._render()
+        self._show_schedules()
 
     def on_cancel_request(self):
         """The request line's Cancel: the request ends, its wait with it; a turn of it in flight is
@@ -928,6 +1014,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.main_window.stop_acquisition_and_timelapse()
         self.main_window.sig_stop_movement.emit()
         self.scheduler.clear()                  # a stop is a stop: nothing scheduled fires after it
+        self._show_schedules()
         self._continuations = []                # and no wait continues (the worker ended the request)
         self._show_confirmation(False)
         self._blocks.append(self._note_block("[stop microscope]"))

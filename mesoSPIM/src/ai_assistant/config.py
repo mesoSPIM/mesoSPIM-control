@@ -232,6 +232,10 @@ RUNS_ON_ITS_OWN_NOTE = ("{what} is under way and ends by itself; get_progress re
 SCHEDULE_MIN_SECONDS = 5
 SCHEDULES_MAX = 10
 SCHEDULED_TURN = "[scheduled '{name}'] {instruction}"
+# What the transcript shows for a turn the machine wrote: the model reads the bracketed text above,
+# the operator a muted line that does not look typed.
+SCHEDULED_SHOWN = "⏱ Scheduled: {name} · {instruction}"
+CONTINUATION_SHOWN = "↻ Request {number} continues: {result}"
 # A request (requests.py): a wait leaves one continuation pending, at most WAIT_MAX_S, at most
 # CONTINUATIONS_MAX per request; its turn starts with CONTINUATION_TURN. A plan keeps PLAN_STEPS_MAX.
 WAIT_MAX_S = 4 * 3600
