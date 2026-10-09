@@ -4,6 +4,7 @@ author: Nikita Vladimirov, @nvladimus, 2022
 License: GPL-3
 '''
 
+import os
 import numpy as np
 import pyqtgraph as pg
 import sys
@@ -17,6 +18,9 @@ from PyQt5.QtMultimedia import QCameraInfo, QCamera, QCameraViewfinderSettings
 from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from .utils.utility_functions import fit_window_to_screen
 
+# The .ui files, found from this file rather than from the working folder, so mesoSPIM starts from any folder
+GUI_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'gui')
+
 
 class WebcamWindow(QtWidgets.QWidget):
     sig_state_request = QtCore.pyqtSignal(dict)
@@ -26,7 +30,7 @@ class WebcamWindow(QtWidgets.QWidget):
         super().__init__()
         #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.WEBCAM_ID = webcam_id
-        loadUi('gui/WebcamWindow.ui', self)
+        loadUi(os.path.join(GUI_DIRECTORY, 'WebcamWindow.ui'), self)
         self.setWindowTitle(f'Webcam view, camera ID {self.WEBCAM_ID}')
         fit_window_to_screen(self)
         self.show()
