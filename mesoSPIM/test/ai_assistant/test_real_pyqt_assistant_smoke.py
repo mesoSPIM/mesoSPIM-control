@@ -81,20 +81,21 @@ def main():
     language, vision = tab.language, tab.vision
     grid = language.grid
 
-    # Cloud, a key-only provider: the key spans the second line, no base URL.
+    # Cloud, a key-only provider: the model on the second line, the key spanning the third, no base URL.
     language.mode.setCurrentText(CLOUD_MODE)
     language.provider.setCurrentText("Anthropic")
     app.processEvents()
     assert language.key.isVisible() and not language.base_url.isVisible() and not language.local_model.isVisible()
-    assert cell_of(grid, language.key) == (1, 3, 6), cell_of(grid, language.key)
+    assert cell_of(grid, language.model) == (1, 3, 6), cell_of(grid, language.model)
+    assert cell_of(grid, language.key) == (2, 3, 6), cell_of(grid, language.key)
     assert items_for(grid, language.key) == 1 and items_for(grid, language.key_label) == 1
     width_cloud = tab.minimumSizeHint().width()
 
-    # OpenAI-style: the base URL takes the second line and the key moves to the third, once.
+    # OpenAI-style: the base URL takes the third line and the key moves to the fourth, once.
     language.provider.setCurrentText("OpenAI-style")
     app.processEvents()
     assert language.base_url.isVisible() and language.key.isVisible()
-    assert cell_of(grid, language.base_url) == (1, 3, 6) and cell_of(grid, language.key) == (2, 3, 6)
+    assert cell_of(grid, language.base_url) == (2, 3, 6) and cell_of(grid, language.key) == (3, 3, 6)
     assert items_for(grid, language.key) == 1 and items_for(grid, language.key_label) == 1
     assert language.key.placeholderText() == "optional"
     width_server = tab.minimumSizeHint().width()
@@ -104,7 +105,7 @@ def main():
     language.provider.setCurrentText("OpenAI-style")
     language.provider.setCurrentText("Anthropic")
     app.processEvents()
-    assert items_for(grid, language.key) == 1 and cell_of(grid, language.key) == (1, 3, 6)
+    assert items_for(grid, language.key) == 1 and cell_of(grid, language.key) == (2, 3, 6)
     assert tab.minimumSizeHint().width() == width_cloud
 
     # Local: the file dropdown and the folder button, the cloud fields gone.

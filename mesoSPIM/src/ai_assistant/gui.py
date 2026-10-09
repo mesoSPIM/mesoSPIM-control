@@ -178,23 +178,24 @@ class ModelPicker(QtWidgets.QGroupBox):
         self.key_label = _field_label("API key", self, font)
         self.base_url_label = _field_label("Base URL", self, font)
 
-        # Line one: the type and what names the model. Line two, cloud only: the key, or the base
-        # URL with the key on the line below it (_on_provider_changed), so an OpenAI-style server
-        # is no wider than any other provider. Columns 5 and 7 take the leftover width, so the
-        # model, the file, the URL and the key all grow with the window.
+        # Line one: the type and, for the cloud, the provider. Line two: the model, a file and the
+        # folder button or a name. Line three, cloud only: the key, or the base URL with the key on
+        # the line below it (_on_provider_changed), so an OpenAI-style server is no wider than any
+        # other provider. Columns 5 and 7 take the leftover width, so the model, the file, the URL
+        # and the key all grow with the window.
         grid = self.grid
         grid.addWidget(self.type_label, 0, 0)
         grid.addWidget(self.mode, 0, 1)
-        grid.addWidget(self.local_model_label, 0, 2)
-        grid.addWidget(self.local_model, 0, 3, 1, 5)
-        grid.addWidget(self.folder_button, 0, 8)
         grid.addWidget(self.provider_label, 0, 2)
         grid.addWidget(self.provider, 0, 3)
-        grid.addWidget(self.model_label, 0, 4)
-        grid.addWidget(self.model, 0, 5, 1, 4)
-        grid.addWidget(self.base_url_label, 1, 2)
-        grid.addWidget(self.base_url, 1, 3, 1, 6)
-        grid.addWidget(self.sees, 3, 3, 1, 6)
+        grid.addWidget(self.local_model_label, 1, 2)
+        grid.addWidget(self.local_model, 1, 3, 1, 5)
+        grid.addWidget(self.folder_button, 1, 8)
+        grid.addWidget(self.model_label, 1, 2)
+        grid.addWidget(self.model, 1, 3, 1, 6)
+        grid.addWidget(self.base_url_label, 2, 2)
+        grid.addWidget(self.base_url, 2, 3, 1, 6)
+        grid.addWidget(self.sees, 4, 3, 1, 6)
         grid.setColumnStretch(5, 1)
         grid.setColumnStretch(7, 1)
 
@@ -241,15 +242,15 @@ class ModelPicker(QtWidgets.QGroupBox):
         else:
             placeholder = f"using {key_env} from the environment" if in_env else f"{name} API key"
         self.key.setPlaceholderText(placeholder)
-        # The key takes the whole second line, or the third, under the base URL.
+        # The key takes the whole third line, or the fourth, under the base URL.
         self.grid.removeWidget(self.key_label)
         self.grid.removeWidget(self.key)
         if preset["kind"] == "openai-compatible":
+            self.grid.addWidget(self.key_label, 3, 2)
+            self.grid.addWidget(self.key, 3, 3, 1, 6)
+        else:
             self.grid.addWidget(self.key_label, 2, 2)
             self.grid.addWidget(self.key, 2, 3, 1, 6)
-        else:
-            self.grid.addWidget(self.key_label, 1, 2)
-            self.grid.addWidget(self.key, 1, 3, 1, 6)
         self._on_mode_changed()
 
     def scan_models(self):
@@ -560,7 +561,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
             cell.addStretch(1)
             return cell
 
-        # Four pairs on one line, the leftover width after them.
+        # Three pairs on one line, the leftover width after them; the focus metric on a line of its own.
         tool_set_label = _field_label("Tool set", preferences, font, gap=0)
         memory_label = _field_label("Memory", preferences, font)
         image_label = _field_label("Bin image", preferences, font, gap=2 * PAIR_GAP)  # set apart
@@ -570,9 +571,12 @@ class AiAssistantGUI(QtWidgets.QWidget):
         options.addLayout(with_unit(self.history_turns, "messages"), 0, 3)   # yours: one per turn
         options.addWidget(image_label, 0, 4)
         options.addWidget(self.frame_bin, 0, 5)
-        options.addWidget(_field_label("Focus metric", preferences, font), 0, 6)
-        options.addWidget(self.focus_metric, 0, 7)
-        options.setColumnStretch(8, 1)
+        options.setColumnStretch(6, 1)
+        focus_cell = QtWidgets.QHBoxLayout()   # as wide as its names, not stretching column 1
+        focus_cell.addWidget(self.focus_metric)
+        focus_cell.addStretch(1)
+        options.addWidget(_field_label("Focus metric", preferences, font, gap=0), 1, 0)
+        options.addLayout(focus_cell, 1, 1, 1, 6)
 
         # The coordinate system as the operator sees it: one row per axis, what a positive move
         # does to the sample in the image. "Move it up" then has one meaning for the model.
