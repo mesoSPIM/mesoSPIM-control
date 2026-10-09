@@ -219,6 +219,48 @@ def _only_keys(fn, name, keys):
     return _call
 
 
+def _safe_keys(schema):
+    """The schema with each argument name Anthropic refuses renamed, at any depth, and the
+    renaming to undo: a property name must match ^[a-zA-Z0-9_.-]{1,64}$, so "camera_delay_%" is
+    offered as "camera_delay_pct". The commands keep their names; only the model sees these."""
+    renamed = {}
+
+    def walk(node):
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        if not isinstance(node, dict):
+            return node
+        out = {}
+        for key, value in node.items():
+            if key == "properties" and isinstance(value, dict):
+                out[key] = {}
+                for name, sub in value.items():
+                    safe = name.replace("%", "pct")
+                    if safe != name:
+                        renamed[safe] = name
+                    out[key][safe] = walk(sub)
+            elif key == "required" and isinstance(value, list):
+                out[key] = [name.replace("%", "pct") for name in value]
+            else:
+                out[key] = walk(value)
+        return out
+    return walk(schema), renamed
+
+
+def _original_keys(fn, renamed):
+    """The call with the names `_safe_keys` gave back to the command's own, at any depth."""
+    def back(value):
+        if isinstance(value, dict):
+            return {renamed.get(key, key): back(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [back(item) for item in value]
+        return value
+
+    def _call(**args) -> str:
+        return fn(**back(args))
+    return _call
+
+
 class ConfirmationGate:
     """The operator's Run / Cancel for a confirm-first command, asked from the worker thread and
     answered from the GUI thread. One question at a time, even when one reply calls two such
@@ -1352,6 +1394,9 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
                                               if k not in config.CODE_ONLY_ARGS[cmd.name]})
         if cmd.name in config.ROWS_BY_REFERENCE:
             schema = _rows_by_reference(schema)
+        schema, renamed = _safe_keys(schema)
+        if renamed:
+            fn = _original_keys(fn, renamed)
         description = config.TOOL_DESCRIPTIONS.get(cmd.name, cmd.hint or cmd.name)
         tools.append(Tool.from_schema(fn, name=cmd.name, description=description, json_schema=schema))
     if "set_acquisition_list" in installs:
