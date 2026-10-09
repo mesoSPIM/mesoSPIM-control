@@ -795,7 +795,7 @@ class VisionSession:
             if self._agent is None:
                 self._agent = Agent(self._model or build_model(self.endpoint),
                                     instructions=config.EYES_INSTRUCTIONS,
-                                    model_settings={"temperature": config.MODEL_TEMPERATURE})
+                                    model_settings=model_settings(self.endpoint))
             if self._loop is None:
                 self._loop = asyncio.new_event_loop()
             result = self._loop.run_until_complete(self._agent.run(prompt, message_history=self._history))
@@ -1722,6 +1722,14 @@ def throttled(model, interval_s):
     return Throttled(model)
 
 
+def model_settings(endpoint):
+    """Temperature 0 for the most likely call, unless the endpoint's model refuses it."""
+    name = endpoint.model if endpoint else ""
+    if any(refusing in name for refusing in config.MODELS_WITHOUT_TEMPERATURE):
+        return {}
+    return {"temperature": config.MODEL_TEMPERATURE}
+
+
 def build_model(endpoint):
     """The endpoint's model, throttled when the endpoint asks for it."""
     model = _build_one(endpoint, endpoint.model)
@@ -1749,7 +1757,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
                                     store=store, scheduler=scheduler, vision_session=vision_session, axes=axes,
                                     requests=requests, measured=measured, focus_metric=focus_metric),
                   capabilities=[ProcessHistory(compact_history)],
-                  model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
+                  model_settings=model_settings(endpoint),                     # the most likely call, not a creative one
                   retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
     agent.output_validator(_hand_back_an_empty_reply())
     if config.CALLED_NOTHING_CHALLENGE:

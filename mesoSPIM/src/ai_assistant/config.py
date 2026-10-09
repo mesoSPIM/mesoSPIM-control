@@ -62,6 +62,9 @@ LOCAL_FLASH_ATTENTION = True   # smaller KV cache and faster attention where the
 # wants the most likely tool call, not a creative one, and a small model's malformed call is
 # handed back to it a couple of times before the turn fails.
 MODEL_TEMPERATURE = 0.0
+# Models that refuse a temperature of 0 ("`temperature` is deprecated for this model"): they get
+# their own default instead. Matched anywhere in the model name.
+MODELS_WITHOUT_TEMPERATURE = ("claude-haiku-5-5",)
 TOOL_CALL_RETRIES = 2
 # A reply at the end of a turn that called no tool goes back to the model once with this text
 # (see _challenge_a_reply_that_called_nothing); empty switches the check off.
