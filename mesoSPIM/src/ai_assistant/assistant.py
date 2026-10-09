@@ -219,6 +219,48 @@ def _only_keys(fn, name, keys):
     return _call
 
 
+def _safe_keys(schema):
+    """The schema with each argument name Anthropic refuses renamed, at any depth, and the
+    renaming to undo: a property name must match ^[a-zA-Z0-9_.-]{1,64}$, so "camera_delay_%" is
+    offered as "camera_delay_pct". The commands keep their names; only the model sees these."""
+    renamed = {}
+
+    def walk(node):
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        if not isinstance(node, dict):
+            return node
+        out = {}
+        for key, value in node.items():
+            if key == "properties" and isinstance(value, dict):
+                out[key] = {}
+                for name, sub in value.items():
+                    safe = name.replace("%", "pct")
+                    if safe != name:
+                        renamed[safe] = name
+                    out[key][safe] = walk(sub)
+            elif key == "required" and isinstance(value, list):
+                out[key] = [name.replace("%", "pct") for name in value]
+            else:
+                out[key] = walk(value)
+        return out
+    return walk(schema), renamed
+
+
+def _original_keys(fn, renamed):
+    """The call with the names `_safe_keys` gave back to the command's own, at any depth."""
+    def back(value):
+        if isinstance(value, dict):
+            return {renamed.get(key, key): back(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [back(item) for item in value]
+        return value
+
+    def _call(**args) -> str:
+        return fn(**back(args))
+    return _call
+
+
 class ConfirmationGate:
     """The operator's Run / Cancel for a confirm-first command, asked from the worker thread and
     answered from the GUI thread. One question at a time, even when one reply calls two such
@@ -795,7 +837,7 @@ class VisionSession:
             if self._agent is None:
                 self._agent = Agent(self._model or build_model(self.endpoint),
                                     instructions=config.EYES_INSTRUCTIONS,
-                                    model_settings={"temperature": config.MODEL_TEMPERATURE})
+                                    model_settings=model_settings(self.endpoint))
             if self._loop is None:
                 self._loop = asyncio.new_event_loop()
             result = self._loop.run_until_complete(self._agent.run(prompt, message_history=self._history))
@@ -805,9 +847,11 @@ class VisionSession:
 
 def detach_old_frames(messages, kept):
     """The messages with the image removed from every frame turn but the last `kept`: the text
-    of the turn (time, settings, numbers) and the answer stay."""
+    of the turn (time, settings, numbers) and the answer stay. The answer's thinking goes with the
+    image: Anthropic signs a thinking block for the turn it saw, and refuses the next request
+    when that turn has changed ("bound to a different conversation")."""
     import dataclasses
-    from pydantic_ai.messages import BinaryContent, UserPromptPart
+    from pydantic_ai.messages import BinaryContent, ThinkingPart, UserPromptPart
     with_image = [i for i, m in enumerate(messages)
                   if any(isinstance(p, UserPromptPart) and isinstance(p.content, list)
                          and any(isinstance(c, BinaryContent) for c in p.content) for p in getattr(m, "parts", []))]
@@ -820,6 +864,8 @@ def detach_old_frames(messages, kept):
                      if isinstance(p, UserPromptPart) and isinstance(p.content, list) else p
                      for p in message.parts]
             message = dataclasses.replace(message, parts=parts)
+        elif i - 1 in to_strip and any(isinstance(p, ThinkingPart) for p in message.parts):
+            message = dataclasses.replace(message, parts=[p for p in message.parts if not isinstance(p, ThinkingPart)])
         out.append(message)
     return out
 
@@ -1348,6 +1394,9 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
                                               if k not in config.CODE_ONLY_ARGS[cmd.name]})
         if cmd.name in config.ROWS_BY_REFERENCE:
             schema = _rows_by_reference(schema)
+        schema, renamed = _safe_keys(schema)
+        if renamed:
+            fn = _original_keys(fn, renamed)
         description = config.TOOL_DESCRIPTIONS.get(cmd.name, cmd.hint or cmd.name)
         tools.append(Tool.from_schema(fn, name=cmd.name, description=description, json_schema=schema))
     if "set_acquisition_list" in installs:
@@ -1563,7 +1612,7 @@ def trim_history(messages, max_turns):
     starts = _turn_starts(messages)
     if len(starts) <= max_turns:
         return list(messages)
-    return list(messages[starts[-max_turns]:])
+    return _without_thinking(list(messages[starts[-max_turns]:]))   # all of it comes after a change
 
 
 def _turn_starts(messages):
@@ -1617,14 +1666,16 @@ def compact_history(messages, full_turns=None):
     """The history with its older turns made small: the last `full_turns` operator turns stay as
     they are; before them, each operator message keeps a one-line readout instead of the whole
     state block, and a tool result longer than HISTORY_RESULT_CHARS is shortened. Tool calls, their
-    pairing with results and the replies are untouched, so nothing the model said is lost."""
+    pairing with results and the replies are untouched, so nothing the model said is lost. What a
+    change costs is the thinking after it (see _without_thinking_after_a_change)."""
     from dataclasses import replace
     full_turns = config.HISTORY_FULL_TURNS if full_turns is None else full_turns
+    before = list(messages)
     messages = _without_answered_challenges(messages)
     starts = _turn_starts(messages)
     cutoff = starts[-full_turns] if len(starts) > full_turns else 0
     if cutoff == 0:
-        return list(messages)
+        return _without_thinking_after_a_change(before, list(messages))
     out = []
     for index, message in enumerate(messages):
         if index >= cutoff or not getattr(message, "parts", None):
@@ -1643,7 +1694,29 @@ def compact_history(messages, full_turns=None):
             parts.append(part)
         changed = any(new is not old for new, old in zip(parts, message.parts))
         out.append(replace(message, parts=parts) if changed else message)
-    return out
+    return _without_thinking_after_a_change(before, out)
+
+
+def _without_thinking_after_a_change(before, after):
+    """`after` without the thinking of every reply from the first message compaction changed on.
+    Anthropic signs a thinking block for all that came before it and refuses the request when any
+    of that has changed ("bound to a different conversation"): with Haiku 5.5 a session died on
+    the fourth message. A change happens only as a turn starts, so the turn in progress keeps
+    the thinking its tool calls need."""
+    changed = next((i for i, (old, new) in enumerate(zip(before, after)) if old != new), min(len(before), len(after)))
+    return _without_thinking(after, changed)
+
+
+def _without_thinking(messages, start=0):
+    """The messages with the replies' thinking gone from `start` on; their text and calls stay."""
+    from dataclasses import replace
+
+    from pydantic_ai.messages import ModelResponse, ThinkingPart
+    for i in range(start, len(messages)):
+        message = messages[i]
+        if isinstance(message, ModelResponse) and any(isinstance(p, ThinkingPart) for p in message.parts):
+            messages[i] = replace(message, parts=[p for p in message.parts if not isinstance(p, ThinkingPart)])
+    return messages
 
 
 @dataclass(frozen=True)
@@ -1722,6 +1795,14 @@ def throttled(model, interval_s):
     return Throttled(model)
 
 
+def model_settings(endpoint):
+    """Temperature 0 for the most likely call, unless the endpoint's model refuses it."""
+    name = endpoint.model if endpoint else ""
+    if any(refusing in name for refusing in config.MODELS_WITHOUT_TEMPERATURE):
+        return {}
+    return {"temperature": config.MODEL_TEMPERATURE}
+
+
 def build_model(endpoint):
     """The endpoint's model, throttled when the endpoint asks for it."""
     model = _build_one(endpoint, endpoint.model)
@@ -1749,7 +1830,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
                                     store=store, scheduler=scheduler, vision_session=vision_session, axes=axes,
                                     requests=requests, measured=measured, focus_metric=focus_metric),
                   capabilities=[ProcessHistory(compact_history)],
-                  model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
+                  model_settings=model_settings(endpoint),                     # the most likely call, not a creative one
                   retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
     agent.output_validator(_hand_back_an_empty_reply())
     if config.CALLED_NOTHING_CHALLENGE:
