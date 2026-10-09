@@ -1612,7 +1612,7 @@ def trim_history(messages, max_turns):
     starts = _turn_starts(messages)
     if len(starts) <= max_turns:
         return list(messages)
-    return list(messages[starts[-max_turns]:])
+    return _without_thinking(list(messages[starts[-max_turns]:]))   # all of it comes after a change
 
 
 def _turn_starts(messages):
@@ -1666,14 +1666,16 @@ def compact_history(messages, full_turns=None):
     """The history with its older turns made small: the last `full_turns` operator turns stay as
     they are; before them, each operator message keeps a one-line readout instead of the whole
     state block, and a tool result longer than HISTORY_RESULT_CHARS is shortened. Tool calls, their
-    pairing with results and the replies are untouched, so nothing the model said is lost."""
+    pairing with results and the replies are untouched, so nothing the model said is lost. What a
+    change costs is the thinking after it (see _without_thinking_after_a_change)."""
     from dataclasses import replace
     full_turns = config.HISTORY_FULL_TURNS if full_turns is None else full_turns
+    before = list(messages)
     messages = _without_answered_challenges(messages)
     starts = _turn_starts(messages)
     cutoff = starts[-full_turns] if len(starts) > full_turns else 0
     if cutoff == 0:
-        return list(messages)
+        return _without_thinking_after_a_change(before, list(messages))
     out = []
     for index, message in enumerate(messages):
         if index >= cutoff or not getattr(message, "parts", None):
@@ -1692,7 +1694,29 @@ def compact_history(messages, full_turns=None):
             parts.append(part)
         changed = any(new is not old for new, old in zip(parts, message.parts))
         out.append(replace(message, parts=parts) if changed else message)
-    return out
+    return _without_thinking_after_a_change(before, out)
+
+
+def _without_thinking_after_a_change(before, after):
+    """`after` without the thinking of every reply from the first message compaction changed on.
+    Anthropic signs a thinking block for all that came before it and refuses the request when any
+    of that has changed ("bound to a different conversation"): with Haiku 5.5 a session died on
+    the fourth message. A change happens only as a turn starts, so the turn in progress keeps
+    the thinking its tool calls need."""
+    changed = next((i for i, (old, new) in enumerate(zip(before, after)) if old != new), min(len(before), len(after)))
+    return _without_thinking(after, changed)
+
+
+def _without_thinking(messages, start=0):
+    """The messages with the replies' thinking gone from `start` on; their text and calls stay."""
+    from dataclasses import replace
+
+    from pydantic_ai.messages import ModelResponse, ThinkingPart
+    for i in range(start, len(messages)):
+        message = messages[i]
+        if isinstance(message, ModelResponse) and any(isinstance(p, ThinkingPart) for p in message.parts):
+            messages[i] = replace(message, parts=[p for p in message.parts if not isinstance(p, ThinkingPart)])
+    return messages
 
 
 @dataclass(frozen=True)
