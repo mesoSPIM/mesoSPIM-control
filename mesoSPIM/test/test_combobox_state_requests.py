@@ -26,6 +26,7 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtTest import QTest
 
 from mesoSPIM.src.devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
+from mesoSPIM.src.mesoSPIM_Core import mesoSPIM_Core
 from mesoSPIM.src.mesoSPIM_MainWindow import mesoSPIM_MainWindow
 
 # Module level, and kept alive: a QApplication that gets garbage collected takes the
@@ -34,6 +35,7 @@ app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 FILTERS = ['Empty', '515LP', '561LP']
 ZOOMS = ['1x', '2x', '4x Olympus']
+SHUTTERS = ['Left', 'Right', 'Both', 'Interleaved']
 SUBSAMPLING = ['1', '2', '4']
 
 
@@ -169,3 +171,41 @@ def test_a_refresh_older_than_the_request_does_not_leave_the_box_wrong():
     assert box.currentText() == 'Empty'
     assert settled(window) == [{'filter': '515LP'}]
     assert window.state['filter'] == '515LP' and box.currentText() == '515LP'
+
+
+class SettingCore(QtCore.QObject):
+    """Core setting a value itself (a remote command, an acquisition row), with Core's own setters.
+    Its state requests are applied at once, as by the serial worker and the waveformer, which live
+    in Core's thread; its refresh reaches the window queued, as across threads."""
+    sig_state_request = QtCore.pyqtSignal(dict)
+    sig_update_gui_from_state = QtCore.pyqtSignal()
+    sig_update_gui_from_shutter_state = QtCore.pyqtSignal()
+    set_filter = mesoSPIM_Core.set_filter
+    set_shutterconfig = mesoSPIM_Core.set_shutterconfig
+
+    def __init__(self, window):
+        super().__init__()
+        self.sig_state_request.connect(window.state.update)
+        self.sig_update_gui_from_state.connect(lambda: mesoSPIM_MainWindow.update_gui_from_state(window),
+                                               type=QtCore.Qt.QueuedConnection)
+
+    def send_status_message_to_gui(self, _message):
+        pass
+
+
+@pytest.mark.parametrize('setter, state_parameter, options, before, after', [
+    ('set_filter', 'filter', FILTERS, 'Empty', '561LP'),
+    ('set_shutterconfig', 'shutterconfig', SHUTTERS, 'Right', 'Left'),
+])
+def test_a_value_core_sets_itself_reaches_the_box(setter, state_parameter, options, before, after):
+    """A filter or shutter set by a remote command changed Core's state but not the box: the shutter
+    box went on naming the other light sheet, with that side's ETL controls enabled. The box must
+    follow, and showing it must ask Core for nothing."""
+    window = Window({state_parameter: before})
+    box = connected_box(window, options, state_parameter)
+    window.widget_to_state_parameter_assignment = [(box, state_parameter, 1)]
+    app.processEvents()
+    window.requests.clear()
+    getattr(SettingCore(window), setter)(after)
+    assert settled(window) == []
+    assert window.state[state_parameter] == after and box.currentText() == after

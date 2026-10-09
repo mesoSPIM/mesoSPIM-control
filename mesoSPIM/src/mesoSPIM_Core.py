@@ -498,6 +498,9 @@ class mesoSPIM_Core(QtCore.QObject):
             logger.debug('Done setting filter to '+filter)
         else:
             self.sig_state_request.emit({'filter': filter})
+        # The request was applied above (serial worker and waveformer live in this thread); show it,
+        # so a filter set remotely or by an acquisition row reaches the main window's box.
+        self.sig_update_gui_from_state.emit()
         self.send_status_message_to_gui('')
 
     @QtCore.pyqtSlot(dict)
@@ -655,6 +658,9 @@ class mesoSPIM_Core(QtCore.QObject):
                 ``'Interleaved'``.
         """
         self.sig_state_request.emit({'shutterconfig': shutterconfig})
+        # Show the applied state: the shutter box follows a remote change, and its change enables
+        # the ETL controls of the side now in use (update_GUI_by_shutter_state reads the box).
+        self.sig_update_gui_from_state.emit()
         self.sig_update_gui_from_shutter_state.emit()
 
     @QtCore.pyqtSlot()
