@@ -15,6 +15,7 @@
 - Configs selecting NI waveform generation, shutters or laser enable lines now fail at startup with a message naming the missing package or driver, instead of an import error or a `DaqNotFoundError` raised mid-acquisition.
 
 ### Bugfixes 🐛
+- Auto-Focus: the DCT-Shannon sharpness (`shannon_dct`) now uses the whole ROI. It used only the top-left quarter, because `scipy.fftpack.dct(..., n=cutoff)` truncated the image before the transform. Its values, and possibly the focus it picks, differ from before; not yet tested on hardware.
 - Waveforms are now `round(samplerate * sweeptime)` samples long instead of truncated: `25000 * 0.073` evaluates to `1824.9999999999998`, which gave 1824 samples and a 72.96 ms waveform for a 73 ms sweep.
 - The pass-through "Identity" image processor no longer costs ~53 ms per full frame: `count_domain_to_uint16()` returns uint16 input unchanged instead of converting it to float and back, which made continuous acquisition drop frames.
 - PSF analysis tool: fixed bead detection finding 0 beads (or crashing) on beads elongated/wiggly in Z (e.g. stage-jitter artifacts): `keepBeads()` now keeps the brightest candidate among mutually-close peaks instead of discarding all of them, and 0 detected beads is reported in the UI instead of raising an uncaught error.

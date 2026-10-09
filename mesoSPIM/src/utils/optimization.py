@@ -41,9 +41,11 @@ def _shannon(spectrum_2d, otf_radius=100):
     return entropy
 
 def _dct_2d(img, cutoff=100):
+    """2D DCT of the whole image, the lowest `cutoff` frequencies on each axis.
+    (dct's `n` would truncate the image itself, so the slice is taken after the transform.)"""
     cutoff = int(cutoff)
     assert len(img.shape) == 2, 'dct_2d(img): image must be 2D'
-    return dct(dct(img.astype(np.float64).T, norm='ortho', n=cutoff).T, norm='ortho', n=cutoff)
+    return dct(dct(img.astype(np.float64).T, norm='ortho').T, norm='ortho')[:cutoff, :cutoff]
 
 def shannon_dct(img, psf_radius_px=1):
     """Shannon entropy of discreet cosine transform, for 2D images."""
