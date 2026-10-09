@@ -805,9 +805,11 @@ class VisionSession:
 
 def detach_old_frames(messages, kept):
     """The messages with the image removed from every frame turn but the last `kept`: the text
-    of the turn (time, settings, numbers) and the answer stay."""
+    of the turn (time, settings, numbers) and the answer stay. The answer's thinking goes with the
+    image: Anthropic signs a thinking block for the turn it saw, and refuses the next request
+    when that turn has changed ("bound to a different conversation")."""
     import dataclasses
-    from pydantic_ai.messages import BinaryContent, UserPromptPart
+    from pydantic_ai.messages import BinaryContent, ThinkingPart, UserPromptPart
     with_image = [i for i, m in enumerate(messages)
                   if any(isinstance(p, UserPromptPart) and isinstance(p.content, list)
                          and any(isinstance(c, BinaryContent) for c in p.content) for p in getattr(m, "parts", []))]
@@ -820,6 +822,8 @@ def detach_old_frames(messages, kept):
                      if isinstance(p, UserPromptPart) and isinstance(p.content, list) else p
                      for p in message.parts]
             message = dataclasses.replace(message, parts=parts)
+        elif i - 1 in to_strip and any(isinstance(p, ThinkingPart) for p in message.parts):
+            message = dataclasses.replace(message, parts=[p for p in message.parts if not isinstance(p, ThinkingPart)])
         out.append(message)
     return out
 
