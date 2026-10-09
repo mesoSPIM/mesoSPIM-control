@@ -226,7 +226,8 @@ def _measures(stats, readout, scale, scale_kind):
            "contrast": round((float(stats.get("max", 0.0)) - float(stats.get("background", 0.0))) / full, 4),
            "mean": round(float(stats.get("mean", 0.0)) / full, 4),
            "saturated": round(float(stats.get("saturated_fraction", 0.0)), 4),
-           "focus": round(float(stats.get("focus_measure", 0.0)), 4)}
+           "focus": round(float(stats.get("focus_measure", 0.0)), 4),
+           "focus_metric": stats.get("focus_metric", "laplacian")}
     if centroid is None:
         return dict(out, signal="none")
     offset = (centroid["col"] - 0.5, 0.5 - centroid["row"])            # fraction of the field right, up
@@ -243,8 +244,9 @@ def _measures(stats, readout, scale, scale_kind):
 
 def _change(before, after):
     change = {"seconds": round(after["t"] - before["t"], 1),
-              "focus": round(after["measures"]["focus"] - before["measures"]["focus"], 4),
               "peak": round(after["measures"]["peak"] - before["measures"]["peak"], 3)}
+    if before["measures"].get("focus_metric") == after["measures"].get("focus_metric"):   # two metrics do not subtract
+        change["focus"] = round(after["measures"]["focus"] - before["measures"]["focus"], 4)
     a, b, field = before.get("image"), after.get("image"), after.get("field_um")
     if (a is not None and b is not None and field and a.shape == b.shape
             and before["settings"]["zoom"] == after["settings"]["zoom"]):
@@ -319,7 +321,7 @@ def _place(usable, now):
 
 def _focus(usable, now):
     """The best focus position from the frames at the newest frame's place (within MAP_SAME_PLACE_UM
-    on x, y and z): the vertex of a parabola through the sharpest frame and its neighbours on f,
+    on x, y and z) measured with the newest frame's focus metric: the vertex of a parabola through the sharpest frame and its neighbours on f,
     with half their spacing as the uncertainty. At the edge of the frames' range, the edge, and
     which way to search."""
     if not usable or usable[-1]["position"]["f"] is None:
@@ -328,14 +330,16 @@ def _focus(usable, now):
     curve = {}
     for f in usable:
         p = f["position"]
-        if all(p[a] is not None and abs(p[a] - here[a]) <= config.MAP_SAME_PLACE_UM for a in ("x", "y", "z")):
+        if (f["measures"].get("focus_metric") == usable[-1]["measures"].get("focus_metric")
+                and all(p[a] is not None and abs(p[a] - here[a]) <= config.MAP_SAME_PLACE_UM for a in ("x", "y", "z"))):
             curve[p["f"]] = max(curve.get(p["f"], 0.0), f["measures"]["focus"])
     if len(curve) < 2:
         return None
     positions = sorted(curve)
     index = max(range(len(positions)), key=lambda i: curve[positions[i]])
     best = positions[index]
-    out = {"f": round(best, 1), "frames_used": len(positions), "age_s": int(now - usable[-1]["t"])}
+    out = {"f": round(best, 1), "frames_used": len(positions), "age_s": int(now - usable[-1]["t"]),
+           "focus_metric": usable[-1]["measures"].get("focus_metric")}
     if index in (0, len(positions) - 1):
         out["edge"] = "search lower f" if index == 0 else "search higher f"
         out["plus_minus"] = round(abs(positions[1] - positions[0]) if index == 0 else

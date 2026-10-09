@@ -565,7 +565,7 @@ def _tool_fn(acceptor, name, kind, cancel, on_call=None, gate=None, guard=None, 
 
 
 def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None, clock=time.time,
-         history=None, axes=None, frames=None, label=None):
+         history=None, axes=None, frames=None, label=None, focus_metric=None):
     """Take a frame and describe it. The numbers come from get_frame and reach the main model
     always. The picture itself goes to a vision model in a separate call with the question, and
     only that answer comes back — the main conversation never carries images, so a text-only main
@@ -575,7 +575,8 @@ def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None, 
 
     With a frame `history`, the new frame is kept there with code's measures, `frames` chooses
     recorded frames to show with it ("last 3", "1,7", "3-10"), and the result compares
-    them; `snap` false with nothing running shows recorded frames instead of taking one."""
+    them; `snap` false with nothing running shows recorded frames instead of taking one.
+    `focus_metric` overrides the operator's choice for this frame."""
     saved = None
     running = _running_mode(acceptor)
     if snap and running is not None:
@@ -591,6 +592,8 @@ def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None, 
         request = {"include_image": endpoint.vision, "bin": image_bin or config.LOOK_BIN}
         if history is not None:
             request["array_side"] = config.FRAME_COPY_SIDE
+        if focus_metric:
+            request["focus_metric"] = focus_metric
         frame = acceptor.dispatch("get_frame", request)
         if not frame.get("available"):
             return {"available": False, "note": "no frame yet; take a snap first"}
@@ -616,7 +619,8 @@ def look(acceptor, endpoint, question, snap, cancel, image_bin=None, eyes=None, 
         result["source"] = f"the latest frame of the running {running}, no snap taken"
     if len(shown) == 1 and frame is not None:
         result["kept"] = {k: v for k, v in history.brief(shown[0]).items()
-                          if k not in ("time", "position", "settings", "peak", "mean", "saturated", "focus")}
+                          if k not in ("time", "position", "settings", "peak", "mean", "saturated", "focus",
+                                       "focus_metric")}
     elif shown:
         result["frames"] = [history.brief(f) for f in shown]
         result["changes"] = history.compare(shown)
@@ -872,6 +876,9 @@ _LOOK_SCHEMA = {
         "snap": {"type": "boolean", "description": "take a new frame first (default true); false shows recorded frames"},
         "frames": {"type": "string", "description": "recorded frames to show as well: 'last 3', '1,7', '3-10'"},
         "label": {"type": "string", "description": "a name for the new frame, to find it again: 'before'"},
+        "focus_metric": {"type": "string", "enum": ["laplacian", "dct_shannon"],
+                         "description": "only when the operator names one: the focus measure for this frame "
+                                        "(dct_shannon is the Auto-Focus one); otherwise the operator's setting"},
     },
     "required": ["question"],
     "additionalProperties": False,
@@ -891,6 +898,22 @@ def hidden_commands(profile=None):
     does not have, so it says so instead of standing another command in for it."""
     offered = {cmd.name for cmd in offered_commands(profile)}
     return [name for name in COMMANDS if name not in offered and name not in _PROMPT_ONLY]
+
+
+class _WithFocusMetric:
+    """The acceptor, adding the operator's focus metric to every get_frame that names none: the
+    look, the kept snaps, calibrate and the model's own get_frame all measure the same way."""
+
+    def __init__(self, acceptor, metric):
+        self._acceptor, self._metric = acceptor, metric
+
+    def dispatch(self, name, args):
+        if name == "get_frame":
+            args = {"focus_metric": self._metric(), **(args or {})}
+        return self._acceptor.dispatch(name, args)
+
+    def __getattr__(self, name):
+        return getattr(self._acceptor, name)
 
 
 def _keeping_snaps(fn, acceptor, history, axes):
@@ -1289,15 +1312,18 @@ def _narrowed(cmd, keys):
 
 def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision_endpoint=None,
                 image_bin=None, profile=None, store=None, scheduler=None, vision_session=None, axes=None,
-                requests=None, measured=False):
+                requests=None, measured=False, focus_metric=None):
     """One passthrough tool per offered command (see offered_commands). The tool list is derived
     from COMMANDS and the profile — never hand-maintained.
 
     Each tool publishes the command's own JSON schema (the one MCP tools/list serves), so the model
     sees the argument names, types and ranges. from_schema skips pydantic's validation of the call,
     which keeps accept() the single place a call can be refused, with one error vocabulary. In the
-    Regular profile a straddling command is offered with a narrowed schema and refuses the rest."""
+    Regular profile a straddling command is offered with a narrowed schema and refuses the rest.
+    `focus_metric` (a callable, read live) is the focus metric of every get_frame that names none."""
     from pydantic_ai import Tool
+    if focus_metric is not None:
+        acceptor = _WithFocusMetric(acceptor, focus_metric)
     regular = (profile or config.DEFAULT_TOOL_PROFILE) == "Regular"
     narrow = config.REGULAR_ARGS if regular else {}
     guard = TurnGuard(store, requests, measured)   # one for all the tools: what one call rules out for the next
@@ -1335,15 +1361,16 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
     if endpoint is not None:
         eyes = vision_endpoint or endpoint  # a dedicated reader, or the main model when it can see
 
-        def _look_now(question, snap, frames, label):
+        def _look_now(question, snap, frames, label, focus_metric):
             if on_call is not None:
                 on_call("look", json.dumps({k: v for k, v in (("question", question), ("snap", snap), ("frames", frames),
-                                                              ("label", label)) if v is not None}))
+                                                              ("label", label), ("focus_metric", focus_metric))
+                                            if v is not None}))
             size = image_bin() if callable(image_bin) else image_bin  # a callable reads a live setting
             reuse = bool(snap) and guard.take_fresh_snap()  # snapped a moment ago: no second exposure
             try:
                 outcome = look(acceptor, eyes, question, snap and not reuse, cancel, size, eyes=vision_session, clock=clock,
-                               history=history, axes=axes, frames=frames, label=label)
+                               history=history, axes=axes, frames=frames, label=label, focus_metric=focus_metric)
                 if reuse and outcome.get("available"):
                     outcome["frame"] = ("the one snapped a moment ago in this turn, not a second exposure; look "
                                         "takes its own snap, so next time call look alone")
@@ -1354,10 +1381,10 @@ def build_tools(acceptor, cancel, on_call=None, endpoint=None, gate=None, vision
             guard.after("look", {}, outcome)
             return json.dumps(outcome)
 
-        async def _look(question="", snap=True, frames=None, label=None) -> str:
+        async def _look(question="", snap=True, frames=None, label=None, focus_metric=None) -> str:
             # On a thread the turn does not wait on: Cancel ends the turn at once, and a vision
             # answer that comes later is dropped.
-            return await asyncio.to_thread(_look_now, question, snap, frames, label)
+            return await asyncio.to_thread(_look_now, question, snap, frames, label, focus_metric)
 
         tools.append(Tool.from_schema(
             _look, name="look", json_schema=_LOOK_SCHEMA,
@@ -1705,7 +1732,7 @@ def build_model(endpoint):
 
 def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=None,
                 vision_endpoint=None, image_bin=None, profile=None, store=None, scheduler=None,
-                vision_session=None, axes=None, requests=None, measured=False):
+                vision_session=None, axes=None, requests=None, measured=False, focus_metric=None):
     """`endpoint` is what the tab chose (the default preset when None). `model` overrides it: the
     GUI never passes it; the offline evaluation drives this same agent with a scripted model."""
     from pydantic_ai import Agent
@@ -1720,7 +1747,7 @@ def build_agent(acceptor, cancel, on_call=None, model=None, endpoint=None, gate=
                   tools=build_tools(acceptor, cancel, on_call, endpoint=endpoint, gate=gate,
                                     vision_endpoint=vision_endpoint, image_bin=image_bin, profile=profile,
                                     store=store, scheduler=scheduler, vision_session=vision_session, axes=axes,
-                                    requests=requests, measured=measured),
+                                    requests=requests, measured=measured, focus_metric=focus_metric),
                   capabilities=[ProcessHistory(compact_history)],
                   model_settings={"temperature": config.MODEL_TEMPERATURE},   # the most likely call, not a creative one
                   retries=config.TOOL_CALL_RETRIES)                            # a malformed call goes back to the model
@@ -1838,6 +1865,7 @@ class AssistantWorker(QtCore.QObject):
         self.gate = ConfirmationGate(on_ask=self.sig_confirm.emit, cancel=self.cancel)
         self.max_history_turns = config.MAX_HISTORY_TURNS  # the tab sets these
         self.look_image_bin = config.LOOK_BIN
+        self.focus_metric = config.FOCUS_METRIC
         self.axes = dict(config.DEFAULT_AXES)            # what a positive move does to the sample in the image
         self._agent_axes = None                          # the axes the agent was built with
         self.measured_values = False                     # the tab reads it from the microscope config
@@ -1900,6 +1928,7 @@ class AssistantWorker(QtCore.QObject):
                                           endpoint=self._endpoint, gate=self.gate,
                                           vision_endpoint=self._vision_endpoint,
                                           image_bin=lambda: self.look_image_bin, profile=self._profile,
+                                          focus_metric=lambda: self.focus_metric,
                                           store=self.store, scheduler=self.scheduler, vision_session=self.eyes,
                                           axes=self._agent_axes, requests=self.requests,
                                           measured=self.measured_values)

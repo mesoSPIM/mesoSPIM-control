@@ -80,6 +80,10 @@ LOCAL_SERVER_TIMEOUT_S = 300  # a 12B file can take minutes to load from a slow 
 # a 2048-pixel camera frame at 1024 pixels, enough for "is it centred" or "is it saturated".
 LOOK_BIN = 2
 
+# The focus measure of every frame the assistant takes: "laplacian" or "dct_shannon" (the Auto-Focus
+# Optimizer's). The Configure box switches it; a request may name the other for its own frames.
+FOCUS_METRIC = "laplacian"
+
 # Whether the chat lists the commands each answer ran; the Configure box switches it.
 SHOW_TOOL_CALLS = False
 

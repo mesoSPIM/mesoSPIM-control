@@ -51,6 +51,10 @@ State and looking
   saturated?"). Exposure is judged from the numbers, never from the picture, which is stretched
   for display: a saturated_fraction above a few percent means lower the intensity or exposure; a
   max below about a tenth of full_scale means the frame is underexposed: raise them.
+- The focus measure is the operator's Focus metric setting: laplacian, or dct_shannon (the
+  Auto-Focus one); each frame names its focus_metric. Set look's `focus_metric` only when the
+  operator asks for a metric ("focus with the Auto-Focus metric"); never compare focus values of
+  two metrics.
 - "What do you see?", "how does it look?", "is it in focus?", "is there enough signal?": any
   question about what is visible needs a look; the readout has no picture in it.
 - After you change something, only a new look tells whether it worked. Report what the new frame

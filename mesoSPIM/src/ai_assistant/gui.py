@@ -467,6 +467,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         if self._worker is not None:
             self._worker.max_history_turns = self.history_turns.value()
             self._worker.look_image_bin = int(self.frame_bin.currentText())
+            self._worker.focus_metric = self.focus_metric.currentData()
             self._worker.axes = self.axes()
 
     def axes(self):
@@ -543,7 +544,11 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.frame_bin = QtWidgets.QComboBox(preferences)
         self.frame_bin.addItems([str(factor) for factor in rc_config.FRAME_BINS])
         self.frame_bin.setCurrentText(str(config.LOOK_BIN))
-        for widget in (self.tools_profile, self.history_turns, self.frame_bin):
+        self.focus_metric = QtWidgets.QComboBox(preferences)
+        self.focus_metric.addItem("Laplacian", "laplacian")
+        self.focus_metric.addItem("DCT-Shannon (Auto-Focus)", "dct_shannon")
+        self.focus_metric.setCurrentIndex(self.focus_metric.findData(config.FOCUS_METRIC))
+        for widget in (self.tools_profile, self.history_turns, self.frame_bin, self.focus_metric):
             widget.setFont(font)
 
         def with_unit(spin, unit):
@@ -555,7 +560,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
             cell.addStretch(1)
             return cell
 
-        # Three pairs on one line, the leftover width after them.
+        # Four pairs on one line, the leftover width after them.
         tool_set_label = _field_label("Tool set", preferences, font, gap=0)
         memory_label = _field_label("Memory", preferences, font)
         image_label = _field_label("Bin image", preferences, font, gap=2 * PAIR_GAP)  # set apart
@@ -565,7 +570,9 @@ class AiAssistantGUI(QtWidgets.QWidget):
         options.addLayout(with_unit(self.history_turns, "messages"), 0, 3)   # yours: one per turn
         options.addWidget(image_label, 0, 4)
         options.addWidget(self.frame_bin, 0, 5)
-        options.setColumnStretch(6, 1)
+        options.addWidget(_field_label("Focus metric", preferences, font), 0, 6)
+        options.addWidget(self.focus_metric, 0, 7)
+        options.setColumnStretch(8, 1)
 
         # The coordinate system as the operator sees it: one row per axis, what a positive move
         # does to the sample in the image. "Move it up" then has one meaning for the model.
@@ -616,6 +623,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.tools_profile.currentTextChanged.connect(self._apply_profile)
         self.history_turns.valueChanged.connect(self._apply_options)
         self.frame_bin.currentTextChanged.connect(self._apply_options)
+        self.focus_metric.currentIndexChanged.connect(self._apply_options)
         for combo in self.axis_boxes.values():
             combo.currentTextChanged.connect(self._apply_options)
         return setup
@@ -643,6 +651,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
     def _set_setup_enabled(self, enabled):
         """The setup is applied by Connect and read only after it: Disconnect first to change it."""
         for widget in (self.language, self.vision, self.tools_profile, self.history_turns, self.frame_bin,
+                       self.focus_metric,
                        *self.axis_boxes.values()):
             widget.setEnabled(enabled)
 
