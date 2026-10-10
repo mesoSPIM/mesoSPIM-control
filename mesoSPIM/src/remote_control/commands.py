@@ -2369,6 +2369,10 @@ def _channel(core, channel, label):
     for key in ("laser", "intensity", "filter"):
         if key not in channel:
             raise ValidationError(f"{label}.{key} is required")
+        try:
+            check_setting(core, key, channel[key])
+        except ValidationError as error:
+            raise ValidationError(f"{label}: {error}") from None
     out.update(channel)
     return out
 
