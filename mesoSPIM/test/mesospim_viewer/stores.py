@@ -348,7 +348,7 @@ class Slabs:
             # Under another name first, as zarr does: a reader never sees half a file.
             partial = target.with_name(target.name + ".partial")
             partial.write_bytes(data)
-            partial.rename(target)
+            partial.replace(target)
         return written
 
     def write_stack(self, *, t: int = 0, c: int = 0) -> list[str]:
