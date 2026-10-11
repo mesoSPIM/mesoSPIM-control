@@ -10,9 +10,11 @@ Claude Haiku 5.5, and the real-Qt tests.
 - **The webcam's picture** (`get_picture` with `window: "webcam"`). The test PC's webcam showed no
   picture in its own window either, and its still capture never became ready, so the call returned
   "the webcam sent no picture within 5 s". To check on a PC with a working webcam.
-- **The real microscope.** The window calls were checked in demo mode only. The real-hardware sweep
-  (`live/test_all_commands_real_hardware.py`) calls them but verifies only that each answers; it has
-  not been run on the microscope.
+- **The real microscope.** The calls were checked in demo mode only. The real-hardware sweep
+  (`live/test_all_commands_real_hardware.py`) checks each call by its effect with small changes
+  and puts each back; run on the demo with its DemoStage refusal taken out, it verified 81 of 84
+  over TCP (the three stage travels not run by default) and 84 of 84 over MCP with them, the ETL
+  file unchanged. It has not been run on the microscope.
 
 ## Not offered
 
