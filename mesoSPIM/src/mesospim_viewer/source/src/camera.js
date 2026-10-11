@@ -12,6 +12,11 @@
  *   newest plane that has arrived, until the operator steps through depth or
  *   time themselves: then it stays where they put it, until Live is pressed.
  *
+ * The volume view (3D) shows every plane at once and turns about the point it
+ * is centred on, so there it is centred on the middle of the stack, and
+ * following goes to the newest time point only. Back in 2D the view is on the
+ * plane it showed before, or on the newest one while it follows a run.
+ *
  * They are independent: zooming into the tile being acquired does not stop the
  * planes from coming, and stepping back through a stack does not stop the view
  * from taking in new tiles.
@@ -32,9 +37,34 @@ export function layoutOf(viewer) {
   return typeof layout === "string" ? layout : layout?.type;
 }
 
-/** Change the layout, by name. */
+// The plane the 2D view showed when the volume view took over.
+let planeBefore3d = null;
+
+/** Change the layout, by name. Leaving the volume view goes back to a plane:
+ * the newest while following a run, or the one shown before. */
 export function setLayout(viewer, name) {
+  const was = layoutOf(viewer);
+  const depth = axisIndex(viewer, "z");
+  if (name === "3d" && was !== "3d" && depth !== -1) planeBefore3d = viewer.navigationState.position.value[depth];
   viewer.layout.restoreState(name);
+  if (name === "3d" || was !== "3d") return;
+  if (following.value && newest !== null) goToNewest(viewer);
+  else if (planeBefore3d !== null && depth !== -1) moveQuietly(viewer, depth, planeBefore3d);
+  planeBefore3d = null;
+}
+
+/** Put one axis of the view somewhere without it counting as the operator stepping away. */
+function moveQuietly(viewer, axis, value) {
+  const { position } = viewer.navigationState;
+  following.moving = true;
+  try {
+    const moved = Float32Array.from(position.value);
+    moved[axis] = value;
+    position.value = moved;
+    if (following.placed) following.placed = placedNow(viewer);
+  } finally {
+    following.moving = false;
+  }
 }
 
 export function globalSpace(viewer) {
@@ -150,6 +180,11 @@ function fitCamera(viewer) {
     boxFit = Math.max(boxFit, (across * render.canonicalVoxelFactors[slot] * volume.logicalHeight) / smaller);
   });
   if (boxFit > 0) viewer.perspectiveNavigationState.zoomFactor.value = boxFit * VOLUME_MARGIN;
+  // The volume turns about the point it is centred on: the middle of the stack.
+  const depth = drawn[2];
+  if (layoutOf(viewer) === "3d" && depth !== undefined && extent(depth) !== null) {
+    moveQuietly(viewer, depth, (lowerBounds[depth] + upperBounds[depth]) / 2);
+  }
   return fit > 0 || boxFit > 0;
 }
 
@@ -205,9 +240,11 @@ export function setNewest(viewer, where) {
 }
 
 function stepTo(viewer, target) {
+  // The volume view shows every plane already: there only the time point is followed.
+  const named = layoutOf(viewer) === "3d" ? { t: target.named.t } : target.named;
   following.moving = true;
   try {
-    if (moveTo(viewer, target.named)) following.placed = placedNow(viewer);
+    if (moveTo(viewer, named)) following.placed = placedNow(viewer);
   } finally {
     following.moving = false;
   }

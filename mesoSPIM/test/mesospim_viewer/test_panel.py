@@ -813,3 +813,51 @@ def test_a_layer_that_arrives_in_the_volume_view_is_drawn_like_the_others(pages,
     assert page.evaluate(VIEW) == {"layout": "3d", "modes": ["min"] * 4, "on": ["3d"]}
     assert [detail for detail, _ in page.evaluate(VOLUME)] == [64] * 4, "as finely as the ones already there"
     assert not errors, errors
+
+
+DEPTH = """() => {
+  const n = window.viewer.navigationState, space = n.position.coordinateSpace.value;
+  const z = space.names.indexOf('z');
+  return { z: n.position.value[z], middle: (space.bounds.lowerBounds[z] + space.bounds.upperBounds[z]) / 2 };
+}"""
+
+
+@slow_without_a_graphics_card
+def test_3d_turns_about_the_middle_of_the_stack_and_2d_comes_back_to_its_plane(pages, viewers, stacks):
+    """The volume view turns about the point it is centred on. Left on the plane
+    the 2D view showed (the last one, after following a run), the stack hangs off
+    to one side of the picture and comes far too close when turned."""
+    view = viewers(ui="simple")
+    view.add(stacks[0], layer="overview")  # 24 planes
+    page, errors = _opened(pages, view, layers=2)
+    _set_slider(page, "#slider-z", 20)
+    assert round(page.evaluate(WHERE)["voxels"]["z"]) == 20
+    _in_3d(page)
+    depth = until(lambda: page.evaluate(DEPTH), lambda seen: abs(seen["z"] - seen["middle"]) < 0.5)
+    assert depth["z"] == pytest.approx(depth["middle"], abs=0.5), "turned about the middle of the stack"
+    page.click('.view button[data-layout="xy"]')
+    assert until(lambda: round(page.evaluate(WHERE)["voxels"]["z"]), lambda z: z == 20) == 20, "back on its plane"
+    assert not errors, errors
+
+
+@slow_without_a_graphics_card
+def test_live_in_3d_follows_the_time_points_and_keeps_the_stack_centred(pages, viewers, stacks):
+    """The volume shows every plane of the stack at once: following a run there
+    goes to the newest time point, not to the newest plane. Back in 2D the view
+    is on the newest plane again."""
+    view = viewers(ui="simple")
+    view.add(stacks[0], layer="run")  # 24 planes of 5 um, three time points
+    page, errors = _opened(pages, view, layers=2)
+    view.look_at_newest(z=50.0, t=1.0)
+    until(lambda: page.evaluate(WHERE)["voxels"], lambda at: round(at["z"]) == 10 and round(at["t"]) == 1)
+    _in_3d(page)
+    until(lambda: page.evaluate(DEPTH), lambda seen: abs(seen["z"] - seen["middle"]) < 0.5)
+    view.look_at_newest(z=75.0, t=2.0)
+    at = until(lambda: page.evaluate(WHERE)["voxels"], lambda at: round(at["t"]) == 2)
+    assert round(at["t"]) == 2, "the newest time point"
+    depth = page.evaluate(DEPTH)
+    assert depth["z"] == pytest.approx(depth["middle"], abs=0.5), "still turned about the middle"
+    assert page.evaluate("() => window.mesospim.following.value") is True, "and still following"
+    page.click('.view button[data-layout="xy"]')
+    assert until(lambda: round(page.evaluate(WHERE)["voxels"]["z"]), lambda z: z == 15) == 15, "on the newest plane"
+    assert not errors, errors
