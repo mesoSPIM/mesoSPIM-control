@@ -90,8 +90,12 @@ def test_a_stack_that_begins_is_listed_shown_and_given_a_preview(library, tmp_pa
     library.begin_stack(a_stack(tmp_path))  # the writer has not made anything on disk yet
     assert library.names == ["run"] and library.shown == ["run"]
     assert offered(view)["run"] == {
-        "name": "run", "shown": True, "live": True, "removable": False, "tiles": 1,
-        "note": "Tile 1 of 2 · 488", "empty": True,
+        "name": "run", "shown": True, "live": True, "paused": False, "removable": False, "tiles": 1,
+        "note": "Tile 1 of 2 · 488", "empty": True, "channels": ["488", "561"],
+        "positions": [
+            {"name": "Tile 1", "state": "now", "um": {"x": [0.0, 64.0], "y": [0.0, 64.0], "z": [0.0, 100.0]}},
+            {"name": "Tile 2", "state": "next"},
+        ],
     }
     (layer,) = view.scene["layers"]
     assert layer["name"] == "run · 488" and layer["_sources"] == ["live-1"]
@@ -514,7 +518,9 @@ def test_the_end_of_the_run_ends_live(library):
     library.end_run()
     assert library.dataset("tiffs").running is None
     assert offered(view)["tiffs"] == {
-        "name": "tiffs", "shown": True, "live": False, "removable": False, "tiles": 1, "note": "", "empty": False,
+        "name": "tiffs", "shown": True, "live": False, "paused": False, "removable": True, "tiles": 1, "note": "",
+        "empty": False, "channels": ["488", "561"],
+        "positions": [{"name": "Tile 1", "um": {"x": [0.0, 64.0], "y": [0.0, 64.0], "z": [0.0, 100.0]}}],
     }
     assert follow(view) == {}, "nothing more is coming: nothing to follow"
     assert previews(view, "tiffs") == ["live-1"]
@@ -662,10 +668,12 @@ def test_each_time_point_of_such_a_time_lapse_is_shown_when_the_microscope_begin
     look(library)
     assert view.layers == ["Sample_Time001"]
     assert list(sources(view, "Sample_Time001")) == ["store-1", "live-2"]
-    assert offered(view)["Sample_Time001"] == {
-        "name": "Sample_Time001", "shown": True, "live": True, "removable": False, "tiles": 1,
+    entry = offered(view)["Sample_Time001"]
+    assert {key: entry[key] for key in ("name", "shown", "live", "paused", "removable", "tiles", "note", "empty")} == {
+        "name": "Sample_Time001", "shown": True, "live": True, "paused": False, "removable": False, "tiles": 1,
         "note": "Tile 1 of 2 · 488", "empty": False,
     }
+    assert [(p["name"], p["state"]) for p in entry["positions"]] == [("Tile 1", "now"), ("Tile 2", "next")]
     held = tiles[1].write(0)
     look(library)
     assert status(view.url + "data/1/" + held[0]) == 404, "held back like any stack being acquired"
@@ -750,7 +758,7 @@ def test_a_run_taken_off_or_left_out_of_a_view_of_another_stays_off_until_its_ne
     assert library.shown == ["older"], "the run left out of the view stays out through its stacks"
     library.show("run")
     assert library.shown == ["run", "older"], "until the operator ticks it on again"
-    library.viewer._server.remove_reported({"name": "run"})  # the panel's remove button
+    library.viewer._server.show_reported({"name": "run", "visible": False})  # its eye: the run being acquired has no remove button
     library.begin_stack(a_stack(tmp_path, tile=1))
     look(library)
     assert library.names == ["run", "older"] and library.shown == ["older"]
@@ -805,3 +813,53 @@ def test_a_run_shown_from_its_previews_counts_its_tiles_too(library):
     library.end_run()
     look(library, LIVE_S + 1)
     assert offered(library.viewer)["tiffs"]["tiles"] == 2
+
+
+# -- the run being acquired: its positions, and the Live switch --------------------------------
+
+
+def test_a_run_being_acquired_offers_its_positions_done_acquiring_and_next(library):
+    library.begin_stack(a_stack(name="run", tile=0))
+    feed(library, range(10))
+    positions = offered(library.viewer)["run"]["positions"]
+    assert [(p["name"], p["state"]) for p in positions] == [("Tile 1", "now"), ("Tile 2", "next")]
+    assert positions[0]["um"] == {"x": [0.0, 64.0], "y": [0.0, 64.0], "z": [0.0, 100.0]}
+    assert "um" not in positions[1], "where the next one is, nobody knows yet"
+    library.end_stack()
+    library.begin_stack(a_stack(name="run", tile=1))
+    feed(library, range(5))
+    positions = offered(library.viewer)["run"]["positions"]
+    assert [(p["name"], p["state"]) for p in positions] == [("Tile 1", "done"), ("Tile 2", "now")]
+    assert positions[1]["um"]["x"] == [64.0, 128.0]
+    assert offered(library.viewer)["run"]["channels"] == ["488", "561"]
+
+
+def test_with_live_off_a_run_that_starts_is_not_collected(library):
+    view = library.viewer
+    assert view._server.scene.ui.get("collecting") is True, "on, at first"
+    library.collect(False)
+    assert view._server.scene.ui.get("collecting") is False
+    library.begin_stack(a_stack(name="run"))
+    feed(library, range(10))
+    library.end_stack()
+    assert library.names == [] and previews(view, "run") == []
+    library.collect(True)
+    library.begin_stack(a_stack(name="next run"))
+    feed(library, range(3))
+    assert library.names == ["next run"] and offered(view)["next run"]["live"] is True
+
+
+def test_live_off_during_a_run_pauses_it_and_live_on_lets_it_go_on(library):
+    view = library.viewer
+    library.begin_stack(a_stack(name="run"))
+    feed(library, range(4))
+    assert offered(view)["run"]["paused"] is False
+    library.collect(False)
+    assert offered(view)["run"]["paused"] is True and offered(view)["run"]["removable"] is False
+    feed(library, range(4, 12))
+    library.collect(True)
+    assert offered(view)["run"]["paused"] is False
+    library.end_stack()
+    library.begin_stack(a_stack(name="run", tile=1))
+    feed(library, range(3))
+    assert [(p["name"], p["state"]) for p in offered(view)["run"]["positions"]] == [("Tile 1", "done"), ("Tile 2", "now")]

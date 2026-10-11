@@ -502,6 +502,19 @@ class Viewer:
         self._server.open_listeners.append(listener)
         self._server.scene.dress(openable=True)
 
+    def on_collect(self, listener: Callable[[bool], None]) -> None:
+        """Hear the operator switch Live on or off: ``listener(on)``. The panel shows the
+        switch only once something listens."""
+        self.start()
+        assert self._server is not None
+        self._server.collect_listeners.append(listener)
+
+    def collecting(self, on: bool) -> None:
+        """Say whether runs the microscope acquires are collected: the Live switch shows it."""
+        self.start()
+        assert self._server is not None
+        self._server.scene.dress(collecting=on)
+
     def on_remove(self, listener: Callable[[str], None]) -> None:
         """Hear the operator ask to take an acquisition off the view, by its layer name.
 

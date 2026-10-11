@@ -269,6 +269,9 @@ class Handler(BaseHTTPRequestHandler):
         elif route == "/api/open":
             self.server.open_reported()
             self._send_json({"ok": True})
+        elif route == "/api/collect":
+            self.server.collect_reported(payload)
+            self._send_json({"ok": True})
         else:
             self._send_empty(HTTPStatus.NOT_FOUND)
 
@@ -439,6 +442,7 @@ class ViewServer(ThreadingHTTPServer):
         self.remove_listeners: list[Callable[[str], None]] = []
         self.show_listeners: list[Callable[[str, bool, bool], None]] = []
         self.open_listeners: list[Callable[[], None]] = []
+        self.collect_listeners: list[Callable[[bool], None]] = []
         # Stacks shown from memory while they are acquired, by the name in their address.
         self.live: dict[str, object] = {}
         self.last_view: dict | None = None
@@ -476,6 +480,13 @@ class ViewServer(ThreadingHTTPServer):
         """The operator pressed Open in the panel: the window asks for a folder."""
         for listener in list(self.open_listeners):
             listener()
+
+    def collect_reported(self, payload: object) -> None:
+        """The operator switched Live on or off: whether runs the microscope acquires are collected."""
+        if not isinstance(payload, dict) or not isinstance(payload.get("on"), bool):
+            return
+        for listener in list(self.collect_listeners):
+            listener(payload["on"])
 
     def remove_reported(self, payload: object) -> None:
         if not isinstance(payload, dict) or not isinstance(payload.get("name"), str):

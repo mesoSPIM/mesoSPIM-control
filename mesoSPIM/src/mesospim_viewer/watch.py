@@ -245,6 +245,9 @@ class Dataset:
     running: Stack | None = None  # the stack the microscope is acquiring into it now
     in_run: bool = False  # the microscope is running it: between its stacks too
     over: bool = False  # the microscope said its run is finished
+    # Read once for the panel while it is not shown: its positions' names and its channels.
+    listed_positions: list[str] | None = None
+    listed_channels: list[str] | None = None
     _resolved: dict[str, Path] = field(default_factory=dict)
 
     def tile_paths(self) -> list[Path]:
@@ -283,10 +286,28 @@ class Library:
         self._offered: list[dict] | None = None
         self._closed = False
         self._resolved: dict[Path, Path] = {}
+        # Acquisitions of the watched folder the operator took off the list: not listed again.
+        self._dismissed: set[Path] = set()
+        # Live: whether runs the microscope acquires are collected, the switch in the panel.
+        self.collecting = True
         # poll() runs on a timer, the rest on the page's or the microscope's request.
         self._lock = threading.RLock()
         viewer.on_show(self.show)
         viewer.on_remove(self.remove)
+        viewer.on_collect(self.collect)
+        viewer.collecting(True)
+
+    def collect(self, on: bool) -> None:
+        """Live, switched on or off. Off, nothing the microscope acquires comes in: a run that
+        starts is not listed, and one being shown is paused where it is, its new planes and
+        files left out. On again, it goes on from what the microscope does next."""
+        with self._lock:
+            self.collecting = bool(on)
+            self.viewer.collecting(self.collecting)
+            if self.collecting:
+                self.poll()
+            else:
+                self._offer()
 
     def close(self) -> None:
         """The window is going: nothing is looked at or shown any more."""
@@ -355,7 +376,7 @@ class Library:
             if path is None:
                 path = self._resolved[found.path] = found.path.resolve()
             here.add(path)
-            if self._at(path) is None:
+            if self._at(path) is None and path not in self._dismissed and self.collecting:
                 self._new(found.name, path, started=found.started)
         for dataset in list(self.datasets):
             # One whose folder was deleted goes from the list.
@@ -445,18 +466,19 @@ class Library:
             return [dataset.name]
 
     def remove(self, name: str) -> bool:
-        """Take an acquisition the operator opened off the list; one of the watched
-        folder is only hidden, since it would be listed again at the next look."""
+        """Take an acquisition off the list; the files stay on disk. One of the watched
+        folder is remembered, so the next look does not list it again. The run being
+        acquired cannot be taken off."""
         with self._lock:
             dataset = self.dataset(name)
-            if dataset is None:
+            if dataset is None or dataset.in_run:
                 return False
             self._take_off(dataset)
-            dataset.hidden = True
-            if dataset.opened and not dataset.in_run:
-                for held in list(dataset.previews):
-                    self._drop(held)
-                self.datasets.remove(dataset)
+            for held in list(dataset.previews):
+                self._drop(held)
+            if dataset.path is not None and not dataset.opened:
+                self._dismissed.add(dataset.path)
+            self.datasets.remove(dataset)
             self._offer()
             return True
 
@@ -516,7 +538,8 @@ class Library:
             now = self.clock()
             self._list_watched()
             for dataset in list(self.datasets):
-                if dataset.shown:
+                # A run paused by Live off is left where it is, on disk too.
+                if dataset.shown and (self.collecting or not dataset.in_run):
                     self._look(dataset, now)
             self._hand_over(now)
             self._offer()
@@ -611,7 +634,7 @@ class Library:
     def begin_stack(self, stack: Stack) -> None:
         """The microscope is about to acquire a stack: show it from memory as it comes."""
         with self._lock:
-            if self._closed:
+            if self._closed or not self.collecting:
                 return
             now = self.clock()
             folder = stack.folder.expanduser().resolve() if stack.folder is not None else None
@@ -673,7 +696,7 @@ class Library:
     def add_plane(self, index: int, frame) -> None:
         """A frame of the stack being acquired: its plane number and its pixels as written."""
         with self._lock:
-            if self._closed:
+            if self._closed or not self.collecting:
                 return
             now = self.clock()
             held = self._acquiring()
@@ -822,9 +845,12 @@ class Library:
                 "name": dataset.name,
                 "shown": dataset.shown,
                 "live": live,
-                "removable": dataset.opened,
+                "paused": live and not self.collecting,
+                "removable": not dataset.in_run,
                 "tiles": self._tile_count(dataset) if dataset.shown else None,
                 "note": self._note(dataset),
+                "positions": self._positions(dataset),
+                "channels": self._channels(dataset),
                 # Shown, but with nothing to draw yet: the page says what it waits for.
                 "empty": dataset.shown and self._holds_nothing(dataset),
             }
@@ -836,6 +862,57 @@ class Library:
         if offered != self._offered:
             self._offered = offered
             self.viewer.offer(offered)
+
+    @staticmethod
+    def _positions(dataset: Dataset) -> list[dict]:
+        """Its positions, by tile, for the panel to list and go to: each with its name and,
+        when known, its place in micrometres (``um``: x, y and z, each low and high). Of
+        the run being acquired, each also says whether it is ``done``, ``now`` being
+        acquired, or ``next``; where a next one lies, nobody knows yet."""
+        found: dict[str, dict] = {}
+        if dataset.shown:
+            for tile in dataset.tiles.values():
+                found.setdefault(position_name(tile.path), {"um": store_place(tile.store)})
+        else:
+            if dataset.listed_positions is None:
+                dataset.listed_positions = sorted({position_name(path) for path in dataset.tile_paths()}, key=_position_order)
+            for name in dataset.listed_positions:
+                found.setdefault(name, {})
+        for held in dataset.previews:
+            stack = held.preview.stack
+            if stack.tile:
+                found.setdefault(stack.tile, {}).setdefault("um", stack_place(stack))
+        if dataset.in_run:
+            running = dataset.running
+            for name, position in found.items():
+                position["state"] = "now" if running is not None and name == running.tile else "done"
+            total = max((held.preview.stack.tiles for held in dataset.previews), default=0)
+            for number in range(1, total + 1):
+                found.setdefault(f"Tile {number}", {"state": "next"})
+        return [{"name": name, **found[name]} for name in sorted(found, key=_position_order)]
+
+    @staticmethod
+    def _channels(dataset: Dataset) -> list[str]:
+        """Its channels, in the order they are saved: as the microscope said, as the tiles
+        shown hold them, or read once from its first tile."""
+        for held in reversed(dataset.previews):
+            return list(held.preview.stack.channels)
+        labels: list[str] = []
+        stores = [tile.store for tile in dataset.tiles.values()] if dataset.shown else []
+        if not stores and dataset.listed_channels is None:
+            dataset.listed_channels = []
+            for path in dataset.tile_paths()[:1]:
+                try:
+                    dataset.listed_channels = [channel.label for channel in read_store(path).channels]
+                except (NotAStore, NotSupported, OSError):
+                    pass
+        if not stores:
+            return list(dataset.listed_channels or [])
+        for store in stores:
+            for channel in store.channels:
+                if channel.label not in labels:
+                    labels.append(channel.label)
+        return labels
 
     @staticmethod
     def _tile_count(dataset: Dataset) -> int:
@@ -905,6 +982,47 @@ class Library:
         # as going on: only when nothing is fed or written any more is it over.
         if held is None and not any(self._is_live(dataset, now) for dataset in self.datasets):
             self.viewer.look_at_newest()
+
+
+_TILE_NUMBER = re.compile(r"Tile(\d+)")
+
+
+def position_name(path: Path) -> str:
+    """A tile's position as the panel names it: "Tile 1" for a store called ``..._Tile0_...``,
+    as the microscope names the tile it acquires; otherwise the store's own name."""
+    found = _TILE_NUMBER.search(path.name)
+    return f"Tile {int(found.group(1)) + 1}" if found else plain_name(path)
+
+
+def _position_order(name: str) -> tuple:
+    found = re.fullmatch(r"Tile (\d+)", name)
+    return (0, int(found.group(1)), "") if found else (1, 0, name)
+
+
+def store_place(store: Store) -> dict[str, list[float]]:
+    """Where a store lies, in micrometres: x, y and z, each from low to high."""
+    place = {}
+    for index, axis in enumerate(store.axes):
+        if axis.name not in ("x", "y", "z"):
+            continue
+        base, factor = axis.si
+        to_um = factor * 1e6 if base == "m" else 1.0
+        low = store.translation[index] * to_um
+        high = (store.translation[index] + store.shape[index] * store.scale[index]) * to_um
+        place[axis.name] = [round(low, 6), round(high, 6)]
+    return place
+
+
+def stack_place(stack: Stack) -> dict[str, list[float]]:
+    """Where a stack being acquired lies, in micrometres, from what the microscope said of it."""
+    z, y, x = stack.origin_um
+    voxel_z, voxel_y, voxel_x = stack.voxel_um
+    rows, columns = stack.frame
+    return {
+        "x": [round(x, 6), round(x + columns * voxel_x, 6)],
+        "y": [round(y, 6), round(y + rows * voxel_y, 6)],
+        "z": [round(z, 6), round(z + stack.planes * voxel_z, 6)],
+    }
 
 
 def _newest_plane(tile: Tile) -> dict[str, float] | None:

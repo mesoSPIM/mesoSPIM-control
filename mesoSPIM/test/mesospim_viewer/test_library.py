@@ -284,15 +284,21 @@ def test_the_offered_list_says_what_the_panel_needs_about_each_acquisition(libra
     tile = Slabs(an_acquisition(tmp_path, "run_b") / TILE.format(0))
     library.watch(tmp_path)
     view = library.viewer
-    assert offered(view) == {
-        "run_b": {"name": "run_b", "shown": True, "live": False, "removable": False, "tiles": 1, "note": "", "empty": True},
-        "run_a": {"name": "run_a", "shown": False, "live": False, "removable": False, "tiles": None, "note": "", "empty": False},
+    keys = ("name", "shown", "live", "paused", "removable", "tiles", "note", "empty")
+    about = lambda name: {key: offered(view)[name][key] for key in keys}  # positions and channels: tested below
+    assert list(offered(view)) == ["run_b", "run_a"]
+    assert about("run_b") == {
+        "name": "run_b", "shown": True, "live": False, "paused": False, "removable": True, "tiles": 1, "note": "", "empty": True,
+    }
+    assert about("run_a") == {
+        "name": "run_a", "shown": False, "live": False, "paused": False, "removable": True, "tiles": None, "note": "",
+        "empty": False,
     }
     tile.write(0)
     library.clock.tick(DOZING_S)
     library.poll()
-    assert offered(view)["run_b"] == {
-        "name": "run_b", "shown": True, "live": True, "removable": False, "tiles": 1, "note": "", "empty": False,
+    assert about("run_b") == {
+        "name": "run_b", "shown": True, "live": True, "paused": False, "removable": True, "tiles": 1, "note": "", "empty": False,
     }
     library.show("run_a")
     assert offered(view)["run_a"]["shown"] is True and offered(view)["run_a"]["tiles"] == 2
@@ -310,20 +316,18 @@ def test_a_run_saved_as_one_store_per_channel_counts_its_tiles_by_place(library,
     assert offered(library.viewer)["run"]["tiles"] == 2
 
 
-def test_only_what_the_operator_opened_can_be_taken_off_the_list(library, tmp_path):
+def test_any_acquisition_but_the_run_being_acquired_can_be_taken_off_the_list(library, tmp_path):
     a_run(tmp_path / "data", "run_a")
     opened = a_run(tmp_path / "elsewhere", "run_b")
     library.watch(tmp_path / "data")
     library.open(opened)
     view = library.viewer
-    assert {name: entry["removable"] for name, entry in offered(view).items()} == {"run_a": False, "run_b": True}
+    assert {name: entry["removable"] for name, entry in offered(view).items()} == {"run_a": True, "run_b": True}
     assert view._server.scene.ui.get("removable") is True, "the panel is told that removals are heard"
     assert library.remove("run_b") is True
     assert library.names == ["run_a"] and view.layers == ["run_a"] and list(offered(view)) == ["run_a"]
-    # One of the watched folder would be listed again at the next look: it is only hidden.
     assert library.remove("run_a") is True
-    assert library.names == ["run_a"] and library.shown == [] and view.layers == []
-    assert offered(view)["run_a"]["shown"] is False
+    assert library.names == [] and view.layers == [] and offered(view) == {}
     assert library.remove("nothing such") is False
 
 
@@ -618,3 +622,42 @@ def test_the_time_point_being_written_is_followed_too(library, tmp_path):
     library.poll()
     assert follow(library.viewer) == {"z": 35.0, "t": 1.0}
     assert events(library.viewer)[-1]["store"] == "data/0"
+
+
+# -- each acquisition's positions, for the panel to list and go to ---------------------------
+
+
+def test_an_acquisition_offers_its_positions_with_their_place_and_its_channels(library, tmp_path):
+    a_run(tmp_path, "run", tiles=2)  # two tiles of 160 x 160 um and 24 planes of 5 um, 144 um apart
+    library.watch(tmp_path)
+    entry = offered(library.viewer)["run"]
+    assert entry["channels"] == ["488", "561"]
+    assert entry["positions"] == [
+        {"name": "Tile 1", "um": {"x": [0.0, 160.0], "y": [0.0, 160.0], "z": [0.0, 120.0]}},
+        {"name": "Tile 2", "um": {"x": [144.0, 304.0], "y": [0.0, 160.0], "z": [0.0, 120.0]}},
+    ]
+
+
+def test_an_acquisition_not_shown_offers_its_positions_by_name(library, tmp_path):
+    a_run(tmp_path, "run_a", tiles=2)
+    a_run(tmp_path, "run_b")
+    library.watch(tmp_path)
+    entry = offered(library.viewer)["run_a"]
+    assert entry["shown"] is False
+    assert [position["name"] for position in entry["positions"]] == ["Tile 1", "Tile 2"]
+    assert entry["channels"] == ["488", "561"], "read from its first tile, without showing it"
+
+
+def test_a_run_of_the_watched_folder_taken_off_the_list_stays_off(library, tmp_path):
+    a_run(tmp_path, "run_a")
+    a_run(tmp_path, "run_b")
+    library.watch(tmp_path)
+    assert offered(library.viewer)["run_a"]["removable"] is True
+    assert library.remove("run_a") is True
+    library.clock.tick(5)
+    library.poll()
+    assert library.names == ["run_b"], "the next look at the folder does not bring it back"
+    a_run(tmp_path, "run_c")
+    library.clock.tick(5)
+    library.poll()
+    assert library.names == ["run_c", "run_b"], "a new one still comes in"
