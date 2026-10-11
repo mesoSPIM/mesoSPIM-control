@@ -188,6 +188,62 @@ function fitCamera(viewer) {
   return fit > 0 || boxFit > 0;
 }
 
+/**
+ * Go to a box given in micrometres -- `{ x: [low, high], y: [...], z: [...] }`,
+ * a position of an acquisition or all of them -- and fit it in the view, as Fit
+ * does for everything. The view is then the operator's: Fit is offered, and
+ * tiles that land do not take it away again.
+ */
+export function frameBounds(viewer, um) {
+  const { position, pose, zoomFactor } = viewer.navigationState;
+  const space = globalSpace(viewer);
+  const render = pose.displayDimensionRenderInfo.value;
+  if (!space?.rank || !render || !um) return false;
+  const toVoxels = (index, value) => (value * (space.units[index] === "m" ? 1e-6 : 1)) / space.scales[index];
+  const drawn = Array.from(render.displayDimensionIndices).filter((axis) => axis >= 0).slice(0, 3);
+  const spans = drawn.map((axis) => {
+    const range = um[space.names[axis]];
+    return Array.isArray(range) ? [toVoxels(axis, range[0]), toVoxels(axis, range[1])] : null;
+  });
+  if (spans.slice(0, 2).some((span) => span === null)) return false;
+  const middle = Float32Array.from(position.value);
+  const flatOnly = layoutOf(viewer) !== "3d";
+  spans.forEach((span, slot) => {
+    // In 2D the plane stays where it is: going to a tile is going across, not in depth.
+    if (span && !(flatOnly && slot === 2)) middle[drawn[slot]] = (span[0] + span[1]) / 2;
+  });
+  let flat = null;
+  let volume = null;
+  for (const panel of viewer.display.panels) {
+    if ("sliceView" in panel) flat = panel.renderViewport;
+    else if ("sliceViews" in panel) volume = panel.renderViewport;
+  }
+  framing.fitting = true;
+  following.moving = true;
+  try {
+    position.value = middle;
+    let fit = 0;
+    spans.slice(0, 2).forEach((span, slot) => {
+      const pixels = slot === 0 ? flat?.logicalWidth : (flat?.logicalHeight ?? 0) - (KEEP_CLEAR.top + KEEP_CLEAR.bottom);
+      if (span && pixels > 0) fit = Math.max(fit, (Math.abs(span[1] - span[0]) * render.canonicalVoxelFactors[slot]) / pixels);
+    });
+    if (fit > 0) zoomFactor.value = fit * FIT_MARGIN;
+    const smaller = Math.min(volume?.logicalWidth ?? 0, volume?.logicalHeight ?? 0);
+    let boxFit = 0;
+    spans.forEach((span, slot) => {
+      if (span && smaller) boxFit = Math.max(boxFit, (Math.abs(span[1] - span[0]) * render.canonicalVoxelFactors[slot] * volume.logicalHeight) / smaller);
+    });
+    if (boxFit > 0) viewer.perspectiveNavigationState.zoomFactor.value = boxFit * VOLUME_MARGIN;
+    if (following.placed) following.placed = placedNow(viewer);
+  } finally {
+    framing.fitting = false;
+    following.moving = false;
+  }
+  framing.fitted = null;
+  framing.set(false);
+  return true;
+}
+
 // -- how finely the volume is drawn -------------------------------------------------------
 
 // The engine's perspective: a vertical field of view of 45 degrees.

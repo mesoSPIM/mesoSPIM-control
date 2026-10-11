@@ -25,7 +25,7 @@ import { ShaderControls } from "neuroglancer/unstable/widget/shader_controls.js"
 import { WatchableVisibilityPriority } from "neuroglancer/unstable/visibility_priority/frontend.js";
 import { SidePanel } from "neuroglancer/unstable/ui/side_panel.js";
 import { TrackableSidePanelLocation } from "neuroglancer/unstable/ui/side_panel_location.js";
-import { layoutOf, setLayout, volumeDrawing } from "./camera.js";
+import { frameBounds, framing, layoutOf, setLayout, volumeDrawing } from "./camera.js";
 import { about } from "./layers.js";
 import { onAutoChanged } from "./contrast.js";
 import "./panel.css";
@@ -37,6 +37,8 @@ const ICONS = {
   eyeOff: '<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.3A11 11 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.2 3.7"/><path d="M6.6 6.6A16 16 0 0 0 2 12s3.5 6 10 6a10 10 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
   panel: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>',
   close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+  pin: '<svg viewBox="0 0 12 12"><path d="M6 11.2S2 7.4 2 4.8a4 4 0 0 1 8 0c0 2.6-4 6.4-4 6.4z"/><circle cx="6" cy="4.8" r="1.3"/></svg>',
   open: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
   help: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg>',
   fit: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
@@ -75,61 +77,216 @@ function imageLayers(viewer) {
     .filter((layer) => layer && layer.type === "image");
 }
 
-// -- the acquisitions: Python's list, drawn ---------------------------------------
+// -- which acquisition the operator is looking at -----------------------------------------
 
-function acquisitionsCard(post) {
-  const card = element("section", "card acquisitions");
+// The selected acquisition: its channels are the ones shown, and its positions
+// are folded out (one acquisition's at a time, `open`), unless folded away.
+export const selection = { name: null, open: null, listeners: [] };
+
+function select(name, open = name) {
+  if (selection.name === name && selection.open === open) return;
+  selection.name = name;
+  selection.open = open;
+  for (const listener of selection.listeners) listener();
+}
+
+function cardHead(step, text) {
   const head = element("div", "row card-head");
-  head.appendChild(element("h2", null, "Acquisitions"));
-  const open = iconButton("open", "Open a dataset from disk");
-  open.classList.add("open");
-  open.hidden = true;
+  const title = element("h2", null, "");
+  title.appendChild(element("span", "step", String(step)));
+  title.appendChild(document.createTextNode(text));
+  head.appendChild(title);
+  return head;
+}
+
+// -- 1: load data: from a folder, or live from the microscope -------------------------------
+
+function loadCard(post) {
+  const card = element("section", "card load");
+  card.appendChild(cardHead(1, "Load data"));
+  const row = element("div", "load-row");
+  const open = element("button", "open");
+  open.type = "button";
+  open.title = "Open a dataset from disk: an acquisition's folder, or a folder of acquisitions";
+  open.innerHTML = ICONS.open;
+  open.appendChild(element("span", null, "Open from folder…"));
   open.addEventListener("click", () => post("/api/open"));
-  head.appendChild(open);
+  const live = element("button", "live-toggle");
+  live.type = "button";
+  live.setAttribute("role", "switch");
+  live.title = "Live: collect what the microscope acquires. A run that starts comes in at the top of the list.";
+  live.append(element("span", "live-dot"), element("span", "live-word", "Live"));
+  let collecting = true;
+  live.addEventListener("click", () => post("/api/collect", { on: !collecting }));
+  row.append(open, live);
+  card.appendChild(row);
+  card.setUi = (ui) => {
+    open.hidden = ui.openable !== true;
+    live.hidden = typeof ui.collecting !== "boolean";
+    collecting = ui.collecting !== false;
+    live.classList.toggle("on", collecting);
+    live.setAttribute("aria-checked", String(collecting));
+    card.hidden = open.hidden && live.hidden;
+  };
+  card.setUi({});
+  return card;
+}
+
+// -- 2: the acquisitions: Python's list, drawn as boxes with their positions --------------------
+
+/** What the line under an acquisition's name says. */
+function lineOf(entry) {
+  if (entry.live) return entry.paused ? `Paused${SEPARATOR}${entry.note ?? ""}` : (entry.note ?? "");
+  const positions = Array.isArray(entry.positions) ? entry.positions.length : null;
+  const parts = [];
+  if (positions) parts.push(positions === 1 ? "1 position" : `${positions} positions`);
+  else if (typeof entry.tiles === "number" && entry.tiles > 0) parts.push(entry.tiles === 1 ? "1 tile" : `${entry.tiles} tiles`);
+  if (Array.isArray(entry.channels) && entry.channels.length) parts.push(entry.channels.join(", "));
+  return parts.join(SEPARATOR);
+}
+
+/** Every position's place together, in micrometres, or null while none is known. */
+function boundsOf(places) {
+  const box = {};
+  for (const um of places) {
+    if (!um) continue;
+    for (const [axis, [low, high]] of Object.entries(um)) {
+      const was = box[axis];
+      box[axis] = was ? [Math.min(was[0], low), Math.max(was[1], high)] : [low, high];
+    }
+  }
+  return box.x && box.y ? box : null;
+}
+
+function acquisitionsCard(viewer, post) {
+  const card = element("section", "card acquisitions");
+  const head = cardHead(2, "Acquisitions");
+  const count = element("span", "count", "");
+  head.appendChild(count);
   card.appendChild(head);
   const list = element("div", "list");
   card.appendChild(list);
   const empty = element("p", "hint", "");
   card.appendChild(empty);
-  let drawn = "";
-  card.setAcquisitions = (acquisitions) => {
-    const key = JSON.stringify(acquisitions);
-    if (key === drawn) return;
-    drawn = key;
-    list.replaceChildren();
-    empty.hidden = acquisitions.length > 0;
-    for (const entry of acquisitions) {
-      const row = element("div", "acquisition");
-      row.dataset.name = entry.name;
-      row.classList.toggle("shown", entry.shown === true);
-      row.classList.toggle("live", entry.live === true);
-      const eye = iconButton(entry.shown ? "eye" : "eyeOff", entry.shown ? "Hide this acquisition" : "Show this acquisition as well");
-      eye.classList.add("eye");
-      eye.classList.toggle("off", !entry.shown);
-      eye.addEventListener("click", () => post("/api/show", { name: entry.name, visible: !entry.shown }));
-      const text = element("button", "text");
-      text.type = "button";
-      text.title = "Show only this acquisition";
-      text.addEventListener("click", () => post("/api/show", { name: entry.name, visible: true, only: true }));
-      const name = element("span", "name", entry.name);
-      text.appendChild(name);
-      const details = [];
-      if (entry.note) details.push(entry.note);
-      else if (typeof entry.tiles === "number" && entry.tiles > 0) details.push(entry.tiles === 1 ? "1 tile" : `${entry.tiles} tiles`);
-      if (details.length) text.appendChild(element("span", "note", details.join(SEPARATOR)));
-      row.append(eye, text);
-      if (entry.live) row.appendChild(element("span", "badge", "Live"));
-      if (entry.removable) {
-        const remove = iconButton("close", "Take this dataset off the list");
-        remove.classList.add("remove");
-        remove.addEventListener("click", () => post("/api/remove", { name: entry.name }));
-        row.appendChild(remove);
-      }
-      list.appendChild(row);
+  let entries = [];
+  let wasLive = new Set();
+  let wanted = null; // where to go once Python says where it is: { name, position }
+  let framedAt = null; // the position the view went to, marked until Fit frames everything again
+  const go = () => {
+    if (wanted === null) return;
+    const entry = entries.find((one) => one.name === wanted.name);
+    if (!entry) {
+      wanted = null;
+      return;
+    }
+    const positions = entry.positions ?? [];
+    const target = wanted.position === null ? boundsOf(positions.map((one) => one.um))
+      : positions.find((one) => one.name === wanted.position)?.um ?? null;
+    if (target && frameBounds(viewer, target)) {
+      framedAt = wanted.position === null ? null : { name: wanted.name, position: wanted.position };
+      wanted = null;
+      draw();
     }
   };
+  framing.listeners.push((framingAll) => {
+    if (framingAll && framedAt !== null) {
+      framedAt = null;
+      draw();
+    }
+  });
+  const pick = (entry, position = null) => {
+    select(entry.name);
+    if (!entry.shown) post("/api/show", { name: entry.name, visible: true });
+    wanted = { name: entry.name, position };
+    go();
+  };
+  const draw = () => {
+    count.textContent = entries.length ? String(entries.length) : "";
+    list.replaceChildren();
+    empty.hidden = entries.length > 0;
+    for (const entry of entries) {
+      const box = element("div", "acquisition");
+      box.dataset.name = entry.name;
+      box.classList.toggle("shown", entry.shown === true);
+      box.classList.toggle("live", entry.live === true);
+      box.classList.toggle("selected", selection.name === entry.name);
+      const open = selection.open === entry.name;
+      box.classList.toggle("open", open);
+      const bar = element("div", "bar");
+      const eye = iconButton(entry.shown ? "eye" : "eyeOff", entry.shown ? "Hide this acquisition" : "Show this acquisition");
+      eye.classList.add("eye");
+      eye.classList.toggle("off", !entry.shown);
+      eye.addEventListener("click", (event) => {
+        event.stopPropagation();
+        post("/api/show", { name: entry.name, visible: !entry.shown });
+      });
+      const text = element("div", "text");
+      text.append(element("span", "name", entry.name), element("span", "sub", lineOf(entry)));
+      const badge = entry.paused ? element("span", "badge paused", "Paused")
+        : entry.live ? element("span", "badge live", "Live") : element("span", "badge saved", "Saved");
+      bar.append(eye, text, badge);
+      if (entry.removable) {
+        const remove = iconButton("close", "Take off the list (the files stay on disk)");
+        remove.classList.add("remove");
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation();
+          post("/api/remove", { name: entry.name });
+        });
+        bar.appendChild(remove);
+      }
+      const positions = Array.isArray(entry.positions) ? entry.positions : [];
+      const fold = iconButton("arrow", open ? "Fold its positions away" : `Show its ${positions.length} positions`);
+      fold.classList.add("fold");
+      fold.classList.toggle("unfolded", open);
+      fold.addEventListener("click", (event) => {
+        event.stopPropagation();
+        select(entry.name, open ? null : entry.name);
+      });
+      bar.appendChild(fold);
+      bar.addEventListener("click", () => pick(entry));
+      box.appendChild(bar);
+      if (open && positions.length) {
+        const rows = element("div", "positions");
+        for (const position of positions) {
+          const row = element("button", "position");
+          row.type = "button";
+          row.dataset.name = position.name;
+          if (position.state) row.dataset.state = position.state;
+          row.classList.toggle("framed", framedAt?.name === entry.name && framedAt?.position === position.name);
+          const pin = element("span", "pin");
+          pin.innerHTML = ICONS.pin;
+          row.append(pin, element("span", "label", position.name));
+          if (position.state) {
+            const words = { done: "acquired", now: "acquiring", next: "next" };
+            row.appendChild(element("span", "state", words[position.state] ?? position.state));
+          }
+          row.addEventListener("click", (event) => {
+            event.stopPropagation();
+            pick(entry, position.name);
+          });
+          rows.appendChild(row);
+        }
+        box.appendChild(rows);
+      }
+      list.appendChild(box);
+    }
+  };
+  card.setAcquisitions = (next) => {
+    entries = next;
+    const names = entries.map((entry) => entry.name);
+    // A run that starts is the one to look at: it is selected, and opened.
+    const started = entries.find((entry) => entry.live && !entry.paused && !wasLive.has(entry.name));
+    wasLive = new Set(entries.filter((entry) => entry.live).map((entry) => entry.name));
+    if (started) select(started.name);
+    else if (!names.includes(selection.name)) {
+      const first = entries.find((entry) => entry.live) ?? entries.find((entry) => entry.shown) ?? entries[0];
+      select(first ? first.name : null);
+    }
+    draw();
+    go();
+  };
+  selection.listeners.push(draw);
   card.setUi = (ui) => {
-    open.hidden = ui.openable !== true;
     empty.textContent = ui.openable === true
       ? "Nothing here yet. Start an acquisition, or open a dataset from disk."
       : "Nothing here yet.";
@@ -467,9 +624,13 @@ function channelRow(viewer, managed, contrast) {
 
 function channelsCard(viewer, contrast) {
   const card = element("section", "card channels");
-  card.appendChild(element("h2", null, "Channels"));
+  card.appendChild(cardHead(3, "Channels"));
+  const of = element("div", "of", "");
+  card.appendChild(of);
   const body = element("div", "groups");
   card.appendChild(body);
+  // Of the acquisitions Python lists, the channels of the one selected; with no list, all.
+  let listed = false;
   // The rows are kept across updates, one per layer: a layer that stays keeps
   // its row, and with it the engine's controls and whatever is being dragged.
   const rows = new Map();
@@ -494,8 +655,11 @@ function channelsCard(viewer, contrast) {
       section.remove();
       sections.delete(group);
     }
-    card.hidden = groups.size === 0;
-    card.classList.toggle("several", groups.size > 1);
+    const only = listed ? selection.name : null;
+    of.textContent = only ?? "";
+    of.hidden = only === null;
+    card.hidden = groups.size === 0 && only === null;
+    card.classList.toggle("several", only === null && groups.size > 1);
     for (const [group, layers] of groups) {
       let section = sections.get(group);
       if (!section) {
@@ -504,6 +668,7 @@ function channelsCard(viewer, contrast) {
         section.appendChild(element("div", "group-name", group));
         sections.set(group, section);
       }
+      section.hidden = only !== null && group !== only;
       body.appendChild(section); // in Python's order
       for (const managed of layers) {
         let made = rows.get(managed.layer);
@@ -521,6 +686,13 @@ function channelsCard(viewer, contrast) {
     pending = setTimeout(rebuild, 0);
   };
   viewer.layerManager.layersChanged.add(later);
+  selection.listeners.push(later);
+  card.setListed = (next) => {
+    if (listed !== next) {
+      listed = next;
+      later();
+    }
+  };
   onAutoChanged(() => {
     for (const made of rows.values()) made.reflect();
   });
@@ -866,7 +1038,7 @@ class ControlPanel extends SidePanel {
     fold.classList.add("fold");
     fold.addEventListener("click", () => this.close());
     head.append(element("span", "title", "Data viewer"), fold);
-    body.append(head, parts.acquisitions, parts.channels, parts.volume);
+    body.append(head, parts.load, parts.acquisitions, parts.channels, parts.volume);
     this.addBody(body);
   }
 }
@@ -879,7 +1051,8 @@ export function mountPanel(viewer, { fit, live, framing, following, acquiring, p
   // The cards are made once and live as long as the page; the engine's panel
   // that holds them is made anew each time it is unfolded.
   const parts = {
-    acquisitions: acquisitionsCard(post),
+    load: loadCard(post),
+    acquisitions: acquisitionsCard(viewer, post),
     channels: channelsCard(viewer, contrast),
     volume: volumeCard(viewer, fit),
   };
@@ -949,9 +1122,11 @@ export function mountPanel(viewer, { fit, live, framing, following, acquiring, p
     location,
     setAcquisitions(acquisitions) {
       parts.acquisitions.setAcquisitions(acquisitions);
+      parts.channels.setListed(acquisitions.length > 0);
       empty.setAcquisitions(acquisitions);
     },
     setUi(ui) {
+      parts.load.setUi(ui);
       parts.acquisitions.setUi(ui);
       empty.setUi(ui);
     },

@@ -64,12 +64,20 @@ What is on screen
   channel, bottom right.
 * **Panel** on the right, foldable:
 
-  * *Acquisitions*: those of the watched folder, newest first, and the
-    datasets you opened. The eye shows or hides one, so several can be shown
-    together. A click on a name shows that one alone. The one that is being
-    acquired is marked **Live**.
-  * *Channels*: one row per channel with an eye, a colour swatch, **Auto**, and
-    the contrast with its histogram.
+  * *1 Load data*: **Open from folder…** adds a saved acquisition, and the
+    square **Live** switch decides whether what the microscope acquires comes
+    in. With Live on, a run that starts appears at the top of the list, marked
+    **Live**, and turns **Saved** when it ends. With Live off, nothing new comes
+    in, and a run being shown is marked **Paused** until Live is on again.
+  * *2 Acquisitions*: those of the watched folder, newest first, and the
+    datasets you opened, each a bar with an eye, its name, one line about it
+    and Live, Saved or Paused. The eye shows or hides it, so several can be
+    shown together. A click on the bar selects it, folds out its positions (one
+    acquisition's at a time; the arrow folds them away) and takes the view to
+    all of it; a click on a position takes the view to that tile. The × takes a
+    saved acquisition off the list; its files stay on disk.
+  * *3 Channels*: the selected acquisition's channels, one row each, with an
+    eye, a colour swatch, **Auto**, and the contrast with its histogram.
   * *3D view*, in 3D only: the projection (max, blend, min), the detail, the
     gain, where to look from, and whether to draw the plane the Z slider moves.
     **Detail** sets how sharply the volume is drawn for what is on screen, from

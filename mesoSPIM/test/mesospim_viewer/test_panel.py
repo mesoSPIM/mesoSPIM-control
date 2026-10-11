@@ -14,7 +14,7 @@ import time
 
 import pytest
 
-from mesoSPIM.src.mesospim_viewer import Library
+from mesoSPIM.src.mesospim_viewer import Library, Stack
 from mesoSPIM.src.mesospim_viewer.demo import write_tile
 
 from .conftest import WHERE
@@ -96,12 +96,19 @@ SLIDERS = """() => Object.fromEntries([...document.querySelectorAll('.axis-slide
 # The panel's list of acquisitions, as the operator reads it.
 ROWS = """() => [...document.querySelectorAll('.card.acquisitions .acquisition')].map(row => ({
   name: row.dataset.name,
-  text: row.querySelector('.text .name').textContent,
-  note: row.querySelector('.text .note')?.textContent ?? null,
+  text: row.querySelector('.name').textContent,
+  note: row.querySelector('.sub')?.textContent || null,
   shown: row.classList.contains('shown'), eyeOff: row.querySelector('.eye').classList.contains('off'),
   live: row.classList.contains('live'), badge: row.querySelector('.badge')?.textContent ?? null,
   remove: row.querySelector('.remove') !== null,
 }))"""
+
+# The positions folded out under an acquisition, as the operator reads them.
+POSITIONS = """() => [...document.querySelectorAll('.card.acquisitions .acquisition')].map(row =>
+  [row.dataset.name, [...row.querySelectorAll('.position')].map(p => [p.querySelector('.label').textContent, p.dataset.state || null])])"""
+
+# The channel rows on show, by layer.
+CHANNEL_ROWS = "() => [...document.querySelectorAll('.card.channels .channel')].filter(r => r.offsetParent !== null).map(r => r.dataset.layer)"
 
 EMPTY = """() => { const box = document.querySelector('#empty');
   return box.hidden ? null : { title: box.querySelector('.title').textContent,
@@ -256,28 +263,35 @@ def test_the_list_of_acquisitions_shows_what_python_offers(pages, viewers, stack
     assert page.evaluate(ROWS) == []
     hint = "() => { const p = document.querySelector('.card.acquisitions .hint'); return p.hidden ? null : p.textContent; }"
     assert page.evaluate(hint) == "Nothing here yet."
+    view.on_remove(lambda name: None)  # removals are heard: the panel offers the remove button
+    two = [{"name": "Tile 1"}, {"name": "Tile 2"}]
     view.offer(
         [
-            {"name": "run_c", "shown": True, "live": True, "removable": False, "tiles": 4, "note": "Tile 3 of 4 · 561"},
-            {"name": "run_b", "shown": True, "live": False, "removable": False, "tiles": 1, "note": ""},
-            {"name": "run_a", "shown": False, "live": False, "removable": True, "tiles": None, "note": ""},
-            {"name": "old", "shown": True, "live": False, "removable": True, "tiles": 12, "note": ""},
+            {"name": "run_c", "shown": True, "live": True, "removable": False, "tiles": 4, "note": "Tile 3 of 4 · 561",
+             "positions": two, "channels": ["488", "561"]},
+            {"name": "run_b", "shown": True, "live": False, "removable": True, "tiles": 1, "note": "",
+             "positions": [{"name": "Tile 1"}], "channels": ["488"]},
+            {"name": "run_a", "shown": False, "live": False, "removable": True, "tiles": None, "note": "",
+             "positions": two, "channels": ["488", "561"]},
+            {"name": "paused", "shown": True, "live": True, "paused": True, "removable": False, "tiles": 2,
+             "note": "Tile 2 of 4 · 488", "positions": two, "channels": ["488"]},
         ]
     )
     rows = until(lambda: page.evaluate(ROWS), lambda seen: len(seen) == 4)
     assert rows == [
         {"name": "run_c", "text": "run_c", "note": "Tile 3 of 4 · 561", "shown": True, "eyeOff": False,
          "live": True, "badge": "Live", "remove": False},
-        {"name": "run_b", "text": "run_b", "note": "1 tile", "shown": True, "eyeOff": False,
-         "live": False, "badge": None, "remove": False},
-        {"name": "run_a", "text": "run_a", "note": None, "shown": False, "eyeOff": True,
-         "live": False, "badge": None, "remove": True},
-        {"name": "old", "text": "old", "note": "12 tiles", "shown": True, "eyeOff": False,
-         "live": False, "badge": None, "remove": True},
+        {"name": "run_b", "text": "run_b", "note": "1 position · 488", "shown": True, "eyeOff": False,
+         "live": False, "badge": "Saved", "remove": True},
+        {"name": "run_a", "text": "run_a", "note": "2 positions · 488, 561", "shown": False, "eyeOff": True,
+         "live": False, "badge": "Saved", "remove": True},
+        {"name": "paused", "text": "paused", "note": "Paused · Tile 2 of 4 · 488", "shown": True, "eyeOff": False,
+         "live": True, "badge": "Paused", "remove": False},
     ]
     assert page.evaluate(hint) is None
-    # The list is the first card of the panel, above the channels.
-    assert page.evaluate("() => [...document.querySelectorAll('.panel-body > .card')].map(c => c.className)")[:2] == [
+    # Three blocks, in the order the operator uses them: load data, the acquisitions, the channels of one.
+    assert page.evaluate("() => [...document.querySelectorAll('.panel-body > .card')].map(c => c.className)")[:3] == [
+        "card load",
         "card acquisitions",
         "card channels",
     ]
@@ -302,10 +316,10 @@ def test_clicks_in_the_list_tell_python_what_to_show_and_what_to_remove(pages, v
     page.wait_for_selector('.acquisition[data-name="run_a"]')
     page.click('.acquisition[data-name="run_a"] .eye')  # hidden: show it as well
     page.click('.acquisition[data-name="run_b"] .eye')  # shown: hide it
-    page.click('.acquisition[data-name="run_a"] .text')  # its name: show it alone
+    page.click('.acquisition[data-name="run_a"] .name')  # its name: select it, shown so that it can be looked at
     page.click('.acquisition[data-name="run_a"] .remove')
     until(lambda: (len(shown), len(removed)), lambda seen: seen == (3, 1))
-    assert shown == [("run_a", True, False), ("run_b", False, False), ("run_a", True, True)]
+    assert shown == [("run_a", True, False), ("run_b", False, False), ("run_a", True, False)]
     assert removed == ["run_a"]
     assert page.query_selector('.acquisition[data-name="run_b"] .remove') is None, "not one of those it may remove"
     assert not errors, errors
@@ -324,10 +338,10 @@ def test_the_list_drives_a_library_and_shows_what_it_did(pages, viewers, tmp_pat
     made = pages.layer_objects(page)["now"]
     listed = lambda: [(row["name"], row["shown"], row["remove"]) for row in page.evaluate(ROWS)]
     layers = lambda: page.evaluate("() => window.viewer.layerManager.managedLayers.map(m => m.name)")
-    assert listed() == [("run_b", True, False), ("run_a", False, False), ("single", True, True)]
+    assert listed() == [("run_b", True, True), ("run_a", False, True), ("single", True, True)]
 
     page.click('.acquisition[data-name="run_a"] .eye')
-    assert until(listed, lambda seen: seen[1][1]) == [("run_b", True, False), ("run_a", True, False), ("single", True, True)]
+    assert until(listed, lambda seen: seen[1][1]) == [("run_b", True, True), ("run_a", True, True), ("single", True, True)]
     assert sorted(until(layers, lambda seen: len(seen) == 6)) == [
         "run_a · 488", "run_a · 561", "run_b · 488", "run_b · 561", "single · 488", "single · 561",
     ]
@@ -337,13 +351,13 @@ def test_the_list_drives_a_library_and_shows_what_it_did(pages, viewers, tmp_pat
 
     page.click('.acquisition[data-name="run_b"] .eye')
     assert sorted(until(layers, lambda seen: len(seen) == 4)) == ["run_a · 488", "run_a · 561", "single · 488", "single · 561"]
-    page.click('.acquisition[data-name="single"] .text')
+    page.click('.acquisition[data-name="run_a"] .eye')
     assert until(layers, lambda seen: len(seen) == 2) == ["single · 488", "single · 561"]
-    assert until(listed, lambda seen: not seen[1][1]) == [("run_b", False, False), ("run_a", False, False), ("single", True, True)]
+    assert until(listed, lambda seen: not seen[1][1]) == [("run_b", False, True), ("run_a", False, True), ("single", True, True)]
     assert library.shown == ["single"]
 
     page.click('.acquisition[data-name="single"] .remove')
-    assert until(listed, lambda seen: len(seen) == 2) == [("run_b", False, False), ("run_a", False, False)]
+    assert until(listed, lambda seen: len(seen) == 2) == [("run_b", False, True), ("run_a", False, True)]
     assert until(layers, lambda seen: seen == []) == [] and library.names == ["run_b", "run_a"]
     assert page.evaluate(EMPTY)["title"] == "Nothing is shown"
     assert not errors, errors
@@ -353,15 +367,107 @@ def test_the_open_button_is_offered_once_python_listens_for_it(pages, viewers, s
     view = viewers(ui="simple")
     view.add(stacks[0], layer="run")
     page, errors = _opened(pages, view, layers=2)
-    assert page.evaluate(VISIBLE, ".card.acquisitions .open") is False
+    assert page.evaluate(VISIBLE, ".card.load .open") is False
     opened = []
     view.on_open(lambda: opened.append(True))
-    assert until(lambda: page.evaluate(VISIBLE, ".card.acquisitions .open")) is True
+    assert until(lambda: page.evaluate(VISIBLE, ".card.load .open")) is True
     assert page.evaluate("() => document.querySelector('.card.acquisitions .hint').textContent") == (
         "Nothing here yet. Start an acquisition, or open a dataset from disk."
     )
-    page.click(".card.acquisitions .open")
+    page.click(".card.load .open")
     assert until(lambda: opened) == [True]
+    assert not errors, errors
+
+
+def test_the_live_switch_shows_what_python_says_and_tells_it_what_the_operator_wants(pages, viewers, stacks):
+    view = viewers(ui="simple")
+    view.add(stacks[0], layer="run")
+    page, errors = _opened(pages, view, layers=2)
+    assert page.evaluate(VISIBLE, ".card.load .live-toggle") is False, "nothing listens yet"
+    asked = []
+    view.on_collect(asked.append)
+    view.collecting(True)
+    assert until(lambda: page.evaluate(VISIBLE, ".card.load .live-toggle")) is True
+    switched_on = "() => document.querySelector('.card.load .live-toggle').classList.contains('on')"
+    assert page.evaluate(switched_on) is True
+    page.click(".card.load .live-toggle")
+    assert until(lambda: asked) == [False]
+    view.collecting(False)
+    assert until(lambda: page.evaluate(switched_on), lambda on: on is False) is False
+    assert not errors, errors
+
+
+def _two_runs(tmp_path, tiles=1):
+    for seed, name in enumerate(["run_a", "run_b"]):
+        time.sleep(0.05)
+        acquisition = an_acquisition(tmp_path / "data", name)
+        for tile in range(tiles):
+            write_tile(acquisition / f"Mag1_Tile{tile}_Sh0_Rot0.ome.zarr", origin_um=(0, 0, tile * 144), seed=seed * 10 + tile)
+
+
+def test_selecting_an_acquisition_shows_only_its_channels(pages, viewers, tmp_path):
+    _two_runs(tmp_path)
+    view = viewers(ui="simple")
+    library = Library(view)
+    library.watch(tmp_path / "data")
+    library.show("run_a")
+    page, errors = _opened(pages, view, layers=4)
+    assert until(lambda: page.evaluate(CHANNEL_ROWS), lambda seen: len(seen) == 2) == ["run_b · 488", "run_b · 561"], (
+        "the newest, selected at first"
+    )
+    page.click('.acquisition[data-name="run_a"] .name')
+    assert until(lambda: page.evaluate(CHANNEL_ROWS), lambda seen: seen and seen[0].startswith("run_a")) == [
+        "run_a · 488", "run_a · 561",
+    ]
+    selected = "() => [...document.querySelectorAll('.acquisition.selected')].map(r => r.dataset.name)"
+    assert page.evaluate(selected) == ["run_a"]
+    assert page.evaluate("() => document.querySelector('.card.channels .of').textContent") == "run_a"
+    assert not errors, errors
+
+
+def test_positions_fold_out_one_acquisition_at_a_time_and_take_the_view_there(pages, viewers, tmp_path):
+    _two_runs(tmp_path, tiles=2)  # tiles 160 um across, 144 um apart: x from 0 to 160, and 144 to 304
+    view = viewers(ui="simple")
+    library = Library(view)
+    library.watch(tmp_path / "data")
+    library.show("run_a")
+    page, errors = _opened(pages, view, layers=4)
+    folded = until(lambda: page.evaluate(POSITIONS), lambda seen: any(names for _, names in seen))
+    assert folded == [["run_b", [["Tile 1", None], ["Tile 2", None]]], ["run_a", []]], "the selected one is open"
+    page.click('.acquisition[data-name="run_a"] .name')
+    assert until(lambda: page.evaluate(POSITIONS), lambda seen: seen[1][1]) == [
+        ["run_b", []], ["run_a", [["Tile 1", None], ["Tile 2", None]]],
+    ], "opening one folds the other away"
+    centre = lambda: round(page.evaluate(WHERE)["um"]["x"])
+    page.click('.acquisition[data-name="run_a"] .position[data-name="Tile 2"]')
+    assert until(centre, lambda x: x == 224) == 224, "the view on Tile 2: x from 144 to 304"
+    assert page.evaluate(VISIBLE, "#fit") is True
+    marked = "() => [...document.querySelectorAll('.position.framed')].map(p => p.dataset.name)"
+    assert until(lambda: page.evaluate(marked), lambda seen: seen) == ["Tile 2"], "the position the view went to is marked"
+    zoomed = page.evaluate(WHERE)["zoom"]
+    page.click('.acquisition[data-name="run_a"] .name')
+    assert until(centre, lambda x: x == 152) == 152, "the whole acquisition again: x from 0 to 304"
+    assert page.evaluate(WHERE)["zoom"] > zoomed
+    assert page.evaluate(marked) == [], "the whole acquisition: no one position marked"
+    page.click('.acquisition[data-name="run_a"] .fold')
+    assert until(lambda: page.evaluate(POSITIONS), lambda seen: not seen[1][1]) == [["run_b", []], ["run_a", []]]
+    assert not errors, errors
+
+
+def test_a_run_that_starts_comes_in_on_top_and_selects_itself(pages, viewers, tmp_path):
+    _two_runs(tmp_path)
+    view = viewers(ui="simple")
+    library = Library(view)
+    library.watch(tmp_path / "data")
+    page, errors = _opened(pages, view, layers=2)
+    page.click('.acquisition[data-name="run_a"] .name')
+    library.begin_stack(Stack(acquisition="new", channel="488", channels=("488",), planes=4, frame=(32, 32),
+                              voxel_um=(5.0, 1.0, 1.0), origin_um=(0.0, 0.0, 0.0), tile="Tile 1", tiles=2))
+    rows = until(lambda: page.evaluate(ROWS), lambda seen: seen and seen[0]["name"] == "new")
+    assert (rows[0]["badge"], rows[0]["live"]) == ("Live", True)
+    selected = "() => [...document.querySelectorAll('.acquisition.selected')].map(r => r.dataset.name)"
+    assert until(lambda: page.evaluate(selected), lambda seen: seen == ["new"]) == ["new"]
+    assert until(lambda: page.evaluate(POSITIONS), lambda seen: seen[0][1])[0] == ["new", [["Tile 1", "now"], ["Tile 2", "next"]]]
     assert not errors, errors
 
 

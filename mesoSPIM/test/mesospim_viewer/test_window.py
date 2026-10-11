@@ -145,7 +145,7 @@ PAGE = """(() => {
     groups: [...document.querySelectorAll('.group')].map(g => g.dataset.group),
     notice: notice && !notice.hidden ? notice.querySelector('.text').textContent : null,
     empty: empty && !empty.hidden ? empty.querySelector('.title').textContent : null,
-    open: !document.querySelector('.card.acquisitions .open').hidden,
+    open: !document.querySelector('.card.load .open').hidden,
     fit: !!fit && !fit.hidden,
     x: at('x'), zoom: n.zoomFactor.value,
     loaded: v.layerManager.managedLayers.every(m => (m.layer?.dataSources ?? []).every(s => s.loadState !== undefined)),
@@ -186,7 +186,7 @@ def test_the_window_shows_the_page_and_follows_its_folder_on_its_timer(tmp_path,
     assert window.web.url().toString().startswith("http://127.0.0.1:")
     shown = _page_until(qt, window.web, lambda s: s["groups"] == ["run_a"])
     assert shown["chrome"] == "simple"
-    assert shown["listed"] == [["run_a", True]] and shown["removable"] == []
+    assert shown["listed"] == [["run_a", True]] and shown["removable"] == ["run_a"]
     assert shown["open"] is True, "the window can ask for a folder, so the panel offers Open"
     assert shown["empty"] is None and shown["x"] == pytest.approx(80, abs=2)
     # A newer acquisition is shown in its place on the window's own timer.
@@ -247,7 +247,7 @@ def test_folders_given_to_drop_are_listed_and_what_cannot_be_opened_is_said(tmp_
     assert _until(qt, lambda: library.shown, lambda seen: len(seen) == 2) == ["run_a", "run_b"]
     both = _page_until(qt, window.web, lambda s: s["groups"] == ["run_a", "run_b"] and s["x"] > 500)
     assert both["listed"] == [["run_a", True], ["run_b", True]]
-    assert both["removable"] == ["run_b"], "what was opened can be taken off; the watched folder's own cannot"
+    assert both["removable"] == ["run_a", "run_b"], "any acquisition but the run being acquired can be taken off"
     assert both["notice"] == "notes isn't an OME-Zarr folder the viewer can open."
     # The view zoomed out to frame both acquisitions.
     assert both["x"] == pytest.approx((0 + 1160) / 2, abs=2)
