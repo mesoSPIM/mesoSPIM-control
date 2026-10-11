@@ -25,7 +25,7 @@ from pathlib import Path
 
 from PyQt5 import QtCore
 
-from ..remote_control.dispatcher import COMMANDS, WAIT, COMPLETED, FAILED, STOPPED, error_info
+from ..remote_control.dispatcher import COMMANDS, DISPLAY, WAIT, COMPLETED, FAILED, STOPPED, error_info
 from ..remote_control.servers import Acceptor
 from ..remote_control.commands import self_test
 from ..remote_control.frame import array_of, to_png
@@ -61,6 +61,8 @@ def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config, clock=time
     if cancel.is_set():
         return {"status": "cancelled"}                              # gate every call after Cancel
     result = acceptor.dispatch(name, args or {})
+    if kind == DISPLAY:
+        return _displayed(acceptor, result, cancel, cfg, clock)
     if kind != WAIT:
         return result
     op = (result or {}).get("operation") or {}
@@ -88,6 +90,22 @@ def dispatch_and_wait(acceptor, name, args, kind, cancel, cfg=config, clock=time
                     "note": cfg.RUNS_ON_ITS_OWN_NOTE.format(what=runs or name)}
     return {"status": "still_running", "operation": op_id,
             "note": "operation exceeds the wait cap; call get_progress to check on it."}
+
+
+def _displayed(acceptor, result, cancel, cfg, clock):
+    """A display change is applied on the GUI thread a moment later: wait until get_display reports
+    the request's outcome, and return what the windows then show, so the model sees what it did."""
+    number = (result or {}).get("request")
+    if number is None:
+        return result
+    deadline = clock() + cfg.WAIT_CAP_S
+    shown = {}
+    while clock() < deadline and not cancel.is_set():
+        shown = acceptor.dispatch("get_display", {"request": number}) or {}
+        if (shown.get("request") or {}).get("status") not in ("queued", None):
+            return shown
+        time.sleep(cfg.POLL_INTERVAL_S)
+    return {**shown, "note": "the window has not shown the change yet; get_display tells when it has."}
 
 
 def _asked_values(name, args):
@@ -979,7 +997,8 @@ def with_state(acceptor, text, store=None, clock=time.time):
 _KINDS = (("read", "reads, which change nothing"),
           ("action", "actions, which return at once"),
           ("wait", "waits, which return when the instrument is done"),
-          ("emergency", "emergency commands, which always run"))
+          ("emergency", "emergency commands, which always run"),
+          ("display", "display changes, which change what the windows show and never the instrument"))
 
 
 def axes_section(axes):

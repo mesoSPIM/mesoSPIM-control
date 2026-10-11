@@ -48,7 +48,8 @@ def _pyqt():
         result = subprocess.call([sys.executable, str(script)], cwd=REPOSITORY, env=os.environ.copy())
         if result:
             return result
-    return _run_pytest([TESTS.parent / "test_combobox_state_requests.py"])   # real boxes, offscreen
+    return _run_pytest([TESTS.parent / "test_combobox_state_requests.py",    # real boxes, offscreen
+                        TESTS.parent / "test_gui_handles_real_qt.py"])       # the real camera window
 
 
 def _missing_for_live(transport, environment):

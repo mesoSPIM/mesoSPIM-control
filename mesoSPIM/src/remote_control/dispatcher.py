@@ -48,6 +48,9 @@ READ = "read"
 ACTION = "action"
 WAIT = "wait"
 EMERGENCY = "emergency"
+# A change to what the windows show (gui_handles): handed to the GUI thread, never gated, since the
+# operator can change the live view during a run too.
+DISPLAY = "display"
 
 # Only PROCESSING and STOPPING hold the mutation gate. An operation a stop cut short ends STOPPED, so a
 # client that reads only the status does not take it for one that finished (COMPLETED).
@@ -430,6 +433,25 @@ def _record_mutation_failure(core, operation_id, error):
         operation["error"] = str(error)
 
 
+def finish_operation(core, operation_id, result):
+    """End one operation that work on another thread carried out (the GUI thread's, gui_handles):
+    COMPLETED with its result, or STOPPED if a stop came meanwhile. Nothing if it is no longer the
+    current operation."""
+    with _GATE:
+        operation = _active(core)
+        if operation is None or operation["id"] != operation_id:
+            return
+        stored = operation.get("result")
+        result = jsonable(result)
+        operation["result"] = {**stored, **result} if isinstance(stored, dict) and isinstance(result, dict) else result
+        operation["status"] = STOPPED if operation.get("stop_requested") else COMPLETED
+
+
+def fail_operation(core, operation_id, error):
+    """End one operation that work on another thread could not carry out, with the reason."""
+    _record_mutation_failure(core, operation_id, error)
+
+
 def _schedule_mutation(core, cmd, args, operation):
     """Queue an admitted ACTION or WAIT and return before its execution begins."""
     operation_id = operation["id"]
@@ -469,7 +491,7 @@ def precheck(name):
 
 
 def dispatch(core, cmd, args):
-    if cmd.kind == READ:
+    if cmd.kind in (READ, DISPLAY):
         return jsonable(cmd.execute(core, args))
 
     if cmd.kind == EMERGENCY:

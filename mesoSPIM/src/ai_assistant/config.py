@@ -57,7 +57,7 @@ DEFAULT_PROVIDER = "Gemini"
 # 4,096-token window unless told otherwise and refuses every request here outright. These are the
 # words llama.cpp and Ollama refuse with; the help is what the tab shows in front of them.
 CONTEXT_TOO_SMALL_SIGNS = ("exceed_context_size", "exceeds the available context size")
-CONTEXT_TOO_SMALL_HELP = ("The model server's context window is smaller than one request (about 7,500 tokens). "
+CONTEXT_TOO_SMALL_HELP = ("The model server's context window is smaller than one request (about 11,000 tokens). "
                           "Give it 32,768 or more: for Ollama, OLLAMA_CONTEXT_LENGTH=32768 on the server, or a "
                           "copy of the model made with PARAMETER num_ctx 32768")
 

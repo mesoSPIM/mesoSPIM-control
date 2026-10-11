@@ -35,10 +35,12 @@ All in `mesoSPIM/src/remote_control/`:
 ```text
 config.py      constants, defaults, and shared names
 dispatcher.py  operation state, dispatch, JSON, and errors
-commands.py    validation, limits, and 56 commands
+commands.py    validation, limits, and every call (84)
 frame.py       the frame readouts (get_frame, get_snapshot)
 servers.py     Core-thread routing, TCP, MCP, startup, and shutdown
 gui.py         operator controls and acquisition-table bridge
+gui_handles.py the windows' own controls, worked from outside on the GUI thread, for the calls
+               that change or read what a window shows or offers
 ```
 
 Existing files receive only integration hooks:

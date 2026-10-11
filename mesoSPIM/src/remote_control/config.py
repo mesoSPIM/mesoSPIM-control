@@ -41,6 +41,8 @@ MCP_INSTRUCTIONS = (
 )
 # Appended to each wait command's description in tools/list; the AI Assistant's tools wait themselves.
 MCP_WAIT_NOTE = "Returns once admitted: poll get_progress until 'completed', 'stopped' or 'failed'."
+MCP_DISPLAY_NOTE = "Returns a request number at once: get_display {request} says when the window shows it."
+MCP_KIND_NOTES = {"wait": MCP_WAIT_NOTE, "display": MCP_DISPLAY_NOTE}
 
 # --- network ---
 # Loopback is the safe default. Any other address exposes the service to a network.
@@ -199,6 +201,8 @@ SETTABLE_STATE_KEYS = (
     "laser_l_pulse_%",
     "laser_r_delay_%",
     "laser_r_pulse_%",
+    "laser_l_max_amplitude_%",
+    "laser_r_max_amplitude_%",
     "camera_delay_%",
     "camera_pulse_%",
     "camera_display_live_subsampling",
@@ -240,7 +244,8 @@ SETTING_GROUPS = {
         "galvo_r_phase",
         "galvo_amp_scale_w_zoom",
     ),
-    "set_laser_timing": ("laser_l_delay_%", "laser_l_pulse_%", "laser_r_delay_%", "laser_r_pulse_%"),
+    "set_laser_timing": ("laser_l_delay_%", "laser_l_pulse_%", "laser_r_delay_%", "laser_r_pulse_%",
+                         "laser_l_max_amplitude_%", "laser_r_max_amplitude_%"),
 }
 
 ACQUISITION_FIELDS = (

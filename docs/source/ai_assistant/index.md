@@ -76,7 +76,10 @@ carries images.
 or 8 times (2 by default: a 2048-pixel camera frame arrives as 1024): coarser is cheaper and
 faster, and enough for "is it centred" or "is it saturated"; the numbers always come from the
 full frame. **Focus metric** chooses the focus measure: Laplacian, or the Auto-Focus DCT-Shannon.
-The model is offered every Remote Control command, the same ones TCP and MCP serve.
+The model is offered every Remote Control command, the same ones TCP and MCP serve. That includes
+what the windows show and offer: the live view's levels, lookup tables and regions of interest,
+pictures of the windows, the optimizer, the processor chain and the analyses of image files. A
+change to a window is waited for until the window shows it, and the tool returns what it then shows.
 
 Building a cloud endpoint does not contact the provider, so a wrong key shows up as an error on
 the first message. To change the models, disconnect and connect again; the next Connect starts a fresh conversation.

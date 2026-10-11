@@ -28,6 +28,7 @@ import os
 import time
 
 from . import config
+from .gui_handles import GROUPINGS, NORMALIZATIONS, OVERLAYS, PICTURE_MAX, WINDOWS, colormaps, frame_size
 from .dispatcher import (
     command,
     complete,
@@ -47,7 +48,10 @@ from .dispatcher import (
     ACTION,
     WAIT,
     EMERGENCY,
+    DISPLAY,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # --- State access and asynchronous scheduling ---
@@ -993,6 +997,10 @@ _MANUAL_INTERACTION = {
         "emergency": "An immediate command allowed while another mutation is processing: the "
         "stops (stop, stop_activity, time_lapse_stop), close_shutters, and the guarded recovery "
         "clear_stuck_operation. It does not create a new operation.",
+        "display": "A change to what the windows show (levels, lookup table, view, regions of interest). "
+        "It never touches the instrument, opens no operation and is never refused as busy, so it works "
+        "during a run too. It returns a request number at once; get_display {request} reports when the "
+        "window shows it.",
     },
     "mutation_gate": "Only one mutation may run at a time. A second valid mutation is rejected "
     "with error code 'busy' while an operation is processing or stopping. Reads, "
@@ -2475,6 +2483,806 @@ command(
 )
 
 
+
+# --- The windows: what the operator sees and sets there (gui_handles works the windows) ----------
+# A display call changes only what a window shows, never the instrument: it is never gated
+# (dispatcher.DISPLAY), returns a request number at once, and the GUI thread carries it out a moment
+# later; get_display {request} says when. Positions in the camera window are in the camera frame's own
+# pixels (x the column, y the row, as get_frame gives the frame), whatever subsampling it shows at.
+
+IMAGE_VIEW_SETTINGS = ("levels", "colormap", "colormap_ticks", "colormap_mode", "histogram_range", "view",
+                       "invert_x", "invert_y", "profile_roi", "normalization")
+DISPLAY_SETTINGS = {
+    "camera": IMAGE_VIEW_SETTINGS + ("adjust_levels", "overlay", "box_roi", "line_roi", "frame_index"),
+    "contrast": IMAGE_VIEW_SETTINGS,
+    "tile_overview": ("scale", "scroll"),
+    "main": ("tab",),
+}
+TILE_SCALE = (0.005, 1.0)                      # the tile overview's own scale box
+PICTURE_FORMATS = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp")
+
+
+def _region(value, label, keys, frame=None):
+    """A rectangle or a line in frame pixels: exactly `keys`, finite numbers, inside the frame."""
+    if not isinstance(value, dict):
+        raise ValidationError(f"{label} must be {{{', '.join(keys)}}} in frame pixels")
+    only(value, keys)
+    region = {key: number(value, key) for key in keys}
+    if "width" in region and (region["width"] <= 0 or region["height"] <= 0):
+        raise ValidationError(f"{label} width and height must be positive")
+    if frame is not None:
+        width, height = frame
+        xs = [region[k] for k in ("x", "x1", "x2") if k in region]
+        ys = [region[k] for k in ("y", "y1", "y2") if k in region]
+        if "width" in region:
+            xs.append(region["x"] + region["width"])
+            ys.append(region["y"] + region["height"])
+        if min(xs + ys) < 0 or max(xs) > width or max(ys) > height:
+            raise ValidationError(f"{label} is outside the frame ({width} x {height} pixels)")
+    return region
+
+
+def _pair(args, key):
+    """[low, high], two finite numbers with low < high."""
+    pair = args[key]
+    if not isinstance(pair, list) or len(pair) != 2:
+        raise ValidationError(f"{key} must be [low, high] with low < high")
+    low, high = _finite(pair[0], f"{key}[0]"), _finite(pair[1], f"{key}[1]")
+    if not low < high:
+        raise ValidationError(f"{key} must be [low, high] with low < high")
+    return [low, high]
+
+
+def _ticks(args):
+    """A lookup table as the histogram's gradient holds it: [[position 0..1, [r, g, b, a] 0..255], ...]."""
+    ticks = args["colormap_ticks"]
+    if not isinstance(ticks, list) or len(ticks) < 2:
+        raise ValidationError("colormap_ticks must be two or more [position, [r, g, b, a]]")
+    clean = []
+    for i, tick in enumerate(ticks):
+        if not (isinstance(tick, list) and len(tick) == 2 and isinstance(tick[1], list) and len(tick[1]) in (3, 4)):
+            raise ValidationError(f"colormap_ticks[{i}] must be [position, [r, g, b, a]]")
+        position = _finite(tick[0], f"colormap_ticks[{i}] position")
+        if not 0 <= position <= 1:
+            raise ValidationError(f"colormap_ticks[{i}] position must be between 0 and 1")
+        color = list(tick[1]) + ([255] if len(tick[1]) == 3 else [])
+        if any(isinstance(c, bool) or not isinstance(c, int) or not 0 <= c <= 255 for c in color):
+            raise ValidationError(f"colormap_ticks[{i}] colour must be integers 0..255")
+        clean.append([position, color])
+    return clean
+
+
+def check_display(frame, args):
+    """set_display's arguments, for the window they name (the camera window when none), against the
+    camera frame (width, height). Run when the call arrives, and again on the GUI thread before it is
+    carried out (the frame may have changed size since)."""
+    window = args.get("window", "camera")
+    if window not in DISPLAY_SETTINGS:
+        raise ValidationError(f"window {window!r} is not one of {list(DISPLAY_SETTINGS)}")
+    only(args, ("window",) + DISPLAY_SETTINGS[window])
+    camera = window == "camera"
+    out = {"window": window} if "window" in args else {}
+    for key in ("levels", "histogram_range"):
+        if key in args:
+            out[key] = _pair(args, key)
+    if "colormap" in args:
+        name = text(args, "colormap")
+        if name not in colormaps():
+            raise ValidationError(f"colormap {name!r} is not one of {colormaps()}")
+        out["colormap"] = name
+    if "colormap_ticks" in args:
+        out["colormap_ticks"] = _ticks(args)
+    if "colormap_mode" in args:
+        mode = text(args, "colormap_mode")
+        if mode not in ("rgb", "hsv"):
+            raise ValidationError("colormap_mode is 'rgb' or 'hsv'")
+        out["colormap_mode"] = mode
+    for key in ("invert_x", "invert_y"):
+        if key in args:
+            out[key] = flag(args, key)
+    if "view" in args:
+        out["view"] = "fit" if args["view"] == "fit" else _region(args["view"], "view", ("x", "y", "width", "height"))
+    if "profile_roi" in args:
+        profile = args["profile_roi"]
+        if not isinstance(profile, dict) or "shown" not in profile:
+            raise ValidationError("profile_roi must be {shown, x?, y?, width?, height?}")
+        only(profile, ("shown", "x", "y", "width", "height"))
+        out["profile_roi"] = {"shown": flag(profile, "shown")}
+        if set(profile) - {"shown"}:
+            out["profile_roi"].update(_region({k: v for k, v in profile.items() if k != "shown"}, "profile_roi",
+                                              ("x", "y", "width", "height"), frame if camera else None))
+    if "normalization" in args:
+        norm = args["normalization"]
+        if not isinstance(norm, dict):
+            raise ValidationError("normalization must be {mode?, roi?, frame?, time_range?}")
+        only(norm, ("mode", "roi", "frame", "time_range"))
+        out["normalization"] = {key: flag(norm, key) for key in ("roi", "frame", "time_range") if key in norm}
+        if "mode" in norm:
+            if norm["mode"] not in NORMALIZATIONS:
+                raise ValidationError(f"normalization mode is one of {list(NORMALIZATIONS)}")
+            out["normalization"]["mode"] = norm["mode"]
+    if "adjust_levels" in args:
+        adjust = args["adjust_levels"]
+        if adjust is True:
+            out["adjust_levels"] = True
+        elif isinstance(adjust, dict):
+            only(adjust, ("low_percentile", "high_percentile"))
+            out["adjust_levels"] = {key: number(adjust, key, (0, 100)) for key in adjust}
+        else:
+            raise ValidationError("adjust_levels is true, or {low_percentile, high_percentile} between 0 and 100")
+    if "overlay" in args:
+        overlay = text(args, "overlay")
+        if overlay not in OVERLAYS:
+            raise ValidationError(f"overlay {overlay!r} is not one of {list(OVERLAYS)}")
+        out["overlay"] = overlay
+    if "box_roi" in args:
+        out["box_roi"] = _region(args["box_roi"], "box_roi", ("x", "y", "width", "height"), frame)
+    if "line_roi" in args:
+        out["line_roi"] = _region(args["line_roi"], "line_roi", ("x1", "y1", "x2", "y2"), frame)
+    if "frame_index" in args:
+        out["frame_index"] = integer(args, "frame_index", minimum=0)
+    if "scale" in args:
+        out["scale"] = number(args, "scale", TILE_SCALE)
+    if "scroll" in args:
+        scroll = args["scroll"]
+        if not isinstance(scroll, dict) or not scroll:
+            raise ValidationError("scroll must be {x?, y?}, each 0..1 of the scroll bar")
+        only(scroll, ("x", "y"))
+        out["scroll"] = {key: number(scroll, key, (0, 1)) for key in scroll}
+    if "tab" in args:
+        out["tab"] = text(args, "tab")
+    return out
+
+
+def gui_handles(core):
+    """The GUI thread's handles on the windows, published by the Remote Control tab."""
+    found = getattr(core, "_remote_control_gui_handles", None)
+    if found is None:
+        raise ValidationError("there are no windows to change: this mesoSPIM runs without its GUI")
+    return found
+
+
+def _accept_set_display(core, args):
+    gui_handles(core)
+    return check_display(frame_size(core, core.cfg), args)
+
+
+def _accept_get_display(core, args):
+    only(args, ("request",))
+    if "request" in args:
+        integer(args, "request", minimum=1)
+    gui_handles(core)
+    return args
+
+
+def _window_list(args, key):
+    names = args.get(key, [])
+    if not isinstance(names, list) or any(name not in WINDOWS for name in names):
+        raise ValidationError(f"{key} must be a list of windows from {list(WINDOWS)}")
+    return names
+
+
+def _accept_set_windows(core, args):
+    only(args, ("show", "hide", "cascade"))
+    gui_handles(core)
+    out = {"show": _window_list(args, "show"), "hide": _window_list(args, "hide"), "cascade": flag(args, "cascade")}
+    if set(out["show"]) & set(out["hide"]):
+        raise ValidationError("a window cannot be shown and hidden at once")
+    if not (out["show"] or out["hide"] or out["cascade"]):
+        raise ValidationError("name windows to show or hide, or cascade")
+    return out
+
+
+def _accept_get_picture(core, args):
+    only(args, ("window", "path", "max_size"))
+    gui_handles(core)
+    window = text(args, "window")
+    if window not in WINDOWS:
+        raise ValidationError(f"window {window!r} is not one of {list(WINDOWS)}")
+    out = {"window": window, "max_size": integer(args, "max_size", 64, PICTURE_MAX, required=False, default=PICTURE_MAX)}
+    if "path" in args:
+        path = text(args, "path")
+        if os.path.splitext(path)[1].lower() not in PICTURE_FORMATS:
+            raise ValidationError(f"path must end in one of {list(PICTURE_FORMATS)}")
+        if not os.path.isdir(os.path.dirname(os.path.abspath(path))):
+            raise ValidationError(f"the folder of {path!r} does not exist")
+        out["path"] = path
+    return out
+
+
+def _accept_open_image_file(core, args):
+    only(args, ("path",))
+    gui_handles(core)
+    path = text(args, "path")
+    if os.path.splitext(path)[1].lower() not in (".tif", ".tiff"):
+        raise ValidationError("open_image_file opens a TIFF file (.tif or .tiff), as File > Open TIFF does")
+    if not os.path.isfile(path):
+        raise ValidationError(f"{path!r} is not an existing file")
+    return {"path": path}
+
+
+def _accept_set_table_view(core, args):
+    only(args, ("group", "select_rows"))
+    gui_handles(core)
+    out = {}
+    if "select_rows" in args:
+        rows = args["select_rows"]
+        if not isinstance(rows, list) or any(isinstance(r, bool) or not isinstance(r, int) or r < 0 for r in rows):
+            raise ValidationError("select_rows must be a list of row indices")
+        out["select_rows"] = rows
+    if "group" in args:
+        group = text(args, "group")
+        if group not in GROUPINGS:
+            raise ValidationError(f"group is one of {list(GROUPINGS)}")
+        out["group"] = group
+    if not out:
+        raise ValidationError("name a group or rows to select")
+    return out
+
+
+def _on_the_gui_thread(name):
+    """A display call's body: hand the accepted request to the GUI thread, return its number."""
+    def execute(core, args):
+        return {"request": gui_handles(core).request(name, args)}
+    return execute
+
+
+def _run_get_display(core, args):
+    return gui_handles(core).display(args.get("request"))
+
+
+_FRAME_PIXELS = ("numbers in the camera frame's pixels (x the column, y the row, as get_frame gives the frame); the "
+                 "frame's width and height are get_display's camera_window.frame: the window shows the frame turned, so its "
+                 "width is the camera's y_pixels and its height x_pixels")
+_BOX = _schema({key: _NUMBER for key in ("x", "y", "width", "height")}, required=("x", "y", "width", "height"),
+               description=_FRAME_PIXELS)
+_PAIR = {"type": "array", "items": _NUMBER, "minItems": 2, "maxItems": 2}
+_WINDOW_LIST = {"type": "array", "items": {"type": "string", "enum": list(WINDOWS)}}
+
+command(
+    "get_display",
+    READ,
+    _run_get_display,
+    accept=_accept_get_display,
+    schema=_schema({"request": {"type": "integer", "minimum": 1}}),
+    hint="in: {request?}. out: what the windows show: the camera window's levels, lookup table, overlay, view and "
+         "regions of interest in frame pixels and um (with their offset from the frame's centre); the contrast map; "
+         "the tile overview; the main window's tab, status message, progress bars and time-lapse estimate; the "
+         "acquisition table's grouping, selection and time and size estimates; which windows are open; and a display "
+         "request's outcome",
+)
+
+command(
+    "set_display",
+    DISPLAY,
+    _on_the_gui_thread("set_display"),
+    accept=_accept_set_display,
+    schema=_schema({
+        "window": {"type": "string", "enum": list(DISPLAY_SETTINGS), "description": "camera when omitted"},
+        "levels": {**_PAIR, "description": "[low, high] counts"},
+        "adjust_levels": {"description": "camera: true, or {low_percentile, high_percentile}: the Adjust levels button (25, 99.99)",
+                          "anyOf": [{"type": "boolean", "const": True},
+                                    _schema({"low_percentile": _NUMBER, "high_percentile": _NUMBER})]},
+        "colormap": {"type": "string", "enum": colormaps(), "description": "a lookup table of the histogram"},
+        "colormap_ticks": {"type": "array", "minItems": 2, "description": "a lookup table of your own: [[position 0..1, [r, g, b, a]], ...]",
+                           "items": {"type": "array", "minItems": 2, "maxItems": 2}},
+        "colormap_mode": {"type": "string", "enum": ["rgb", "hsv"]},
+        "histogram_range": {**_PAIR, "description": "the histogram's own axis, [low, high]"},
+        "view": {"description": "the region to show, kept at square pixels, or 'fit' for the whole image",
+                 "anyOf": [{"type": "string", "const": "fit"}, _BOX]},
+        "invert_x": _BOOLEAN, "invert_y": _BOOLEAN,
+        "profile_roi": _schema({"shown": _BOOLEAN, **{k: _NUMBER for k in ("x", "y", "width", "height")}}, required=("shown",),
+                               description="the image view's own ROI button and the mean-intensity profile under it"),
+        "normalization": _schema({"mode": {"type": "string", "enum": list(NORMALIZATIONS)}, "roi": _BOOLEAN,
+                                  "frame": _BOOLEAN, "time_range": _BOOLEAN}),
+        "overlay": {"type": "string", "enum": list(OVERLAYS), "description": "camera"},
+        "box_roi": _BOX,
+        "line_roi": _schema({key: _NUMBER for key in ("x1", "y1", "x2", "y2")}, required=("x1", "y1", "x2", "y2"),
+                            description=_FRAME_PIXELS),
+        "frame_index": {"type": "integer", "minimum": 0, "description": "camera: the frame of a stack opened with open_image_file"},
+        "scale": {"type": "number", "minimum": TILE_SCALE[0], "maximum": TILE_SCALE[1], "description": "tile_overview"},
+        "scroll": _schema({"x": _NUMBER, "y": _NUMBER}, description="tile_overview: 0..1 of each scroll bar"),
+        "tab": {"type": "string", "description": "main: a tab's name, as get_display lists them"},
+    }),
+    hint="in: {window?: camera|contrast|tile_overview|main, ...what that window offers}: camera and contrast: levels, "
+         "colormap or colormap_ticks and colormap_mode, histogram_range, view, invert_x/y, profile_roi, normalization; "
+         "camera also adjust_levels, overlay, box_roi, line_roi (a box_roi or line_roi shows that overlay), frame_index; "
+         "tile_overview: scale, scroll; main: tab. out: {request}",
+)
+
+command(
+    "set_windows",
+    DISPLAY,
+    _on_the_gui_thread("set_windows"),
+    accept=_accept_set_windows,
+    schema=_schema({"show": _WINDOW_LIST, "hide": _WINDOW_LIST, "cascade": _BOOLEAN}),
+    hint="in: {show?, hide?, cascade?}: open and close windows as the View menu and their close buttons do, and "
+         "cascade them. out: {request}",
+)
+
+command(
+    "get_picture",
+    DISPLAY,
+    _on_the_gui_thread("get_picture"),
+    accept=_accept_get_picture,
+    schema=_schema({"window": {"type": "string", "enum": list(WINDOWS)}, "path": _STRING,
+                    "max_size": {"type": "integer", "minimum": 64, "maximum": PICTURE_MAX}}, required=("window",)),
+    hint="in: {window, path?, max_size?}: a picture of a window as it is on screen, as PNG in the request's outcome, "
+         "or saved to path (.png, .jpg, .tif, .bmp). out: {request}",
+)
+
+command(
+    "open_image_file",
+    DISPLAY,
+    _on_the_gui_thread("open_image_file"),
+    accept=_accept_open_image_file,
+    schema=_schema({"path": _STRING}, required=("path",)),
+    hint="in: {path}: a TIFF image or stack into the camera window, as File > Open TIFF. out: {request}",
+)
+
+command(
+    "set_table_view",
+    DISPLAY,
+    _on_the_gui_thread("set_table_view"),
+    accept=_accept_set_table_view,
+    schema=_schema({"group": {"type": "string", "enum": list(GROUPINGS)},
+                    "select_rows": {"type": "array", "items": {"type": "integer", "minimum": 0}}}),
+    hint="in: {group?: none|laser|illumination|selected, select_rows?}: the acquisition table's selection and grouping "
+         "(an edit to a group's first row then goes to the whole group). out: {request}",
+)
+
+
+# --- The windows' own instrument features: what only a window offers (gui_handles) ---------------
+# These change the instrument, so they are ordinary operations under the busy gate. The writer
+# parameters, the processor chain, Save to config and auto illumination need no window to carry
+# them out; the ETL and galvo toggles and the optimizer are the window's own, so the GUI thread
+# carries them out and ends the operation (dispatcher.finish_operation).
+
+OPTIMIZER_MODES = ("focus", "etl_offset", "etl_amp")         # mesoSPIM_Optimizer's modes_list
+OPTIMIZER_POINTS = (5, 29)                                   # its Num of points box: 5, 7, ... 29
+OPTIMIZER_RANGE = (0.001, 500.0)                             # its Search interval box
+ALIGNMENT_TOGGLES = ("zero_left_etl", "zero_right_etl", "freeze_galvo")
+
+
+def _writer_class(name):
+    from ..plugins.utils import get_image_writer_plugins
+
+    for plugin in get_image_writer_plugins():
+        if plugin["name"] == name:
+            return plugin["writer_class"]
+    known = ", ".join(w["name"] for w in _image_writers())
+    raise ValidationError(f"no image writer {name!r}; there are {known}")
+
+
+def _writer_parameters(core, name):
+    """A writer's own settings as the filename wizard's Writer parameters page shows them: its
+    wizard_parameters() defaults, overridden by the config's entry for it (and this session's)."""
+    writer = _writer_class(name)
+    offered = writer.wizard_parameters() if hasattr(writer, "wizard_parameters") else {}
+    current = getattr(core.cfg, name, {}) or {}
+    return {key: {"value": current.get(key, default), "default": default, "help": help_text}
+            for key, (default, help_text) in offered.items()}
+
+
+def _accept_get_writer_parameters(core, args):
+    only(args, ("writer",))
+    name = text(args, "writer")
+    _writer_class(name)
+    return {"writer": name}
+
+
+def _run_get_writer_parameters(core, args):
+    return {"writer": args["writer"], "parameters": _writer_parameters(core, args["writer"])}
+
+
+def _writer_value(key, default, value):
+    """One value as the wizard's page takes it, typed by its default: a check box for a bool, a whole
+    number for an int, text (or None) for a string, and a literal (a tuple as a list, or None) for
+    the rest."""
+    if isinstance(default, bool):
+        if not isinstance(value, bool):
+            raise ValidationError(f"{key} must be true or false")
+        return value
+    if isinstance(default, int):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValidationError(f"{key} must be a whole number >= 0")
+        return value
+    if isinstance(default, str):
+        if value is not None and not isinstance(value, str):
+            raise ValidationError(f"{key} must be text, or null")
+        return value
+    if isinstance(value, list):
+        return tuple(value)
+    if value is None or isinstance(value, (int, float, str)) and not isinstance(value, bool):
+        return value
+    raise ValidationError(f"{key} must be a list, a number, text or null")
+
+
+def _accept_set_writer_parameters(core, args):
+    only(args, ("writer", "parameters"))
+    name = text(args, "writer")
+    offered = _writer_parameters(core, name)
+    if not offered:
+        raise ValidationError(f"{name} offers no parameters to set")
+    parameters = args.get("parameters")
+    if not isinstance(parameters, dict) or not parameters:
+        raise ValidationError("parameters must name at least one of the writer's settings")
+    unknown = sorted(set(parameters) - set(offered))
+    if unknown:
+        raise ValidationError(f"{name} has no setting {', '.join(unknown)}; it has {', '.join(offered)}")
+    return {"writer": name, "parameters": {key: _writer_value(key, offered[key]["default"], value)
+                                           for key, value in parameters.items()}}
+
+
+def _run_set_writer_parameters(core, args):
+    """As the wizard's page applies them: into the config attribute the writer reads at the start of a
+    run, for this session only; the config file is not touched."""
+    name = args["writer"]
+    merged = dict(getattr(core.cfg, name, {}) or {})
+    merged.update(args["parameters"])
+    setattr(core.cfg, name, merged)
+    logger.info(f"Remote Control: {name} parameters set: {args['parameters']}")
+    return {"writer": name, "parameters": {k: v["value"] for k, v in _writer_parameters(core, name).items()}}
+
+
+def _processor_chain(core):
+    chain = getattr(getattr(core, "camera_worker", None), "processor_chain", None)
+    if chain is None:
+        raise ValidationError("this mesoSPIM has no processor chain")
+    return chain
+
+
+def _parameters_of(processor_class):
+    """A processor's parameters as the chain window reads them: none when it describes none
+    (IdentityProcessor has no parameter_descriptions)."""
+    describe = getattr(processor_class, "parameter_descriptions", None)
+    return (describe() or {}) if describe is not None else {}
+
+
+def _processor_value(name, key, description, value):
+    """One processor parameter against its own description (type, min, max, choices), as the chain
+    window's editor holds it."""
+    kind = description.get("type")
+    if kind == "float":
+        value = _finite(value, f"{name}.{key}")
+    elif kind == "int":
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValidationError(f"{name}.{key} must be a whole number")
+    elif kind == "bool":
+        if not isinstance(value, bool):
+            raise ValidationError(f"{name}.{key} must be true or false")
+    elif kind == "str":
+        if not isinstance(value, str):
+            raise ValidationError(f"{name}.{key} must be text")
+    if "choices" in description and value not in description["choices"]:
+        raise ValidationError(f"{name}.{key}={value!r} is not one of {description['choices']}")
+    if kind in ("float", "int") and not description.get("min", value) <= value <= description.get("max", value):
+        raise ValidationError(f"{name}.{key}={value} is outside [{description.get('min')}, {description.get('max')}]")
+    return value
+
+
+def _run_get_processor_chain(core, args):
+    chain = _processor_chain(core)
+    available = [{"name": p["name"], "description": p["description"],
+                  "parameters": _parameters_of(p["processor_class"])} for p in chain.available_processors]
+    return {"available": available, "chain": chain.get_config()["processors"], "enabled": chain.is_enabled}
+
+
+def _accept_set_processor_chain(core, args):
+    only(args, ("processors", "save"))
+    chain = _processor_chain(core)
+    available = {p["name"]: _parameters_of(p["processor_class"]) for p in chain.available_processors}
+    processors = args.get("processors")
+    if not isinstance(processors, list):
+        raise ValidationError("processors must be the chain, first to last: [{name, enabled?, config?}] ([] empties it)")
+    clean = []
+    for i, entry in enumerate(processors):
+        if not isinstance(entry, dict):
+            raise ValidationError(f"processors[{i}] must be {{name, enabled?, config?}}")
+        only(entry, ("name", "enabled", "config"))
+        name = text(entry, "name")
+        if name not in available:
+            raise ValidationError(f"processors[{i}]: no processor {name!r}; there are {', '.join(available)}")
+        config_ = entry.get("config", {})
+        if not isinstance(config_, dict):
+            raise ValidationError(f"processors[{i}].config must be an object")
+        unknown = sorted(set(config_) - set(available[name]))
+        if unknown:
+            raise ValidationError(f"{name} has no parameter {', '.join(unknown)}; it has {', '.join(available[name])}")
+        clean.append({"name": name, "enabled": flag(entry, "enabled", True),
+                      "config": {k: _processor_value(name, k, available[name][k], v) for k, v in config_.items()}})
+    return {"processors": clean, "save": flag(args, "save")}
+
+
+def _run_set_processor_chain(core, args):
+    """The chain as the window's Apply sets it (and its Save writes it): the chain takes its own lock, so
+    the camera thread processes the next frame with the new chain. An open chain window shows it."""
+    chain = _processor_chain(core)
+    chain.set_config({"processors": args["processors"]})
+    result = {"chain": chain.get_config()["processors"], "enabled": chain.is_enabled}
+    if args["save"]:
+        path = getattr(getattr(core, "parent", None), "processor_chain_config_path", None)
+        if not path or not chain.save_to_file(path):
+            raise ValidationError(f"could not save the processor chain to {path!r}")
+        result["saved_to"] = path
+    handles = getattr(core, "_remote_control_gui_handles", None)
+    if handles is not None:
+        handles.request("refresh_processor_chain", {})
+    return result
+
+
+def _accept_set_alignment_toggles(core, args):
+    only(args, ALIGNMENT_TOGGLES)
+    gui_handles(core)
+    toggles = {key: flag(args, key) for key in ALIGNMENT_TOGGLES if key in args}
+    if not toggles:
+        raise ValidationError(f"name one or more of {', '.join(ALIGNMENT_TOGGLES)}")
+    return toggles
+
+
+def _accept_optimize(core, args):
+    only(args, ("mode", "range", "points", "roi"))
+    gui_handles(core)
+    mode = text(args, "mode")
+    if mode not in OPTIMIZER_MODES:
+        raise ValidationError(f"mode is one of {list(OPTIMIZER_MODES)}")
+    out = {"mode": mode, "range": number(args, "range", OPTIMIZER_RANGE),
+           "points": integer(args, "points", *OPTIMIZER_POINTS, required=False, default=7)}
+    if out["points"] % 2 == 0:
+        raise ValidationError("points must be odd, as the optimizer asks (the current value sits in the middle)")
+    if mode != "focus" and state(core, "shutterconfig") not in ("Left", "Right"):
+        raise ValidationError(f"{mode} needs one light sheet (shutterconfig Left or Right), as the optimizer asks")
+    if "roi" in args:
+        out["roi"] = _region(args["roi"], "roi", ("x", "y", "width", "height"), frame_size(core, core.cfg))
+    return out
+
+
+def _accept_finish_optimization(core, args):
+    only(args, ("accept",))
+    gui_handles(core)
+    if "accept" not in args:
+        raise ValidationError("'accept' is required: true applies the optimum, false keeps the old value")
+    return {"accept": flag(args, "accept")}
+
+
+def _on_the_gui_thread_as_operation(name):
+    """A window's instrument feature: the operation stays processing (it holds the busy gate) until the
+    GUI thread has carried it out and finished it with its result."""
+    def execute(core, args):
+        gui_handles(core).operation(core, operation_snapshot(core)["id"], name, args)
+        return {"scheduled": True}
+    return execute
+
+
+def _accept_save_parameters_to_config(core, args):
+    only(args, ("path", "overwrite"))
+    config_file = getattr(core.cfg, "__file__", None)
+    if config_file is None:
+        raise ValidationError("the config file's path is not known (the config has no __file__)")
+    path = text(args, "path", required=False, default=config_file)
+    if not path.endswith(".py"):
+        raise ValidationError("the config is a Python file: path must end in .py")
+    if not os.path.isdir(os.path.dirname(os.path.abspath(path))):
+        raise ValidationError(f"the folder of {path!r} does not exist")
+    if os.path.exists(path) and not flag(args, "overwrite"):
+        raise ValidationError(f"{path} exists; overwrite=true replaces it, as the window's question does")
+    return {"config_file": config_file, "path": path}
+
+
+def _run_save_parameters_to_config(core, args):
+    from .gui_handles import CONFIG_PARAMETERS, parameters_to_config
+
+    appended = parameters_to_config(args["config_file"], core.state, args["path"])
+    return {"path": args["path"], "saved": list(CONFIG_PARAMETERS), "appended_as_startup_update": appended}
+
+
+def _accept_auto_illumination(core, args):
+    from .gui_handles import illumination_by_x
+
+    only(args, ())
+    rows = _installed(core)
+    if not rows:
+        raise ValidationError("the installed acquisition list is empty")
+    options = getattr(core.cfg, "ui_options", {}) or {}
+    sides = illumination_by_x([row["x_pos"] for row in rows], bool(options.get("flip_auto_LR_illumination")))
+    for row, side in zip(rows, sides):
+        row["shutterconfig"] = side
+    return _as_list(core, rows)
+
+
+command(
+    "get_writer_parameters",
+    READ,
+    _run_get_writer_parameters,
+    accept=_accept_get_writer_parameters,
+    schema=_schema({"writer": _STRING}, required=("writer",)),
+    hint="in: {writer}. out: the writer's own settings as the filename wizard's Writer parameters page shows them, "
+         "each {value, default, help}",
+)
+
+command(
+    "set_writer_parameters",
+    ACTION,
+    _run_set_writer_parameters,
+    accept=_accept_set_writer_parameters,
+    schema=_schema({"writer": _STRING, "parameters": {"type": "object", "additionalProperties": True,
+                                                      "description": "settings named as get_writer_parameters lists them"}},
+                   required=("writer", "parameters")),
+    hint="in: {writer, parameters}: a writer's settings (OME-Zarr chunks, compression, shards, ...) for this session, "
+         "as the filename wizard's Writer parameters page sets them. out: {writer, parameters}",
+)
+
+command(
+    "get_processor_chain",
+    READ,
+    _run_get_processor_chain,
+    accept=no_args,
+    hint="in: none. out: the processors there are, with their parameters, and the chain applied to the live view "
+         "and the saved images, first to last",
+)
+
+command(
+    "set_processor_chain",
+    ACTION,
+    _run_set_processor_chain,
+    accept=_accept_set_processor_chain,
+    schema=_schema({"processors": {"type": "array", "items": _schema(
+        {"name": _STRING, "enabled": _BOOLEAN, "config": {"type": "object", "additionalProperties": True}}, required=("name",))},
+        "save": {**_BOOLEAN, "description": "also save it, as the window's Save does"}}, required=("processors",)),
+    hint="in: {processors: [{name, enabled?, config?}], save?}: the whole chain, first to last, as the Processor "
+         "Chain window's Apply sets it. out: {chain, enabled}",
+)
+
+command(
+    "set_alignment_toggles",
+    WAIT,
+    _on_the_gui_thread_as_operation("set_alignment_toggles"),
+    accept=_accept_set_alignment_toggles,
+    schema=_schema({key: _BOOLEAN for key in ALIGNMENT_TOGGLES}),
+    hint="in: {zero_left_etl?, zero_right_etl?, freeze_galvo?}: the ETL tab's AmpL=0, AmpR=0 and Freeze galvos, "
+         "which set the amplitude to 0 and back. out: the three toggles",
+)
+
+command(
+    "optimize",
+    WAIT,
+    _on_the_gui_thread_as_operation("optimize"),
+    accept=_accept_optimize,
+    schema=_schema({"mode": {"type": "string", "enum": list(OPTIMIZER_MODES)},
+                    "range": {**_NUMBER, "minimum": OPTIMIZER_RANGE[0], "maximum": OPTIMIZER_RANGE[1],
+                              "description": "+- around the current value: um for focus, V for the ETL"},
+                    "points": {"type": "integer", "minimum": OPTIMIZER_POINTS[0], "maximum": OPTIMIZER_POINTS[1],
+                               "description": "odd; 7 when omitted"},
+                    "roi": _BOX}, required=("mode", "range")),
+    hint="in: {mode: focus|etl_offset|etl_amp, range, points?, roi?}: the optimizer (AUTO Focus, Launch Optimizer): "
+         "snaps across the range, scores each frame's sharpness within roi (the camera window's box) and fits the "
+         "best. out: {old, new, points, sharpness}; nothing changes until finish_optimization",
+)
+
+command(
+    "finish_optimization",
+    WAIT,
+    _on_the_gui_thread_as_operation("finish_optimization"),
+    accept=_accept_finish_optimization,
+    schema=_schema({"accept": _BOOLEAN}, required=("accept",)),
+    hint="in: {accept}: the optimizer's result window: true applies the new value (Accept), false keeps the old "
+         "(Discard). out: {accepted, value}",
+)
+
+command(
+    "save_parameters_to_config",
+    ACTION,
+    _run_save_parameters_to_config,
+    accept=_accept_save_parameters_to_config,
+    schema=_schema({"path": {**_STRING, "description": "the config file when omitted"}, "overwrite": _BOOLEAN}),
+    hint="in: {path?, overwrite?}: the Parameters tab's Save config file: sweep, camera, laser, galvo and ETL timing "
+         "and binning written into the config file. out: {path, saved}",
+)
+
+command(
+    "auto_illumination",
+    ACTION,
+    _run_set_acquisition_list,
+    accept=_accept_auto_illumination,
+    hint="in: none. out: {count}: the acquisition manager's Auto L/R illumination: rows left of the median X lit "
+         "from the right, the others from the left",
+)
+
+
+# --- The Utils menu's analyses of image files (gui_handles) --------------------------------------
+# mesoSPIM runs these tools as programs of their own: they read files and never touch the
+# instrument, so the calls are never gated. They run in a thread of their own; get_display {request}
+# carries the result, as for the display calls.
+
+def _tif(path, label):
+    if os.path.splitext(path)[1].lower() not in (".tif", ".tiff"):
+        raise ValidationError(f"{label} must be a TIFF z-stack (.tif or .tiff)")
+    if not os.path.isfile(path):
+        raise ValidationError(f"{label} {path!r} is not an existing file")
+    return path
+
+
+def _optics(args, z_step_default):
+    """The tools' System Parameters, with their windows' defaults."""
+    return {"magnification": number(args, "magnification", (0.01, 1000), required=False, default=5.0),
+            "pixel_pitch_um": number(args, "pixel_pitch_um", (0.01, 1000), required=False, default=4.25),
+            "z_step_um": number(args, "z_step_um", (0.001, 10000), required=False, default=z_step_default)}
+
+
+def _accept_analyse_psf(core, args):
+    only(args, ("path", "magnification", "pixel_pitch_um", "z_step_um", "min_intensity", "min_bead_distance_um",
+                "z_fit_window_um", "z_min", "z_max"))
+    gui_handles(core)
+    out = {"path": _tif(text(args, "path"), "path"), **_optics(args, 1.0),
+           "min_intensity": number(args, "min_intensity", (0, 1e9), required=False, default=700.0),
+           "min_bead_distance_um": number(args, "min_bead_distance_um", (0.01, 10000), required=False, default=15.0),
+           "z_fit_window_um": number(args, "z_fit_window_um", (0.01, 10000), required=False, default=30.0)}
+    for key in ("z_min", "z_max"):
+        if key in args:
+            out[key] = integer(args, key, minimum=0)
+    return out
+
+
+def _accept_analyse_field_curvature(core, args):
+    only(args, ("channels", "magnification", "pixel_pitch_um", "z_step_um", "n_rois_x", "n_rois_y", "tilt_reference"))
+    gui_handles(core)
+    channels = args.get("channels")
+    if not isinstance(channels, list) or not channels:
+        raise ValidationError("channels must be one or more {path, label?, wavelength_nm?}, one TIFF z-stack each")
+    clean = []
+    for i, channel in enumerate(channels):
+        if not isinstance(channel, dict):
+            raise ValidationError(f"channels[{i}] must be {{path, label?, wavelength_nm?}}")
+        only(channel, ("path", "label", "wavelength_nm"))
+        entry = {"path": _tif(text(channel, "path"), f"channels[{i}].path"),
+                 "label": text(channel, "label", required=False, default=os.path.basename(channel["path"]))}
+        if "wavelength_nm" in channel:
+            entry["wavelength_nm"] = number(channel, "wavelength_nm", (200, 2000))
+        clean.append(entry)
+    out = {"channels": clean, **_optics(args, 10.0),
+           "n_rois_x": integer(args, "n_rois_x", 2, 64, required=False, default=16),
+           "n_rois_y": integer(args, "n_rois_y", 2, 64, required=False, default=16)}
+    if "tilt_reference" in args:
+        reference = text(args, "tilt_reference")
+        if reference not in [c["path"] for c in clean]:
+            raise ValidationError("tilt_reference must be the path of one of the channels")
+        out["tilt_reference"] = reference
+    return out
+
+
+command(
+    "analyse_psf",
+    DISPLAY,
+    _on_the_gui_thread("analyse_psf"),
+    accept=_accept_analyse_psf,
+    schema=_schema({"path": _STRING, "magnification": _NUMBER, "pixel_pitch_um": _NUMBER,
+                    "z_step_um": {**_NUMBER, "description": "the axial pixel; 1.0 when omitted"},
+                    "min_intensity": _NUMBER, "min_bead_distance_um": _NUMBER, "z_fit_window_um": _NUMBER,
+                    "z_min": {"type": "integer", "minimum": 0}, "z_max": {"type": "integer", "minimum": 0}},
+                   required=("path",)),
+    hint="in: {path, magnification?, pixel_pitch_um?, z_step_um?, min_intensity?, min_bead_distance_um?, "
+         "z_fit_window_um?, z_min?, z_max?}: Utils > PSF (beads) analysis of a TIFF z-stack: each bead's lateral and "
+         "axial FWHM and their median and spread. out: {request}; the result in get_display {request}",
+)
+
+command(
+    "analyse_field_curvature",
+    DISPLAY,
+    _on_the_gui_thread("analyse_field_curvature"),
+    accept=_accept_analyse_field_curvature,
+    schema=_schema({"channels": {"type": "array", "minItems": 1, "items": _schema(
+        {"path": _STRING, "label": _STRING, "wavelength_nm": _NUMBER}, required=("path",))},
+        "magnification": _NUMBER, "pixel_pitch_um": _NUMBER,
+        "z_step_um": {**_NUMBER, "description": "10.0 when omitted"},
+        "n_rois_x": {"type": "integer", "minimum": 2, "maximum": 64}, "n_rois_y": {"type": "integer", "minimum": 2, "maximum": 64},
+        "tilt_reference": {**_STRING, "description": "a channel's path: its tilt is subtracted from the sections"}},
+        required=("channels",)),
+    hint="in: {channels: [{path, label?, wavelength_nm?}], magnification?, pixel_pitch_um?, z_step_um?, n_rois_x?, "
+         "n_rois_y?, tilt_reference?}: Utils > Field curvature / chromatic shift of TIFF z-stacks: per channel the depth "
+         "of field, sag, best plane and best-focus map. out: {request}; the result in get_display {request}",
+)
+
+
 def _enter_and_start(core, run_state, row):
     """Run upstream's synchronous acquisition entry point with a truthful state transition.
 
@@ -2791,3 +3599,4 @@ def self_test(source):
     note(not accepts("__import__", {}), "unknown command refused")
     note(len(sim.moves) == expected, f"only the {expected} in-range move(s) reached the mock stage")
     return ok, report
+

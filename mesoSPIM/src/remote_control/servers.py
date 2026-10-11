@@ -35,7 +35,6 @@ from .dispatcher import (
     EMERGENCY,
     PROCESSING,
     STOPPING,
-    WAIT,
     _core_state,
     run,
     complete,
@@ -465,7 +464,8 @@ def _mcp_reply(acceptor, msg):
         result = {
             "tools": [
                 {"name": c.name, "inputSchema": c.schema,
-                 "description": f"{c.hint}. {config.MCP_WAIT_NOTE}" if c.kind == WAIT else c.hint or c.name}
+                 "description": f"{c.hint}. {config.MCP_KIND_NOTES[c.kind]}" if c.kind in config.MCP_KIND_NOTES
+                 else c.hint or c.name}
                 for c in COMMANDS.values()
             ]
         }

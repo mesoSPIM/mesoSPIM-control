@@ -6,8 +6,8 @@ server as running before binding succeeds. Only one transport can run in a sessi
 started automatically when mesoSPIM opens.
 
 The class also supplies the small, thread-safe bridges needed to keep a remotely installed
-acquisition list synchronized with the visible mesoSPIM table, and to give a remotely started run
-the main window's STOP. Network protocols, validation, and hardware calls deliberately live in the
+acquisition list synchronized with the visible mesoSPIM table, to give a remotely started run
+the main window's STOP, and to reach the windows' own controls (gui_handles). Network protocols, validation, and hardware calls deliberately live in the
 other Remote Control modules. MainWindow only constructs this widget and calls ``shutdown`` during
 application exit.
 
@@ -22,6 +22,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from . import config
 from . import dispatcher
+from .gui_handles import GuiHandles
 
 
 class RemoteControlGUI(QtWidgets.QWidget):
@@ -74,6 +75,10 @@ class RemoteControlGUI(QtWidgets.QWidget):
         self.core._remote_control_acquisition_list_signal = self.sig_install_acquisition_list
         self.sig_remote_run.connect(self.on_remote_run, type=queued)
         self.core._remote_control_run_signal = self.sig_remote_run
+        # The windows' own controls, for the calls that change what they show (gui_handles).
+        self.gui_handles = GuiHandles(parent, self)
+        self.core._remote_control_gui_handles = self.gui_handles
+        self.gui_handles.start()
         parent.sig_state_request.connect(self.on_window_state_request)
         parent.sig_stop_time_lapse.connect(self.on_window_stop)
         parent.installEventFilter(self)
@@ -204,8 +209,10 @@ class RemoteControlGUI(QtWidgets.QWidget):
     def on_window_state_request(self, request):
         """The main window's STOP (and the AI Assistant's Stop microscope, which calls the same
         handler) asks Core for the idle state. A remote run it ends is marked stopped, as
-        stop_activity marks it, so the client is not told a stopped run simply completed."""
-        if isinstance(request, dict) and request.get("state") == "idle":
+        stop_activity marks it, so the client is not told a stopped run simply completed. While a
+        window feature runs on the GUI thread (the optimizer stops live itself), the operator cannot
+        press STOP, so an idle request then is the feature's own, not a stop."""
+        if isinstance(request, dict) and request.get("state") == "idle" and self.gui_handles.operating is None:
             self.on_window_stop()
 
     def eventFilter(self, watched, event):
