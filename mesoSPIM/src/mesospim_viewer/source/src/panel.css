@@ -151,8 +151,10 @@ button.icon.off { color: var(--text-muted); }
 .controls .neuroglancer-invlerp-widget { display: flex; flex-direction: column; width: 100%; }
 .controls .neuroglancer-invlerp-widget > * + * { margin-top: 3px; }
 .controls .neuroglancer-invlerp-legend-panel { display: none; }
+/* overflow: a row's histogram not drawn yet keeps the browser's 300-pixel canvas,
+   which would make the panel scroll sideways */
 .controls .neuroglancer-invlerp-cdfpanel {
-  position: relative; display: block; width: 100%; height: 44px; box-sizing: border-box;
+  position: relative; display: block; width: 100%; height: 44px; box-sizing: border-box; overflow: hidden;
   background: #0a0c10; border: 1px solid var(--subtle-border); border-radius: 4px;
 }
 .controls .neuroglancer-invlerp-widget-bounds { display: flex; align-items: center; width: 100%; }

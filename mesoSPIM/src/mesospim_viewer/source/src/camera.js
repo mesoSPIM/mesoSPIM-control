@@ -188,6 +188,65 @@ function fitCamera(viewer) {
   return fit > 0 || boxFit > 0;
 }
 
+// -- how finely the volume is drawn -------------------------------------------------------
+
+// The engine's perspective: a vertical field of view of 45 degrees.
+const FOCAL = 1 / Math.tan(Math.PI / 8);
+// The box keeps a little room around the farthest corner.
+const BOX_MARGIN = 1.05;
+// More steps than this would stall the picture on any card.
+const MOST_STEPS = 16384;
+
+/**
+ * The volume view's box and the number of steps along each line of sight, for
+ * one voxel of the copy drawn to cover about `pixelsPerVoxel` pixels of the
+ * screen where the view turns.
+ *
+ * The engine draws from the copy whose voxels are about the size of one step,
+ * and a step is the depth of its box divided by the steps. Its own box is fifty
+ * times the zoom deep: for a light-sheet stack nearly all of it is empty space,
+ * so it kept to its coarsest copy until the steps were so many the picture
+ * stalled. Here the box just holds every corner of what is shown, wherever the
+ * view turns, and the steps follow from the zoom and the size of the panel:
+ * zooming in draws from finer copies, down to the finest, by itself.
+ *
+ * Returns `{ depth, samples }` (the box in the engine's units), or null while
+ * there is nothing to draw or no volume view on screen.
+ */
+export function volumeDrawing(viewer, pixelsPerVoxel) {
+  const space = globalSpace(viewer);
+  const render = viewer.navigationState.pose.displayDimensionRenderInfo.value;
+  if (!space?.rank || !render) return null;
+  let volume = null;
+  for (const panel of viewer.display.panels) if ("sliceViews" in panel) volume = panel.renderViewport;
+  const height = volume?.logicalHeight ?? 0;
+  if (!(height > 0)) return null;
+  const drawn = Array.from(render.displayDimensionIndices).filter((axis) => axis >= 0).slice(0, 3);
+  const { lowerBounds, upperBounds } = space.bounds;
+  if (drawn.some((axis) => !Number.isFinite(lowerBounds[axis]) || !Number.isFinite(upperBounds[axis]))) return null;
+  const at = viewer.navigationState.position.value;
+  let farthest = 0;
+  for (let corner = 0; corner < 1 << drawn.length; ++corner) {
+    let squared = 0;
+    drawn.forEach((axis, slot) => {
+      const end = (corner >> slot) & 1 ? upperBounds[axis] : lowerBounds[axis];
+      squared += ((end - at[axis]) * render.canonicalVoxelFactors[slot]) ** 2;
+    });
+    farthest = Math.max(farthest, Math.sqrt(squared));
+  }
+  const zoom = viewer.perspectiveNavigationState.zoomFactor.value; // the height of the view where it turns
+  if (!(farthest > 0) || !(zoom > 0)) return null;
+  const depth = 2 * farthest * BOX_MARGIN;
+  // The engine's own sums (perspective_view/panel.js): a box of `depth` reaches this
+  // far before and behind the point the view turns about, in units of the distance
+  // to that point; nearer than a tenth of it is cut off.
+  const reach = depth / zoom / FOCAL;
+  const span = 1 + reach - Math.max(0.1, 1 - reach);
+  // One pixel where the view turns is 2 / (FOCAL * height) of those units.
+  const samples = (span * FOCAL * height) / (2 * pixelsPerVoxel);
+  return { depth, samples: Math.min(MOST_STEPS, Math.max(1, Math.round(samples))) };
+}
+
 // -- following the newest plane --------------------------------------------------------
 
 function placedNow(viewer) {

@@ -72,6 +72,12 @@ What is on screen
     the contrast with its histogram.
   * *3D view*, in 3D only: the projection (max, blend, min), the detail, the
     gain, where to look from, and whether to draw the plane the Z slider moves.
+    **Detail** sets how sharply the volume is drawn for what is on screen, from
+    fast to as fine as the screen; beside it, the size of a voxel of the copy of
+    the image drawn now. Zooming in draws from finer copies by itself, down to
+    the finest the data has, so to look at a detail, zoom in on it. The volume
+    turns about the middle of the stack; while an acquisition runs, Live in 3D
+    follows its time points.
 
 * The picture is never silently black: with nothing to draw it says what it is
   waiting for, and a thin bar along the top shows while data is still loading.

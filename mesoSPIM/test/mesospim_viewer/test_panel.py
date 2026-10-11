@@ -692,6 +692,35 @@ VIEW = """() => ({ layout: window.mesospim.layout(),
 VOLUME = """() => window.viewer.layerManager.managedLayers.map(m =>
   [m.layer.volumeRenderingDepthSamplesTarget.value, m.layer.volumeRenderingGain.value])"""
 
+READING = "() => document.querySelector('.card.volume input.detail + .reading').textContent"
+
+# The copy of the image the volume view draws from, in micrometres across (x), as the engine last drew it.
+DRAWN = """() => {
+  const layer = window.viewer.layerManager.managedLayers[0].layer;
+  const volume = layer.renderLayers.find((r) => 'depthSamplesTarget' in r);
+  const size = volume?.highestResolutionLoadedVoxelSize;
+  return size ? size[0] * 1e6 : null;
+}"""
+
+# The depth of the volume view's box, and the farthest any corner of what is shown lies from where it
+# turns, both in the engine's units.
+BOX = """() => {
+  const v = window.viewer, space = v.navigationState.position.coordinateSpace.value;
+  const render = v.navigationState.pose.displayDimensionRenderInfo.value;
+  const drawn = Array.from(render.displayDimensionIndices).filter((a) => a >= 0).slice(0, 3);
+  const at = v.navigationState.position.value;
+  let farthest = 0;
+  for (let corner = 0; corner < 8; ++corner) {
+    let squared = 0;
+    drawn.forEach((axis, slot) => {
+      const end = (corner >> slot) & 1 ? space.bounds.upperBounds[axis] : space.bounds.lowerBounds[axis];
+      squared += ((end - at[axis]) * render.canonicalVoxelFactors[slot]) ** 2;
+    });
+    farthest = Math.max(farthest, Math.sqrt(squared));
+  }
+  return { depth: v.perspectiveNavigationState.depthRange.value, farthest };
+}"""
+
 
 @slow_without_a_graphics_card
 def test_2d_and_3d_swap_the_layout_and_the_volume_rendering(pages, viewers, stacks):
@@ -728,9 +757,13 @@ def test_the_3d_card_drives_projection_detail_gain_planes_and_the_look(pages, vi
     assert modes() == ["max", "max"] and page.evaluate(lit) == "max"
     assert page.evaluate(gain_offered) is False, "the gain is for the blended projection only"
 
+    coarse = page.evaluate(VOLUME)[0][0]
     _set_detail(page, 3)
-    assert [detail for detail, _ in page.evaluate(VOLUME)] == [256, 256]
-    assert page.evaluate("() => document.querySelector('.card.volume input.detail + .reading').textContent") == "256 steps"
+    # applied on the next frame
+    sharp = until(lambda: [detail for detail, _ in page.evaluate(VOLUME)], lambda seen: seen[0] > coarse)
+    assert sharp[0] == sharp[1] and sharp[0] > coarse, "sharper is more steps, for every channel"
+    reading = until(lambda: page.evaluate(READING), lambda text: text.endswith("µm"))
+    assert reading.endswith("µm"), f"the copy drawn, not a count of steps: {reading!r}"
     _set_detail(page, 0)
 
     page.evaluate(
@@ -792,7 +825,8 @@ def test_adjustments_in_the_panel_survive_a_tile_landing(pages, viewers, stacks)
     assert until(lambda: page.evaluate(sources), lambda seen: seen == [2, 2], 20) == [2, 2]
     assert pages.layer_objects(page) == made, "the same layers, so the same rows and controls"
     assert page.evaluate(VISIBILITY) == [True, False]
-    assert page.evaluate(VOLUME) == [[64, 2], [64, 2]]
+    (steps, gain), other = page.evaluate(VOLUME)
+    assert other == [steps, gain] and gain == 2 and steps > 0, "one detail and one gain for every channel"
     assert page.evaluate(
         "() => [...document.querySelectorAll('.channel')].map(r => r.classList.contains('hidden'))"
     ) == [False, True]
@@ -811,7 +845,8 @@ def test_a_layer_that_arrives_in_the_volume_view_is_drawn_like_the_others(pages,
     view.add(stacks[1], layer="second")
     until(lambda: page.evaluate(VIEW)["modes"], lambda seen: len(seen) == 4, 20)
     assert page.evaluate(VIEW) == {"layout": "3d", "modes": ["min"] * 4, "on": ["3d"]}
-    assert [detail for detail, _ in page.evaluate(VOLUME)] == [64] * 4, "as finely as the ones already there"
+    details = [detail for detail, _ in page.evaluate(VOLUME)]
+    assert len(set(details)) == 1, f"as finely as the ones already there: {details}"
     assert not errors, errors
 
 
@@ -860,4 +895,50 @@ def test_live_in_3d_follows_the_time_points_and_keeps_the_stack_centred(pages, v
     assert page.evaluate("() => window.mesospim.following.value") is True, "and still following"
     page.click('.view button[data-layout="xy"]')
     assert until(lambda: round(page.evaluate(WHERE)["voxels"]["z"]), lambda z: z == 15) == 15, "on the newest plane"
+    assert not errors, errors
+
+
+@slow_without_a_graphics_card
+def test_the_volume_views_box_holds_the_whole_specimen(pages, viewers, stacks):
+    """The engine takes the depth of the box it draws in, divided by the detail, as
+    the size of the copy to draw from. Left at its own default, fifty times the
+    zoom, the box was many times deeper than a stack: nearly every step went into
+    empty space, and the picture stayed on the coarsest copy."""
+    view = viewers(ui="simple")
+    view.add(stacks[0], layer="overview")
+    page, errors = _opened(pages, view, layers=2)
+    _in_3d(page)
+    box = until(lambda: page.evaluate(BOX), lambda seen: seen["depth"] > 0)
+    assert box["depth"] > 0, "a box of its own size, not the engine's fifty times the zoom"
+    assert 2 * box["farthest"] <= box["depth"] <= 2.5 * box["farthest"], box
+    assert not errors, errors
+
+
+@slow_without_a_graphics_card
+def test_zooming_in_draws_from_a_finer_copy_without_touching_the_detail(pages, viewers, stacks):
+    view = viewers(ui="simple")
+    view.add(stacks[0], layer="overview")  # 160 x 160 voxels of 1 um, copies of 1, 2, 4 and 8 um
+    page, errors = _opened(pages, view, layers=2)
+    _in_3d(page)  # the fastest detail
+    whole = until(lambda: page.evaluate(DRAWN), lambda seen: seen is not None and seen > 1.5)
+    assert whole > 1.5, "the whole specimen on screen, quickly: a coarse copy"
+    page.evaluate("() => { const z = window.viewer.perspectiveNavigationState.zoomFactor; z.value = z.value / 8; }")
+    close = until(lambda: page.evaluate(DRAWN), lambda seen: seen is not None and seen < 1.5)
+    assert close == pytest.approx(1.0), "zoomed in: the finest copy"
+    assert until(lambda: page.evaluate(READING), lambda text: text.startswith("1 ")) == "1 µm"
+    assert not errors, errors
+
+
+def test_a_panel_full_of_channels_scrolls_down_and_never_sideways(pages, viewers, stacks):
+    """The histogram of a channel row below the fold is not drawn yet, and its
+    canvas keeps the browser's default width of 300 pixels: wider than the row,
+    it gave the panel a sideways scrollbar as soon as the panel scrolled down."""
+    view = viewers(ui="simple")
+    for name in ("first", "second", "third", "fourth"):
+        view.add(stacks[0], layer=name)
+    page, errors = _opened(pages, view, layers=8)
+    body = "() => { const b = document.querySelector('.panel-body'); return [b.scrollHeight > b.clientHeight, b.scrollWidth - b.clientWidth]; }"
+    scrolls_down, sideways = until(lambda: page.evaluate(body), lambda seen: seen[0])
+    assert scrolls_down, "enough channels for the panel to scroll"
+    assert sideways <= 0, f"the panel is {sideways} pixels too wide"
     assert not errors, errors

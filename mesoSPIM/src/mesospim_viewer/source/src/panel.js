@@ -25,7 +25,7 @@ import { ShaderControls } from "neuroglancer/unstable/widget/shader_controls.js"
 import { WatchableVisibilityPriority } from "neuroglancer/unstable/visibility_priority/frontend.js";
 import { SidePanel } from "neuroglancer/unstable/ui/side_panel.js";
 import { TrackableSidePanelLocation } from "neuroglancer/unstable/ui/side_panel_location.js";
-import { layoutOf, setLayout } from "./camera.js";
+import { layoutOf, setLayout, volumeDrawing } from "./camera.js";
 import { about } from "./layers.js";
 import { onAutoChanged } from "./contrast.js";
 import "./panel.css";
@@ -187,11 +187,13 @@ const LOOK_FROM = [
   ["Front", [-Math.SQRT1_2, 0, 0, Math.SQRT1_2]],
   ["Side", [0, Math.SQRT1_2, 0, Math.SQRT1_2]],
 ];
-// Doubling, because the engine draws from the copy of the image whose voxels
-// are about the size of one step: each step of the slider is one finer copy.
-// The top step lets a stack thousands of voxels across draw from its finest
-// copy, for a card that can hold it.
-const DETAIL_STEPS = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+// How many pixels of the screen one voxel of the copy drawn covers at least,
+// from fast to sharp: the engine takes the finest copy whose voxels are no
+// smaller, so in practice between this and twice it. Halving, because each copy
+// of the image has voxels twice the size of the one before: each step of the
+// slider is one finer copy, and the sharpest is as fine as the screen.
+const DETAIL_PIXELS = [8, 4, 2, 1, 0.5];
+let detail = 2;
 
 function labelled(text, control, reading) {
   const row = element("div", "row labelled");
@@ -225,21 +227,22 @@ function volumeCard(viewer, fit) {
   }
   card.appendChild(labelled("Projection", projection));
 
-  // Detail: how many steps a ray takes, which is what decides how fine a copy of
-  // the image the engine may draw from. More is sharper and slower.
-  const detail = document.createElement("input");
-  detail.type = "range";
-  detail.min = "0";
-  detail.max = String(DETAIL_STEPS.length - 1);
-  detail.step = "1";
-  detail.className = "detail";
-  detail.title = "Finer is sharper, and slower to draw";
+  // Detail: how finely the volume is drawn for what is on screen. The copy of the
+  // image follows the zoom: zoomed in, a finer one, down to the finest.
+  const detailInput = document.createElement("input");
+  detailInput.type = "range";
+  detailInput.min = "0";
+  detailInput.max = String(DETAIL_PIXELS.length - 1);
+  detailInput.step = "1";
+  detailInput.className = "detail";
+  detailInput.title = "Sharper or faster to draw; zooming in sharpens it too";
   const detailReading = element("span", "reading", "");
-  detail.addEventListener("input", () => {
-    const samples = DETAIL_STEPS[Number(detail.value)];
-    for (const layer of imageLayers(viewer)) layer.volumeRenderingDepthSamplesTarget.value = samples;
+  detailReading.title = "The size of a voxel of the copy of the image drawn now";
+  detailInput.addEventListener("input", () => {
+    detail = Number(detailInput.value);
+    drawFinely(viewer);
   });
-  card.appendChild(labelled("Detail", detail, detailReading));
+  card.appendChild(labelled("Detail", detailInput, detailReading));
 
   // Gain, for the blended projection only: how strongly each voxel adds up.
   const gain = document.createElement("input");
@@ -281,13 +284,8 @@ function volumeCard(viewer, fit) {
     const layers = imageLayers(viewer);
     const mode = layoutOf(viewer) === "3d" ? layers[0]?.volumeRenderingMode.toJSON() ?? volumeMode : volumeMode;
     for (const [name, button] of projections) button.classList.toggle("on", mode === name);
-    const samples = layers[0]?.volumeRenderingDepthSamplesTarget.value ?? 64;
-    let nearest = 0;
-    DETAIL_STEPS.forEach((step, i) => {
-      if (Math.abs(step - samples) < Math.abs(DETAIL_STEPS[nearest] - samples)) nearest = i;
-    });
-    if (document.activeElement !== detail) detail.value = String(nearest);
-    detailReading.textContent = `${Math.round(samples)} steps`;
+    if (document.activeElement !== detailInput) detailInput.value = String(detail);
+    detailReading.textContent = drawnVoxel(viewer);
     const g = layers[0]?.volumeRenderingGain.value ?? 0;
     if (document.activeElement !== gain) gain.value = String(g);
     gainReading.textContent = g.toFixed(1);
@@ -315,13 +313,55 @@ function volumeCard(viewer, fit) {
   viewer.layerManager.layersChanged.add(watch);
   viewer.showPerspectiveSliceViews.changed.add(reflect);
   watch();
+  // The box and the steps follow the zoom, the point the view turns about, the
+  // data shown and the size of the panel.
+  const again = () => drawFinely(viewer);
+  viewer.perspectiveNavigationState.changed.add(again);
+  viewer.navigationState.changed.add(again);
+  viewer.layerManager.layersChanged.add(again);
+  window.addEventListener("resize", again);
+  // The copy drawn is the engine's choice, made as it draws: read it now and then.
+  setInterval(() => {
+    if (!card.hidden) detailReading.textContent = drawnVoxel(viewer);
+  }, 500);
   const show = () => {
     card.hidden = layoutOf(viewer) !== "3d";
+    drawFinely(viewer);
     reflect();
   };
   viewer.layout.changed.add(show);
   show();
   return card;
+}
+
+let drawing = 0;
+
+/** Set the volume view's box and steps for the detail chosen (camera.js), once per frame at most. */
+function drawFinely(viewer) {
+  if (drawing) return;
+  drawing = requestAnimationFrame(() => {
+    drawing = 0;
+    if (layoutOf(viewer) !== "3d") return;
+    const wanted = volumeDrawing(viewer, DETAIL_PIXELS[detail]);
+    if (wanted === null) return;
+    const box = viewer.perspectiveNavigationState.depthRange;
+    if (!(box.value > 0) || Math.abs(box.value - wanted.depth) > 1e-3 * wanted.depth) box.value = wanted.depth;
+    for (const layer of imageLayers(viewer)) {
+      if (layer.volumeRenderingDepthSamplesTarget.value !== wanted.samples) {
+        layer.volumeRenderingDepthSamplesTarget.value = wanted.samples;
+      }
+    }
+  });
+}
+
+/** The size of a voxel of the copy the volume view draws from now, in micrometres across. */
+function drawnVoxel(viewer) {
+  for (const layer of imageLayers(viewer)) {
+    const volume = layer.renderLayers.find((render) => "depthSamplesTarget" in render);
+    const size = volume?.highestResolutionLoadedVoxelSize;
+    if (size) return `${Number((size[0] * 1e6).toPrecision(2))} µm`;
+  }
+  return "";
 }
 
 // -- the channels: one row per engine layer, gathered by acquisition ------------
