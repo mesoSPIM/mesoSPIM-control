@@ -18,7 +18,13 @@ import pytest
 
 pytest.importorskip("PyQt5", reason="mesoSPIM_DataViewer is part of the PyQt5 application")
 
-from mesoSPIM.src.mesoSPIM_DataViewer import Feed, acquisition_folder, describe_stack, time_point_of  # noqa: E402
+from mesoSPIM.src.mesoSPIM_DataViewer import (  # noqa: E402
+    Feed,
+    acquisition_folder,
+    close_window,
+    describe_stack,
+    time_point_of,
+)
 from mesoSPIM.src.mesospim_viewer import Stack  # noqa: E402
 
 
@@ -271,6 +277,9 @@ class Window:
     def end_run(self) -> None:
         self.told.append("end_run")
 
+    def close(self) -> None:
+        self.told.append("close")
+
 
 def a_feed(window=None, time_point=None, **core) -> SimpleNamespace:
     """What ``Feed``'s methods read of the feed, without the signals it listens to.
@@ -361,3 +370,19 @@ def test_a_time_lapse_fed_to_the_library_stays_one_run_until_its_last_time_point
 def core_with_pixels(core: SimpleNamespace) -> SimpleNamespace:
     core.cfg = a_core().cfg
     return core
+
+
+# -- closing mesoSPIM ----------------------------------------------------------------------------
+
+
+def test_closing_mesospim_closes_the_data_viewer_with_it():
+    """A window of its own, the Data viewer left open would keep mesoSPIM running
+    after File > Exit has closed every other window."""
+    window = Window()
+    close_window(SimpleNamespace(data_viewer_window=window))
+    assert window.told == ["close"]
+
+
+def test_closing_mesospim_with_no_data_viewer_open_is_fine():
+    close_window(SimpleNamespace())
+    close_window(SimpleNamespace(data_viewer_window=None))

@@ -104,6 +104,14 @@ def open_window(main_window):
     return window
 
 
+def close_window(main_window):
+    """Close the Data viewer with mesoSPIM: a window of its own, left open it would keep
+    the program running after File > Exit has closed every other window."""
+    window = getattr(main_window, 'data_viewer_window', None)
+    if window is not None:
+        window.close()
+
+
 def open_acquired_dataset(main_window, path: str | None = None):
     """Ask for a dataset on disk and show it in the Data viewer, beside what it shows.
 

@@ -300,6 +300,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         if self.contrast_window:
             self.contrast_window.close()
         self.tile_view_window.close()
+        mesoSPIM_DataViewer.close_window(self)
         if self.scriptwindow:
             self.scriptwindow.close()
         self.close()
