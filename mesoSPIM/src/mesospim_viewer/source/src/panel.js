@@ -194,6 +194,12 @@ const LOOK_FROM = [
 // slider is one finer copy, and the sharpest is as fine as the screen.
 const DETAIL_PIXELS = [8, 4, 2, 1, 0.5];
 let detail = 2;
+// While the operator turns, zooms or pans the volume: two copies coarser, and
+// never finer than a voxel to 8 pixels, so it keeps up at any detail; at the
+// detail chosen once it has been still this long.
+const WHILE_MOVING = 4;
+const MOVING_PIXELS = 8;
+const STILL_MS = 300;
 
 function labelled(text, control, reading) {
   const row = element("div", "row labelled");
@@ -316,8 +322,12 @@ function volumeCard(viewer, fit) {
   // The box and the steps follow the zoom, the point the view turns about, the
   // data shown and the size of the panel.
   const again = () => drawFinely(viewer);
-  viewer.perspectiveNavigationState.changed.add(again);
-  viewer.navigationState.changed.add(again);
+  const moved = () => {
+    noteMoving(viewer);
+    drawFinely(viewer);
+  };
+  viewer.perspectiveNavigationState.changed.add(moved);
+  viewer.navigationState.changed.add(moved);
   viewer.layerManager.layersChanged.add(again);
   window.addEventListener("resize", again);
   // The copy drawn is the engine's choice, made as it draws: read it now and then.
@@ -335,6 +345,28 @@ function volumeCard(viewer, fit) {
 }
 
 let drawing = 0;
+let moving = false;
+let still = null;
+let pose = null;
+
+/** Whether the operator is turning, zooming or panning the volume: the page's own
+ * changes to the box are not a move, and nor is the same view set again. */
+function noteMoving(viewer) {
+  const now = [
+    ...viewer.projectionOrientation.orientation,
+    viewer.perspectiveNavigationState.zoomFactor.value,
+    ...viewer.navigationState.position.value,
+  ].join();
+  const changed = pose !== null && now !== pose;
+  pose = now;
+  if (!changed || layoutOf(viewer) !== "3d") return;
+  moving = true;
+  clearTimeout(still);
+  still = setTimeout(() => {
+    moving = false;
+    drawFinely(viewer);
+  }, STILL_MS);
+}
 
 /** Set the volume view's box and steps for the detail chosen (camera.js), once per frame at most. */
 function drawFinely(viewer) {
@@ -342,7 +374,8 @@ function drawFinely(viewer) {
   drawing = requestAnimationFrame(() => {
     drawing = 0;
     if (layoutOf(viewer) !== "3d") return;
-    const wanted = volumeDrawing(viewer, DETAIL_PIXELS[detail]);
+    const pixels = moving ? Math.max(DETAIL_PIXELS[detail] * WHILE_MOVING, MOVING_PIXELS) : DETAIL_PIXELS[detail];
+    const wanted = volumeDrawing(viewer, pixels);
     if (wanted === null) return;
     const box = viewer.perspectiveNavigationState.depthRange;
     if (!(box.value > 0) || Math.abs(box.value - wanted.depth) > 1e-3 * wanted.depth) box.value = wanted.depth;

@@ -75,7 +75,9 @@ What is on screen
     **Detail** sets how sharply the volume is drawn for what is on screen, from
     fast to as fine as the screen; beside it, the size of a voxel of the copy of
     the image drawn now. Zooming in draws from finer copies by itself, down to
-    the finest the data has, so to look at a detail, zoom in on it. The volume
+    the finest the data has, so to look at a detail, zoom in on it. While you
+    turn, zoom or pan it, the volume is drawn coarser so that it keeps up, and
+    at the detail chosen again as soon as you stop. The volume
     turns about the middle of the stack; while an acquisition runs, Live in 3D
     follows its time points.
 

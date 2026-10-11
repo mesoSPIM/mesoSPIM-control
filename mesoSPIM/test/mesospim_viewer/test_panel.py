@@ -942,3 +942,25 @@ def test_a_panel_full_of_channels_scrolls_down_and_never_sideways(pages, viewers
     assert scrolls_down, "enough channels for the panel to scroll"
     assert sideways <= 0, f"the panel is {sideways} pixels too wide"
     assert not errors, errors
+
+
+@slow_without_a_graphics_card
+def test_turning_the_volume_draws_it_coarser_until_it_stops(pages, viewers, stacks):
+    """Drawn finely, a volume turns slowly. While the operator turns, zooms or pans it,
+    the view draws from a coarser copy, and once it has stopped, at the detail chosen."""
+    view = viewers(ui="simple")
+    view.add(stacks[0], layer="overview")
+    page, errors = _opened(pages, view, layers=2)
+    _in_3d(page)
+    _set_detail(page, 3)
+    steps = lambda: page.evaluate(VOLUME)[0][0]
+    still = until(steps, lambda seen: seen > 0, 5)
+    time.sleep(1.0)
+    still = steps()
+    turn = """() => { const o = window.viewer.projectionOrientation; const q = Float32Array.from(o.orientation);
+      q[1] += 0.05; const n = Math.hypot(...q); o.orientation = q.map((v) => v / n); o.changed.dispatch(); }"""
+    page.evaluate(turn)
+    moving = until(steps, lambda seen: seen < still, 2)
+    assert moving < still, "coarser while turning"
+    assert until(steps, lambda seen: seen == still, 3) == still, "and as chosen once it has stopped"
+    assert not errors, errors
