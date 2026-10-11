@@ -214,5 +214,6 @@ server does not start. `self_test` repeats this hardware-free check on demand.
 calls
 architecture
 testing
+microscope
 open
 ```
