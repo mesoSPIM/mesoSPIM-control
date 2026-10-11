@@ -300,6 +300,25 @@ def test_the_list_of_acquisitions_shows_what_python_offers(pages, viewers, stack
     assert not errors, errors
 
 
+def test_a_run_between_two_stacks_says_how_far_it_has_got(pages, viewers, stacks):
+    view = viewers(ui="simple")
+    view.add(stacks[0], layer="run")
+    view.offer([{
+        "name": "run", "shown": True, "live": True, "removable": False, "tiles": 3, "note": "", "channels": ["488", "561"],
+        "positions": [{"name": "Tile 1", "state": "done"}, {"name": "Tile 2", "state": "part", "acquired": 1},
+                      {"name": "Tile 3", "state": "next"}],
+    }])
+    page, errors = _opened(pages, view, layers=2)
+    rows = until(lambda: page.evaluate(ROWS), lambda seen: seen)
+    assert rows[0]["note"] == "1 of 3 positions acquired", "between two stacks the microscope says nothing more"
+    states = """() => [...document.querySelectorAll('.position')].map(p => [p.querySelector('.label').textContent,
+      p.querySelector('.state')?.textContent ?? null])"""
+    assert until(lambda: page.evaluate(states), lambda seen: seen) == [
+        ["Tile 1", "acquired"], ["Tile 2", "1 of 2 channels"], ["Tile 3", "next"],
+    ]
+    assert not errors, errors
+
+
 def test_clicks_in_the_list_tell_python_what_to_show_and_what_to_remove(pages, viewers, stacks):
     view = viewers(ui="simple")
     view.add(stacks[0], layer="run_b")

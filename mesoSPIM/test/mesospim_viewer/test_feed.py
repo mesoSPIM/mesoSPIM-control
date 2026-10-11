@@ -826,12 +826,32 @@ def test_a_run_being_acquired_offers_its_positions_done_acquiring_and_next(libra
     assert positions[0]["um"] == {"x": [0.0, 64.0], "y": [0.0, 64.0], "z": [0.0, 100.0]}
     assert "um" not in positions[1], "where the next one is, nobody knows yet"
     library.end_stack()
+    between = offered(library.viewer)["run"]["positions"]
+    assert [(p["name"], p["state"]) for p in between] == [("Tile 1", "now"), ("Tile 2", "next")], (
+        "between two stacks the tile last begun is still being acquired: its 561 stack is to come"
+    )
+    library.begin_stack(a_stack(name="run", tile=0, channel="561"))
+    feed(library, range(5))
+    library.end_stack()
     library.begin_stack(a_stack(name="run", tile=1))
     feed(library, range(5))
     positions = offered(library.viewer)["run"]["positions"]
     assert [(p["name"], p["state"]) for p in positions] == [("Tile 1", "done"), ("Tile 2", "now")]
     assert positions[1]["um"]["x"] == [64.0, 128.0]
     assert offered(library.viewer)["run"]["channels"] == ["488", "561"]
+
+
+def test_a_tile_with_some_of_its_channels_acquired_says_how_many(library):
+    """An acquisition list may go laser by laser: every tile in 488 first, then every tile in 561."""
+    library.begin_stack(a_stack(name="run", tile=0))
+    feed(library, range(5))
+    library.end_stack()
+    library.begin_stack(a_stack(name="run", tile=1))
+    feed(library, range(5))
+    positions = offered(library.viewer)["run"]["positions"]
+    assert [(p["name"], p["state"], p.get("acquired")) for p in positions] == [
+        ("Tile 1", "part", 1), ("Tile 2", "now", None),
+    ]
 
 
 def test_with_live_off_a_run_that_starts_is_not_collected(library):
@@ -856,10 +876,11 @@ def test_live_off_during_a_run_pauses_it_and_live_on_lets_it_go_on(library):
     assert offered(view)["run"]["paused"] is False
     library.collect(False)
     assert offered(view)["run"]["paused"] is True and offered(view)["run"]["removable"] is False
+    assert follow(view) == {}, "paused, nothing comes in: the picture's Live button goes"
     feed(library, range(4, 12))
     library.collect(True)
     assert offered(view)["run"]["paused"] is False
     library.end_stack()
     library.begin_stack(a_stack(name="run", tile=1))
     feed(library, range(3))
-    assert [(p["name"], p["state"]) for p in offered(view)["run"]["positions"]] == [("Tile 1", "done"), ("Tile 2", "now")]
+    assert [(p["name"], p["state"]) for p in offered(view)["run"]["positions"]] == [("Tile 1", "part"), ("Tile 2", "now")]

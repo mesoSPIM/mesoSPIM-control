@@ -199,7 +199,22 @@ mesoSPIM-control does. What to look for:
 Then with the microscope: select ``MP_OME_Zarr_TCZYX_Writer`` in the
 file-naming wizard, open the Data viewer, and run a short acquisition list of
 two tiles and two lasers. Each stack should fill in as it is acquired, and a
-time lapse of a few time points should extend the T slider.
+time lapse of a few time points should extend the T slider. In the panel,
+while it runs and after:
+
+1. The run comes in at the top, marked **Live**, opened, with its positions:
+   the tile being acquired says *acquiring*, the others *next*. With the list
+   going laser by laser, a tile with one laser done says *1 of 2 channels*.
+2. At the end it turns **Saved**, its line says how many positions and which
+   channels, and it has a ×.
+3. A click on an earlier acquisition selects it: its positions fold out, the
+   other's fold away, the channels below become its own, and the view goes to
+   it. A click on one of its positions goes to that tile; **Fit** goes back.
+4. **Live** off, and a short run: it does not appear. **Live** on again: it
+   appears, **Saved**. **Live** off during a run: it reads **Paused**; on again,
+   it goes on.
+5. **Open from folder…** adds a saved acquisition; the × takes one off the list
+   (its files stay on disk). File > Exit closes the Data viewer with mesoSPIM.
 
 If something is wrong
 ---------------------

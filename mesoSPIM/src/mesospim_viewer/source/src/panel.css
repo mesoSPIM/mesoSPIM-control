@@ -113,7 +113,8 @@ button.icon.off { color: var(--text-muted); }
 .live-toggle.on .live-word { color: #56d364; }
 
 /* -- 2: the acquisitions: a raised bar each, its positions in a lighter area below -- */
-.acquisitions .list { display: flex; flex-direction: column; max-height: 420px; overflow-y: auto; }
+/* No scrolling of its own: the panel scrolls, one scrollbar. */
+.acquisitions .list { display: flex; flex-direction: column; }
 .acquisition {
   flex: 0 0 auto;
   background: #222a35; border: 1px solid var(--control-border); border-radius: 8px; overflow: hidden;
@@ -168,6 +169,8 @@ button.icon.off { color: var(--text-muted); }
 .position[data-state="done"] .pin path, .position[data-state="now"] .pin path { fill-opacity: 1; }
 .position[data-state="now"] .pin, .position[data-state="now"] .state { color: #56d364; }
 .position[data-state="next"] .pin path { fill-opacity: 0; stroke-dasharray: 2 1.6; }
+.position[data-state="part"] .pin { color: var(--text-primary); }
+.position[data-state="part"] .pin path { fill-opacity: 0.5; }
 .position.framed { background: rgba(47, 129, 247, 0.18); color: var(--text-bright); }
 .position.framed .pin { color: var(--accent); }
 .position.framed .pin path { fill-opacity: 1; }

@@ -308,6 +308,7 @@ class Library:
                 self.poll()
             else:
                 self._offer()
+                self._point(self.clock())
 
     def close(self) -> None:
         """The window is going: nothing is looked at or shown any more."""
@@ -874,7 +875,8 @@ class Library:
             for tile in dataset.tiles.values():
                 found.setdefault(position_name(tile.path), {"um": store_place(tile.store)})
         else:
-            if dataset.listed_positions is None:
+            if not dataset.listed_positions:
+                # Kept once found: a run just finished may not show its tiles yet.
                 dataset.listed_positions = sorted({position_name(path) for path in dataset.tile_paths()}, key=_position_order)
             for name in dataset.listed_positions:
                 found.setdefault(name, {})
@@ -883,9 +885,33 @@ class Library:
             if stack.tile:
                 found.setdefault(stack.tile, {}).setdefault("um", stack_place(stack))
         if dataset.in_run:
-            running = dataset.running
+            # Of each tile, the channels whose stack the microscope has finished, at its newest time point.
+            finished: dict[str, tuple[int, set[str]]] = {}
+            for held in dataset.previews:
+                stack = held.preview.stack
+                point, channels = finished.get(stack.tile, (stack.time_point, set()))
+                if stack.time_point > point:
+                    point, channels = stack.time_point, set()
+                if held.ended is not None and stack.time_point == point:
+                    channels.add(stack.channel)
+                finished[stack.tile] = (point, channels)
+            last = dataset.previews[-1].preview.stack if dataset.previews else None
+            wanted = len(last.channels) if last is not None else 1
+            # The tile being acquired; between two of its stacks, the one last begun, until it is whole.
+            now = dataset.running.tile if dataset.running is not None else (
+                last.tile if last is not None and len(finished.get(last.tile, (0, set()))[1]) < wanted else None
+            )
             for name, position in found.items():
-                position["state"] = "now" if running is not None and name == running.tile else "done"
+                done = len(finished.get(name, (0, set()))[1])
+                if name == now:
+                    position["state"] = "now"
+                elif done >= wanted:
+                    position["state"] = "done"
+                elif done:
+                    position["state"] = "part"
+                    position["acquired"] = done
+                else:
+                    position["state"] = "next"
             total = max((held.preview.stack.tiles for held in dataset.previews), default=0)
             for number in range(1, total + 1):
                 found.setdefault(f"Tile {number}", {"state": "next"})
@@ -899,8 +925,8 @@ class Library:
             return list(held.preview.stack.channels)
         labels: list[str] = []
         stores = [tile.store for tile in dataset.tiles.values()] if dataset.shown else []
-        if not stores and dataset.listed_channels is None:
-            dataset.listed_channels = []
+        if not stores and not dataset.listed_channels:
+            # Kept once found: a run just finished may not have its description on disk yet.
             for path in dataset.tile_paths()[:1]:
                 try:
                     dataset.listed_channels = [channel.label for channel in read_store(path).channels]
@@ -953,6 +979,10 @@ class Library:
 
     def _point(self, now: float) -> None:
         """Say where the newest data is, for a view that follows the acquisition."""
+        if not self.collecting:
+            # Live off: nothing comes in, so there is nothing to follow.
+            self.viewer.look_at_newest()
+            return
         held = self._acquiring()
         if held is not None and held.name:
             depth = held.preview.newest_um

@@ -136,7 +136,15 @@ function loadCard(post) {
 
 /** What the line under an acquisition's name says. */
 function lineOf(entry) {
-  if (entry.live) return entry.paused ? `Paused${SEPARATOR}${entry.note ?? ""}` : (entry.note ?? "");
+  if (entry.live) {
+    // Between two stacks the microscope says nothing: how many positions are done, then.
+    let where = entry.note ?? "";
+    if (!where && Array.isArray(entry.positions) && entry.positions.length) {
+      const done = entry.positions.filter((one) => one.state === "done").length;
+      where = `${done} of ${entry.positions.length} positions acquired`;
+    }
+    return entry.paused ? `Paused${SEPARATOR}${where}` : where;
+  }
   const positions = Array.isArray(entry.positions) ? entry.positions.length : null;
   const parts = [];
   if (positions) parts.push(positions === 1 ? "1 position" : `${positions} positions`);
@@ -257,7 +265,11 @@ function acquisitionsCard(viewer, post) {
           pin.innerHTML = ICONS.pin;
           row.append(pin, element("span", "label", position.name));
           if (position.state) {
-            const words = { done: "acquired", now: "acquiring", next: "next" };
+            const channels = Array.isArray(entry.channels) ? entry.channels.length : 0;
+            const words = {
+              done: "acquired", now: "acquiring", next: "next",
+              part: `${position.acquired ?? 0} of ${channels || "?"} channels`,
+            };
             row.appendChild(element("span", "state", words[position.state] ?? position.state));
           }
           row.addEventListener("click", (event) => {

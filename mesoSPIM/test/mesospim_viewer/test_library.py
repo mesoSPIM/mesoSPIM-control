@@ -661,3 +661,19 @@ def test_a_run_of_the_watched_folder_taken_off_the_list_stays_off(library, tmp_p
     library.clock.tick(5)
     library.poll()
     assert library.names == ["run_c", "run_b"], "a new one still comes in"
+
+
+def test_channels_that_could_not_be_read_yet_are_read_again(library, tmp_path):
+    """A run just finished may not have its first tile's description on disk yet: the empty
+    answer is not kept."""
+    acquisition = an_acquisition(tmp_path, "run")
+    a_run(tmp_path, "newer")
+    (acquisition / TILE.format(0)).mkdir()  # a tile store not written yet
+    library.watch(tmp_path)
+    assert offered(library.viewer)["run"]["channels"] == []
+    import shutil
+    shutil.rmtree(acquisition / TILE.format(0))
+    write_tile(acquisition / TILE.format(0), origin_um=(0, 0, 0), seed=3)
+    library.clock.tick(5)
+    library.poll()
+    assert offered(library.viewer)["run"]["channels"] == ["488", "561"]
