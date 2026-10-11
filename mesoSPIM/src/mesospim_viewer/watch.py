@@ -840,7 +840,9 @@ class Library:
     @staticmethod
     def _tile_count(dataset: Dataset) -> int:
         """How many tiles are shown: stores at different places. A run saved as one
-        store per tile and channel has several stores to a tile."""
+        store per tile and channel has several stores to a tile. A run with nothing
+        on disk the viewer reads (TIFF, HDF5, raw) is shown from the camera's frames:
+        its tiles are the places of its previews."""
         places = set()
         for tile in dataset.tiles.values():
             store = tile.store
@@ -851,6 +853,8 @@ class Library:
                     if axis.name in ("z", "y", "x")
                 )
             )
+        if not places:
+            places = {tuple(round(value, 3) for value in held.preview.stack.origin_um) for held in dataset.previews}
         return len(places)
 
     @staticmethod

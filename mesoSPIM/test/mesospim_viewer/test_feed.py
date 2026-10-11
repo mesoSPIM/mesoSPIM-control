@@ -90,7 +90,7 @@ def test_a_stack_that_begins_is_listed_shown_and_given_a_preview(library, tmp_pa
     library.begin_stack(a_stack(tmp_path))  # the writer has not made anything on disk yet
     assert library.names == ["run"] and library.shown == ["run"]
     assert offered(view)["run"] == {
-        "name": "run", "shown": True, "live": True, "removable": False, "tiles": 0,
+        "name": "run", "shown": True, "live": True, "removable": False, "tiles": 1,
         "note": "Tile 1 of 2 · 488", "empty": True,
     }
     (layer,) = view.scene["layers"]
@@ -442,7 +442,7 @@ def test_a_stack_with_no_store_on_disk_keeps_its_preview(library):
         look(library, GIVE_UP_S)
     assert previews(view, "tiffs") == ["live-1"], "nothing on disk can take its place"
     assert status(view.url + "live/live-1/0/0/0/19/0/0") == 200
-    assert offered(view)["tiffs"]["tiles"] == 0 and offered(view)["tiffs"]["empty"] is False
+    assert offered(view)["tiffs"]["tiles"] == 1 and offered(view)["tiffs"]["empty"] is False
     # The next stack of the run joins the same entry, each channel in its own layer.
     library.begin_stack(a_stack(name="tiffs", channel="561"))
     feed(library, range(20))
@@ -514,7 +514,7 @@ def test_the_end_of_the_run_ends_live(library):
     library.end_run()
     assert library.dataset("tiffs").running is None
     assert offered(view)["tiffs"] == {
-        "name": "tiffs", "shown": True, "live": False, "removable": False, "tiles": 0, "note": "", "empty": False,
+        "name": "tiffs", "shown": True, "live": False, "removable": False, "tiles": 1, "note": "", "empty": False,
     }
     assert follow(view) == {}, "nothing more is coming: nothing to follow"
     assert previews(view, "tiffs") == ["live-1"]
@@ -792,3 +792,16 @@ def test_a_time_lapse_hidden_at_one_time_point_stays_hidden_at_the_next(library,
     # The next run is shown again.
     library.begin_stack(a_time_point(tmp_path, 2))
     assert library.shown == ["Sample_Time002"]
+
+
+def test_a_run_shown_from_its_previews_counts_its_tiles_too(library):
+    """A run saved as TIFF is shown from the camera's frames alone: the list says how
+    many tiles it has all the same, as it does for a run on disk."""
+    for tile in (0, 1):
+        for channel in ("488", "561"):
+            library.begin_stack(a_stack(name="tiffs", tile=tile, channel=channel))
+            feed(library, range(20))
+            library.end_stack()
+    library.end_run()
+    look(library, LIVE_S + 1)
+    assert offered(library.viewer)["tiffs"]["tiles"] == 2
