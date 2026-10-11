@@ -240,6 +240,9 @@ class Dataset:
     by_hand: bool = False  # shown because the operator asked, not because it is the newest
     hidden: bool = False  # the operator ticked it off: it is not shown again unasked
     started: float = 0.0
+    # The order the library came to know it in: of two with the same start time (the
+    # system clock moves in steps of 15.6 ms on Windows), the later one is the newer.
+    made: int = 0
     tiles: dict[Path, Tile] = field(default_factory=dict)
     previews: list[Held] = field(default_factory=list)
     running: Stack | None = None  # the stack the microscope is acquiring into it now
@@ -276,6 +279,7 @@ class Library:
         self.viewer = viewer
         self.clock = clock
         self.datasets: list[Dataset] = []
+        self._made = 0
         self.watched: Acquisitions | None = None
         self._top: Path | None = None  # the newest acquisition of the watched folder
         self._retiring: list[tuple[float, Held]] = []
@@ -313,12 +317,13 @@ class Library:
         return next((d for d in self.datasets if d.path is not None and d.path == path), None)
 
     def _new(self, name: str, path: Path | None, **about) -> Dataset:
-        dataset = Dataset(name=free_name(self.names, name), path=path, **about)
+        dataset = Dataset(name=free_name(self.names, name), path=path, made=self._made, **about)
+        self._made += 1
         self.datasets.append(dataset)
         return dataset
 
     def _sort(self) -> None:
-        self.datasets.sort(key=lambda d: (d.opened, -d.started))
+        self.datasets.sort(key=lambda d: (d.opened, -d.started, -d.made))
 
     # -- the folder the microscope writes into --------------------------------------
 
