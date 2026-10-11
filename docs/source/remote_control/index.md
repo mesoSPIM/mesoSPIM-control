@@ -1,6 +1,6 @@
 # Remote Control
 
-TCP and MCP expose the same 56 commands. They use the same names, arguments, limits, operation
+TCP and MCP expose the same 84 commands, and the AI Assistant uses them too. They use the same names, arguments, limits, operation
 state, and error codes. The operator chooses one transport in the Remote Control tab; both cannot
 run together.
 
@@ -115,6 +115,10 @@ Important client rules:
 - A second mutation is rejected with `busy` while one is still running.
 - Reads and emergency commands remain available while an asynchronous mutation is active, subject
   to the Core event loop being responsive.
+- Display calls (what the windows show: levels, lookup tables, regions of interest, which windows are
+  open, pictures, and the analyses of image files) never touch the instrument and are never refused
+  as `busy`. Each returns a request number at once; `get_display` with that number reports when the
+  window shows the change, or the analysis's result.
 
 ## Small TCP client example
 
@@ -188,10 +192,12 @@ Both transports return the same code and a readable message.
 
 ## Calls
 
-The concise [Remote Control call list](calls.md) names all 56 calls and explains
+The concise [Remote Control call list](calls.md) names all 84 calls and explains
 their purpose. For exact arguments, call `get_manual` against the running microscope. Its command
 hints are generated from the same registry used by TCP and MCP, so they cannot drift from the
 installed implementation.
+
+What is not finished or not yet verified is listed in [Open items](open.md).
 
 ## Limit enforcement
 
@@ -208,4 +214,5 @@ server does not start. `self_test` repeats this hardware-free check on demand.
 calls
 architecture
 testing
+open
 ```
