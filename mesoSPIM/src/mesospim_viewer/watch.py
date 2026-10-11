@@ -240,9 +240,6 @@ class Dataset:
     by_hand: bool = False  # shown because the operator asked, not because it is the newest
     hidden: bool = False  # the operator ticked it off: it is not shown again unasked
     started: float = 0.0
-    # The order the library came to know it in: of two with the same start time (the
-    # system clock moves in steps of 15.6 ms on Windows), the later one is the newer.
-    made: int = 0
     tiles: dict[Path, Tile] = field(default_factory=dict)
     previews: list[Held] = field(default_factory=list)
     running: Stack | None = None  # the stack the microscope is acquiring into it now
@@ -279,7 +276,6 @@ class Library:
         self.viewer = viewer
         self.clock = clock
         self.datasets: list[Dataset] = []
-        self._made = 0
         self.watched: Acquisitions | None = None
         self._top: Path | None = None  # the newest acquisition of the watched folder
         self._retiring: list[tuple[float, Held]] = []
@@ -317,13 +313,20 @@ class Library:
         return next((d for d in self.datasets if d.path is not None and d.path == path), None)
 
     def _new(self, name: str, path: Path | None, **about) -> Dataset:
-        dataset = Dataset(name=free_name(self.names, name), path=path, made=self._made, **about)
-        self._made += 1
+        dataset = Dataset(name=free_name(self.names, name), path=path, **about)
         self.datasets.append(dataset)
         return dataset
 
+    def _start_time(self) -> float:
+        """Now, for a run the microscope begins: after every acquisition listed. On Windows the
+        system clock moves in steps of 15.6 ms, and a run begun within one step of another
+        would have had the same start time and been taken for the older."""
+        now = time.time()
+        latest = max((dataset.started for dataset in self.datasets if not dataset.opened), default=now - 1.0)
+        return now if now > latest else latest + 1e-3
+
     def _sort(self) -> None:
-        self.datasets.sort(key=lambda d: (d.opened, -d.started, -d.made))
+        self.datasets.sort(key=lambda d: (d.opened, -d.started))
 
     # -- the folder the microscope writes into --------------------------------------
 
@@ -619,7 +622,7 @@ class Library:
                 )
             if dataset is None:
                 name = plain_name(folder) if folder is not None else stack.acquisition
-                dataset = self._new(name, folder, started=time.time())
+                dataset = self._new(name, folder, started=self._start_time())
             self.end_stack()
             if not dataset.in_run:
                 # A run begins: it is what a live view shows, even one the operator
