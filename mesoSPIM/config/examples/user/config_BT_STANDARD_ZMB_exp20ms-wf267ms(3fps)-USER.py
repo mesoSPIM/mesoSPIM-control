@@ -14,21 +14,7 @@ config_format = 2
 
 include('hardware/config_BT_STANDARD_ZMB_exp20ms-wf267_hw.py')
 
-plugins['first_image_writer'] = 'MP_OME_Zarr_Writer'
-
-'''Sharded OME-Zarr v0.5 at 12 FPS (benchmarked 2026-10-01).'''
-MP_OME_Zarr_Writer.update({
-    'ome_version': '0.5',
-    'generate_multiscales': True,
-    'compression': 'zstd',
-    'compression_level': 1,
-    'shards': (64, 6000, 6000),        # shards[0] MUST equal base_chunks[0]
-    'base_chunks': (64, 1264, 1480),
-    'target_chunks': (64, 64, 64),
-    'ring_buffer_size': 512,
-    'write_cache': None,
-})
-
 startup.update({
     'folder': 'F:\\TEMP',
+    'average_frame_rate': 3.0,    
 })

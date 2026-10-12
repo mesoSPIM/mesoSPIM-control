@@ -49,9 +49,9 @@ ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
               'enable_z_buttons' : True,
               'enable_f_buttons' : True,
               'enable_rotation_buttons' : True,
-              'enable_loading_buttons' : False,
+              'enable_loading_buttons' : True,
               'flip_XYZFT_button_polarity': (True, True, False, False, False), # flip the polarity of the stage buttons (X, Y, Z, F, Theta)
-              'button_sleep_ms_xyzft' : (300, 300, 300, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
+              'button_sleep_ms_xyzft' : (300, 400, 300, 0, 0), # step-motion buttons disabled for N ms after click. Prevents stage overshooting outside of safe limits, for slow stages.
               'usb_webcam_ID': 0, # open USB web-camera (if available): 0 (first cam), 1 (second cam), ...
               'flip_auto_LR_illumination': False, # flip the polarity of the "Auto L/R illumination" button in Acquisition Manager
                }
@@ -174,8 +174,8 @@ Mixed stage types: 'stage_type' : 'PI_rot_and_Galil_xyzf', 'GalilStage', 'PI_f_r
 '''
 
 stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' or other configs, see above.
-                    'y_load_position': 10000,
-                    'y_unload_position': 0,
+                    'y_load_position': 16000,
+                    'y_unload_position': 1000,
                     'x_center_position': -3377,
                     'z_center_position': 0,
                     'x_max' : 26000,
@@ -189,29 +189,6 @@ stage_parameters = {'stage_type' : 'TigerASI', # 'DemoStage', 'PI', 'TigerASI' o
                     'theta_max' : 999,
                     'theta_min' : -999,
                     }
-'''
-Depending on the stage hardware, further dictionaries define further details of the stage configuration
-
-For a standard mesoSPIM V4 with PI stages, the following pi_parameters are necessary (replace the
-serialnumber with the one of your controller):
-'''
-'''
-pi_parameters = {'controllername' : 'C-884',
-                 'stages' : ('M-605.2DD','L-406.40DG10','M-112K033','M-116.DG','M-112K033','NOSTAGE'), # M-605.2DD, M-112K033
-                 'refmode' : ('FRF',),
-                 'serialnum' : ('119046748'),
-                 }
-'''
-
-'''
-For a standard mesoSPIM V5 with PI stages, the following pi_parameters are necessary (replace the
-serialnumber with the one of your controller):
-
-pi_parameters = {'controllername' : 'C-884',
-                 'stages' : ('L-509.20DG10','L-509.40DG10','L-509.20DG10','M-060.DG','M-406.4PD','NOSTAGE'),
-                 'refmode' : ('FRF',),
-                 'serialnum' : ('118015799'),
-'''
 
 '''
 For a benchtop mesoSPIM with an ASI Tiger controller, the following parameters are necessary.
@@ -354,15 +331,16 @@ OME_Zarr_Writer = {
     'transpose_xy' : False, # True for Hamamatsu, False for Photometrix, possibly due to different coordinate systems.
     }
 
+'''Sharded OME-Zarr v0.5 at 12 FPS (benchmarked 2026-10-01).'''
 MP_OME_Zarr_Writer = {
-    'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'ome_version': '0.5',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
     'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd',  # None, 'zstd', 'lz4'
-    'compression_level': 5,  # 1-9
+    'compression_level': 1,  # 1-9
     'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (128, 5056//4, 2960//2),
+    'base_chunks': (64, 5056//4, 2960//2),
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-    'target_chunks': (128, 5056//4, 2960//2),
+    'target_chunks': (64, 64, 64),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
     'async_finalize': True,  # True, False
 
