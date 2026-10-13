@@ -1,11 +1,10 @@
 from PyQt5 import QtWidgets, QtGui, QtCore, QtDesigner
 
-from .acquisitions import Acquisition, AcquisitionList
+from .acquisitions import Acquisition, AcquisitionList, value_from_state
 
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 import copy
-import csv
 
 
 class AcquisitionModel(QtCore.QAbstractTableModel):
@@ -135,14 +134,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     def setDataFromState(self, row, state_parameter):
         column = self._table.get_keylist().index(state_parameter)
-
-        if state_parameter in ('x_pos','y_pos','z_pos','f_pos'):
-            new_value = round(self.state['position'][state_parameter],2)
-        elif state_parameter == 'rot':
-            new_value = round(self.state['position']['theta_pos'],1)
-        else:
-            new_value = self.state[state_parameter]
-
+        new_value = value_from_state(self.state, state_parameter)
         index = self.createIndex(row, column)
 
         self.setData(index, new_value)        
@@ -357,12 +349,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
 
     def saveModel(self, filename):
         ''' Saves the acquisition table as a CSV file '''
-        keys = self._table.get_keylist()
-        with open(filename, 'w', newline='') as file:
-            writer = csv.DictWriter(file, fieldnames=keys)
-            writer.writeheader()
-            for acq in self._table:
-                writer.writerow(dict(acq))
+        self._table.to_csv(filename)
 
     def setTable(self, table):
         self.modelAboutToBeReset.emit()
@@ -374,24 +361,7 @@ class AcquisitionModel(QtCore.QAbstractTableModel):
     
     def loadModel(self, filename):
         self.modelAboutToBeReset.emit()
-        ref = Acquisition()
-        type_map = {key: type(ref[key]) for key in ref.keys()}
-        new_table = AcquisitionList([])
-        with open(filename, 'r', newline='') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                acq = Acquisition()
-                for key, value in row.items():
-                    expected_type = type_map.get(key, str)
-                    try:
-                        acq[key] = expected_type(value)
-                    except (ValueError, TypeError):
-                        try:
-                            acq[key] = float(value)
-                        except (ValueError, TypeError):
-                            acq[key] = value
-                new_table.append(acq)
-        self._table = new_table
+        self._table = AcquisitionList.from_csv(filename)
         self.modelReset.emit()
 
     def deleteTable(self):

@@ -4,6 +4,8 @@ Contains a variety of mesoSPIM utility functions
 import ctypes
 import logging
 from PyQt5 import QtWidgets
+
+from .acquisitions import replace_with_underscores  # noqa: F401  moved there; Core and the writer import it from here
 logger = logging.getLogger(__name__)
 
 # Windows API binding
@@ -109,19 +111,6 @@ def gb_size_of_array_shape(shape):
         return total / 1024**3
 
 
-def replace_with_underscores(string):
-    '''Replace spaces, slashes and percent signs with underscores or ASCII equivalents.
-
-    Used for sanitising file and folder names produced from user inputs.
-
-    Args:
-        string (str): Raw string, e.g. a filter name like ``"488 nm / 50%"``.
-
-    Returns:
-        str: Sanitised string safe for use in file paths.
-    '''
-    s = string.replace(' ', '_').replace('/', '_').replace('%', 'pct')
-    return s
 
 def log_cpu_core(func):
     '''Decorator to log (at DEBUG level) which logical CPU core the calling thread is currently running on.

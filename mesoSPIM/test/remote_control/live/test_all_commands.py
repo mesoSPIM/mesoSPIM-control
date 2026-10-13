@@ -18,7 +18,8 @@ import time
 import pytest
 
 from mesoSPIM.test.remote_control.support.clients import RemoteControl
-from mesoSPIM.test.remote_control.support.contracts import OPERATIONAL_COMMANDS, VALID_CASES
+from mesoSPIM.test.remote_control.support.contracts import (OPERATIONAL_COMMANDS, TABLE_CALLS, VALID_CASES, WINDOW_CALLS,
+                                                            WINDOW_FEATURE_CALLS)
 from mesoSPIM.test.remote_control.support.live_session import bounded_delta as _bounded_delta
 from mesoSPIM.test.remote_control.support.live_session import demo_acquisition as _demo_acquisition
 from mesoSPIM.test.remote_control.support.live_session import different as _different
@@ -29,12 +30,13 @@ from mesoSPIM.test.remote_control.support.live_session import raw_tcp_tool as _r
 from mesoSPIM.test.remote_control.support.live_session import wait_for_operation as _wait_for_operation
 from mesoSPIM.test.remote_control.support.live_session import wait_for_result as _wait_for_result
 from mesoSPIM.test.remote_control.support.live_session import wait_until as _wait_until
+from mesoSPIM.test.remote_control.support.live_session import write_test_stacks as _write_test_stacks
 
 
 pytestmark = pytest.mark.live_demo_all
 
-TOTAL = len(VALID_CASES)  # 56
-OPERATIONAL = len(OPERATIONAL_COMMANDS)  # 37
+TOTAL = len(VALID_CASES)  # 67
+OPERATIONAL = len(OPERATIONAL_COMMANDS)  # 49
 
 
 def test_live_demo_all_commands_are_functional_safe_and_restored(request):
@@ -100,8 +102,10 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
         "etl_r_offset",
         "galvo_l_frequency",
         "laser_l_delay_%",
+        "snap_folder",
     ]
     original = _must(tool, "get_state_all", {"keys": state_keys})
+    original_galvo_amplitude = _must(tool, "get_state_all", {"keys": ["galvo_l_amplitude"]})["galvo_l_amplitude"]
     original_acquisitions = _must(tool, "get_acquisition_list")["acquisitions"]
     etl_backup = etl_path.read_bytes()
     temp_folder = Path(tempfile.mkdtemp(prefix="mesospim_demo_all_"))
@@ -131,6 +135,10 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
     relative_delta = relative_target - x_target
 
     acquisition = _demo_acquisition(temp_folder, "set-list.raw", original)
+    x_here, y_here, z_here, f_here = (original["position"][axis + "_pos"] for axis in ("x", "y", "z", "f"))
+    beads_file, texture_file = _write_test_stacks(temp_folder)
+    writer_before = _must(tool, "get_writer_parameters", {"writer": "OME_Zarr_Writer"})["parameters"]["compression_level"]["value"]
+    chain_before = _must(tool, "get_processor_chain")["chain"]
     cases = copy.deepcopy(VALID_CASES)
     cases.update(
         {
@@ -158,6 +166,36 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
             "check_motion_limits": {"acquisitions": [acquisition]},
             "time_lapse_start": {"timepoints": 1, "interval_sec": 0},
             "snap": {"folder": str(temp_folder), "prefix": "remote"},
+            # the table calls, on the two rows install_table puts in, with the instrument's own options
+            "update_acquisition_row": {"row": 0, "changes": {"filename": "updated.raw"}},
+            "add_acquisition_rows": {"like": 0},
+            "save_acquisition_list": {"path": str(temp_folder / "list.csv"), "overwrite": True},
+            "load_acquisition_list": {"path": str(temp_folder / "list.csv")},
+            "name_acquisition_rows": {"writer": "RAW_Writer", "description": "remote"},
+            "track_focus": {"z_1": z_here, "f_1": f_here, "z_2": z_here + 100,
+                            "f_2": _bounded_delta(f_here, *axes["f"], 10)},
+            "build_tiling_list": {"x_start": x_here, "x_end": x_here, "y_start": y_here, "y_end": y_here,
+                                  "z_start": z_here, "z_end": z_here, "z_step": 1,
+                                  "channels": [{"laser": original["laser"], "intensity": 10,
+                                                "filter": original["filter"]}],
+                                  "folder": str(temp_folder), "writer": "RAW_Writer"},
+            "set_snap_folder": {"folder": str(temp_folder)},
+            # the windows (gui_handles), on the running demo's own windows and files
+            "set_display": {"levels": [123, 2345]},
+            "set_windows": {"show": ["contrast"]},
+            "get_picture": {"window": "camera", "max_size": 256},
+            "open_image_file": {"path": beads_file},
+            "set_table_view": {"select_rows": [0]},
+            "get_writer_parameters": {"writer": "OME_Zarr_Writer"},
+            "set_writer_parameters": {"writer": "OME_Zarr_Writer", "parameters": {"compression_level": 4}},
+            "set_processor_chain": {"processors": [{"name": "GaussianBlur", "config": {"sigma": 2.0}}]},
+            "set_alignment_toggles": {"freeze_galvo": True},
+            "optimize": {"mode": "focus", "range": 50, "points": 5},
+            "finish_optimization": {"accept": False},
+            "save_parameters_to_config": {"path": str(temp_folder / "saved_config.py")},
+            "analyse_psf": {"path": beads_file, "min_intensity": 1300, "z_step_um": 1.0, "z_fit_window_um": 10,
+                            "min_bead_distance_um": 12},      # windows that fit the 21-plane stack
+            "analyse_field_curvature": {"channels": [{"path": texture_file}], "z_step_um": 1.0, "n_rois_x": 4, "n_rois_y": 4},
         }
     )
 
@@ -176,6 +214,25 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
         item = _demo_acquisition(temp_folder, filename, original)
         accepted = _must(tool, "set_acquisition_list", {"acquisitions": [item], "selected_row": 0})
         _wait_for_operation(tool, accepted, "install acquisition list")
+
+    def install_table():
+        rows = [_demo_acquisition(temp_folder, name, original) for name in ("row-0.raw", "row-1.raw")]
+        accepted = _must(tool, "set_acquisition_list", {"acquisitions": rows, "selected_row": 0})
+        _wait_for_operation(tool, accepted, "install the two-row table")
+
+    def table():
+        return _must(tool, "get_acquisition_list")["acquisitions"]
+
+    def displayed(number, timeout=120):
+        """A display call's outcome, once the windows (or an analysis's thread) have carried it out."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            shown = _must(tool, "get_display", {"request": number})
+            if shown["request"]["status"] != "queued":
+                assert shown["request"]["status"] == "applied", shown["request"]
+                return shown
+            time.sleep(0.2)
+        raise AssertionError(f"display request {number} still queued after {timeout} s")
 
     def verify(name, result):
         if name == "move_absolute":
@@ -237,6 +294,70 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
             assert result["started"] is True
         elif name == "time_lapse_stop":
             assert result["stopped"] is True
+        elif name == "update_acquisition_row":
+            assert [row["filename"] for row in table()] == ["updated.raw", "row-1.raw"]
+        elif name == "add_acquisition_rows":
+            assert len(table()) == 3
+        elif name == "delete_acquisition_rows":
+            assert [row["filename"] for row in table()] == ["row-0.raw"]
+        elif name == "save_acquisition_list":
+            assert (temp_folder / "list.csv").is_file()
+        elif name in {"load_acquisition_list", "move_acquisition_row", "mark_acquisition_rows"}:
+            assert len(table()) == 2
+        elif name == "name_acquisition_rows":
+            assert all(row["filename"].endswith(".raw") for row in table())
+        elif name == "track_focus":
+            assert [row["f_start"] for row in table()] == [f_here, f_here]
+        elif name == "build_tiling_list":
+            assert result["count"] == len(table()) == 1
+        elif name == "set_snap_folder":
+            _wait_until(lambda: state_value("snap_folder") == str(temp_folder), "snap folder readback")
+        elif name == "get_display":
+            assert {"camera_window", "main_window", "acquisition_manager", "windows"} <= set(result)
+        elif name == "set_display":
+            assert result["camera_window"]["levels"] == [123.0, 2345.0]
+        elif name == "set_windows":
+            assert result["windows"]["contrast"] is True
+            displayed(_must(tool, "set_windows", {"hide": ["contrast"]})["request"])
+        elif name == "get_picture":
+            picture = result["request"]["result"]
+            assert picture["format"] == "png" and max(picture["width"], picture["height"]) <= 256
+        elif name == "open_image_file":
+            assert result["request"]["result"]["shape"] == [21, 64, 64]
+        elif name == "set_table_view":
+            assert result["acquisition_manager"]["selected_rows"] == [0]
+        elif name == "get_writer_parameters":
+            assert {"compression", "shards", "base_chunks"} <= set(result["parameters"])
+        elif name == "set_writer_parameters":
+            assert result["parameters"]["compression_level"] == 4
+            undone = _must(tool, "set_writer_parameters", {"writer": "OME_Zarr_Writer",
+                                                           "parameters": {"compression_level": writer_before}})
+            _wait_for_result(tool, undone, "writer parameters back")
+        elif name == "get_processor_chain":
+            assert "GaussianBlur" in [p["name"] for p in result["available"]]
+        elif name == "set_processor_chain":
+            assert result["chain"][0]["name"] == "GaussianBlur" and result["chain"][0]["config"]["sigma"] == 2.0
+            undone = _must(tool, "set_processor_chain", {"processors": chain_before})
+            _wait_for_result(tool, undone, "processor chain back")
+        elif name == "set_alignment_toggles":
+            assert result["freeze_galvo"] is True and state_value("galvo_l_amplitude") == 0
+            undone = _must(tool, "set_alignment_toggles", {"freeze_galvo": False})
+            _wait_for_result(tool, undone, "galvos unfrozen")
+            assert state_value("galvo_l_amplitude") == original_galvo_amplitude
+        elif name == "optimize":
+            assert len(result["points"]) == 5 and result["points"][0] == f_here - 50 and result["points"][-1] == f_here + 50
+        elif name == "finish_optimization":
+            assert result["accepted"] is False and position()["f"] == f_here
+        elif name == "save_parameters_to_config":
+            assert (temp_folder / "saved_config.py").is_file()
+        elif name == "auto_illumination":
+            assert {row["shutterconfig"] for row in table()} <= {"Left", "Right"}
+        elif name == "analyse_psf":
+            psf = result["request"]["result"]
+            assert psf["beads_found"] == 3
+            assert abs(psf["fwhm_lateral_um"]["median"] - 1.0) < 0.1 and abs(psf["fwhm_axial_um"]["median"] - 2.0) < 0.2
+        elif name == "analyse_field_curvature":
+            assert result["request"]["result"]["channels"][0]["metrics"]["dof_um"] is not None
         else:
             assert isinstance(result, dict)
 
@@ -249,12 +370,15 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
 
     try:
         for index, name in enumerate(VALID_CASES, 1):
-            kind = "CHANGE" if name in OPERATIONAL_COMMANDS else "READ"
+            kind = ("CHANGE" if name in OPERATIONAL_COMMANDS else "WINDOW" if name in WINDOW_CALLS | WINDOW_FEATURE_CALLS
+                    else "READ")
             print(f"[{index:02d}/{TOTAL}] {kind:10s} {name}", flush=True)
             seen.append(name)
             try:
                 if name in acquisition_actions:
                     install_acquisition(acquisition_actions[name])
+                if name in TABLE_CALLS - {"load_acquisition_list", "set_snap_folder"}:
+                    install_table()
                 before_save_mtime = etl_path.stat().st_mtime_ns if name == "save_etl_config" else None
                 ok, result = tool(name, cases[name])
                 assert ok, result
@@ -262,6 +386,8 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
                     verify(name, result)
                     time.sleep(hold)
                     stop_and_wait()
+                elif name in WINDOW_CALLS and "request" in result:
+                    verify(name, displayed(result["request"]))
                 else:
                     completed_result = _wait_for_result(tool, result, name)
                     verify(name, completed_result)
@@ -332,6 +458,7 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
                 },
             ),
             ("open_shutters" if original.get("shutterstate") else "close_shutters", {}),
+            *([("set_snap_folder", {"folder": original["snap_folder"]})] if original.get("snap_folder") else []),
         )
         if not connection_lost:
             for name, arguments in cleanup_calls:
@@ -370,3 +497,4 @@ def test_live_demo_all_commands_are_functional_safe_and_restored(request):
         f"DEMO STATE RESTORED via {transport}",
         flush=True,
     )
+

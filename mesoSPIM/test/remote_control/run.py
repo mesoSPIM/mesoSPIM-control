@@ -44,12 +44,12 @@ def _run_pytest(paths, environment=None, show_output=False):
 
 def _pyqt():
     assistant = TESTS.parent / "ai_assistant" / "test_real_pyqt_assistant_smoke.py"
-    scheduler = TESTS.parent / "ai_assistant" / "test_real_pyqt_scheduler_smoke.py"
-    for script in (TESTS / "test_real_pyqt_smoke.py", TESTS / "test_real_pyqt_transport_smoke.py", assistant, scheduler):
+    for script in (TESTS / "test_real_pyqt_smoke.py", TESTS / "test_real_pyqt_transport_smoke.py", assistant):
         result = subprocess.call([sys.executable, str(script)], cwd=REPOSITORY, env=os.environ.copy())
         if result:
             return result
-    return _run_pytest([TESTS.parent / "test_combobox_state_requests.py"])   # real boxes, offscreen
+    return _run_pytest([TESTS.parent / "test_combobox_state_requests.py",    # real boxes, offscreen
+                        TESTS.parent / "test_gui_handles_real_qt.py"])       # the real camera window
 
 
 def _missing_for_live(transport, environment):

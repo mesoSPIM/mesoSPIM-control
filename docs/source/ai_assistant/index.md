@@ -19,7 +19,7 @@ The AI Assistant tab: language and vision model, preferences, coordinate system,
 :maxdepth: 1
 
 architecture
-tool-sets
+skills
 ```
 
 ## Requirements
@@ -30,8 +30,8 @@ tool-sets
   starts and every other feature works without it; the tab reports the missing module when the
   operator sends a first message.
 - An API key for the chosen provider, or any server that speaks the OpenAI API (Ollama, vLLM, LM Studio).
-- For a local model file, `llama-cpp-python` with its server: the extra `ai-assistant-local`
-  installs both.
+  The assistant is built and evaluated for the cloud models Gemini 3.5 Flash-Lite and Claude
+  Haiku 5.5; a model served locally works through the OpenAI-style preset.
 
 ## Setting it up
 
@@ -41,12 +41,11 @@ The tab is the setup, shaped like the Remote Control tab: one **Setup AI assista
 window, where the chat is; the status line then names the model that answers. Disconnect, or
 closing that window, cancels a running turn, closes it and hands the session back, so the Remote
 Control tab can start a transport without restarting mesoSPIM. While connected the boxes are
-read-only: Disconnect to change them. When a Connect cannot go ahead (nothing configured yet, a
-missing key, a local model that failed to start) the status line says what is needed. Images stay
-out of the chat: a frame goes to the vision model only. Each model box starts with a
-**Type** dropdown; the fields after it follow the choice.
+read-only: Disconnect to change them. When a Connect cannot go ahead (a missing key, say) the
+status line says what is needed. Images stay out of the chat: a frame goes to the vision model
+only.
 
-**Language model, Cloud AI.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style**
+**Language model.** Choose a provider (Gemini, OpenAI, Anthropic, or **OpenAI-style**
 for any server that speaks the OpenAI API, such as an Ollama or vLLM already running somewhere, or
 a hosted gateway), keep or edit the prefilled model name, and type the API key into the masked
 field. OpenAI-style also asks for the server's base URL, and there the key is optional: Ollama
@@ -61,59 +60,26 @@ field falls back to the provider's environment variable (`GEMINI_API_KEY`, `OPEN
 provider serves under that key works by name: under Gemini, for example, `gemini-3.6-flash` or the
 open-weight `gemma-4-31b-it`.
 
-**Language model, Local AI.** One **Model** dropdown lists the `.gguf` files in the models folder
-(`~/mesoSPIM/models`, or the `ai_assistant_models_folder` attribute of the microscope config;
-**Models folder…** points it elsewhere for the session). Download a file from Hugging Face, drop
-it in, choose it, Connect. Nothing leaves the machine and no key is needed. Behind Connect,
-mesoSPIM serves the file itself with llama.cpp's OpenAI-compatible server (`pip install
-"llama-cpp-python[server]"`, or the `ai-assistant-local` extra) as a child process on a loopback
-port; the status line reads "starting …" while the model loads, and the window opens once it
-answers. The
-server is started with a 32K-token context window (llama.cpp's own default of 2,048 would not
-hold one request), prompt batches of 2,048 tokens and flash attention where the build has it;
-the config attribute `ai_assistant_context_tokens` sets another context size. Every model, cloud
-or local, is sampled at temperature 0 and gets a malformed tool call handed back twice before
-the turn fails. The `ai_assistant_*` attributes (`_tools`, `_models_folder`, `_context_tokens`)
-describe the microscope, so in a configuration split into a hardware file and a
-user file they belong in the hardware file (`config/hardware/…_hw.py`); the user file can
-override any of them below its `include()` line.
-Connecting again, or closing mesoSPIM, stops the child. A server that fails to start is reported
-with the path of its log. Use a GPU build of llama-cpp-python for anything above a few billion
-parameters; the 4B to 12B instruction models are the realistic range on a microscope PC.
+Every model is sampled at temperature 0 where it accepts one, and a malformed tool call is
+handed back to it twice before the turn fails. The `ai_assistant_*` attributes describe the
+microscope, so in a configuration split into a hardware file and a user file they belong in the
+hardware file (`config/hardware/…_hw.py`); the user file can override any of them below its
+`include()` line.
 
 **Vision model.** The model that reads camera frames when the assistant looks. *Same as language
-model* (the default) lets the language model read frames itself when it can: the cloud models
-can, and a local file can when its projector file (`mmproj-…gguf`) sits beside it in the models
-folder, since mesoSPIM serves the two together; a local file without one decides from the numbers
-alone. Choosing Cloud AI or Local AI here gives a text-only language model eyes of its own: the
-same fields as above, and the frame goes to this model in a separate call with the question, so
-the conversation itself never carries images. A local vision model must have its projector file;
-choosing the same file in both boxes serves it once. Whether a given local file can see depends
-on llama-cpp-python supporting that model family's projector.
+model* (the default) lets the language model read frames itself; the cloud models can. Choosing
+Cloud AI here gives a text-only language model eyes of its own: the same fields as above, and the
+frame goes to this model in a separate call with the question, so the conversation itself never
+carries images.
 
-**Preferences** apply at once. **Tool set** chooses what the assistant may do: *Regular* (the
-default) is for a user setting up a sample on a configured microscope: reads and checks (the
-self test and the stuck-operation reset included), stage and sample moves, laser, intensity,
-filter, zoom, shutters, the ETL voltages (amplitude and offset) and its calibration files, snap,
-live, and the acquisition and time lapse commands. *Full* adds the camera settings (the exposure
-time included), the ETL's delay and ramps, galvo and laser timing, the alignment modes and the
-generic setting call. In Regular the other commands are not offered to the model at all, so it
-cannot be talked into them; a command offered in both sets takes the same arguments in both,
-except `set_etl`, which in Regular takes the voltages only. The model is told which commands the
-set withholds, so a request for one gets "not in this tool set" rather than a stand-in command
-dressed up as the result. The start-up choice can be fixed per microscope with the config
-attribute `ai_assistant_tools` ("Regular" or "Full"). TCP and MCP always serve every command; this
-is the assistant only. **Memory** is how
-many of the operator's messages, with their answers, the model remembers; the newest three stay
-whole, older ones keep a one-line readout (state, position, optics) instead of the full state
-block and have long tool results shortened, so twenty turns of memory cost a fraction of what
-twenty full readouts would. Nothing is lost by it: every turn stays in a session store, and the
-assistant has two tools on it, one that returns an earlier turn in full or the turns in which a
-readout value changed, and one that finds earlier turns by words, for "what was the focus before
-I moved it" or "which batch did I say this is". Clear context empties the store. **Bin image** bins
-the frame handed to the vision model 1, 2, 4 or 8 times (2 by default: a 2048-pixel camera frame
-arrives as 1024): coarser is cheaper and faster, and enough for "is it centred" or "is it
-saturated"; the numbers always come from the full frame.
+**Preferences** apply at once. **Bin image** bins the frame handed to the vision model 1, 2, 4
+or 8 times (2 by default: a 2048-pixel camera frame arrives as 1024): coarser is cheaper and
+faster, and enough for "is it centred" or "is it saturated"; the numbers always come from the
+full frame. **Focus metric** chooses the focus measure: Laplacian, or the Auto-Focus DCT-Shannon.
+The model is offered every Remote Control command, the same ones TCP and MCP serve. That includes
+what the windows show and offer: the live view's levels, lookup tables and regions of interest,
+pictures of the windows, the optimizer, the processor chain and the analyses of image files. A
+change to a window is waited for until the window shows it, and the tool returns what it then shows.
 
 Building a cloud endpoint does not contact the provider, so a wrong key shows up as an error on
 the first message. To change the models, disconnect and connect again; the next Connect starts a fresh conversation.
@@ -125,41 +91,35 @@ Press **Connect** in the tab and type in the window that opens. Enter submits; S
 a new line, as in an editor. **Stop microscope** sits right of the input; under them **Cancel
 prompt**, **Clear context** and **Show tool calls**, which lists the commands each answer ran above
 it, streamed live, so the operator sees exactly which named calls were issued. **Cancel prompt**
-stops the assistant: the turn ends at once, a model
-request in flight is abandoned and an open Run / Cancel question is cancelled; what the assistant
-already started keeps running. **Stop microscope** is
+stops the assistant: the turn ends at once and a model request in flight is abandoned; what the
+assistant already started keeps running. **Stop microscope** is
 the main window's Stop: the same queued signals to Core (state idle aborts the running mode, the
 time lapse is cancelled) plus the stage stop, sent straight from the tab with nothing of the
 assistant in between, so it is as immediate as the button on the main window and works before the
-assistant has ever connected. It cancels the assistant as well, and every schedule.
+assistant has ever connected. It cancels the assistant as well.
 
 **Live and long runs do not hold the line.** A live mode the assistant starts returns as soon as
 live runs, and from then on it is the operator's live view whoever started it: settings and moves
 go through while it runs, from the window or from the assistant, a snap or a run is refused, and
 "stop" ends it. An acquisition or time lapse the assistant starts returns as soon as the run is
 under way, so the input line is free and "stop" can be typed; the run is refused nothing but
-`stop_activity` until it ends, and the main window shows its progress. During live, a look reads
-the frame live shows instead of taking a snap.
+`stop_activity` until it ends, and the main window shows its progress. When it ends, the chat
+says so in one grey line ("Acquisition list finished 14:02:00"); no model is asked. A time
+course is the software's own time lapse (`time_lapse_start`, an interval and a number of
+points); the assistant keeps no timer of its own. During live, a look reads the frame live shows
+instead of taking a snap.
 
-**Schedules.** "Take a snap every three minutes", "in ten minutes close the shutters", "at 15:00
-start the list": the assistant sets a named schedule (`schedule`; `cancel_schedule` removes one,
-or all), and the tab's own timer fires each due instruction as a turn of its own, shown in the
-transcript as a muted line ("⏱ Scheduled: snap every minute · take a snap"), through the same
-tools, gate and refusals as anything typed, never while a turn runs. Above the input, each schedule
-has a row with how often it fires and a countdown to its next firing ("next in 0:42", or "due,
-after this turn" while a turn runs), and **Cancel schedule** ends that one alone. The readout
-carries the clock and the schedules, the model's only clock. Stop microscope and Disconnect clear
-every schedule; at most ten, none more often than every five seconds.
+**The session's size.** The conversation is kept whole until **Clear context**, so every request
+carries the session so far. The line above the input shows what the last request cost in input
+tokens; past the model's warning it says the session is large, and past its ceiling no message is
+sent until Clear context. On Anthropic models the request is cached: the tools and instructions
+for an hour, the conversation for five minutes, so each request pays in full only for what is
+new. Gemini and OpenAI cache such a prefix on their own.
 
-**Requests and waiting.** A typed message opens a request; its schedules and waits come back as
-turns of the same request, written by the machine. "Run the list and look at the result" runs the
-list, then `wait`s until the run is done, idle, or a number of seconds has passed; the request
-continues on its own in a turn that starts with the wait's result, shown as a muted line ("↻
-Request 2 continues: ..."). One wait is pending at a time, at most 30 per request. The request
-line above the input shows the open request's turns, tokens, what it waits for and its plan (a
-checklist the model writes in its first reply), with **Cancel request**. Cancel request, Stop
-microscope, Clear context and Disconnect end it. A number the model wrote into a schedule or a
-continuation is not the operator's: it waits for **Run**.
+**Unclear requests and plans.** When a request is unclear, the assistant suggests what it would
+do and asks before doing it; when it does not know, it asks. For several steps it says its plan in
+a line or two first. The manual stays short and general: each tool's own description says what it
+takes, and repeatable workflows belong in skills.
 
 **Frames and the map.** Every frame a look, a snap or live delivers is kept for the session as a
 small copy with its number, time, position and settings, and code adds its measures: focus, peak,
@@ -172,19 +132,10 @@ conversation of its own for the session, so `ask_eyes` puts a question to the fr
 taking a new one. Clear context and Disconnect clear the frames and the eyes with the transcript.
 
 **Calibrate.** Until calibrated, the move that centres the sample uses the nominal pixel size and
-the coordinate system below. `calibrate` (confirm-first, one **Run** for the block) moves x and y by
+the coordinate system below. `calibrate` moves x and y by
 a tenth of the field and back, measures how the image moved, and keeps the result per zoom beside
 the configuration, in a git-ignored file. Centring moves then use the measured scale and
 direction, which also corrects a coordinate system set the wrong way round.
-
-**Measured values (off by default).** With `ai_assistant_measured_values = True` in the microscope
-config, a value that follows from the assistant's own fresh measurement may pass without **Run**:
-a move within 20 % of the frame's centring move (at most one field), a focus move to the map's
-best focus or a search step of at most 100 µm within 300 µm of the start, an intensity or exposure
-within a factor of two of the frame's. Each next measured offset must be smaller than the last,
-at most eight measured moves per request, and the newest frame must be newer than the last move
-or setting; anything else waits for **Run**. Leave it off until it has been tried on the
-instrument with an operator present.
 
 **The coordinate system.** The box under Preferences says what a positive move on x, y and z
 does to the sample in the image: right or left, up or down, toward or away from the camera.
@@ -207,33 +158,11 @@ it.
 These are known and deliberate; read them before using the tab on an instrument with a sample
 loaded.
 
-- **Three stage moves are gated by the operator, in code.** `load_sample`, `unload_sample` and
-  `preview_acquisition` cross the stage's range and can collide faster than anyone reacts, so they
-  do not execute until the operator presses **Run** in the bar above the input; Cancel there,
-  Cancel or Stop microscope refuse, and the model is told so. This holds whatever the model was
-  told or talked into. Starting a run is not gated: the model is instructed to summarise and ask
-  only when the state shows something off (empty list, missing folder, short disk, pending
-  warning), and Stop microscope ends a run at any time.
-- **Five rules are held in code for the length of a request** (`TurnGuard`), because a model can
-  read a rule and still break it. After a move is refused for a movement limit, no other target
-  on that axis is taken until the operator's next message. After a command is refused because the
-  operator is running something from the GUI, a stop waits for **Run** in the same bar as the
-  three moves above. A request may change the laser intensity, or the exposure, twice in ten
-  minutes; a third change waits for **Run**. A `look` right after a `snap` reads that frame instead of exposing the sample
-  again. A value the operator did not give waits for **Run** ("make it brighter" sent as 20 %,
-  "change the filter" sent as the one other filter); a value counts as theirs when it is in their
-  words, this turn or earlier and in any unit the manual converts, or made from a readout value
-  by an operation they named (double, halve, back to what it was, an amount further). A stop the
-  operator asks for is never held back. A refusal carries its advice ("say so and wait; do not
-  stop it") where the model reads it next.
-- **A reply that called no tool goes back to the model once, and the tab says when it sent
-  nothing.** A model can report an action it never took ("I have stopped the time lapse").
-  A turn that ends without a tool call is handed back with that fact: the model calls the tool
-  after all, or answers with one word and its first reply reaches the operator unchanged (one
-  short extra request on turns that send no command; `CALLED_NOTHING_CHALLENGE`, empty switches
-  it off). It is not a guarantee, so under a reply that called nothing the tab also prints "no
-  command was sent to the microscope in this turn". The Stop microscope button never depends on
-  the model.
+- **The safety is the instrument's, for every client alike.** Core's stage limits, the one
+  operation at a time and Stop microscope hold whatever the model was told; the assistant adds no
+  gate of its own. Load, unload, preview, calibrate and any move within the limits run when asked.
+  When a request leaves a value or a choice open, the model is told to ask; otherwise it acts and
+  says what it chose. Every refusal carries its advice where the model reads it next.
 - **The model call has no time limit of its own.** `WAIT_CAP_S` bounds the microscope leg only. If
   the endpoint stalls (a burst over a tokens-per-minute quota is the usual cause), the turn waits
   until the HTTP layer gives up; **Cancel prompt** ends it at once.
@@ -252,7 +181,5 @@ to answer a turn; a local model keeps everything on the PC.
 ## Testing
 
 `python mesoSPIM/test/remote_control/run.py pyqt` runs the real-PyQt scripts, among them one that
-builds the tab offscreen and checks the setup layout and the input keys, and one that connects
-the tab to a real worker thread and Acceptor against a scripted model and lets the tab's own
-timer fire a schedule twice, then checks that Stop microscope ends it. No model, network or
+builds the tab offscreen and checks the setup layout and the input keys. No model, network or
 hardware is involved.

@@ -22,19 +22,16 @@ import dataclasses
 import html as _htmllib
 import re
 import os
-import time
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import config
+from . import skills as skill_files
 from ..remote_control import config as rc_config
-from .assistant import AssistantWorker, Endpoint, Scheduler
-from .local import LocalModelServer, list_models, models_folder, projector_for
+from .assistant import AssistantWorker, Endpoint, offered_commands
 
-LOCAL_MODE = "Local AI"
 CLOUD_MODE = "Cloud AI"
 SAME_AS_LANGUAGE = "Same as language model"
-LOCAL_PROVIDER = "Local"        # the provider name of a model file served by mesoSPIM itself
 NO_COMMANDS_SENT = "no command was sent to the microscope in this turn"
 PAIR_GAP = 14                   # px before an inner label, more than the 8 between it and its field
 _ORPHANED_THREADS = []          # worker threads still in a model call at exit; kept so Qt never destroys a running one
@@ -59,35 +56,6 @@ def _chat_sized(html):
     """Qt's Markdown sets inline code, which is how a model writes a file path, in a fixed point
     size smaller than the chat; drop the size and keep the fixed-width face."""
     return re.sub(r"\s*font-size:\s*[\d.]+pt;", "", html)
-
-
-def _clock(seconds):
-    """A countdown as m:ss, or h:mm:ss from an hour."""
-    minutes, seconds = divmod(int(seconds), 60)
-    hours, minutes = divmod(minutes, 60)
-    return f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
-
-
-def _period(seconds):
-    seconds = int(seconds)
-    if seconds % 3600 == 0:
-        return f"{seconds // 3600} h"
-    if seconds % 60 == 0:
-        return f"{seconds // 60} min"
-    return f"{seconds} s"
-
-
-def _schedule_text(item, running):
-    """One schedule row: its name, how often, and how long until it fires. A due schedule waits for
-    the turn that is running, since schedules fire only between turns."""
-    if "every_seconds" in item:
-        how = f"every {_period(item['every_seconds'])}"
-    elif "at" in item:
-        how = f"once at {item['at']}"
-    else:
-        how = "once"
-    when = "due, after this turn" if running and item["due_in_s"] == 0 else f"next in {_clock(item['due_in_s'])}"
-    return f"⏱ {item['name'].replace('_', ' ')} · {how} · {when}"
 
 
 class _Input(QtWidgets.QPlainTextEdit):
@@ -129,30 +97,24 @@ def _field_label(text, parent, font, gap=PAIR_GAP):
 
 
 def _describe(endpoint):
-    if endpoint.provider == LOCAL_PROVIDER:
-        return f"{endpoint.model} on {endpoint.base_url}"
     return f"{endpoint.provider}, {endpoint.model}"
 
 
 class ModelPicker(QtWidgets.QGroupBox):
-    """A titled box that names one model. A Type dropdown (Local AI, Cloud AI, and for the vision
-    box "Same as language model") decides the fields after it: a dropdown of model files and the
-    folder button, or provider and model, then the API key and, for an OpenAI-style server, its
-    base URL. Serving a file is the tab's business; the box only names it."""
+    """A titled box that names one model. A Type dropdown (Cloud AI, and for the vision box "Same
+    as language model") decides the fields after it: provider and model, then the API key and,
+    for an OpenAI-style server, its base URL."""
 
-    def __init__(self, title, font, parent, models_folder, on_folder, same_as=None):
+    def __init__(self, title, font, parent, same_as=None):
         super().__init__(title, parent)
         self.setFont(font)
-        self.models_folder = models_folder
         self.grid = QtWidgets.QGridLayout(self)
         self.grid.setContentsMargins(12, 12, 12, 12)
         self.grid.setHorizontalSpacing(8)
         self.grid.setVerticalSpacing(10)
 
         self.mode = QtWidgets.QComboBox(self)
-        self.mode.addItems(([same_as] if same_as else []) + [LOCAL_MODE, CLOUD_MODE])
-        self.local_model = QtWidgets.QComboBox(self)
-        self.folder_button = QtWidgets.QPushButton("Models folder…", self)
+        self.mode.addItems(([same_as] if same_as else []) + [CLOUD_MODE])
         self.provider = QtWidgets.QComboBox(self)
         self.provider.addItems(list(config.PROVIDERS))
         self.provider.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # as wide as its names
@@ -168,29 +130,23 @@ class ModelPicker(QtWidgets.QGroupBox):
         self.sees = QtWidgets.QCheckBox("Can see images", self)
         self.sees.setToolTip("Tick when the model behind this server accepts images; look then shows it "
                              "the frame. Unticked, look gives it the frame's numbers only.")
-        for widget in (self.mode, self.local_model, self.folder_button, self.provider, self.model,
-                       self.key, self.base_url, self.sees):
+        for widget in (self.mode, self.provider, self.model, self.key, self.base_url, self.sees):
             widget.setFont(font)
         self.type_label = _field_label("Type", self, font, gap=0)
-        self.local_model_label = _field_label("Model", self, font)
         self.provider_label = _field_label("Provider", self, font)
         self.model_label = _field_label("Model", self, font)
         self.key_label = _field_label("API key", self, font)
         self.base_url_label = _field_label("Base URL", self, font)
 
-        # Line one: the type and, for the cloud, the provider. Line two: the model, a file and the
-        # folder button or a name. Line three, cloud only: the key, or the base URL with the key on
-        # the line below it (_on_provider_changed), so an OpenAI-style server is no wider than any
-        # other provider. Columns 5 and 7 take the leftover width, so the model, the file, the URL
-        # and the key all grow with the window.
+        # Line one: the type and the provider. Line two: the model. Line three: the key, or the base
+        # URL with the key on the line below it (_on_provider_changed), so an OpenAI-style server is
+        # no wider than any other provider. Columns 5 and 7 take the leftover width, so the model,
+        # the URL and the key all grow with the window.
         grid = self.grid
         grid.addWidget(self.type_label, 0, 0)
         grid.addWidget(self.mode, 0, 1)
         grid.addWidget(self.provider_label, 0, 2)
         grid.addWidget(self.provider, 0, 3)
-        grid.addWidget(self.local_model_label, 1, 2)
-        grid.addWidget(self.local_model, 1, 3, 1, 5)
-        grid.addWidget(self.folder_button, 1, 8)
         grid.addWidget(self.model_label, 1, 2)
         grid.addWidget(self.model, 1, 3, 1, 6)
         grid.addWidget(self.base_url_label, 2, 2)
@@ -203,31 +159,22 @@ class ModelPicker(QtWidgets.QGroupBox):
         self.mode.setCurrentText(same_as or CLOUD_MODE)
         self.mode.currentTextChanged.connect(self._on_mode_changed)
         self.provider.currentTextChanged.connect(self._on_provider_changed)
-        self.folder_button.clicked.connect(on_folder)
         self._on_provider_changed(config.DEFAULT_PROVIDER)     # prefills, then shows the mode's fields
 
     @property
     def same(self):
         """True when this box defers to the language model (the vision box's first choice)."""
-        return self.mode.currentText() not in (LOCAL_MODE, CLOUD_MODE)
-
-    @property
-    def local(self):
-        return self.mode.currentText() == LOCAL_MODE
+        return self.mode.currentText() != CLOUD_MODE
 
     def _on_mode_changed(self, *_):
-        """Show the fields for the type chosen; the local list is rescanned when it appears."""
-        local, cloud = self.local, not self.local and not self.same
+        """Show the fields for the type chosen."""
+        cloud = not self.same
         server = cloud and config.PROVIDERS[self.provider.currentText()]["kind"] == "openai-compatible"
-        for widget in (self.local_model_label, self.local_model, self.folder_button):
-            widget.setVisible(local)
         for widget in (self.provider_label, self.provider, self.model_label, self.model,
                        self.key_label, self.key):
             widget.setVisible(cloud)
         for widget in (self.base_url_label, self.base_url, self.sees):
             widget.setVisible(server)
-        if local:
-            self.scan_models()
 
     def _on_provider_changed(self, name):
         """Prefill the preset. An OpenAI-style server also shows its base URL, and its key is
@@ -252,16 +199,6 @@ class ModelPicker(QtWidgets.QGroupBox):
             self.grid.addWidget(self.key_label, 2, 2)
             self.grid.addWidget(self.key, 2, 3, 1, 6)
         self._on_mode_changed()
-
-    def scan_models(self):
-        """Fill the local dropdown from the models folder; an empty folder leaves it greyed."""
-        current = self.local_model.currentText()
-        names = list_models(self.models_folder)
-        self.local_model.clear()
-        self.local_model.addItems(names)
-        if current in names:
-            self.local_model.setCurrentText(current)
-        self.local_model.setEnabled(bool(names))
 
     def cloud_endpoint(self):
         server = config.PROVIDERS[self.provider.currentText()]["kind"] == "openai-compatible"
@@ -300,43 +237,13 @@ class AssistantWindow(QtWidgets.QWidget):
         self.status.setVisible(False)                             # shown only while a turn runs
         layout.addWidget(self.status)
 
-        # The confirm-first bar: hidden until the assistant wants to run a command the operator
-        # must approve; Run or Cancel answers the worker's gate.
-        confirm = QtWidgets.QHBoxLayout()
-        self.confirm_label = QtWidgets.QLabel(self)
-        self.confirm_label.setFont(font)
-        self.confirm_run = QtWidgets.QPushButton("Run", self)
-        self.confirm_cancel = QtWidgets.QPushButton("Cancel", self)
-        for widget in (self.confirm_run, self.confirm_cancel):
-            widget.setFont(font)
-        self.confirm_run.clicked.connect(lambda: tab._answer_confirmation(True))
-        self.confirm_cancel.clicked.connect(lambda: tab._answer_confirmation(False))
-        confirm.addWidget(self.confirm_label, 1)
-        confirm.addWidget(self.confirm_run)
-        confirm.addWidget(self.confirm_cancel)
-        for widget in (self.confirm_label, self.confirm_run, self.confirm_cancel):
-            widget.setVisible(False)
-        layout.addLayout(confirm)
-
-        # The open request: its turns, tokens, wait and plan, with a Cancel of its own. Hidden
-        # while there is none.
-        request = QtWidgets.QHBoxLayout()
-        self.request_label = QtWidgets.QLabel(self)
-        self.request_label.setFont(font)
-        self.request_cancel = QtWidgets.QPushButton("Cancel request", self)
-        self.request_cancel.setFont(font)
-        self.request_cancel.clicked.connect(tab.on_cancel_request)
-        request.addWidget(self.request_label, 1)
-        request.addWidget(self.request_cancel)
-        for widget in (self.request_label, self.request_cancel):
-            widget.setVisible(False)
-        layout.addLayout(request)
-
-        # What is scheduled: one row per schedule with a countdown to its next firing and a Cancel
-        # of its own. Rows come and go with the schedules; none while nothing is scheduled.
-        self.schedules = QtWidgets.QVBoxLayout()
-        self.schedule_rows = {}                                   # name -> (row widget, label)
-        layout.addLayout(self.schedules)
+        # The token meter: what the last request of the session cost in input tokens. The history
+        # is append-only, so it grows with every turn; past the model's warning it says so, and
+        # past its ceiling no turn starts until Clear context.
+        self.meter = QtWidgets.QLabel("", self)
+        self.meter.setObjectName("AiAssistantMeter")
+        self.meter.setFont(font)
+        layout.addWidget(self.meter)
 
         self.input = _Input(self)
         self.input.setPlaceholderText("Ask the microscope…")
@@ -387,8 +294,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
     the chat is in the AssistantWindow, which Connect opens."""
 
     sig_run_turn = QtCore.pyqtSignal(str)
-    sig_run_machine_turn = QtCore.pyqtSignal(str, int)   # a schedule or a continuation, for its request
-    sig_check_continuation = QtCore.pyqtSignal()
+    sig_check_run = QtCore.pyqtSignal()      # is the run the assistant started still under way?
 
     def __init__(self, parent):
         super().__init__(parent.TabWidget)
@@ -397,22 +303,18 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.setObjectName("AiAssistantTabWidget")
         self._worker = None
         self._thread = None
-        self._state = "idle"                    # idle, starting (a local model loads), ready; the status line shows it
+        self._state = "idle"                    # idle or ready; the status line shows it
         self._endpoints = {}                    # "language" and, when it is its own, "vision"
-        self._servers = {}                      # by the same names: children serving local files
-        self._started_at = 0.0
         self._running = False                   # a turn is in flight
         self._run_turn_slot = None
-        self._pending_confirmation = None
-        self._models_folder = models_folder(getattr(self.core, "cfg", None))
-        self._single_shot = QtCore.QTimer.singleShot   # injectable for tests
         self._blocks = []                       # oldest first: HTML, or a finished answer's turn dict
-        self._continuations = []                # (text, request) of waits that are over, for the next tick
         self._active = None                     # the running turn: {"tools", "reply", "error"}
-        self.scheduler = Scheduler()            # the assistant's schedules; the tick below fires them
-        self._tick = QtCore.QTimer(self)
-        self._tick.setInterval(1000)
-        self._tick.timeout.connect(self.fire_due_schedule)
+        self._tokens = 0                        # the input tokens of the session's last request
+        # The done notice: while a run the assistant started is under way, the worker is asked every
+        # DONE_CHECK_MS whether it has ended. It never runs a turn.
+        self._done_check = QtCore.QTimer(self)
+        self._done_check.setInterval(config.DONE_CHECK_MS)
+        self._done_check.timeout.connect(self.sig_check_run.emit)
         self._build_ui()
         index = parent.TabWidget.indexOf(parent.remote_control)   # RemoteControlGUI instance
         if index >= 0:
@@ -444,29 +346,20 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self._worker.moveToThread(self._thread)
         self._run_turn_slot = self._worker.run_turn
         self.sig_run_turn.connect(self._run_turn_slot, QtCore.Qt.QueuedConnection)
-        self.sig_run_machine_turn.connect(self._worker.run_machine_turn, QtCore.Qt.QueuedConnection)
-        self.sig_check_continuation.connect(self._worker.check_continuation, QtCore.Qt.QueuedConnection)
-        self._worker.sig_continue.connect(self._on_continue)
+        self.sig_check_run.connect(self._worker.check_run, QtCore.Qt.QueuedConnection)
+        self._worker.sig_run_ended.connect(self._on_run_ended)
+        self._worker.sig_usage.connect(self._on_usage)
         self._worker.sig_reply.connect(self._on_reply)
         self._worker.sig_tool.connect(self._on_tool)
-        self._worker.sig_confirm.connect(self._on_confirm)
         self._worker.sig_served.connect(self._on_served)
         self._worker.sig_error.connect(self._on_error)
         self._worker.sig_done.connect(self._on_done)
         self._apply_options()
-        self._worker.scheduler = self.scheduler
-        self._worker.measured_values = bool(getattr(getattr(self.core, "cfg", None), config.MEASURED_VALUES_CONFIG_KEY,
-                                                    False))
         self._thread.start()
         return True
 
-    def _apply_profile(self, *_):
-        if self._worker is not None:
-            self._worker.set_profile(self.tools_profile.currentText())
-
     def _apply_options(self, *_):
         if self._worker is not None:
-            self._worker.max_history_turns = self.history_turns.value()
             self._worker.look_image_bin = int(self.frame_bin.currentText())
             self._worker.focus_metric = self.focus_metric.currentData()
             self._worker.axes = self.axes()
@@ -534,14 +427,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
         options.setContentsMargins(12, 12, 12, 12)
         options.setHorizontalSpacing(8)
         options.setVerticalSpacing(10)
-        self.tools_profile = QtWidgets.QComboBox(preferences)
-        self.tools_profile.addItems(list(config.TOOL_PROFILES))
         cfg = getattr(self.core, "cfg", None)
-        start = getattr(cfg, config.TOOLS_CONFIG_KEY, None)
-        self.tools_profile.setCurrentText(start if start in config.TOOL_PROFILES else config.DEFAULT_TOOL_PROFILE)
-        self.history_turns = QtWidgets.QSpinBox(preferences)
-        self.history_turns.setRange(1, 200)
-        self.history_turns.setValue(config.MAX_HISTORY_TURNS)
         self.frame_bin = QtWidgets.QComboBox(preferences)
         self.frame_bin.addItems([str(factor) for factor in rc_config.FRAME_BINS])
         self.frame_bin.setCurrentText(str(config.LOOK_BIN))
@@ -549,34 +435,17 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.focus_metric.addItem("Laplacian", "laplacian")
         self.focus_metric.addItem("DCT-Shannon (Auto-Focus)", "dct_shannon")
         self.focus_metric.setCurrentIndex(self.focus_metric.findData(config.FOCUS_METRIC))
-        for widget in (self.tools_profile, self.history_turns, self.frame_bin, self.focus_metric):
+        for widget in (self.frame_bin, self.focus_metric):
             widget.setFont(font)
 
-        def with_unit(spin, unit):
-            """A number box with its unit after it, as one cell."""
-            cell = QtWidgets.QHBoxLayout()
-            cell.setSpacing(6)
-            cell.addWidget(spin)
-            cell.addWidget(_field_label(unit, preferences, font, gap=0))
-            cell.addStretch(1)
-            return cell
-
-        # Three pairs on one line, the leftover width after them; the focus metric on a line of its own.
-        tool_set_label = _field_label("Tool set", preferences, font, gap=0)
-        memory_label = _field_label("Memory", preferences, font)
-        image_label = _field_label("Bin image", preferences, font, gap=2 * PAIR_GAP)  # set apart
-        options.addWidget(tool_set_label, 0, 0)
-        options.addWidget(self.tools_profile, 0, 1)
-        options.addWidget(memory_label, 0, 2)
-        options.addLayout(with_unit(self.history_turns, "messages"), 0, 3)   # yours: one per turn
-        options.addWidget(image_label, 0, 4)
-        options.addWidget(self.frame_bin, 0, 5)
-        options.setColumnStretch(6, 1)
-        focus_cell = QtWidgets.QHBoxLayout()   # as wide as its names, not stretching column 1
-        focus_cell.addWidget(self.focus_metric)
-        focus_cell.addStretch(1)
-        options.addWidget(_field_label("Focus metric", preferences, font, gap=0), 1, 0)
-        options.addLayout(focus_cell, 1, 1, 1, 6)
+        # The bin and the focus metric on one line, the leftover width after them.
+        image_label = _field_label("Bin image", preferences, font, gap=0)
+        focus_label = _field_label("Focus metric", preferences, font)
+        options.addWidget(image_label, 0, 0)
+        options.addWidget(self.frame_bin, 0, 1)
+        options.addWidget(focus_label, 0, 2)
+        options.addWidget(self.focus_metric, 0, 3)
+        options.setColumnStretch(4, 1)
 
         # The coordinate system as the operator sees it: one row per axis, what a positive move
         # does to the sample in the image. "Move it up" then has one meaning for the model.
@@ -600,32 +469,28 @@ class AiAssistantGUI(QtWidgets.QWidget):
             self.axis_boxes[axis] = combo
         axes_grid.setColumnStretch(2, 1)
 
-        self.language = ModelPicker("Language model", font, setup, self._models_folder, self.on_choose_folder)
-        self.vision = ModelPicker("Vision model", font, setup, self._models_folder, self.on_choose_folder,
-                                  same_as=SAME_AS_LANGUAGE)
+        self.language = ModelPicker("Language model", font, setup)
+        self.vision = ModelPicker("Vision model", font, setup, same_as=SAME_AS_LANGUAGE)
         column.addWidget(self.language)
         column.addWidget(self.vision)
         column.addWidget(preferences)
         column.addWidget(axes_box)
 
         # The boxes share their first columns, each as wide as its widest occupant, so Type sits
-        # under Tool set, the dropdowns under each other, Provider under Memory.
+        # under Bin image, the dropdowns under each other, Provider under Focus metric.
         pickers = (self.language, self.vision)
 
         def widest(*widgets):
             return max(widget.sizeHint().width() for widget in widgets)
 
         widths = (
-            widest(tool_set_label, *(p.type_label for p in pickers)),
-            widest(*(p.mode for p in pickers)),                  # "Same as language model" sets it
-            widest(memory_label, *(w for p in pickers for w in (p.provider_label, p.base_url_label, p.key_label))),
-            widest(self.history_turns, *(p.provider for p in pickers)),
+            widest(image_label, *(p.type_label for p in pickers)),
+            widest(self.frame_bin, *(p.mode for p in pickers)),   # "Same as language model" sets it
+            widest(focus_label, *(w for p in pickers for w in (p.provider_label, p.base_url_label, p.key_label))),
         )
         for grid in (options, self.language.grid, self.vision.grid):
             for index, width in enumerate(widths):
                 grid.setColumnMinimumWidth(index, width)
-        self.tools_profile.currentTextChanged.connect(self._apply_profile)
-        self.history_turns.valueChanged.connect(self._apply_options)
         self.frame_bin.currentTextChanged.connect(self._apply_options)
         self.focus_metric.currentIndexChanged.connect(self._apply_options)
         for combo in self.axis_boxes.values():
@@ -634,10 +499,10 @@ class AiAssistantGUI(QtWidgets.QWidget):
 
     # --- the session ---
     def _set_connect_state(self, state, detail=""):
-        """idle: Connect is the one button that works and the window is closed. starting: a local
-        model is loading. ready: connected, the window open and titled with what answers."""
+        """idle: Connect is the one button that works and the window is closed. ready: connected,
+        the window open and titled with what answers."""
         self._state = state
-        text = {"idle": "disconnected", "starting": f"starting {detail}…", "ready": f"connected: {detail}"}[state]
+        text = {"idle": "disconnected", "ready": f"connected: {detail}"}[state]
         self.status_label.setText(text)
         self.connect_button.setEnabled(state == "idle")
         self.disconnect_button.setEnabled(state != "idle")
@@ -647,26 +512,14 @@ class AiAssistantGUI(QtWidgets.QWidget):
             self.chat_window.show()
             self.chat_window.raise_()
             self.chat_window.activateWindow()
-            self._tick.start()
         else:
-            self._tick.stop()
+            self._done_check.stop()
             self.chat_window.hide()
 
     def _set_setup_enabled(self, enabled):
         """The setup is applied by Connect and read only after it: Disconnect first to change it."""
-        for widget in (self.language, self.vision, self.tools_profile, self.history_turns, self.frame_bin,
-                       self.focus_metric,
-                       *self.axis_boxes.values()):
+        for widget in (self.language, self.vision, self.frame_bin, self.focus_metric, *self.axis_boxes.values()):
             widget.setEnabled(enabled)
-
-    # --- setup state ---
-    def on_choose_folder(self):
-        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Models folder", self._models_folder)
-        if path:
-            self._models_folder = path
-            for picker in (self.language, self.vision):
-                picker.models_folder = path
-                picker.scan_models()
 
     # --- connecting ---
     def on_connect(self):
@@ -682,13 +535,10 @@ class AiAssistantGUI(QtWidgets.QWidget):
         if self._state == "idle":
             return
         self._release_session()
-        self._show_confirmation(False)
         if self._running:
             self._set_running(False)
-        self.scheduler.clear()                  # nothing fires into a session that is gone
-        self._show_schedules()
-        self._continuations = []
         self._blocks, self._active = [], None
+        self._show_tokens(0)
         self._render()
         self._set_connect_state("idle")
 
@@ -697,17 +547,16 @@ class AiAssistantGUI(QtWidgets.QWidget):
         self.on_disconnect()
 
     def _release_session(self):
-        """Stop a local model server and the worker, joining with a bound so the GUI never hangs
-        on an in-flight model call, and release the Core-owned Acceptor."""
-        self._stop_local_servers()
+        """Stop the worker, joining with a bound so the GUI never hangs on an in-flight model call,
+        and release the Core-owned Acceptor."""
         self._endpoints = {}
+        self._done_check.stop()
         if self._worker is None:
             return
         self._worker.interrupt()
         if self._run_turn_slot is not None:
             self.sig_run_turn.disconnect(self._run_turn_slot)
-            self.sig_run_machine_turn.disconnect(self._worker.run_machine_turn)
-            self.sig_check_continuation.disconnect(self._worker.check_continuation)
+            self.sig_check_run.disconnect(self._worker.check_run)
             self._run_turn_slot = None
         self._thread.quit()
         if not self._thread.wait(3000):         # still inside a model call: let it be, never qFatal
@@ -718,7 +567,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
 
     def _connect(self):
         """Apply the three boxes. Returns True when the assistant can take a message now; False
-        after a note, or while a local model is still loading (the status line says so)."""
+        after a note that says what to fix."""
         if not self._ensure_worker():
             self._note(getattr(self.core, "_assistant_refusal", None)
                        or "Stop the Remote Control transport to use the AI Assistant.")
@@ -726,55 +575,17 @@ class AiAssistantGUI(QtWidgets.QWidget):
         plan = self._plan()
         if plan is None:
             return False
-        self._stop_local_servers()
-        self._endpoints = {}
-        for role in ("vision", "language"):     # vision first: its server, with the projector, can serve both
-            choice = plan[role]
-            if isinstance(choice, Endpoint):
-                self._endpoints[role] = choice
-            elif choice is not None:
-                path, projector = choice
-                twin = next((s for s in self._servers.values() if s.model_path == path), None)
-                if twin is not None:            # the same file in both boxes: one server
-                    self._servers[role] = twin
-                    continue
-                server = LocalModelServer(path, projector=projector,
-                                          context_tokens=getattr(getattr(self.core, "cfg", None), config.CONTEXT_CONFIG_KEY, None))
-                try:
-                    server.start()
-                except (RuntimeError, OSError) as error:  # missing runtime, or the child could not spawn
-                    self._local_failed(str(error))
-                    return False
-                self._servers[role] = server
-        if self._servers:
-            servers = self._servers
-            self._started_at = time.monotonic()
-            self._set_connect_state("starting", ", ".join(sorted({s.model for s in servers.values()})))
-            self._single_shot(config.LOCAL_SERVER_POLL_MS, lambda: self._poll_local_servers(servers))
-            return False
+        self._endpoints = {role: endpoint for role, endpoint in plan.items() if endpoint is not None}
         self._use()
         return True
 
     def _plan(self):
-        """What each box asks for, by role: an Endpoint, a (path, projector) pair for a file to
-        serve, or None when the vision model is the language model. None altogether after a note
-        that says what to fix."""
+        """What each box asks for, by role: an Endpoint, or None when the vision model is the
+        language model. None altogether after a note that says what to fix."""
         plan = {}
         for role, picker in (("language", self.language), ("vision", self.vision)):
             if picker.same:
                 plan[role] = None
-            elif picker.local:
-                name = picker.local_model.currentText()
-                if not name:
-                    self._note(f"Put a model file ({', '.join(config.MODEL_SUFFIXES)}) in {self._models_folder} first.")
-                    return None
-                # A projector gives the file eyes: the vision model must have one; the language
-                # model takes one only when it is the vision model too.
-                projector = projector_for(self._models_folder, name) if role == "vision" or self.vision.same else None
-                if role == "vision" and projector is None:
-                    self._note(f"{name} needs its projector file (mmproj…) beside it in {self._models_folder} to see.")
-                    return None
-                plan[role] = (os.path.join(self._models_folder, name), projector)
             else:
                 endpoint = picker.cloud_endpoint()
                 if endpoint.needs_key and not endpoint.api_key:
@@ -790,34 +601,6 @@ class AiAssistantGUI(QtWidgets.QWidget):
                 plan[role] = endpoint
         return plan
 
-    def _poll_local_servers(self, servers):
-        """Poll the servers of one Connect until all answer, then use them. A poll left over from
-        an earlier Connect finds its servers replaced and stops."""
-        if servers is not self._servers:
-            return
-        try:
-            waiting = [server for server in set(servers.values()) if not server.ready()]
-        except Exception as error:  # a child exited, or the probe failed in an unforeseen way
-            self._local_failed(str(error))
-            return
-        if waiting:
-            if time.monotonic() - self._started_at > config.LOCAL_SERVER_TIMEOUT_S:
-                names = ", ".join(server.model for server in waiting)
-                logs = ", ".join(server.log_path for server in waiting)
-                self._local_failed(f"{names} did not answer within {config.LOCAL_SERVER_TIMEOUT_S} s; see {logs}")
-            else:
-                self._single_shot(config.LOCAL_SERVER_POLL_MS, lambda: self._poll_local_servers(servers))
-            return
-        for role, server in servers.items():
-            self._endpoints[role] = Endpoint(provider=LOCAL_PROVIDER, kind="openai-compatible", model=server.model,
-                                             base_url=server.base_url, vision=server.projector is not None)
-        self._use()
-
-    def _local_failed(self, message):
-        self._stop_local_servers()
-        self._set_connect_state("idle")
-        self._note(message)
-
     def _use(self):
         """Hand the endpoints to the worker; the status line says which, and the window opens."""
         language, vision = self._endpoints["language"], self._endpoints.get("vision")
@@ -825,7 +608,8 @@ class AiAssistantGUI(QtWidgets.QWidget):
         if interval > 0:                        # the microscope config spaces the requests, for a tight host limit
             language = dataclasses.replace(language, request_interval_s=interval)
             vision = dataclasses.replace(vision, request_interval_s=interval) if vision else None
-        self._worker.configure(language, vision, self.tools_profile.currentText())
+        self._load_skills()
+        self._worker.configure(language, vision)
         detail = _describe(language) + (f"; vision: {_describe(vision)}" if vision else "")
         if interval > 0:
             detail += f"; {interval:g} s between requests"
@@ -833,10 +617,17 @@ class AiAssistantGUI(QtWidgets.QWidget):
             detail += "; no vision: look gives the numbers only"   # the box above says how to change that
         self._set_connect_state("ready", detail)
 
-    def _stop_local_servers(self):
-        servers, self._servers = self._servers, {}
-        for server in servers.values():
-            server.stop()
+    def _load_skills(self):
+        """The microscope's skills, from the folder next to its config; the transcript says which were
+        found and why a file was left out, so a lab sees at connect what the assistant will use."""
+        found, problems = skill_files.load(skill_files.folder_of(getattr(self.core, "cfg", None)))
+        offered = [cmd.name for cmd in offered_commands()] + ["look", "ask_eyes", "calibrate"]
+        self._worker.skills = found
+        lines = problems + skill_files.unknown_tools(found, offered)
+        if found:
+            lines.insert(0, "Skills: " + ", ".join(found))
+        for line in lines:
+            self._blocks.append(self._note_block(line))
 
     def _note(self, text):
         """What a Connect needs: on the status line, where the setup is, and in the transcript,
@@ -877,11 +668,6 @@ class AiAssistantGUI(QtWidgets.QWidget):
         # Qt drops a bottom margin before the next question's table: an empty line keeps the air.
         return f'<div style="margin:12px 0 0 8px;">{"".join(parts)}</div><p style="margin:0;">&nbsp;</p>'
 
-    def _machine_block(self, text):
-        """A turn the machine wrote, a schedule that fell due or a wait that is over: a muted line
-        where the operator's panel would be, since nobody typed it."""
-        return f'<div style="color:{_DIM};margin:14px 0 2px 0;">{_htmllib.escape(text)}</div>'
-
     def _note_block(self, text):
         return f'<div style="color:{_DIM};margin:3px 0;"><i>{_htmllib.escape(text)}</i></div>'
 
@@ -901,119 +687,55 @@ class AiAssistantGUI(QtWidgets.QWidget):
         text = self.chat_window.input.text().strip()
         if not text or not self.chat_window.input.isEnabled() or self._state != "ready":
             return
+        if self._tokens >= self._ceiling()[1]:                # the session is as large as the model takes
+            self._blocks.append(self._note_block(config.CONTEXT_FULL))
+            self._render()
+            return
         self.chat_window.input.clear()
         self._submit(text)
 
-    def _submit(self, text, request=None, shown=None):
-        """One turn: typed (a new request), or written by the machine for `request`: a schedule
-        that fell due, or a wait that is over. The model gets `text`; the transcript shows a
-        machine turn as `shown`."""
-        self._blocks.append(self._user_block(text) if request is None else self._machine_block(shown or text))
+    def _submit(self, text):
+        """One turn: the operator's message."""
+        self._blocks.append(self._user_block(text))
         self._active = {"tools": [], "reply": None, "error": None}
         self._set_running(True)
         self._render()
-        if request is None:
-            self.sig_run_turn.emit(text)
-        else:
-            self.sig_run_machine_turn.emit(text, request)
+        self.sig_run_turn.emit(text)
 
-    def fire_due_schedule(self):
-        """Every second while connected, never while a turn runs (it waits for the next tick): a
-        continuation that came due, else the first schedule that is due, runs as a turn of its own,
-        marked as such in the transcript; while a request waits, the worker is asked whether its
-        wait is over. The schedule rows count down on the same tick."""
-        self._show_request()
-        self._show_schedules()
-        if self._state != "ready" or self._running:
-            return
-        if self._continuations:
-            self._submit(*self._continuations.pop(0))
-            return
-        item = self.scheduler.pop_due()
-        if item is not None:
-            self._submit(config.SCHEDULED_TURN.format(name=item["name"], instruction=item["instruction"]),
-                         item.get("request") or 0,
-                         config.SCHEDULED_SHOWN.format(name=item["name"].replace("_", " "), instruction=item["instruction"]))
-            self._show_schedules()                  # the one that fired: its next time, or gone
-        elif self._worker is not None and self._worker.requests.waiting is not None:
-            self.sig_check_continuation.emit()
+    # --- the token meter ---
+    def _ceiling(self):
+        """The language model's (warning, ceiling) in input tokens; none for an unknown server."""
+        language = self._endpoints.get("language")
+        preset = config.PROVIDERS.get(language.provider, {}) if language is not None else {}
+        return preset.get("context_warn_tokens", float("inf")), preset.get("context_max_tokens", float("inf"))
 
-    def _on_continue(self, text, request):
-        prefix = config.CONTINUATION_TURN.format(number=request, result="")
-        result = text[len(prefix):] if text.startswith(prefix) else text
-        self._continuations.append((text, request, config.CONTINUATION_SHOWN.format(number=request, result=result)))
-        self.fire_due_schedule()
+    def _on_usage(self, tokens):
+        if tokens:                              # a provider that counted nothing keeps the last count
+            self._show_tokens(tokens)
 
-    def _show_schedules(self):
-        """The schedule rows: each schedule's name, how often, and the countdown to its next
-        firing, with a Cancel of its own; a row per schedule, in the order they fire."""
-        window = self.chat_window
-        listing = self.scheduler.listing()
-        names = [item["name"] for item in listing]
-        if names != list(window.schedule_rows):     # one added, cancelled or fired for good, or the order changed
-            for row, _ in window.schedule_rows.values():
-                window.schedules.removeWidget(row)
-                row.hide()                          # gone now; deleteLater waits for the event loop
-                row.deleteLater()
-            window.schedule_rows = {name: self._schedule_row(name) for name in names}
-            for row, _ in window.schedule_rows.values():
-                window.schedules.addWidget(row)
-        for item in listing:
-            window.schedule_rows[item["name"]][1].setText(_schedule_text(item, self._running))
+    def _show_tokens(self, tokens):
+        """The meter: the last request's input tokens, a warning past the model's, and the stop."""
+        self._tokens = tokens
+        warn, ceiling = self._ceiling()
+        text = f"{tokens:,} tokens per request" if tokens else ""
+        if tokens >= ceiling:
+            text += f" · {config.CONTEXT_FULL}"
+        elif tokens >= warn:
+            text += f" · {config.CONTEXT_LARGE}"
+        self.chat_window.meter.setText(text)
 
-    def _schedule_row(self, name):
-        font = self.chat_window.request_label.font()
-        row = QtWidgets.QWidget(self.chat_window)
-        line = QtWidgets.QHBoxLayout(row)
-        line.setContentsMargins(0, 0, 0, 0)
-        label = QtWidgets.QLabel(row)
-        label.setFont(font)
-        cancel = QtWidgets.QPushButton("Cancel schedule", row)
-        cancel.setFont(font)
-        cancel.clicked.connect(lambda: self.on_cancel_schedule(name))
-        line.addWidget(label, 1)
-        line.addWidget(cancel)
-        return row, label
-
-    def on_cancel_schedule(self, name):
-        """A schedule row's Cancel: that schedule only; a turn it already started runs on. The
-        model sees it gone in the next readout."""
-        if self.scheduler.cancel(name):
-            self._blocks.append(self._note_block(f"[schedule cancelled: {name.replace('_', ' ')}]"))
-            self._render()
-        self._show_schedules()
-
-    def on_cancel_request(self):
-        """The request line's Cancel: the request ends, its wait with it; a turn of it in flight is
-        cancelled as Cancel does. The microscope is not stopped."""
-        if self._running:
-            self.on_interrupt()
-        if self._worker is not None:
-            self._worker.requests.end("cancelled by the operator")
-        self._continuations = []
-        self._show_request()
-
-    def _show_request(self):
-        """The request line: the open request's number, turns, tokens, wait and plan."""
-        request = self._worker.requests.open() if self._worker is not None else None
-        window = self.chat_window
-        for widget in (window.request_label, window.request_cancel):
-            widget.setVisible(request is not None)
-        if request is None:
-            return
-        text = f"Request {request.number}: {request.turns} turns, {request.tokens:,} tokens"
-        if request.wait:
-            text += f", waiting until {request.wait['until']}"
-        if request.plan:
-            text += "\n" + "\n".join(request.plan)
-        window.request_label.setText(text)
+    # --- the done notice ---
+    def _on_run_ended(self, text):
+        """The run the assistant started has ended: one grey line, no model turn."""
+        self._done_check.stop()
+        self._blocks.append(self._note_block(text))
+        self._render()
 
     def on_interrupt(self):
         if not self._running:
             return                                  # nothing is running
         if self._worker is not None:
             self._worker.interrupt()
-        self._show_confirmation(False)
         self._blocks.append(self._note_block("[cancelled]"))
         self._render()
 
@@ -1026,10 +748,6 @@ class AiAssistantGUI(QtWidgets.QWidget):
             self._worker.interrupt()
         self.main_window.stop_acquisition_and_timelapse()
         self.main_window.sig_stop_movement.emit()
-        self.scheduler.clear()                  # a stop is a stop: nothing scheduled fires after it
-        self._show_schedules()
-        self._continuations = []                # and no wait continues (the worker ended the request)
-        self._show_confirmation(False)
         self._blocks.append(self._note_block("[stop microscope]"))
         self._render()
 
@@ -1039,29 +757,9 @@ class AiAssistantGUI(QtWidgets.QWidget):
             return                                  # not while a turn runs
         self._blocks = []
         self._active = None
-        self._continuations = []
         if self._worker is not None:
             self._worker.reset()
-        self._render()
-        self._show_request()
-
-    # --- confirm-first commands ---
-    def _show_confirmation(self, visible):
-        for widget in (self.chat_window.confirm_label, self.chat_window.confirm_run, self.chat_window.confirm_cancel):
-            widget.setVisible(visible)
-
-    def _on_confirm(self, name, args):
-        self._pending_confirmation = name
-        self.chat_window.confirm_label.setText(f"The assistant wants to run {name} {args}. Run it?")
-        self._show_confirmation(True)
-
-    def _answer_confirmation(self, allowed):
-        name = self._pending_confirmation
-        self._show_confirmation(False)
-        if self._worker is not None:
-            self._worker.gate.answer(allowed)
-        verdict = "confirmed" if allowed else "cancelled"
-        self._blocks.append(self._note_block(f"[{verdict} {name}]"))
+        self._show_tokens(0)
         self._render()
 
     def _set_running(self, running):
@@ -1083,6 +781,8 @@ class AiAssistantGUI(QtWidgets.QWidget):
         if self._active is not None:
             self._active["tools"].append((name, args))
             self._render()
+        if name in config.RUNS_ON_ITS_OWN:
+            self._done_check.start()            # the worker says when it is under way, and when it ends
 
     def _on_served(self, text):
         if self._active is not None:
@@ -1100,7 +800,6 @@ class AiAssistantGUI(QtWidgets.QWidget):
             self._active = None
         self._set_running(False)
         self._render()
-        self._show_request()
 
     def shutdown(self):
         """Called by MainWindow on app exit: release the session as Disconnect does. The

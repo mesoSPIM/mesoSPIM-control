@@ -20,7 +20,7 @@ try:
 except ModuleNotFoundError as error:
     raise SystemExit("test_real_pyqt_assistant_smoke.py requires PyQt5") from error
 
-from mesoSPIM.src.ai_assistant.gui import CLOUD_MODE, LOCAL_MODE, SAME_AS_LANGUAGE, AiAssistantGUI
+from mesoSPIM.src.ai_assistant.gui import CLOUD_MODE, SAME_AS_LANGUAGE, AiAssistantGUI
 from mesoSPIM.src.remote_control.gui import RemoteControlGUI
 
 MAIN_WINDOW_WIDTH = 1000  # the designed width of mesoSPIM_MainWindow.ui
@@ -85,7 +85,7 @@ def main():
     language.mode.setCurrentText(CLOUD_MODE)
     language.provider.setCurrentText("Anthropic")
     app.processEvents()
-    assert language.key.isVisible() and not language.base_url.isVisible() and not language.local_model.isVisible()
+    assert language.key.isVisible() and not language.base_url.isVisible()
     assert cell_of(grid, language.model) == (1, 3, 6), cell_of(grid, language.model)
     assert cell_of(grid, language.key) == (2, 3, 6), cell_of(grid, language.key)
     assert items_for(grid, language.key) == 1 and items_for(grid, language.key_label) == 1
@@ -108,23 +108,13 @@ def main():
     assert items_for(grid, language.key) == 1 and cell_of(grid, language.key) == (2, 3, 6)
     assert tab.minimumSizeHint().width() == width_cloud
 
-    # Local: the file dropdown and the folder button, the cloud fields gone.
-    language.mode.setCurrentText(LOCAL_MODE)
-    app.processEvents()
-    assert language.local_model.isVisible() and language.folder_button.isVisible()
-    assert not any(w.isVisible() for w in (language.provider, language.model, language.key, language.base_url))
-    width_local = tab.minimumSizeHint().width()
-
     # The vision box defers to the language model until told otherwise, then offers the same.
     assert vision.same and vision.mode.currentText() == SAME_AS_LANGUAGE
-    assert not any(w.isVisible() for w in (vision.provider, vision.model, vision.key, vision.local_model))
+    assert not any(w.isVisible() for w in (vision.provider, vision.model, vision.key))
     same_height = vision.sizeHint().height()
     vision.mode.setCurrentText(CLOUD_MODE)
     app.processEvents()
     assert vision.provider.isVisible() and vision.key.isVisible() and vision.sizeHint().height() > same_height
-    vision.mode.setCurrentText(LOCAL_MODE)
-    app.processEvents()
-    assert vision.local_model.isVisible() and not vision.provider.isVisible()
 
     # The boxes line up: same first columns.
     for column in range(5):
@@ -162,8 +152,7 @@ def main():
     # letter as a wide box.
     fonts = bool(QtGui.QFontDatabase().families())
     if fonts:
-        for name, width in (("cloud", width_cloud), ("local", width_local)):
-            assert width <= MAIN_WINDOW_WIDTH - FRAME, f"{name} setup needs {width} px"
+        assert width_cloud <= MAIN_WINDOW_WIDTH - FRAME, f"cloud setup needs {width_cloud} px"
         assert width_server <= MAIN_WINDOW_WIDTH - FRAME, f"OpenAI-style setup needs {width_server} px"
 
     # The input box: Enter sends, Shift+Enter starts a new line, as editors do. Only the key
@@ -183,7 +172,7 @@ def main():
 
     tab.shutdown()
     print(f"REAL PYQT ASSISTANT SMOKE PASS: Qt {QtCore.QT_VERSION_STR}, "
-          + (f"setup widths cloud={width_cloud} local={width_local} openai-style={width_server}" if fonts
+          + (f"setup widths cloud={width_cloud} openai-style={width_server}" if fonts
              else "setup widths not measured: no fonts on this platform, run with QT_QPA_PLATFORM=windows"))
 
 

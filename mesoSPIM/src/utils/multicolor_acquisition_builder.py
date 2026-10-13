@@ -2,7 +2,25 @@
 
 Take a dict with information and return an acquisition list
 '''
+import math
+
 from .acquisitions import Acquisition, AcquisitionList
+
+
+def field_of_view_um(x_pixels, y_pixels, pixelsize_um):
+    ''' The field of view in um. X and Y are interchanged here to account for the camera rotation by 90°'''
+    return int(y_pixels * pixelsize_um), int(x_pixels * pixelsize_um)
+
+
+def tile_offsets(x_fov, y_fov, overlap_percent):
+    ''' The stage step between neighbouring tiles for a field of view and an overlap in % '''
+    return int(x_fov * (1 - overlap_percent / 100)), int(y_fov * (1 - overlap_percent / 100))
+
+
+def image_counts(x_start, x_end, y_start, y_end, x_offset, y_offset):
+    ''' Using the ceiling function to always create at least 1 image '''
+    return (int(math.ceil(abs(x_end - x_start) / x_offset)) + 1,
+            int(math.ceil(abs(y_end - y_start) / y_offset)) + 1)
 
 
 class AcquisitionListBuilder():

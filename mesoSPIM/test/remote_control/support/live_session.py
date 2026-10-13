@@ -200,3 +200,23 @@ def demo_acquisition(folder, filename, state):
         "etl_r_amplitude": state["etl_r_amplitude"],
         "processing": "MAX",
     }
+
+
+def write_test_stacks(folder):
+    """Two small TIFF z-stacks for the window calls that open files: three beads of known size (as
+    the PSF tool's own simulation builds them) and a texture whose focus moves through the stack."""
+    import numpy as np
+    import tifffile
+
+    zz, yy, xx = np.meshgrid(np.arange(21), np.arange(64), np.arange(64), indexing="ij")
+    beads = np.full(zz.shape, 300.0)
+    sigma_lateral, sigma_axial = (1.0 / 2.3548) / (4.25 / 5.0), (2.0 / 2.3548) / 1.0
+    for z, y, x in ((10, 16, 16), (10, 16, 48), (10, 48, 32)):
+        beads += 5000.0 * np.exp(-((zz - z) ** 2 / (2 * sigma_axial ** 2) + ((yy - y) ** 2 + (xx - x) ** 2) / (2 * sigma_lateral ** 2)))
+    beads_file = str(folder / "beads.tif")
+    tifffile.imwrite(beads_file, beads.astype(np.uint16))
+    texture = np.random.default_rng(0).random((64, 64)) * 3000 + 200
+    planes = [np.where(np.abs(z - 10) < 3, texture, texture.mean()) for z in range(21)]
+    texture_file = str(folder / "texture.tif")
+    tifffile.imwrite(texture_file, np.array(planes).astype(np.uint16))
+    return beads_file, texture_file

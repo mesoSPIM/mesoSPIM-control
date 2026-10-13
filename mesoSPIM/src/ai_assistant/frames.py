@@ -115,6 +115,14 @@ class Calibration:
             self.path.write_text(json.dumps(data, indent=1), encoding="utf-8")
 
 
+def place_and_settings(readout):
+    """Where a frame was taken and with what light, from the readout: what makes two frames the same."""
+    optics, camera = readout.get("optics") or {}, readout.get("camera") or {}
+    return ({a: (readout.get("position") or {}).get(a) for a in AXES},
+            {"zoom": optics.get("zoom"), "laser": optics.get("laser"), "filter": optics.get("filter"),
+             "intensity": optics.get("intensity"), "exposure_s": camera.get("exposure_time_s")})
+
+
 class FrameHistory:
     """The frames of the session, newest last, capped at FRAME_HISTORY_BYTES of copies; numbers
     keep counting when the oldest go. Thread-safe: a look runs on its own thread."""
@@ -131,16 +139,13 @@ class FrameHistory:
         """Keep a frame: `image` is its small copy, `stats` get_frame's numbers for the full frame,
         `readout` the snapshot it was taken in. Returns the entry."""
         readout = readout or {}
-        optics, camera = readout.get("optics") or {}, readout.get("camera") or {}
-        zoom = optics.get("zoom")
+        position, settings = place_and_settings(readout)
+        zoom = settings["zoom"]
         calibrated = self.calibration.scale(zoom) if self.calibration is not None and zoom else None
         scale = calibrated or nominal_scale(readout, axes)
         with self._lock:
             self._count += 1
-            entry = {"n": self._count, "t": self.clock(), "source": source,
-                     "position": {a: (readout.get("position") or {}).get(a) for a in AXES},
-                     "settings": {"zoom": zoom, "laser": optics.get("laser"), "filter": optics.get("filter"),
-                                  "intensity": optics.get("intensity"), "exposure_s": camera.get("exposure_time_s")},
+            entry = {"n": self._count, "t": self.clock(), "source": source, "position": position, "settings": settings,
                      "measures": _measures(stats, readout, scale, "calibrated" if calibrated else "nominal"),
                      "image": np.asarray(image) if image is not None else None, "field_um": field_um(readout)}
             if label:

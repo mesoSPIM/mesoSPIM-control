@@ -35,10 +35,12 @@ All in `mesoSPIM/src/remote_control/`:
 ```text
 config.py      constants, defaults, and shared names
 dispatcher.py  operation state, dispatch, JSON, and errors
-commands.py    validation, limits, and 56 commands
+commands.py    validation, limits, and every call (84)
 frame.py       the frame readouts (get_frame, get_snapshot)
 servers.py     Core-thread routing, TCP, MCP, startup, and shutdown
 gui.py         operator controls and acquisition-table bridge
+gui_handles.py the windows' own controls, worked from outside on the GUI thread, for the calls
+               that change or read what a window shows or offers
 ```
 
 Existing files receive only integration hooks:
@@ -182,6 +184,32 @@ The command list returned by `get_manual` is generated from the registry, so a c
 command appears automatically over both transports. Its `hint` is also the description MCP
 `tools/list` serves (a `WAIT` command's gets the polling note, `MCP_WAIT_NOTE`, added); write it as
 a compact but complete description rather than relying on private implementation details.
+
+### Writing a call's description
+
+The hint is what an MCP client and the AI Assistant's model read to choose a call, so it is written
+for choosing:
+
+- **Start with `in: {...}. out: {...}.`** Every call does: the arguments by name, `?` for an
+  optional one, and what comes back.
+- **Then the facts that set the call apart from its neighbour.** Use the name the window gives the
+  control (Freeze galvos, AUTO Focus, File > Open TIFF, Save config file), and say what it does to the
+  instrument or the screen ("set the amplitude to 0 and back", "with their offset from the frame's
+  centre", "nothing changes until finish_optimization"). Measured on Claude Haiku 5.5 (2026-10-11):
+  shortened descriptions that dropped such a fact lost the choice. Without "set the amplitude to 0
+  and back", "Stop the galvos scanning" went to `set_galvo` in one of two runs. Without the offset from
+  the centre, "Where is the region of interest compared with the centre?" went to `get_frame`.
+- **Units in the description or the argument's name**, never implied: `camera_exposure_time` is in
+  seconds, and the hint says so.
+- **Facts, not procedures.** No "call X first", no advice to the model, no "the operator"; how
+  calls chain is the manual's and a skill's work. A hint is never written to make one test case
+  pass.
+- **Argument details go in the schema**, in each property's `description`, not again in the hint;
+  the schemas are most of what the calls cost to offer (the 17 window calls: 3,500 characters of
+  hints, 8,900 of schemas).
+- **Plain words, no wire jargon beyond the `in`/`out` line.** The style of the hints did not show
+  in the assistant's replies (same article rate and sentence length with telegraphic or
+  sentence-style hints); the manual sets the reply's register.
 
 ## Replies and operation state
 

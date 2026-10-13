@@ -6,7 +6,6 @@ import ast
 
 from PyQt5 import QtCore, QtWidgets
 
-from .utility_functions import replace_with_underscores
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
 from ..plugins.utils import get_image_writer_plugins, get_image_writer_from_name
 from pprint import pprint as print
@@ -94,78 +93,9 @@ class FilenameWizard(QtWidgets.QWizard):
         Each writer is formated by:
         mesoSPIM/src/plugins/utils.py:get_writer_plugins()
         '''
-        if self.selected_writer.get('file_names').SingleFileFormat:
-            row_count = 1
-        else:
-            row_count = self.parent.model.rowCount()
-        num_string = '000000'
-        start_number = 0
-        start_number_string = str(start_number)
-        self.filename_list = []
-        for row in range(0, row_count):
-            filename = ''
-
-            # Add custom description
-            WindowDescription = self.selected_writer.get('file_names').WindowDescription
-            if self.field(WindowDescription):
-                filename += replace_with_underscores(self.field(WindowDescription)) + '_'
-
-            # Add Magnification
-            if self.selected_writer.get('file_names').IncludeMag:
-                filename += f'Mag{self.parent.model.getZoom(row)}_'
-
-            # Add Tile
-            if self.selected_writer.get('file_names').IncludeTile:
-                filename += f'Tile{self.parent.model.getTileIndex(row)}_'
-
-            # Add Channel(s)
-            if self.selected_writer.get('file_names').IncludeChannel:
-                if self.selected_writer.get('file_names').SingleFileFormat \
-                        and self.selected_writer.get('file_names').IncludeAllChannelsInSingleFileFormat:
-                    laser_list = self.parent.model.getLaserList()
-                    for laser in laser_list:
-                        filename += 'Ch' + laser[:-3] + '_'
-                else:
-                    filename += f'Ch{self.parent.model.getLaser(row)[:-3]}_'
-
-            # Add Filter
-            if self.selected_writer.get('file_names').IncludeFilter:
-                filename += f'Flt{replace_with_underscores(self.parent.model.getFilter(row))}_'
-
-            # Add Shutter
-            if self.selected_writer.get('file_names').IncludeShutter:
-                if self.parent.model.getNShutterConfigs() > 1:
-                    shutter_id = 0 if self.parent.model.getShutterconfig(row) == 'Left' else 1
-                else:
-                    shutter_id = 0
-                filename += f'Sh{shutter_id}_'
-
-            # Add Rotation/Angle
-            if self.selected_writer.get('file_names').IncludeRotation:
-                if self.parent.model.getNAngles() > 1:
-                    angle = int(self.parent.model.getRotationPosition(row))
-                else:
-                    angle = 0
-                filename += f'Rot{angle}_'
-
-            # Add Suffix
-            if self.selected_writer.get('file_names').IncludeSuffix:
-                filename += f'{self.selected_writer.get('file_names').IncludeSuffix}'
-
-            # Trim trailing _
-            if filename.endswith('_'):
-                filename = filename[:-1]
-
-            # Add File Extension
-            extension = self.selected_writer['file_extensions'][0]
-            if extension.startswith('.'):
-                extension = extension[1:]
-            filename += '.' + extension
-
-            self.filename_list.append(filename)
-
-        if self.selected_writer.get('file_names').SingleFileFormat:
-            self.filename_list *= self.parent.model.rowCount()
+        file_names = self.selected_writer.get('file_names')
+        self.filename_list = self.parent.model.get_acquisition_list().filenames(
+            file_names, self.selected_writer['file_extensions'][0], self.field(file_names.WindowDescription))
 
             # if self.file_format == 'raw':
             #     if self.field('DescriptionRaw'):

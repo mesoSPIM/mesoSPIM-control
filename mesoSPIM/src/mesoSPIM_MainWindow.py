@@ -614,6 +614,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             (self.RightETLRampRisingSpinBox, 'etl_r_ramp_rising_%',1),
             (self.LeftETLRampFallingSpinBox, 'etl_l_ramp_falling_%',1),
             (self.RightETLRampFallingSpinBox, 'etl_r_ramp_falling_%',1),
+            (self.BinningComboBox, 'camera_binning', 1),
+            (self.LiveSubSamplingComboBox, 'camera_display_live_subsampling', 1),
+            (self.AcquisitionSubSamplingComboBox, 'camera_display_acquisition_subsampling', 1),
+            (self.checkBoxScaleWZoom, 'galvo_amp_scale_w_zoom', 1),
+            (self.ETLconfigIndicator, 'ETL_cfg_file', 1),
+            (self.SnapFolderIndicator, 'snap_folder', 1),
         )
 
         for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment:
@@ -691,6 +697,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(int)
     def set_laser_intensity(self, value):
+        if self.showing_state:   # a refresh shows Core's own intensity: not a request (as the combo boxes)
+            return
         self.sig_state_request.emit({'intensity': value})
         self.LaserIntensitySlider.setValue(value)
         self.LaserIntensitySpinBox.setValue(value)
@@ -786,6 +794,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         spinbox.valueChanged.connect(lambda new_value: self.spinbox_to_state_parameter(new_value, spinbox, state_parameter, conversion_factor))
 
     def spinbox_to_state_parameter(self, new_value, spinbox, state_parameter, conversion_factor):
+        if self.showing_state:   # a refresh shows Core's own value: not a request, and not a rounded one back
+            return
         self.sig_state_request.emit({state_parameter : new_value/conversion_factor})
         self.slow_down_spinbox(spinbox)
 
@@ -799,11 +809,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
     def update_widget_from_state(self, widget, state_parameter_string, conversion_factor):
         if isinstance(widget, QtWidgets.QComboBox):
-            widget.setCurrentText(self.state[state_parameter_string])
+            widget.setCurrentText(str(self.state[state_parameter_string]))   # the subsampling factors are ints
         elif isinstance(widget, (QtWidgets.QSlider, QtWidgets.QSpinBox)):
             widget.setValue(int(self.state[state_parameter_string]*conversion_factor))
         elif isinstance(widget, (QtWidgets.QDoubleSpinBox)):
             widget.setValue(float(self.state[state_parameter_string]*conversion_factor))
+        elif isinstance(widget, QtWidgets.QCheckBox):
+            widget.setChecked(self.state[state_parameter_string])
+        elif isinstance(widget, QtWidgets.QLabel):
+            widget.setText(self.state[state_parameter_string])
     
     @QtCore.pyqtSlot()
     def update_gui_from_state(self):
@@ -979,7 +993,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(int)
     def run_timepoint(self, timepoint):
         self.acquisition_manager_window.append_time_index_to_filenames(timepoint)
-        total = getattr(self, 'timelapse_total_timepoints', 1)
+        total = self.core.timelapse_tpoints   # Core's count: set for a time lapse started remotely too
         self.timelapse_current_timepoint = timepoint
         self.TimePointProgressBar.setValue(int((timepoint + 1) / total * 100))
         self.TimePointProgressBar.setFormat(f'%p% ({timepoint + 1}/{total})')

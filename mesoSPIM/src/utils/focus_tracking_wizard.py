@@ -8,6 +8,8 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
+from .acquisitions import focus_at
+
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
 class FocusTrackingWizard(QtWidgets.QWizard):
@@ -58,11 +60,7 @@ class FocusTrackingWizard(QtWidgets.QWizard):
         super().done(r)
 
     def calculate_f_pos(self, z_1, z_2, f_1, f_2, z):
-        if z_2 == z_1:
-            ''' Avoid division by zero '''
-            return 0
-        else:
-            return (f_2-f_1)/(z_2-z_1)*(z-z_1)+f_1
+        return focus_at(z_1, z_2, f_1, f_2, z)
 
     def convert_string_to_list(self, inputstring):
         outputlist = []

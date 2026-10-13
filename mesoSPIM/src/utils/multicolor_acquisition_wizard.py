@@ -4,14 +4,13 @@ Contains Multicolor Acquisition Wizard Classes:
 Widgets that take user input and create acquisition lists
 
 '''
-import numpy as np
 import pprint
 from functools import partial
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtProperty
 
-from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder
+from .multicolor_acquisition_builder import MulticolorTilingAcquisitionListBuilder, field_of_view_um, image_counts, tile_offsets
 from .filename_wizard import FilenameWizard
 #from ..mesoSPIM_State import mesoSPIM_StateSingleton
 
@@ -106,10 +105,8 @@ class MulticolorTilingWizard(QtWidgets.QWizard):
     def update_image_counts(self):
         self.delta_x = abs(self.x_end - self.x_start)
         self.delta_y = abs(self.y_end - self.y_start)
-
-        ''' Using the ceiling function to always create at least 1 image '''
-        self.x_image_count = int(np.ceil(self.delta_x / self.x_offset)) + 1
-        self.y_image_count = int(np.ceil(self.delta_y / self.y_offset)) + 1
+        self.x_image_count, self.y_image_count = image_counts(self.x_start, self.x_end, self.y_start, self.y_end,
+                                                              self.x_offset, self.y_offset)
 
     def get_dict(self):
         return {'x_start' : self.x_start,
@@ -362,9 +359,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
         ''' Should be invoked whenever the zoom selection is changed '''
         new_zoom = self.zoomComboBox.currentText()
         pixelsize_in_um = self.parent.cfg.pixelsize[new_zoom] if self.parent.cfg else 6.5
-        ''' X and Y are interchanged here to account for the camera rotation by 90°'''
-        new_x_fov_in_um = int(self.parent.y_pixels * pixelsize_in_um)
-        new_y_fov_in_um = int(self.parent.x_pixels * pixelsize_in_um)
+        new_x_fov_in_um, new_y_fov_in_um = field_of_view_um(self.parent.x_pixels, self.parent.y_pixels, pixelsize_in_um)
         self.parent.x_fov = new_x_fov_in_um
         self.parent.y_fov = new_y_fov_in_um
 
@@ -376,9 +371,7 @@ class DefineGeneralParametersPage(QtWidgets.QWizardPage):
 
     @QtCore.pyqtSlot()
     def update_x_and_y_offset(self):
-        new_offset_percentage = self.overlapPercentageSpinBox.value()
-        x_offset = int(self.parent.x_fov * (1-new_offset_percentage / 100))
-        y_offset = int(self.parent.y_fov * (1-new_offset_percentage / 100))
+        x_offset, y_offset = tile_offsets(self.parent.x_fov, self.parent.y_fov, self.overlapPercentageSpinBox.value())
         self.xOffsetSpinBox.setValue(x_offset)
         self.yOffsetSpinBox.setValue(y_offset)
 

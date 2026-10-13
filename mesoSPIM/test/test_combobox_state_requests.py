@@ -209,3 +209,141 @@ def test_a_value_core_sets_itself_reaches_the_box(setter, state_parameter, optio
     getattr(SettingCore(window), setter)(after)
     assert settled(window) == []
     assert window.state[state_parameter] == after and box.currentText() == after
+
+
+class RemoteCore(QtCore.QObject):
+    """Core taking a Remote Control setter (the AI Assistant's, TCP's or MCP's): Core's own handler
+    and setters, then the Remote Control's refresh of the window. The waveformer's keys are applied
+    at once, as it lives in Core's thread; the camera's later, as its worker lives on its own thread.
+    The refresh reaches the window queued, as across threads."""
+    sig_state_request = QtCore.pyqtSignal(dict)
+    sig_update_gui_from_state = QtCore.pyqtSignal()
+    state_request_handler = mesoSPIM_Core.state_request_handler
+    set_intensity = mesoSPIM_Core.set_intensity
+    set_camera_exposure_time = mesoSPIM_Core.set_camera_exposure_time
+    set_filter = set_zoom = set_laser = set_shutterconfig = set_state = set_camera_line_interval = None   # in the handler's table, not called
+
+    def __init__(self, window):
+        super().__init__()
+        self.state = window.state
+        self.sig_state_request.connect(self.apply)
+        self.sig_update_gui_from_state.connect(lambda: mesoSPIM_MainWindow.update_gui_from_state(window),
+                                               type=QtCore.Qt.QueuedConnection)
+
+    def apply(self, request):
+        for key, value in request.items():
+            if key.startswith('camera_'):
+                QtCore.QTimer.singleShot(200, lambda key=key, value=value: self.state.update({key: value}))
+            else:
+                self.state[key] = value
+
+
+class RemoteWindow(Window):
+    """The Main Window's spin boxes, slider and check box, with its own code for them."""
+    connect_spinbox_to_state_parameter = mesoSPIM_MainWindow.connect_spinbox_to_state_parameter
+    spinbox_to_state_parameter = mesoSPIM_MainWindow.spinbox_to_state_parameter
+    slow_down_spinbox = mesoSPIM_MainWindow.slow_down_spinbox
+    set_laser_intensity = mesoSPIM_MainWindow.set_laser_intensity
+    scale_galvo_amp_w_zoom = mesoSPIM_MainWindow.scale_galvo_amp_w_zoom
+
+    def __init__(self, startup):
+        super().__init__(startup)
+        self.core = RemoteCore(self)
+        self.CameraExposureTimeSpinBox = QtWidgets.QDoubleSpinBox(maximum=10000, decimals=1)
+        self.LeftETLOffsetSpinBox = QtWidgets.QDoubleSpinBox(minimum=-5, maximum=5, decimals=3)
+        self.GalvoFrequencySpinBox = QtWidgets.QDoubleSpinBox(maximum=1000, decimals=2)
+        self.LaserIntensitySlider = QtWidgets.QSlider(maximum=100)
+        self.LaserIntensitySpinBox = QtWidgets.QSpinBox(maximum=100)
+        self.checkBoxScaleWZoom = QtWidgets.QCheckBox()
+        self.BinningComboBox = connected_box(self, ['1x1', '2x2'], 'camera_binning')
+        self.LiveSubSamplingComboBox = connected_box(self, SUBSAMPLING, 'camera_display_live_subsampling',
+                                                     int_conversion=True)
+        self.widget_to_state_parameter_assignment = [
+            (self.CameraExposureTimeSpinBox, 'camera_exposure_time', 1000),
+            (self.LeftETLOffsetSpinBox, 'etl_l_offset', 1),
+            (self.GalvoFrequencySpinBox, 'galvo_l_frequency', 1),
+            (self.LaserIntensitySlider, 'intensity', 1),
+            (self.LaserIntensitySpinBox, 'intensity', 1),
+            (self.checkBoxScaleWZoom, 'galvo_amp_scale_w_zoom', 1),
+            (self.BinningComboBox, 'camera_binning', 1),
+            (self.LiveSubSamplingComboBox, 'camera_display_live_subsampling', 1),
+        ]
+        for widget, state_parameter, conversion_factor in self.widget_to_state_parameter_assignment[:3]:
+            self.connect_spinbox_to_state_parameter(widget, state_parameter, conversion_factor)
+        self.LaserIntensitySlider.valueChanged.connect(self.set_laser_intensity)
+        self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
+        self.checkBoxScaleWZoom.stateChanged.connect(self.scale_galvo_amp_w_zoom)
+        mesoSPIM_MainWindow.update_gui_from_state(self)
+        app.processEvents()
+        self.requests.clear()
+
+
+def shows(window, condition):
+    """Pump the event loop until the widget shows the value, within the refresh's own cap."""
+    from mesoSPIM.src.remote_control import config
+    deadline = QtCore.QDeadlineTimer(int((config.READ_BACK_S + 1) * 1000))
+    while not condition() and not deadline.hasExpired():
+        app.processEvents()
+        QTest.qWait(10)
+    app.processEvents()
+    return condition()
+
+
+@pytest.fixture
+def remote():
+    return RemoteWindow({'intensity': 10, 'camera_exposure_time': 0.02, 'camera_binning': '1x1',
+                         'camera_display_live_subsampling': 2, 'etl_l_offset': 1.0, 'galvo_l_frequency': 99.9,
+                         'galvo_amp_scale_w_zoom': False})
+
+
+def test_a_camera_setting_made_remotely_reaches_the_widgets_once_the_camera_wrote_it(remote):
+    """A remote set_camera changed Core's state, late (the camera worker's thread), and the window
+    showed nothing of it. The widgets must follow, and showing the values must ask Core for nothing."""
+    from mesoSPIM.src.remote_control import commands
+    commands._run_state_settings(remote.core, {'settings': {'camera_exposure_time': 0.05, 'camera_binning': '2x2',
+                                                            'camera_display_live_subsampling': 4}})
+    assert shows(remote, lambda: remote.CameraExposureTimeSpinBox.value() == 50.0)
+    assert (remote.BinningComboBox.currentText(), remote.LiveSubSamplingComboBox.currentText()) == ('2x2', '4')
+    assert remote.requests == []
+
+
+def test_a_remote_intensity_reaches_the_slider_and_the_box(remote):
+    from mesoSPIM.src.remote_control import commands
+    commands._run_set_intensity(remote.core, {'intensity': 30, 'wait': False})
+    assert shows(remote, lambda: remote.LaserIntensitySlider.value() == remote.LaserIntensitySpinBox.value() == 30)
+    assert remote.requests == []
+
+
+@pytest.mark.parametrize('setting, widget_name, shown', [
+    ({'etl_l_offset': 1.25}, 'LeftETLOffsetSpinBox', 1.25),                     # set_etl
+    ({'galvo_l_frequency': 100.5}, 'GalvoFrequencySpinBox', 100.5),             # set_galvo
+])
+def test_a_remote_waveform_setting_reaches_its_spin_box(remote, setting, widget_name, shown):
+    from mesoSPIM.src.remote_control import commands
+    commands._run_state_settings(remote.core, {'settings': setting})
+    assert shows(remote, lambda: getattr(remote, widget_name).value() == shown)
+    assert remote.requests == []
+
+
+def test_scale_with_zoom_set_remotely_reaches_the_check_box(remote):
+    """Core forwards galvo_amp_scale_w_zoom and nobody applied it: a remote set_state of it was a
+    silent no-op. The Remote Control writes it; the check box follows."""
+    from mesoSPIM.src.remote_control import commands
+    commands._run_state_settings(remote.core, {'settings': {'galvo_amp_scale_w_zoom': True}})
+    assert shows(remote, lambda: remote.checkBoxScaleWZoom.isChecked())
+    assert remote.state['galvo_amp_scale_w_zoom'] is True and remote.requests == []
+
+
+def test_a_refresh_does_not_send_a_rounded_value_back():
+    """A spin box's setValue fires valueChanged, and that sent the box's rounded value back to Core as
+    a request: an exposure of 12.3 ms shown by a box with no decimals came back as 12 ms."""
+    window = RemoteWindow({'intensity': 10, 'camera_exposure_time': 0.0123, 'camera_binning': '1x1',
+                           'camera_display_live_subsampling': 2, 'etl_l_offset': 1.0, 'galvo_l_frequency': 99.9,
+                           'galvo_amp_scale_w_zoom': False})
+    window.CameraExposureTimeSpinBox.setDecimals(0)
+    window.requests.clear()
+    mesoSPIM_MainWindow.update_gui_from_state(window)
+    assert window.CameraExposureTimeSpinBox.value() == 12
+    assert settled(window) == [] and window.state['camera_exposure_time'] == 0.0123
+    window.CameraExposureTimeSpinBox.setValue(20)                     # the operator
+    assert settled(window) == [{'camera_exposure_time': 0.02}]

@@ -98,10 +98,24 @@ process exits, ports 42000 and 42100 close, and no mesoSPIM, Python, or Qt worke
 ## Real-hardware command sweep
 
 `live/test_all_commands_real_hardware.py` is the same sweep for a real instrument, and refuses to
-run against a DemoStage. Read its module docstring first: it moves the stage to the configured
-load, unload and center positions, fires the laser for single-plane acquisitions, and overwrites
-and restores the live ETL file. An operator must watch the instrument for the whole run. On top of
-the device and operator variables above, it needs `MESOSPIM_RUN_REAL_ALL_COMMANDS=1`,
+run against a DemoStage. Its one aim is to show that every call has an effect, without harm to a
+sample in place: each change is small, read back and put back. Read its module docstring first;
+in short:
+
+- the stage moves at most 25 um on X, and the optimizer sweeps the focus +-20 um and discards
+  its result;
+- every exposure (brief live, visual and alignment modes, snaps, single-plane acquisitions, the
+  optimizer's snaps) runs at 1-2 % laser intensity (`MESOSPIM_REAL_LASER_PERCENT`, 0 to 10,
+  default 1);
+- settings and the window features (Freeze galvos, the processor chain, the writer's
+  compression, the display) change one step and are restored;
+- mesoSPIM is pointed at a copy of the ETL file for the run, so `save_etl_config` never writes the
+  real one;
+- load, unload and centre sample travel to the config's positions: they are not run unless
+  `MESOSPIM_REAL_LARGE_MOVES=1`, for an empty stage, and the summary names them as not run.
+
+An operator must watch the instrument for the whole run. On top of the device and operator
+variables above, it needs `MESOSPIM_RUN_REAL_ALL_COMMANDS=1`,
 `MESOSPIM_CONFIRM_REAL_HARDWARE=I_UNDERSTAND_THIS_MOVES_REAL_HARDWARE` and
 `MESOSPIM_LIVE_REAL_TRANSPORT` (`mcp` or `tcp`), and it runs once per endpoint and transport.
 
