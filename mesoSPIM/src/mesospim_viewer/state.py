@@ -154,8 +154,10 @@ def default_colour(label: str, index: int, count: int) -> str:
 # two channels shows in both colours at once instead of the upper channel
 # hiding the lower, the mix never clips to white, and two tiles of one
 # acquisition that overlap do not add up to a bright seam along the join. The
-# alpha follows the brightness and never quite reaches zero inside a tile, so
-# on a transparent ground a tile is never wholly clear.
+# alpha follows the brightness and never quite reaches zero inside a tile, as
+# the 3D view has always drawn it. On a transparent ground the alpha is one
+# (TRANSPARENT_SHADER): a tile is solid, and what is under the view shows
+# through only where nothing was imaged.
 SHADER = "\n".join(
     [
         "#uicontrol invlerp contrast",
@@ -167,6 +169,7 @@ SHADER = "\n".join(
         "",
     ]
 )
+TRANSPARENT_SHADER = SHADER.replace("max(value, 1.0 / 255.0)", "1.0")
 
 
 def channel_shader(channel: Channel | None = None) -> str:
@@ -290,7 +293,7 @@ class Layer:
             found.append((replace(preview.channel, color=colour), [], None))
         return found
 
-    def to_json(self) -> list[dict]:
+    def to_json(self, transparent: bool = False) -> list[dict]:
         if not self.placements and not self.previews:
             raise ValueError(f"layer {self.name!r} has no stores")
         layers = []
@@ -313,7 +316,7 @@ class Layer:
                 "type": "image",
                 "name": channel_layer_name(self.name, channel),
                 "source": sources,
-                "shader": SHADER,
+                "shader": TRANSPARENT_SHADER if transparent else SHADER,
                 "shaderControls": channel_controls(channel),
                 # Composited over one another by their brightness (see SHADER).
                 "blend": "default",
@@ -334,7 +337,7 @@ class Layer:
         return layers
 
 
-def state_json(layers: list[Layer], *, layout: str = "xy") -> dict:
+def state_json(layers: list[Layer], *, layout: str = "xy", transparent: bool = False) -> dict:
     """The whole scene as the page takes it: neuroglancer layers, each with the page's
     three additions (see the module's description)."""
     if layout not in LAYOUTS:
@@ -344,7 +347,7 @@ def state_json(layers: list[Layer], *, layout: str = "xy") -> dict:
             engine_layer
             for layer in layers
             if layer.placements or layer.previews
-            for engine_layer in layer.to_json()
+            for engine_layer in layer.to_json(transparent)
         ],
         "layout": layout,
         # Left to itself the engine draws the first three axes it meets, which

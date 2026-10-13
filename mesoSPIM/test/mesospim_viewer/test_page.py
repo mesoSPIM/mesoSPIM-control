@@ -30,9 +30,9 @@ READ_ALPHA = """() => {
   const gl = display.gl, canvas = display.canvas;
   const pixels = new Uint8Array(canvas.width * canvas.height * 4);
   gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  const seen = { clear: 0, covered: 0, lit: 0 };
+  const seen = { clear: 0, opaque: 0, lit: 0 };
   for (let i = 0; i < pixels.length; i += 4) {
-    if (pixels[i + 3] === 0) seen.clear++; else seen.covered++;
+    if (pixels[i + 3] === 0) seen.clear++; else if (pixels[i + 3] === 255) seen.opaque++;
     if (pixels[i + 3] === 255 && pixels[i] + pixels[i + 1] + pixels[i + 2] > 60) seen.lit++;
   }
   return seen;
@@ -189,7 +189,7 @@ def test_the_engine_draws_one_store_per_channel_as_two_channels(pages, viewers, 
     assert not errors, errors
 
 
-def test_a_transparent_ground_is_clear_outside_the_tiles_and_covered_inside(pages, viewers, tiles):
+def test_a_transparent_ground_is_clear_outside_the_tiles_and_opaque_inside(pages, viewers, tiles):
     view = viewers(transparent=True, ui="bare")
     view.add(tiles[0], layer="overview")
     page, errors = pages.open(view.start())
@@ -197,7 +197,7 @@ def test_a_transparent_ground_is_clear_outside_the_tiles_and_covered_inside(page
     time.sleep(1.0)
     alpha = page.evaluate(READ_ALPHA)
     assert alpha["clear"] > 100_000, alpha
-    assert alpha["covered"] > 100_000, alpha
+    assert alpha["opaque"] > 100_000, alpha
     assert alpha["lit"] > 5000, alpha
     assert page.evaluate("() => document.documentElement.dataset.chrome") == "bare"
     assert page.evaluate("() => document.querySelector('.neuroglancer-layer-panel')") is None

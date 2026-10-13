@@ -436,7 +436,9 @@ class Viewer:
         """What the page is being asked to show: neuroglancer layers with the page's
         additions (see ``state.py``)."""
         with self._lock:
-            return state_json(list(self._layers.values()), layout=self._layout)
+            return state_json(
+                list(self._layers.values()), layout=self._layout, transparent=self._ui["transparent"]
+            )
 
     @property
     def state(self) -> dict:
@@ -615,7 +617,7 @@ class Viewer:
 
     def _publish(self) -> None:
         if self._server is not None:
-            self._server.scene.publish(state_json(list(self._layers.values()), layout=self._layout))
+            self._server.scene.publish(self.scene)
 
     def _camera(self, camera: dict) -> None:
         self.start()
