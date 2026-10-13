@@ -138,8 +138,8 @@ across:
   places each source by a transform and composites them; nothing is stitched.
 - **A channel is an engine layer.** One layer per channel is neuroglancer's own
   multichannel arrangement; see below why.
-- **The transparent 2D ground**, as four small opt-in edits to the pinned
-  engine, the same edits the ZMART viewer 0.2.1 carries.
+- **The transparent 2D ground**, as the engine's opt-in `transparentBackground`
+  option of google/neuroglancer#1128, applied to the pinned engine.
 
 Left out, on purpose: the composed `.zmartview.zarr` picture, baking,
 publication and revision bookkeeping, the React interface, and every server
@@ -148,9 +148,10 @@ route that is not needed here.
 What the build does to the pinned engine is in `source/scripts/neuroglancer.mjs`,
 applied while the page is built, never to the installed engine, so building
 twice makes the same page: the transparent ground, how channels and tiles are
-mixed (next section), and the two background workers compiled for the old
-browser of the Data viewer window, the chunk worker with `worker_landed.js`
-added to it.
+mixed (next section), a source read again keeping its chunks on screen until
+each is replaced (google/neuroglancer#1126), and the two background workers
+compiled for the old browser of the Data viewer window, the chunk worker with
+`worker_landed.js` added to it.
 
 ## How channels and tiles are mixed
 

@@ -1,7 +1,7 @@
 /**
  * What the build does to the pinned neuroglancer 2.41.2, as one Vite plugin.
  *
- * Two things, both done while the page is built and never by editing the
+ * Four things, all done while the page is built and never by editing the
  * installed engine in `node_modules`: what is installed stays exactly as npm
  * put it there, so building twice, or on another machine after `npm ci`,
  * makes the same page.
@@ -18,16 +18,13 @@
  *    chunk worker asks for "../async_computation.bundle.js" next to itself,
  *    which from the root is the root.
  *
- * 2. An opt-in transparent ground for the flat (2D) view -- the same four
- *    edits the ZMART viewer 0.2.1 carries (see docs/TRANSPARENT_2D.md at the
- *    repository root). Stock neuroglancer paints the slice background opaque
- *    and finally forces the whole display's alpha to one, so a host
- *    application can never show through where nothing was imaged. With
- *    `display.transparentBackground` set by the page, these edits leave alpha
- *    at zero outside acquired pixels and at one inside them, whatever the
- *    channel weights, and keep an opaque picture opaque under translucent
- *    annotations and scale bars. Without the flag the engine behaves exactly
- *    as shipped.
+ * 2. An opt-in transparent ground for the flat (2D) view: the viewer option
+ *    `transparentBackground` of google/neuroglancer#1128. Stock neuroglancer
+ *    paints the slice background opaque and finally forces the whole
+ *    display's alpha to one, so a host application can never show through
+ *    where nothing was imaged. With the option, the flat view is clear where
+ *    it shows no data and translucent content keeps its alpha; the 3D view
+ *    stays opaque. Without it the engine behaves exactly as shipped.
  *
  * 3. Channels and tiles mixed by the brighter of the two. For a layer with the
  *    default blending, what is laid over the picture replaces, colour by
@@ -35,12 +32,17 @@
  *    shows in both colours, and two overlapping tiles do not add up along the
  *    join. Every tile of a layer is blended so, the first one too.
  *
- * Only frontend modules are touched: nothing here reaches the workers.
+ * 4. A source that is read again keeps showing its chunks until each one is
+ *    replaced (google/neuroglancer#1126). Stock neuroglancer drops all of
+ *    them at once, which blanks the picture until they are fetched again.
+ *
+ * The edits apply wherever a module is compiled, the page or a worker.
  *
  * Every edit is anchored on the stock text, and the build stops with a message
  * when an anchor is missing: the pinned engine version has then moved.
  */
 import { build } from "esbuild";
+import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,42 +57,250 @@ const WORKERS = ["chunk_worker.bundle.js", "async_computation.bundle.js"];
 // Each edit: the module it applies to (inside neuroglancer/lib), the stock text
 // it is anchored on, and what that text becomes.
 const PATCHES = [
-  // Keep an opaque image opaque under translucent annotations and scale bars.
-  ...[
-    { indent: "      ", drawing: "annotations" },
-    { indent: "        ", drawing: "scale bars" },
-  ].map(({ indent, drawing }) => ({
-    module: "sliceview/panel.js",
-    anchor: `${indent}gl.blendFunc(\n${indent}  WebGL2RenderingContext.SRC_ALPHA,\n${indent}  WebGL2RenderingContext.ONE_MINUS_SRC_ALPHA\n${indent});`,
-    replacement: (anchor) =>
-      `${anchor}\n${indent}// Preserve image alpha under ${drawing}.\n${indent}if (this.context.transparentBackground) gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);`,
-  })),
+  // google/neuroglancer#1128: the viewer option `transparentBackground`.
   {
-    // Do not force the display's alpha to one at the end of a frame.
+    module: "viewer.js",
+    anchor: `  "showPanelBorders"\n];`,
+    replacement: () => `  "showPanelBorders",\n  "transparentBackground"\n];`,
+  },
+  {
+    module: "viewer.js",
+    anchor: `    VIEWER_UI_CONFIG_OPTIONS.map((key) => [key, new TrackableBoolean(true)])`,
+    replacement: () => `    VIEWER_UI_CONFIG_OPTIONS.map((key) => [
+      key,
+      new TrackableBoolean(key !== "transparentBackground")
+    ])`,
+  },
+  {
+    module: "viewer.js",
+    anchor: `    this.makeUI();\n    this.updateShowBorders();\n`,
+    replacement: (anchor) => `${anchor}    const { transparentBackground } = this.uiConfiguration;
+    const updateTransparentBackground = () => {
+      display.transparentBackground = transparentBackground.value;
+      display.scheduleRedraw();
+    };
+    updateTransparentBackground();
+    this.registerDisposer(
+      transparentBackground.changed.add(updateTransparentBackground)
+    );
+`,
+  },
+  {
     module: "display_context.js",
-    anchor: `    this.gl.clearColor(1, 1, 1, 1);
+    anchor: `  force3DHistogramForAutoRange = false;\n`,
+    replacement: (anchor) => `${anchor}  /**
+   * If \`true\`, cross-section panels leave the canvas transparent where they show no data and keep
+   * the alpha of translucent content, so that an embedding page shows through.  The 3D panel stays
+   * opaque.  Intended for embedding Neuroglancer over other content.  Set through the viewer's
+   * \`transparentBackground\` option.
+   */
+  transparentBackground = false;
+`,
+  },
+  {
+    // The display's alpha is forced to one at the end of a frame only when opaque.
+    module: "display_context.js",
+    anchor: `    gl.disable(gl.SCISSOR_TEST);
+    this.gl.clearColor(1, 1, 1, 1);
     this.gl.colorMask(false, false, false, true);
     gl.clear(gl.COLOR_BUFFER_BIT);
     this.gl.colorMask(true, true, true, true);`,
     replacement: (anchor) => `    if (!this.transparentBackground) {\n${anchor.replace(/^/gm, "  ")}\n    }`,
   },
   {
-    // The slice background is clear, not opaque.
-    module: "sliceview/panel.js",
-    anchor: "    backgroundColor[3] = 1;",
-    replacement: (anchor) => `${anchor}\n    if (this.context.transparentBackground) backgroundColor.fill(0);`,
+    // The 3D view stays opaque.
+    module: "perspective_view/panel.js",
+    anchor: `      this.offscreenFramebuffer.colorBuffers[0 /* COLOR */].texture
+    );
+    return true;
+  }
+  drawSliceViews(renderContext) {`,
+    replacement: (anchor) =>
+      anchor.replace(
+        "    return true;",
+        `    if (this.context.transparentBackground) {
+      gl.colorMask(false, false, false, true);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(WebGL2RenderingContext.COLOR_BUFFER_BIT);
+      gl.colorMask(true, true, true, true);
+    }
+    return true;`,
+      ),
   },
   {
-    // Coverage is binary: acquired pixels are opaque whatever their brightness.
-    module: "sliceview/frontend.js",
-    anchor: `  sampledColor = uBackgroundColor;
+    // The flat view's background is clear, and its picture is drawn premultiplied.
+    module: "sliceview/panel.js",
+    anchor: `const tempVec3 = vec3.create();\n`,
+    replacement: (anchor) => `function sliceViewPanelEmitPremultipliedColor(builder) {
+  builder.addOutputBuffer("vec4", "out_fragColor", null);
+  builder.addFragmentCode(\`
+void emit(vec4 color, highp uint pickId) {
+  out_fragColor = vec4(color.rgb * color.a, color.a);
 }
-emit(sampledColor * uColorFactor, 0u);`,
-    replacement: () => `  sampledColor = uBackgroundColor;
+\`);
 }
-// A transparent ground uses binary coverage, independently of channel weights.
-if (uBackgroundColor.a == 0.0) sampledColor.a = float(sampledColor.a > 0.0);
-emit(sampledColor * uColorFactor, 0u);`,
+${anchor}`,
+  },
+  {
+    module: "sliceview/panel.js",
+    anchor: `        sliceViewPanelEmitColor,\n        this.viewer,\n        false\n      )\n    );\n`,
+    replacement: (anchor) => `${anchor}    this.premultipliedSliceViewRenderHelper = this.registerDisposer(
+      SliceViewRenderHelper.get(
+        this.gl,
+        sliceViewPanelEmitPremultipliedColor,
+        this.viewer,
+        false
+      )
+    );
+`,
+  },
+  {
+    module: "sliceview/panel.js",
+    anchor: `  sliceViewRenderHelper;\n`,
+    replacement: (anchor) => `${anchor}  premultipliedSliceViewRenderHelper;\n`,
+  },
+  {
+    module: "sliceview/panel.js",
+    anchor: `    backgroundColor[3] = 1;
+    this.offscreenFramebuffer.bindSingle(0 /* COLOR */);
+    this.sliceViewRenderHelper.draw(`,
+    replacement: () => `    backgroundColor[3] = this.context.transparentBackground ? 0 : 1;
+    this.offscreenFramebuffer.bindSingle(0 /* COLOR */);
+    const sliceViewRenderHelper = this.context.transparentBackground ? this.premultipliedSliceViewRenderHelper : this.sliceViewRenderHelper;
+    sliceViewRenderHelper.draw(`,
+  },
+  // Translucent annotations and scale bars keep their alpha.
+  ...["      ", "        "].map((indent) => ({
+    module: "sliceview/panel.js",
+    anchor: `${indent}gl.blendFunc(\n${indent}  WebGL2RenderingContext.SRC_ALPHA,\n${indent}  WebGL2RenderingContext.ONE_MINUS_SRC_ALPHA\n${indent});`,
+    replacement: (anchor) => `${anchor}\n${indent}this.keepAlphaOfTranslucentContent();`,
+  })),
+  {
+    module: "sliceview/panel.js",
+    anchor: `  ensureBoundsUpdated() {\n`,
+    replacement: (anchor) => `  // With a transparent background, blends alpha with (ONE, ONE_MINUS_SRC_ALPHA), so that
+  // translucent content keeps its alpha.  Blending alpha with SRC_ALPHA would square it.
+  keepAlphaOfTranslucentContent() {
+    if (!this.context.transparentBackground) return;
+    this.gl.blendFuncSeparate(
+      WebGL2RenderingContext.SRC_ALPHA,
+      WebGL2RenderingContext.ONE_MINUS_SRC_ALPHA,
+      WebGL2RenderingContext.ONE,
+      WebGL2RenderingContext.ONE_MINUS_SRC_ALPHA
+    );
+  }
+${anchor}`,
+  },
+  // google/neuroglancer#1126: a source read again keeps showing its chunks. The
+  // chunk worker no longer tells the page to drop every chunk of the source;
+  // each chunk the page holds is flagged instead, stays on screen until the
+  // chunk read again replaces it, and is expired if it is not read again.
+  {
+    module: "chunk_manager/backend.js",
+    anchor: `  downloadAbortController = void 0;\n  initialize(key) {\n`,
+    replacement: () => `  downloadAbortController = void 0;
+  /**
+   * Indicates that the frontend still holds a copy of this chunk from before the most recent
+   * \`invalidateSourceCache\` call.  The frontend keeps displaying that copy until it is either
+   * replaced by the re-downloaded chunk or expired, if the chunk is not re-downloaded.
+   */
+  staleFrontendCopy = false;
+  initialize(key) {
+`,
+  },
+  {
+    module: "chunk_manager/backend.js",
+    anchor: `    this.requestedState = ChunkState.NEW;\n    this.newRequestedState = ChunkState.NEW;\n`,
+    replacement: (anchor) => `${anchor}    this.staleFrontendCopy = false;\n`,
+  },
+  {
+    module: "chunk_manager/backend.js",
+    anchor: `chunk.priorityTier === ChunkPriorityTier.RECENT) {\n`,
+    replacement: (anchor) => `${anchor}      this.expireStaleFrontendCopy(chunk);\n`,
+  },
+  {
+    module: "chunk_manager/backend.js",
+    anchor: `    chunk.state = newState;
+    this.adjustCapacitiesForChunk(chunk, true);
+    this.addChunkToQueues_(chunk);
+    this.scheduleUpdate();
+  }
+`,
+    replacement: () => `    chunk.state = newState;
+    if (chunk.staleFrontendCopy) {
+      switch (newState) {
+        case ChunkState.SYSTEM_MEMORY:
+        case ChunkState.GPU_MEMORY:
+          chunk.staleFrontendCopy = false;
+          break;
+        case ChunkState.QUEUED:
+        case ChunkState.DOWNLOADING:
+          break;
+        case ChunkState.SYSTEM_MEMORY_WORKER:
+          if (chunk.requestedState === ChunkState.GPU_MEMORY) break;
+          this.expireStaleFrontendCopy(chunk);
+          break;
+        default:
+          this.expireStaleFrontendCopy(chunk);
+      }
+    }
+    this.adjustCapacitiesForChunk(chunk, true);
+    this.addChunkToQueues_(chunk);
+    this.scheduleUpdate();
+  }
+  /**
+   * Tells the frontend to drop the copy of \`chunk\` retained by \`invalidateSourceCache\`, because
+   * the chunk will not be re-downloaded.
+   */
+  expireStaleFrontendCopy(chunk) {
+    if (!chunk.staleFrontendCopy) return;
+    chunk.staleFrontendCopy = false;
+    this.rpc.invoke("Chunk.update", {
+      id: chunk.key,
+      state: ChunkState.EXPIRED,
+      source: chunk.source.rpcId
+    });
+  }
+`,
+  },
+  {
+    module: "chunk_manager/backend.js",
+    anchor: `          chunk.freeSystemMemory();
+          break;
+      }
+      this.updateChunkState(chunk, ChunkState.QUEUED);
+    }
+    this.rpc.invoke("Chunk.update", { source: source.rpcId });
+`,
+    replacement: () => `          chunk.freeSystemMemory();
+          break;
+        case ChunkState.SYSTEM_MEMORY:
+        case ChunkState.GPU_MEMORY:
+          chunk.staleFrontendCopy = true;
+          break;
+      }
+      this.updateChunkState(chunk, ChunkState.QUEUED);
+    }
+`,
+  },
+  {
+    module: "chunk_manager/frontend.js",
+    anchor: `    } else if (update.id === void 0) {
+      for (const chunkKey of source.chunks.keys()) {
+        source.deleteChunk(chunkKey);
+      }
+      visibleChunksChanged = true;
+`,
+    replacement: () => ``,
+  },
+  {
+    // A chunk read again replaces the copy still on screen.
+    module: "chunk_manager/frontend.js",
+    anchor: `        if (update.new) {\n`,
+    replacement: (anchor) => `${anchor}          if (source.chunks.has(key)) {
+            source.deleteChunk(key);
+          }
+`,
   },
   {
     // Channels and tiles are mixed by taking, for each of red, green and blue,
@@ -140,8 +350,21 @@ ${anchor}`,
   },
 ];
 
+/** The code of neuroglancer/lib/`module` with its edits, each one added to `applied`. */
+function patchModule(module, code, applied) {
+  let patched = code;
+  for (const patch of PATCHES.filter((patch) => patch.module === module)) {
+    if (!patched.includes(patch.anchor)) {
+      throw new Error(`anchor not found in neuroglancer/lib/${module}: the pinned neuroglancer version has changed`);
+    }
+    patched = patched.replace(patch.anchor, patch.replacement(patch.anchor));
+    applied.add(patch);
+  }
+  return patched;
+}
+
 /** One worker entry point, compiled into one self-contained file, as text. */
-async function compileWorker(name) {
+async function compileWorker(name, applied) {
   const result = await build({
     entryPoints: [join(lib, name)],
     bundle: true,
@@ -155,6 +378,18 @@ async function compileWorker(name) {
     legalComments: "none",
     target: "chrome83",
     inject: name === "chunk_worker.bundle.js" ? [shims, landed] : [shims],
+    plugins: [
+      {
+        name: "neuroglancer-edits",
+        setup(worker) {
+          worker.onLoad({ filter: /[\\/]neuroglancer[\\/]lib[\\/].*\.js$/ }, async ({ path }) => {
+            const module = engineModule(path);
+            if (!PATCHES.some((patch) => patch.module === module)) return undefined;
+            return { contents: patchModule(module, await readFile(path, "utf8"), applied), loader: "js" };
+          });
+        },
+      },
+    ],
   });
   const text = result.outputFiles[0].text;
   if (text.length < 50 * 1024) {
@@ -185,25 +420,16 @@ export function neuroglancerForQt() {
     },
     transform(code, id) {
       const module = engineModule(id);
-      const patches = PATCHES.filter((patch) => patch.module === module);
-      if (patches.length === 0) return null;
-      let patched = code;
-      for (const patch of patches) {
-        if (!patched.includes(patch.anchor)) {
-          this.error(`anchor not found in neuroglancer/lib/${module}: the pinned neuroglancer version has changed`);
-        }
-        patched = patched.replace(patch.anchor, patch.replacement(patch.anchor));
-        applied.add(patch);
-      }
-      return { code: patched, map: null };
+      if (!PATCHES.some((patch) => patch.module === module)) return null;
+      return { code: patchModule(module, code, applied), map: null };
     },
     async generateBundle() {
+      for (const name of WORKERS) {
+        this.emitFile({ type: "asset", fileName: name, source: await compileWorker(name, applied) });
+      }
       const missed = PATCHES.filter((patch) => !applied.has(patch));
       if (missed.length) {
         this.error(`never reached: neuroglancer/lib/${missed.map((patch) => patch.module).join(", ")}`);
-      }
-      for (const name of WORKERS) {
-        this.emitFile({ type: "asset", fileName: name, source: await compileWorker(name) });
       }
     },
     configureServer(server) {
@@ -213,7 +439,7 @@ export function neuroglancerForQt() {
         const name = request.url?.split("?")[0].slice(1);
         if (!WORKERS.includes(name) || command !== "serve") return next();
         try {
-          if (!compiled.has(name)) compiled.set(name, await compileWorker(name));
+          if (!compiled.has(name)) compiled.set(name, await compileWorker(name, applied));
           response.setHeader("Content-Type", "text/javascript");
           response.end(compiled.get(name));
         } catch (error) {

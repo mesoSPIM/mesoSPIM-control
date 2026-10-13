@@ -101,18 +101,17 @@ function buildViewer(ui) {
     showPanelBorders: native,
     showLayerDialog: false,
     resetStateWhenEmpty: false,
+    transparentBackground: ui.transparent,
   });
   setDefaultInputEventBindings(viewer.inputEventBindings);
   bindDefaultCopyHandler(viewer);
   bindDefaultPasteHandler(viewer);
   if (ui.transparent) {
     document.documentElement.dataset.transparent = "";
-    viewer.display.transparentBackground = true;
     // The engine's axis-lines overlay blends against destination alpha
     // (axes_lines.js) and leaves the whole picture clear, so a transparent
     // ground does without it. Annotations and the scale bar are unaffected.
     viewer.showAxisLines.value = false;
-    viewer.display.scheduleRedraw();
   }
   window.viewer = viewer;
   return viewer;

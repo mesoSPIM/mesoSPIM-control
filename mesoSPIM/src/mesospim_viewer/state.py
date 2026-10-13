@@ -154,8 +154,8 @@ def default_colour(label: str, index: int, count: int) -> str:
 # two channels shows in both colours at once instead of the upper channel
 # hiding the lower, the mix never clips to white, and two tiles of one
 # acquisition that overlap do not add up to a bright seam along the join. The
-# alpha is coverage: it never quite reaches zero inside a tile, so a
-# transparent ground still shows acquired black as black.
+# alpha follows the brightness and never quite reaches zero inside a tile, so
+# on a transparent ground a tile is never wholly clear.
 SHADER = "\n".join(
     [
         "#uicontrol invlerp contrast",
