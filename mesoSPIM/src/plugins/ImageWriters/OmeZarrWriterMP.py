@@ -35,7 +35,7 @@ from plugins.support_files.ImageWriters.OmeZarrWriterMP.omezarr_writer import (
     Live3DPyramidWriter, plan_levels,
     compute_xy_only_levels, FlushPad,
     BloscCodec, BloscShuffle,
-    XmlWriter, omezarr_writer_worker
+    XmlWriter, omezarr_writer_worker, CHANNEL_COLORS
 )
 
 
@@ -354,6 +354,9 @@ class OMEZarrWriterMP(ImageWriter):
             async_close=False, # Force sync close to ensure all data is written before proceeding, sync not compatible with Multiprocess
             translation=(acq['z_start'], acq['y_pos'], acq['x_pos']),
             ome_version=ome_version,
+            # Each store holds one channel; its omero block says which one.
+            channel_label=laser,
+            channel_color=CHANNEL_COLORS.get(laser),
         )
 
         self._writer_proc = ctx.Process(

@@ -138,6 +138,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    timelapse
    remote_control/index
    ai_assistant/index
+   data_viewer
    changelog
 
 .. toctree::

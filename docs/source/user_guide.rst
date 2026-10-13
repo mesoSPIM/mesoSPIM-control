@@ -193,6 +193,10 @@ The Main window menu bar also has:
   :doc:`Field Curvature & Chromatic Shift <field_curvature>` tool for
   measuring field flatness and axial chromatic aberration from z-stacks of a
   Ronchi grating.
+* **View → Open Data Viewer** — the running acquisition, shown as the camera
+  delivers it, and earlier ones from disk; see :doc:`data_viewer`.
+* **View → Open Dataset in Data Viewer...** — a dataset already on disk, shown
+  in the same window; see :doc:`data_viewer`.
 
 Running an acquisition
 ~~~~~~~~~~~~~~~~~~~~~~

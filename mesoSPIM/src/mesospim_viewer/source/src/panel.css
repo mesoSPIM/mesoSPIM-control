@@ -1,0 +1,399 @@
+/* The simple interface: controls on the picture and a panel down the right-hand
+   edge. Colours come from page.css. The engine's own window-with-histogram and
+   colour controls are mounted inside the channel rows and dressed here.
+
+   Written for the Data viewer window's Qt WebEngine 5.15 (Chromium 83) as much
+   as for a current browser. That browser knows no gaps in flex rows and
+   columns, no `inset`, no :has() and no accent-color: spacing is given by
+   margins on every item after the first, boxes are placed with top/right/
+   bottom/left, and sliders are drawn here. An element with a `display` of its
+   own also needs its [hidden] rule said. */
+
+.mesospim-panel {
+  background: var(--panel-bg);
+  border-left: 1px solid var(--panel-border);
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+.panel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  min-height: 0;
+}
+.panel-body > * + * { margin-top: 10px; }
+.panel-body > [hidden] { display: none; }
+
+.panel-head { display: flex; align-items: center; min-height: 28px; }
+.panel-head .title { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-bright); }
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--subtle-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.card[hidden] { display: none; }
+.card h2 {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.card .hint { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+.card .hint[hidden] { display: none; }
+
+.row { display: flex; align-items: center; }
+.row > * + * { margin-left: 8px; }
+.row.card-head { margin-bottom: 6px; }
+.row.card-head h2 { flex: 1; margin: 0; }
+
+/* -- buttons ------------------------------------------------------------------- */
+.mesospim-panel button, .stage-overlay button { font: inherit; }
+button.icon {
+  flex: 0 0 auto;
+  width: 28px; height: 26px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  color: var(--text-primary); cursor: pointer;
+}
+button.icon[hidden] { display: none; }
+button.icon:hover { background: var(--control-bg); border-color: var(--control-border); }
+button.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+button.icon.off { color: var(--text-muted); }
+
+.segmented { display: flex; width: 100%; border: 1px solid var(--control-border); border-radius: 6px; overflow: hidden; }
+.segmented button {
+  flex: 1; padding: 6px 0;
+  background: var(--control-bg); border: 0; color: var(--text-primary);
+  font-weight: 600; cursor: pointer;
+}
+.segmented button + button { border-left: 1px solid var(--control-border); }
+.segmented button:hover { color: var(--text-bright); }
+.segmented button.on { background: var(--accent); color: #fff; }
+
+/* -- the blocks' heads: their place in the order the operator uses them ----------- */
+.card h2 .step {
+  display: inline-block; width: 16px; height: 16px; margin-right: 7px; vertical-align: -3px;
+  border-radius: 50%; border: 1px solid var(--control-border); background: var(--control-bg);
+  color: var(--text-primary); font-size: 10px; line-height: 14px; text-align: center; letter-spacing: 0;
+}
+.card-head .count { color: var(--text-muted); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; }
+
+/* -- 1: load data ------------------------------------------------------------------ */
+.load-row { display: flex; }
+.load-row > * + * { margin-left: 8px; }
+.load .open {
+  flex: 1; min-width: 0; height: 50px; padding: 0 12px;
+  display: flex; align-items: center;
+  background: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px;
+  color: var(--text-bright); font-weight: 600; cursor: pointer; text-align: left;
+}
+.load .open[hidden] { display: none; }
+.load .open:hover { border-color: #46546a; }
+.load .open svg { flex: 0 0 auto; width: 18px; height: 18px; margin-right: 10px; fill: none; stroke: var(--text-muted); stroke-width: 1.8; stroke-linejoin: round; }
+.live-toggle {
+  flex: 0 0 50px; width: 50px; height: 50px; padding: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; cursor: pointer;
+}
+.live-toggle[hidden] { display: none; }
+.live-toggle .live-dot { width: 10px; height: 10px; border-radius: 50%; background: #4a5462; }
+.live-toggle .live-word {
+  margin-top: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted);
+}
+.live-toggle.on { border-color: #23633a; background: linear-gradient(180deg, rgba(63, 185, 80, 0.15), rgba(63, 185, 80, 0.02)), var(--control-bg); }
+.live-toggle.on .live-dot { background: #3fb950; box-shadow: 0 0 0 4px rgba(63, 185, 80, 0.18); }
+.live-toggle.on .live-word { color: #56d364; }
+
+/* -- 2: the acquisitions: a raised bar each, its positions in a lighter area below -- */
+/* No scrolling of its own: the panel scrolls, one scrollbar. */
+.acquisitions .list { display: flex; flex-direction: column; }
+.acquisition {
+  flex: 0 0 auto;
+  background: #222a35; border: 1px solid var(--control-border); border-radius: 8px; overflow: hidden;
+}
+.acquisition + .acquisition { margin-top: 8px; }
+.acquisition:hover { border-color: #3a4656; }
+.acquisition.selected { border-color: #3d4a5c; }
+.acquisition .bar {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; padding: 6px 4px 6px 4px; cursor: pointer;
+  background: linear-gradient(180deg, #1e252f, #181e26); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.acquisition .bar > * + * { margin-left: 4px; }
+.acquisition.selected .bar { background: linear-gradient(180deg, #2a3442, #222a36); }
+.acquisition.open .bar {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.5), 0 4px 8px -4px rgba(0, 0, 0, 0.7);
+}
+.acquisition .text { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 2px 2px; }
+.acquisition .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-bright); font-weight: 600; }
+.acquisition.selected .name { color: #ffffff; }
+.acquisition:not(.shown) .name, .acquisition:not(.shown) .sub { color: var(--text-muted); }
+.acquisition .sub {
+  margin-top: 1px; overflow-wrap: anywhere;
+  font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+.acquisition .badge {
+  flex: 0 0 auto; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--control-border);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted);
+}
+.acquisition .badge.live { color: #56d364; border-color: #23633a; background: rgba(46, 160, 67, 0.16); }
+.acquisition .badge.paused { color: #e3b341; border-color: #6b5420; background: rgba(187, 128, 9, 0.15); }
+.acquisition .remove, .acquisition .fold { width: 24px; height: 24px; color: var(--text-muted); }
+.acquisition .remove { opacity: 0.6; }
+.acquisition:hover .remove, .acquisition.selected .remove { opacity: 1; }
+.acquisition .remove:hover { color: #ff7b72; }
+.acquisition .fold svg { width: 14px; height: 14px; transition: transform 0.18s; }
+.acquisition .fold.unfolded svg { transform: rotate(90deg); }
+.positions { max-height: 132px; overflow-y: auto; padding: 4px 6px 6px 24px; }
+.position {
+  display: flex; align-items: center; width: 100%; padding: 4px 8px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--text-primary); font-size: 12px; text-align: left; cursor: pointer;
+}
+.position > * + * { margin-left: 7px; }
+.position:hover { background: rgba(255, 255, 255, 0.05); }
+.position .pin { flex: 0 0 12px; height: 12px; color: var(--text-muted); }
+.position .pin svg { display: block; width: 12px; height: 12px; }
+.position .pin path { fill: currentColor; fill-opacity: 0.25; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.position .pin circle { fill: #222a35; }
+.position .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.position .state { font-size: 11px; color: var(--text-muted); }
+.position[data-state="done"] .pin { color: var(--text-primary); }
+.position[data-state="done"] .pin path, .position[data-state="now"] .pin path { fill-opacity: 1; }
+.position[data-state="now"] .pin, .position[data-state="now"] .state { color: #56d364; }
+.position[data-state="next"] .pin path { fill-opacity: 0; stroke-dasharray: 2 1.6; }
+.position[data-state="part"] .pin { color: var(--text-primary); }
+.position[data-state="part"] .pin path { fill-opacity: 0.5; }
+.position.framed { background: rgba(47, 129, 247, 0.18); color: var(--text-bright); }
+.position.framed .pin { color: var(--accent); }
+.position.framed .pin path { fill-opacity: 1; }
+
+/* -- 3: the channels of the selected acquisition ------------------------------------ */
+.channels .of { margin: -2px 0 6px; color: var(--text-bright); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.channels .of[hidden], .channels .group[hidden] { display: none; }
+
+/* -- the 3D card: labelled rows of controls ---------------------------------------- */
+.row.labelled { margin-top: 8px; }
+.row.labelled > * + * { margin-left: 10px; }
+.row.labelled > .label { flex: 0 0 68px; color: var(--text-muted); font-size: 12px; }
+.row.labelled > .segmented { flex: 1; }
+.row.labelled > .segmented button { padding: 4px 0; font-weight: 500; font-size: 12px; }
+.row.labelled > input[type="range"] { flex: 1; min-width: 0; margin-top: 0; margin-bottom: 0; margin-right: 0; }
+.row.labelled > .reading { flex: 0 0 62px; text-align: right; font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.row.labelled.disabled { opacity: 0.4; pointer-events: none; }
+.card.volume h2 { margin-bottom: 2px; }
+.mesospim-panel input[type="checkbox"] { width: 15px; height: 15px; margin-top: 0; margin-bottom: 0; }
+
+/* -- the channels: one block per channel, gathered by acquisition when several are shown */
+.group { display: flex; flex-direction: column; }
+.group + .group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-border); }
+.group-name { display: none; margin-bottom: 4px; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card.several .group-name { display: block; }
+
+.channel { display: flex; flex-direction: column; padding: 6px 0 8px 0; }
+.channel + .channel { border-top: 1px solid var(--subtle-border); }
+.channel > * + * { margin-top: 6px; }
+.channel .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-bright); font-weight: 600; }
+.channel .swatch {
+  flex: 0 0 auto;
+  width: 16px; height: 16px; padding: 0; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer;
+}
+.channel .swatch:hover { border-color: #fff; }
+.channel .auto {
+  flex: 0 0 auto;
+  padding: 2px 9px; border-radius: 10px;
+  background: transparent; border: 1px solid var(--control-border);
+  color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.channel .auto:hover { border-color: var(--accent); color: var(--text-bright); }
+.channel .auto.on { background: var(--accent-selection); border-color: var(--accent); color: #9cc7ff; }
+.channel.hidden .label, .channel.hidden .swatch, .channel.hidden .auto { opacity: 0.35; }
+.channel.hidden .controls { display: none; }
+
+/* The engine's controls, laid out our way: the histogram full width with the
+   window's black and white points as handles and their numbers above it. The
+   colour input is driven by the swatch, and the engine's own automatic-range
+   buttons give way to the Auto button of the row. */
+.controls { display: flex; flex-direction: column; }
+.controls .neuroglancer-tab-content { display: contents; }
+.controls .neuroglancer-layer-control-container { display: block; margin: 0; }
+.controls .neuroglancer-layer-control-label-container { display: none; }
+.controls .neuroglancer-invlerp-widget { display: flex; flex-direction: column; width: 100%; }
+.controls .neuroglancer-invlerp-widget > * + * { margin-top: 3px; }
+.controls .neuroglancer-invlerp-legend-panel { display: none; }
+/* overflow: a row's histogram not drawn yet keeps the browser's 300-pixel canvas,
+   which would make the panel scroll sideways */
+.controls .neuroglancer-invlerp-cdfpanel {
+  position: relative; display: block; width: 100%; height: 44px; box-sizing: border-box; overflow: hidden;
+  background: #0a0c10; border: 1px solid var(--subtle-border); border-radius: 4px;
+}
+.controls .neuroglancer-invlerp-widget-bounds { display: flex; align-items: center; width: 100%; }
+.controls .neuroglancer-invlerp-widget-bound {
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; padding: 0;
+  background: transparent; border: 0; color: var(--text-bright);
+}
+.controls .neuroglancer-invlerp-widget-window-bounds { font-size: 11px; }
+.controls .neuroglancer-invlerp-widget-window-bound { color: var(--text-muted); font-size: 11px; }
+.controls .neuroglancer-invlerp-range-finder-button-container { display: none; }
+.controls .colour-control { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; }
+
+/* -- on the picture ------------------------------------------------------------------ */
+.stage-overlay { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; font-size: 13px; color: var(--text-primary); }
+.stage-overlay > * { pointer-events: auto; }
+
+/* Top left: the 2D/3D switch, Fit, and Live. */
+.stage-overlay > .tools { position: absolute; top: 12px; left: 12px; z-index: 5; display: flex; align-items: stretch; }
+.tools > * + * { margin-left: 8px; }
+.tools > .segmented.view { width: auto; background: var(--overlay-bg); backdrop-filter: blur(4px); }
+.tools > .segmented.view button { padding: 5px 16px; background: transparent; }
+.tools > .segmented.view button.on { background: var(--accent); }
+.tools > button.tool {
+  display: inline-flex; align-items: center;
+  padding: 5px 12px;
+  background: var(--overlay-bg); backdrop-filter: blur(4px);
+  border: 1px solid var(--control-border); border-radius: 6px;
+  color: var(--text-bright); font-weight: 600; cursor: pointer;
+}
+.tools > button.tool[hidden] { display: none; }
+.tools > button.tool:hover { border-color: var(--accent); }
+.tools > button.tool svg { width: 14px; height: 14px; margin-right: 6px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Live: green and quiet while the view follows the acquisition; lit, and
+   asking to be pressed, once the operator has stepped away from it. */
+.tools > button.live .dot { width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--text-muted); }
+.tools > button.live.following { border-color: rgba(63, 185, 80, 0.55); color: #56d364; cursor: default; }
+.tools > button.live.following .dot { background: #3fb950; animation: mesospim-pulse 1.6s ease-in-out infinite; }
+.tools > button.live:not(.following) { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tools > button.live:not(.following) .dot { background: #fff; }
+@keyframes mesospim-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Top right: how to move around, and the button that brings the panel back. */
+.stage-overlay > .corner { position: absolute; top: 10px; right: 10px; z-index: 5; display: flex; align-items: flex-start; }
+.corner > * + * { margin-left: 6px; }
+.corner button.icon { width: 30px; height: 28px; background: var(--overlay-bg); border-color: var(--control-border); }
+.corner button.icon:hover { border-color: var(--accent); }
+.help { position: relative; }
+.help .sheet {
+  position: absolute; top: 34px; right: 0; width: 330px;
+  padding: 10px 12px;
+  background: var(--overlay-bg); backdrop-filter: blur(6px);
+  border: 1px solid var(--control-border); border-radius: 8px;
+}
+.help .sheet[hidden] { display: none; }
+.help .line { display: flex; padding: 3px 0; line-height: 1.35; }
+.help .keys { flex: 0 0 132px; color: var(--text-bright); font-weight: 600; }
+.help .does { flex: 1; color: var(--text-primary); }
+
+/* A thin bar along the top while the picture is still filling in. */
+#loading { position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 6; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+#loading.busy { opacity: 1; }
+#loading .fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+
+/* A message on the picture, top centre, such as why a dropped folder did not open. */
+#notice {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 7;
+  max-width: 50%;
+  display: flex; align-items: flex-start;
+  padding: 6px 6px 6px 12px;
+  background: var(--overlay-bg); backdrop-filter: blur(4px);
+  border: 1px solid #a3742c; border-radius: 8px;
+  color: var(--text-bright); line-height: 1.4;
+  white-space: pre-line; overflow-wrap: anywhere;
+}
+#notice[hidden] { display: none; }
+#notice > * + * { margin-left: 8px; }
+#notice .text { flex: 1; padding-top: 3px; }
+
+/* Instead of a black picture: what the viewer is waiting for. */
+#empty {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3;
+  width: 380px; max-width: 80%;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  pointer-events: none;
+}
+#empty[hidden] { display: none; }
+#empty > * + * { margin-top: 8px; }
+#empty .title { font-size: 16px; font-weight: 600; color: var(--text-bright); }
+#empty .text { color: var(--text-muted); line-height: 1.5; }
+#empty .text[hidden] { display: none; }
+#empty button.primary {
+  margin-top: 14px; padding: 7px 16px; pointer-events: auto;
+  background: var(--accent); border: 1px solid var(--accent); border-radius: 6px;
+  color: #fff; font-weight: 600; cursor: pointer;
+}
+#empty button.primary[hidden] { display: none; }
+
+/* Along the bottom, clear of the engine's scale bar at the left: what is under
+   the pointer, and beneath it the time and depth sliders. */
+.stage-overlay > .bottom {
+  position: absolute; left: 150px; right: 12px; bottom: 10px; z-index: 4;
+  display: flex; flex-direction: column; align-items: flex-end;
+  pointer-events: none;
+}
+.bottom > * { pointer-events: auto; }
+.bottom > * + * { margin-top: 6px; }
+.readout {
+  display: flex; align-items: center;
+  padding: 3px 9px;
+  background: var(--overlay-bg); border-radius: 6px;
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: var(--text-primary);
+  pointer-events: none;
+}
+.readout[hidden] { display: none; }
+.readout > * + * { margin-left: 12px; }
+.readout .value { color: var(--text-bright); }
+.bottom-bar {
+  align-self: stretch;
+  display: flex; flex-direction: column;
+  background: var(--overlay-bg); backdrop-filter: blur(4px);
+  border: 1px solid var(--control-border); border-radius: 8px;
+  padding: 2px 12px;
+}
+.axis-slider { display: flex; align-items: center; height: 28px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-bright); }
+.axis-slider[hidden] { display: none; }
+.axis-slider .name { flex: 0 0 14px; font-weight: 700; color: var(--text-muted); }
+.axis-slider input { flex: 1; min-width: 0; margin: 0 12px; }
+.axis-slider .reading { flex: 0 0 132px; text-align: right; white-space: nowrap; }
+/* With neither a stack nor a time lapse on screen there is no bar at all, and
+   the volume view, which shows every plane at once, has no depth slider. */
+.bottom-bar.none { display: none; }
+.bottom-bar.whole #slider-z { display: none; }
+
+/* -- every slider of the page, dressed by the page itself ---------------------
+   Chromium 83 ignores accent-color and would draw them plain grey, so the track
+   and the thumb are drawn here; current browsers draw them the same. */
+.mesospim-panel input[type="range"],
+.axis-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.mesospim-panel input[type="range"]::-webkit-slider-runnable-track,
+.axis-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-track);
+}
+.mesospim-panel input[type="range"]::-webkit-slider-thumb,
+.axis-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--text-bright);
+  box-sizing: border-box;
+}
+.mesospim-panel input[type="range"]:focus,
+.axis-slider input[type="range"]:focus { outline: none; }

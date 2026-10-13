@@ -47,7 +47,7 @@ plugins = {
         "../src/plugins",         # Ignored if it does not exits (use '/')
         "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
     ],
-    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'MP_OME_Zarr_Writer', 'MP_OME_Zarr_TCZYX_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
 }
 
 '''
@@ -494,6 +494,22 @@ MP_OME_Zarr_Writer = {
     # None acquires data direct to acquisition folder.
     'write_cache': None # None, 'e:/path/to/fast/ssd/write/cache'
 }
+
+MP_OME_Zarr_TCZYX_Writer = {
+    # Like MP_OME_Zarr_Writer, but one (t, c, z, y, x) store per tile: the channels of a tile are
+    # its c axis and the time points of a time lapse are appended along t. No chunk or shard ever
+    # spans a channel or a time point, so a later stack only adds files.
+    'ome_version': '0.5',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
+    'compression': 'zstd',  # None, 'zstd', 'lz4'
+    'compression_level': 5,  # 1-9
+    'shards': None,  # None: one file per chunk. Or a (z,y,x) tuple whose z EQUALS base_chunks z, so each shard is one write. Ignored if ome_version "0.4"
+    'base_chunks': (64, 256, 256),  # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
+    'target_chunks': (64, 64, 64),  # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
+
+    # Multiprocess options
+    'ring_buffer_size': 512,  # The number of frames buffered into shared memory for the MP writer.
+    }
 
 '''
 Rescale the galvo amplitude when zoom is changed

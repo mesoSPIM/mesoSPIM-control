@@ -22,6 +22,8 @@ sys.path.insert(0, os.path.dirname(
 from mesoSPIM.src.plugins.manager import PluginRegistry
 from mesoSPIM.src.utils.config_loader import load_config_from_file
 from mesoSPIM.src.utils.system_info import log_system_info
+from mesoSPIM.src import mesoSPIM_DataViewer
+mesoSPIM_DataViewer.prepare_qt()  # before any QApplication: Qt WebEngine allows its import only then
 
 def load_config_UI(current_path):
     '''

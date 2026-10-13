@@ -228,6 +228,11 @@ def pick_shards_for_level(
     return tuple(out)
 
 # ---------- Zarr v3 init (multiscales 0.5) ----------
+# Default false colours for a channel's omero entry, by excitation wavelength (nm).
+# The same as the MP_OME_Zarr_TCZYX_Writer uses.
+CHANNEL_COLORS = {'405': '5A73FF', '488': '00FF66', '561': 'FFBF1A', '640': 'FF33FF', '647': 'FF33FF', '785': 'FFFFFF'}
+
+
 def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                   chunk_scheme: ChunkScheme = ChunkScheme(),
                   compressor=None,
@@ -235,7 +240,9 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                   translation: Tuple[int, int, int] = (0,0,0), # in units
                   xy_levels: int = 0,
                   shard_shape: Tuple[int,int,int] | None = None,
-                  ome_version: str = "0.5"):
+                  ome_version: str = "0.5",
+                  channel_label: str | None = None,
+                  channel_color: str | None = None):
 
     # Map OME-NGFF version to Zarr store version
     zarr_version = 2 if ome_version == "0.4" else 3
@@ -318,8 +325,16 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
         {"name": "y", "type": "space", "unit": unit},
         {"name": "x", "type": "space", "unit": unit},
     ]
+    # This store holds one channel of the acquisition, so the omero block names that one
+    # channel. Viewers read it to tell the stores of different channels apart.
+    omero = None
+    if channel_label:
+        channel = {"label": channel_label, "active": True}
+        if channel_color:
+            channel["color"] = channel_color
+        omero = {"channels": [channel]}
     if ome_version == "0.5":
-        root.attrs["ome"] = {
+        ome = {
             "version": "0.5",
             "multiscales": [{
                 "axes": axes,
@@ -328,6 +343,9 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
                 "type": "image",
             }],
         }
+        if omero:
+            ome["omero"] = omero
+        root.attrs["ome"] = ome
     else:
         # OME-Zarr 0.4 stores multiscales at top level
         root.attrs["multiscales"] = [{
@@ -336,6 +354,8 @@ def init_ome_zarr(spec: PyramidSpec, path=STORE_PATH,
             "datasets": datasets,
             "name": "image",
         }]
+        if omero:
+            root.attrs["omero"] = omero
     return root, arrs
 
 
@@ -365,10 +385,14 @@ class FastShardWriter:
     Only used when the array is sharded with codecs [bytes(little), blosc] and index codecs
     [bytes(little), crc32c] at the end -- what init_ome_zarr creates when compression is set --
     and only for slabs that cover whole shards in z. Everything else goes through zarr.
+
+    An array may have leading axes before (z, y, x), such as the time point and channel of a
+    tczyx store. Each shard is then one step deep along them, and `lead` says which step a
+    writer writes to, so every shard lands at its own time point and channel.
     """
 
     @classmethod
-    def for_array(cls, arr):
+    def for_array(cls, arr, lead=()):
         try:
             from zarr.codecs import BytesCodec, Crc32cCodec
             from zarr.codecs.sharding import ShardingCodecIndexLocation
@@ -386,16 +410,22 @@ class FastShardWriter:
                 return None
             if sc.index_location != ShardingCodecIndexLocation.end or np.dtype(arr.dtype) != np.dtype('<u2'):
                 return None
-            return cls(arr, sc)
+            n = len(lead)
+            if arr.ndim != 3 + n:
+                return None
+            if any(s != 1 for s in tuple(arr.shards)[:n]) or any(c != 1 for c in tuple(sc.chunk_shape)[:n]):
+                return None
+            return cls(arr, sc, lead)
         except Exception:
             return None
 
-    def __init__(self, arr, sharding_codec):
+    def __init__(self, arr, sharding_codec, lead=()):
         from crc32c import crc32c
         self._crc32c = crc32c
         self.arr = arr
-        self.shard = tuple(arr.shards)
-        self.chunk = tuple(sharding_codec.chunk_shape)
+        self.lead = tuple(lead)
+        self.shard = tuple(arr.shards)[len(self.lead):]
+        self.chunk = tuple(sharding_codec.chunk_shape)[len(self.lead):]
         self.cps = tuple(s // c for s, c in zip(self.shard, self.chunk))  # chunks per shard
         self.blosc = sharding_codec.codecs[1]._blosc_codec
         self.fill = arr.metadata.fill_value
@@ -412,7 +442,7 @@ class FastShardWriter:
         return self.blosc.encode(np.ascontiguousarray(view).view(np.uint8).reshape(-1))
 
     def write(self, z0: int, buf3d: np.ndarray):
-        _, Y, X = self.arr.shape
+        Y, X = self.arr.shape[-2:]
         shz, shy, shx = self.shard
         chz, chy, chx = self.chunk
         iz = z0 // shz
@@ -442,7 +472,7 @@ class FastShardWriter:
                 offset += len(data)
             index_bytes = index.tobytes()
             crc = np.uint32(self._crc32c(index_bytes)).astype('<u4').tobytes()
-            path = self.dir / self.arr.metadata.encode_chunk_key((iz, sy, sx))
+            path = self.dir / self.arr.metadata.encode_chunk_key(self.lead + (iz, sy, sx))
             path.parent.mkdir(parents=True, exist_ok=True)
             tmp = path.with_name(path.name + '.partial')
             with open(tmp, 'wb') as f:
@@ -474,7 +504,9 @@ class Live3DPyramidWriter:
                  async_close: bool = True,
                  shard_shape: Tuple[int, int, int] | None = None,
                  translation: Tuple[int,int,int] = (0,0,0),
-                 ome_version: str = "0.5"):
+                 ome_version: str = "0.5",
+                 channel_label: str | None = None,
+                 channel_color: str | None = None):
 
         self.spec = spec
         self.chunk_scheme = chunk_scheme
@@ -490,6 +522,7 @@ class Live3DPyramidWriter:
             voxel_size=voxel_size, xy_levels=self.xy_levels,
             shard_shape=shard_shape, translation=translation,
             ome_version=ome_version,
+            channel_label=channel_label, channel_color=channel_color,
         )
 
         self.levels = spec.levels
