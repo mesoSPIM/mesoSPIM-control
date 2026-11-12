@@ -17,6 +17,7 @@ prototypes/orcas/*.tif
 prototypes/python-essentials/temp\.tif
 mesoSPIM/config/etl_parameters/*
 !mesoSPIM/config/etl_parameters/ETL-parameters-benchtop.csv
+!mesoSPIM/config/etl_parameters/channel-parameters.csv
 mesoSPIM/config/*.py
 mesoSPIM/config/processor_chain.json
 mesoSPIM/config/ai_assistant_calibration.json

@@ -1883,10 +1883,10 @@ Focus</string>
               </font>
              </property>
              <property name="toolTip">
-              <string>The file stores ETL offsets and amplitudes, which are specific for zoom (FOV width), medium refractive index, and immersion chamber (its width).</string>
+              <string>The channel settings file stores, per laser and zoom, the ETL offsets and amplitudes (specific for zoom (FOV width), medium refractive index, and immersion chamber (its width)) and optionally the absolute F position. Old ETL config files load as well.</string>
              </property>
              <property name="text">
-              <string>Choose ETL config file</string>
+              <string>Choose channel settings file</string>
              </property>
             </widget>
             <widget class="QPushButton" name="SaveETLParametersButton">
@@ -1910,10 +1910,10 @@ Focus</string>
               </font>
              </property>
              <property name="toolTip">
-              <string>Always save your ETL parameters before switching laser or zoom.</string>
+              <string>Saves the ETL parameters and the absolute F position of the current laser and zoom to the channel settings file. Always save before switching laser or zoom.</string>
              </property>
              <property name="text">
-              <string>Save current parameters to csv</string>
+              <string>Save channel settings</string>
              </property>
             </widget>
             <widget class="QLabel" name="label_17">
@@ -2006,6 +2006,27 @@ Focus</string>
               <string>Config File:</string>
              </property>
             </widget>
+            <widget class="QCheckBox" name="LoadChannelFCheckBox">
+             <property name="geometry">
+              <rect>
+               <x>150</x>
+               <y>430</y>
+               <width>211</width>
+               <height>41</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>Use the F positions stored in the channel settings file. After a laser, zoom or file change, a move to the stored F is offered for confirmation; F never moves without your OK. Missing F positions, or ones more than 500 um away from the current F, are flagged and not moved to. Config default: startup['load_f_from_channel_file'].</string>
+             </property>
+             <property name="text">
+              <string>Load F positions</string>
+             </property>
+            </widget>
             <widget class="QPushButton" name="ZeroRightETLButton">
              <property name="geometry">
               <rect>
@@ -2083,7 +2104,7 @@ Focus</string>
               <rect>
                <x>20</x>
                <y>40</y>
-               <width>187</width>
+               <width>261</width>
                <height>83</height>
               </rect>
              </property>
@@ -2096,28 +2117,13 @@ Focus</string>
                  </font>
                 </property>
                 <property name="toolTip">
-                 <string>DANGER of sample bleaching. Set amplitude of both galvos to 0, i.e. stop scanning. Before pressing, move the sample away from the laser.</string>
+                 <string>⚠ Risk of sample bleaching! Freezing stops the galvo scanning (both amplitudes set to 0), so the laser is focused into one line instead of being spread over the field of view. Before pressing, move the sample out of the light path (e.g. Unload or a large XY move), otherwise this line of the sample gets bleached.</string>
                 </property>
                 <property name="text">
-                 <string>Freeze galvos</string>
+                 <string>⚠ Freeze galvos</string>
                 </property>
                 <property name="checkable">
                  <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QPushButton" name="launchOptimizerButton">
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="toolTip">
-                 <string>Experimental features, autofocus and ETL parameter optimization on a sample. Success depends on the sample.</string>
-                </property>
-                <property name="text">
-                 <string>Launch Optimizer</string>
                 </property>
                </widget>
               </item>
@@ -2127,7 +2133,7 @@ Focus</string>
           </widget>
           <widget class="QWidget" name="ParameterTabWidget">
            <attribute name="title">
-            <string>Parameters</string>
+            <string>Waveforms</string>
            </attribute>
            <widget class="QGroupBox" name="sweep">
             <property name="geometry">
@@ -3282,137 +3288,11 @@ Focus</string>
              </property>
             </widget>
            </widget>
-           <widget class="QGroupBox" name="groupBox_15">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>310</y>
-              <width>431</width>
-              <height>131</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>14</pointsize>
-             </font>
-            </property>
-            <property name="title">
-             <string>Snap Directory</string>
-            </property>
-            <widget class="QPushButton" name="ChooseSnapFolderButton">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>40</y>
-               <width>81</width>
-               <height>81</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-               <weight>50</weight>
-               <italic>false</italic>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Choose
- folder</string>
-             </property>
-            </widget>
-            <widget class="QTextEdit" name="SnapFolderIndicator">
-             <property name="geometry">
-              <rect>
-               <x>100</x>
-               <y>40</y>
-               <width>321</width>
-               <height>81</height>
-              </rect>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>14</pointsize>
-              </font>
-             </property>
-             <property name="acceptDrops">
-              <bool>false</bool>
-             </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </widget>
-           <widget class="QGroupBox" name="groupBox_3">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>440</y>
-              <width>401</width>
-              <height>151</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>14</pointsize>
-             </font>
-            </property>
-            <property name="title">
-             <string>Display Subsampling</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_5">
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_48">
-               <property name="font">
-                <font>
-                 <pointsize>14</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>During Live display</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QComboBox" name="LiveSubSamplingComboBox">
-               <property name="font">
-                <font>
-                 <pointsize>14</pointsize>
-                </font>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_56">
-               <property name="font">
-                <font>
-                 <pointsize>14</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>During Acquisitions</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
-               <property name="font">
-                <font>
-                 <pointsize>14</pointsize>
-                </font>
-               </property>
-               <property name="currentIndex">
-                <number>-1</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
            <widget class="QPushButton" name="SaveToConfigButton">
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>600</y>
+              <y>310</y>
               <width>431</width>
               <height>51</height>
              </rect>
@@ -3423,16 +3303,37 @@ Focus</string>
              </font>
             </property>
             <property name="toolTip">
-             <string>Save current Parameters tab values to a config file (overwrite current or save as new file)</string>
+             <string>Save the current Waveforms tab values and the display subsampling (Other tab) to a config file (overwrite current or save as new file)</string>
             </property>
             <property name="text">
              <string>Save config file</string>
             </property>
            </widget>
+           <widget class="QPushButton" name="ShowWaveformsButton">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>370</y>
+              <width>431</width>
+              <height>51</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>Plot the current waveforms of one sweep (galvos, ETLs, laser, camera and stage triggers) on a common time axis. Updates while open; nothing is sent to the hardware.</string>
+            </property>
+            <property name="text">
+             <string>Show waveforms</string>
+            </property>
+           </widget>
           </widget>
           <widget class="QWidget" name="AlignmentTabWidget">
            <attribute name="title">
-            <string>Alignment</string>
+            <string>Other</string>
            </attribute>
            <widget class="QPushButton" name="VisualModeButton">
             <property name="geometry">
@@ -3499,6 +3400,132 @@ Focus</string>
             <property name="text">
              <string>Open image contrast window</string>
             </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_15">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>180</y>
+              <width>431</width>
+              <height>131</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+             </font>
+            </property>
+            <property name="title">
+             <string>Snap Directory</string>
+            </property>
+            <widget class="QPushButton" name="ChooseSnapFolderButton">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>40</y>
+               <width>81</width>
+               <height>81</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+               <weight>50</weight>
+               <italic>false</italic>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Choose
+ folder</string>
+             </property>
+            </widget>
+            <widget class="QTextEdit" name="SnapFolderIndicator">
+             <property name="geometry">
+              <rect>
+               <x>100</x>
+               <y>40</y>
+               <width>321</width>
+               <height>81</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+              </font>
+             </property>
+             <property name="acceptDrops">
+              <bool>false</bool>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_3">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>320</y>
+              <width>401</width>
+              <height>151</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+             </font>
+            </property>
+            <property name="title">
+             <string>Display Subsampling</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_5">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_48">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>During Live display</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="LiveSubSamplingComboBox">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_56">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>During Acquisitions</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="AcquisitionSubSamplingComboBox">
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="currentIndex">
+                <number>-1</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </widget>
           <widget class="QWidget" name="TimelapseTabWidget">

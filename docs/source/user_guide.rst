@@ -45,8 +45,8 @@ Main window
    Main window (Movement tab): menu bar, mode tabs, stage controls, position
    read-out, illumination controls, and acquisition/progress controls.
 
-The tabs, from left to right: **Movement**, **ETL**, **Parameters**,
-**Alignment**, **Timelapse** (see :doc:`timelapse`), **Scripting**,
+The tabs, from left to right: **Movement**, **ETL**, **Waveforms**,
+**Other** (alignment modes, contrast window, snap directory, display subsampling), **Timelapse** (see :doc:`timelapse`), **Scripting**,
 **Remote Control** (see :doc:`remote_control/index`) and **AI Assistant**
 (see :doc:`ai_assistant/index`). The position read-out, the Controls box and
 the Live / Snap / Run / STOP buttons below the tabs stay visible on every tab,
@@ -73,6 +73,60 @@ Shutter and laser selection
   arms.
 * Select the active **laser** from the wavelength drop-down.  Only lasers
   listed in ``laserdict`` will appear.
+
+Waveform viewer (Waveforms tab)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Show waveforms** opens a window with the output waveforms of one sweep on a
+common time axis (0 to the sweep time, in ms): galvos L/R, ETLs L/R, the active
+laser, the camera trigger and, for ASI or mixed stages, the stage trigger.  The
+plots share the time axis, so zooming into one zooms all.  While the window is
+open it refreshes twice a second, so changes on the Waveforms and ETL tabs show
+up right away.  It only displays the current waveforms; nothing is sent to the
+hardware.  The arm not selected by the shutter setting is shown flat at its
+offset, as it is output.
+
+Channel settings (ETL tab)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **channel settings file** (formerly *ETL config file*, ``startup['ETL_cfg_file']``)
+stores, for every laser line and zoom (magnification), the ETL offsets and
+amplitudes and, optionally, the **absolute focus (F) position**.  It is a
+semicolon-separated CSV file:
+
+.. code-block:: text
+
+   Objective;Wavelength;Zoom;ETL-Left-Offset;ETL-Left-Amp;ETL-Right-Offset;ETL-Right-Amp;F-Absolute-um
+   1x;488 nm;2x;2.31;0.70;2.36;0.65;5012.5
+   1x;561 nm;2x;2.29;0.71;2.35;0.64;
+
+* **Choose channel settings file** loads a file.  Old ETL files without the
+  ``F-Absolute-um`` column load unchanged; an empty cell means "no F stored".
+* **Save channel settings** writes the ETL parameters *and the current F
+  position* of the current laser and zoom.  Old files get the F column on the
+  first save.
+* F is stored in **physical stage coordinates** (not affected by zeroing F),
+  so stored positions stay valid after the F axis is zeroed.
+
+**Load F positions** checkbox (default from ``startup['load_f_from_channel_file']``,
+off if not set): when ticked, every time the channel settings are loaded
+(laser, zoom or file change), the stored F of that channel is checked:
+
+* missing F, F more than **500 µm** away from the current F, or F outside the
+  stage limits: a warning is shown and logged, and **F does not move**;
+* otherwise a dialog asks *Move focus (F)?* with the current and stored F and
+  the distance.  F moves only if you click **Yes** (No is the default).  The
+  checks are repeated just before the move; if laser, zoom, file or F changed
+  meanwhile, or the microscope started an acquisition, F does not move.
+  The same offer (same channel, file, stored and current F) is not asked twice
+  in a row; choosing a file or toggling the checkbox asks again.
+
+The demo configs use ``config/etl_parameters/channel-parameters.csv``, which
+has F positions for all demo lasers and zooms near the demo start F (5000 µm).
+
+Stored F positions are never used during acquisitions, previews, scripts or
+tiling: acquisition rows keep their own F values.  When the checkbox is off,
+F values in channel settings files are ignored.
 
 
 Camera window

@@ -493,7 +493,12 @@ startup = {
 'samplerate' : 100000,
 'sweeptime' : 0.2,
 'position' : {'x_pos':0,'y_pos':1000,'z_pos':2000,'f_pos':5000,'theta_pos':180},
-'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
+'ETL_cfg_file' : 'config/etl_parameters/channel-parameters.csv',
+# Channel settings file (ETL_cfg_file, formerly "ETL config file") can also store absolute F (focus) positions per
+# laser and zoom. True: after a laser/zoom/file change, a move to the stored F is offered in a confirmation dialog
+# (F never moves without the user's OK, never during acquisitions; missing F, or F > 500 um away, is flagged and not moved to).
+# False (default, safe): stored F positions are ignored. Can be toggled in the GUI ('Load F positions' checkbox).
+'load_f_from_channel_file' : False,
 'zoom' : '2x',
 'pixelsize' : 1.0,
 'laser' : '488 nm',

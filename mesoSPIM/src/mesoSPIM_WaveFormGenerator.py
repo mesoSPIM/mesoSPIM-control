@@ -16,6 +16,7 @@ from .utils.ni_daqmx import AcquisitionType, TaskMode, LineGrouping, Regeneratio
 '''mesoSPIM imports'''
 from .utils.waveforms import single_pulse, tunable_lens_ramp, sawtooth, square, samples_per_sweep
 from .utils.utility_functions import log_cpu_core, timed
+from .utils.channel_settings import read_channel_settings, write_channel_settings
 
 from PyQt5 import QtCore
 
@@ -27,6 +28,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     '''
     sig_update_gui_from_state = QtCore.pyqtSignal() # -> mesoSPIM_Core.sig_update_gui_from_state -> MainWindow.update_gui_from_state
+    sig_channel_f_position = QtCore.pyqtSignal(dict) # F stored in the channel settings file -> mesoSPIM_Core.handle_channel_f_position (never moves by itself)
     requires_nidaqmx = True # the Demo subclass below sets this to False
 
     def __init__(self, parent):
@@ -279,113 +281,42 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
         self.update_etl_parameters_from_csv(etl_cfg_file, laser, zoom)
 
     def update_etl_parameters_from_csv(self, cfg_path, laser, zoom):
-        """ Updates the internal ETL left/right offsets and amplitudes from the
-        values in the ETL csv files
+        """ Updates the ETL left/right offsets and amplitudes from the channel settings file
+        (formerly "ETL config file", see utils/channel_settings.py for the format).
 
-        The .csv file needs to contain the follwing columns:
-
-        Wavelength
-        Zoom
-        ETL-Left-Offset
-        ETL-Left-Amp
-        ETL-Right-Offset
-        ETL-Right-Amp
+        The F position stored for (laser, zoom), if any, is only *reported* via
+        sig_channel_f_position: this method never moves the focus stage. mesoSPIM_Core decides
+        whether it may be offered to the user, who must approve the move explicitly.
         """
-        zoom_clean = zoom.split('x')[0] + 'x' # cleanup the zoom string for backwards compatibility with existing ETL files
         full_path = os.path.join(self.parent.package_directory, cfg_path)
-        with open(full_path) as file:
-            reader = csv.DictReader(file, delimiter=';')
-            match_found = False
-            for row in reader:
-                if row['Wavelength'] == laser and (row['Zoom'] == zoom_clean or row['Zoom'] == zoom):
-                    match_found = True
-                    # Some diagnostic tracing statements
-                    # print(row)
-                    ''' updating internal state '''
-                    etl_l_offset = float(row['ETL-Left-Offset'])
-                    etl_l_amplitude = float(row['ETL-Left-Amp'])
-                    etl_r_offset = float(row['ETL-Right-Offset'])
-                    etl_r_amplitude = float(row['ETL-Right-Amp'])
-
-                    parameter_dict = {'etl_l_offset': etl_l_offset,
-                                      'etl_l_amplitude' : etl_l_amplitude,
-                                      'etl_r_offset' : etl_r_offset,
-                                      'etl_r_amplitude' : etl_r_amplitude}
-
-                    logger.info(f'Parameters set from csv: {parameter_dict}')
-                    self.state.set_parameters(parameter_dict)
-
-        if match_found:
-            '''Update waveforms with the new parameters'''
+        settings = read_channel_settings(full_path, laser, zoom)
+        if settings is not None:
+            parameter_dict = {key: settings[key] for key in ('etl_l_offset', 'etl_l_amplitude',
+                                                             'etl_r_offset', 'etl_r_amplitude')}
+            logger.info(f'Parameters set from channel settings file: {parameter_dict}, F stored: {settings["f_abs"]}')
+            self.state.set_parameters(parameter_dict)
+            # Update waveforms with the new parameters
             self.create_waveforms()
+            self.sig_channel_f_position.emit({'f_abs': settings['f_abs'], 'laser': laser, 'zoom': zoom,
+                                              'file': self.state['ETL_cfg_file']})
         else:
-            err_message = f"Combination {laser} - {zoom} not found in ETL file. The file will be updated:\n{cfg_path}"
+            err_message = f"Combination {laser} - {zoom} not found in channel settings file. The file will be updated:\n{cfg_path}"
             self.parent.sig_warning.emit(err_message)
             self.save_etl_parameters_to_csv()
         self.sig_update_gui_from_state.emit()
 
     @QtCore.pyqtSlot()
     def save_etl_parameters_to_csv(self):
-        """ Saves the current ETL left/right offsets and amplitudes from the
-        values to the ETL csv files
-
-        The .csv file needs to contain the following columns:
-
-        Wavelength
-        Zoom
-        ETL-Left-Offset
-        ETL-Left-Amp
-        ETL-Right-Offset
-        ETL-Right-Amp
-
-        Creates a temporary cfg file with the ending _tmp
+        """ Saves the current channel settings (ETL left/right offsets and amplitudes, and the
+        absolute F position) of the current laser and zoom to the channel settings file.
+        See utils/channel_settings.py for the format.
         """
-
-        etl_cfg_file, laser, zoom, etl_l_offset, etl_l_amplitude, etl_r_offset, etl_r_amplitude = \
-        self.state.get_parameter_list(['ETL_cfg_file', 'laser', 'zoom', 'etl_l_offset', 'etl_l_amplitude', 'etl_r_offset','etl_r_amplitude'])
-
-        '''Temporary filepath'''
-        etl_cfg_file = os.path.join(self.parent.package_directory, etl_cfg_file)
-        tmp_etl_cfg_file = etl_cfg_file+'_tmp'
-        with open(etl_cfg_file,'r') as input_file, open(tmp_etl_cfg_file,'w') as outputfile:
-            reader = csv.DictReader(input_file, delimiter=';')
-            fieldnames = ['Objective',
-                          'Wavelength',
-                          'Zoom',
-                          'ETL-Left-Offset',
-                          'ETL-Left-Amp',
-                          'ETL-Right-Offset',
-                          'ETL-Right-Amp']
-
-            writer = csv.DictWriter(outputfile, fieldnames=fieldnames, dialect='excel', delimiter=';')
-            writer.writeheader()
-            match_found = False
-            for row in reader:
-                # update values if the laser and zoom are already in the file
-                if row['Wavelength'] == laser and row['Zoom'] == zoom:
-                        writer.writerow({'Objective' : '1x',
-                                         'Wavelength' : laser,
-                                         'Zoom' : zoom,
-                                         'ETL-Left-Offset' : etl_l_offset,
-                                         'ETL-Left-Amp' : etl_l_amplitude,
-                                         'ETL-Right-Offset' : etl_r_offset,
-                                         'ETL-Right-Amp' : etl_r_amplitude,
-                                         })
-                        match_found = True
-                else:
-                    # copy all other rows
-                    writer.writerow(row)
-            if not match_found:
-                writer.writerow({'Objective' : '1x',
-                                 'Wavelength' : laser,
-                                 'Zoom' : zoom,
-                                 'ETL-Left-Offset' : etl_l_offset,
-                                 'ETL-Left-Amp' : etl_l_amplitude,
-                                 'ETL-Right-Offset' : etl_r_offset,
-                                 'ETL-Right-Amp' : etl_r_amplitude,
-                                 })
-        os.remove(etl_cfg_file)
-        os.rename(tmp_etl_cfg_file, etl_cfg_file)
+        etl_cfg_file, laser, zoom = self.state.get_parameter_list(['ETL_cfg_file', 'laser', 'zoom'])
+        etl_params = self.state.get_parameter_dict(['etl_l_offset', 'etl_l_amplitude', 'etl_r_offset', 'etl_r_amplitude'])
+        f_abs = self.state['position_absolute']['f_pos'] # physical F, independent of the user's F zeroing
+        full_path = os.path.join(self.parent.package_directory, etl_cfg_file)
+        write_channel_settings(full_path, laser, zoom, etl_params, f_abs)
+        logger.info(f'Channel settings saved for {laser} - {zoom}: {etl_params}, F (absolute) = {f_abs} um, file: {full_path}')
 
     @timed
     def create_tasks(self):

@@ -1,7 +1,7 @@
 # The two tool sets
 
 What the assistant may do in each tool set. **Full** is every command; **Regular**, the default,
-is Full minus the right-hand column: the Parameters tab of the main window (camera, laser timing,
+is Full minus the right-hand column: the Waveforms tab of the main window (camera, laser timing,
 galvos, the ETL's delays and ramps) and the two alignment modes stay with the operator. A command
 in both sets is the same tool in both, except `set_etl`, which in Regular takes the four voltages
 only. The set is chosen in the tab's setup box, or per microscope with the config attribute

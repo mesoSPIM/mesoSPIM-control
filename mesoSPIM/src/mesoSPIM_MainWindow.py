@@ -20,6 +20,7 @@ from .mesoSPIM_AcquisitionManagerWindow import mesoSPIM_AcquisitionManagerWindow
 from .mesoSPIM_Optimizer import mesoSPIM_Optimizer
 from .WebcamWindow import WebcamWindow
 from .mesoSPIM_ContrastWindow import mesoSPIM_ContrastWindow
+from .mesoSPIM_WaveformWindow import mesoSPIM_WaveformWindow
 from .mesoSPIM_ProcessorChainWindow import ProcessorChainWindow
 from .mesoSPIM_ScriptWindow import mesoSPIM_ScriptWindow # do not delete this line, it is actually used in exec()
 from .mesoSPIM_TileViewWindow import mesoSPIM_TileViewWindow
@@ -30,6 +31,7 @@ from .ai_assistant.gui import AiAssistantGUI
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
 from .utils.config_loader import check_zoom_keys, is_demo, retired_writer_warnings
+from .utils.channel_settings import channel_f_offer_key
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     sig_center_sample = QtCore.pyqtSignal()
 
     sig_save_etl_config = QtCore.pyqtSignal()
+    sig_apply_channel_f_position = QtCore.pyqtSignal(dict) # user-approved channel settings F move -> Core.apply_channel_f_position
     sig_poke_demo_thread = QtCore.pyqtSignal()
     sig_launch_optimizer = QtCore.pyqtSignal(dict)
     sig_launch_contrast_window = QtCore.pyqtSignal()
@@ -167,10 +170,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.initialize_and_connect_menubar()
         self.initialize_and_connect_widgets()
 
-        # launch ETL menu, unless there is no ETL to tune: the waveform generator has
+        # launch the channel settings (ETL) file menu, unless there is no ETL to tune: the waveform generator has
         # already loaded startup['ETL_cfg_file'], so demo mode starts without the dialog
         if is_demo(self.cfg.waveformgeneration):
-            logger.info(f"Demo mode: using ETL config file {self.state['ETL_cfg_file']}")
+            logger.info(f"Demo mode: using channel settings file {self.state['ETL_cfg_file']}")
         else:
             self.choose_etl_config()
 
@@ -187,6 +190,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.core.sig_status_message.connect(self.display_status_message)
         self.core.sig_progress.connect(self.update_progressbars)
         self.core.sig_warning.connect(self.display_warning)
+        self.core.sig_offer_channel_f_position.connect(self.offer_channel_f_position)
+        self.sig_apply_channel_f_position.connect(self.core.apply_channel_f_position)
         self.core.sig_zoom_in_progress.connect(self.set_zoom_change_in_progress)
         self.core.sig_time_lapse_finished.connect(self.on_time_lapse_finished)
         self.core.sig_time_lapse_cancelled.connect(self.on_time_lapse_cancelled)
@@ -199,6 +204,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.optimizer = None
         self.contrast_window = None
+        self.waveform_window = None
         self.processor_chain_window = None
 
         # Signal from state to GUI
@@ -300,6 +306,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             pass
         if self.contrast_window:
             self.contrast_window.close()
+        if self.waveform_window:
+            self.waveform_window.close()
         self.tile_view_window.close()
         if self.scriptwindow:
             self.scriptwindow.close()
@@ -523,8 +531,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.xyzLoadButton.clicked.connect(self.sig_load_sample.emit)
         self.xyzUnloadButton.clicked.connect(self.sig_unload_sample.emit)
         self.centerButton.clicked.connect(self.sig_center_sample.emit)
-        self.launchOptimizerButton.clicked.connect(lambda: self.sig_launch_optimizer.emit({'mode': 'etl_offset', 'amplitude': 0.5}))
         self.ContrastWindowButton.clicked.connect(lambda: self.sig_launch_contrast_window.emit())
+        self.ShowWaveformsButton.clicked.connect(self.show_waveform_window)
 
         # Keyboard shortcut for processor chain window (Ctrl+Shift+P)
         self.processor_chain_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+Shift+P"), self)
@@ -581,6 +589,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.SaveToConfigButton.clicked.connect(self.save_parameters_to_config)
         self.SnapFolderIndicator.setText(self.state['snap_folder'])
         self.ETLconfigIndicator.setText(self.state['ETL_cfg_file'])
+        self._pending_channel_f = None
+        self._channel_f_dialog_open = False
+        self._channel_f_shown_key = None  # offer on screen
+        self._channel_f_last_key = None   # offer answered last
+        self.LoadChannelFCheckBox.setChecked(bool(self.state['load_f_from_channel_file']))
+        self.LoadChannelFCheckBox.toggled.connect(self.set_load_f_from_channel_file)
+        logger.info(f"Loading F positions from channel settings files: {'ON' if self.state['load_f_from_channel_file'] else 'OFF'}")
 
         self.ShutterComboBox.currentIndexChanged.connect(self.update_GUI_by_shutter_state)
 
@@ -1005,6 +1020,15 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             self.optimizer.show()
 
     @QtCore.pyqtSlot()
+    def show_waveform_window(self):
+        '''Waveforms tab: plot the current waveforms of one sweep (read-only).'''
+        if not self.waveform_window:
+            self.waveform_window = mesoSPIM_WaveformWindow(self)
+        self.waveform_window.show()
+        self.waveform_window.raise_()
+        self.waveform_window.activateWindow()
+
+    @QtCore.pyqtSlot()
     def launch_contrast_window(self):
         if not self.contrast_window:
             self.contrast_window = mesoSPIM_ContrastWindow(self)
@@ -1262,31 +1286,91 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else:
             self.state['galvo_l_amplitude'] = self.galvo_amp_backup
             #self.state['galvo_r_amplitude'] = self.galvo_amp_backup
-            self.freezeGalvoButton.setText('Freeze galvos')
+            self.freezeGalvoButton.setText('⚠ Freeze galvos')
         self.sig_state_request.emit({'galvo_l_amplitude': self.state['galvo_l_amplitude']})
         self.update_gui_from_state()
         #self.sig_state_request.emit({'galvo_r_amplitude': self.state['galvo_r_amplitude']})
 
     def choose_etl_config(self):
-        ''' File dialog for choosing the config file
+        ''' File dialog for choosing the channel settings (former ETL config) file
         '''
-        path , _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open ETL config file, specific for immersion medium and stationary cuvette size',
+        path , _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open channel settings (ETL) file, specific for immersion medium and stationary cuvette size',
                                                          self.state['ETL_cfg_file'],  filter='CSV file (*.csv)')
         ''' To avoid crashes, only set the cfg file when a file has been selected:'''
         if path:
             self.state['ETL_cfg_file'] = path
             self.ETLconfigIndicator.setText(path)
-            logger.info(f'Main Window: Chose ETL Config File: {path}')
+            logger.info(f'Main Window: Chose channel settings file: {path}')
+            self._channel_f_last_key = None  # a deliberately (re)loaded file asks again
             self.sig_state_request.emit({'ETL_cfg_file' : path})
         else:
-            logger.debug(f'Choose ETL Config File cancelled')
+            logger.debug(f'Choose channel settings file cancelled')
 
     def save_etl_config(self):
-        ''' Save current ETL parameters into config '''
+        ''' Save the current channel settings (ETL parameters and absolute F) of the current laser and zoom '''
         self.sig_save_etl_config.emit()
 
+    @QtCore.pyqtSlot(bool)
+    def set_load_f_from_channel_file(self, enabled):
+        ''' GUI switch for using F positions from channel settings files (config: startup['load_f_from_channel_file']) '''
+        self.state['load_f_from_channel_file'] = bool(enabled)
+        self._channel_f_last_key = None  # ask again, even for the channel answered last
+        logger.info(f"Loading F positions from channel settings files switched {'ON' if enabled else 'OFF'} in the GUI")
+
+    @QtCore.pyqtSlot(dict)
+    def offer_channel_f_position(self, proposal):
+        ''' Ask the user to approve an F move to the position stored in the channel settings file.
+
+        The Core only offers positions that passed its safety checks; it checks them again when the
+        approval arrives. "No" is the default button. If a newer offer arrives while the dialog is
+        open, the open one is discarded whatever the answer and the newer one is asked instead.
+
+        An offer identical to the one on screen, or to the one answered last (same laser, zoom, file,
+        stored F and current F), is not asked again: at startup, the zoom and the laser initialization
+        each reload the channel settings and would otherwise ask the same question twice. Choosing a
+        file or toggling the "Load F positions" checkbox forgets the last answer.
+        '''
+        key = channel_f_offer_key(proposal)
+        if key in (getattr(self, '_channel_f_shown_key', None), getattr(self, '_channel_f_last_key', None)):
+            logger.info(f"Channel settings: duplicate F offer for {proposal['laser']} / {proposal['zoom']} not asked again")
+            return
+        self._pending_channel_f = proposal
+        if self._channel_f_dialog_open:
+            return  # asked as soon as the open dialog closes
+        self._channel_f_dialog_open = True
+        try:
+            while self._pending_channel_f is not None:
+                p, self._pending_channel_f = self._pending_channel_f, None
+                if not self.state['load_f_from_channel_file']:
+                    logger.info('Channel settings: F offer dropped, F loading was switched off')
+                    break
+                self._channel_f_shown_key = channel_f_offer_key(p)
+                delta = p['f_abs'] - p['f_current']
+                text = (f"The channel settings file stores an F position for {p['laser']} / {p['zoom']}.\n\n"
+                        f"Current F (absolute): {p['f_current']:.1f} um\n"
+                        f"Stored F (absolute): {p['f_abs']:.1f} um\n"
+                        f"Move: {delta:+.1f} um\n\n"
+                        f"Move F to the stored position now?\n\n"
+                        f"File: {p['file']}")
+                box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Question, 'Move focus (F)?', text,
+                                            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, self)
+                box.setDefaultButton(QtWidgets.QMessageBox.No)
+                answer = box.exec_()
+                self._channel_f_shown_key, self._channel_f_last_key = None, channel_f_offer_key(p)
+                if self._pending_channel_f is not None:
+                    logger.info('Channel settings: F offer superseded by a newer one, answer discarded')
+                    continue
+                if answer == QtWidgets.QMessageBox.Yes:
+                    logger.info(f"Channel settings: user approved F move to {p['f_abs']} um for {p['laser']} / {p['zoom']}")
+                    self.sig_apply_channel_f_position.emit(p)
+                else:
+                    logger.info(f"Channel settings: user declined F move to {p['f_abs']} um for {p['laser']} / {p['zoom']}")
+        finally:
+            self._channel_f_dialog_open = False
+            self._channel_f_shown_key = None
+
     def save_parameters_to_config(self):
-        """Save current Parameters-tab values back into the startup dict of a config file.
+        """Save current Waveforms-tab values and the display subsampling (Other tab) back into the startup dict of a config file.
         Opens a Save-As dialog pre-filled with the current config path.
         If the chosen file already exists the user is asked to confirm overwrite.
         """

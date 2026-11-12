@@ -44,7 +44,8 @@ class mesoSPIM_StateSingleton(QObject):
                         'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0}, # relative position, including user-specified offset
                         'position_absolute' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0}, 
                         'ttl_movement_enabled_during_acq' : False,
-                        'ETL_cfg_file' : 'config/etl_parameters/ETL-parameters.csv',
+                        'ETL_cfg_file' : 'config/etl_parameters/channel-parameters.csv',
+                        'load_f_from_channel_file' : False, # offer F positions stored in the channel settings (ETL) file; config: startup['load_f_from_channel_file']
                         'filename' : 'file.tif',
                         'folder' : 'tmp',
                         'snap_folder' : 'tmp',

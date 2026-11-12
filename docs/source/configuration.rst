@@ -355,6 +355,24 @@ refer to the extensive comments and examples directly in ``demo_config.py``
 and the
 `mesoSPIM hardware wiki <https://github.com/mesoSPIM/mesoSPIM-hardware-documentation/wiki/mesoSPIM_configuration_file>`_.
 
+The channel settings file (``startup['ETL_cfg_file']``, formerly the ETL config
+file) can also store absolute F positions per laser and zoom (see
+:doc:`user_guide`, *Channel settings*).  Whether they are used is set by:
+
+.. code-block:: python
+
+   startup = {
+       ...
+       'ETL_cfg_file' : 'config/etl_parameters/channel-parameters.csv',
+       'load_f_from_channel_file' : False,  # True: offer stored F positions for confirmation
+       ...
+   }
+
+``False`` (also when the key is missing) ignores stored F positions.  ``True``
+offers a move to the stored F after a laser, zoom or file change, in a
+confirmation dialog; F never moves without the user's OK.  The setting can be
+changed at runtime with the **Load F positions** checkbox on the ETL tab.
+
 Mandatory dictionaries (v1.20+)
 -------------------------------
 

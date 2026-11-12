@@ -522,7 +522,7 @@ class AiAssistantGUI(QtWidgets.QWidget):
 
     def _build_setup(self, parent, font):
         """Three titled boxes, in the order they are decided: the Language model, the Vision model,
-        then Preferences on one line. Connect applies them."""
+        then Preferences. Connect applies them."""
         setup = QtWidgets.QWidget(parent)
         column = QtWidgets.QVBoxLayout(setup)
         column.setContentsMargins(0, 0, 0, 0)
@@ -561,22 +561,24 @@ class AiAssistantGUI(QtWidgets.QWidget):
             cell.addStretch(1)
             return cell
 
-        # Three pairs on one line, the leftover width after them; the focus metric on a line of its own.
+        # Two pairs per line, in the columns the model boxes above use, the leftover width after them.
+        # (Three pairs on one line made the tab, and so the main window, wider than 1000 px.)
         tool_set_label = _field_label("Tool set", preferences, font, gap=0)
         memory_label = _field_label("Memory", preferences, font)
-        image_label = _field_label("Bin image", preferences, font, gap=2 * PAIR_GAP)  # set apart
+        image_label = _field_label("Bin image", preferences, font, gap=0)
+        focus_label = _field_label("Focus metric", preferences, font)
         options.addWidget(tool_set_label, 0, 0)
         options.addWidget(self.tools_profile, 0, 1)
         options.addWidget(memory_label, 0, 2)
         options.addLayout(with_unit(self.history_turns, "messages"), 0, 3)   # yours: one per turn
-        options.addWidget(image_label, 0, 4)
-        options.addWidget(self.frame_bin, 0, 5)
-        options.setColumnStretch(6, 1)
-        focus_cell = QtWidgets.QHBoxLayout()   # as wide as its names, not stretching column 1
+        options.addWidget(image_label, 1, 0)
+        options.addWidget(self.frame_bin, 1, 1)
+        focus_cell = QtWidgets.QHBoxLayout()   # as wide as its names, not stretching column 3
         focus_cell.addWidget(self.focus_metric)
         focus_cell.addStretch(1)
-        options.addWidget(_field_label("Focus metric", preferences, font, gap=0), 1, 0)
-        options.addLayout(focus_cell, 1, 1, 1, 6)
+        options.addWidget(focus_label, 1, 2)
+        options.addLayout(focus_cell, 1, 3, 1, 2)
+        options.setColumnStretch(4, 1)
 
         # The coordinate system as the operator sees it: one row per axis, what a positive move
         # does to the sample in the image. "Move it up" then has one meaning for the model.

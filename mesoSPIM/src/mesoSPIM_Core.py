@@ -38,6 +38,13 @@ from .mesoSPIM_ImageWriter import mesoSPIM_ImageWriter
 
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import convert_seconds_to_string, format_data_size, write_line, replace_with_underscores, log_cpu_core
+from .utils.channel_settings import evaluate_f_target, F_DISABLED, F_IN_PLACE, F_OFFER
+
+# Microscope states in which an F position from a channel settings file may be offered to the user and,
+# after explicit approval, moved to. Never during acquisitions, previews, scripts or tiling.
+CHANNEL_F_INTERACTIVE_STATES = ('idle', 'live', 'visual_mode', 'lightsheet_alignment_mode')
+# If F changed by more than this (um) between the offer and the approval, the approval is not used.
+CHANNEL_F_APPROVAL_DRIFT_UM = 10.0
 
 
 class mesoSPIM_Core(QtCore.QObject):
@@ -86,6 +93,8 @@ class mesoSPIM_Core(QtCore.QObject):
 
     ''' ETL-related signals '''
     sig_save_etl_config = QtCore.pyqtSignal()
+    # Channel settings F position that passed the safety checks -> MainWindow.offer_channel_f_position (asks the user)
+    sig_offer_channel_f_position = QtCore.pyqtSignal(dict)
 
     sig_remote_control_started = QtCore.pyqtSignal(bool, str)  # Remote Control tab: a transport started (ok, message)
 
@@ -198,6 +207,7 @@ class mesoSPIM_Core(QtCore.QObject):
             self.waveformer = mesoSPIM_DemoWaveFormGenerator(self)
 
         self.waveformer.sig_update_gui_from_state.connect(self.sig_update_gui_from_state.emit)
+        self.waveformer.sig_channel_f_position.connect(self.handle_channel_f_position)
         # Signals from Core
         self.sig_state_request.connect(self.waveformer.state_request_handler)
         self.sig_state_request_and_wait_until_done.connect(self.waveformer.state_request_handler)
@@ -482,6 +492,95 @@ class mesoSPIM_Core(QtCore.QObject):
                 'remaining_time_string': remaining_time_string,
         }
         self.sig_progress.emit(dict)
+
+    def _channel_f_check(self, f_target):
+        """evaluate_f_target() against the current physical F, the F-loading switch and the stage F limits."""
+        enabled = bool(self.state['load_f_from_channel_file'])
+        f_current = self.state['position_absolute']['f_pos']
+        stage_parameters = getattr(self.cfg, 'stage_parameters', {})
+        f_limits = None
+        if 'f_min' in stage_parameters and 'f_max' in stage_parameters:
+            f_limits = (stage_parameters['f_min'], stage_parameters['f_max'])
+        outcome, message = evaluate_f_target(f_target, f_current, enabled, f_limits)
+        return outcome, message, f_current
+
+    @QtCore.pyqtSlot(dict)
+    def handle_channel_f_position(self, report):
+        """Safety gate for an F position read from the channel settings file. Never moves F.
+
+        Called after the waveformer loaded the settings of a channel (laser, zoom), e.g. after the user
+        changed laser or zoom or chose another channel settings file. If F loading is switched on, the
+        microscope is in an interactive state and the stored F passes the checks (present, within the
+        stage limits, at most MAX_F_JUMP_UM from the current F), the position is *offered* to the user
+        via sig_offer_channel_f_position; the move needs the user's explicit approval
+        (apply_channel_f_position). Missing or too distant positions are flagged in the GUI and the log.
+
+        Args:
+            report (dict): {'f_abs': float or None, 'laser': str, 'zoom': str, 'file': str}
+        """
+        channel = f"{report['laser']} / {report['zoom']}"
+        outcome, message, f_current = self._channel_f_check(report['f_abs'])
+        if outcome == F_DISABLED:
+            logger.debug(f'Channel settings: F loading is off, stored F {report["f_abs"]} of {channel} ignored')
+            return
+        microscope_state = self.state['state']
+        if microscope_state not in CHANNEL_F_INTERACTIVE_STATES:
+            logger.info(f'Channel settings: F of {channel} not offered in state {microscope_state!r}')
+            return
+        if outcome == F_IN_PLACE:
+            logger.info(f'Channel settings: F already at the stored {report["f_abs"]} um for {channel}')
+            return
+        if outcome != F_OFFER:
+            text = f'Channel {channel}: {message}\nChannel settings file: {report["file"]}'
+            logger.warning(f'Channel settings: {outcome}: {text}')
+            self.sig_warning.emit(text)
+            return
+        proposal = dict(report, f_current=f_current)
+        logger.info(f'Channel settings: offering F move for {channel}: {f_current} -> {report["f_abs"]} um (waits for the user)')
+        self.sig_offer_channel_f_position.emit(proposal)
+
+    @QtCore.pyqtSlot(dict)
+    def apply_channel_f_position(self, proposal):
+        """Move F to a channel settings F position the user has explicitly approved.
+
+        Every check of handle_channel_f_position is repeated, because laser, zoom, file, F or the
+        microscope state may have changed while the confirmation dialog was open. Additionally, the
+        approval is only used if F did not move by more than CHANNEL_F_APPROVAL_DRIFT_UM since the
+        offer. The move uses physical stage coordinates (use_internal_position=False).
+
+        Args:
+            proposal (dict): as emitted by sig_offer_channel_f_position, including 'f_current'.
+
+        Returns:
+            bool: True if F was moved.
+        """
+        channel = f"{proposal['laser']} / {proposal['zoom']}"
+        reasons = []
+        if self.state['state'] not in CHANNEL_F_INTERACTIVE_STATES:
+            reasons.append(f"the microscope is busy ({self.state['state']})")
+        if (proposal['laser'], proposal['zoom'], proposal['file']) != \
+                (self.state['laser'], self.state['zoom'], self.state['ETL_cfg_file']):
+            reasons.append('laser, zoom or channel settings file changed since the offer')
+        outcome, message, f_current = self._channel_f_check(proposal['f_abs'])
+        if outcome == F_IN_PLACE and not reasons:
+            logger.info(f'Channel settings: F already at {proposal["f_abs"]} um for {channel}, no move')
+            return False
+        if outcome == F_DISABLED:
+            reasons.append('loading F positions from channel settings files was switched off')
+        elif outcome not in (F_OFFER, F_IN_PLACE):
+            reasons.append(message)
+        if abs(f_current - proposal['f_current']) > CHANNEL_F_APPROVAL_DRIFT_UM:
+            reasons.append(f"F moved from {proposal['f_current']:.1f} to {f_current:.1f} um since the offer")
+        if reasons:
+            text = f'Channel {channel}: F was not moved to {proposal["f_abs"]} um: ' + '; '.join(reasons)
+            logger.warning(f'Channel settings: {text}')
+            self.sig_warning.emit(text)
+            return False
+        logger.info(f'Channel settings: moving F (approved by the user) for {channel}: {f_current} -> {proposal["f_abs"]} um (absolute)')
+        self.send_status_message_to_gui(f'Moving F to the channel settings position {proposal["f_abs"]:.1f} um')
+        self.move_absolute({'f_abs': proposal['f_abs']}, wait_until_done=True, use_internal_position=False)
+        self.send_status_message_to_gui('F at the channel settings position')
+        return True
 
     @QtCore.pyqtSlot(dict)
     def set_filter(self, filter, wait_until_done=False):
