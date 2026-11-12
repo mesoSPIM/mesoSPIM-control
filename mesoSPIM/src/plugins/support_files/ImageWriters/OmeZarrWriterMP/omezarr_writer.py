@@ -1035,6 +1035,7 @@ def omezarr_writer_worker(
     work_q: mp.Queue,
     free_q: mp.Queue,
     write_cache: Path | None,
+    attached=None,
 ):
     """
     Child process:
@@ -1064,8 +1065,11 @@ def omezarr_writer_worker(
         random_char = str(uuid.uuid4()).split('-')[-1]
         return f'{timestamp}_{acq_path.name}.{random_char}'
 
-    # Attach to shared memory
+    # Attach to shared memory. On Windows the block exists only while a handle is open, so the
+    # parent keeps its handle until `attached` is set (OMEZarrWriterMP.finalize waits for it).
     shm = shared_memory.SharedMemory(name=shm_name)
+    if attached is not None:
+        attached.set()
     Y, X = frame_shape
     ring = np.ndarray((ring_size, Y, X), dtype=np.uint16, buffer=shm.buf)
 

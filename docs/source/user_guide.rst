@@ -60,6 +60,14 @@ size shown in the adjacent spin box.  Button polarity and step-motion delays
 are configurable in the :doc:`configuration` file (``flip_XYZFT_button_polarity``,
 ``button_sleep_ms_xyzft``).
 
+**Soft limits.** The stage limits from the config (``x_min``, ``x_max`` …, see
+:doc:`configuration`) are kept for every stage type.  A step that would cross a
+limit stops just inside it, with a message in the status bar.  A position
+read-out turns **amber** when that axis is within one step of a limit (its
+tooltip shows the limits and the physical position), and the arrow pointing at a
+limit is greyed out once the axis has reached it.  Acquisition lists with
+positions outside the limits do not start.
+
 .. note::
 
    The **F axis** controls the focus/objective position.  If your setup uses a

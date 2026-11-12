@@ -12,6 +12,27 @@ import multiprocessing as mp
 from multiprocessing import shared_memory
 mp.set_start_method("spawn", force=True)
 
+# How long finalize() waits for a writer process to attach to its shared memory. Starting a
+# spawned process (importing zarr etc.) takes seconds; a stack shorter than that, or one
+# stopped right after it was prepared, finalizes before the child has attached.
+ATTACH_TIMEOUT_S = 120.0
+
+
+def wait_for_writer_attach(proc, attached, timeout=ATTACH_TIMEOUT_S, poll=0.05) -> bool:
+    """Wait until the writer process has attached to the shared memory.
+
+    On Windows a shared-memory block is deleted when its last handle closes, so the parent
+    must keep its handle open until the child has opened its own. Returns True once
+    `attached` is set; False if the process exited first or the timeout ran out.
+    """
+    deadline = time.monotonic() + timeout
+    while not attached.wait(poll):
+        if proc is not None and not proc.is_alive():
+            return attached.is_set()
+        if time.monotonic() > deadline:
+            return False
+    return True
+
 
 from mesoSPIM.src.plugins.ImageWriterApi import (
     ImageWriter, WriterCapabilities, WriteRequest, API_VERSION, FileNaming, WriteImage, FinalizeImage
@@ -114,6 +135,7 @@ class OMEZarrWriterMP(ImageWriter):
         self._work_q = None
         self._free_q = None
         self._writer_proc = None
+        self._writer_attached = None
         self.xml_writer = None
         self.req = None
         self._background_writers: list[tuple[mp.Process, str]] = []
@@ -356,6 +378,7 @@ class OMEZarrWriterMP(ImageWriter):
             ome_version=ome_version,
         )
 
+        self._writer_attached = ctx.Event()
         self._writer_proc = ctx.Process(
             target=omezarr_writer_worker,  # From omezarr_writer.py
             args=(
@@ -366,6 +389,7 @@ class OMEZarrWriterMP(ImageWriter):
                 self._work_q,
                 self._free_q,
                 write_cache,
+                self._writer_attached,
             ),
             daemon=True,
         )
@@ -454,9 +478,24 @@ class OMEZarrWriterMP(ImageWriter):
             except Exception:
                 logger.exception("Failed to send shutdown to writer process")
 
+        # The child may still be starting (short stack, or Stop right after open()).
+        # Closing our shm handle before it has attached deletes the block on Windows.
+        proc, attached = self._writer_proc, self._writer_attached
+        if proc is not None and attached is not None:
+            if not attached.is_set():
+                logger.info("MP finalize: waiting for the writer process to attach to shared memory")
+            t0 = time.monotonic()
+            if wait_for_writer_attach(proc, attached):
+                logger.info("MP finalize: writer process attached (waited %.1f s)", time.monotonic() - t0)
+            else:
+                logger.error("OME-Zarr writer process did not attach to shared memory (alive=%s, exitcode=%s): "
+                             "%s is likely incomplete", proc.is_alive(), proc.exitcode,
+                             self.current_acquire_file_path)
+
         # DO NOT join here → let it run in the background
         # Just drop our references so they don't get reused accidentally
         self._writer_proc = None
+        self._writer_attached = None
         self._work_q = None
         self._free_q = None
 
@@ -549,12 +588,12 @@ class OMEZarrWriterMP(ImageWriter):
                         proc.exitcode,
                     )
 
-            logger.info(
-                "OME-Zarr writer process %d exited after %.1f s, exitcode=%s",
-                i,
-                time.time() - start,
-                proc.exitcode,
-            )
+            if proc.exitcode == 0:
+                logger.info("OME-Zarr writer process %d exited after %.1f s, exitcode=0", i, time.time() - start)
+            else:  # crashed: that stack's data are missing or incomplete
+                logger.error("OME-Zarr writer process %d (pid=%s) FAILED, exitcode=%s: its stack is likely "
+                             "missing or incomplete; see the terminal for its traceback",
+                             i, proc.pid, proc.exitcode)
 
             # Now its shm can be safely unlinked
             try:

@@ -261,6 +261,7 @@ stage_parameters = {'stage_type' : 'DemoStage', # one of 'DemoStage', 'PI_1contr
                     'f_objective_exchange': 2000, # DANGER ZONE: position for the objective exchange, either manually or by the revolver. Set up carefully to avoid collisions! If missing, the objective revolver will rotate in the current f-position.
                     'theta_max' : 999,
                     'theta_min' : -999,
+                    'limit_guard_um': 10, # soft limits (<axis>_min/_max, physical coordinates) apply to every stage type: a button step that would cross a limit stops this far inside it; acquisition and script moves outside the limits are refused. Default 10.
                     }
 
 ''''

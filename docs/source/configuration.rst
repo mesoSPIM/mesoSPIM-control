@@ -373,6 +373,31 @@ offers a move to the stored F after a laser, zoom or file change, in a
 confirmation dialog; F never moves without the user's OK.  The setting can be
 changed at runtime with the **Load F positions** checkbox on the ETL tab.
 
+**Soft stage limits.** ``stage_parameters['<axis>_min']`` / ``['<axis>_max']``
+(``x``, ``y``, ``z``, ``f``, ``theta``; physical stage coordinates, not affected
+by ZERO) are enforced in software for every stage type:
+
+.. code-block:: python
+
+   stage_parameters = {
+       ...
+       'x_max' : 25000,
+       'x_min' : -25000,
+       ...
+       'limit_guard_um': 10,  # optional, default 10: gap kept to a limit by a shortened button move
+   }
+
+* Move buttons: a step that would cross a limit is shortened to stop
+  ``limit_guard_um`` inside it (θ: at the limit); the status bar says so.  Fast
+  repeated clicks are checked against where the axis is heading, not the last
+  polled position.
+* Moves to an absolute position, acquisition steps and scripts are never
+  shortened: a move outside the limits is refused, and a running acquisition
+  stops with an error.
+* An acquisition list with any X, Y, Z start/end, F start/end or rotation
+  outside the limits does not start; the warning lists row, value and limit.
+* Every refusal is logged as a WARNING.
+
 Mandatory dictionaries (v1.20+)
 -------------------------------
 

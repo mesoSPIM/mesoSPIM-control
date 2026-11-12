@@ -29,6 +29,7 @@ from .mesoSPIM_Camera import mesoSPIM_Camera
 
 from .devices.lasers.Demo_LaserEnabler import Demo_LaserEnabler
 from .devices.lasers.mesoSPIM_LaserEnabler import mesoSPIM_LaserEnabler
+from .utils.stage_limits import limits_from_cfg, acquisition_limit_violations, format_violations
 from .utils.ni_daqmx import require_nidaqmx
 from .utils.config_loader import is_demo
 
@@ -188,6 +189,7 @@ class mesoSPIM_Core(QtCore.QObject):
         self.sig_polling_stage_position_start.connect(self.serial_worker.stage.pos_timer.start)
         self.sig_polling_stage_position_stop.connect(self.serial_worker.stage.pos_timer.stop)
         self.sig_move_absolute.connect(self.serial_worker.move_absolute)
+        self.serial_worker.sig_move_refused.connect(self.handle_move_refused)
         self.sig_move_relative.connect(self.serial_worker.move_relative)
         self.sig_move_relative_and_wait_until_done.connect(lambda sdict: self.serial_worker.move_relative(sdict, wait_until_done=True))
         self.sig_state_request.connect(self.serial_worker.state_request_handler)
@@ -962,7 +964,10 @@ class mesoSPIM_Core(QtCore.QObject):
                                   f'Stopping! \n')
             self.sig_finished.emit()
         elif len(acqusitions_outside_motion_limits) > 0:
-            self.sig_warning.emit(f'The acquisition list contains positions {acqusitions_outside_motion_limits} outside the motion limits - stopping!')
+            text = format_violations(acqusitions_outside_motion_limits)
+            logger.error(f'Acquisition list outside the soft limits, not started:\n{text}')
+            self.sig_warning.emit('The acquisition list has positions outside the stage soft limits '
+                                  '(stage_parameters in the config) - stopping!\n' + text)
             self.sig_finished.emit()
         else:
             self.prepare_acquisition_list(acq_list)
@@ -991,31 +996,29 @@ class mesoSPIM_Core(QtCore.QObject):
         return total_bytes_required
     
     def check_motion_limits(self, acq_list):
-        """
-        Check if the motion limits of the stage are violated for each acquisition in the given list.
+        """Positions of the acquisition list outside the stage soft limits.
 
-        Args:
-            acq_list (list): A list of dictionaries representing acquisitions, where each dictionary contains
-                             the x, y, and z positions.
+        Checks X, Y, Z start/end, F start/end and rotation of every row against
+        cfg.stage_parameters (physical coordinates; the ZERO offsets are taken into account).
 
         Returns:
-            list: A list of indices of acquisitions in the input list that violate the motion limits.
-
+            list: (row, key, value, physical value, limit name, limit) per violation; empty if all fine.
         """
-        unsafe_list = []
-        for i in range(len(acq_list)):
-            if not (self.cfg.stage_parameters['x_min'] <= acq_list[i]['x_pos'] - self.serial_worker.stage.int_x_pos_offset <= self.cfg.stage_parameters['x_max']):
-                unsafe_list.append(i)
-            elif not (self.cfg.stage_parameters['y_min'] <= acq_list[i]['y_pos'] - self.serial_worker.stage.int_y_pos_offset <= self.cfg.stage_parameters['y_max']):
-                unsafe_list.append(i)
-            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_start'] - self.serial_worker.stage.int_z_pos_offset <= self.cfg.stage_parameters['z_max']):
-                unsafe_list.append(i)
-            elif not (self.cfg.stage_parameters['z_min'] <= acq_list[i]['z_end'] - self.serial_worker.stage.int_z_pos_offset <= self.cfg.stage_parameters['z_max']):
-                unsafe_list.append(i)
-            else:
-                continue
-        return unsafe_list
-            
+        stage = self.serial_worker.stage
+        offsets = {axis: getattr(stage, f'int_{axis}_pos_offset', 0) for axis in ('x', 'y', 'z', 'f', 'theta')}
+        return acquisition_limit_violations(acq_list, limits_from_cfg(self.cfg.stage_parameters), offsets)
+
+    @QtCore.pyqtSlot(str)
+    def handle_move_refused(self, message):
+        """A programmatic stage move was refused by the soft limits (mesoSPIM_Serial).
+
+        During an acquisition this would image the wrong planes, so the acquisition is stopped.
+        """
+        if self.state['state'] in ('run_selected_acquisition', 'run_acquisition_list') and not self.stopflag:
+            logger.error(f'Acquisition stopped: {message}')
+            self.sig_warning.emit(f'Acquisition stopped: a stage move was refused by the soft limits.\n{message}')
+            self.stop()
+
     def prepare_acquisition_list(self, acq_list):
         ''' Housekeeping: Prepare the acquisition list '''
         self.image_count = 0
@@ -1297,7 +1300,9 @@ class mesoSPIM_Core(QtCore.QObject):
                 self.snap_image_in_series(laser_blanking)
                 self.sig_add_images_to_image_series.emit(acq, acq_list)
 
-                if not self.state['ttl_movement_enabled_during_acq']:
+                if i == steps - 1:
+                    pass  # last plane: no step beyond z_end (it could cross a soft limit set at z_end)
+                elif not self.state['ttl_movement_enabled_during_acq']:
                     # Z and F moves via serial commands at each plane
                     f_step = self.f_step_generator.__next__()
                     if f_step != 0:

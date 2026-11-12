@@ -18,6 +18,7 @@ from .plugins.FilterWheelApi import FilterWheel
 from .plugins.utils import get_filter_wheel_plugins, get_filter_wheel_plugin_class_from_name
 from .utils.utility_functions import log_cpu_core, timed
 from .utils.config_loader import is_demo
+from .utils.stage_limits import StageLimitGuard, limits_from_cfg, limit_guard_um
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class mesoSPIM_Serial(QtCore.QObject):
     sig_center_sample = QtCore.pyqtSignal()
     sig_mark_rotation_position = QtCore.pyqtSignal()
     sig_status_message = QtCore.pyqtSignal(str)
+    sig_move_refused = QtCore.pyqtSignal(str)  # a programmatic move was refused by the soft limits
     #sig_pause = QtCore.pyqtSignal(bool)
     
     def __init__(self, parent):
@@ -58,6 +60,9 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.cfg = parent.cfg
         self.state = self.parent.state # the mesoSPIM_StateSingleton() instance
         self.stage_limits_warning = False
+        # Soft limits for every stage type (utils/stage_limits.py), physical coordinates.
+        self.limit_guard = StageLimitGuard(limits_from_cfg(self.cfg.stage_parameters),
+                                           limit_guard_um(self.cfg.stage_parameters))
 
         ''' Attaching the filterwheel '''
         self._filterwheel_is_plugin = False
@@ -157,6 +162,10 @@ class mesoSPIM_Serial(QtCore.QObject):
         self.parent.sig_load_sample.connect(self.sig_load_sample.emit)
         self.parent.sig_unload_sample.connect(self.sig_unload_sample.emit)
         self.parent.sig_center_sample.connect(self.sig_center_sample.emit)
+        # These moves bypass the guard (or stop a move): forget where the axes were heading.
+        for signal in (self.parent.sig_stop_movement, self.parent.sig_load_sample,
+                       self.parent.sig_unload_sample, self.parent.sig_center_sample):
+            signal.connect(lambda *args: self.limit_guard.forget())
 
     def __del__(self):
         self.close()
@@ -220,39 +229,67 @@ class mesoSPIM_Serial(QtCore.QObject):
         """
         self.stage.enable_ttl_motion(boolean)
 
-    def stage_limits_OK(self, sdict, safety_margin_n_moves=3):
-        '''Safety margin is added to deal with delays in position reporting.'''
-        logger.debug(f"Checking stage limits: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in sdict.items()])}}}")
-        for key in ('x_rel', 'y_rel', 'z_rel', 'theta_rel', 'f_rel'):
-            if key in sdict:
-                axis = key[:-4]
-                condition = f"(self.stage.{axis}_min < self.stage.{axis}_pos + {safety_margin_n_moves} * sdict['{key}'] < self.stage.{axis}_max)"
-                if not eval(condition):
-                    self.send_status_message(f'Relative movement stopped: {axis} motion limit would be reached!')
-                    self.stage_limits_warning = True
-                    return False
-        if self.stage_limits_warning: # clear previous warning message
-            self.send_status_message('') 
+    def _limit_message(self, message, refused_programmatic=False):
+        """Show a soft-limit message in the status bar and log it; a refused programmatic move
+        (acquisition step, script) is also sent on sig_move_refused so Core can stop."""
+        self.send_status_message(message)
+        self.stage_limits_warning = True
+        logger.warning(message)
+        if refused_programmatic:
+            self.sig_move_refused.emit(message)
+
+    def _clear_limit_message(self):
+        if self.stage_limits_warning:  # clear the previous soft-limit message
+            self.send_status_message('')
             self.stage_limits_warning = False
-        return True
 
     @log_cpu_core
     @QtCore.pyqtSlot(dict)
-    def move_relative(self, sdict, wait_until_done=False):
-        """Move one or more axes by a relative offset after checking motion limits.
+    def move_relative(self, sdict, wait_until_done=False, clamp=False):
+        """Move one or more axes by a relative offset, within the soft limits.
 
-        If the requested movement would violate a stage limit, the move is
-        suppressed and a warning message is emitted instead.
+        Each step is checked against where the axis is heading (utils/stage_limits.py), so
+        fast repeated clicks can't add up past a limit.
 
         Args:
             sdict (dict): Axis → step mapping, e.g. ``{'z_rel': 50.0}`` (μm).
             wait_until_done (bool): Block until the stage controller confirms completion.
+            clamp (bool): Button moves: a step that would cross a limit is shortened to stop
+                just inside it. Otherwise (acquisition steps, scripts) the whole move is refused
+                and sig_move_refused is emitted.
+
+        Returns:
+            bool: True if a move was sent to the stage.
         """
         logger.debug(f"mesoSPIM_Serial moving relative: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in sdict.items()])}}}")
-        if self.stage_limits_OK(sdict):
-            self.stage.move_relative(sdict, wait_until_done=wait_until_done)
+        moves, targets, messages = {}, {}, []
+        for key, step in sdict.items():
+            if not key.endswith('_rel'):
+                moves[key] = step
+                continue
+            axis = key[:-4]
+            allowed, target, message = self.limit_guard.check_relative(
+                axis, step, getattr(self.stage, axis + '_pos'), clamp=clamp)
+            if message:
+                messages.append(message)
+            if allowed is None:
+                if not clamp:  # programmatic: refuse the whole move
+                    self._limit_message(message, refused_programmatic=True)
+                    return False
+                continue
+            moves[key] = allowed
+            if target is not None:
+                targets[axis] = target
+        if messages:
+            self._limit_message(' '.join(messages))
         else:
-            logger.info('Stage limits reached: motion stopped')
+            self._clear_limit_message()
+        if not any(key.endswith('_rel') for key in moves):
+            return False
+        self.stage.move_relative(moves, wait_until_done=wait_until_done)
+        for axis, target in targets.items():
+            self.limit_guard.accept(axis, target)
+        return True
 
     @timed
     @QtCore.pyqtSlot(dict)
@@ -264,9 +301,31 @@ class mesoSPIM_Serial(QtCore.QObject):
             wait_until_done (bool): Block until the stage controller confirms completion.
             use_internal_position (bool): Apply the user-visible position offset stored
                 in :class:`mesoSPIM_StateSingleton` when ``True``.
+
+        Targets outside the soft limits are refused for every stage type (the whole move),
+        with a status message, a WARNING and sig_move_refused.
+
+        Returns:
+            bool: True if the move was sent to the stage.
         """
         logger.debug(f"mesoSPIM_Serial moving absolute: {{{', '.join([f'{k!r}: {v:.3f}' if isinstance(v, (int, float)) else f'{k!r}: {v!r}' for k, v in sdict.items()])}}}")
+        targets = {}
+        for key, value in sdict.items():
+            if not key.endswith('_abs'):
+                continue
+            axis = key[:-4]
+            offset = getattr(self.stage, f'int_{axis}_pos_offset', 0) if use_internal_position else 0
+            physical = value - offset
+            message = self.limit_guard.check_absolute(axis, physical)
+            if message:  # refuse the whole move: a partial absolute move ends somewhere unexpected
+                self._limit_message(message, refused_programmatic=True)
+                return False
+            targets[axis] = physical
+        self._clear_limit_message()
         self.stage.move_absolute(sdict, wait_until_done=wait_until_done, use_internal_position=use_internal_position)
+        for axis, target in targets.items():
+            self.limit_guard.accept(axis, target)
+        return True
 
     @log_cpu_core
     @QtCore.pyqtSlot(dict)

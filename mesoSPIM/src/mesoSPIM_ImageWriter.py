@@ -366,7 +366,15 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             logger.error(f'{e}')
 
         # Place holder prior to image processing plugins
-        if acq['processing'] == 'MAX':
+        if acq['processing'] == 'MAX' and self.mip_image is None:  # no frames written (e.g. Stop before launch)
+            logger.warning(f'No max projection saved for {self.path}: no frames were written')
+            try:
+                self.tiff_mip_writer.close()
+                if os.path.exists(self.MIP_path):
+                    os.remove(self.MIP_path)  # empty file, no image in it
+            except Exception as e:
+                logger.error(f'{e}')
+        elif acq['processing'] == 'MAX':
             try:
                 px_size_um = self.cfg.pixelsize[acq['zoom']]
                 self.tiff_mip_writer.write(self.mip_image.T[::-1], # Transform image before saving

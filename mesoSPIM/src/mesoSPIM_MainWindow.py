@@ -29,6 +29,7 @@ from .mesoSPIM_Core import mesoSPIM_Core
 from .remote_control.gui import RemoteControlGUI
 from .ai_assistant.gui import AiAssistantGUI
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
+from .utils.stage_limits import limit_status
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
 from .utils.config_loader import check_zoom_keys, is_demo, retired_writer_warnings
 from .utils.channel_settings import channel_f_offer_key
@@ -165,6 +166,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         # Load processor chain configuration from file
         self._load_processor_chain_config()
+
+        # Move-button state: axes switched off in the config, axes waiting after a click
+        # (button_sleep_ms_xyzft), and buttons pointing at a soft limit the axis is at.
+        self._move_axes_disabled, self._move_axes_waiting, self._limit_blocked_buttons = set(), set(), set()
 
         # Get buttons & connections ready
         self.initialize_and_connect_menubar()
@@ -399,6 +404,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
                 self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
                 self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
+                self.update_limit_cues()
                 #self.state['position'] = dict['position'] # this must be done in the core thread
 
     @QtCore.pyqtSlot(dict)
@@ -510,16 +516,24 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         else:
             x_sign, y_sign, z_sign, f_sign, t_sign = 1, 1, 1, 1, 1
             logger.warning('flip_XYZFT_button_polarity key not found in config file. Assuming all buttons are positive.')
-        self.xPlusButton.pressed.connect(lambda: self.move_relative({'x_rel': - x_sign*self.xyzIncrementSpinbox.value()}))
-        self.xMinusButton.pressed.connect(lambda: self.move_relative({'x_rel': x_sign*self.xyzIncrementSpinbox.value()}))
-        self.yPlusButton.pressed.connect(lambda: self.move_relative({'y_rel': y_sign*self.xyzIncrementSpinbox.value()}))
-        self.yMinusButton.pressed.connect(lambda: self.move_relative({'y_rel': - y_sign*self.xyzIncrementSpinbox.value()}))
-        self.zPlusButton.pressed.connect(lambda: self.move_relative({'z_rel': z_sign*self.xyzIncrementSpinbox.value()}))
-        self.zMinusButton.pressed.connect(lambda: self.move_relative({'z_rel': - z_sign*self.xyzIncrementSpinbox.value()}))
-        self.focusPlusButton.pressed.connect(lambda: self.move_relative({'f_rel': f_sign*self.focusIncrementSpinbox.value()}))
-        self.focusMinusButton.pressed.connect(lambda: self.move_relative({'f_rel': - f_sign*self.focusIncrementSpinbox.value()}))
-        self.rotPlusButton.pressed.connect(lambda: self.move_relative({'theta_rel': t_sign*self.rotIncrementSpinbox.value()}))
-        self.rotMinusButton.pressed.connect(lambda: self.move_relative({'theta_rel': - t_sign*self.rotIncrementSpinbox.value()}))
+        # (button, axis, direction of its physical move, step spin box)
+        self.move_buttons = [
+            (self.xPlusButton, 'x', -x_sign, self.xyzIncrementSpinbox),
+            (self.xMinusButton, 'x', x_sign, self.xyzIncrementSpinbox),
+            (self.yPlusButton, 'y', y_sign, self.xyzIncrementSpinbox),
+            (self.yMinusButton, 'y', -y_sign, self.xyzIncrementSpinbox),
+            (self.zPlusButton, 'z', z_sign, self.xyzIncrementSpinbox),
+            (self.zMinusButton, 'z', -z_sign, self.xyzIncrementSpinbox),
+            (self.focusPlusButton, 'f', f_sign, self.focusIncrementSpinbox),
+            (self.focusMinusButton, 'f', -f_sign, self.focusIncrementSpinbox),
+            (self.rotPlusButton, 'theta', t_sign, self.rotIncrementSpinbox),
+            (self.rotMinusButton, 'theta', -t_sign, self.rotIncrementSpinbox),
+        ]
+        for button, axis, direction, spinbox in self.move_buttons:
+            button.pressed.connect(lambda axis=axis, direction=direction, spinbox=spinbox:
+                                   self.move_relative({axis + '_rel': direction * spinbox.value()}))
+        for spinbox in (self.xyzIncrementSpinbox, self.focusIncrementSpinbox, self.rotIncrementSpinbox):
+            spinbox.valueChanged.connect(lambda _value: self.update_limit_cues())
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
@@ -676,7 +690,62 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.LaserIntensitySpinBox.valueChanged.connect(self.set_laser_intensity)
         self.LaserIntensitySlider.setValue(self.cfg.startup['intensity'])
 
+    def _refresh_move_buttons(self, axis):
+        '''Enable the buttons of an axis unless switched off in the config, waiting after a
+        click (button_sleep_ms_xyzft), or pointing at a soft limit the axis is at.'''
+        for button, button_axis, _direction, _spinbox in getattr(self, 'move_buttons', []):
+            if button_axis == axis:
+                button.setEnabled(axis not in self._move_axes_disabled and axis not in self._move_axes_waiting
+                                  and button not in self._limit_blocked_buttons)
+
+    def update_limit_cues(self):
+        '''Soft-limit cue: amber position read-out within one step of a limit, and the move
+        button that points at a limit greyed out once the axis is at it (physical coordinates).'''
+        if not hasattr(self, 'move_buttons'):
+            return
+        try:
+            guard = self.core.serial_worker.limit_guard
+            physical = self.state['position_absolute']
+        except (AttributeError, KeyError, TypeError):
+            return
+        indicators = {'x': self.X_Position_Indicator, 'y': self.Y_Position_Indicator, 'z': self.Z_Position_Indicator,
+                      'f': self.Focus_Position_Indicator, 'theta': self.Rotation_Position_Indicator}
+        steps = {axis: spinbox.value() for _b, axis, _d, spinbox in self.move_buttons}
+        blocked = set()
+        for axis, indicator in indicators.items():
+            if axis not in guard.limits or f'{axis}_pos' not in physical:
+                continue
+            low, high = guard.limits[axis]
+            position = physical[f'{axis}_pos']
+            at_low, at_high, near = limit_status(position, low, high, steps.get(axis, 0), guard._guard(axis))
+            for button, button_axis, direction, _spinbox in self.move_buttons:
+                if button_axis == axis and ((direction > 0 and at_high) or (direction < 0 and at_low)):
+                    blocked.add(button)
+            if near != getattr(indicator, '_limit_near', None):
+                indicator._limit_near = near
+                indicator.setStyleSheet('QLineEdit { color: #ffb000; font-weight: bold; }' if near else '')
+            unit = '°' if axis == 'theta' else ' µm'
+            tip = (f'Soft limits {low:g} … {high:g}{unit} (physical); physical position {position:.1f}{unit}.'
+                   + (' Within one step of a limit.' if near else ''))
+            if indicator.toolTip() != tip:
+                indicator.setToolTip(tip)
+        if blocked != self._limit_blocked_buttons:
+            changed = {axis for button, axis, _d, _s in self.move_buttons if button in blocked ^ self._limit_blocked_buttons}
+            self._limit_blocked_buttons = blocked
+            for axis in changed:
+                self._refresh_move_buttons(axis)
+
     def enable_move_buttons(self, axis='x', state=True):
+        '''Switch the move buttons of an axis on or off (config ui_options['enable_<axis>_buttons']).'''
+        if axis not in ('x', 'y', 'z', 'f', 'theta'):
+            raise ValueError(f'axis = {axis} is unknown.')
+        if state:
+            self._move_axes_disabled.discard(axis)
+        else:
+            self._move_axes_disabled.add(axis)
+        if hasattr(self, 'move_buttons'):
+            self._refresh_move_buttons(axis)
+            return
         if axis == 'x':
             self.xPlusButton.setEnabled(state)
             self.xMinusButton.setEnabled(state)
@@ -700,14 +769,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         assert len(pos_dict) == 1, f"Position dictionary expects only one entry, got {pos_dict}"
         key, value = list(pos_dict.keys())[0], list(pos_dict.values())[0]
         #self.sig_move_relative.emit(pos_dict)
-        self.core.serial_worker.move_relative(pos_dict)  # direct call to ensure execution in main thread during live mode and avoid conflicts with core thread (stage freezing)
+        # direct call to ensure execution in main thread during live mode and avoid conflicts with core thread (stage freezing);
+        # clamp: a step that would cross a soft limit stops just inside it
+        self.core.serial_worker.move_relative(pos_dict, clamp=True)
         if hasattr(self.cfg, 'ui_options') and ('button_sleep_ms_xyzft' in self.cfg.ui_options.keys()):
             axis = key[:-4]
             index = ['x', 'y', 'z', 'f', 'theta'].index(axis)
             sleep_ms = self.cfg.ui_options['button_sleep_ms_xyzft'][index]
             if sleep_ms > 0:
-                self.enable_move_buttons(axis, False)
-                QtCore.QTimer().singleShot(sleep_ms, lambda: self.enable_move_buttons(axis, True))
+                self._move_axes_waiting.add(axis)
+                self._refresh_move_buttons(axis)
+                QtCore.QTimer().singleShot(sleep_ms, lambda: (self._move_axes_waiting.discard(axis),
+                                                              self._refresh_move_buttons(axis)))
             else:
                 pass
 
