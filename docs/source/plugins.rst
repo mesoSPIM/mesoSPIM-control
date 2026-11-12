@@ -76,7 +76,7 @@ is listed in the active config file:
        'path_list': [
            'C:/mesospim_plugins',
        ],
-       'first_image_writer': 'OME_Zarr_Writer',
+       'first_image_writer': 'MP_OME_Zarr_Writer',
    }
 
 Keep these points in mind when authoring external plugins:
@@ -158,7 +158,7 @@ Current runtime behavior worth knowing:
 * ``dtype`` is currently ``'uint16'`` for the normal acquisition path.
 * ``uri`` is currently passed as a path-like string.
 * Writer-specific config comes from a top-level config dictionary with the same
-  name as the writer, for example ``OME_Zarr_Writer = {...}``.
+  name as the writer, for example ``MP_OME_Zarr_Writer = {...}``.
 
 Metadata and Side Effects
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -199,15 +199,15 @@ Example:
 
 .. code-block:: python
 
-   OME_Zarr_Writer = {
+   MP_OME_Zarr_Writer = {
        'ome_version': '0.5',
        'generate_multiscales': True,
        'compression': 'zstd',
        'compression_level': 5,
    }
 
-This mechanism is how built-in advanced writers such as
-``OME_Zarr_Writer`` and ``MP_OME_Zarr_Writer`` receive chunking,
+This mechanism is how the built-in
+``MP_OME_Zarr_Writer`` receives chunking,
 compression, and multiscale settings.
 
 Writer Authoring Checklist

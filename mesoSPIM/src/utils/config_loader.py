@@ -78,3 +78,25 @@ def check_zoom_keys(cfg):
     if cfg.startup['zoom'] not in cfg.zoomdict:
         raise ValueError(f"Config file: startup['zoom'] = {cfg.startup['zoom']!r} is not one of "
                          f"the zoom positions in 'zoomdict': {sorted(cfg.zoomdict)}.")
+
+
+def retired_writer_warnings(cfg):
+    '''Warnings for settings of the single-core OME-Zarr writer (``OME_Zarr_Writer``), which was
+    removed: the multiprocess ``MP_OME_Zarr_Writer`` writes OME-Zarr instead. Each warning is also
+    logged. The config still loads, since none of these settings stops an acquisition.
+    '''
+    warnings = []
+    if hasattr(cfg, 'OME_Zarr_Writer'):
+        warnings.append("Config file: the 'OME_Zarr_Writer' dictionary is ignored: that writer was removed. "
+                        "Move its settings to 'MP_OME_Zarr_Writer' and delete it.")
+    plugins = getattr(cfg, 'plugins', None)
+    if isinstance(plugins, dict) and plugins.get('first_image_writer') == 'OME_Zarr_Writer':
+        warnings.append("Config file: plugins['first_image_writer'] = 'OME_Zarr_Writer' names a removed writer; "
+                        "'MP_OME_Zarr_Writer' is used instead. Change it to 'MP_OME_Zarr_Writer'.")
+    mp = getattr(cfg, 'MP_OME_Zarr_Writer', None)
+    if isinstance(mp, dict) and 'async_finalize' in mp:
+        warnings.append("Config file: MP_OME_Zarr_Writer['async_finalize'] is ignored: it was a setting of the "
+                        "removed single-core OME_Zarr_Writer. Delete it.")
+    for w in warnings:
+        logger.warning(w)
+    return warnings

@@ -20,7 +20,7 @@ plugins = {
         "../src/plugins/ImageWriters",         # Ignored if it does not exits (use '/')
         "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
     ],
-    'first_image_writer': 'OME_Zarr_Writer', # 'H5_BDV_Writer', 'OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
+    'first_image_writer': 'MP_OME_Zarr_Writer', # 'H5_BDV_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
 }
 
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
@@ -305,20 +305,6 @@ is finalized in the background. On systems with slow IO, data can accumulate in 
 Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
 to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
 '''
-OME_Zarr_Writer = {
-    'ome_version': '0.4', # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
-    'generate_multiscales': True, #True, False. False: only the primary data is saved. True: multiscale data is generated
-    'compression': None, # None, 'zstd', 'lz4'
-    'compression_level': 5, # 1-9
-    'shards': (64,6000,6000), # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (32,2592//2, 4608//4), # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
-    'target_chunks': (64,64,64), # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
-    'async_finalize': False, # True, False
-    'write_big_stitcher_xml': True, # BigStitcher XML file for compatibiliyt ('ome_version': '0.4')
-    'flip_xyz': (True, True, False), # match BigStitcher coordinates to mesoSPIM axes.
-    'transpose_xy' : False, # True for Hamamatsu, False for Photometrix, possibly due to different coordinate systems.
-    }
-            
 MP_OME_Zarr_Writer = {
     'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
     'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated

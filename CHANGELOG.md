@@ -16,6 +16,8 @@
 - Demo mode no longer requires the `nidaqmx` package: NI-DAQmx is imported through an optional shim, and `nidaqmx` has moved to an optional `ni` extra (`pip install -e ".[ni]"`). `requirements-conda-mamba.txt` still installs it, so the documented install path is unchanged.
 - Configs selecting NI waveform generation, shutters or laser enable lines now fail at startup with a message naming the missing package or driver, instead of an import error or a `DaqNotFoundError` raised mid-acquisition.
 
+### Removed 🗑️
+- ✂️ **Single-core `OME_Zarr_Writer` removed**: `MP_OME_Zarr_Writer` writes the same OME-Zarr in a background process and is the only OME-Zarr writer now. Acquisition lists that name `OME_Zarr_Writer` are written with `MP_OME_Zarr_Writer`. A config file with an `OME_Zarr_Writer` dictionary, `first_image_writer = 'OME_Zarr_Writer'` or `MP_OME_Zarr_Writer['async_finalize']` (its option) loads with a warning for each. The demo configs no longer have any of these settings, and the example configs no longer have an `OME_Zarr_Writer` dictionary (some still set `async_finalize`, which only warns).
 ### Bugfixes 🐛
 - Auto-Focus: the DCT-Shannon sharpness (`shannon_dct`) now uses the whole ROI. It used only the top-left quarter, because `scipy.fftpack.dct(..., n=cutoff)` truncated the image before the transform. Its values, and possibly the focus it picks, differ from before; not yet tested on hardware.
 - Waveforms are now `round(samplerate * sweeptime)` samples long instead of truncated: `25000 * 0.073` evaluates to `1824.9999999999998`, which gave 1824 samples and a 72.96 ms waveform for a 73 ms sweep.

@@ -15,7 +15,7 @@ from PyQt5 import QtCore
 from .utils.acquisitions import AcquisitionList, Acquisition
 from .utils.utility_functions import write_line, gb_size_of_array_shape, replace_with_underscores, log_cpu_core, timed
 from .plugins.ImageWriterApi import WriteRequest, WriteImage, FinalizeImage
-from .plugins.utils import get_image_writer_from_name, get_image_writer_class_from_name
+from .plugins.utils import get_image_writer_from_name, get_image_writer_class_from_name, resolve_image_writer_name
 
 class mesoSPIM_ImageWriter(QtCore.QObject):
     """Image and metadata writer that runs in its own high-priority QThread.
@@ -145,7 +145,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             self.frame_queue.clear()
 
         if acq == acq_list[0]:
-            self.writer_name = acq['image_writer_plugin']
+            self.writer_name = resolve_image_writer_name(acq['image_writer_plugin'])
             self.writer = get_image_writer_class_from_name(self.writer_name)() # Get and init () the writer class
 
         self.active_processor_metadata = self._get_enabled_processor_metadata()

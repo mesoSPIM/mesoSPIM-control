@@ -112,8 +112,8 @@ in the file-naming wizard.
             "../src/plugins",                # relative paths work
             "C:/a/different/plugin/location",
         ],
-       'first_image_writer': 'OME_Zarr_Writer',
-        # other options: 'H5_BDV_Writer', 'MP_OME_Zarr_Writer',
+       'first_image_writer': 'MP_OME_Zarr_Writer',
+        # other options: 'H5_BDV_Writer',
         #                'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
     }
 
@@ -129,7 +129,7 @@ named after the writer itself, for example:
 
 .. code-block:: python
 
-   OME_Zarr_Writer = {
+   MP_OME_Zarr_Writer = {
        'ome_version': '0.5',
        'generate_multiscales': True,
        'compression': 'zstd',
@@ -365,7 +365,6 @@ if the corresponding feature is not used:
 
    plugins = {}
    H5_BDV_Writer = {}
-   OME_Zarr_Writer = {}
    MP_OME_Zarr_Writer = {}
 
 Check the ``demo_config.py`` for the latest required keys.

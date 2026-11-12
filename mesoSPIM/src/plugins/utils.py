@@ -107,11 +107,26 @@ def get_image_writer_name_for_file_extension(file_extension: str):
     writer = get_image_writer_for_file_extension(file_extension)
     return writer['name'] if writer is not None else None
 
+# Writers that were removed, and the writer that now does their job. Saved acquisition lists and
+# config files may still name them.
+RETIRED_IMAGE_WRITERS = {
+    'OME_Zarr_Writer': 'MP_OME_Zarr_Writer',  # the single-core OME-Zarr writer
+}
+
+def resolve_image_writer_name(name):
+    '''Return the name of the writer to use for ``name``: a retired writer's replacement, else ``name``.'''
+    if name in RETIRED_IMAGE_WRITERS:
+        new_name = RETIRED_IMAGE_WRITERS[name]
+        logger.warning(f"Image writer '{name}' was removed; using '{new_name}' instead")
+        return new_name
+    return name
+
 def get_image_writer_from_name(name: str):
     '''
-    Return the writer dict given its name attribute
+    Return the writer dict given its name attribute (a retired writer's name gives its replacement)
     Structure of writer is determined by function get_writer_plugins()
     '''
+    name = resolve_image_writer_name(name)
     for writer in get_image_writer_plugins():
         if name == writer['name']:
             return writer
@@ -124,6 +139,7 @@ def get_image_writer_class_from_name(name: str):
     writer.open(WriteRequest)
     writer.write_frame(image)
     '''
+    name = resolve_image_writer_name(name)
     for writer in get_image_writer_plugins():
         if name == writer['name']:
             return writer['writer_class']

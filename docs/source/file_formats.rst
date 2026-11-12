@@ -38,12 +38,6 @@ At a glance
      - Yes
      - zstd / lz4
      - Writes in a background process; recommended default
-   * - ``OME_Zarr_Writer``
-     - ``.ome.zarr`` / ``.zarr``
-     - One store (per-tile subgroups)
-     - Yes
-     - zstd / lz4
-     - Single-core; same format as above
    * - ``H5_BDV_Writer``
      - ``.h5``
      - One file (all tiles)
@@ -85,27 +79,31 @@ restrict which writers are available:
 
    plugins = {
        'path_list': ["../src/plugins"],
-       'first_image_writer': 'OME_Zarr_Writer',
+       'first_image_writer': 'MP_OME_Zarr_Writer',
    }
 
 See :doc:`configuration` for the full ``plugins`` config reference.
 
-OME-Zarr (``OME_Zarr_Writer`` / ``MP_OME_Zarr_Writer``)
-----------------------------------------------------------
+OME-Zarr (``MP_OME_Zarr_Writer``)
+---------------------------------
 
-Both write the same `OME-Zarr <https://ngff.openmicroscopy.org/>`_ format —
-one ``.ome.zarr`` store per acquisition, with each tile in its own subgroup
-— and accept identical configuration. The only difference is *how* the
-writing happens:
+``MP_OME_Zarr_Writer`` writes `OME-Zarr <https://ngff.openmicroscopy.org/>`_ —
+one ``.ome.zarr`` store per acquisition, with each tile in its own subgroup.
+It offloads writing to a separate background process via a shared-memory
+ring buffer, so a slow disk can't stall acquisition. This is the
+**recommended writer for new acquisitions** on systems with fast (NVMe/SSD)
+storage.
 
-* **``OME_Zarr_Writer``** writes on the main acquisition thread (single-core).
-* **``MP_OME_Zarr_Writer``** offloads writing to a separate background
-  process via a shared-memory ring buffer, so a slow disk can't stall
-  acquisition. This is the **recommended writer for new acquisitions** on
-  systems with fast (NVMe/SSD) storage.
-
-Both save multi-resolution pyramids natively, with compression, and can
+It saves multi-resolution pyramids natively, with compression, and can
 optionally emit an XML file for drag-and-drop stitching in BigStitcher.
+
+.. note::
+
+   The single-core ``OME_Zarr_Writer`` was removed in 1.27.0. Acquisition
+   lists that name it are written with ``MP_OME_Zarr_Writer``, and a config
+   file that still has an ``OME_Zarr_Writer`` dictionary, names it as
+   ``first_image_writer``, or sets ``async_finalize`` (its option) gets a
+   warning at startup. Move those settings to ``MP_OME_Zarr_Writer``.
 
 .. tip::
 
@@ -115,7 +113,7 @@ optionally emit an XML file for drag-and-drop stitching in BigStitcher.
 
 .. code-block:: python
 
-   OME_Zarr_Writer = {
+   MP_OME_Zarr_Writer = {
        'ome_version': '0.5',          # '0.4' (zarr v2) or '0.5' (zarr v3, sharding supported)
        'generate_multiscales': True,  # False: only save the original resolution
        'compression': 'zstd',         # None, 'zstd', 'lz4'
@@ -123,16 +121,13 @@ optionally emit an XML file for drag-and-drop stitching in BigStitcher.
        'shards': (64, 6000, 6000),    # max shard size (z,y,x); ignored if ome_version == '0.4'
        'base_chunks': (64, 256, 256),   # starting chunk size (level 0), (z,y,x)
        'target_chunks': (64, 64, 64),   # chunk size at the highest pyramid level, (z,y,x)
-       'async_finalize': True,        # let the next tile start before this one's pyramid finishes
 
        # BigStitcher-specific
        'write_big_stitcher_xml': True,       # ome_version '0.4' and '0.5'
        'flip_xyz': (True, True, False),      # match BigStitcher coordinates to mesoSPIM axes
        'transpose_xy': False,                # swap X/Y if tile positions come out wrong
-   }
 
-   MP_OME_Zarr_Writer = {
-       # ... same keys as above, plus:
+       # background process
        'ring_buffer_size': 512,  # frames buffered in shared memory; lower (e.g. 16) for demo/simulation mode
        'write_cache': None,      # optional fast local scratch path, moved to the final folder once a tile finishes
    }
@@ -216,12 +211,6 @@ Writer capabilities
      - Overwrite existing
      - dtypes
    * - ``MP_OME_Zarr_Writer``
-     - Yes
-     - Yes
-     - Yes
-     - No
-     - uint16
-   * - ``OME_Zarr_Writer``
      - Yes
      - Yes
      - Yes

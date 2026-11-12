@@ -29,7 +29,7 @@ from .remote_control.gui import RemoteControlGUI
 from .ai_assistant.gui import AiAssistantGUI
 from .devices.joysticks.mesoSPIM_JoystickHandlers import mesoSPIM_JoystickHandler
 from .utils.utility_functions import log_cpu_core, fit_window_to_screen, move_window_into_screen, convert_seconds_to_string
-from .utils.config_loader import check_zoom_keys, is_demo
+from .utils.config_loader import check_zoom_keys, is_demo, retired_writer_warnings
 
 logger = logging.getLogger(__name__)
 
@@ -227,6 +227,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         """
         logger.info(f"Config format: {getattr(self.cfg, 'config_format', 1)}")
         check_zoom_keys(self.cfg)
+        for warning in retired_writer_warnings(self.cfg):
+            print(warning)
         gen_msg = "You are using outdated config file, check project github with the most recent template (demo_config.py):"
         if not hasattr(self.cfg, 'ui_options'):
             spec_msg = "\n - 'ui_options' is missing"

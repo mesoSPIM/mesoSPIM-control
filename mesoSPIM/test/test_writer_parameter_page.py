@@ -27,7 +27,7 @@ class FakeWriter:
     """Stands in for the OME-Zarr plugins: same wizard_parameters() contract, no zarr import."""
     @classmethod
     def name(cls):
-        return 'OME_Zarr_Writer'
+        return 'MP_OME_Zarr_Writer'
 
     @classmethod
     def wizard_parameters(cls):
@@ -40,13 +40,13 @@ class FakeWriter:
 def page():
     class FakeWizard(QtWidgets.QWizard):
         cfg = types.ModuleType('cfg')
-        selected_writer = {'name': 'OME_Zarr_Writer', 'writer_class': FakeWriter}
+        selected_writer = {'name': 'MP_OME_Zarr_Writer', 'writer_class': FakeWriter}
         num_of_pages = 4
         writer_parameters = None
         apply_writer_parameters = FilenameWizard.apply_writer_parameters
 
     wizard = FakeWizard()
-    wizard.cfg.OME_Zarr_Writer = {'compression': 'lz4'}   # a config file entry
+    wizard.cfg.MP_OME_Zarr_Writer = {'compression': 'lz4'}   # a config file entry
     p = WriterParameterPage(wizard)
     p.initializePage()
     return p
@@ -70,7 +70,7 @@ def test_edits_reach_the_config_attribute_the_writer_reads(page):
     page.validatePage()
     page.parent.apply_writer_parameters()
 
-    cfg_entry = page.parent.cfg.OME_Zarr_Writer
+    cfg_entry = page.parent.cfg.MP_OME_Zarr_Writer
     assert cfg_entry['shards'] == (32, 2048, 2048)
     assert cfg_entry['write_cache'] == r'D:\scratch'
     assert cfg_entry['compression'] is None
