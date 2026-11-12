@@ -101,6 +101,12 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Measure field flatness and axial chromatic shift from Ronchi-grating stacks.
 
+   .. grid-item-card:: :octicon:`file-zip` TIFF to OME-Zarr
+      :link: tiff_to_omezarr
+      :link-type: doc
+
+      Convert TIFF tiles and channels to sharded OME-Zarr pyramids with a BigStitcher XML.
+
    .. grid-item-card:: :octicon:`filter` Image Processing Plugins
       :link: image_processors
       :link-type: doc
@@ -134,6 +140,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    file_formats
    psf_analysis
    field_curvature
+   tiff_to_omezarr
    image_processors
    timelapse
    remote_control/index

@@ -481,6 +481,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.menuUtils.addAction(self.actionField_Curvature)
         self.actionField_Curvature.triggered.connect(self.launch_field_curvature_window)
 
+        # Add TIFF -> OME-Zarr converter to Utils menu
+        self.actionTiff_To_OmeZarr = QtWidgets.QAction("Convert TIFF stacks to OME-Zarr", self)
+        self.menuUtils.addAction(self.actionTiff_To_OmeZarr)
+        self.actionTiff_To_OmeZarr.triggered.connect(self.launch_tiff_to_omezarr_window)
+
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
@@ -1091,6 +1096,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         pixel_pitch_micron = self.cfg.camera_parameters['x_pixel_size_in_microns']
         args = self._system_parameter_args(mag, pixel_pitch_micron, None)
         self._launch_utils_tool('field_curvature_gui_qt.py', args, "Field curvature analysis")
+
+    def launch_tiff_to_omezarr_window(self):
+        """Open the TIFF -> OME-Zarr converter (utils/tiff_to_omezarr.py) as a separate process,
+        so a long conversion never blocks the GUI. Its file dialogs start in the acquisition folder."""
+        args = ['--gui']
+        try:
+            folder = self.state['folder']
+        except Exception:
+            folder = None
+        if folder and os.path.isdir(folder):
+            args += ['--start-dir', folder]
+        self._launch_utils_tool('tiff_to_omezarr.py', args, "TIFF to OME-Zarr")
 
     @staticmethod
     def _system_parameter_args(mag, pixel_pitch_micron, z_step_micron):

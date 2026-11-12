@@ -107,6 +107,12 @@ writing happens:
 Both save multi-resolution pyramids natively, with compression, and can
 optionally emit an XML file for drag-and-drop stitching in BigStitcher.
 
+.. tip::
+
+   Data already saved as TIFF can be converted to the same OME-Zarr layout
+   afterwards with the :doc:`TIFF to OME-Zarr converter <tiff_to_omezarr>`
+   (**Utils → Convert TIFF stacks to OME-Zarr**).
+
 .. code-block:: python
 
    OME_Zarr_Writer = {
@@ -120,7 +126,7 @@ optionally emit an XML file for drag-and-drop stitching in BigStitcher.
        'async_finalize': True,        # let the next tile start before this one's pyramid finishes
 
        # BigStitcher-specific
-       'write_big_stitcher_xml': True,       # only takes effect for ome_version == '0.4'
+       'write_big_stitcher_xml': True,       # ome_version '0.4' and '0.5'
        'flip_xyz': (True, True, False),      # match BigStitcher coordinates to mesoSPIM axes
        'transpose_xy': False,                # swap X/Y if tile positions come out wrong
    }
@@ -133,9 +139,10 @@ optionally emit an XML file for drag-and-drop stitching in BigStitcher.
 
 .. note::
 
-   The BigStitcher XML export only works with ``ome_version: '0.4'`` (zarr
-   v2). Choosing ``'0.5'`` gets you sharding (fewer files on disk) but no
-   BigStitcher XML.
+   The BigStitcher XML is written for both ``ome_version: '0.4'`` (zarr v2)
+   and ``'0.5'`` (zarr v3, sharding). It records the zarr version, so
+   BigStitcher opens the container with the matching reader (verified with
+   sharded 0.5 data in BigStitcher 3.0.8).
 
 .. important::
 
