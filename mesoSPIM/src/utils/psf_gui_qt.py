@@ -43,7 +43,139 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_pdf import PdfPages
 
-from tifffile import imread, imwrite
+from tifffile import imread, imwrite, TiffFile
+
+
+def _px_size_from_tiff_tags(tif):
+    """Lateral pixel size in µm from the standard X/YResolution tags, or None.
+
+    Accepts inch/cm resolution units, or no unit when ImageJ metadata says the
+    unit is microns. Ignores the meaningless default resolution of 1."""
+    try:
+        page = tif.pages[0]
+        tag = page.tags.get("XResolution")
+        if tag is None:
+            return None
+        num, den = tag.value
+        px_per_unit = num / den
+        if px_per_unit <= 0 or px_per_unit == 1:
+            return None
+        # A unit written in ImageJ / tifffile-JSON metadata wins over the tag:
+        # mesoSPIM's BigTIFF writer stores px/µm but leaves the tag at "inch".
+        if str(_tiff_meta(tif).get("unit", "")).lower() in ("micron", "microns", "um", "µm", "\\u00b5m"):
+            px_um = 1.0 / px_per_unit
+        else:
+            unit_tag = page.tags.get("ResolutionUnit")
+            unit = int(unit_tag.value) if unit_tag is not None else 2
+            if unit == 2:      # inch
+                px_um = 25400.0 / px_per_unit
+            elif unit == 3:    # centimeter
+                px_um = 10000.0 / px_per_unit
+            else:
+                return None
+        # Ignore implausible values for a microscope (e.g. a mislabeled unit)
+        return px_um if 0.001 <= px_um <= 100 else None
+    except Exception:
+        return None
+
+
+def _tiff_meta(tif):
+    """ImageJ metadata, or tifffile's JSON 'shaped' metadata, as a dict."""
+    try:
+        if tif.is_imagej and tif.imagej_metadata:
+            return tif.imagej_metadata
+        if tif.is_shaped and tif.shaped_metadata:
+            return tif.shaped_metadata[0]
+    except Exception:
+        pass
+    return {}
+
+
+def read_zstack(path):
+    """
+    Read a TIFF as a (Z, Y, X) stack, reducing any extra axes.
+
+    Plain mesoSPIM stacks are already ZYX and come back unchanged. Files from
+    other software (e.g. ScanImage) can carry extra axes, such as several frames
+    per Z slice ('T', e.g. ZTYX) or several channels ('C'):
+      - frame/time-like axes are averaged; a voxel saturated in any of the
+        averaged frames is kept at the dtype's max value, so the saturation
+        check in load_stack() still excludes those beads;
+      - channel axes keep only the first channel.
+
+    Returns (im, info), where info is a dict with 'notes' (list of str, what was
+    reduced), 'z_step_um' and 'px_lateral_um' (float or None each, from
+    ScanImage / ImageJ / TIFF resolution metadata when present).
+    """
+    info = {"notes": [], "z_step_um": None, "px_lateral_um": None}
+    with TiffFile(path) as tif:
+        series = tif.series[0]
+        im = series.asarray()
+        axes = series.axes.upper()
+        if tif.is_scanimage:
+            try:
+                fd = tif.scanimage_metadata.get("FrameData", {})
+                dz = fd.get("SI.hStackManager.actualStackZStepSize",
+                            fd.get("SI.hStackManager.stackZStepSize"))
+                if dz is not None and float(dz) > 0:
+                    info["z_step_um"] = abs(float(dz))
+                # Imaging FOV corners in µm (zoom already applied) / pixels per line
+                fov = np.asarray(fd.get("SI.hRoiManager.imagingFovUm"), dtype=float)
+                npx = float(fd.get("SI.hRoiManager.pixelsPerLine"))
+                width_um = fov[:, 0].max() - fov[:, 0].min()
+                if width_um > 0 and npx > 0:
+                    info["px_lateral_um"] = width_um / npx
+            except Exception:
+                pass
+        if info["px_lateral_um"] is None:
+            info["px_lateral_um"] = _px_size_from_tiff_tags(tif)
+
+        if info["z_step_um"] is None:
+            try:
+                dz = float(_tiff_meta(tif).get("spacing", 0))
+                if dz > 0:
+                    info["z_step_um"] = dz
+            except Exception:
+                pass
+
+    # Drop singleton axes first
+    keep = [i for i, n in enumerate(im.shape) if n > 1 or axes[i] in "YX"]
+    if len(keep) != im.ndim:
+        im = im.reshape([im.shape[i] for i in keep])
+        axes = "".join(axes[i] for i in keep)
+
+    if axes == "ZYX" or im.ndim == 3 and axes.endswith("YX") and "Z" not in axes:
+        # Already a 3D stack (an unlabeled leading axis is taken as Z)
+        return im, info
+
+    # Channels: keep the first one
+    for ax_name in "CS":
+        if ax_name in axes and im.ndim > 3:
+            i = axes.index(ax_name)
+            info["notes"].append(f"kept channel 1 of {im.shape[i]}")
+            im = np.take(im, 0, axis=i)
+            axes = axes[:i] + axes[i + 1:]
+
+    # Frames per slice / repeated volumes: average them
+    avg_axes = tuple(i for i, a in enumerate(axes) if a not in "ZYX")
+    if "Z" not in axes and avg_axes:
+        # No explicit Z axis: treat the first non-YX axis as Z
+        avg_axes = avg_axes[1:]
+    if avg_axes:
+        n = int(np.prod([im.shape[i] for i in avg_axes]))
+        info["notes"].append(
+            f"averaged {n} frames per slice ({axes} -> ZYX)")
+        mean = im.mean(axis=avg_axes, dtype=np.float64)
+        if np.issubdtype(im.dtype, np.integer):
+            sat = np.any(im == np.iinfo(im.dtype).max, axis=avg_axes)
+            mean = np.rint(mean).astype(im.dtype)
+            mean[sat] = np.iinfo(im.dtype).max
+        im = mean
+
+    if im.ndim != 3:
+        raise ValueError(f"Could not reduce stack with axes '{series.axes}' "
+                         f"and shape {series.shape} to ZYX")
+    return im, info
 
 
 # =============================
@@ -415,9 +547,9 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         params_layout.addWidget(QtWidgets.QLabel("Magnification:"))
         self.mag_edit = QtWidgets.QDoubleSpinBox()
-        self.mag_edit.setRange(0.1, 100.0)
+        self.mag_edit.setRange(0.1, 10000.0)
+        self.mag_edit.setDecimals(3)
         self.mag_edit.setValue(self.mag)
-        self.mag_edit.setDecimals(2)
         self.mag_edit.setSingleStep(1.0)
         self.mag_edit.valueChanged.connect(self.update_system_parameters)
         params_layout.addWidget(self.mag_edit)
@@ -654,13 +786,29 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         if not fname:
             return
 
+        self.open_path(fname)
+
+    def open_path(self, path):
+        """Read a TIFF (mesoSPIM ZYX, or e.g. ScanImage ZTYX) and load it."""
         try:
-            im = imread(fname)
+            im, info = read_zstack(path)
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
             return
-
-        self.load_stack(im, filename=fname)
+        if info["z_step_um"] is not None:
+            # Z step from file metadata overrides the current setting
+            self.px_axial_edit.setValue(info["z_step_um"])
+            info["notes"].append(f"Z step {info['z_step_um']:g} µm from file metadata")
+        if info["px_lateral_um"] is not None:
+            # Lateral pixel = pitch / mag: keep the pitch, set the magnification
+            pitch = float(self.pixel_pitch_edit.value())
+            self.mag_edit.setValue(pitch / info["px_lateral_um"])
+            info["notes"].append(
+                f"lateral pixel {info['px_lateral_um']:.4g} µm from file metadata "
+                f"(magnification set to {self.mag_edit.value():.3f} for {pitch:g} µm pitch)")
+        self.load_stack(im, filename=path)
+        if info["notes"]:
+            self.info_label.setText(self.info_label.text() + " — " + "; ".join(info["notes"]))
 
     def dragEnterEvent(self, event):
         urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
@@ -671,12 +819,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         for url in event.mimeData().urls():
             path = url.toLocalFile()
             if path.lower().endswith((".tif", ".tiff")):
-                try:
-                    im = imread(path)
-                except Exception as e:
-                    QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
-                    return
-                self.load_stack(im, filename=path)
+                self.open_path(path)
                 return
 
     def simulate_demo(self):
@@ -1155,11 +1298,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     win = PSFMainWindow(mag=args.mag, pixel_pitch_micron=args.pixel_pitch, z_step_micron=args.z_step)
     if args.tiff_path:
-        try:
-            im = imread(args.tiff_path)
-            win.load_stack(im, filename=args.tiff_path)
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(win, "Error", f"Failed to open file:\n{e}")
+        win.open_path(args.tiff_path)
     win.show()
     sys.exit(app.exec_())
 
