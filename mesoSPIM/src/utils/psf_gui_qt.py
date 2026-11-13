@@ -406,6 +406,31 @@ def compute(im, options):
     return psf_list, beads, maxima, centers, smoothed
 
 
+def _nice_length(x):
+    """Largest 1/2/5 x 10^k value <= x (x > 0)."""
+    if not np.isfinite(x) or x <= 0:
+        return 1.0
+    k = np.floor(np.log10(x))
+    for m in (5.0, 2.0, 1.0):
+        if m * 10 ** k <= x:
+            return float(m * 10 ** k)
+    return float(10 ** k)
+
+
+def _add_scalebar(ax, length_um, extent):
+    """White horizontal scale bar with label in the lower-right corner of an
+    image axis whose data coordinates are in µm (extent = x0, x1, y0, y1)."""
+    x0, x1, y0, y1 = extent
+    w, h = x1 - x0, y1 - y0
+    xe = x1 - 0.06 * w
+    yb = y0 + 0.08 * h
+    ax.plot([xe - length_um, xe], [yb, yb], color="white", lw=2.5,
+            solid_capstyle="butt")
+    label = f"{length_um:g} µm"
+    ax.text(xe - length_um / 2, yb + 0.03 * h, label, color="white",
+            ha="center", va="bottom", fontsize=7)
+
+
 def plot_psf_subplot(ax, fit_tuple, scale, Max, title):
     x, y, yFit, FWHM = fit_tuple
 
@@ -1026,8 +1051,8 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
     def save_png_figure(self):
         """
-        Save the current 4-panel figure (histograms + PSF maps)
-        as a single PNG at 300 DPI.
+        Save the current figure (histograms, PSF maps, and XY/XZ/YZ max
+        projections of the averaged PSF) as a single PNG at 300 DPI.
         """
         if self.stats_df is None or self.stats_df.empty or self.smoothed is None:
             QtWidgets.QMessageBox.warning(self, "Warning", "No plots to save yet.")
@@ -1044,7 +1069,7 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         if not fname.lower().endswith(".png"):
             fname += ".png"
 
-        EXPORT_W_IN, EXPORT_H_IN = 9.0, 12.0  # fixed export dimensions (inches @ 300 DPI), 3:4
+        EXPORT_W_IN, EXPORT_H_IN = 9.0, 15.0  # fixed export dimensions (inches @ 300 DPI)
         try:
             from matplotlib.backends.backend_agg import FigureCanvasAgg
             export_fig = plt.Figure(figsize=(EXPORT_W_IN, EXPORT_H_IN), dpi=300)
@@ -1191,9 +1216,10 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         (used for PNG export)."""
         import matplotlib.gridspec as gridspec
 
+        avg_psf, n_avg = self._average_bead_psf()
         gs = gridspec.GridSpec(
-            2, 2,
-            height_ratios=[1.0, 2.5],
+            3 if avg_psf is not None else 2, 2,
+            height_ratios=[1.0, 2.5, 1.6] if avg_psf is not None else [1.0, 2.5],
             width_ratios=[1.0, 1.0],
             figure=fig
         )
@@ -1256,6 +1282,52 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         ax_im_lat.set_xlabel("FOV_X (µm)")
         ax_im_lat.set_ylabel("FOV_Y (µm)")
         fig.colorbar(overlay1, ax=ax_im_lat, fraction=0.040, pad=0.02).set_label("FWHM (µm)")
+
+        if avg_psf is not None:
+            self._plot_psf_projections(fig, gs[2, :], avg_psf, n_avg)
+
+    def _average_bead_psf(self):
+        """Mean of the normalised bead sub-volumes used for fitting (Z, Y, X),
+        or (None, 0) if there are none. All share the analysis window, centred
+        on each bead's peak."""
+        if not self.beads:
+            return None, 0
+        vols = [b for b in self.beads if b is not None and b.size]
+        if not vols:
+            return None, 0
+        shape = vols[0].shape
+        vols = [v for v in vols if v.shape == shape]
+        return np.mean(np.stack(vols, axis=0), axis=0), len(vols)
+
+    def _plot_psf_projections(self, fig, subplot_spec, avg_psf, n_beads):
+        """XY, XZ and YZ maximum-intensity projections of the averaged PSF,
+        drawn to scale in µm with the bead centre at (0, 0)."""
+        nz, ny, nx = avg_psf.shape
+        dz, dl = self.px_axial_micron, self.px_lateral_micron
+        hz, hy, hx = nz * dz / 2, ny * dl / 2, nx * dl / 2
+        vmax = max(float(avg_psf.max()), 1e-9)
+        views = [
+            ("XY", avg_psf.max(axis=0), (-hx, hx, -hy, hy), "X", "Y"),
+            ("XZ", avg_psf.max(axis=1), (-hx, hx, -hz, hz), "X", "Z"),
+            ("YZ", avg_psf.max(axis=2), (-hy, hy, -hz, hz), "Y", "Z"),
+        ]
+        # One scale bar length for all panels (same µm scale, aspect equal):
+        # a 1/2/5 x 10^k value close to a quarter of the narrowest panel width.
+        bar_um = _nice_length(0.25 * min(2 * hx, 2 * hy))
+        sub = subplot_spec.subgridspec(1, 3, wspace=0.25)
+        im = None
+        for i, (name, proj, extent, xl, yl) in enumerate(views):
+            ax = fig.add_subplot(sub[0, i])
+            # origin="lower" with extent: row 0 (first Z / Y) at the bottom
+            im = ax.imshow(proj, cmap="magma", vmin=0, vmax=vmax, origin="lower",
+                           extent=extent, aspect="equal", interpolation="nearest")
+            ax.set_title(f"Avg PSF {name} (n={n_beads})", fontsize=9)
+            ax.set_xlabel(xl, fontsize=8)
+            ax.set_ylabel(yl, fontsize=8)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            _add_scalebar(ax, bar_um, extent)
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).ax.tick_params(labelsize=7)
 
     def update_plots(self):
         if self.stats_df is None or self.stats_df.empty or self.smoothed is None:
