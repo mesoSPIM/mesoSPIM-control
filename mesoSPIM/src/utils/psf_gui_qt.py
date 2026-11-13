@@ -32,7 +32,7 @@ import pandas as pd
 
 from PyQt5 import QtCore, QtWidgets
 
-from skimage.filters import gaussian
+from skimage.filters import gaussian, threshold_otsu
 from skimage.feature import peak_local_max
 from scipy.optimize import curve_fit
 from sklearn.metrics import pairwise_distances
@@ -236,6 +236,61 @@ def findBeads(im, window, thresh, min_dist=1):
     )
     print(f"findBeads() done: {len(centers)} found")
     return centers, smoothed.max(axis=0)   # <-- 2D image here
+
+
+def estimate_threshold(im, k=4.0, max_voxels=64_000_000):
+    """
+    Estimate a 'Min intensity' threshold for findBeads() from the image itself.
+
+    The stack is smoothed exactly as in findBeads(), and every local maximum
+    rising more than 5 voxel-noise sigmas above the background (median) is
+    collected. If their heights are clearly bimodal on a log scale (noise
+    peaks vs. a dense bead population), the threshold is the Otsu split
+    between the two modes. Otherwise (sparse beads, noise peaks dominate) it
+    is background + median(peak height) + k * MAD(peak height): above the
+    noise-peak population but well below the bright bead peaks.
+
+    Large stacks are cropped laterally (centred, full Z) to about max_voxels for speed.
+    Returns (threshold, description string).
+    """
+    im = np.asarray(im)
+    nz, ny, nx = im.shape
+    if im.size > max_voxels:
+        side = int(np.sqrt(max_voxels / nz))
+        cy, cx = min(side, ny), min(side, nx)
+        y0, x0 = (ny - cy) // 2, (nx - cx) // 2
+        im = im[:, y0:y0 + cy, x0:x0 + cx]
+    smoothed = gaussian(im.astype(np.float32), 1, mode="nearest",
+                        truncate=1.0, preserve_range=True)
+    bg = float(np.median(smoothed))
+    sigma = 1.4826 * float(np.median(np.abs(smoothed - bg)))
+    vmax = float(smoothed.max())
+    fallback = bg + 0.2 * (vmax - bg)
+    if sigma <= 0 or vmax <= bg:
+        # noise-free (e.g. simulated) data: take 20% of the brightest peak
+        return fallback, f"noise-free image: 20% of max above background {bg:.1f}"
+    peaks = peak_local_max(smoothed, min_distance=1, threshold_abs=bg + 5 * sigma,
+                           exclude_border=True)
+    if len(peaks) < 20:
+        return fallback, f"only {len(peaks)} local maxima: 20% of max above background {bg:.1f}"
+    h = smoothed[tuple(peaks.T)] - bg
+    stats = f"background {bg:.1f}, noise sigma {sigma:.1f}, {len(peaks)} local maxima"
+
+    # Dense bead stacks: peak heights are bimodal in log scale (noise vs beads).
+    # If the Otsu split falls in a deep valley, use it.
+    lh = np.log10(h)
+    t = threshold_otsu(lh)
+    counts, edges = np.histogram(lh, bins=50)
+    i_t = int(np.clip(np.searchsorted(edges, t) - 1, 0, len(counts) - 1))
+    lo, hi = counts[:i_t + 1], counts[i_t:]
+    valley = counts[max(i_t - 1, 0):i_t + 2].min()
+    if lo.max() > 0 and hi.max() > 0 and valley < 0.1 * min(lo.max(), hi.max()):
+        return bg + 10 ** t, f"{stats}; bimodal peak heights, Otsu split"
+
+    # Sparse beads: noise peaks dominate, put the threshold above their spread.
+    med = float(np.median(h))
+    mad = 1.4826 * float(np.median(np.abs(h - med)))
+    return bg + med + k * mad, f"{stats}; median height {med:.1f} + {k:g} x MAD {mad:.1f}"
 
 
 def getCenters(im, options):
@@ -607,10 +662,18 @@ class PSFMainWindow(QtWidgets.QMainWindow):
 
         controls.addWidget(QtWidgets.QLabel("Min intensity:"))
         self.thresh_edit = QtWidgets.QDoubleSpinBox()
-        self.thresh_edit.setRange(0, 20000)
+        self.thresh_edit.setRange(-1e6, 1e9)
         self.thresh_edit.setValue(self.options["thresh"])
         self.thresh_edit.setDecimals(1)
         controls.addWidget(self.thresh_edit)
+        self.auto_thresh_button = QtWidgets.QPushButton("Auto")
+        self.auto_thresh_button.setToolTip(
+            "Estimate the threshold from the loaded stack's local-maximum heights: "
+            "the noise/bead split if they are bimodal, else background + median + 4×MAD "
+            "(above the noise peaks, below the beads). Done automatically on load."
+        )
+        self.auto_thresh_button.clicked.connect(self.auto_threshold)
+        controls.addWidget(self.auto_thresh_button)
 
         controls.addSpacing(10)
         controls.addWidget(QtWidgets.QLabel("Min dist betw beads (µm):"))
@@ -950,6 +1013,20 @@ class PSFMainWindow(QtWidgets.QMainWindow):
         self.clear_plots()
         self.psf_list = self.beads = self.maxima = self.centers = self.smoothed = None
         self.stats_df = None
+        self.auto_threshold()
+
+    def auto_threshold(self):
+        """Set 'Min intensity' to an estimate computed from the loaded stack."""
+        if self.im is None:
+            return
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        try:
+            thresh, how = estimate_threshold(self.im)
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+        self.thresh_edit.setValue(thresh)
+        self.thresh_edit.setToolTip(f"Auto estimate {thresh:.1f}: {how}")
+        print(f"auto threshold {thresh:.1f} ({how})")
 
     def _default_save_path(self, default_name):
         """Suggested path for a save dialog: *default_name* inside the folder the
