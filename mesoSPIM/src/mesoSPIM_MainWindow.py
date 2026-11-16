@@ -502,8 +502,10 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.menuUtils.addAction(self.actionTiff_To_OmeZarr)
         self.actionTiff_To_OmeZarr.triggered.connect(self.launch_tiff_to_omezarr_window)
 
-        # Help menu: online docs, ZMB Dozuki guides
+        # Help menu: project website, online docs, ZMB Dozuki guides
         self.menuHelp = self.menuBar.addMenu("Help")  # menuBar is the widget from the .ui file
+        self.menuHelp.addAction("mesoSPIM website",
+                                lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://mesospim.org/")))
         self.menuHelp.addAction("Documentation",
                                 lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://mesospim.github.io/mesoSPIM-control/")))
         self.menuHelp.addAction("ZMB Dozuki guides",
