@@ -502,6 +502,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.menuUtils.addAction(self.actionTiff_To_OmeZarr)
         self.actionTiff_To_OmeZarr.triggered.connect(self.launch_tiff_to_omezarr_window)
 
+        # Add beam profile analysis to Utils menu
+        self.actionBeam_Profile = QtWidgets.QAction("Analyse Beam Profile (snap of a static beam)", self)
+        self.menuUtils.addAction(self.actionBeam_Profile)
+        self.actionBeam_Profile.triggered.connect(self.launch_beam_profile_window)
+
         # Help menu: project website, online docs, ZMB Dozuki guides
         self.menuHelp = self.menuBar.addMenu("Help")  # menuBar is the widget from the .ui file
         self.menuHelp.addAction("About",
@@ -1243,6 +1248,46 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(self, title, f"Failed to launch {title} tool:\n{e}")
             return
         self._utils_tool_processes.append(proc)
+
+    @QtCore.pyqtSlot()
+    def launch_beam_profile_window(self):
+        """Start mesoSPIM/src/utils/beam_profile_gui_qt.py as an independent process, preloaded
+        with the last acquired TIFF stack, or empty (browse or drag and drop a file there).
+        Magnification comes from the acquisition's zoom (last stack) or the current zoom."""
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setWindowTitle("Beam profile")
+        msg_box.setText("Load the most recently acquired stack, or browse for a TIFF file yourself?")
+        last_button = msg_box.addButton("Last acquired stack", QtWidgets.QMessageBox.AcceptRole)
+        msg_box.addButton("Browse for TIFF file...", QtWidgets.QMessageBox.ActionRole)
+        cancel_button = msg_box.addButton(QtWidgets.QMessageBox.Cancel)
+        msg_box.exec_()
+        clicked = msg_box.clickedButton()
+        if clicked is None or clicked == cancel_button:
+            return
+
+        filename, zoom = None, self.state['zoom']
+        if clicked == last_button:
+            acq = getattr(self.core.image_writer, 'acq', None)
+            path = getattr(self.core.image_writer, 'path', None)
+            if acq is None or path is None or not os.path.isfile(path):
+                QtWidgets.QMessageBox.warning(self, "Beam profile", "No completed acquisition found yet.")
+                return
+            if not path.lower().endswith(('.tif', '.tiff')):
+                QtWidgets.QMessageBox.warning(self, "Beam profile", f"The last acquisition is not a TIFF file:\n{path}")
+                return
+            filename, zoom = path, acq['zoom']
+
+        script_path = os.path.join(os.path.dirname(__file__), 'utils', 'beam_profile_gui_qt.py')
+        cmd = [sys.executable, script_path,
+               '--pixel-pitch', str(self.cfg.camera_parameters['x_pixel_size_in_microns']),
+               '--mag', str(self._parse_zoom_magnification(zoom)),
+               '--dir', str(self.state['snap_folder'])]
+        if filename:
+            cmd.append(filename)
+        try:
+            subprocess.Popen(cmd)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Beam profile", f"Failed to launch beam profile tool:\n{e}")
 
     @staticmethod
     def _parse_zoom_magnification(zoom_string):

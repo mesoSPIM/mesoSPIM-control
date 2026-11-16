@@ -255,6 +255,16 @@ The Main window menu bar also has:
   :doc:`Field Curvature & Chromatic Shift <field_curvature>` tool for
   measuring field flatness and axial chromatic aberration from z-stacks of a
   Ronchi grating.
+* **Utils → Analyse Beam Profile** — opens the last acquired TIFF stack or a
+  chosen/dropped TIFF of a static beam (ETL and galvo not scanning, beam running
+  horizontally) and reports the effective illumination NA, the waist FWHM and the
+  beam length (range where the FWHM stays below sqrt2 x the waist FWHM). The pixel
+  size is camera pixel / magnification, prefilled from the configuration and zoom.
+  Drag vertically on the image (or set the row range) to crop to the stripe around
+  the beam, keeping some background above and below it. Saturated images are
+  flagged. Assumes a Gaussian beam with the detection focused on it; waist and
+  length include the detection blur, so they are upper bounds. Standalone:
+  ``python mesoSPIM/src/utils/beam_profile_gui_qt.py``.
 
 Running an acquisition
 ~~~~~~~~~~~~~~~~~~~~~~
