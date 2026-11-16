@@ -19,6 +19,8 @@ import uuid
 # renames it. The 41-char suffix pushes long paths over Windows MAX_PATH (260).
 # Replace it with '<name>.<8-hex>.tmp' (13 chars). Patched at import, so the
 # writer worker processes get it too. Skipped if zarr internals change.
+# ZARR_TEMP_SUFFIX_LEN is what the path-length pre-flight check reserves for it.
+ZARR_TEMP_SUFFIX_LEN = len('.' + 'f' * 32 + '.partial')
 try:
     import zarr.storage._local as _zarr_local
 
@@ -38,6 +40,7 @@ try:
 
     if hasattr(_zarr_local, '_atomic_write') and hasattr(_zarr_local, '_safe_move'):
         _zarr_local._atomic_write = _short_atomic_write
+        ZARR_TEMP_SUFFIX_LEN = len('.' + 'f' * 8 + '.tmp')
     else:
         print('omezarr_writer: zarr internals changed, keeping default temp file names')
 except ImportError as e:
