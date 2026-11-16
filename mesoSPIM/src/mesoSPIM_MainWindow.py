@@ -504,12 +504,14 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         # Help menu: project website, online docs, ZMB Dozuki guides
         self.menuHelp = self.menuBar.addMenu("Help")  # menuBar is the widget from the .ui file
-        self.menuHelp.addAction("mesoSPIM website",
+        self.menuHelp.addAction("About",
                                 lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://mesospim.org/")))
-        self.menuHelp.addAction("Documentation",
+        self.menuHelp.addAction("Online documentation",
                                 lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://mesospim.github.io/mesoSPIM-control/")))
         self.menuHelp.addAction("ZMB Dozuki guides",
                                 lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://zmb.dozuki.com/c/Lightsheet_microscopy#Section_MesoSPIM")))
+        self.menuHelp.addAction("YouTube videos",
+                                lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://www.youtube.com/@mesoSPIM/videos")))
 
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
