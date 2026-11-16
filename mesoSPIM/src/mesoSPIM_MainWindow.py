@@ -502,6 +502,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.menuUtils.addAction(self.actionTiff_To_OmeZarr)
         self.actionTiff_To_OmeZarr.triggered.connect(self.launch_tiff_to_omezarr_window)
 
+        # Help menu: online docs, ZMB Dozuki guides
+        self.menuHelp = self.menuBar.addMenu("Help")  # menuBar is the widget from the .ui file
+        self.menuHelp.addAction("Documentation",
+                                lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://mesospim.github.io/mesoSPIM-control/")))
+        self.menuHelp.addAction("ZMB Dozuki guides",
+                                lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://zmb.dozuki.com/c/Lightsheet_microscopy#Section_MesoSPIM")))
+
     def initialize_and_connect_widgets(self):
         """ Connecting the menu actions """
         self.openScriptEditorButton.clicked.connect(self.create_script_window)
