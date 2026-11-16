@@ -12,6 +12,39 @@ from dataclasses import dataclass
 from typing import Union, Tuple, Optional
 from enum import Enum
 from xml.etree import ElementTree as ET
+import contextlib
+import uuid
+
+# zarr's LocalStore writes each file as '<name>.<32-hex uuid>.partial' and then
+# renames it. The 41-char suffix pushes long paths over Windows MAX_PATH (260).
+# Replace it with '<name>.<8-hex>.tmp' (13 chars). Patched at import, so the
+# writer worker processes get it too. Skipped if zarr internals change.
+# ZARR_TEMP_SUFFIX_LEN is what the path-length pre-flight check reserves for it.
+ZARR_TEMP_SUFFIX_LEN = len('.' + 'f' * 32 + '.partial')
+try:
+    import zarr.storage._local as _zarr_local
+
+    @contextlib.contextmanager
+    def _short_atomic_write(path, mode, exclusive=False):
+        tmp_path = path.with_suffix(f".{uuid.uuid4().hex[:8]}.tmp")
+        try:
+            with tmp_path.open(mode) as f:
+                yield f
+            if exclusive:
+                _zarr_local._safe_move(tmp_path, path)
+            else:
+                tmp_path.replace(path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+
+    if hasattr(_zarr_local, '_atomic_write') and hasattr(_zarr_local, '_safe_move'):
+        _zarr_local._atomic_write = _short_atomic_write
+        ZARR_TEMP_SUFFIX_LEN = len('.' + 'f' * 8 + '.tmp')
+    else:
+        print('omezarr_writer: zarr internals changed, keeping default temp file names')
+except ImportError as e:
+    print(f'omezarr_writer: could not patch zarr temp file names: {e}')
 
 ### Multiscale writer ###
 

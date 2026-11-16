@@ -941,6 +941,7 @@ class mesoSPIM_Core(QtCore.QObject):
         filename_list = acq_list.check_for_existing_filenames()
         duplicates_list = acq_list.check_for_duplicated_filenames()
         files_without_extensions = acq_list.check_filename_extensions()
+        too_long_paths = acq_list.check_for_too_long_paths(self.cfg)
         free_disk_space_bytes = self.get_free_disk_space(acq_list)
         total_required_bytes = self.get_required_disk_space(acq_list)
         acqusitions_outside_motion_limits = self.check_motion_limits(acq_list)
@@ -956,6 +957,11 @@ class mesoSPIM_Core(QtCore.QObject):
             self.sig_finished.emit()
         elif files_without_extensions:
             self.sig_warning.emit('Some files have no extensions (.raw, .tiff, .h5) - stopping! \n' + self.list_to_string_with_carriage_return(files_without_extensions))
+            self.sig_finished.emit()
+        elif too_long_paths:
+            shown = too_long_paths[:5] + ([f'... and {len(too_long_paths) - 5} more'] if len(too_long_paths) > 5 else [])
+            self.sig_warning.emit('The writer would create file paths too long for Windows - '
+                                  'shorten the folder or filename. Stopping! \n' + self.list_to_string_with_carriage_return(shown))
             self.sig_finished.emit()
         elif free_disk_space_bytes < total_required_bytes * 1.1:
             self.sig_warning.emit(f'Insufficient disk space: \n'

@@ -114,7 +114,8 @@ class StageLimitGuard:
         Returns:
             (step, target, message): step to execute (the requested one, a shortened one, or
             None when refused), the physical position it ends at (None when refused), and a
-            message (None when the requested step is fine). Nothing is remembered: call
+            message (None when the requested step is fine and, for button moves, does not end at
+            the limit). Nothing is remembered: call
             accept(axis, target) once the move was sent.
         '''
         if axis not in self.limits or step == 0:
@@ -122,11 +123,16 @@ class StageLimitGuard:
         low, high = self.limits[axis]
         base = self.heading(axis, reported)
         new = base + step
-        # Inside the limits, or moving back toward them from outside: fine.
-        if _violation(new, low, high) <= _EPS or _violation(new, low, high) < _violation(base, low, high):
-            return step, new, None
         limit_name, limit = (f'{axis}_max', high) if step > 0 else (f'{axis}_min', low)
         unit = _unit(axis)
+        # Inside the limits, or moving back toward them from outside: fine.
+        if _violation(new, low, high) <= _EPS or _violation(new, low, high) < _violation(base, low, high):
+            # A button step ending where limit_status() greys out its arrow: say so, or the operator
+            # only sees a dead button.
+            guard = self._guard(axis)
+            if clamp and (new >= high - guard - _EPS if step > 0 else new <= low + guard + _EPS):
+                return step, new, f'{axis.upper()} reached the soft limit ({limit_name} = {limit:g}{unit}).'
+            return step, new, None
         if clamp:
             stop_at = high - self._guard(axis) if step > 0 else low + self._guard(axis)
             allowed = stop_at - base

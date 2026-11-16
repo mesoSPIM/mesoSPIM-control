@@ -361,6 +361,40 @@ class AcquisitionList(list):
         
         return nonexisting_folders
 
+    # Windows MAX_PATH: 260 chars for a whole path, incl. the terminating NUL. Exceeding it makes a
+    # writer fail with a misleading FileNotFoundError mid-acquisition. (The 255-char limit for one
+    # file/folder name can't bind first: such a name already makes the whole path > 259.)
+    MAX_PATH_LEN = 259
+    # Writers without longest_write_paths() put metadata and MAX projection files next to the
+    # data file: '<file>_meta.txt', 'MAX_<file>.tif', '<file>_s123-t0_meta.txt' (H5).
+    GENERIC_WRITER_RESERVE = 20
+
+    def check_for_too_long_paths(self, cfg=None):
+        ''' Returns a description of every acquisition whose files would exceed the Windows path
+        limits (Windows only). Writers that define longest_write_paths() report the real longest
+        path they create, e.g. OME-Zarr adds a tile group, chunk folders, zarr's temporary-file
+        suffix and the optional write_cache location. `cfg` supplies per-writer config values.
+        '''
+        if os.name != 'nt':
+            return []
+        from ..plugins.utils import get_image_writer_class_from_name, resolve_image_writer_name
+        from .utility_functions import replace_with_underscores
+        too_long = []
+        for acq in self:
+            # same uri as mesoSPIM_ImageWriter.prepare_acquisition() builds
+            uri = os.path.realpath(acq['folder'] + '/' + replace_with_underscores(acq['filename']))
+            writer_name = resolve_image_writer_name(acq['image_writer_plugin'])
+            writer = get_image_writer_class_from_name(writer_name)
+            if hasattr(writer, 'longest_write_paths'):
+                writer_config = getattr(cfg, writer_name, None) if cfg is not None else None
+                paths = writer.longest_write_paths(uri, acq, self, writer_config)
+            else:
+                paths = [(uri, len(uri) + self.GENERIC_WRITER_RESERVE)]
+            for path, length in paths:
+                if length > self.MAX_PATH_LEN:
+                    too_long.append(f'{path}\n  -> longest file path {length} chars, limit {self.MAX_PATH_LEN}')
+        return too_long
+
     def get_duplicates_in_list(self, in_list):
         duplicates = []
         unique = set(in_list)

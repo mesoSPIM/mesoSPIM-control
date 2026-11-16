@@ -56,7 +56,7 @@ from plugins.support_files.ImageWriters.OmeZarrWriterMP.omezarr_writer import (
     Live3DPyramidWriter, plan_levels,
     compute_xy_only_levels, FlushPad,
     BloscCodec, BloscShuffle,
-    XmlWriter, omezarr_writer_worker
+    XmlWriter, omezarr_writer_worker, ZARR_TEMP_SUFFIX_LEN
 )
 
 
@@ -226,6 +226,39 @@ class OMEZarrWriterMP(ImageWriter):
             'write_cache': (None, 'Scratch directory (a fast NVMe) the tile is written to before being moved to the acquisition folder, or None'),
         }
 
+    @staticmethod
+    def group_name(acq, acq_list) -> str:
+        '''Descriptive name of the per-tile .ome.zarr group written inside the acquisition file.'''
+        mag = acq['zoom'].removesuffix('x')  # '2x' -> '2'; '20x_custom(t25)' stays whole
+        laser = acq['laser'].removesuffix('nm').strip().replace(' ', '_')  # '488 nm', '488nm' -> '488'
+        rot = acq['rot']
+        shutter_id = 0 if acq['shutterconfig'] == 'Left' else 1
+        tile = acq_list.get_tile_index(acq)
+        filter = acq['filter'].replace(' ', '_').replace('/', '_')  # clean up filter name for filename
+        return f'Mag{mag}_Tile{tile}_Ch{laser}_Flt{filter}_Sh{shutter_id}_Rot{rot}.ome.zarr'
+
+    # Longest key zarr writes inside a tile group: '/<level>/c/<z>/<y>/<x>' (zarr v3 chunk/shard
+    # keys; v2 keys and the zarr.json/.zarray files are shorter).
+    # ponytail: fixed digit budget, holds for <100 levels, <100000 z-chunks, <1000 xy-chunks.
+    _LONGEST_ZARR_KEY = len('/99/c/99999/999/999')
+
+    @classmethod
+    def longest_write_paths(cls, uri: str, acq, acq_list, writer_config=None) -> list[tuple[str, int]]:
+        '''Where this writer puts files for one acquisition, and the length of the longest file path
+        it creates there: [(folder, longest path length)]. Used by the pre-flight check against
+        the Windows path limits. `uri` is the acquisition file path, as passed in WriteRequest.'''
+        p = {key: default for key, (default, _help) in cls.wizard_parameters().items()}
+        p.update(writer_config or {})
+        group = cls.group_name(acq, acq_list)
+        tail = cls._LONGEST_ZARR_KEY + ZARR_TEMP_SUFFIX_LEN
+        group_path = os.path.join(uri, group)
+        paths = [(group_path, len(group_path) + tail)]
+        if p['write_cache']:
+            # omezarr_writer_worker writes to <write_cache>/<YYYYmmdd_HHMMSS>_<group>.<12 hex> first
+            cache_path = os.path.join(os.path.realpath(p['write_cache']), f'{"0" * 15}_{group}.{"0" * 12}')
+            paths.append((cache_path, len(cache_path) + tail))
+        return paths
+
     def open(self, req: WriteRequest) -> None:
         assert self.compatible_suffix(req), f'URI suffix not compatible with {self.name()}'
 
@@ -253,22 +286,10 @@ class OMEZarrWriterMP(ImageWriter):
         acq_list = req.acq_list
 
         # Logic for naming files and metadata
-        # Define descriptive group name for this tile
-        mag = acq['zoom'][:-1]  # remove x at end
-        laser = acq['laser'][:-3]  # remove nm at end
-        rot = acq['rot']
-        shutter_id = acq['shutterconfig']
-        shutter_id = 0 if shutter_id == 'Left' else 1
-        tile = acq_list.get_tile_index(acq)
-        filter = acq['filter']
-        filter = filter.replace(' ', '_').replace('/', '_')  # clean up filter name for filename
-        group_name = f'Mag{mag}_Tile{tile}_Ch{laser}_Flt{filter}_Sh{shutter_id}_Rot{rot}.ome.zarr'
-        self.omezarr_group_name = group_name
+        self.omezarr_group_name = self.group_name(acq, acq_list)
 
         self.current_acquire_file_path = req.uri + '/' + self.omezarr_group_name
 
-        self.metadata_file_path = req.uri + '_' + self.omezarr_group_name + '_meta.txt'
-        # self.MIP_path = self.first_folder + '/MAX_' + self.filename + '_' + self.omezarr_group_name + '.tiff'
         self.big_stitcher_xml_filename = str(req.uri) + '.xml'
 
         # create writer object if the view is first in the list
@@ -564,12 +585,15 @@ class OMEZarrWriterMP(ImageWriter):
         This may need to be overwritten if FileNaming(SingleFileFormat=True)
         """
 
-        self.metadata_file = self.req.uri + f'_{self.omezarr_group_name}_meta.txt'
+        # '<file>_<tile group>' without the two '.ome.zarr' suffixes, which carried no information.
+        # Must stay unique per tile: mesoSPIM_ImageWriter.write_metadata() opens it with 'w'.
+        uri = Path(self.req.uri)
+        name = f"{uri.name.removesuffix('.ome.zarr')}_{self.omezarr_group_name.removesuffix('.ome.zarr')}"
+        self.metadata_file = str(uri.with_name(name + '_meta.txt'))
         self.metadata_file_describes_this_path = Path(self.current_acquire_file_path).as_posix()
 
         # Placeholder prior to adding data processing plugins
-        path = Path(self.req.uri + f'_{self.omezarr_group_name}')
-        self.MIP_path = path.with_name('MAX_' + path.name + '.tif').as_posix()
+        self.MIP_path = uri.with_name('MAX_' + name + '.tif').as_posix()
 
     def _wait_for_background_writers(self):
         for i, (proc, shm_name) in enumerate(self._background_writers):

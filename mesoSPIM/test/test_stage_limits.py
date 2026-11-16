@@ -72,6 +72,17 @@ def test_button_at_the_limit_does_not_move_toward_it_but_can_move_away():
     assert guard.check_relative('x', -100, 995, clamp=True)[0] == -100
 
 
+def test_button_step_ending_at_the_limit_says_so():
+    # The arrow greys out after such a step, so a later click can't show a message: this one must.
+    guard, _ = make_guard(guard_um=10)
+    for start in (900, 895):  # ends exactly at x_max, or inside the guard
+        step, target, message = guard.check_relative('x', 100, start, clamp=True)
+        assert step == 100 and 'reached the soft limit' in message and 'x_max' in message
+    assert 'x_min' in guard.check_relative('x', -100, -900, clamp=True)[2]
+    assert guard.check_relative('x', 100, 850, clamp=True)[2] is None  # ends 50 short: no message
+    assert guard.check_relative('x', 100, 900)[2] is None  # acquisition/script steps stay quiet
+
+
 def test_the_old_three_step_margin_is_gone():
     # 600 from the limit with a 250 step: the old check (pos + 3 * step) refused this.
     guard, _ = make_guard()
