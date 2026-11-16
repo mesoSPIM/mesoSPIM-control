@@ -229,7 +229,7 @@ For ZWO EFW Mini 5-slot wheel: positions 0, 1, .. 4.
 '''
 
 filterdict = {'Empty' : 0, # Every config should contain this
-              '405-488-561-640-Quadrupleblock' : 1,
+              '405-488-561-640-Quad' : 1,
               '488LB RazorEdge': 2,
               '520/35 BrightLine': 3,
               '595/31 BrightLine': 4,
@@ -257,7 +257,7 @@ zoomdict = {'2x' : 4,
             '5x' : 6,
             '7.5x' : 7,
             '10x' : 8,
-            '20x' : 9,
+            '20x(t25)' : 9,
             }
 '''
 Pixelsize in micron
@@ -266,7 +266,7 @@ pixelsize = {'2x' : 4.25/2,
             '5x' : 4.25/5,
             '7.5x' : 4.25/7.5,
             '10x' : 4.25/10,
-            '20x' : 4.25/20,
+            '20x(t25)' : 4.25/20,
             }
 
 '''
@@ -317,6 +317,7 @@ is finalized in the background. On systems with slow IO, data can accumulate in 
 Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
 to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
 '''
+
 '''Sharded OME-Zarr v0.5 at 12 FPS (benchmarked 2026-10-01).'''
 MP_OME_Zarr_Writer = {
     'ome_version': '0.5',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
