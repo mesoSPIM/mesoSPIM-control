@@ -361,6 +361,24 @@ class AcquisitionList(list):
         
         return nonexisting_folders
 
+    def check_for_too_long_paths(self, max_len=140):
+        ''' Returns full paths longer than max_len (Windows only).
+
+        Windows MAX_PATH is 260 chars. Writers append their own subpaths
+        (e.g. OME-Zarr: /Mag.._Tile.._Ch.._Flt.._Sh.._Rot...ome.zarr/0/c/..
+        plus zarr's temporary .<8-hex>.tmp suffix), so ~120 chars are
+        reserved for them. Exceeding the limit crashes the writer with a
+        misleading FileNotFoundError.
+        '''
+        if os.name != 'nt':
+            return []
+        too_long = []
+        for i in range(len(self)):
+            path = os.path.abspath(self[i]['folder']+'/'+self[i]['filename'])
+            if len(path) > max_len:
+                too_long.append(f'{path} ({len(path)} chars)')
+        return too_long
+
     def get_duplicates_in_list(self, in_list):
         duplicates = []
         unique = set(in_list)
