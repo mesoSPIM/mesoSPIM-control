@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASLM Scan Simulator</title>
+<!--
+  mesoSPIM ASLM scanning simulator. Self-contained: open this file in any modern browser.
+  Waveforms mirror mesoSPIM/src/utils/waveforms.py (tunable_lens_ramp, sawtooth, single_pulse)
+  and the parameter names of mesoSPIM_WaveFormGenerator. The optics/sample model is a teaching
+  model (Gaussian beam, first-order ETL lag, layered phantom), not a calibrated instrument model.
+-->
+<style>
+  :root { --bg:#f6f7f9; --panel:#fff; --ink:#1d2330; --muted:#667085; --line:#d9dde4;
+          --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --accent:#2d6cdf; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg);
+         display:grid; grid-template-columns: 340px 1fr; height:100vh; }
+  aside { background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:10px 12px 40px; }
+  main { overflow-y:auto; padding:12px 16px 40px; }
+  h1 { font-size:16px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:10px; }
+  details.grp { border:1px solid var(--line); border-radius:6px; margin:8px 0; padding:2px 8px 6px; }
+  details.grp > summary { font-weight:600; cursor:pointer; padding:4px 0; }
+  .row { display:grid; grid-template-columns: 1fr 96px 38px; gap:6px; align-items:center; margin:3px 0; }
+  .row label { font-size:12px; }
+  .row .u { color:var(--muted); font-size:11px; }
+  .row input[type=number], select { width:100%; padding:2px 4px; font:inherit; border:1px solid var(--line); border-radius:4px; }
+  .row input[type=checkbox] { justify-self:start; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+  button { font:inherit; padding:5px 9px; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:5px; cursor:pointer; }
+  button.sec { background:#fff; color:var(--accent); }
+  .top { display:grid; grid-template-columns: minmax(0,1fr) 340px; gap:14px; align-items:start; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .card h2 { font-size:13px; margin:0 0 6px; }
+  .imgbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  #imgwrap { overflow:auto; max-height:72vh; width:fit-content; max-width:100%; background:#000; border-radius:4px; }
+  #img { display:block; image-rendering:pixelated; }
+  #hover { font-family:ui-monospace, Consolas, monospace; font-size:11px; color:var(--muted); min-height:16px; }
+  table.m { width:100%; border-collapse:collapse; font-size:12px; }
+  table.m td { padding:2px 4px; border-bottom:1px solid #eef0f3; }
+  table.m td:last-child { text-align:right; font-variant-numeric: tabular-nums; }
+  ul.checks { list-style:none; padding:0; margin:6px 0 0; font-size:12px; }
+  ul.checks li { padding:3px 0 3px 22px; position:relative; border-bottom:1px solid #eef0f3; }
+  ul.checks li::before { position:absolute; left:2px; font-weight:700; }
+  ul.checks li.ok::before { content:"\2713"; color:var(--ok); }
+  ul.checks li.warn::before { content:"!"; color:var(--warn); left:6px; }
+  ul.checks li.bad::before { content:"\2717"; color:var(--bad); }
+  .plots { display:grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap:14px; margin-top:14px; }
+  canvas.plot { width:100%; height:220px; display:block; }
+  canvas.short { height:130px; }
+  .note { color:var(--muted); font-size:12px; }
+  #status { color:var(--muted); font-size:11px; }
+  details.help { margin-top:14px; }
+  details.help p, details.help li { max-width:900px; }
+  @media (max-width: 900px) { body { grid-template-columns: 1fr; height:auto; } aside { border-right:0; } .top { grid-template-columns:1fr; } .plots { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<aside>
+  <h1>ASLM scan simulator</h1>
+  <div class="sub">mesoSPIM-style parameters, one illumination arm, one galvo.</div>
+  <div class="row"><label for="scenario">Scenario (from ASLM notes)</label><select id="scenario" style="grid-column: span 2"></select></div>
+  <div class="row"><label for="sensor">Sensor preset</label><select id="sensor" style="grid-column: span 2"></select></div>
+  <div class="btns">
+    <button id="bOpt" title="Line interval from slit = light-sheet length; sweeptime so readout = 90% of ETL ramp; camera/laser timing; galvo frequency snapped to integer half-periods per exposure; ETL fitted to the rolling shutter.">Optimize all</button>
+    <button id="bFit" class="sec" title="Keep line interval and sweeptime. Set camera/laser delays and fit ETL amplitude/offset to the rolling shutter.">Fit ETL/camera/laser</button>
+    <button id="bEtl" class="sec" title="Only fit ETL amplitude and offset so the beam waist follows the centre of the virtual slit.">Fit ETL only</button>
+  </div>
+  <div id="panel"></div>
+</aside>
+
+<main>
+  <div class="top">
+    <div class="card">
+      <div class="imgbar">
+        <h2 style="margin:0">Simulated frame</h2>
+        <select id="view">
+          <option value="img">Simulated camera image</option>
+          <option value="gt">Ground truth (in-focus plane)</option>
+          <option value="dose">Excitation within detection DOF (1 = ideal)</option>
+          <option value="oof">Out-of-focus signal fraction</option>
+        </select>
+        <select id="zoom"><option value="fit">Fit</option><option value="fitw">Fit width</option><option value="1">1&times;</option><option value="2">2&times;</option><option value="4">4&times;</option></select>
+        <label><input type="checkbox" id="lock"> lock contrast</label>
+        <span id="status"></span>
+      </div>
+      <div id="imgwrap"><canvas id="img"></canvas></div>
+      <div id="hover">&nbsp;</div>
+      <div class="note">Horizontal = rolling-shutter readout direction = light-sheet propagation (ETL moves the waist along it). Vertical = galvo sweep.</div>
+    </div>
+    <div class="card">
+      <h2>Derived values</h2>
+      <table class="m" id="metrics"></table>
+      <h2 style="margin-top:10px">Constraint checks</h2>
+      <ul class="checks" id="checks"></ul>
+    </div>
+  </div>
+
+  <div class="plots">
+    <div class="card"><h2>Time vs. sensor line: rolling shutter and beam waist</h2><canvas class="plot" id="kymo" style="height:300px"></canvas>
+      <div class="note">Blue: exposure window of every line (virtual slit = vertical cut). Orange: beam waist &plusmn; L<sub>ls</sub>/2 (actual ETL response). Dashed: waist from the commanded ETL voltage. Grey: laser on.</div></div>
+    <div class="card"><h2>Excitation profile across z vs. x (exposure-integrated)</h2><canvas class="plot" id="xz" style="height:300px"></canvas>
+      <div class="note">Each column: light-sheet profile seen by that sensor line during its exposure. White: &plusmn;FWHM/2.</div></div>
+    <div class="card"><h2>Waveforms (one sweep, as sent to the DAQ)</h2>
+      <canvas class="plot short" id="wEtl"></canvas><canvas class="plot short" id="wGalvo"></canvas><canvas class="plot short" id="wTtl"></canvas></div>
+    <div class="card"><h2>Effective light-sheet thickness (FWHM) across the FOV</h2><canvas class="plot" id="fwhm"></canvas>
+      <canvas class="plot short" id="conf"></canvas>
+      <div class="note">FWHM shows the core of the sheet; the confinement curve shows how much light goes into the tails (out-of-focus haze) when the slit is wider than the sheet.</div>
+      <h2 style="margin-top:8px">Illumination uniformity</h2><canvas class="plot short" id="doseY"></canvas><canvas class="plot short" id="doseX"></canvas></div>
+  </div>
+
+  <details class="help card">
+    <summary><b>How the simulator works, and its assumptions</b></summary>
+    <p><b>Waveforms</b> are generated exactly as in <code>mesoSPIM/src/utils/waveforms.py</code>: the ETL is a <code>tunable_lens_ramp</code> (delay / rise / fall in % of <code>sweeptime</code>, amplitude = half peak-to-peak), the galvo is <code>scipy.signal.sawtooth</code> with duty cycle and phase, and the laser and camera trigger are <code>single_pulse</code>s. The camera starts line 0 at the rising edge of the trigger; each following group of <i>lines per step</i> starts one line interval later and is exposed for <code>camera_exposure_time</code>.</p>
+    <p><b>Light sheet</b>: Gaussian beam with Rayleigh range z<sub>R</sub> = L<sub>ls</sub>/2 (L<sub>ls</sub> in sample space), so w<sub>0</sub> = &radic;(z<sub>R</sub>&lambda;/&pi;n). At every time step the waist sits where the ETL puts it; the beam radius at line x is w(x) = w<sub>0</sub>&radic;(1+(x&minus;x<sub>waist</sub>)&sup2;/z<sub>R</sub>&sup2;) and the excitation at depth z is (w<sub>0</sub>/w)&middot;exp(&minus;2z&sup2;/w&sup2;) (energy conserved). All thicknesses on this page are FWHM = 1.1774&middot;w<sub>0</sub> (w<sub>0</sub> = 1/e&sup2; radius). The ETL follows its command through a first-order lag (time constant &tau;) &mdash; this is why exposure should start ~10% into the ramp. Galvo: the beam is swept along y; the time it spends in each pixel row during each line's exposure window is integrated exactly, so stripes appear when the exposure is not an integer number of galvo half-periods.</p>
+    <p><b>Sample</b>: a stack of layers at z = 0, &plusmn;3, &plusmn;7, &plusmn;14, &plusmn;25, &plusmn;45, &plusmn;80, &plusmn;140 &micro;m with cell bodies and dim autofluorescence; filaments are smooth 3D curves through &plusmn;200 &micro;m that drift in and out of the focal plane at shallow angles (up to the set maximum tilt), so a thin sheet shows short in-focus segments and a thick sheet shows long hazy ones. Each layer is blurred by the detection PSF plus geometric defocus (detection NA). The image is the sum over layers of (layer image &times; exposure-integrated excitation of that layer), plus optional shot and read noise. So a thick effective sheet shows up as out-of-focus structures and haze, not as a lateral blur.</p>
+    <p><b>Calibration knobs</b> (ETL &micro;m/V, ETL voltage at FOV centre, galvo &micro;m/V, ETL &tau;) stand in for what is measured on the instrument (beam-profile image). Use them to match a real system before trusting absolute numbers. Not modelled: camera trigger latency, sensor-specific line-time quantisation (e.g. Iris 15: 10.26 &micro;s &times; (scan_line_delay+1)), galvo/ETL non-linearity, scattering, pivoting, second arm.</p>
+    <p><b>Rules of thumb from the notes</b>: virtual slit N<sub>slit</sub> = t<sub>exp</sub>/dt<sub>L</sub> lines should match the light sheet, N<sub>slit</sub>&middot;dx<sub>px</sub> &asymp; L<sub>ls</sub>&middot;M; galvo half-period &times; n = t<sub>exp</sub>; readout t<sub>exp</sub> + (N<sub>px</sub>&minus;1)&middot;dt<sub>L</sub> &asymp; 0.9 &times; ETL ramp; narrower slit &rArr; longer line interval &rArr; slower frame rate but better axial resolution. Reference: Liu et al. 2021 (CompassLSM), Fig. S3.</p>
+  </details>
+</main>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const TAU = 2 * Math.PI;
+
+// ---------------------------------------------------------------- parameters
+// [key, label, default, unit, tooltip]
+const SPEC = [
+  ['Sensor', [
+    ['N_px', 'Lines along readout, N_px', 2960, 'px', 'Sensor pixels along the rolling-shutter direction (= light-sheet propagation)'],
+    ['N_perp', 'Pixels across (galvo axis)', 5056, 'px'],
+    ['dx', 'Pixel size dx_px', 4.25, 'µm'],
+    ['lps', 'Lines per line-interval step', 1, '', 'Orca Lightning reads 4 lines per step (4H)'],
+    ['dtMin', 'Min line interval', 0.01, 'ms', 'Sensor limit; 0 = none'],
+    ['dtMax', 'Max line interval', 0, 'ms', 'Sensor limit; 0 = none (Orca Lightning: 0.2 ms)'],
+    ['readNoise', 'Read noise', 1.5, 'e⁻', 'Model value, set to your sensor'],
+  ]],
+  ['Optics', [
+    ['M', 'Magnification', 5, 'x'],
+    ['L', 'Light-sheet length L_ls (sample)', 114, 'µm', '= 2 z_R, measured in sample space. Default = ideal Gaussian with waist FWHM 2.8 µm at 488 nm, n 1.56'],
+    ['fwhm0', 'Waist thickness FWHM (measured, 0 = Gaussian from L_ls)', 2.8, 'µm', 'Sheet thickness (FWHM) at the waist, e.g. bead axial FWHM with ETL off. Set to decouple it from L_ls when measured beams are not ideal Gaussians'],
+    ['lambda', 'Excitation wavelength', 488, 'nm'],
+    ['n', 'Refractive index', 1.56, ''],
+    ['NA', 'Detection NA', 0.15, '', 'Sets out-of-focus blur of the phantom layers'],
+  ]],
+  ['Camera', [
+    ['aslm', 'ASLM mode (rolling shutter)', true, '', 'Off: all lines exposed together, ETL frozen at offset'],
+    ['t_exp', 'camera_exposure_time', 20, 'ms'],
+    ['dtL', 'camera_line_interval', 0.0718, 'ms', 'Iris 15: 10.26 µs × (scan_line_delay+1)'],
+    ['cam_delay', 'camera_delay_%', 10, '%'],
+    ['cam_pulse', 'camera_pulse_%', 1, '%'],
+  ]],
+  ['Waveform timing', [
+    ['samplerate', 'samplerate', 100000, 'Hz'],
+    ['sweeptime', 'sweeptime', 267.34, 'ms'],
+  ]],
+  ['ETL', [
+    ['etl_delay', 'etl_l_delay_%', 5, '%'],
+    ['etl_rise', 'etl_l_ramp_rising_%', 90, '%'],
+    ['etl_fall', 'etl_l_ramp_falling_%', 5, '%'],
+    ['etl_amp', 'etl_l_amplitude', 0.5, 'V'],
+    ['etl_off', 'etl_l_offset', 2.5, 'V'],
+    ['etl_k', 'calib: waist shift per volt', 2500, 'µm/V', 'Calibration knob: measure on the instrument'],
+    ['etl_vc', 'calib: ETL V with waist at FOV centre', 2.5, 'V', 'Calibration knob'],
+    ['etl_tau', 'ETL response time constant', 2, 'ms', 'First-order lag model; 0 = ideal ETL'],
+  ]],
+  ['Galvo', [
+    ['g_freq', 'galvo_l_frequency', 99.9, 'Hz'],
+    ['g_amp', 'galvo_l_amplitude', 0.8, 'V'],
+    ['g_off', 'galvo_l_offset', 0, 'V'],
+    ['g_duty', 'galvo_l_duty_cycle', 50, '%'],
+    ['g_phase', 'galvo_l_phase', 0.4488, 'rad'],
+    ['g_k', 'calib: sweep per volt', 3000, 'µm/V', 'Calibration knob: beam displacement in sample per galvo volt'],
+    ['g_vc', 'calib: galvo V with beam at FOV centre', 0, 'V', 'Calibration knob'],
+  ]],
+  ['Laser', [
+    ['las_delay', 'laser_l_delay_%', 10, '%'],
+    ['las_pulse', 'laser_l_pulse_%', 87, '%'],
+  ]],
+  ['Sample & simulation', [
+    ['seed', 'Random seed', 1, ''],
+    ['cells', 'Cell bodies per mm² per 10 µm', 150, ''],
+    ['fil', 'Filaments per FOV per 10 µm', 20, ''],
+    ['filTilt', 'Filament max tilt from plane', 4, '°', 'Filaments wander in z with this maximum angle to the imaging plane; 0 = flat'],
+    ['cellB', 'Cell brightness', 1, ''],
+    ['filB', 'Filament brightness', 0.8, ''],
+    ['bg', 'Autofluorescence', 0.08, ''],
+    ['photons', 'Photons, bright cell, ideal sheet', 300, 'e⁻'],
+    ['noise', 'Shot + read noise', true, ''],
+    ['simCols', 'Simulation columns', 480, '', 'Image width in simulation pixels (speed vs detail)'],
+    ['zmap', 'XZ map half-height', 40, 'µm'],
+  ]],
+];
+const P = {};
+for (const [, items] of SPEC) for (const [k, , d] of items) P[k] = d;
+
+// name, N_px, N_perp, dx, lps, dtMin, dtMax  (values from the ASLM notes; edit if your camera differs)
+const SENSORS = [
+  ['Iris 15', 2960, 5056, 4.25, 1, 0.01, 0],
+  ['Orca Flash 4.0', 2048, 2048, 6.5, 1, 0.00974, 0],
+  ['Orca Lightning', 2592, 4608, 5.5, 4, 0.01261, 0.2],
+  ['Retiga E9', 3000, 3000, 3.76, 1, 0, 0],
+];
+// name, sensor, t_exp, dtL, sweeptime, ETL rising time (ms)  - rows of the table in "ASLM optimization.md"
+const SCENARIOS = [
+  ['BT Iris 15 standard (3.7 FPS)', 'Iris 15', 20, 0.0718, 267.34, 240],
+  ['BT Iris 15 long exposure', 'Iris 15', 200, 0.72, 2500, 2260],
+  ['BT Iris 15 FAST (13 FPS)', 'Iris 15', 5, 0.02, 73, 66],
+  ['BT Iris 15 FASTEST, 2x slit', 'Iris 15', 5, 0.01, 37, 35],
+  ['V5 Orca Flash 4.0 (H45, Wyss)', 'Orca Flash 4.0', 20, 0.075, 200, 170],
+  ['V5 Orca Flash 4.0 FAST', 'Orca Flash 4.0', 5, 0.0366, 100, 90],
+  ['V6 Orca Lightning (ZMB)', 'Orca Lightning', 20, 0.2, 180, 162],
+  ['Retiga E9 FAST (23 FPS)', 'Retiga E9', 5, 0.0112, 43, 39],
+  ['Retiga E9 11 FPS', 'Retiga E9', 10, 0.018, 82, 74],
+  // exact config values (no fitting); calibration fitted to bead axial FWHM (BT std 20/10/5 ms = 4.47/3.3/3.5 um)
+  // from "mesoSPIM ASLM tables.xlsx": waist FWHM 3.18 um (w0 2.7 um), L_ls 105 um; ETL 1980 um/V, 2.32 V = compromise of both configs
+  ['BT 13 FPS (config ...wf73ms)', 'Iris 15', 10, 0.02052, 73, 69.35, { etl_delay: 0, etl_rise: 95, etl_fall: 5, etl_amp: 0.7, etl_off: 2.3,
+    g_freq: 100, g_amp: 0.8, g_off: -0.75, g_vc: -0.75, g_duty: 50, g_phase: 1.0, las_delay: 5, las_pulse: 95, cam_delay: 5, cam_pulse: 1,
+    fwhm0: 3.18, L: 105, etl_k: 1980, etl_vc: 2.32 }],
+  ['BT 7 FPS (config ...wf130ms)', 'Iris 15', 10, 0.04104, 130, 128.7, { etl_delay: 0, etl_rise: 99, etl_fall: 1, etl_amp: 0.7, etl_off: 2.3,
+    g_freq: 100, g_amp: 0.8, g_off: 0, g_vc: 0, g_duty: 50, g_phase: 1.0, las_delay: 1, las_pulse: 98, cam_delay: 0, cam_pulse: 1,
+    fwhm0: 3.18, L: 105, etl_k: 1980, etl_vc: 2.32 }],
+  // NA 0.15 (f=125 collimator on PM-S405-XP+ fiber, 561 nm, ideal Gaussian): waist FWHM 1.42 um, L_ls 25 um.
+  // Slit = L_ls = 29.4 lines at 10 ms exposure -> dtL 0.3386 ms (Iris 10.26 us x 33), ~0.8 FPS. Optics only, timing fitted.
+  ['BT NA 0.15, 561 nm, slit = L_ls (0.8 FPS)', 'Iris 15', 10, 0.3386, 1250, 1125, { lambda: 561, n: 1.56, fwhm0: 1.42, L: 25, g_freq: 100 }],
+];
+
+function buildPanel() {
+  const panel = $('panel');
+  for (const [g, items] of SPEC) {
+    const det = document.createElement('details');
+    det.className = 'grp'; det.open = g !== 'Sample & simulation';
+    det.innerHTML = `<summary>${g}</summary>`;
+    for (const [k, label, d, unit, tip] of items) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      if (tip) row.title = tip;
+      const isBool = typeof d === 'boolean';
+      row.innerHTML = `<label for="p_${k}">${label}</label>` +
+        (isBool ? `<input type="checkbox" id="p_${k}">` : `<input type="number" step="any" id="p_${k}"${k in LIMITS ? ` min="${LIMITS[k][0]}" max="${LIMITS[k][1]}"` : ''}>`) +
+        `<span class="u">${unit}</span>`;
+      det.appendChild(row);
+      const el = row.querySelector('input');
+      el.addEventListener(isBool ? 'change' : 'input', () => {
+        if (isBool) P[k] = el.checked;
+        else { const v = parseFloat(el.value); if (!Number.isFinite(v)) return; P[k] = v; }
+        schedule();
+      });
+    }
+    panel.appendChild(det);
+  }
+  for (const s of SCENARIOS) $('scenario').add(new Option(s[0], s[0]));
+  $('scenario').add(new Option('(custom)', ''), 0);
+  for (const s of SENSORS) $('sensor').add(new Option(s[0], s[0]));
+  $('sensor').add(new Option('(custom)', ''), 0);
+  $('scenario').onchange = e => { const s = SCENARIOS.find(x => x[0] === e.target.value); if (s) applyScenario(s); };
+  $('sensor').onchange = e => { const s = SENSORS.find(x => x[0] === e.target.value); if (s) { applySensor(s); schedule(); } };
+  $('bOpt').onclick = () => { optimizeAll(); syncInputs(); schedule(); };
+  $('bFit').onclick = () => { fitTiming(); syncInputs(); schedule(); };
+  $('bEtl').onclick = () => { fitEtl(); syncInputs(); schedule(); };
+  for (const id of ['view', 'zoom', 'lock']) $(id).addEventListener('change', () => draw(LAST));
+}
+function syncInputs() {
+  for (const k in P) {
+    const el = $('p_' + k); if (!el) continue;
+    if (el.type === 'checkbox') el.checked = P[k];
+    else el.value = +(+P[k]).toPrecision(6);
+  }
+}
+const r4 = v => +v.toFixed(4);
+
+// ---------------------------------------------------------------- presets / optimization helpers
+function applySensor(s) { [, P.N_px, P.N_perp, P.dx, P.lps, P.dtMin, P.dtMax] = s; syncInputs(); }
+function applyScenario(s) {
+  applySensor(SENSORS.find(x => x[0] === s[1]));
+  $('sensor').value = s[1];
+  P.t_exp = s[2]; P.dtL = s[3]; P.sweeptime = s[4];
+  P.etl_rise = r4(100 * s[5] / s[4]);
+  P.etl_delay = P.etl_fall = r4((100 - P.etl_rise) / 2);
+  P.aslm = true;
+  if (s[6]) Object.assign(P, s[6]);   // full config (has cam_delay): use as-is
+  if (!s[6] || !('cam_delay' in s[6])) fitTiming();
+  syncInputs(); schedule();
+}
+// Fit ETL amplitude/offset so the (lagged) waist follows the centre of the virtual slit during the ramp.
+function fitEtl() {
+  if (!P.aslm) return;
+  const T = P.sweeptime, Ns = Math.floor(P.samplerate * T / 1000), dt = T / Ns;
+  const tCam = Math.floor(Ns * P.cam_delay / 100) * dt;
+  const FOVx = P.N_px * P.dx / P.M;
+  const lineX = t => (((t - tCam - P.t_exp / 2) / P.dtL) * P.lps + 0.5) * P.dx / P.M; // slit centre at time t
+  const t0 = T * P.etl_delay / 100, t1 = T * (P.etl_delay + P.etl_rise) / 100;
+  // a first-order lag delays a ramp by tau: command now where the waist must be tau later
+  const V = t => P.etl_vc + (lineX(t + P.etl_tau) - FOVx / 2) / P.etl_k;
+  P.etl_off = r4((V(t0) + V(t1)) / 2);
+  P.etl_amp = r4((V(t1) - V(t0)) / 2);
+}
+function fitTiming() {
+  const steps = Math.ceil(P.N_px / P.lps);
+  const R = P.t_exp + (steps - 1) * P.dtL;
+  P.cam_delay = r4(P.etl_delay + 0.1 * P.etl_rise);   // exposure starts 10% into the ETL ramp
+  P.las_delay = P.cam_delay;
+  P.las_pulse = r4(100 * R / P.sweeptime + 0.5);
+  fitEtl();
+}
+function optimizeAll() {
+  P.aslm = true;
+  const slitLines = P.L * P.M / P.dx;                  // N_slit * dx_px = L_ls * M
+  let dtL = P.t_exp * P.lps / slitLines;
+  if (P.dtMin > 0) dtL = Math.max(dtL, P.dtMin);
+  if (P.dtMax > 0) dtL = Math.min(dtL, P.dtMax);
+  P.dtL = +dtL.toFixed(5);
+  const steps = Math.ceil(P.N_px / P.lps);
+  const R = P.t_exp + (steps - 1) * P.dtL;
+  const ramp = R / 0.9;                                 // readout = 90% of the ETL ramp
+  P.sweeptime = +(ramp / (P.etl_rise / 100)).toFixed(2);
+  const n = Math.max(1, Math.round(P.t_exp * 2 * P.g_freq / 1000));
+  P.g_freq = r4(n * 1000 / (2 * P.t_exp));             // integer galvo half-periods per exposure
+  P.g_amp = r4(1.1 * (P.N_perp * P.dx / P.M) / 2 / P.g_k);
+  fitTiming();
+}
+
+// ---------------------------------------------------------------- waveform model (mirrors waveforms.py)
+function sawtooth(ph, width) {           // scipy.signal.sawtooth
+  const p = (((ph % TAU) + TAU) % TAU) / TAU;
+  return p < width ? -1 + 2 * p / width : 1 - 2 * (p - width) / (1 - width);
+}
+function model() {
+  const p = P, m = {};
+  m.FOVx = p.N_px * p.dx / p.M; m.FOVy = p.N_perp * p.dx / p.M;
+  m.dof = ((p.lambda + 40) / 1000) * p.n / (p.NA * p.NA);   // detection depth of field, lambda*n/NA^2
+  m.zR = p.L / 2; m.w0 = p.fwhm0 > 0 ? p.fwhm0 / 1.1774 : Math.sqrt(m.zR * (p.lambda / 1000) / (Math.PI * p.n));
+  m.T = p.sweeptime; m.Ns = Math.max(16, Math.floor(p.samplerate * p.sweeptime / 1000)); m.dt = m.T / m.Ns;
+  m.steps = Math.ceil(p.N_px / p.lps);
+  m.tCam = Math.floor(m.Ns * p.cam_delay / 100) * m.dt;
+  m.R = p.t_exp + (p.aslm ? (m.steps - 1) * p.dtL : 0);
+  m.tEnd = m.tCam + m.R;
+  m.l0 = Math.floor(m.Ns * p.las_delay / 100); m.l1 = m.l0 + Math.floor(m.Ns * p.las_pulse / 100);
+  m.c0 = Math.floor(m.Ns * p.cam_delay / 100); m.c1 = m.c0 + Math.floor(m.Ns * p.cam_pulse / 100);
+  m.e0 = m.T * p.etl_delay / 100; m.e1 = m.T * (p.etl_delay + p.etl_rise) / 100;
+  // tunable_lens_ramp
+  const a = p.aslm ? p.etl_amp : 0, o = p.etl_off, Ns = m.Ns;
+  const nd = Math.floor(Ns * p.etl_delay / 100), nr = Math.floor(Ns * p.etl_rise / 100), nf = Math.floor(Ns * p.etl_fall / 100);
+  const raw = new Float32Array(Ns), act = new Float32Array(Ns);
+  for (let i = 0; i < Ns; i++) {
+    let v = o - a;
+    if (i >= nd && i < nd + nr) v = a * (2 * (i - nd) / nr - 1) + o;
+    else if (i >= nd + nr && i < nd + nr + nf) v = a * (1 - 2 * (i - nd - nr) / nf) + o;
+    raw[i] = v;
+  }
+  // ETL response: first-order lag, periodic steady state
+  const alpha = p.etl_tau > 0 ? 1 - Math.exp(-m.dt / p.etl_tau) : 1;
+  const passes = 2 + Math.ceil(5 * Math.max(0, p.etl_tau) / m.T);
+  let y = raw[0];
+  for (let k = 0; k < passes; k++) for (let i = 0; i < Ns; i++) { y += alpha * (raw[i] - y); if (k === passes - 1) act[i] = y; }
+  m.raw = raw; m.act = act;
+  const wrap = t => ((t % m.T) + m.T) % m.T;
+  m.etlAt = t => { const u = wrap(t) / m.dt, i = Math.floor(u) % Ns, f = u - Math.floor(u); return act[i] * (1 - f) + act[(i + 1) % Ns] * f; };
+  m.etlRawAt = t => raw[Math.floor(wrap(t) / m.dt) % Ns];
+  m.waist = t => m.FOVx / 2 + (m.etlAt(t) - p.etl_vc) * p.etl_k;
+  m.waistRaw = t => m.FOVx / 2 + (m.etlRawAt(t) - p.etl_vc) * p.etl_k;
+  m.laser = t => { const i = Math.floor(wrap(t) / m.dt); return i >= m.l0 && i < m.l1 ? 1 : 0; };
+  m.galvoV = t => p.g_amp * sawtooth(TAU * p.g_freq * t / 1000 + p.g_phase, p.g_duty / 100) + p.g_off;
+  m.galvoY = t => m.FOVy / 2 + (m.galvoV(t) - p.g_vc) * p.g_k;
+  m.lineStart = i => m.tCam + (p.aslm ? Math.floor(i / p.lps) * p.dtL : 0);
+  return m;
+}
+
+// ---------------------------------------------------------------- phantom
+const ZK = [0, 3, 7, 14, 25, 45, 80, 140];
+const SK = ZK.map((z, k) => {          // slab thickness each layer stands for (both signs of z)
+  const hi = k < ZK.length - 1 ? (z + ZK[k + 1]) / 2 : 200, lo = k > 0 ? (z + ZK[k - 1]) / 2 : 0;
+  return k === 0 ? 2 * hi : 2 * (hi - lo);
+});
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function splat(img, W, H, x, y, sx, sy, amp) {
+  const x0 = Math.max(0, Math.floor(x - 3 * sx)), x1 = Math.min(W - 1, Math.ceil(x + 3 * sx));
+  const y0 = Math.max(0, Math.floor(y - 3 * sy)), y1 = Math.min(H - 1, Math.ceil(y + 3 * sy));
+  for (let j = y0; j <= y1; j++) {
+    const gy = Math.exp(-0.5 * ((j + 0.5 - y) / sy) ** 2);
+    for (let i = x0; i <= x1; i++) img[j * W + i] += amp * gy * Math.exp(-0.5 * ((i + 0.5 - x) / sx) ** 2);
+  }
+}
+function boxBlur(img, W, H, sx, sy) {
+  const tmp = new Float32Array(img.length);
+  const pass = (src, dst, r, horiz) => {
+    const n = horiz ? W : H, m = horiz ? H : W, st = horiz ? 1 : W, ln = horiz ? W : 1;
+    for (let l = 0; l < m; l++) {
+      const base = l * ln; let acc = 0;
+      for (let i = -r; i <= r; i++) acc += src[base + Math.min(n - 1, Math.max(0, i)) * st];
+      for (let i = 0; i < n; i++) {
+        dst[base + i * st] = acc / (2 * r + 1);
+        acc += src[base + Math.min(n - 1, i + r + 1) * st] - src[base + Math.max(0, i - r) * st];
+      }
+    }
+  };
+  const rx = Math.round((Math.sqrt(4 * sx * sx + 1) - 1) / 2), ry = Math.round((Math.sqrt(4 * sy * sy + 1) - 1) / 2);
+  for (let k = 0; k < 3; k++) {          // 3 box passes ~ Gaussian
+    if (rx > 0) { pass(img, tmp, rx, true); img.set(tmp); }
+    if (ry > 0) { pass(img, tmp, ry, false); img.set(tmp); }
+  }
+}
+let PH = null;
+function phantom(g, m) {
+  const p = P, key = [g.W, g.H, m.FOVx, m.FOVy, p.seed, p.cells, p.fil, p.filTilt, p.cellB, p.filB, p.bg, p.NA, p.n, p.lambda].join();
+  if (PH && PH.key === key) return PH;
+  const { W, H, pxX, pxY } = g, rng = mulberry32(p.seed | 0 || 1);
+  const areaMM2 = m.FOVx * m.FOVy / 1e6, diag = Math.hypot(W, H);
+  const pois = mean => Math.floor(mean) + (rng() < mean % 1 ? 1 : 0);
+  const layers = ZK.map((z, k) => {
+    const img = new Float32Array(W * H), w = SK[k] / 10;
+    // dim autofluorescence, smooth variation
+    const gc = 9, coarse = Array.from({ length: gc * gc }, () => 0.5 + rng());
+    const bgk = p.bg * SK[k] / SK[0];
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const u = i / W * (gc - 1), v = j / H * (gc - 1), iu = Math.floor(u), iv = Math.floor(v), fu = u - iu, fv = v - iv;
+      const c = (a, b) => coarse[Math.min(gc - 1, b) * gc + Math.min(gc - 1, a)];
+      img[j * W + i] = bgk * ((c(iu, iv) * (1 - fu) + c(iu + 1, iv) * fu) * (1 - fv) + (c(iu, iv + 1) * (1 - fu) + c(iu + 1, iv + 1) * fu) * fv);
+    }
+    // cell bodies
+    const nc = pois(p.cells * areaMM2 * w);
+    for (let c = 0; c < nc; c++) {
+      const r = 4 + 6 * rng(), s = r / 2;
+      splat(img, W, H, rng() * W, rng() * H, Math.max(0.5, s / pxX), Math.max(0.5, s / pxY), p.cellB * (0.5 + rng()));
+    }
+    return img;
+  });
+  // filaments (nerve fibres): smooth 3D curves through the slab +-ZMAX, tilted at shallow angles to the imaging
+  // plane, so they drift in and out of focus. Each point goes to the two nearest layers (linear in |z|).
+  const ZMAX = 200, tiltMax = Math.max(0, p.filTilt) * Math.PI / 180;
+  const nf = pois(p.fil * 2 * ZMAX / 10), sx = Math.max(0.6, 1.5 / pxX), sy = Math.max(0.6, 1.5 / pxY);
+  for (let f = 0; f < nf; f++) {
+    const x0 = rng() * W, y0 = rng() * H, z0 = (2 * rng() - 1) * ZMAX, th0 = rng() * TAU, phi0 = (2 * rng() - 1) * tiltMax;
+    const amp = p.filB * (0.6 + 0.8 * rng()) * 0.5 / (Math.sqrt(TAU) * Math.min(sx, sy));
+    for (const sgn of [1, -1]) {
+      let x = x0, y = y0, z = z0, th = th0 + (sgn < 0 ? Math.PI : 0), phi = phi0, curv = 0;
+      for (let s = 0; s < 3 * diag; s++) {
+        if (x < -5 || y < -5 || x > W + 5 || y > H + 5) break;
+        const az = Math.abs(z);
+        if (az < ZMAX) {
+          let k = 0; while (k < ZK.length - 1 && ZK[k + 1] <= az) k++;
+          if (k < ZK.length - 1) {
+            const fz = (az - ZK[k]) / (ZK[k + 1] - ZK[k]);
+            if (fz < 0.99) splat(layers[k], W, H, x, y, sx, sy, amp * (1 - fz));
+            if (fz > 0.01) splat(layers[k + 1], W, H, x, y, sx, sy, amp * fz);
+          } else splat(layers[k], W, H, x, y, sx, sy, amp * (ZMAX - az) / (ZMAX - ZK[k]));
+        }
+        curv = 0.98 * curv + (rng() - 0.5) * 0.003; th += curv;
+        phi += (rng() - 0.5) * 0.004;
+        if (phi > tiltMax) phi = 2 * tiltMax - phi; else if (phi < -tiltMax) phi = -2 * tiltMax - phi;
+        const cx = Math.cos(th), sy_ = Math.sin(th);
+        x += 0.5 * cx; y += 0.5 * sy_;
+        z += sgn * 0.5 * Math.hypot(cx * pxX, sy_ * pxY) * Math.tan(phi);
+      }
+    }
+  }
+  // detection PSF + geometric defocus
+  const lamEm = (p.lambda + 40) / 1000, sLat = 0.21 * lamEm / p.NA;
+  layers.forEach((img, k) => {
+    const s = Math.hypot(sLat, ZK[k] * p.NA / p.n / 2);
+    boxBlur(img, W, H, s / pxX, s / pxY);
+  });
+  PH = { key, layers };
+  return PH;
+}
+
+// ---------------------------------------------------------------- exposure simulation
+const NB = 96, WMAXF = 300, LOGSTEP = Math.log(WMAXF) / NB;   // histogram of beam radius per column
+function simulate(m, g) {
+  const p = P, { W, H, pxX, pxY } = g, K = ZK.length, KA = K + 1;   // last channel: fraction of excitation within the detection depth of field
+  const A = new Float32Array(W * H * KA);         // per pixel, per layer excitation integral (+ DOF channel)
+  const WH = new Float32Array(W * NB);            // per column: time spent at each beam radius
+  const ZK2 = ZK.map(z => z * z), ek = new Float64Array(KA), aDof = m.dof / 2;
+  const hp = 500 / Math.max(1e-6, Math.abs(p.g_freq));
+  // ponytail: time step capped at 6000 per exposure; very long exposures with fast galvos get coarser galvo sampling
+  const n = Math.min(6000, Math.max(50, Math.ceil(p.t_exp / Math.min(p.t_exp / 600, hp / 20))));
+  const h = p.t_exp / n;
+  for (let c = 0; c < W; c++) {
+    const line = (c + 0.5) * p.N_px / W - 0.5, tS = m.lineStart(Math.max(0, Math.round(line)));
+    const xc = (c + 0.5) * pxX;
+    for (let s = 0; s < n; s++) {
+      const t0 = tS + s * h, tm = t0 + h / 2;
+      if (!m.laser(tm)) continue;
+      const dx = xc - m.waist(tm), w = m.w0 * Math.sqrt(1 + (dx / m.zR) ** 2), inv = m.w0 / w, a = 2 / (w * w);
+      for (let k = 0; k < K; k++) ek[k] = inv * Math.exp(-a * ZK2[k]);
+      ek[K] = erf(Math.SQRT2 * aDof / w);           // energy fraction of this pass inside the detection DOF
+      WH[c * NB + Math.min(NB - 1, Math.floor(Math.log(w / m.w0) / LOGSTEP))] += h;
+      let ra = m.galvoY(t0) / pxY, rb = m.galvoY(t0 + h) / pxY;
+      if (ra > rb) [ra, rb] = [rb, ra];
+      const span = rb - ra;
+      if (span < 1e-9) {
+        const r = Math.floor(ra);
+        if (r >= 0 && r < H) { const o = (r * W + c) * KA; for (let k = 0; k < KA; k++) A[o + k] += h * ek[k]; }
+        continue;
+      }
+      const r0 = Math.max(0, Math.floor(ra)), r1 = Math.min(H - 1, Math.floor(rb));
+      for (let r = r0; r <= r1; r++) {
+        const f = (Math.min(rb, r + 1) - Math.max(ra, r)) / span * h;
+        const o = (r * W + c) * KA;
+        for (let k = 0; k < KA; k++) A[o + k] += f * ek[k];
+      }
+    }
+  }
+  return { A, WH, h };
+}
+// excitation profile at depth z for column c, from the beam-radius histogram
+function profileAt(WH, c, w0, z) {
+  let s = 0;
+  for (let b = 0; b < NB; b++) {
+    const t = WH[c * NB + b]; if (!t) continue;
+    const w = w0 * Math.exp((b + 0.5) * LOGSTEP);
+    s += t * (w0 / w) * Math.exp(-2 * z * z / (w * w));
+  }
+  return s;
+}
+function erf(x) {   // Abramowitz & Stegun 7.1.26
+  const s = Math.sign(x); x = Math.abs(x); const t = 1 / (1 + 0.3275911 * x);
+  return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x));
+}
+// fraction of the excitation energy that lands within |z| < a (FWHM hides the tails of a too-wide slit; this does not)
+function confAt(WH, c, w0, a) {
+  let s = 0, n = 0;
+  for (let b = 0; b < NB; b++) { const t = WH[c * NB + b]; if (!t) continue; s += t * erf(Math.SQRT2 * a / (w0 * Math.exp((b + 0.5) * LOGSTEP))); n += t; }
+  return n ? s / n : NaN;
+}
+function fwhmAt(WH, c, w0) {
+  const p0 = profileAt(WH, c, w0, 0); if (!(p0 > 0)) return NaN;
+  let lo = 0, hi = w0 * WMAXF * 2;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (profileAt(WH, c, w0, mid) > p0 / 2) lo = mid; else hi = mid; }
+  return lo + hi;   // = 2 * z_half
+}
+
+// ---------------------------------------------------------------- run
+let LAST = null, pending = false, lockLH = null;
+function schedule() { if (pending) return; pending = true; setTimeout(() => { pending = false; run(); }, 40); }
+// spinbox ranges in mesoSPIM_MainWindow.ui (no minimum set -> Qt default 0)
+const LIMITS = { etl_amp: [0, 2], g_amp: [0, 5] };
+function run() {
+  const t0 = performance.now();
+  let clamped = false;
+  for (const [k, [lo, hi]] of Object.entries(LIMITS)) {
+    const v = Math.min(hi, Math.max(lo, P[k]));
+    if (v !== P[k]) { P[k] = v; clamped = true; }
+  }
+  if (clamped) syncInputs();
+  if ($('scenario').value) {   // any manual change makes the scenario "custom" again
+    const s = SCENARIOS.find(x => x[0] === $('scenario').value);
+    if (!s || s[2] !== P.t_exp || s[3] !== P.dtL || s[4] !== P.sweeptime) $('scenario').value = '';
+  }
+  const m = model();
+  const W = Math.max(16, Math.min(P.N_px, Math.round(P.simCols) || 480));
+  const H = Math.max(16, Math.min(1400, Math.round(W * m.FOVy / m.FOVx)));
+  const g = { W, H, pxX: m.FOVx / W, pxY: m.FOVy / H };
+  const ph = phantom(g, m);
+  const sim = simulate(m, g);
+  const K = ZK.length, N = W * H;
+  const norm = P.t_exp * g.pxY / Math.max(1e-9, 2 * Math.abs(P.g_amp * P.g_k));   // dose of a uniformly swept, ideal sheet
+  const img = new Float32Array(N), dose = new Float32Array(N), oof = new Float32Array(N);
+  const rng = mulberry32(12345);
+  const gauss = () => { let u = 0, v = 0; while (u === 0) u = rng(); v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); };
+  for (let i = 0; i < N; i++) {
+    let s = 0, s0 = 0;
+    for (let k = 0; k < K; k++) { const v = sim.A[i * (K + 1) + k] * ph.layers[k][i]; s += v; if (!k) s0 = v; }
+    let e = s * P.photons / norm;
+    if (P.noise) e = Math.max(0, e + Math.sqrt(Math.max(e, 0)) * gauss() + P.readNoise * gauss());
+    img[i] = e;
+    dose[i] = sim.A[i * (K + 1) + K] / norm;
+    oof[i] = s > 0 ? 1 - s0 / s : 0;
+  }
+  const fw = new Float32Array(W), conf = new Float32Array(W);
+  for (let c = 0; c < W; c++) { fw[c] = fwhmAt(sim.WH, c, m.w0); conf[c] = confAt(sim.WH, c, m.w0, 1.1774 * m.w0); }
+  LAST = { m, g, ph, sim, img, dose, oof, fw, conf, ms: performance.now() - t0 };
+  draw(LAST);
+}
+
+// ---------------------------------------------------------------- drawing helpers
+function setup(cv) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  return [ctx, w, h];
+}
+function ticks(a, b, n = 5) {
+  const span = (b - a) || 1, st0 = span / n, mag = 10 ** Math.floor(Math.log10(st0));
+  const st = [1, 2, 5, 10].map(k => k * mag).find(s => s >= st0 * 0.999);
+  const out = []; for (let v = Math.ceil(a / st) * st; v <= b + 1e-9 * span; v += st) out.push(+v.toPrecision(10));
+  return out;
+}
+const fmt = v => Math.abs(v) >= 1e5 || (Math.abs(v) < 0.01 && v !== 0) ? v.toExponential(1) : +v.toPrecision(4) + '';
+function axes(ctx, w, h, xr, yr, xl, yl, opt = {}) {
+  const L = 52, R = 10, T = 8, B = opt.noX ? 8 : 30;
+  const box = { L, T, W: w - L - R, H: h - T - B };
+  const X = v => L + (v - xr[0]) / (xr[1] - xr[0]) * box.W, Y = v => T + box.H - (v - yr[0]) / ((yr[1] - yr[0]) || 1) * box.H;
+  ctx.strokeStyle = '#d9dde4'; ctx.fillStyle = '#667085'; ctx.font = '11px system-ui'; ctx.lineWidth = 1;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const v of ticks(xr[0], xr[1], Math.max(2, box.W / 80))) {
+    ctx.beginPath(); ctx.moveTo(X(v), T); ctx.lineTo(X(v), T + box.H); ctx.stroke();
+    if (!opt.noX) ctx.fillText(fmt(v), X(v), T + box.H + 3);
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const v of ticks(yr[0], yr[1], Math.max(2, box.H / 35))) {
+    ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(L + box.W, Y(v)); ctx.stroke();
+    ctx.fillText(fmt(v), L - 4, Y(v));
+  }
+  ctx.strokeStyle = '#98a2b3'; ctx.strokeRect(L, T, box.W, box.H);
+  ctx.fillStyle = '#344054';
+  if (xl && !opt.noX) { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(xl, L + box.W / 2, h - 1); }
+  if (yl) { ctx.save(); ctx.translate(11, T + box.H / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(yl, 0, 0); ctx.restore(); }
+  return { X, Y, box };
+}
+function legend(ctx, box, items) {
+  ctx.font = '11px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  let y = box.T + 4;
+  for (const [label, color] of items) {
+    const tw = ctx.measureText(label).width;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(box.L + box.W - tw - 26, y - 1, tw + 22, 14);
+    ctx.fillStyle = color; ctx.fillRect(box.L + box.W - tw - 22, y + 5, 12, 3);
+    ctx.fillStyle = '#344054'; ctx.fillText(label, box.L + box.W - 4, y); y += 14;
+  }
+}
+function line(ctx, ax, xs, ys, color, width = 1.5, dash = []) {
+  ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash); ctx.beginPath();
+  let pen = false;
+  for (let i = 0; i < xs.length; i++) {
+    if (!Number.isFinite(ys[i])) { pen = false; continue; }
+    const x = ax.X(xs[i]), y = ax.Y(ys[i]);
+    pen ? ctx.lineTo(x, y) : ctx.moveTo(x, y); pen = true;
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+function vline(ctx, ax, x, color, dash = [4, 3]) {
+  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash(dash); ctx.beginPath();
+  ctx.moveTo(ax.X(x), ax.box.T); ctx.lineTo(ax.X(x), ax.box.T + ax.box.H); ctx.stroke(); ctx.setLineDash([]);
+}
+function range(arr) { let lo = Infinity, hi = -Infinity; for (const v of arr) if (Number.isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } return [lo, hi]; }
+function pad([lo, hi], f = 0.08) { const d = (hi - lo) || Math.abs(hi) || 1; return [lo - d * f, hi + d * f]; }
+const MAGMA = [[0, 0, 4], [40, 11, 84], [101, 21, 110], [159, 42, 99], [212, 72, 66], [245, 125, 21], [250, 193, 39], [252, 255, 164]];
+function cmap(v) {
+  v = Math.min(1, Math.max(0, v)) * (MAGMA.length - 1); const i = Math.min(MAGMA.length - 2, Math.floor(v)), f = v - i;
+  return MAGMA[i].map((c, j) => c + (MAGMA[i + 1][j] - c) * f);
+}
+
+// ---------------------------------------------------------------- draw everything
+function draw(S) {
+  if (!S) return;
+  const { m, g, img, dose, oof, fw } = S, p = P;
+  // --- image
+  const view = $('view').value, arr = { img, gt: S.ph.layers[0], dose, oof }[view];
+  const cv = $('img'); cv.width = g.W; cv.height = g.H;
+  let lo, hi;
+  if (view === 'dose' || view === 'oof') { lo = 0; hi = view === 'dose' ? Math.max(1, range(arr)[1]) : 1; }
+  else if ($('lock').checked && lockLH && lockLH.view === view) [lo, hi] = lockLH.v;
+  else {
+    const smp = []; for (let i = 0; i < arr.length; i += Math.max(1, Math.floor(arr.length / 20000))) smp.push(arr[i]);
+    smp.sort((a, b) => a - b); lo = smp[Math.floor(smp.length * 0.002)]; hi = smp[Math.floor(smp.length * 0.998)];
+  }
+  if (!(hi > lo)) hi = lo + 1;
+  if (!$('lock').checked || !lockLH || lockLH.view !== view) lockLH = { view, v: [lo, hi] };
+  const ctx = cv.getContext('2d'), id = ctx.createImageData(g.W, g.H);
+  const heat = view === 'dose' || view === 'oof';
+  for (let i = 0; i < arr.length; i++) {
+    const v = (arr[i] - lo) / (hi - lo);
+    const [r, gg, b] = heat ? cmap(v) : [255 * Math.min(1, Math.max(0, v)), 255 * Math.min(1, Math.max(0, v)), 255 * Math.min(1, Math.max(0, v))];
+    id.data[4 * i] = r; id.data[4 * i + 1] = gg; id.data[4 * i + 2] = b; id.data[4 * i + 3] = 255;
+  }
+  ctx.putImageData(id, 0, 0);
+  const z = $('zoom').value, wrapW = $('imgwrap').parentElement.clientWidth - 20;   // card width minus padding (wrapper shrinks to the image)
+  if (z === 'fit' || z === 'fitw') { const s = z === 'fitw' ? wrapW / g.W : Math.min(wrapW / g.W, (window.innerHeight * 0.72) / g.H); cv.style.width = g.W * s + 'px'; cv.style.height = g.H * s + 'px'; }
+  else { cv.style.width = g.W * z + 'px'; cv.style.height = g.H * z + 'px'; }
+  $('status').textContent = `${g.W}×${g.H} sim px, ${S.ms.toFixed(0)} ms` + (heat ? '' : `, display ${fmt(lo)}–${fmt(hi)}`);
+
+  // --- kymograph: time vs line
+  {
+    const [c, w, h] = setup($('kymo'));
+    const tmax = Math.max(m.T, m.tEnd + 1), slitHalfLines = p.L / 2 * p.M / p.dx;
+    const ax = axes(c, w, h, [0, tmax], [0, p.N_px], 'time (ms)', 'sensor line');
+    // laser on
+    c.fillStyle = 'rgba(120,120,120,0.12)';
+    for (let k = 0; k * m.T < tmax; k++) { const a = k * m.T + m.l0 * m.dt, b = k * m.T + m.l1 * m.dt; c.fillRect(ax.X(a), ax.box.T, ax.X(Math.min(b, tmax)) - ax.X(a), ax.box.H); }
+    // exposure band
+    c.fillStyle = 'rgba(45,108,223,0.28)'; c.beginPath();
+    const nl = 200;
+    for (let k = 0; k <= nl; k++) { const i = k / nl * (p.N_px - 1); c.lineTo(ax.X(m.lineStart(i)), ax.Y(i)); }
+    for (let k = nl; k >= 0; k--) { const i = k / nl * (p.N_px - 1); c.lineTo(ax.X(m.lineStart(i) + p.t_exp), ax.Y(i)); }
+    c.closePath(); c.fill();
+    // waist band
+    const ts = [], wl = [], wr = [], up = [], dn = [];
+    for (let k = 0; k <= 800; k++) { const t = k / 800 * tmax; ts.push(t); const L = m.waist(t) * p.M / p.dx; wl.push(L); up.push(L + slitHalfLines); dn.push(L - slitHalfLines); wr.push(m.waistRaw(t) * p.M / p.dx); }
+    c.save(); c.beginPath(); c.rect(ax.box.L, ax.box.T, ax.box.W, ax.box.H); c.clip();
+    c.fillStyle = 'rgba(245,125,21,0.25)'; c.beginPath();
+    ts.forEach((t, k) => c.lineTo(ax.X(t), ax.Y(up[k]))); for (let k = ts.length - 1; k >= 0; k--) c.lineTo(ax.X(ts[k]), ax.Y(dn[k]));
+    c.closePath(); c.fill();
+    line(c, ax, ts, wl, '#e8590c', 1.6); line(c, ax, ts, wr, '#e8590c', 1, [4, 3]);
+    c.restore();
+    vline(c, ax, m.e0, '#7a5af8'); vline(c, ax, m.e1, '#7a5af8'); vline(c, ax, m.T, '#000', [2, 2]);
+    legend(c, ax.box, [['exposure (virtual slit)', 'rgba(45,108,223,0.6)'], ['waist ± L_ls/2', '#e8590c'], ['ETL ramp start/end', '#7a5af8']]);
+  }
+
+  // --- XZ map
+  {
+    const [c, w, h] = setup($('xz'));
+    const zmax = Math.max(1, p.zmap), nz = 121, cs = Math.ceil(g.W / 240), W = Math.ceil(g.W / cs);
+    const ax = axes(c, w, h, [0, m.FOVx], [-zmax, zmax], 'x along propagation (µm)', 'z (µm)');
+    const off = document.createElement('canvas'); off.width = W; off.height = nz;
+    const oc = off.getContext('2d'), od = oc.createImageData(W, nz), vals = new Float32Array(W * nz);
+    let vmax = 0;
+    for (let col = 0; col < W; col++) for (let j = 0; j < nz; j++) {
+      const zz = zmax - 2 * zmax * j / (nz - 1), v = profileAt(S.sim.WH, col * cs, m.w0, zz);
+      vals[j * W + col] = v; if (v > vmax) vmax = v;
+    }
+    for (let i = 0; i < vals.length; i++) { const [r, gg, b] = cmap((vals[i] / (vmax || 1)) ** 0.3); od.data[4 * i] = r; od.data[4 * i + 1] = gg; od.data[4 * i + 2] = b; od.data[4 * i + 3] = 255; }
+    oc.putImageData(od, 0, 0);
+    c.imageSmoothingEnabled = true; c.drawImage(off, ax.box.L, ax.box.T, ax.box.W, ax.box.H);
+    const xs = Array.from({ length: g.W }, (_, i) => (i + 0.5) * g.pxX);
+    c.save(); c.beginPath(); c.rect(ax.box.L, ax.box.T, ax.box.W, ax.box.H); c.clip();
+    line(c, ax, xs, Array.from(fw, v => v / 2), '#fff', 1); line(c, ax, xs, Array.from(fw, v => -v / 2), '#fff', 1);
+    c.restore();
+  }
+
+  // --- waveforms
+  {
+    const N = m.Ns, step = Math.max(1, Math.floor(N / 4000)), ts = [], er = [], ea = [], gv = [], la = [], ca = [];
+    for (let i = 0; i < N; i += step) {
+      const t = i * m.dt; ts.push(t); er.push(m.raw[i]); ea.push(m.act[i]); gv.push(m.galvoV(t));
+      la.push(i >= m.l0 && i < m.l1 ? 1 : 0); ca.push(i >= m.c0 && i < m.c1 ? 1 : 0);
+    }
+    const marks = (c, ax) => { vline(c, ax, m.tCam, '#2d6cdf'); vline(c, ax, m.tEnd, '#2d6cdf'); };
+    let [c, w, h] = setup($('wEtl')); let ax = axes(c, w, h, [0, m.T], pad(range(er.concat(ea))), '', 'ETL (V)', { noX: true });
+    line(c, ax, ts, er, '#7a5af8', 1.2, [4, 3]); line(c, ax, ts, ea, '#7a5af8', 1.6); marks(c, ax);
+    legend(c, ax.box, [['command', '#b8a9fb'], ['ETL response', '#7a5af8'], ['first/last line exposure', '#2d6cdf']]);
+    [c, w, h] = setup($('wGalvo')); ax = axes(c, w, h, [0, m.T], pad(range(gv)), '', 'galvo (V)', { noX: true });
+    line(c, ax, ts, gv, '#0e9384', 1); marks(c, ax);
+    [c, w, h] = setup($('wTtl')); ax = axes(c, w, h, [0, m.T], [-0.2, 2.4], 'time (ms)', 'TTL');
+    line(c, ax, ts, la.map(v => v + 1.2), '#c62828', 1.4); line(c, ax, ts, ca, '#344054', 1.4); marks(c, ax);
+    legend(c, ax.box, [['laser', '#c62828'], ['camera trigger', '#344054']]);
+  }
+
+  // --- FWHM and uniformity
+  {
+    const xs = Array.from({ length: g.W }, (_, i) => (i + 0.5) * g.pxX);
+    const stat = xs.map(x => 1.1774 * m.w0 * Math.sqrt(1 + ((x - m.FOVx / 2) / m.zR) ** 2));
+    const fwv = Array.from(fw);
+    let [c, w, h] = setup($('fwhm'));
+    const yHi = Math.max(4 * m.w0, Math.min(range(stat)[1], 3 * range(fwv)[1]) * 1.1);
+    let ax = axes(c, w, h, [0, m.FOVx], [0, yHi], 'x along propagation (µm)', 'FWHM (µm)');
+    c.save(); c.beginPath(); c.rect(ax.box.L, ax.box.T, ax.box.W, ax.box.H); c.clip();
+    line(c, ax, xs, stat, '#98a2b3', 1.2, [5, 4]); line(c, ax, xs, fwv, '#2d6cdf', 2);
+    line(c, ax, [0, m.FOVx], [1.1774 * m.w0, 1.1774 * m.w0], '#1a7f37', 1, [2, 3]);
+    c.restore();
+    legend(c, ax.box, [['this setting', '#2d6cdf'], ['static sheet, waist at centre', '#98a2b3'], ['waist FWHM', '#1a7f37']]);
+    // confinement: energy within +-FWHM0
+    const a0 = 1.1774 * m.w0, statConf = xs.map(x => erf(Math.SQRT2 * a0 / (m.w0 * Math.sqrt(1 + ((x - m.FOVx / 2) / m.zR) ** 2))));
+    [c, w, h] = setup($('conf')); ax = axes(c, w, h, [0, m.FOVx], [0, 100], 'x along propagation (µm)', '%');
+    line(c, ax, xs, statConf.map(v => 100 * v), '#98a2b3', 1.2, [5, 4]); line(c, ax, xs, Array.from(S.conf, v => 100 * v), '#2d6cdf', 2);
+    legend(c, ax.box, [['excitation within ±FWHM₀ of focal plane', '#2d6cdf'], ['static sheet', '#98a2b3']]);
+    S.statConf = statConf;
+    // dose vs y and vs x
+    const rowMean = new Float32Array(g.H), colMean = new Float32Array(g.W);
+    for (let r = 0; r < g.H; r++) for (let col = 0; col < g.W; col++) { const v = dose[r * g.W + col]; rowMean[r] += v / g.W; colMean[col] += v / g.H; }
+    const ys = Array.from({ length: g.H }, (_, i) => (i + 0.5) * g.pxY);
+    // galvo stripes run diagonally (each line has its own exposure window), so show one column, not a mean over x
+    const cc = g.W >> 1, colY = ys.map((_, r) => dose[r * g.W + cc]);
+    [c, w, h] = setup($('doseY')); ax = axes(c, w, h, [0, m.FOVy], [0, Math.max(1.2, range(colY)[1] * 1.1)], 'y along galvo sweep (µm)', 'dose');
+    line(c, ax, ys, colY, '#0e9384', 1.2);
+    legend(c, ax.box, [['dose within DOF at centre line (1 = ideal)', '#0e9384']]);
+    [c, w, h] = setup($('doseX')); ax = axes(c, w, h, [0, m.FOVx], [0, Math.max(1.2, range(colMean)[1] * 1.1)], 'x (µm)', 'dose');
+    line(c, ax, xs, Array.from(colMean), '#e8590c', 1.2);
+    legend(c, ax.box, [['dose within DOF, mean over y', '#e8590c']]);
+    S.rowMean = rowMean; S.colMean = colMean; S.stat = stat;
+  }
+  metrics(S);
+}
+
+// ---------------------------------------------------------------- metrics & checks
+function avg(a) { const v = a.filter(Number.isFinite); return v.reduce((x, y) => x + y, 0) / (v.length || 1); }
+function metrics(S) {
+  const { m, g, fw, rowMean, colMean, stat } = S, p = P;
+  const slitLines = p.t_exp / p.dtL * p.lps, slitSensor = slitLines * p.dx, slitSample = slitSensor / p.M;
+  const ratio = slitSample / p.L;
+  const halfPer = p.t_exp * 2 * p.g_freq / 1000;
+  const ramp = m.e1 - m.e0;
+  const fwv = Array.from(fw).filter(Number.isFinite);
+  const meanF = fwv.reduce((a, b) => a + b, 0) / (fwv.length || 1), maxF = Math.max(...fwv);
+  const meanStat = stat.reduce((a, b) => a + b, 0) / stat.length;
+  // galvo stripes: per-pixel dose relative to its column mean, std over the central 90% of rows (CV)
+  const r0 = Math.floor(g.H * 0.05), r1 = Math.ceil(g.H * 0.95);
+  let s1 = 0, s2 = 0, ns = 0;
+  for (let r = r0; r < r1; r++) for (let col = 0; col < g.W; col++) {
+    if (!(colMean[col] > 0)) continue;
+    const v = S.dose[r * g.W + col] / colMean[col]; s1 += v; s2 += v * v; ns++;
+  }
+  const stripe = ns ? Math.sqrt(Math.max(0, s2 / ns - (s1 / ns) ** 2)) : 0;
+  const cm = Array.from(colMean), cmm = cm.reduce((a, b) => a + b, 0) / cm.length, xUnif = (Math.max(...cm) - Math.min(...cm)) / (cmm || 1);
+  // waist tracking: waist vs slit centre at each line's mid-exposure
+  let trk = 0;
+  // only lines exposed entirely inside the ETL ramp; lines past the ramp are flagged by the flyback check
+  if (p.aslm) for (let k = 0; k <= 100; k++) {
+    const i = k / 100 * (p.N_px - 1), ts = m.lineStart(i), tm = ts + p.t_exp / 2;
+    if (ts < m.e0 || ts + p.t_exp > m.e1) continue;
+    trk = Math.max(trk, Math.abs(m.waist(tm) - (i + 0.5) * p.dx / p.M));
+  }
+  const rows_ = [
+    ['FOV (x × y)', `${(m.FOVx / 1000).toFixed(2)} × ${(m.FOVy / 1000).toFixed(2)} mm`],
+    ['Sample pixel', `${(p.dx / p.M).toFixed(2)} µm`],
+    ['Waist thickness FWHM', `${(1.1774 * m.w0).toFixed(2)} µm`],
+    ['  aux: w₀ (1/e² radius) / 1/e² diameter', `${m.w0.toFixed(2)} / ${(2 * m.w0).toFixed(2)} µm`],
+    ['Detection depth of field', `${m.dof.toFixed(1)} µm`],
+    ['L_ls on sensor', `${(p.L * p.M).toFixed(0)} µm = ${(p.L * p.M / p.dx).toFixed(0)} lines`],
+    ['Virtual slit N_slit', `${slitLines.toFixed(0)} lines`],
+    ['Slit width sensor / sample', `${slitSensor.toFixed(0)} / ${slitSample.toFixed(0)} µm`],
+    ['Slit / L_ls', ratio.toFixed(2) + '×'],
+    ['Readout t_exp+(N−1)·dt_L', `${m.R.toFixed(1)} ms`],
+    ['ETL ramp', `${ramp.toFixed(1)} ms (readout ${(100 * m.R / ramp).toFixed(0)}%)`],
+    ['Frame rate (1/sweeptime)', `${(1000 / m.T).toFixed(2)} fps`],
+    ['Galvo half-periods / exposure', halfPer.toFixed(3)],
+    ['Effective FWHM mean / max', `${meanF.toFixed(1)} / ${maxF.toFixed(1)} µm`],
+    ['Static sheet FWHM mean', `${meanStat.toFixed(1)} µm`],
+    ['Excitation within ±FWHM₀, mean', `${(100 * avg(Array.from(S.conf))).toFixed(0)}% (static ${(100 * avg(S.statConf)).toFixed(0)}%)`],
+    ['Mean dose within detection DOF', cmm.toFixed(2)],
+    ['Dose stripes along y (CV)', (100 * stripe).toFixed(1) + '%'],
+    ['Dose non-uniformity (x)', (100 * xUnif).toFixed(1) + '%'],
+  ];
+  if (p.aslm) rows_.push(['Max waist tracking error', `${trk.toFixed(1)} µm`]);
+  $('metrics').innerHTML = rows_.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+
+  const C = [];
+  const add = (lvl, txt) => C.push(`<li class="${lvl}">${txt}</li>`);
+  const sumPct = p.etl_delay + p.etl_rise + p.etl_fall;
+  add(sumPct <= 100 ? 'ok' : 'bad', `ETL delay+rise+fall = ${sumPct.toFixed(1)}% ${sumPct <= 100 ? '≤' : '>'} 100%`);
+  if (p.dtMin > 0 || p.dtMax > 0) {
+    const okL = (!(p.dtMin > 0) || p.dtL >= p.dtMin - 1e-9) && (!(p.dtMax > 0) || p.dtL <= p.dtMax + 1e-9);
+    add(okL ? 'ok' : 'bad', `Line interval ${p.dtL} ms ${okL ? 'within' : 'outside'} sensor limits [${p.dtMin || 0}, ${p.dtMax || '∞'}] ms`);
+  }
+  if (p.aslm) {
+    add(ratio < 0.7 ? 'warn' : ratio <= 1.5 ? 'ok' : ratio <= 3 ? 'warn' : 'bad',
+      `Slit ${ratio.toFixed(2)}× L_ls` + (ratio > 1.5 ? ': slit wider than the sheet, axial resolution degrades at slit edges' : ratio < 0.7 ? ': slit narrower than the sheet, slow scan for little gain' : ''));
+    const startPct = 100 * (m.tCam - m.e0) / ramp, endPct = 100 * (m.tEnd - m.e0) / ramp;
+    add(startPct >= 9.5 ? 'ok' : startPct >= 0 ? 'warn' : 'bad', `First line starts ${startPct.toFixed(1)}% into the ETL ramp (rule: ≥ 10%)`);
+    add(endPct <= 100.5 ? 'ok' : 'bad', `Last line ends at ${endPct.toFixed(1)}% of the ETL ramp` + (endPct > 100.5 ? ' — last lines exposed during ETL flyback' : ''));
+    add(trk <= p.L / 4 ? 'ok' : trk <= p.L / 2 ? 'warn' : 'bad', `Waist tracks slit centre within ${trk.toFixed(1)} µm (L_ls/2 = ${(p.L / 2).toFixed(0)} µm)`);
+  } else add('warn', 'ASLM off: static sheet, thickness grows away from the waist');
+  add(m.tEnd <= m.T ? 'ok' : 'bad', `Exposure ends at ${m.tEnd.toFixed(1)} ms ${m.tEnd <= m.T ? '≤' : '>'} sweeptime ${m.T.toFixed(1)} ms`);
+  const lOn = m.l0 * m.dt, lOff = m.l1 * m.dt;
+  add(lOn <= m.tCam + 1e-6 && lOff >= m.tEnd - 1e-6 ? 'ok' : 'bad', `Laser on ${lOn.toFixed(1)}–${lOff.toFixed(1)} ms covers exposure ${m.tCam.toFixed(1)}–${m.tEnd.toFixed(1)} ms`);
+  const dHP = Math.abs(halfPer - Math.round(halfPer));
+  add(halfPer >= 0.95 && dHP < 0.02 ? 'ok' : dHP < 0.1 && halfPer >= 0.9 ? 'warn' : 'bad',
+    `Galvo: ${halfPer.toFixed(3)} half-periods per exposure (should be an integer)`);
+  add(stripe < 0.03 ? 'ok' : stripe < 0.08 ? 'warn' : 'bad', `Dose stripes along y: CV ${(100 * stripe).toFixed(1)}%` +
+    (stripe >= 0.03 && p.aslm && ratio > 1.5 ? ' — a slit much wider than the sheet makes each galvo pass meet the waist at a different distance' : ''));
+  const gTop = m.FOVy / 2 + Math.abs(p.g_amp * p.g_k), gBot = m.FOVy / 2 - Math.abs(p.g_amp * p.g_k);
+  const gShift = (p.g_off - p.g_vc) * p.g_k;
+  add(gBot + gShift <= 0 && gTop + gShift >= m.FOVy ? 'ok' : 'bad', `Galvo sweep ${(2 * Math.abs(p.g_amp * p.g_k) / 1000).toFixed(2)} mm vs FOV height ${(m.FOVy / 1000).toFixed(2)} mm`);
+  $('checks').innerHTML = C.join('');
+}
+
+// ---------------------------------------------------------------- hover readout
+$('img').addEventListener('mousemove', e => {
+  const S = LAST; if (!S) return;
+  const r = e.target.getBoundingClientRect();
+  const c = Math.floor((e.clientX - r.left) / r.width * S.g.W), row = Math.floor((e.clientY - r.top) / r.height * S.g.H);
+  if (c < 0 || row < 0 || c >= S.g.W || row >= S.g.H) return;
+  const i = row * S.g.W + c;
+  $('hover').textContent = `x ${((c + 0.5) * S.g.pxX).toFixed(0)} µm (line ${Math.floor((c + 0.5) * P.N_px / S.g.W)}), y ${((row + 0.5) * S.g.pxY).toFixed(0)} µm | signal ${S.img[i].toFixed(0)} e⁻ | dose in DOF ${S.dose[i].toFixed(2)} | out-of-focus ${(100 * S.oof[i]).toFixed(0)}% | FWHM ${S.fw[c].toFixed(1)} µm`;
+});
+window.addEventListener('resize', () => draw(LAST));
+
+buildPanel();
+$('sensor').value = 'Iris 15';
+$('scenario').value = '';
+fitEtl();          // timing of config_BT_STANDARD_ZMB_exp20ms_v1.2.py; only the ETL is fitted (calibration-dependent)
+syncInputs();
+run();
+</script>
+</body>
+</html>

@@ -107,6 +107,12 @@ multiview, and tiled imaging of large cleared-tissue samples.
 
       Convert TIFF tiles and channels to sharded OME-Zarr pyramids with a BigStitcher XML.
 
+   .. grid-item-card:: :octicon:`graph` ASLM Scan Simulator
+      :link: aslm_simulator
+      :link-type: doc
+
+      Browser simulator of ASLM timing: rolling shutter, ETL sweep, galvo and the resulting light sheet.
+
    .. grid-item-card:: :octicon:`filter` Image Processing Plugins
       :link: image_processors
       :link-type: doc
@@ -141,6 +147,7 @@ multiview, and tiled imaging of large cleared-tissue samples.
    psf_analysis
    field_curvature
    tiff_to_omezarr
+   aslm_simulator
    image_processors
    timelapse
    remote_control/index
