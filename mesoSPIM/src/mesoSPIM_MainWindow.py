@@ -1279,7 +1279,8 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         cmd = [sys.executable, script_path,
                '--pixel-pitch', str(self.cfg.camera_parameters['x_pixel_size_in_microns']),
                '--mag', str(self._parse_zoom_magnification(zoom)),
-               '--dir', str(self.state['snap_folder'])]
+               '--dir', str(self.state['snap_folder']),
+               '--laser', str(self.state['laser'])]
         if filename:
             cmd.append(filename)
         try:

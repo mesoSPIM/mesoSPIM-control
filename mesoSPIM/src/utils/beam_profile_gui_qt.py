@@ -19,6 +19,7 @@ import sys
 
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.ndimage import median_filter, uniform_filter1d
 from tifffile import TiffFile
 
 from PyQt5 import QtWidgets
@@ -32,6 +33,7 @@ from matplotlib.widgets import SpanSelector
 FWHM_PER_W = np.sqrt(2 * np.log(2))   # intensity FWHM / 1/e^2 radius = 1.1774
 FULL_SCALE = (255, 4095, 16383, 65535)  # 8/12/14/16-bit ADC full scale
 MAX_FRAMES = 10
+OUTLIER_REL = 0.3   # bin FWHM off its 5-bin running median by more than this fraction: excluded
 
 
 def _gauss(y, A, y0, s, c):
@@ -73,6 +75,36 @@ def read_image(path):
     return frames.mean(0), frames.max(0), frames.shape[0], px
 
 
+def read_sidecar_laser(path):
+    """Laser (e.g. '488 nm') from the mesoSPIM metadata sidecar '<path>_meta.txt', or None."""
+    try:
+        with open(path + "_meta.txt", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.startswith("[Laser]"):
+                    return line[len("[Laser]"):].strip() or None
+    except OSError:
+        pass
+    return None
+
+
+def measured_range(xs, fw, ib):
+    """Model-free beam range: walk out from the narrowest bin ib to where the measured FWHM first
+    exceeds sqrt2 x fw[ib], interpolating the crossings. Returns (x_left, x_right, reaches_edge)."""
+    thr = np.sqrt(2) * fw[ib]
+    ends, edge = [], False
+    for step in (-1, 1):
+        i = ib
+        while 0 <= i + step < len(fw) and fw[i + step] <= thr:
+            i += step
+        j = i + step
+        if 0 <= j < len(fw):                    # crossing between bins i (inside) and j (outside)
+            ends.append(xs[i] + (xs[j] - xs[i]) * (thr - fw[i]) / (fw[j] - fw[i]))
+        else:                                   # still inside at the end of the analysed range
+            ends.append(xs[i])
+            edge = True
+    return ends[0], ends[1], edge
+
+
 def analyse_beam(img, px_um, n=1.0, bin_cols=10):
     """Analyse a 2D image of a beam running along x. Lengths in um."""
     a = np.asarray(img, dtype=float)
@@ -98,16 +130,29 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
     xs, fw, power = xs[keep], fw[keep], power[keep]
     if len(xs) < 5:
         raise ValueError("Beam not found: fewer than 5 column bins could be fitted (crop too narrow?).")
+    # Outlier bins (fit locked on dust or a hot pixel): FWHM far from the running median of its neighbours
+    med = median_filter(fw, size=5, mode="nearest")
+    out = np.abs(fw - med) > OUTLIER_REL * med
+    out_x, out_fw = xs[out], fw[out]
+    xs, fw, power = xs[~out], fw[~out], power[~out]
+    if len(xs) < 5:
+        raise ValueError("Beam not found: fewer than 5 consistent column bins.")
 
-    ib = int(np.argmin(fw))
+    fs = uniform_filter1d(fw, size=3, mode="nearest")    # light smoothing: the min of noisy bins is biased low
+    ib = int(np.argmin(fs))
     far = max(np.abs(xs - xs[ib]).max(), 1)
     th0 = min(max((fw.max() - fw[ib]) / FWHM_PER_W / far, 1e-3), 0.5)
     pm, _ = curve_fit(_observed_fwhm, xs, fw, p0=[fw[ib], xs[ib], th0],
                       bounds=([0.05, 0, 1e-4], [20 * fw[ib], W, 1.0]), maxfev=20000)
     f0, xw, theta = pm
     length = 2 * f0 / (FWHM_PER_W * theta)
+    m0, m1, m_edge = measured_range(xs, fs, ib)
     return dict(
         x_um=xs * px_um, fwhm_um=fw * px_um, fit_params_px=pm, px_um=px_um,
+        outlier_x_um=out_x * px_um, outlier_fwhm_um=out_fw * px_um,
+        min_fwhm_um=fs[ib] * px_um, min_x_um=xs[ib] * px_um,
+        meas_x0_um=m0 * px_um, meas_x1_um=m1 * px_um, meas_length_um=(m1 - m0) * px_um,
+        meas_length_at_edge=m_edge,
         waist_fwhm_um=f0 * px_um, waist_x_um=xw * px_um, theta_rad=theta, na_eff=n * np.sin(theta), n=n,
         two_zR_um=length * px_um, waist_in_image=bool(xs[0] < xw < xs[-1]),
         length_in_image=bool(xw - length / 2 > xs[0] and xw + length / 2 < xs[-1]),
@@ -118,13 +163,19 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
 def report(res, warnings=()):
     lines = [
         f"Effective NA   {res['na_eff']:.3f}   (n = {res['n']:.3f})",
-        f"Waist FWHM     {res['waist_fwhm_um']:.2f} um",
-        f"Beam length    {res['two_zR_um']:.0f} um   (2zR: FWHM <= sqrt2 x waist FWHM)",
+        f"Waist FWHM     {res['waist_fwhm_um']:.2f} um   (fit)",
+        f"Min FWHM       {res['min_fwhm_um']:.2f} um   (measured, 3-bin mean, at x = {res['min_x_um']:.0f} um)",
+        f"Beam length    {res['two_zR_um']:.0f} um   (fit, 2zR: FWHM <= sqrt2 x waist FWHM)",
+        f"Beam length    {'>= ' if res['meas_length_at_edge'] else ''}{res['meas_length_um']:.0f} um   "
+        "(measured: FWHM <= sqrt2 x min FWHM)",
         "",
-        "Assumes a Gaussian beam with the detection focused on it.",
+        "Fit values assume a Gaussian beam; with aberrations (e.g. spherical)",
+        "trust the measured values. All assume the detection is focused on the beam.",
         "Waist and length include detection blur and pixel size (upper bounds);",
         "the NA does not depend on them.",
     ]
+    if res["meas_length_at_edge"]:
+        warnings = list(warnings) + ["Measured length reaches the end of the image: it is a lower bound."]
     if not res["waist_in_image"]:
         warnings = list(warnings) + ["Waist outside the analysed range: values are extrapolated."]
     elif not res["length_in_image"]:
@@ -132,6 +183,9 @@ def report(res, warnings=()):
     if res["power_cv"] > 0.2:
         warnings = list(warnings) + [f"Light per column varies {100 * res['power_cv']:.0f}% along the beam "
                                      "(expected constant)."]
+    if len(res["outlier_x_um"]):
+        warnings = list(warnings) + [f"{len(res['outlier_x_um'])} column bins excluded as outliers "
+                                     "(FWHM inconsistent with neighbours: dust, hot pixel?)."]
     if res["n_dropped"]:
         warnings = list(warnings) + [f"{res['n_dropped']} column bins skipped: beam wider than 1/4 of the crop."]
     if warnings:
@@ -140,7 +194,7 @@ def report(res, warnings=()):
 
 
 class BeamProfileWindow(QtWidgets.QMainWindow):
-    def __init__(self, pixel_pitch_um=4.25, mag=5.0, start_dir=""):
+    def __init__(self, pixel_pitch_um=4.25, mag=5.0, start_dir="", laser=""):
         super().__init__()
         self.setWindowTitle("Beam profile analysis")
         self.setAcceptDrops(True)
@@ -155,6 +209,11 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         self.mag.setToolTip("Detection magnification; sample pixel = camera pixel / magnification")
         self.n = QtWidgets.QDoubleSpinBox(decimals=3, minimum=1.0, maximum=2.0, singleStep=0.01, value=1.56)
         self.n.setToolTip("Refractive index of the immersion medium (for the NA)")
+        self.laser = QtWidgets.QLineEdit(laser)
+        self.laser.setMaximumWidth(80)
+        self.laser.setToolTip("Excitation wavelength, shown in the plot title and report. "
+                              "Taken from the file's mesoSPIM metadata (_meta.txt) when present.")
+        self.laser.editingFinished.connect(self.run)
         self.crop0 = QtWidgets.QSpinBox(minimum=0, maximum=0)
         self.crop1 = QtWidgets.QSpinBox(minimum=0, maximum=0)
         for w in (self.crop0, self.crop1):
@@ -171,7 +230,7 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         bar = QtWidgets.QHBoxLayout()
         bar.addWidget(open_btn)
         for label, w in (("Camera pixel (um)", self.pitch), ("Magnification", self.mag), ("n", self.n),
-                         ("Rows from", self.crop0), ("to", self.crop1)):
+                         ("Laser", self.laser), ("Rows from", self.crop0), ("to", self.crop1)):
             bar.addWidget(QtWidgets.QLabel(label))
             bar.addWidget(w)
         bar.addWidget(run_btn)
@@ -224,6 +283,9 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(self, "Beam profile", f"Failed to open file:\n{e}")
             return
         self.path = path
+        laser = read_sidecar_laser(path)
+        if laser:
+            self.laser.setText(laser)
         H = self.img.shape[0]
         for w, v in ((self.crop0, 0), (self.crop1, H)):
             w.blockSignals(True)
@@ -260,7 +322,9 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         except Exception as e:
             self.text.setPlainText(f"Analysis failed: {e}")
             return
+        laser = self.laser.text().strip()
         self.text.setPlainText(
+            (f"Laser          {laser}\n" if laser else "") +
             report(res, warnings) + "\n\n" +
             f"Pixel {self.px():.3f} um ({self.pitch.value():g} um / {self.mag.value():g}x), "
             f"rows {a}-{b}, {self.n_frames} frame(s) averaged")
@@ -277,7 +341,9 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         ax[0].axhspan(b * px, H * px, color="k", alpha=0.6)
         ax[0].set_ylim(H * px, 0)
         ax[0].set_ylabel("y (um)")
-        ax[0].set_title(f"{os.path.basename(self.path or '')}  (drag vertically to crop)")
+        laser = self.laser.text().strip()
+        ax[0].set_title(f"{os.path.basename(self.path or '')}" + (f", laser {laser}" if laser else "")
+                        + "  (drag vertically to crop)")
         self._span = SpanSelector(ax[0], self._on_span, "vertical", useblit=True, minspan=10 * px,
                                   props=dict(facecolor="tab:orange", alpha=0.3))
         ax[1].plot(res["x_um"], res["fwhm_um"], ".", ms=3, label="FWHM across the beam")
@@ -285,6 +351,16 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         ax[1].plot(xx * px, _observed_fwhm(xx, *res["fit_params_px"]) * px, "-",
                    label=f"fit: NA {res['na_eff']:.3f}, waist FWHM {res['waist_fwhm_um']:.2f} um, "
                          f"length {res['two_zR_um']:.0f} um")
+        if len(res["outlier_x_um"]):
+            ax[1].plot(res["outlier_x_um"], res["outlier_fwhm_um"], "x", color="gray", ms=5,
+                       label=f"outlier bins, excluded ({len(res['outlier_x_um'])})")
+        ax[1].plot(res["min_x_um"], res["min_fwhm_um"], "v", color="tab:red", ms=7,
+                   label=f"min measured FWHM {res['min_fwhm_um']:.2f} um")
+        ax[1].axhline(np.sqrt(2) * res["min_fwhm_um"], color="tab:red", ls=":", lw=1)
+        ax[1].axvspan(res["meas_x0_um"], res["meas_x1_um"], facecolor="none", edgecolor="tab:red",
+                      hatch="//", alpha=0.5,
+                      label=f"measured length {'>= ' if res['meas_length_at_edge'] else ''}"
+                            f"{res['meas_length_um']:.0f} um")
         ax[1].axhline(np.sqrt(2) * res["waist_fwhm_um"], color="gray", ls=":", lw=1)
         ax[1].axvspan(res["waist_x_um"] - res["two_zR_um"] / 2, res["waist_x_um"] + res["two_zR_um"] / 2,
                       color="tab:green", alpha=0.15)
@@ -315,10 +391,11 @@ def main():
                         help="Camera pixel pitch in um")
     parser.add_argument("--mag", type=float, default=5.0, help="Detection magnification")
     parser.add_argument("--dir", default="", help="Start folder of the file dialog")
+    parser.add_argument("--laser", default="", help="Excitation laser, e.g. '488 nm' (a file's _meta.txt overrides it)")
     args = parser.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    win = BeamProfileWindow(args.pixel_pitch, args.mag, args.dir)
+    win = BeamProfileWindow(args.pixel_pitch, args.mag, args.dir, args.laser)
     win.show()
     if args.tiff_path:
         win.load(args.tiff_path)

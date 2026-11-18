@@ -3,7 +3,7 @@ Run from mesoSPIM/: python -m pytest test/test_beam_profile.py -q"""
 import numpy as np
 from tifffile import imwrite
 
-from src.utils.beam_profile_gui_qt import analyse_beam, read_image, saturation
+from src.utils.beam_profile_gui_qt import analyse_beam, measured_range, read_image, saturation
 
 
 def synthetic_beam(w0=3.0, theta=0.04, H=200, W=2000, noise=0.5):
@@ -21,6 +21,7 @@ def test_recovers_beam():
     assert abs(res["waist_fwhm_um"] - 1.1774 * 3 * 0.5) < 0.1     # 1.77 um
     assert abs(res["two_zR_um"] - 75) < 0.1 * 75                  # 2zR = 150 px = 75 um
     assert res["power_cv"] < 0.05 and res["waist_in_image"] and res["length_in_image"]
+    assert abs(res["meas_length_um"] - res["two_zR_um"]) < 0.1 * 75 and not res["meas_length_at_edge"]
 
 
 def test_saturation():
@@ -40,3 +41,23 @@ def test_read_stack(tmp_path):
     mean, mx, n, px = read_image(path)
     assert mean.shape == (30, 40) and n == 10 and abs(mean.mean() - 9.5) < 1e-9   # central 10 frames: 5..14
     assert mx.max() == 14 and px is None                                            # frame 3 not read
+
+
+def test_measured_range_asymmetric():
+    xs = np.arange(0, 100, 10.)
+    fw = np.array([20, 16, 12, 8, 4, 5, 6, 7, 8, 9.])     # min 4 at x=40, threshold 4*sqrt2 = 5.657
+    x0, x1, edge = measured_range(xs, fw, 4)
+    assert abs(x0 - (30 + 10 * (8 - 5.657) / 4)) < 0.01   # crossing between 8 (x=30) and 4 (x=40)
+    assert abs(x1 - (50 + 10 * (5.657 - 5) / 1)) < 0.01   # crossing between 5 (x=50) and 6 (x=60)
+    assert not edge
+    assert measured_range(xs, np.full(10, 4.), 0) == (0., 90., True)
+
+
+def test_speck_rejected():
+    img = synthetic_beam()
+    img[100:106, 101:109] += 5000            # dust / hot pixel on the wide part of the beam (FWHM ~ 4x waist there)
+    res = analyse_beam(img, px_um=0.5, n=1.5)
+    assert len(res["outlier_x_um"]) >= 1
+    assert abs(res["min_x_um"] - 500) < 30                            # min at the true waist (x = 1000 px)
+    assert abs(res["min_fwhm_um"] - 1.1774 * 3 * 0.5) < 0.2
+    assert abs(res["meas_length_um"] - 75) < 0.15 * 75
