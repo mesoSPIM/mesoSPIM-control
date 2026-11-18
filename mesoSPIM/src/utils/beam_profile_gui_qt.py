@@ -283,7 +283,7 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         ax[1].plot(res["x_um"], res["fwhm_um"], ".", ms=3, label="FWHM across the beam")
         xx = np.linspace(0, W, 1000)
         ax[1].plot(xx * px, _observed_fwhm(xx, *res["fit_params_px"]) * px, "-",
-                   label=f"fit: NA {res['na_eff']:.3f}, waist {res['waist_fwhm_um']:.2f} um, "
+                   label=f"fit: NA {res['na_eff']:.3f}, waist FWHM {res['waist_fwhm_um']:.2f} um, "
                          f"length {res['two_zR_um']:.0f} um")
         ax[1].axhline(np.sqrt(2) * res["waist_fwhm_um"], color="gray", ls=":", lw=1)
         ax[1].axvspan(res["waist_x_um"] - res["two_zR_um"] / 2, res["waist_x_um"] + res["two_zR_um"] / 2,

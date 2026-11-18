@@ -1252,12 +1252,12 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def launch_beam_profile_window(self):
         """Start mesoSPIM/src/utils/beam_profile_gui_qt.py as an independent process, preloaded
-        with the last acquired TIFF stack, or empty (browse or drag and drop a file there).
-        Magnification comes from the acquisition's zoom (last stack) or the current zoom."""
+        with the last snap (beam images are taken with the Snap button), or empty (browse or
+        drag and drop a file there). Magnification comes from the snap's zoom or the current zoom."""
         msg_box = QtWidgets.QMessageBox(self)
         msg_box.setWindowTitle("Beam profile")
-        msg_box.setText("Load the most recently acquired stack, or browse for a TIFF file yourself?")
-        last_button = msg_box.addButton("Last acquired stack", QtWidgets.QMessageBox.AcceptRole)
+        msg_box.setText("Load the most recent snap (taken with the Snap button), or browse for a TIFF file yourself?")
+        last_button = msg_box.addButton("Last snap", QtWidgets.QMessageBox.AcceptRole)
         msg_box.addButton("Browse for TIFF file...", QtWidgets.QMessageBox.ActionRole)
         cancel_button = msg_box.addButton(QtWidgets.QMessageBox.Cancel)
         msg_box.exec_()
@@ -1267,15 +1267,13 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         filename, zoom = None, self.state['zoom']
         if clicked == last_button:
-            acq = getattr(self.core.image_writer, 'acq', None)
-            path = getattr(self.core.image_writer, 'path', None)
-            if acq is None or path is None or not os.path.isfile(path):
-                QtWidgets.QMessageBox.warning(self, "Beam profile", "No completed acquisition found yet.")
+            path = getattr(self.core.image_writer, 'last_snap_path', None)
+            if path is None or not os.path.isfile(path):
+                QtWidgets.QMessageBox.warning(self, "Beam profile",
+                                              "No snap taken in this session yet.\n"
+                                              "Take one with the Snap button, or browse for a TIFF file.")
                 return
-            if not path.lower().endswith(('.tif', '.tiff')):
-                QtWidgets.QMessageBox.warning(self, "Beam profile", f"The last acquisition is not a TIFF file:\n{path}")
-                return
-            filename, zoom = path, acq['zoom']
+            filename, zoom = path, self.core.image_writer.last_snap_zoom or zoom
 
         script_path = os.path.join(os.path.dirname(__file__), 'utils', 'beam_profile_gui_qt.py')
         cmd = [sys.executable, script_path,

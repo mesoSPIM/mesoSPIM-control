@@ -52,6 +52,8 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
 
         self.file_extension = ''
         self.active_processor_metadata = []
+        self.last_snap_path = None  # last snap TIFF written this session, and the zoom it was taken at
+        self.last_snap_zoom = None
         self.check_versions()
 
     def _get_enabled_processor_metadata(self):
@@ -403,6 +405,7 @@ class mesoSPIM_ImageWriter(QtCore.QObject):
             tifffile.imsave(path, image, photometric='minisblack',
                             imagej=True, resolution=xy_res,
                             metadata={'unit': 'um'})
+            self.last_snap_path, self.last_snap_zoom = path, self.state['zoom']
             self.write_snap_metadata(path)
         except Exception as e:
             logger.error(f"{e}")
