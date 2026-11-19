@@ -6,11 +6,13 @@ from tifffile import imwrite
 from src.utils.beam_profile_gui_qt import analyse_beam, measured_range, read_image, saturation
 
 
-def synthetic_beam(w0=3.0, theta=0.04, H=200, W=2000, noise=0.5):
-    x = np.arange(W)[None, :]
+def synthetic_beam(w0=3.0, theta=0.04, H=200, W=2000, noise=0.5, tilt_deg=0.0):
+    x = np.arange(W)[None, :] - W / 2
     y = np.arange(H)[:, None] - H / 2
-    w = w0 * np.sqrt(1 + ((x - W / 2) * theta / w0) ** 2)
-    img = 3000 * np.sqrt(2 / np.pi) / w * np.exp(-2 * y ** 2 / w ** 2)   # power conserved along x
+    t = np.radians(tilt_deg)
+    u, v = x * np.cos(t) + y * np.sin(t), -x * np.sin(t) + y * np.cos(t)   # along / across the beam
+    w = w0 * np.sqrt(1 + (u * theta / w0) ** 2)
+    img = 3000 * np.sqrt(2 / np.pi) / w * np.exp(-2 * v ** 2 / w ** 2)   # power conserved along the beam
     return 100 + img + np.random.default_rng(0).normal(0, noise, img.shape)
 
 
@@ -61,3 +63,12 @@ def test_speck_rejected():
     assert abs(res["min_x_um"] - 500) < 30                            # min at the true waist (x = 1000 px)
     assert abs(res["min_fwhm_um"] - 1.1774 * 3 * 0.5) < 0.2
     assert abs(res["meas_length_um"] - 75) < 0.15 * 75
+
+
+def test_tilted_beam():
+    # 15 deg: uncorrected, theta would read 1/cos^2 = 7% high and lengths 3.5% short
+    res = analyse_beam(synthetic_beam(w0=6.0, H=800, tilt_deg=15), px_um=0.5, n=1.5)
+    assert abs(res["tilt_deg"] - 15) < 0.2
+    assert abs(res["theta_rad"] - 0.04) < 0.001
+    assert abs(res["waist_fwhm_um"] - 1.1774 * 6 * 0.5) < 0.06 * 3.53   # some smear: beam shifts 2.7 px per bin
+    assert abs(res["two_zR_um"] - 150) < 0.1 * 150                         # 2zR = 2 w0/theta = 300 px = 150 um

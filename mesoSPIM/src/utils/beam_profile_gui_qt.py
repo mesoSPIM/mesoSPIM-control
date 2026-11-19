@@ -34,6 +34,7 @@ FWHM_PER_W = np.sqrt(2 * np.log(2))   # intensity FWHM / 1/e^2 radius = 1.1774
 FULL_SCALE = (255, 4095, 16383, 65535)  # 8/12/14/16-bit ADC full scale
 MAX_FRAMES = 10
 OUTLIER_REL = 0.3   # bin FWHM off its 5-bin running median by more than this fraction: excluded
+TILT_WARN_DEG = 2.0
 
 
 def _gauss(y, A, y0, s, c):
@@ -112,7 +113,7 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
     edge = max(1, min(20, H // 10))
     bg = np.median(np.concatenate([a[:edge].ravel(), a[-edge:].ravel()]))
     y = np.arange(H)
-    xs, fw, power = [], [], []
+    xs, fw, power, yc = [], [], [], []
     for x0 in range(0, W - bin_cols + 1, bin_cols):
         prof = np.median(a[:, x0:x0 + bin_cols], axis=1) - bg
         i = int(np.argmax(np.convolve(prof, np.ones(5) / 5, "same")))
@@ -124,19 +125,32 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
         xs.append(x0 + bin_cols / 2)
         fw.append(2 * np.sqrt(2 * np.log(2)) * p[2])
         power.append(p[0] * p[2])
-    xs, fw, power = map(np.array, (xs, fw, power))
+        yc.append(p[1])
+    xs, fw, power, yc = map(np.array, (xs, fw, power, yc))
     keep = fw < H / 4                       # wider than 1/4 of the crop: tails clipped, FWHM biased low
     n_dropped = int((~keep).sum())
-    xs, fw, power = xs[keep], fw[keep], power[keep]
+    xs, fw, power, yc = xs[keep], fw[keep], power[keep], yc[keep]
     if len(xs) < 5:
         raise ValueError("Beam not found: fewer than 5 column bins could be fitted (crop too narrow?).")
     # Outlier bins (fit locked on dust or a hot pixel): FWHM far from the running median of its neighbours
     med = median_filter(fw, size=5, mode="nearest")
     out = np.abs(fw - med) > OUTLIER_REL * med
     out_x, out_fw = xs[out], fw[out]
-    xs, fw, power = xs[~out], fw[~out], power[~out]
+    xs, fw, power, yc = xs[~out], fw[~out], power[~out], yc[~out]
     if len(xs) < 5:
         raise ValueError("Beam not found: fewer than 5 consistent column bins.")
+
+    # Beam axis in the image: line through the bin centres (one pass of residual rejection).
+    # Widths are measured along y, so the width perpendicular to the beam is FWHM_y x cos(tilt),
+    # and lengths along the beam are image-x lengths / cos(tilt).
+    axis = np.polyfit(xs, yc, 1)
+    r = yc - np.polyval(axis, xs)
+    ok = np.abs(r) <= max(3 * 1.4826 * np.median(np.abs(r - np.median(r))), 2.0)
+    if ok.sum() >= 5:
+        axis = np.polyfit(xs[ok], yc[ok], 1)
+    tilt = np.arctan(axis[0])
+    c = np.cos(tilt)
+    fw, out_fw = fw * c, out_fw * c
 
     fs = uniform_filter1d(fw, size=3, mode="nearest")    # light smoothing: the min of noisy bins is biased low
     ib = int(np.argmin(fs))
@@ -144,18 +158,20 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
     th0 = min(max((fw.max() - fw[ib]) / FWHM_PER_W / far, 1e-3), 0.5)
     pm, _ = curve_fit(_observed_fwhm, xs, fw, p0=[fw[ib], xs[ib], th0],
                       bounds=([0.05, 0, 1e-4], [20 * fw[ib], W, 1.0]), maxfev=20000)
-    f0, xw, theta = pm
-    length = 2 * f0 / (FWHM_PER_W * theta)
+    f0, xw, theta_x = pm                    # theta_x: divergence per image-x distance
+    theta = theta_x * c                     # per distance along the beam
+    length_x = 2 * f0 / (FWHM_PER_W * theta_x)   # in image x; along the beam: / c
     m0, m1, m_edge = measured_range(xs, fs, ib)
     return dict(
         x_um=xs * px_um, fwhm_um=fw * px_um, fit_params_px=pm, px_um=px_um,
         outlier_x_um=out_x * px_um, outlier_fwhm_um=out_fw * px_um,
+        tilt_deg=np.degrees(tilt), axis_px=axis,
         min_fwhm_um=fs[ib] * px_um, min_x_um=xs[ib] * px_um,
-        meas_x0_um=m0 * px_um, meas_x1_um=m1 * px_um, meas_length_um=(m1 - m0) * px_um,
+        meas_x0_um=m0 * px_um, meas_x1_um=m1 * px_um, meas_length_um=(m1 - m0) / c * px_um,
         meas_length_at_edge=m_edge,
         waist_fwhm_um=f0 * px_um, waist_x_um=xw * px_um, theta_rad=theta, na_eff=n * np.sin(theta), n=n,
-        two_zR_um=length * px_um, waist_in_image=bool(xs[0] < xw < xs[-1]),
-        length_in_image=bool(xw - length / 2 > xs[0] and xw + length / 2 < xs[-1]),
+        two_zR_um=length_x / c * px_um, two_zR_x_um=length_x * px_um, waist_in_image=bool(xs[0] < xw < xs[-1]),
+        length_in_image=bool(xw - length_x / 2 > xs[0] and xw + length_x / 2 < xs[-1]),
         power_cv=power.std() / power.mean(), n_dropped=n_dropped,
     )
 
@@ -168,12 +184,16 @@ def report(res, warnings=()):
         f"Beam length    {res['two_zR_um']:.0f} um   (fit, 2zR: FWHM <= sqrt2 x waist FWHM)",
         f"Beam length    {'>= ' if res['meas_length_at_edge'] else ''}{res['meas_length_um']:.0f} um   "
         "(measured: FWHM <= sqrt2 x min FWHM)",
+        f"Beam tilt      {res['tilt_deg']:+.2f} deg in the image   (widths, lengths and NA corrected)",
         "",
         "Fit values assume a Gaussian beam; with aberrations (e.g. spherical)",
         "trust the measured values. All assume the detection is focused on the beam.",
         "Waist and length include detection blur and pixel size (upper bounds);",
         "the NA does not depend on them.",
     ]
+    if abs(res["tilt_deg"]) > TILT_WARN_DEG:
+        warnings = list(warnings) + [f"Beam tilted {res['tilt_deg']:+.1f} deg in the image: check the alignment "
+                                     "(a tilt out of the focal plane is not visible here and defocuses the ends)."]
     if res["meas_length_at_edge"]:
         warnings = list(warnings) + ["Measured length reaches the end of the image: it is a lower bound."]
     if not res["waist_in_image"]:
@@ -339,6 +359,9 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
                      vmin=np.percentile(self.img, 1), vmax=np.percentile(self.img, 99.9))
         ax[0].axhspan(0, a * px, color="k", alpha=0.6)
         ax[0].axhspan(b * px, H * px, color="k", alpha=0.6)
+        xa = np.array([0, W])                                  # fitted beam axis (crop rows start at a)
+        ax[0].plot(xa * px, (np.polyval(res["axis_px"], xa) + a) * px, "--", color="tab:cyan", lw=0.8)
+        ax[0].set_xlim(0, W * px)
         ax[0].set_ylim(H * px, 0)
         ax[0].set_ylabel("y (um)")
         laser = self.laser.text().strip()
@@ -362,7 +385,7 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
                       label=f"measured length {'>= ' if res['meas_length_at_edge'] else ''}"
                             f"{res['meas_length_um']:.0f} um")
         ax[1].axhline(np.sqrt(2) * res["waist_fwhm_um"], color="gray", ls=":", lw=1)
-        ax[1].axvspan(res["waist_x_um"] - res["two_zR_um"] / 2, res["waist_x_um"] + res["two_zR_um"] / 2,
+        ax[1].axvspan(res["waist_x_um"] - res["two_zR_x_um"] / 2, res["waist_x_um"] + res["two_zR_x_um"] / 2,
                       color="tab:green", alpha=0.15)
         ax[1].set_ylabel("FWHM (um)")
         ax[1].set_xlabel("x along the beam (um)")
