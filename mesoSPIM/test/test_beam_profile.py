@@ -3,7 +3,8 @@ Run from mesoSPIM/: python -m pytest test/test_beam_profile.py -q"""
 import numpy as np
 from tifffile import imwrite
 
-from src.utils.beam_profile_gui_qt import analyse_beam, measured_range, read_image, saturation
+from src.utils.beam_profile_gui_qt import (analyse_beam, analyse_shape, measured_range, profile_widths,
+                                           read_image, saturation, shape_report, GAUSS_SHAPE)
 
 
 def synthetic_beam(w0=3.0, theta=0.04, H=200, W=2000, noise=0.5, tilt_deg=0.0):
@@ -72,3 +73,45 @@ def test_tilted_beam():
     assert abs(res["theta_rad"] - 0.04) < 0.001
     assert abs(res["waist_fwhm_um"] - 1.1774 * 6 * 0.5) < 0.06 * 3.53   # some smear: beam shifts 2.7 px per bin
     assert abs(res["two_zR_um"] - 150) < 0.1 * 150                         # 2zR = 2 w0/theta = 300 px = 150 um
+
+
+def sa_beam(sa=+1, k=150.0, alpha=0.05, H=400, W=2000, blur=3.0):
+    """Ray model of a focused beam travelling towards -x (enters from the right), with spherical aberration:
+    the ray through pupil height rho crosses the axis at x0 + sa * k * rho^2 (sa=+1: edge rays focus upstream)."""
+    from scipy.ndimage import gaussian_filter1d
+    rho = np.linspace(-1, 1, 6001)
+    wgt = np.exp(-2 * rho ** 2 / 0.8 ** 2)
+    xc = W / 2 + sa * k * rho ** 2
+    img = np.zeros((H, W))
+    for x in range(W):
+        h = rho * alpha * (x - xc) + H / 2
+        img[:, x] = np.histogram(h, bins=H, range=(0, H), weights=wgt)[0]
+    return 100 + 1000 * gaussian_filter1d(img, blur, axis=0) / wgt.sum() * 50
+
+
+def test_shape_gaussian_no_sa():
+    img = synthetic_beam()
+    res = analyse_beam(img, px_um=0.5, n=1.5)
+    sh = analyse_shape(img, res, "right")
+    ratios = [r[s]["ratio"] for r in sh["rows"] for s in ("up", "down") if r[s]]
+    assert len(ratios) >= 4 and all(abs(q - GAUSS_SHAPE) < 0.05 for q in ratios)
+    assert sh["sa_sign"] == 0
+
+
+def test_shape_sa_sign():
+    for sa in (+1, -1):
+        img = sa_beam(sa)
+        res = analyse_beam(img, px_um=1.0, n=1.5)
+        sh = analyse_shape(img, res, "right")
+        assert sh["sa_sign"] == sa, (sa, sh["asym"])
+        assert analyse_shape(img, res, "left")["sa_sign"] == -sa      # direction flips the sign
+        assert "POSITIVE" in "\n".join(shape_report(sh)) if sa > 0 else "NEGATIVE" in "\n".join(shape_report(sh))
+    flat = analyse_shape(sa_beam(+1, k=0.0), analyse_beam(sa_beam(+1, k=0.0), 1.0), "right")
+    assert flat["sa_sign"] == 0, flat["asym"]
+
+
+def test_profile_widths():
+    y = np.arange(201) - 100.
+    fw, w13, c = profile_widths(np.exp(-2 * (y - 7) ** 2 / 20 ** 2))  # 1/e^2 radius 20: widths 23.5, 40; centre 107
+    assert abs(fw - 23.55) < 0.3 and abs(w13 - 40) < 0.4 and abs(c - 107) < 0.1
+    assert profile_widths(np.ones(50)) is None                       # never drops: level not reached

@@ -9,6 +9,8 @@ Beam profile analysis from an image of a static (non-scanned) excitation beam.
     FWHM(x)^2 = FWHM_waist^2 + (1.1774 theta (x - x_waist))^2
 - Reports effective NA = n sin(theta), waist FWHM and beam length
   (2zR: the range where FWHM <= sqrt2 x waist FWHM)
+- Profile shape up- and downstream of the focus (FWHM / 1/e^2 width) and, from its
+  asymmetry, the sign of the spherical aberration. Needs the side the beam enters from.
 
 Assumptions: Gaussian beam; the detection is focused on the beam. Detection blur and
 pixel size are part of the measured waist and length (upper bounds); theta, and so
@@ -35,6 +37,9 @@ FULL_SCALE = (255, 4095, 16383, 65535)  # 8/12/14/16-bit ADC full scale
 MAX_FRAMES = 10
 OUTLIER_REL = 0.3   # bin FWHM off its 5-bin running median by more than this fraction: excluded
 TILT_WARN_DEG = 2.0
+GAUSS_SHAPE = 0.5887              # FWHM / 1/e^2 full width of a Gaussian: sqrt(ln2 / 2)
+SHAPE_DIST = (1.0, 1.5, 2.0)      # distances from the focus where the shape is measured, x measured length
+SA_NONE, SA_STRONG = 0.10, 0.25   # |upstream - downstream| shape: below: no SA seen; above: strong
 
 
 def _gauss(y, A, y0, s, c):
@@ -106,12 +111,103 @@ def measured_range(xs, fw, ib):
     return ends[0], ends[1], edge
 
 
+def _background(a):
+    """Background level: median of the top and bottom rows of the crop."""
+    edge = max(1, min(20, a.shape[0] // 10))
+    return np.median(np.concatenate([a[:edge].ravel(), a[-edge:].ravel()]))
+
+
+def profile_widths(prof):
+    """(width at 50 %, width at 13.5 % = 1/e^2, centre at 50 %) of a background-free 1D profile,
+    in samples, walking out from the peak. None if a level is not reached inside the profile."""
+    p = uniform_filter1d(np.asarray(prof, dtype=float), 3, mode="nearest")
+    i = int(np.argmax(p))
+    if p[i] <= 0:
+        return None
+    out = []
+    for lev in (0.5, np.exp(-2)):
+        t = lev * p[i]
+        l = r = i
+        while l > 0 and p[l] > t:
+            l -= 1
+        while r < len(p) - 1 and p[r] > t:
+            r += 1
+        if p[l] > t or p[r] > t:        # level not reached before the crop edge
+            return None
+        out.append((l + (t - p[l]) / (p[l + 1] - p[l]), r - (t - p[r]) / (p[r - 1] - p[r])))
+    (l50, r50), (l13, r13) = out
+    return r50 - l50, r13 - l13, (l50 + r50) / 2
+
+
+def analyse_shape(img, res, enters_from="right", bin_cols=10):
+    """Profile shape up- and downstream of the focus, and the sign of the spherical aberration.
+
+    Shape = FWHM / 1/e^2 width of the profile across the beam: 0.59 for a Gaussian, higher for a
+    flat top with bright edges, lower for a sharp core with wide wings. Without aberrations the
+    profile is the same at equal distances before and after the focus. With spherical aberration,
+    rays through the edge of the lens cross the axis before (positive, under-corrected) or after
+    (negative, over-corrected) the central rays: the beam is flat-topped on the side where the edge
+    rays have not crossed yet, and sharp with wings on the other side.
+    Measured at 1, 1.5 and 2 x the measured length from the narrowest point, where inside the image.
+    `res` is the result of analyse_beam() on the same image."""
+    a = np.asarray(img, dtype=float)
+    H, W = a.shape
+    bg = _background(a)
+    px = res["px_um"]
+    up = 1 if enters_from == "right" else -1       # image-x direction pointing upstream
+    xc = res["min_x_um"] / px
+    h = bin_cols // 2
+    rows = []
+    for k in SHAPE_DIST:
+        d = k * res["meas_length_um"] / px
+        row = dict(dist_um=d * px)
+        for side, sgn in (("up", up), ("down", -up)):
+            x0 = int(round(xc + sgn * d))
+            r = None
+            if h <= x0 <= W - h:
+                prof = np.median(a[:, x0 - h:x0 + h], axis=1) - bg
+                w = profile_widths(prof)
+                if w is not None and w[1] > 0:
+                    r = dict(x_um=x0 * px, fwhm_um=w[0] * px, ratio=w[0] / w[1],
+                             y_um=(np.arange(H) - w[2]) * px, prof=prof / prof.max())
+            row[side] = r
+        rows.append(row)
+    pairs = [(r["up"]["ratio"], r["down"]["ratio"]) for r in rows if r["up"] and r["down"]]
+    if not pairs:
+        return dict(enters_from=enters_from, rows=rows, asym=None, sa_sign=0, sa_strength="")
+    asym = float(np.mean([u - dn for u, dn in pairs]))
+    sign = 0 if abs(asym) < SA_NONE else (1 if asym > 0 else -1)
+    strength = "" if sign == 0 else ("strong" if abs(asym) >= SA_STRONG else "weak")
+    return dict(enters_from=enters_from, rows=rows, asym=asym, sa_sign=sign, sa_strength=strength)
+
+
+def shape_report(shape):
+    lines = [f"Beam enters    from the {shape['enters_from']} of the image",
+             f"Profile shape  FWHM / 1/e2 width (Gaussian {GAUSS_SHAPE:.2f}; "
+             "flat top > 0.7; sharp core + wings < 0.5)"]
+    f = lambda r: f"{r['ratio']:.2f}" if r else " n/a"
+    for row in shape["rows"]:
+        lines.append(f"  +/-{row['dist_um']:5.0f} um   upstream {f(row['up'])}   downstream {f(row['down'])}")
+    if shape["asym"] is None:
+        lines.append("Spherical ab.  not estimated: no upstream/downstream pair inside the image")
+    elif shape["sa_sign"] == 0:
+        lines.append(f"Spherical ab.  none detected (up - down {shape['asym']:+.2f}, below {SA_NONE})")
+    elif shape["sa_sign"] > 0:
+        lines += [f"Spherical ab.  POSITIVE, {shape['sa_strength']} (up - down {shape['asym']:+.2f}, under-corrected):",
+                  "               rays through the lens edge focus first (upstream).",
+                  "               Typical of a lens: singlet, or an achromat facing the wrong way."]
+    else:
+        lines += [f"Spherical ab.  NEGATIVE, {shape['sa_strength']} (up - down {shape['asym']:+.2f}, over-corrected):",
+                  "               rays through the lens edge focus last (downstream).",
+                  "               Typical of focusing through a flat window into a higher-index medium."]
+    return lines
+
+
 def analyse_beam(img, px_um, n=1.0, bin_cols=10):
     """Analyse a 2D image of a beam running along x. Lengths in um."""
     a = np.asarray(img, dtype=float)
     H, W = a.shape
-    edge = max(1, min(20, H // 10))
-    bg = np.median(np.concatenate([a[:edge].ravel(), a[-edge:].ravel()]))
+    bg = _background(a)
     y = np.arange(H)
     xs, fw, power, yc = [], [], [], []
     for x0 in range(0, W - bin_cols + 1, bin_cols):
@@ -176,7 +272,7 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
     )
 
 
-def report(res, warnings=()):
+def report(res, warnings=(), shape=None):
     lines = [
         f"Effective NA   {res['na_eff']:.3f}   (n = {res['n']:.3f})",
         f"Waist FWHM     {res['waist_fwhm_um']:.2f} um   (fit)",
@@ -186,6 +282,10 @@ def report(res, warnings=()):
         "(measured: FWHM <= sqrt2 x min FWHM)",
         f"Beam tilt      {res['tilt_deg']:+.2f} deg in the image   (widths, lengths and NA corrected)",
         "",
+    ]
+    if shape is not None:
+        lines += shape_report(shape) + [""]
+    lines += [
         "Fit values assume a Gaussian beam; with aberrations (e.g. spherical)",
         "trust the measured values. All assume the detection is focused on the beam.",
         "Waist and length include detection blur and pixel size (upper bounds);",
@@ -214,7 +314,7 @@ def report(res, warnings=()):
 
 
 class BeamProfileWindow(QtWidgets.QMainWindow):
-    def __init__(self, pixel_pitch_um=4.25, mag=5.0, start_dir="", laser=""):
+    def __init__(self, pixel_pitch_um=4.25, mag=5.0, start_dir="", laser="", enters_from="right"):
         super().__init__()
         self.setWindowTitle("Beam profile analysis")
         self.setAcceptDrops(True)
@@ -234,6 +334,12 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         self.laser.setToolTip("Excitation wavelength, shown in the plot title and report. "
                               "Taken from the file's mesoSPIM metadata (_meta.txt) when present.")
         self.laser.editingFinished.connect(self.run)
+        self.enters = QtWidgets.QComboBox()
+        self.enters.addItems(["right", "left"])
+        self.enters.setCurrentText(enters_from)
+        self.enters.setToolTip("Side of the image the beam enters from. "
+                               "Sets which side of the focus is upstream, for the sign of the spherical aberration.")
+        self.enters.currentIndexChanged.connect(self.run)
         self.crop0 = QtWidgets.QSpinBox(minimum=0, maximum=0)
         self.crop1 = QtWidgets.QSpinBox(minimum=0, maximum=0)
         for w in (self.crop0, self.crop1):
@@ -250,14 +356,14 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         bar = QtWidgets.QHBoxLayout()
         bar.addWidget(open_btn)
         for label, w in (("Camera pixel (um)", self.pitch), ("Magnification", self.mag), ("n", self.n),
-                         ("Laser", self.laser), ("Rows from", self.crop0), ("to", self.crop1)):
+                         ("Laser", self.laser), ("Beam enters from", self.enters), ("Rows from", self.crop0), ("to", self.crop1)):
             bar.addWidget(QtWidgets.QLabel(label))
             bar.addWidget(w)
         bar.addWidget(run_btn)
         bar.addWidget(save_btn)
         bar.addStretch()
 
-        self.fig = Figure(figsize=(10, 7))
+        self.fig = Figure(figsize=(10, 9))
         self.canvas = FigureCanvas(self.fig)
         self.text = QtWidgets.QPlainTextEdit(readOnly=True)
         self.text.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
@@ -339,20 +445,23 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
                             "(camera pixel / magnification).")
         try:
             res = analyse_beam(self.img[a:b], self.px(), self.n.value())
+            shape = analyse_shape(self.img[a:b], res, self.enters.currentText())
         except Exception as e:
             self.text.setPlainText(f"Analysis failed: {e}")
             return
         laser = self.laser.text().strip()
         self.text.setPlainText(
             (f"Laser          {laser}\n" if laser else "") +
-            report(res, warnings) + "\n\n" +
+            report(res, warnings, shape) + "\n\n" +
             f"Pixel {self.px():.3f} um ({self.pitch.value():g} um / {self.mag.value():g}x), "
             f"rows {a}-{b}, {self.n_frames} frame(s) averaged")
-        self.plot(res, a, b)
+        self.plot(res, a, b, shape)
 
-    def plot(self, res, a, b):
+    def plot(self, res, a, b, shape=None):
         self.fig.clear()
-        ax = self.fig.subplots(2, 1, sharex=True)
+        gs = self.fig.add_gridspec(3, 1, height_ratios=[2.2, 2.2, 1.6])
+        ax = [self.fig.add_subplot(gs[0])]
+        ax.append(self.fig.add_subplot(gs[1], sharex=ax[0]))
         px = res["px_um"]
         H, W = self.img.shape
         ax[0].imshow(self.img, cmap="gray", aspect="auto", extent=(0, W * px, H * px, 0),
@@ -387,12 +496,52 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         ax[1].axhline(np.sqrt(2) * res["waist_fwhm_um"], color="gray", ls=":", lw=1)
         ax[1].axvspan(res["waist_x_um"] - res["two_zR_x_um"] / 2, res["waist_x_um"] + res["two_zR_x_um"] / 2,
                       color="tab:green", alpha=0.15)
+        if shape is not None:
+            self._plot_shape(ax, shape, gs[2])
         ax[1].set_ylabel("FWHM (um)")
         ax[1].set_xlabel("x along the beam (um)")
         ax[1].set_ylim(0, None)
         ax[1].legend(fontsize=8)
         self.fig.tight_layout()
         self.canvas.draw()
+
+    def _plot_shape(self, ax, shape, slot):
+        """Beam direction on the image, shape points on the FWHM plot, and the profiles in a third panel."""
+        right = shape["enters_from"] == "right"
+        ax[0].text(0.99 if right else 0.01, 0.06, "<- beam enters" if right else "beam enters ->",
+                   transform=ax[0].transAxes, color="w", fontsize=9, ha="right" if right else "left")
+        colors = {"up": "tab:purple", "down": "tab:olive"}
+        for side, mk in (("up", "^"), ("down", "s")):
+            first = True
+            for row in shape["rows"]:
+                pt = row[side]
+                if pt:
+                    ax[1].plot(pt["x_um"], pt["fwhm_um"], mk, color=colors[side], ms=6, mfc="none",
+                               label=f"{'upstream' if side == 'up' else 'downstream'} shape: direct FWHM, "
+                                     "FWHM / 1/e2 width" if first else None)
+                    first = False
+                    ax[1].annotate(f"{pt['ratio']:.2f}", (pt["x_um"], pt["fwhm_um"]), textcoords="offset points",
+                                   xytext=(0, 7), ha="center", fontsize=7, color=colors[side])
+        p = self.fig.add_subplot(slot)
+        ax.append(p)
+        for row, ls in zip(shape["rows"], ("-", "--", ":")):
+            for side in ("up", "down"):
+                r = row[side]
+                if r:
+                    p.plot(r["y_um"], r["prof"], ls, color=colors[side], lw=1,
+                           label=f"{'upstream' if side == 'up' else 'downstream'} {row['dist_um']:.0f} um: "
+                                 f"{r['ratio']:.2f}")
+        widest = max([r[s]["fwhm_um"] for r in shape["rows"] for s in ("up", "down") if r[s]], default=50)
+        p.set_xlim(-1.5 * widest, 1.5 * widest)
+        p.set_xlabel("y across the beam, from the half-maximum centre (um)")
+        p.set_ylabel("norm. intensity")
+        if shape["asym"] is None:
+            verdict = "SA not estimated"
+        else:
+            verdict = {1: "positive", -1: "negative", 0: "none seen"}[shape["sa_sign"]]
+            verdict = f"spherical aberration {verdict} {shape['sa_strength']} (up - down {shape['asym']:+.2f})"
+        p.set_title(f"Profile shape, FWHM / 1/e2 width (Gaussian {GAUSS_SHAPE:.2f}): {verdict}", fontsize=9)
+        p.legend(fontsize=7, ncol=2)
 
     def save_png(self):
         if self.img is None:
@@ -415,10 +564,12 @@ def main():
     parser.add_argument("--mag", type=float, default=5.0, help="Detection magnification")
     parser.add_argument("--dir", default="", help="Start folder of the file dialog")
     parser.add_argument("--laser", default="", help="Excitation laser, e.g. '488 nm' (a file's _meta.txt overrides it)")
+    parser.add_argument("--beam-from", default="right", choices=("right", "left"), dest="beam_from",
+                        help="Side of the image the beam enters from (for the sign of the spherical aberration)")
     args = parser.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    win = BeamProfileWindow(args.pixel_pitch, args.mag, args.dir, args.laser)
+    win = BeamProfileWindow(args.pixel_pitch, args.mag, args.dir, args.laser, args.beam_from)
     win.show()
     if args.tiff_path:
         win.load(args.tiff_path)
