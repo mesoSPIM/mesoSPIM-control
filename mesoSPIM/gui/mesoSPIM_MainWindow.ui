@@ -3401,6 +3401,33 @@ Focus</string>
              <string>Open image contrast window</string>
             </property>
            </widget>
+           <widget class="QPushButton" name="LaserHoldButton">
+            <property name="geometry">
+             <rect>
+              <x>430</x>
+              <y>90</y>
+              <width>361</width>
+              <height>71</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>14</pointsize>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>For alignment and laser power measurement: while Live runs, keep the selected laser continuously on at the set intensity, instead of pulsing it once per frame. Takes effect during Live only (not Snap or acquisitions). ⚠ Higher light dose: the sample is illuminated also between frames.</string>
+            </property>
+            <property name="text">
+             <string>⚠ Hold laser ON in Live</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
            <widget class="QGroupBox" name="groupBox_15">
             <property name="geometry">
              <rect>

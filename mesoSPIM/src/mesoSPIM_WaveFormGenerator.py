@@ -33,6 +33,7 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
 
     def __init__(self, parent):
         super().__init__()
+        self.laser_hold = False # True: laser AO held at constant intensity over the whole sweep (set by Core.live() only)
         if self.requires_nidaqmx:
             require_nidaqmx('NI waveform generation')
         self.cfg = parent.cfg
@@ -248,6 +249,10 @@ class mesoSPIM_WaveFormGenerator(QtCore.QObject):
                                                     pulsewidth = laser_l_pulse,
                                                     amplitude = laser_voltage,
                                                     offset = 0)
+        if self.laser_hold:
+            # Constant intensity over the whole sweep: the last sample stays on the AO line
+            # between frames, so the laser does not blink in Live.
+            self.laser_template_waveform = np.full(self.samples, laser_voltage, dtype=float)
 
         '''The key: replace the waveform in the waveform list with this new template'''
         assert sorted(list(self.cfg.laserdict.keys())) == list(self.cfg.laserdict.keys()), f"Error: laserdict keys in config file must be alphanumerically sorted: {self.cfg.laserdict.keys()}"

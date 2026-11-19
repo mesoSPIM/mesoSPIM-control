@@ -611,6 +611,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.ZeroLeftETLButton.toggled.connect(self.zero_left_etl)
         self.ZeroRightETLButton.toggled.connect(self.zero_right_etl)
         self.freezeGalvoButton.toggled.connect(self.zero_galvo_amp)
+        self.LaserHoldButton.toggled.connect(self.set_laser_hold)
 
         self.ChooseETLcfgButton.clicked.connect(self.choose_etl_config)
         self.SaveETLParametersButton.clicked.connect(self.save_etl_config)
@@ -1403,6 +1404,18 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.LeftETLOffsetSpinBox.setEnabled(True)
                 self.LeftETLAmplitudeSpinBox.setEnabled(True)
                 self.ZeroLeftETLButton.setEnabled(True)
+
+    def set_laser_hold(self, checked):
+        '''Other tab: hold the laser continuously on (no per-frame pulsing) while Live runs.
+        Read by mesoSPIM_Core.live() every frame, so it also switches on/off during a running Live.'''
+        self.state['laser_hold_on'] = bool(checked)
+        if checked:
+            self.LaserHoldButton.setText('Laser held ON in Live (click to release)')
+            self.LaserHoldButton.setStyleSheet('QPushButton {background-color: #c0392b; color: white;}')
+        else:
+            self.LaserHoldButton.setText('⚠ Hold laser ON in Live')
+            self.LaserHoldButton.setStyleSheet('')
+        logger.info(f"Hold laser ON in Live: {bool(checked)}")
 
     def zero_galvo_amp(self):
         '''Set the amplitude of both galvos to zero, or back to where it was, depending on button state'''

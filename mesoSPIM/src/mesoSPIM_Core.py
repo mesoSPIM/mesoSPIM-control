@@ -903,11 +903,13 @@ class mesoSPIM_Core(QtCore.QObject):
         laser = self.state['laser']
         laser_blanking = False if (hasattr(self.cfg, 'laser_blanking') and (self.cfg.laser_blanking in ('stack', 'stacks'))) else True
         self.laserenabler.enable(laser)
+        held_laser = None # laser currently held on (Other tab > Hold laser ON), None if not holding
         while self.stopflag is False:
+            held_laser = self._update_live_laser_hold(held_laser)
             ''' How to handle a possible shutter switch?'''
             self.open_shutters()
             ''' Needs update to use snap image in series '''
-            self.snap_image(laser_blanking)
+            self.snap_image(laser_blanking and held_laser is None)
             self.sig_get_live_image.emit()
 
 #            while self.pauseflag is True:
@@ -916,10 +918,49 @@ class mesoSPIM_Core(QtCore.QObject):
 
             QtWidgets.QApplication.processEvents()
 
+        if held_laser is not None:
+            self._release_live_laser_hold()
         self.laserenabler.disable_all()
         self.close_shutters()
         self.sig_end_live.emit()
         self.sig_finished.emit()
+
+    def _update_live_laser_hold(self, held_laser):
+        """Follow the 'laser_hold_on' state in Live: hold the laser continuously on, or release it.
+
+        While held, the laser AO waveform is constant over the whole sweep (no pulse) and the
+        digital enable line is not toggled per frame, so the laser does not blink between frames.
+        Returns the laser now held on, or None.
+        """
+        want = bool(self.state['laser_hold_on'])
+        if want:
+            laser = self.state['laser']
+            if held_laser is None:
+                self.waveformer.laser_hold = True
+                self.waveformer.create_laser_waveforms()
+                logger.info(f"Live: laser {laser} held ON (no blanking)")
+            if laser != held_laser:
+                self.laserenabler.enable(laser) # also switches the other lines off
+            return laser
+        if held_laser is not None:
+            self.waveformer.laser_hold = False
+            self.waveformer.create_laser_waveforms()
+            logger.info("Live: laser hold released, back to pulsed laser")
+            # The next snap_image() writes the pulsed waveform (starting at 0 V) and re-enables the laser
+        return None
+
+    def _release_live_laser_hold(self):
+        """End of Live with the laser held: restore the pulsed waveform and drive the laser AO to 0 V.
+
+        The constant waveform ends at the full laser voltage, which an AO line keeps after its task closes.
+        """
+        self.waveformer.laser_hold = False
+        self.waveformer.create_laser_waveforms()
+        try:
+            self.waveformer.park_ao_outputs() # all AO lines to the last sample of the pulsed sweep: laser 0 V
+        except Exception as e:
+            logger.error(f"Parking the AO outputs after Live with the laser held failed: {e}")
+        logger.info("Live stopped: laser hold released")
 
     def start(self, row=None):
         """Entry point for running one selected acquisition or the full acquisition list.

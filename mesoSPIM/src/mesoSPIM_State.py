@@ -56,6 +56,7 @@ class mesoSPIM_StateSingleton(QObject):
                         'laser' : '488 nm',
                         'max_laser_voltage':1,
                         'intensity' : 10,
+                        'laser_hold_on' : False, # Live only: laser continuously on (no blanking/pulsing), for alignment and power measurement
                         'shutterstate':False, # Is the shutter open or not?
                         'shutterconfig':'Right', # Can be "Left", "Right","Both","Interleaved"
                         'laser_interleaving':False,
