@@ -41,8 +41,9 @@ class mesoSPIM_StateSingleton(QObject):
                         'selected_row': -2,
                         'samplerate' : 100000,
                         'sweeptime' : 0.2,
-                        'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0}, # relative position, including user-specified offset
+                        'position' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0}, # user-visible position: equals position_absolute (ZERO only adds relative read-outs)
                         'position_absolute' : {'x_pos':0,'y_pos':0,'z_pos':0,'f_pos':0,'theta_pos':0}, 
+                        'position_reference' : {}, # ZERO buttons: {axis: absolute position at zeroing}, display only (relative read-outs)
                         'ttl_movement_enabled_during_acq' : False,
                         'ETL_cfg_file' : 'config/etl_parameters/channel-parameters.csv',
                         'load_f_from_channel_file' : False, # offer F positions stored in the channel settings (ETL) file; config: startup['load_f_from_channel_file']

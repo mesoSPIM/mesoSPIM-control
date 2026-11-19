@@ -74,8 +74,10 @@ def position(core, absolute=False):
 def axis_offsets(core):
     """The per-axis shift between the user-visible frame and the physical stage frame.
 
-    The GUI "zero" buttons (and the remote ``zero`` command) make the current physical position
-    read as 0 by adding an offset to every readback. ``stage_parameters`` limits, and therefore the
+    The GUI "zero" buttons and the remote ``zero`` command no longer shift the coordinates (they
+    only add relative read-outs, state['position_reference']), so all offsets are normally 0. The
+    stage drivers still support an offset (int_<axis>_pos_offset), which would make the readback
+    differ from the physical position by that offset. ``stage_parameters`` limits, and therefore the
     stage drivers' own checks, are in the PHYSICAL frame, so a user-frame target must be shifted
     back before it is compared. Both readbacks come from one ``report_position`` call, so their
     difference is exactly the active offset: user = physical + offset. An axis whose absolute
@@ -1070,7 +1072,7 @@ def _snapshot_document(core):
         "warnings": recent_warnings(core)[-5:],
         "position": position(core),
         "position_stage": position(core, absolute=True),
-        "zeroed_axes": [axis for axis, offset in offsets.items() if offset],
+        "zeroed_axes": sorted(set(state(core, "position_reference", {}) or {}) | {axis for axis, offset in offsets.items() if offset}),
         "limits": {axis: list(bounds) for axis, bounds in effective_limits(core).items()},
         "optics": {key: state(core, key) for key in ("laser", "intensity", "filter", "zoom", "shutterconfig", "shutterstate")},
         "camera": {
@@ -1351,7 +1353,7 @@ def _run_zero(core, args):
     return {}
 
 
-command("zero", ACTION, _run_zero, schema=_schema({"axes": {**_AXES, "description": "omit for all axes"}}), accept=_accept_axes, hint="in: {axes?}. out: {}")
+command("zero", ACTION, _run_zero, schema=_schema({"axes": {**_AXES, "description": "omit for all axes"}}), accept=_accept_axes, hint="in: {axes?}. out: {}. Display only: adds a relative read-out in the GUI, positions stay absolute")
 
 
 def _run_unzero(core, args):

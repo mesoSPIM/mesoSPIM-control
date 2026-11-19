@@ -404,8 +404,60 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
                 self.Z_Position_Indicator.setText(self.pos2str(self.z_position)+' µm')
                 self.Focus_Position_Indicator.setText(self.pos2str(self.f_position)+' µm')
                 self.Rotation_Position_Indicator.setText(self.pos2str(self.theta_position)+'°')
+                self.update_relative_indicators(pos_dict)
                 self.update_limit_cues()
                 #self.state['position'] = dict['position'] # this must be done in the core thread
+
+    def create_relative_indicators(self):
+        """Blue relative read-outs under the (absolute) position indicators, shown only for zeroed axes."""
+        indicators = {'x': self.X_Position_Indicator, 'y': self.Y_Position_Indicator, 'z': self.Z_Position_Indicator,
+                      'theta': self.Rotation_Position_Indicator, 'f': self.Focus_Position_Indicator}
+        self.relative_indicators = {}
+        for axis, indicator in indicators.items():
+            rel = QtWidgets.QLineEdit(indicator.parentWidget())
+            rel.setObjectName(f'{axis}_Relative_Indicator')
+            rel.setReadOnly(True)
+            rel.setFont(indicator.font())
+            rel.setAlignment(QtCore.Qt.AlignCenter)
+            rel.setStyleSheet('QLineEdit { color: #e8f1f8; background-color: #2f5f86; font-weight: bold; }')
+            rel.setToolTip('Relative to the position where ZERO was pressed (display only). '
+                           'Stage moves and the acquisition table use the absolute position on the left.')
+            rel.hide()
+            # Stack the relative read-out under its absolute indicator, so the row keeps its width.
+            layout = self.horizontalLayout_3
+            index = layout.indexOf(indicator)
+            layout.removeWidget(indicator)
+            column = QtWidgets.QVBoxLayout()
+            column.setSpacing(2)
+            column.addWidget(indicator)
+            column.addWidget(rel)
+            layout.insertLayout(index, column)
+            self.relative_indicators[axis] = rel
+        self.zero_buttons = {'x': self.xyZeroButton, 'y': self.xyZeroButton, 'z': self.zZeroButton,
+                             'f': self.focusZeroButton, 'theta': self.rotZeroButton}
+
+    def update_relative_indicators(self, pos_dict):
+        """Show 'absolute - reference' in red for every zeroed axis (state['position_reference'])."""
+        if not hasattr(self, 'relative_indicators'):
+            return
+        reference = self.state['position_reference'] or {}
+        for axis, rel in self.relative_indicators.items():
+            zeroed = axis in reference and f'{axis}_pos' in pos_dict
+            if zeroed:
+                unit = '°' if axis == 'theta' else ' µm'
+                rel.setText('Δ ' + self.pos2str(pos_dict[f'{axis}_pos'] - reference[axis]) + unit)
+            if rel.isVisible() != zeroed:
+                rel.setVisible(zeroed)
+        if reference != getattr(self, '_shown_reference', {}):
+            # Keep the ZERO buttons in step when the reference changes elsewhere (remote zero/unzero).
+            # Only on a change, so a click is not undone before Core has stored its reference.
+            self._shown_reference = dict(reference)
+            for button in set(self.zero_buttons.values()):
+                checked = any(axis in reference for axis, b in self.zero_buttons.items() if b is button)
+                if button.isChecked() != checked:
+                    button.blockSignals(True)
+                    button.setChecked(checked)
+                    button.blockSignals(False)
 
     @QtCore.pyqtSlot(dict)
     def update_progressbars(self,dict):
@@ -553,6 +605,7 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
 
         self.xyzrotStopButton.pressed.connect(self.sig_stop_movement.emit)
 
+        self.create_relative_indicators()
         self.xyZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['x','y']) if bool is True else self.sig_unzero_axes.emit(['x','y']))
         self.zZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['z']) if bool is True else self.sig_unzero_axes.emit(['z']))
         self.focusZeroButton.clicked.connect(lambda bool: self.sig_zero_axes.emit(['f']) if bool is True else self.sig_unzero_axes.emit(['f']))

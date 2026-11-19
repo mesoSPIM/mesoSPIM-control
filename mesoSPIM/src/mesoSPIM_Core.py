@@ -729,21 +729,31 @@ class mesoSPIM_Core(QtCore.QObject):
 
     @QtCore.pyqtSlot(list)
     def zero_axes(self, list):
-        """Define the current position as the zero/origin for the given axes.
+        """Remember the current absolute position of the given axes as a reference for the
+        relative read-outs. Display only: stage moves, the acquisition table and the
+        position read-outs stay in absolute (physical) coordinates.
 
         Args:
             list (list[str]): Axis names to zero, e.g. ``['x', 'y']``.
         """
-        self.sig_zero_axes.emit(list)
+        reference = dict(self.state['position_reference'] or {})
+        absolute = self.state['position_absolute']
+        for axis in list:
+            if f'{axis}_pos' in absolute:
+                reference[axis] = absolute[f'{axis}_pos']
+        self.state['position_reference'] = reference
+        logger.info(f'Zero (relative read-out) set: {reference}')
 
     @QtCore.pyqtSlot(list)
     def unzero_axes(self, list):
-        """Restore the physical (absolute) coordinate system for the given axes.
+        """Drop the relative-read-out reference of the given axes.
 
         Args:
             list (list[str]): Axis names to unzero, e.g. ``['x', 'z']``.
         """
-        self.sig_unzero_axes.emit(list)
+        reference = {axis: value for axis, value in (self.state['position_reference'] or {}).items() if axis not in list}
+        self.state['position_reference'] = reference
+        logger.info(f'Zero (relative read-out) cleared for {list}')
 
     @QtCore.pyqtSlot()
     def stop_movement(self):
