@@ -151,7 +151,7 @@ def analyse_shape(img, res, enters_from="right", bin_cols=10):
     Measured at 1, 1.5 and 2 x the measured length from the narrowest point, where inside the image.
     `res` is the result of analyse_beam() on the same image."""
     a = np.asarray(img, dtype=float)
-    H, W = a.shape
+    W = a.shape[1]
     bg = _background(a)
     px = res["px_um"]
     up = 1 if enters_from == "right" else -1       # image-x direction pointing upstream
@@ -168,8 +168,7 @@ def analyse_shape(img, res, enters_from="right", bin_cols=10):
                 prof = np.median(a[:, x0 - h:x0 + h], axis=1) - bg
                 w = profile_widths(prof)
                 if w is not None and w[1] > 0:
-                    r = dict(x_um=x0 * px, fwhm_um=w[0] * px, ratio=w[0] / w[1],
-                             y_um=(np.arange(H) - w[2]) * px, prof=prof / prof.max())
+                    r = dict(x_um=x0 * px, fwhm_um=w[0] * px, ratio=w[0] / w[1])
             row[side] = r
         rows.append(row)
     pairs = [(r["up"]["ratio"], r["down"]["ratio"]) for r in rows if r["up"] and r["down"]]
@@ -183,8 +182,8 @@ def analyse_shape(img, res, enters_from="right", bin_cols=10):
 
 def shape_report(shape):
     lines = [f"Beam enters    from the {shape['enters_from']} of the image",
-             f"Profile shape  FWHM / 1/e2 width (Gaussian {GAUSS_SHAPE:.2f}; "
-             "flat top > 0.7; sharp core + wings < 0.5)"]
+             f"Profile shape  width at 50% / width at 13.5% of the peak (Gaussian {GAUSS_SHAPE:.2f};",
+             "               flat top > 0.7; sharp core + wings < 0.5). Equal on both sides without SA."]
     f = lambda r: f"{r['ratio']:.2f}" if r else " n/a"
     for row in shape["rows"]:
         lines.append(f"  +/-{row['dist_um']:5.0f} um   upstream {f(row['up'])}   downstream {f(row['down'])}")
@@ -363,7 +362,7 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         bar.addWidget(save_btn)
         bar.addStretch()
 
-        self.fig = Figure(figsize=(10, 9))
+        self.fig = Figure(figsize=(10, 7))
         self.canvas = FigureCanvas(self.fig)
         self.text = QtWidgets.QPlainTextEdit(readOnly=True)
         self.text.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
@@ -459,9 +458,7 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
 
     def plot(self, res, a, b, shape=None):
         self.fig.clear()
-        gs = self.fig.add_gridspec(3, 1, height_ratios=[2.2, 2.2, 1.6])
-        ax = [self.fig.add_subplot(gs[0])]
-        ax.append(self.fig.add_subplot(gs[1], sharex=ax[0]))
+        ax = self.fig.subplots(2, 1, sharex=True)
         px = res["px_um"]
         H, W = self.img.shape
         ax[0].imshow(self.img, cmap="gray", aspect="auto", extent=(0, W * px, H * px, 0),
@@ -496,8 +493,10 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         ax[1].axhline(np.sqrt(2) * res["waist_fwhm_um"], color="gray", ls=":", lw=1)
         ax[1].axvspan(res["waist_x_um"] - res["two_zR_x_um"] / 2, res["waist_x_um"] + res["two_zR_x_um"] / 2,
                       color="tab:green", alpha=0.15)
-        if shape is not None:
-            self._plot_shape(ax, shape, gs[2])
+        if shape is not None:                   # beam direction (it sets which side is upstream)
+            right = shape["enters_from"] == "right"
+            ax[0].text(0.99 if right else 0.01, 0.06, "<- beam enters" if right else "beam enters ->",
+                       transform=ax[0].transAxes, color="w", fontsize=9, ha="right" if right else "left")
         ax[1].set_ylabel("FWHM (um)")
         ax[1].set_xlabel("x along the beam (um)")
         ax[1].set_ylim(0, None)
@@ -505,43 +504,6 @@ class BeamProfileWindow(QtWidgets.QMainWindow):
         self.fig.tight_layout()
         self.canvas.draw()
 
-    def _plot_shape(self, ax, shape, slot):
-        """Beam direction on the image, shape points on the FWHM plot, and the profiles in a third panel."""
-        right = shape["enters_from"] == "right"
-        ax[0].text(0.99 if right else 0.01, 0.06, "<- beam enters" if right else "beam enters ->",
-                   transform=ax[0].transAxes, color="w", fontsize=9, ha="right" if right else "left")
-        colors = {"up": "tab:purple", "down": "tab:olive"}
-        for side, mk in (("up", "^"), ("down", "s")):
-            first = True
-            for row in shape["rows"]:
-                pt = row[side]
-                if pt:
-                    ax[1].plot(pt["x_um"], pt["fwhm_um"], mk, color=colors[side], ms=6, mfc="none",
-                               label=f"{'upstream' if side == 'up' else 'downstream'} shape: direct FWHM, "
-                                     "FWHM / 1/e2 width" if first else None)
-                    first = False
-                    ax[1].annotate(f"{pt['ratio']:.2f}", (pt["x_um"], pt["fwhm_um"]), textcoords="offset points",
-                                   xytext=(0, 7), ha="center", fontsize=7, color=colors[side])
-        p = self.fig.add_subplot(slot)
-        ax.append(p)
-        for row, ls in zip(shape["rows"], ("-", "--", ":")):
-            for side in ("up", "down"):
-                r = row[side]
-                if r:
-                    p.plot(r["y_um"], r["prof"], ls, color=colors[side], lw=1,
-                           label=f"{'upstream' if side == 'up' else 'downstream'} {row['dist_um']:.0f} um: "
-                                 f"{r['ratio']:.2f}")
-        widest = max([r[s]["fwhm_um"] for r in shape["rows"] for s in ("up", "down") if r[s]], default=50)
-        p.set_xlim(-1.5 * widest, 1.5 * widest)
-        p.set_xlabel("y across the beam, from the half-maximum centre (um)")
-        p.set_ylabel("norm. intensity")
-        if shape["asym"] is None:
-            verdict = "SA not estimated"
-        else:
-            verdict = {1: "positive", -1: "negative", 0: "none seen"}[shape["sa_sign"]]
-            verdict = f"spherical aberration {verdict} {shape['sa_strength']} (up - down {shape['asym']:+.2f})"
-        p.set_title(f"Profile shape, FWHM / 1/e2 width (Gaussian {GAUSS_SHAPE:.2f}): {verdict}", fontsize=9)
-        p.legend(fontsize=7, ncol=2)
 
     def save_png(self):
         if self.img is None:
