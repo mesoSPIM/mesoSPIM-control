@@ -115,3 +115,17 @@ def test_profile_widths():
     fw, w13, c = profile_widths(np.exp(-2 * (y - 7) ** 2 / 20 ** 2))  # 1/e^2 radius 20: widths 23.5, 40; centre 107
     assert abs(fw - 23.55) < 0.3 and abs(w13 - 40) < 0.4 and abs(c - 107) < 0.1
     assert profile_widths(np.ones(50)) is None                       # never drops: level not reached
+
+
+def test_two_sided_fit():
+    img = synthetic_beam()                                  # no SA: both sides same NA, cones meet
+    res = analyse_beam(img, px_um=0.5, n=1.5)
+    sh = analyse_shape(img, res, "right")
+    assert abs(sh["side_up"]["na"] - res["na_eff"]) < 0.003 and abs(sh["side_down"]["na"] - res["na_eff"]) < 0.003
+    assert abs(sh["spread_um"]) < 5
+    for sa in (+1, -1):                                     # SA of either sign: spread > 0 (a size, not a sign)
+        img = sa_beam(sa)
+        res = analyse_beam(img, px_um=1.0)
+        assert analyse_shape(img, res, "right")["spread_um"] > 15
+        assert analyse_shape(img, res, "left")["spread_um"] > 15
+    assert "Focus spread" in "\n".join(shape_report(sh))

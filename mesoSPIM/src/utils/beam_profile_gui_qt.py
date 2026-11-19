@@ -171,13 +171,23 @@ def analyse_shape(img, res, enters_from="right", bin_cols=10):
                     r = dict(x_um=x0 * px, fwhm_um=w[0] * px, ratio=w[0] / w[1])
             row[side] = r
         rows.append(row)
+    # Two-sided fit: where the incoming and the outgoing cone point. The spread is > 0 for SA of either
+    # sign: the FWHM follows the edge rays on the flat-top side and the central rays on the side with
+    # wings, so the incoming cone always points upstream of the outgoing one. A size, not a sign.
+    sides = res.get("sides") or {}
+    s_up = sides.get("right" if up > 0 else "left")
+    s_dn = sides.get("left" if up > 0 else "right")
+    spread = None
+    if s_up and s_dn:
+        spread = (s_up["apex_x_um"] - s_dn["apex_x_um"]) * up / np.cos(np.radians(res["tilt_deg"]))
+    out = dict(enters_from=enters_from, rows=rows, side_up=s_up, side_down=s_dn, spread_um=spread)
     pairs = [(r["up"]["ratio"], r["down"]["ratio"]) for r in rows if r["up"] and r["down"]]
     if not pairs:
-        return dict(enters_from=enters_from, rows=rows, asym=None, sa_sign=0, sa_strength="")
+        return dict(out, asym=None, sa_sign=0, sa_strength="")
     asym = float(np.mean([u - dn for u, dn in pairs]))
     sign = 0 if abs(asym) < SA_NONE else (1 if asym > 0 else -1)
     strength = "" if sign == 0 else ("strong" if abs(asym) >= SA_STRONG else "weak")
-    return dict(enters_from=enters_from, rows=rows, asym=asym, sa_sign=sign, sa_strength=strength)
+    return dict(out, asym=asym, sa_sign=sign, sa_strength=strength)
 
 
 def shape_report(shape):
@@ -187,6 +197,14 @@ def shape_report(shape):
     f = lambda r: f"{r['ratio']:.2f}" if r else " n/a"
     for row in shape["rows"]:
         lines.append(f"  +/-{row['dist_um']:5.0f} um   upstream {f(row['up'])}   downstream {f(row['down'])}")
+    lines.append("Two-sided fit  each side of the focus alone (outside the measured length, waist = min FWHM)")
+    for name, s in (("upstream  ", shape["side_up"]), ("downstream", shape["side_down"])):
+        lines.append(f"  {name}   NA {s['na']:.3f}, cone points to x = {s['apex_x_um']:.0f} um   ({s['n_bins']} bins)"
+                     if s else f"  {name}   n/a (fewer than 5 bins outside the measured length)")
+    if shape["spread_um"] is not None:
+        lines += [f"Focus spread   {shape['spread_um']:+.0f} um along the beam, from where the incoming cone points",
+                  "               to where the outgoing cone starts. ~0 without SA, > 0 with SA of either sign",
+                  "               (size, not sign: a lower bound of the edge-to-centre ray focus distance)."]
     if shape["asym"] is None:
         lines.append("Spherical ab.  not estimated: no upstream/downstream pair inside the image")
     elif shape["sa_sign"] == 0:
@@ -257,6 +275,8 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
     theta = theta_x * c                     # per distance along the beam
     length_x = 2 * f0 / (FWHM_PER_W * theta_x)   # in image x; along the beam: / c
     m0, m1, m_edge = measured_range(xs, fs, ib)
+    sides = {name: _fit_side(xs[sel], fw[sel], fs[ib], xs[ib], c, px_um, n)
+             for name, sel in (("left", xs < m0), ("right", xs > m1))}
     return dict(
         x_um=xs * px_um, fwhm_um=fw * px_um, fit_params_px=pm, px_um=px_um,
         outlier_x_um=out_x * px_um, outlier_fwhm_um=out_fw * px_um,
@@ -267,8 +287,25 @@ def analyse_beam(img, px_um, n=1.0, bin_cols=10):
         waist_fwhm_um=f0 * px_um, waist_x_um=xw * px_um, theta_rad=theta, na_eff=n * np.sin(theta), n=n,
         two_zR_um=length_x / c * px_um, two_zR_x_um=length_x * px_um, waist_in_image=bool(xs[0] < xw < xs[-1]),
         length_in_image=bool(xw - length_x / 2 > xs[0] and xw + length_x / 2 < xs[-1]),
-        power_cv=power.std() / power.mean(), n_dropped=n_dropped,
+        power_cv=power.std() / power.mean(), n_dropped=n_dropped, sides=sides,
     )
+
+
+def _fit_side(x, fw, f_min, x_min, c, px_um, n, min_bins=5):
+    """Hyperbola fitted to one side of the focus only (bins outside the measured length), with the waist
+    width fixed to the measured minimum: that side's divergence and where its cone points (apex).
+    x, fw in px, fw already tilt-corrected. Returns dict(na, theta_rad, apex_x_um, n_bins) or None."""
+    if len(x) < min_bins:
+        return None
+    slope = abs(np.polyfit(x, fw, 1)[0])
+    th0 = min(max(slope / FWHM_PER_W, 2e-4), 0.5)
+    try:
+        p, _ = curve_fit(lambda xx, xw, th: _observed_fwhm(xx, f_min, xw, th), x, fw, p0=[x_min, th0],
+                         bounds=([x_min - 20 * (abs(x - x_min).max() + 1), 1e-4],
+                                 [x_min + 20 * (abs(x - x_min).max() + 1), 1.0]), maxfev=20000)
+    except (RuntimeError, ValueError):
+        return None
+    return dict(theta_rad=p[1] * c, na=n * np.sin(p[1] * c), apex_x_um=p[0] * px_um, n_bins=len(x))
 
 
 def report(res, warnings=(), shape=None):
