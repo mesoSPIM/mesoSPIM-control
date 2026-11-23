@@ -519,12 +519,12 @@ startup = {
 'etl_r_ramp_falling_%' : 85,
 'etl_r_amplitude' : 0.65,
 'etl_r_offset' : 2.36,
-'galvo_l_frequency' : 99.9,
+'galvo_l_frequency' : 100, # integer half-periods per exposure (4 at 20 ms, 10 at 50 ms); 99.9 Hz left a thin 75%-dose band
 'galvo_l_amplitude' : 2.5,
 'galvo_l_offset' : 0,
 'galvo_l_duty_cycle' : 50,
 'galvo_l_phase' : np.pi/2,
-'galvo_r_frequency' : 99.9,
+'galvo_r_frequency' : 100,
 #'galvo_r_amplitude' : 0.0, # currently not used
 'galvo_r_offset' : 0,
 'galvo_r_duty_cycle' : 50,

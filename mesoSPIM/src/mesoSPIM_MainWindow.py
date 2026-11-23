@@ -559,6 +559,11 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
         self.menuUtils.addAction(self.actionBeam_Profile)
         self.actionBeam_Profile.triggered.connect(self.launch_beam_profile_window)
 
+        # ASLM scan simulator: self-contained HTML page in the docs, opened in the default browser
+        self.actionASLM_Simulator = QtWidgets.QAction("ASLM scan simulator (beta, opens in browser)", self)
+        self.menuUtils.addAction(self.actionASLM_Simulator)
+        self.actionASLM_Simulator.triggered.connect(self.open_aslm_simulator)
+
         # Help menu: project website, online docs, ZMB Dozuki guides
         self.menuHelp = self.menuBar.addMenu("Help")  # menuBar is the widget from the .ui file
         self.menuHelp.addAction("About",
@@ -1341,6 +1346,19 @@ class mesoSPIM_MainWindow(QtWidgets.QMainWindow):
             subprocess.Popen(cmd)
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Beam profile", f"Failed to launch beam profile tool:\n{e}")
+
+    @QtCore.pyqtSlot()
+    def open_aslm_simulator(self):
+        """Open the ASLM scan simulator (docs/source/_static/aslm_simulator.html) in the default browser;
+        fall back to the online docs copy when the local docs folder is not there."""
+        path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'docs', 'source',
+                                             '_static', 'aslm_simulator.html'))
+        if os.path.isfile(path):
+            url = QtCore.QUrl.fromLocalFile(path)
+        else:
+            url = QtCore.QUrl("https://mesospim.github.io/mesoSPIM-control/_static/aslm_simulator.html")
+        if not QtGui.QDesktopServices.openUrl(url):
+            QtWidgets.QMessageBox.warning(self, "ASLM scan simulator", f"Could not open:\n{url.toString()}")
 
     @staticmethod
     def _parse_zoom_magnification(zoom_string):
