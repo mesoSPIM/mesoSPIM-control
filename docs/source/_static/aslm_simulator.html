@@ -231,7 +231,8 @@ const SCENARIOS = [
   ['BT NA 0.15, 561 nm, slit = L_ls (0.8 FPS)', 'Iris 15', 10, 0.3386, 1250, 1125, { lambda: 561, n: 1.56, fwhm0: 1.42, L: 25, g_freq: 100 }],
 ];
 
-// spinbox arrow steps by unit (typing any value still works); others step by 1
+// spinbox arrow steps by parameter, then by unit (typing any value still works); others step by 1
+const STEP_KEY = { dtL: 0.001 };
 const STEP = { V: 0.01, rad: 0.01 };
 function buildPanel() {
   const panel = $('panel');
@@ -245,7 +246,7 @@ function buildPanel() {
       if (tip) row.title = tip;
       const isBool = typeof d === 'boolean';
       row.innerHTML = `<label for="p_${k}">${label}</label>` +
-        (isBool ? `<input type="checkbox" id="p_${k}">` : `<input type="number" step="${STEP[unit] || 'any'}" id="p_${k}"${k in LIMITS ? ` min="${LIMITS[k][0]}" max="${LIMITS[k][1]}"` : ''}>`) +
+        (isBool ? `<input type="checkbox" id="p_${k}">` : `<input type="number" step="${STEP_KEY[k] || STEP[unit] || 'any'}" id="p_${k}"${k in LIMITS ? ` min="${LIMITS[k][0]}" max="${LIMITS[k][1]}"` : ''}>`) +
         `<span class="u">${unit}</span>`;
       det.appendChild(row);
       const el = row.querySelector('input');
