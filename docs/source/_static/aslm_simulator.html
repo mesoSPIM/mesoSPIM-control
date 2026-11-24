@@ -53,6 +53,16 @@
   #status { color:var(--muted); font-size:11px; }
   details.help { margin-top:14px; }
   details.help p, details.help li { max-width:900px; }
+  /* values changed from the loaded defaults/scenario/config: marker + bold + border, not colour alone */
+  .row.chg input[type=number] { background:#fff4cc; border:1.5px solid var(--warn); font-weight:700; }
+  .row.chg input[type=checkbox] { outline:2px solid var(--warn); }
+  .row.chg label { font-weight:600; }
+  .row.chg label::before { content:"\25CF  "; color:var(--warn); }
+  .box { border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-size:12px; margin:6px 0; }
+  .box.chgbox { border:1.5px solid var(--warn); background:#fffaf0; }
+  .box ul.checks { margin:4px 0 0; }
+  .box button { padding:2px 7px; font-size:12px; }
+  pre.cfg { font:11px/1.35 ui-monospace, Consolas, monospace; background:#f4f5f7; padding:6px; margin:4px 0 0; overflow-x:auto; user-select:all; }
   @media (max-width: 900px) { body { grid-template-columns: 1fr; height:auto; } aside { border-right:0; } .top { grid-template-columns:1fr; } .plots { grid-template-columns:1fr; } }
 </style>
 </head>
@@ -64,10 +74,24 @@
   <div class="row"><label for="scenario">Scenario (from ASLM notes)</label><select id="scenario" style="grid-column: span 2"></select></div>
   <div class="row"><label for="sensor">Sensor preset</label><select id="sensor" style="grid-column: span 2"></select></div>
   <div class="btns">
-    <button id="bOpt" title="Line interval from slit = light-sheet length; sweeptime so readout = 90% of ETL ramp; camera/laser timing; galvo frequency snapped to integer half-periods per exposure; ETL fitted to the rolling shutter.">Optimize all</button>
+    <button id="bLoad" class="sec" title="Read the timing, camera and one arm's ETL/galvo/laser settings from a mesoSPIM-control config (.py). For a user config that uses include(), select it together with its hardware file (Ctrl+click). The file is parsed, not run, and stays on this computer.">Load mesoSPIM config (.py)&hellip;</button>
+    <select id="arm" hidden title="Which illumination arm's ETL/galvo/laser settings to use"><option value="l">Left arm</option><option value="r">Right arm</option></select>
+    <input type="file" id="cfgFile" accept=".py" multiple hidden>
+  </div>
+  <div id="cfgInfo"></div>
+  <div class="row"><label for="goal">Optimize for</label><select id="goal" style="grid-column: span 2">
+    <option value="bal">Balanced: slit = L_ls, exposure as set</option>
+    <option value="zres">Z resolution: narrow slit, exposure as set</option>
+    <option value="speed">Speed: shortest exposure for min. SNR, wider slit</option>
+    <option value="snr">SNR: exposure for target SNR, slit = L_ls</option>
+  </select></div>
+  <div class="note" id="goalNote"></div>
+  <div class="btns">
+    <button id="bOpt" title="Exposure (Speed/SNR goals) and line interval from the goal; sweeptime so readout = 90% of ETL ramp; camera/laser timing; galvo frequency snapped to integer half-periods per exposure; ETL fitted to the rolling shutter.">Optimize all</button>
     <button id="bFit" class="sec" title="Keep line interval and sweeptime. Set camera/laser delays and fit ETL amplitude/offset to the rolling shutter.">Fit ETL/camera/laser</button>
     <button id="bEtl" class="sec" title="Only fit ETL amplitude and offset so the beam waist follows the centre of the virtual slit.">Fit ETL only</button>
   </div>
+  <div id="chgInfo"></div>
   <div id="panel"></div>
 </aside>
 
@@ -142,7 +166,7 @@ const SPEC = [
     ['lps', 'Lines per line-interval step', 1, '', 'Orca Lightning reads 4 lines per step (4H)'],
   ]],
   ['Optics', [
-    ['M', 'Magnification', 5, 'x'],
+    ['M', 'Magnification value', 5, 'x', 'Set by the Detection magnification list, or type any value (list shows custom)'],
     ['L', 'Light-sheet length L_ls (sample)', 220, 'µm', '= 2 z_R, measured in sample space. Default: measured beam length (range where FWHM <= sqrt2 x min FWHM), static 561 nm beam in bulk-medium fluorescence'],
     ['fwhm0', 'Waist thickness FWHM (measured, 0 = Gaussian from L_ls)', 6.0, 'µm', 'Sheet thickness (FWHM) at the waist, e.g. min FWHM of a static beam or bead axial FWHM with ETL off. Set to decouple it from L_ls when measured beams are not ideal Gaussians. Default: measured, static 561 nm beam in bulk-medium fluorescence'],
     ['lambda', 'Excitation wavelength', 561, 'nm'],
@@ -177,6 +201,13 @@ const SPEC = [
     ['las_delay', 'laser_l_delay_%', 10, '%'],
     ['las_pulse', 'laser_l_pulse_%', 87, '%'],
   ]],
+  ['Optimization targets', [
+    ['phRate', 'Photon rate, bright cell, ideal sheet', 15, 'e⁻/ms', 'Photoelectrons per millisecond of exposure from a bright cell lit by the ideal (waist) sheet, at your laser power and labelling. Signal = rate × exposure time, so a longer exposure gives a better SNR. Measure: mean signal of a bright cell minus background, divided by the exposure time'],
+    ['zSlit', 'Z resolution goal: slit width', 0.5, '× L_ls', 'Slit width as a fraction of the light-sheet length. Narrower: thinner effective sheet, longer line interval, slower'],
+    ['speedSlit', 'Speed goal: slit width', 2, '× L_ls', 'Accepted slit width for speed (2 = the FASTEST 2x slit scenario): thicker sheet at the slit edges, shorter line interval'],
+    ['snrMin', 'Speed goal: minimum SNR', 10, '', 'SNR of a bright cell (shot + read noise) the shortest exposure must still give'],
+    ['snrTarget', 'SNR goal: target SNR', 30, '', 'SNR of a bright cell (shot + read noise); the exposure is set to reach it'],
+  ]],
   ['Sample & simulation', [
     ['seed', 'Random seed', 1, ''],
     ['cells', 'Cell bodies per mm² per 10 µm', 150, ''],
@@ -185,7 +216,6 @@ const SPEC = [
     ['cellB', 'Cell brightness', 1, ''],
     ['filB', 'Filament brightness', 0.8, ''],
     ['bg', 'Autofluorescence', 0.08, ''],
-    ['photons', 'Photons, bright cell, ideal sheet', 300, 'e⁻'],
     ['noise', 'Shot + read noise', true, ''],
     ['readNoise', 'Camera read noise', 1.5, 'e⁻', 'Model value, set to your sensor'],
     ['simCols', 'Simulation columns', 480, '', 'Image width in simulation pixels (speed vs detail)'],
@@ -196,14 +226,14 @@ const P = {};
 for (const [, items] of SPEC) for (const [k, , d] of items) P[k] = d;
 // Fixed model values, not shown in the panel (sensor presets and scenarios may still set them):
 // sensor line-interval limits, camera trigger pulse, detection NA (phantom blur, DOF), DAQ sample rate, ETL calibration.
-Object.assign(P, { dtMin: 0.01, dtMax: 0, cam_pulse: 1, NA: 0.15, samplerate: 100000, etl_k: 2500, etl_vc: 2.5 });
+Object.assign(P, { dtMin: 0.01, dtMax: 0, dtQ: 0.01026, cam_pulse: 1, NA: 0.15, samplerate: 100000, etl_k: 2500, etl_vc: 2.5 });
 
-// name, N_px, N_perp, dx, lps, dtMin, dtMax  (values from the ASLM notes; edit if your camera differs)
+// name, N_px, N_perp, dx, lps, dtMin, dtMax, dtQ = line-time step (ms, 0 = continuous)  (values from the ASLM notes; edit if your camera differs)
 const SENSORS = [
-  ['Iris 15', 2960, 5056, 4.25, 1, 0.01, 0],
-  ['Orca Flash 4.0', 2048, 2048, 6.5, 1, 0.00974, 0],
-  ['Orca Lightning', 2592, 4608, 5.5, 4, 0.01261, 0.2],
-  ['Retiga E9', 3000, 3000, 3.76, 1, 0, 0],
+  ['Iris 15', 2960, 5056, 4.25, 1, 0.01, 0, 0.01026],
+  ['Orca Flash 4.0', 2048, 2048, 6.5, 1, 0.00974, 0, 0],
+  ['Orca Lightning', 2592, 4608, 5.5, 4, 0.01261, 0.2, 0],
+  ['Retiga E9', 3000, 3000, 3.76, 1, 0, 0, 0],
 ];
 // name, sensor, t_exp, dtL, sweeptime, ETL rising time (ms)  - rows of the table in "ASLM optimization.md"
 const SCENARIOS = [
@@ -241,6 +271,14 @@ function buildPanel() {
     det.className = 'grp'; det.open = g !== 'Sample & simulation';
     det.innerHTML = `<summary>${g}</summary>`;
     for (const [k, label, d, unit, tip] of items) {
+      if (k === 'M') {   // detection zoom presets; typing a value in the field below selects "custom"
+        const mr = document.createElement('div');
+        mr.className = 'row';
+        mr.innerHTML = `<label for="magSel">Detection magnification</label><select id="magSel" style="grid-column: span 2">` +
+          MAGS.map(v => `<option value="${v}">${v}&times;</option>`).join('') + `<option value="">custom</option></select>`;
+        det.appendChild(mr);
+        mr.querySelector('select').onchange = e => { if (e.target.value) { P.M = +e.target.value; syncInputs(); schedule(); } };
+      }
       const row = document.createElement('div');
       row.className = 'row';
       if (tip) row.title = tip;
@@ -253,7 +291,7 @@ function buildPanel() {
       el.addEventListener(isBool ? 'change' : 'input', () => {
         if (isBool) P[k] = el.checked;
         else { const v = parseFloat(el.value); if (!Number.isFinite(v)) return; P[k] = v; }
-        schedule();
+        syncMag(); markChanged(); schedule();
       });
     }
     panel.appendChild(det);
@@ -267,6 +305,10 @@ function buildPanel() {
   $('bOpt').onclick = () => { optimizeAll(); syncInputs(); schedule(); };
   $('bFit').onclick = () => { fitTiming(); syncInputs(); schedule(); };
   $('bEtl').onclick = () => { fitEtl(); syncInputs(); schedule(); };
+  $('goal').onchange = () => { $('goalNote').textContent = GOAL_NOTE[$('goal').value](); };
+  $('bLoad').onclick = () => $('cfgFile').click();
+  $('cfgFile').onchange = e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) loadConfigFiles(f); };
+  $('arm').onchange = () => { if (LOADED) applyConfig(); };
   for (const id of ['view', 'zoom', 'lock', 'sweep']) $(id).addEventListener('change', () => draw(LAST));
   $('kymoBox').addEventListener('toggle', () => draw(LAST));   // canvas has no size while collapsed
 }
@@ -276,11 +318,286 @@ function syncInputs() {
     if (el.type === 'checkbox') el.checked = P[k];
     else el.value = +(+P[k]).toPrecision(6);
   }
+  syncMag(); markChanged();
+}
+const MAGS = [2, 5, 7.5, 10, 20, 25];
+function syncMag() { const el = $('magSel'); if (el) el.value = MAGS.includes(P.M) ? String(P.M) : ''; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const fv = v => typeof v === 'number' ? String(+v.toPrecision(6)) : String(v);
+
+// ---------------------------------------------------------------- changed-value highlighting
+// Baseline = the values right after the last load (page defaults, scenario or config). Anything that differs
+// from it (Optimize/Fit buttons, typing, sensor preset) gets a marker, bold text and a border.
+let BASE = null, BASE_SRC = 'defaults';
+function setBaseline(src) { BASE = { ...P }; BASE_SRC = src; markChanged(); }
+const differs = (a, b) => typeof a === 'number' && typeof b === 'number'
+  ? Math.abs(a - b) > 1e-9 * Math.max(1, Math.abs(a), Math.abs(b)) : a !== b;
+// panel key -> [mesoSPIM startup key ({a} = arm letter), factor from panel units]
+const CFG_KEYS = {
+  t_exp: ['camera_exposure_time', 1e-3], dtL: ['camera_line_interval', 1e-3], sweeptime: ['sweeptime', 1e-3],
+  cam_delay: ['camera_delay_%', 1],
+  etl_delay: ['etl_{a}_delay_%', 1], etl_rise: ['etl_{a}_ramp_rising_%', 1], etl_fall: ['etl_{a}_ramp_falling_%', 1],
+  g_freq: ['galvo_{a}_frequency', 1], g_duty: ['galvo_{a}_duty_cycle', 1], g_phase: ['galvo_{a}_phase', 1],
+  las_delay: ['laser_{a}_delay_%', 1], las_pulse: ['laser_{a}_pulse_%', 1],
+};
+function markChanged() {
+  if (!BASE) return;
+  const ch = [];
+  for (const [, items] of SPEC) for (const [k, label] of items) {
+    const el = $('p_' + k); if (!el) continue;
+    const d = differs(P[k], BASE[k]);
+    el.closest('.row').classList.toggle('chg', d);
+    el.title = d ? `Changed: was ${fv(BASE[k])} (${BASE_SRC})` : '';
+    if (d) ch.push([k, label]);
+  }
+  const box = $('chgInfo');
+  if (!ch.length) { box.innerHTML = ''; return; }
+  const a = LOADED ? LOADED.arm : 'l';
+  const cfgLines = [], skipped = [];
+  for (const [k] of ch) {
+    if (!(k in CFG_KEYS)) { if (/^(etl_amp|etl_off|g_amp|g_off)$/.test(k)) skipped.push(k); continue; }
+    const [key, f] = CFG_KEYS[k];
+    cfgLines.push(`'${key.replace('{a}', a)}' : ${fv(+(P[k] * f).toPrecision(8))},`);
+    if (k === 'dtL' && P.dtQ > 0) {
+      const n = Math.round(P.dtL / 0.01026 - 1);
+      cfgLines.push(`# Photometrics: line time = 10.26 us x (scan_line_delay + 1); camera_parameters['scan_line_delay'] : ${n}  (${(0.01026 * (n + 1)).toFixed(5)} ms)`);
+    }
+  }
+  if (skipped.length) cfgLines.push(`# not listed: ETL/galvo voltages (${skipped.join(', ')}) depend on the model calibration, not your instrument's`);
+  box.innerHTML = `<div class="box chgbox"><b>&#9679; ${ch.length} value${ch.length > 1 ? 's' : ''} changed</b> from ${esc(BASE_SRC)} ` +
+    `(marked &#9679;, bold; hover a field for the old value). <button class="sec" id="bRevert">Revert</button>` +
+    (cfgLines.length ? `<details><summary>As config lines (startup dict)</summary><pre class="cfg">${esc(cfgLines.join('\n'))}</pre></details>` : '') + `</div>`;
+  $('bRevert').onclick = () => { Object.assign(P, BASE); syncInputs(); schedule(); };
+}
+
+// ---------------------------------------------------------------- mesoSPIM config (.py) loader
+// The file is parsed, never executed: a small reader for the Python subset used in mesoSPIM configs
+// (assignments of literals and arithmetic, np.pi, dict.update(), d['k'] = v, include()).
+function pyTokens(src) {
+  const T = []; let i = 0, depth = 0, bol = true;
+  const RE = {
+    ws: /[ \t\r\f]+/y, com: /#[^\n]*/y, cont: /\\\r?\n/y,
+    str: /([rRbBuUfF]{0,2})('''|"""|'|")/y,
+    num: /(?:\d[\d_]*\.?[\d_]*|\.\d[\d_]*)(?:[eE][+-]?\d+)?/y,
+    name: /[A-Za-z_]\w*/y,
+    op: /\*\*|\/\/|==|!=|<=|>=|->|[-+*\/%(){}\[\],:=.<>!&|^~@;]/y,
+  };
+  const at = re => { re.lastIndex = i; const m = re.exec(src); return m; };
+  while (i < src.length) {
+    let m;
+    if (src[i] === '\n') { if (depth === 0 && T.length && T[T.length - 1].t !== 'nl') T.push({ t: 'nl' }); i++; bol = true; continue; }
+    if ((m = at(RE.ws))) { i += m[0].length; if (bol) bol = 'indent'; continue; }
+    if ((m = at(RE.com)) || (m = at(RE.cont))) { i += m[0].length; continue; }
+    const col0 = bol === true; bol = false;
+    if ((m = at(RE.str))) {
+      const q = m[2], raw = /r/i.test(m[1]); let j = i + m[0].length, s = '';
+      while (j < src.length && !src.startsWith(q, j)) {
+        if (src[j] === '\\' && !raw) { s += src[j + 1] === 'n' ? '\n' : src[j + 1]; j += 2; }
+        else if (src[j] === '\n' && q.length === 1) break;
+        else s += src[j++];
+      }
+      i = j + q.length; T.push({ t: 'str', v: s, col0 }); continue;
+    }
+    if ((m = at(RE.num))) { i += m[0].length; T.push({ t: 'num', v: parseFloat(m[0].replace(/_/g, '')), col0 }); continue; }
+    if ((m = at(RE.name))) { i += m[0].length; T.push({ t: 'name', v: m[0], col0 }); continue; }
+    if ((m = at(RE.op))) {
+      i += m[0].length;
+      if ('([{'.includes(m[0])) depth++; else if (')]}'.includes(m[0])) depth = Math.max(0, depth - 1);
+      if (m[0] === ';' && depth === 0) { T.push({ t: 'nl' }); continue; }
+      T.push({ t: 'op', v: m[0], col0 }); continue;
+    }
+    i++;   // anything else: skip
+  }
+  T.push({ t: 'eof' });
+  return T;
+}
+const PY_GLOBALS = {
+  np: { __mod: true, pi: Math.PI, e: Math.E }, numpy: { __mod: true, pi: Math.PI, e: Math.E }, math: { __mod: true, pi: Math.PI, e: Math.E },
+  int: x => Math.trunc(x), float: x => +x, abs: Math.abs, round: (x, n = 0) => +(+x).toFixed(n), min: Math.min, max: Math.max,
+};
+function pyExec(src, env, onInclude) {
+  const T = pyTokens(src); let p = 0;
+  const pk = (o = 0) => T[Math.min(p + o, T.length - 1)];
+  const isOp = (v, o = 0) => pk(o).t === 'op' && pk(o).v === v;
+  const expect = v => { if (!isOp(v)) throw new Error('expected ' + v); p++; };
+  const isNum = v => typeof v === 'number';
+  function atom() {
+    const k = pk();
+    if (k.t === 'num') { p++; return k.v; }
+    if (k.t === 'str') { p++; let s = k.v; while (pk().t === 'str') s += T[p++].v; return s; }
+    if (k.t === 'name') {
+      p++;
+      if (k.v === 'True') return true; if (k.v === 'False') return false; if (k.v === 'None') return null;
+      return k.v in env ? env[k.v] : PY_GLOBALS[k.v];
+    }
+    if (isOp('(') || isOp('[')) {
+      const close = isOp('(') ? ')' : ']'; p++;
+      const a = []; let comma = false;
+      while (!isOp(close)) { a.push(expr()); if (isOp(',')) { p++; comma = true; } else break; }
+      expect(close);
+      return close === ')' && a.length === 1 && !comma ? a[0] : a;
+    }
+    if (isOp('{')) {
+      p++; const d = {};
+      while (!isOp('}')) { const key = expr(); expect(':'); d[key] = expr(); if (isOp(',')) p++; else break; }
+      expect('}'); return d;
+    }
+    throw new Error('unexpected token');
+  }
+  function postfix() {
+    let v = atom();
+    for (;;) {
+      if (isOp('.')) { p++; const nm = pk().v; p++; v = v && v.__mod ? v[nm] : undefined; }
+      else if (isOp('[')) { p++; const key = expr(); expect(']'); v = v != null && typeof v === 'object' ? v[key] : undefined; }
+      else if (isOp('(')) {
+        p++; const args = [];
+        while (!isOp(')')) { if (pk().t === 'name' && isOp('=', 1)) p += 2; args.push(expr()); if (isOp(',')) p++; else break; }
+        expect(')');
+        v = typeof v === 'function' && args.every(isNum) ? v(...args) : undefined;
+      } else return v;
+    }
+  }
+  function power() { const b = postfix(); if (isOp('**')) { p++; const e = unary(); return isNum(b) && isNum(e) ? b ** e : undefined; } return b; }
+  function unary() {
+    if (isOp('-')) { p++; const v = unary(); return isNum(v) ? -v : undefined; }
+    if (isOp('+')) { p++; return unary(); }
+    return power();
+  }
+  function term() {
+    let v = unary();
+    while (isOp('*') || isOp('/') || isOp('//') || isOp('%')) {
+      const o = pk().v; p++; const w = unary();
+      v = !isNum(v) || !isNum(w) ? undefined : o === '*' ? v * w : o === '/' ? v / w : o === '//' ? Math.floor(v / w) : v % w;
+    }
+    return v;
+  }
+  function expr() {
+    let v = term();
+    while (isOp('+') || isOp('-')) {
+      const o = pk().v; p++; const w = term();
+      v = o === '+' && typeof v === 'string' && typeof w === 'string' ? v + w : !isNum(v) || !isNum(w) ? undefined : o === '+' ? v + w : v - w;
+    }
+    return v;
+  }
+  const isDict = v => v != null && typeof v === 'object' && !Array.isArray(v) && !v.__mod;
+  while (pk().t !== 'eof') {
+    const k = pk();
+    try {
+      if (k.t === 'name' && k.col0) {   // top-level statements only; indented blocks (if/def bodies) are skipped
+        const nm = k.v;
+        if (isOp('=', 1)) { p += 2; env[nm] = expr(); }
+        else if (isOp('.', 1) && pk(2).v === 'update' && isOp('(', 3)) {
+          p += 4; const d = expr(); expect(')');
+          if (isDict(env[nm]) && isDict(d)) Object.assign(env[nm], d);
+        } else if (isOp('[', 1)) {
+          p += 2; const key = expr(); expect(']');
+          if (isOp('=')) { p++; const v = expr(); if (isDict(env[nm])) env[nm][key] = v; }
+        } else if (nm === 'include' && isOp('(', 1)) { p += 2; const f = expr(); expect(')'); if (typeof f === 'string') onInclude(f); }
+      }
+    } catch (e) { /* statement outside the supported subset: skip it */ }
+    while (pk().t !== 'nl' && pk().t !== 'eof') p++;
+    if (pk().t === 'nl') p++;
+  }
+  return env;
+}
+
+let LOADED = null;
+async function loadConfigFiles(files) {
+  const base = s => s.split(/[\\/]/).pop();
+  const texts = {};
+  for (const f of files) texts[f.name] = await f.text();
+  const refs = new Set();
+  for (const t of Object.values(texts)) for (const m of t.matchAll(/^include\(\s*['"]([^'"]+)['"]\s*\)/gm)) refs.add(base(m[1]));
+  const roots = Object.keys(texts).filter(n => !refs.has(n));
+  const env = {}, used = [], missing = [];
+  const exec = (nm, stack) => {
+    if (stack.includes(nm)) return;
+    used.push(nm);
+    pyExec(texts[nm], env, f => { const b = base(f); if (b in texts) exec(b, [...stack, nm]); else missing.push([nm, f]); });
+  };
+  for (const r of (roots.length ? roots : Object.keys(texts))) exec(r, []);
+  LOADED = { env, names: used, roots: roots.length ? roots : Object.keys(texts), missing, arm: 'l', camera: env.camera };
+  $('arm').hidden = false; $('arm').value = 'l';
+  applyConfig();
+}
+// Map one arm of a parsed config onto the panel. Returns notes for the config box.
+function applyConfig() {
+  const L = LOADED; L.arm = $('arm').value;
+  const a = L.arm, A = a === 'l' ? 'left' : 'right', env = L.env;
+  const st = env.startup, cp = env.camera_parameters || {};
+  const info = [], notes = [];
+  const note = (lvl, txt) => notes.push(`<li class="${lvl}">${txt}</li>`);
+  const num = v => typeof v === 'number' && Number.isFinite(v);
+  for (const [f, inc] of L.missing) note('bad', `${esc(f)} includes <code>${esc(inc)}</code>, which was not loaded: select both files together (Ctrl+click in the file dialog)`);
+  if (!st || typeof st !== 'object') {
+    note('bad', 'No <code>startup</code> dict found: nothing loaded. Is this a mesoSPIM-control config?');
+    $('cfgInfo').innerHTML = `<div class="box"><b>Config:</b> ${esc(L.names.join(' + '))}<ul class="checks">${notes.join('')}</ul></div>`;
+    return;
+  }
+  const set = {}, missingKeys = [];
+  const take = (key, dst, f = 1) => { if (num(st[key])) set[dst] = +(st[key] * f).toPrecision(8); else missingKeys.push(key); };
+  // camera (rolling-shutter lines = y_pixels; with binning, fewer and larger pixels)
+  const bm = String(st.camera_binning || '1x1').match(/^(\d+)x(\d+)$/), b = bm ? +bm[1] : 1;
+  const dx0 = num(cp.y_pixel_size_in_microns) ? cp.y_pixel_size_in_microns : num(cp.x_pixel_size_in_microns) ? cp.x_pixel_size_in_microns : null;
+  if (num(cp.y_pixels)) set.N_px = Math.floor(cp.y_pixels / b);
+  if (num(cp.x_pixels)) set.N_perp = Math.floor(cp.x_pixels / b);
+  if (dx0) set.dx = dx0 * b;
+  const ps = env.pixelsize && st.zoom in env.pixelsize ? env.pixelsize[st.zoom] : st.pixelsize;
+  let M = null;
+  if (dx0 && num(ps) && ps > 0) M = dx0 / ps;
+  else if (typeof st.zoom === 'string' && parseFloat(st.zoom) > 0) M = parseFloat(st.zoom);
+  if (M) set.M = +M.toPrecision(6);
+  info.push(`Camera: ${esc(env.camera ?? '?')}, ${cp.x_pixels ?? '?'} &times; ${cp.y_pixels ?? '?'} px, ${dx0 ?? '?'} &micro;m` + (b > 1 ? `, binning ${b}&times;${b}` : '') +
+    ` &middot; zoom ${esc(st.zoom ?? '?')} &rarr; M = ${M ? fv(M) : '? (kept ' + P.M + ')'}`);
+  // timing
+  take('camera_exposure_time', 't_exp', 1000);
+  take('sweeptime', 'sweeptime', 1000);
+  take('camera_line_interval', 'dtL', 1000);
+  take('camera_delay_%', 'cam_delay'); take('camera_pulse_%', 'cam_pulse'); take('samplerate', 'samplerate');
+  if (env.camera === 'Photometrics' && num(cp.scan_line_delay)) {
+    const d = +(0.01026 * (cp.scan_line_delay + 1)).toPrecision(6);
+    if (num(set.dtL) && Math.abs(set.dtL - d) > 1e-4 * d)
+      note('warn', `camera_line_interval = ${fv(set.dtL)} ms is not used by the Photometrics camera: its line time is 10.26 &micro;s &times; (scan_line_delay + 1) = ${fv(d)} ms (scan_line_delay = ${cp.scan_line_delay}). Using ${fv(d)} ms. Set camera_line_interval to ${fv(d / 1000)} to keep the config consistent.`);
+    set.dtL = d;
+  }
+  if (typeof st.camera_sensor_mode === 'string') set.aslm = st.camera_sensor_mode === 'ASLM';
+  // one illumination arm
+  take(`etl_${a}_delay_%`, 'etl_delay'); take(`etl_${a}_ramp_rising_%`, 'etl_rise'); take(`etl_${a}_ramp_falling_%`, 'etl_fall');
+  take(`galvo_${a}_frequency`, 'g_freq'); take(`galvo_${a}_amplitude`, 'g_amp'); take(`galvo_${a}_offset`, 'g_off');
+  take(`galvo_${a}_duty_cycle`, 'g_duty'); take(`galvo_${a}_phase`, 'g_phase');
+  take(`laser_${a}_delay_%`, 'las_delay'); take(`laser_${a}_pulse_%`, 'las_pulse');
+  // sensor preset (lines per step, line-interval limits) if the sensor matches one
+  const sp = SENSORS.find(s => s[1] === set.N_px && s[2] === set.N_perp && Math.abs(s[3] - set.dx) < 1e-6);
+  // fresh model calibration: a scenario may have changed it
+  Object.assign(P, { dtMin: 0, dtMax: 0, dtQ: L.camera === 'Photometrics' ? 0.01026 : 0, lps: 1, etl_k: 2500, etl_vc: 2.5 }, sp ? { lps: sp[4], dtMin: sp[5], dtMax: sp[6], dtQ: sp[7] } : {}, set);
+  $('sensor').value = sp ? sp[0] : '';
+  $('scenario').value = '';
+  P.g_vc = P.g_off;   // galvo calibration unknown: assume the config offset centres the beam
+  const etlA = st[`etl_${a}_amplitude`], etlO = st[`etl_${a}_offset`];
+  if (P.aslm) {
+    fitEtl();
+    note('warn', `ETL ${A}: config amplitude/offset ${fv(etlA)}/${fv(etlO)} V are not used. The model's ETL calibration is relative (2500 &micro;m/V); the ETL is fitted to the slit here (${fv(P.etl_amp)}/${fv(P.etl_off)} V). Timing is what this analysis checks.`);
+  } else note('warn', `camera_sensor_mode = '${esc(st.camera_sensor_mode)}': ASLM off, static sheet`);
+  const gOther = st[`galvo_${a === 'l' ? 'r' : 'l'}_frequency`];
+  if (num(gOther) && num(set.g_freq) && gOther !== set.g_freq)
+    note('warn', `galvo_l_frequency ${fv(st.galvo_l_frequency)} Hz &ne; galvo_r_frequency ${fv(st.galvo_r_frequency)} Hz`);
+  if (num(st.average_frame_rate) && num(set.sweeptime))
+    info.push(`Frame rate 1/sweeptime: ${(1000 / set.sweeptime).toFixed(2)} fps (average_frame_rate in config: ${fv(st.average_frame_rate)}, includes stage moves)`);
+  if (missingKeys.length) note('warn', `Not in the config (panel values kept): ${missingKeys.map(esc).join(', ')}`);
+  info.push(`Optics are not in the config and stay as set: L<sub>ls</sub> ${fv(P.L)} &micro;m, waist FWHM ${fv(P.fwhm0)} &micro;m` +
+    (typeof st.laser === 'string' ? ` (config start laser: ${esc(st.laser)}; set &lambda; and your measured beam for it)` : '') + '.');
+  info.push(`Galvo: calibration knobs (&micro;m/V, centre V) are model values; the config offset is taken as the beam centre.`);
+  syncInputs();
+  setBaseline('config ' + L.roots.join(' + '));
+  $('cfgInfo').innerHTML = `<div class="box"><b>Config:</b> ${esc(L.names.join(' + '))} &middot; ${A} arm` +
+    `<details><summary class="note">What was read (camera, zoom, optics, galvo)</summary><div class="note">${info.join("<br>")}</div></details>` +
+    `<ul class="checks">${notes.join('')}</ul><div class="note">Timing checks for this config: <b>Constraint checks</b>, right. Try <b>Optimize all</b>; changed values are marked.</div></div>`;
+  schedule();
 }
 const r4 = v => +v.toFixed(4);
 
 // ---------------------------------------------------------------- presets / optimization helpers
-function applySensor(s) { [, P.N_px, P.N_perp, P.dx, P.lps, P.dtMin, P.dtMax] = s; syncInputs(); }
+function applySensor(s) { [, P.N_px, P.N_perp, P.dx, P.lps, P.dtMin, P.dtMax, P.dtQ] = s; syncInputs(); }
 function applyScenario(s) {
   applySensor(SENSORS.find(x => x[0] === s[1]));
   $('sensor').value = s[1];
@@ -291,7 +608,7 @@ function applyScenario(s) {
   if (s[6]) Object.assign(P, s[6]);   // full config (has cam_delay): use as-is
   if (!s[6] || !('cam_delay' in s[6])) fitTiming();
   else if (!('etl_amp' in s[6])) fitEtl();   // config timing without ETL voltages: fit them to the slit
-  syncInputs(); schedule();
+  syncInputs(); setBaseline('scenario "' + s[0] + '"'); schedule();
 }
 // Fit ETL amplitude/offset so the (lagged) waist follows the centre of the virtual slit during the ramp.
 function fitEtl() {
@@ -314,13 +631,34 @@ function fitTiming() {
   P.las_pulse = r4(100 * R / P.sweeptime + 0.5);
   fitEtl();
 }
-function optimizeAll() {
+// SNR of a bright cell, ideal sheet: S = rate * t_exp photoelectrons, shot + read noise
+const snrAt = t => { const S = P.phRate * t; return S / Math.sqrt(S + P.readNoise ** 2); };
+function exposureForSnr(snr) {   // solve S^2 = snr^2 (S + rn^2)
+  const s2 = snr * snr, S = (s2 + Math.sqrt(s2 * s2 + 4 * s2 * P.readNoise ** 2)) / 2;
+  return S / P.phRate;
+}
+const GOAL_NOTE = {
+  bal: () => `Slit = L_ls, exposure ${fv(P.t_exp)} ms kept.`,
+  zres: () => `Slit = ${fv(P.zSlit)} × L_ls, exposure ${fv(P.t_exp)} ms kept: thinner sheet, slower.`,
+  speed: () => `Exposure for SNR ${fv(P.snrMin)} (${fv(exposureForSnr(P.snrMin).toFixed(1))} ms at ${fv(P.phRate)} e⁻/ms), slit = ${fv(P.speedSlit)} × L_ls.`,
+  snr: () => `Exposure for SNR ${fv(P.snrTarget)} (${fv(exposureForSnr(P.snrTarget).toFixed(1))} ms at ${fv(P.phRate)} e⁻/ms), slit = L_ls.`,
+};
+function optimizeAll(goal = $('goal').value) {
   P.aslm = true;
-  const slitLines = P.L * P.M / P.dx;                  // N_slit * dx_px = L_ls * M
+  let slitF = 1;
+  if (goal === 'zres') slitF = P.zSlit;
+  else if (goal === 'speed' || goal === 'snr') {
+    if (goal === 'speed') slitF = P.speedSlit;
+    const t = exposureForSnr(goal === 'speed' ? P.snrMin : P.snrTarget);
+    if (Number.isFinite(t) && t > 0) P.t_exp = Math.max(0.5, Math.ceil(t * 10) / 10);
+  }
+  const slitLines = slitF * P.L * P.M / P.dx;          // N_slit * dx_px = slit * L_ls * M
   let dtL = P.t_exp * P.lps / slitLines;
   if (P.dtMin > 0) dtL = Math.max(dtL, P.dtMin);
   if (P.dtMax > 0) dtL = Math.min(dtL, P.dtMax);
-  P.dtL = +dtL.toFixed(5);
+  // sensor line-time steps (Iris 15: 10.26 us x (scan_line_delay+1)): round up (narrower slit), nearest for speed
+  if (P.dtQ > 0) dtL = Math.max(1, (goal === 'speed' ? Math.round : Math.ceil)(dtL / P.dtQ - 1e-9)) * P.dtQ;
+  P.dtL = +dtL.toFixed(6);
   const steps = Math.ceil(P.N_px / P.lps);
   const R = P.t_exp + (steps - 1) * P.dtL;
   const ramp = R / 0.9;                                 // readout = 90% of the ETL ramp
@@ -571,8 +909,9 @@ function run() {
     const s = SCENARIOS.find(x => x[0] === $('scenario').value);
     if (!s || s[2] !== P.t_exp || s[3] !== P.dtL || s[4] !== P.sweeptime) $('scenario').value = '';
   }
+  $('goalNote').textContent = GOAL_NOTE[$('goal').value]();
   const m = model();
-  const W = Math.max(16, Math.min(P.N_px, Math.round(P.simCols) || 480));
+  const W =Math.max(16, Math.min(P.N_px, Math.round(P.simCols) || 480));
   const H = Math.max(16, Math.min(1400, Math.round(W * m.FOVy / m.FOVx)));
   const g = { W, H, pxX: m.FOVx / W, pxY: m.FOVy / H };
   const ph = phantom(g, m);
@@ -585,7 +924,7 @@ function run() {
   for (let i = 0; i < N; i++) {
     let s = 0, s0 = 0;
     for (let k = 0; k < K; k++) { const v = sim.A[i * (K + 1) + k] * ph.layers[k][i]; s += v; if (!k) s0 = v; }
-    let e = s * P.photons / norm;
+    let e = s * P.phRate * P.t_exp / norm;
     if (P.noise) e = Math.max(0, e + Math.sqrt(Math.max(e, 0)) * gauss() + P.readNoise * gauss());
     img[i] = e;
     dose[i] = sim.A[i * (K + 1) + K] / norm;
@@ -915,6 +1254,7 @@ function metrics(S) {
     ['Readout t_exp+(N−1)·dt_L', `${m.R.toFixed(1)} ms`],
     ['ETL ramp', `${ramp.toFixed(1)} ms (readout ${(100 * m.R / ramp).toFixed(0)}%)`],
     ['Frame rate (1/sweeptime)', `${(1000 / m.T).toFixed(2)} fps`],
+    ['SNR, bright cell, ideal sheet', `${snrAt(p.t_exp).toFixed(1)} (${(p.phRate * p.t_exp).toFixed(0)} e⁻)`],
     ['Galvo half-periods / exposure', halfPer.toFixed(3)],
     ['Effective FWHM mean / max', `${meanF.toFixed(1)} / ${maxF.toFixed(1)} µm`],
     ['Static sheet FWHM mean', `${meanStat.toFixed(1)} µm`],
@@ -979,6 +1319,7 @@ $('sensor').value = 'Iris 15';
 $('scenario').value = '';
 fitEtl();          // timing of config_BT_STANDARD_ZMB_exp20ms_v1.2.py; only the ETL is fitted (calibration-dependent)
 syncInputs();
+setBaseline('defaults');
 run();
 </script>
 </body>

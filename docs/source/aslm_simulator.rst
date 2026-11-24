@@ -28,6 +28,29 @@ the line interval has to grow, and the frame rate drop, when the slit is matched
 To measure the waist and the beam length on your instrument, use **Utils → Analyse Beam Profile** in
 mesoSPIM-control on a snap of a static beam (see the :doc:`User Guide <user_guide>`).
 
+**Load mesoSPIM config (.py)** reads a mesoSPIM-control config and checks its timing. For a user config that
+uses ``include()``, select it together with its hardware file (Ctrl+click). The file is parsed, not run. It reads the
+camera (sensor size, pixel size, binning), the start zoom (magnification from ``pixelsize``), exposure, line interval,
+sweeptime, camera delay and one arm's ETL timing, galvo and laser settings (pick left or right). For a Photometrics
+camera the line interval comes from ``scan_line_delay`` (10.26 µs × (n+1)), and a ``camera_line_interval`` that
+disagrees is flagged. Optics (beam length, waist) are not in a config and stay as set; ETL voltages are refitted,
+because the model's ETL calibration is relative.
+
+**Optimize for** sets the goal of **Optimize all**:
+
+* *Balanced*: slit = light-sheet length, exposure as set.
+* *Z resolution*: a narrower slit (default 0.5 × L\ :sub:`ls`), exposure as set; slower.
+* *Speed*: the shortest exposure that still gives the minimum SNR, and a wider slit (default 2 × L\ :sub:`ls`).
+* *SNR*: the exposure that gives the target SNR, slit = L\ :sub:`ls`.
+
+SNR is for a bright cell lit by the ideal sheet, from the photon rate (e⁻ per ms of exposure) and the read noise in
+**Optimization targets**; measure the rate as (bright cell − background) / exposure time on your sample.
+Iris 15 line intervals are rounded to 10.26 µs steps.
+
+Values that differ from what was last loaded (page defaults, a scenario or a config) are marked with ●, bold text and
+a border; hovering a field shows the old value. The box above the panel offers **Revert** and lists the changed
+timing values as config lines (``startup`` keys) to copy.
+
 **Optimize all** proposes a line interval, sweeptime, camera/laser delays, galvo frequency and ETL amplitude/offset
 for the current sensor and light-sheet length. These are starting points: the ETL and galvo calibration values
 (µm per volt, ETL response time) are model inputs and must be matched to the instrument before the suggested
