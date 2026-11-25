@@ -95,7 +95,14 @@ class Acquisition(indexed.IndexedOrderedDict):
         self['processing']=processing
 
 
+    # Rotation angles are rounded to this many decimals on every write, so that
+    # stage readout jitter (e.g. 359.028 vs 359.0) cannot split tiles of the
+    # same view into different angles in BigStitcher XML / file names.
+    ROT_DECIMALS = 1
+
     def __setitem__(self, key, value):
+        if key == 'rot' and isinstance(value, (int, float)) and not isinstance(value, bool):
+            value = round(value, self.ROT_DECIMALS)
         super().__setitem__(key, value)
 
     def __call__(self, index):

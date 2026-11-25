@@ -318,7 +318,7 @@ class MarkRotationPositionDelegate(MarkPositionDelegate):
 
     def set_model_data_from_button(self, editor, model, index):
         pos = model.state['position']['theta_pos']
-        pos = round(pos, 2)
+        pos = round(pos, 1)
         model.setData(index, pos)
         editor.lineEdit.setText(str(pos))
 
