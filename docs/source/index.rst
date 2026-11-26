@@ -12,7 +12,7 @@ mesoSPIM Control
 
 |doi| |python| |license| |forum|
 
-.. |doi| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.6109315.svg
+.. |doi| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.6109315-blue.svg
    :target: https://doi.org/10.5281/zenodo.6109315
 
 .. |python| image:: https://img.shields.io/badge/python-3.12-blue.svg
