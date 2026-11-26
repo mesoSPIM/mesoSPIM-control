@@ -39,9 +39,9 @@ Cameras
    * - **Teledyne Photometrics Retiga E9**
      - ``'Photometrics'``
      - 3000 × 3000, 3.76 µm pixel. Requires PVCAM + PVCAM-SDK + PyVCAM. Use USB3 frame grabber. Supported and recommended for Benchtop-mesoSPIM. Default config: ``exp_mode='Edge Trigger'``, ``gain_index=3`` (HDR), ``exp_out_mode=4`` (line out), ``scan_mode=1`` (Line Delay).
-   * - **PCO cameras**
+   * - **PCO pco.edge 4.2 bi**
      - ``'PCO'``
-     - Requires the ``pco`` Python package (≥ 0.1.3).
+     - 2048 × 2048, 6.5 µm pixel, back-illuminated. Live mode tested on the Benchtop (USB 3.1); acquisitions not yet tested on hardware. Requires the ``pco`` Python package 2.x (``pip install pco``, tested with 2.6.0) and the `PCO USB3 interface driver <https://www.excelitas.com/product/pco-interface-drivers>`_. Lightsheet (CMOS line timing) mode, frames started by the camera TTL on the trigger input. Example config: ``config/examples/hardware/config_benchtop-cDAQ-ASI-PCOedge42bi_hw.py``. Other pco.edge models use the same driver but are untested.
 
 Camera parameters — pixel size, binning, trigger mode, etc. — are set in
 the ``camera_parameters`` dict.  See :doc:`configuration` for examples.

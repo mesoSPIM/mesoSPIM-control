@@ -281,7 +281,7 @@ camera
 
 .. code-block:: python
 
-   camera = 'HamamatsuOrca'   # 'DemoCamera', 'HamamatsuOrca', or 'Photometrics'
+   camera = 'HamamatsuOrca'   # 'DemoCamera', 'HamamatsuOrca', 'Photometrics', or 'PCO'
 
    # Example — Hamamatsu Orca Flash 4.0 V2/V3
    camera_parameters = {
@@ -304,6 +304,38 @@ camera
    binning_dict = {'1x1': (1, 1), '2x2': (2, 2), '4x4': (4, 4)}
 
 For Photometrics camera parameter examples, see ``demo_config.py``.
+
+PCO pco.edge cameras run in lightsheet (CMOS line timing) mode. The rolling shutter
+reads one line per ``line_interval``, from the top sensor row to the bottom, and each
+line is exposed for ``round(exp_time / line_interval)`` line times:
+
+.. code-block:: python
+
+   camera = 'PCO'
+
+   # Example — PCO pco.edge 4.2 bi (USB 3.1), Benchtop at 5x
+   camera_parameters = {
+       'x_pixels': 2048,
+       'y_pixels': 2048,
+       'x_pixel_size_in_microns': 6.5,
+       'y_pixel_size_in_microns': 6.5,
+       'subsampling': [1, 2, 4],
+       'binning': '1x1',                 # binning is not available in lightsheet mode
+       'line_interval': 0.000118,        # s; = startup['camera_line_interval']
+       'exp_time': 0.02,                 # s; = startup['camera_exposure_time']
+       'trigger': 'external exposure start & software trigger',
+       'readout_direction': 'top bottom',  # 'inverse' is not supported by the pco.edge 4.2 bi USB
+       'series_buffer_frames': 64,       # recorder fifo; when full, the camera misses triggers
+   }
+
+   binning_dict = {'1x1': (1, 1)}
+
+Mount the camera so that its readout (sensor vertical) axis is parallel to the
+light-sheet propagation, with the top sensor row where the ETL sweep starts. The
+camera window shows frames transposed, so the beam then runs horizontally on screen
+and the rolling shutter moves left to right. See the notes in
+``config/examples/hardware/config_benchtop-cDAQ-ASI-PCOedge42bi_hw.py`` for a
+live-mode check of the orientation.
 
 microscope_parameters
 ~~~~~~~~~~~~~~~~~~~~~

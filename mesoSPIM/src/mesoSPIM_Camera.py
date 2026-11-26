@@ -756,71 +756,181 @@ class mesoSPIM_PhotometricsCamera(mesoSPIM_GenericCamera):
         
 
 class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
-    '''Camera driver for PCO scientific cameras (e.g. pco.edge sCMOS).
+    '''Camera driver for PCO pco.edge sCMOS cameras in lightsheet (CMOS line timing) mode.
 
-    Uses the ``pco`` Python SDK (``pip install pco``).  Acquires frames in
-    rolling-shutter light-sheet mode; frame transfer timing is set by the
-    global line interval from ``cfg.startup``.
+    Written for the ``pco`` Python package 2.x (``pip install pco``; API checked: 2.6.0).
+    The rolling shutter reads one line per ``line_interval``, in the direction set by
+    ``camera_parameters['readout_direction']`` ('top bottom', or 'inverse' = bottom to top),
+    and each line is exposed for round(exposure / line interval) line times. Each frame starts
+    on the camera TTL ('external exposure start & software trigger').
+
+    Frames are buffered in a pco recorder in 'fifo' mode: ``recorded_image_count`` is the number
+    of unread frames and ``image(0)`` reads the oldest one. When the fifo is full the camera
+    pauses (it misses triggers) instead of overwriting frames.
+
+    The recorder is started once, in open_camera(), and left running: stopping it takes 2.27 s in
+    the pco SDK (recorder.stop_record, 2026-11-26), which made STOP laggy and would add 2.27 s per
+    stack. Live mode and image series start by discarding frames left over from earlier.
+    Line timing and exposure can only change while the recorder is stopped, so a change of
+    exposure or line interval stops and restarts it (one 2.27 s pause).
+
+    camera_parameters keys: 'line_interval' (s), 'exp_time' (s), 'trigger', and optional
+    'readout_direction' (default 'top bottom') and 'series_buffer_frames' (default 64).
     '''
+    # Longest wait for one frame (s): generous for any sweeptime, but finite (see the Photometrics driver).
+    SERIES_POLL_TIMEOUT_S = 5.0
+    # Frames taken per drain call: everything already buffered, bounded so one call cannot starve the writer.
+    SERIES_MAX_FRAMES_PER_CALL = 16
+
     def __init__(self, parent):
         super().__init__(parent)
+        self.cam = None
+        self.recording = False
+        self.recording_frames = 0
+        self.camera_line_interval = self.cfg.camera_parameters.get('line_interval', self.camera_line_interval)
+        self.camera_exposure_time = self.cfg.camera_parameters.get('exp_time', self.camera_exposure_time)
+        self.readout_direction = self.cfg.camera_parameters.get('readout_direction', 'top bottom')
+        if self.readout_direction not in ('top bottom', 'inverse'):
+            raise ValueError(f"PCO: camera_parameters['readout_direction'] = {self.readout_direction!r}; "
+                             f"lightsheet mode needs 'top bottom' or 'inverse'")
         logger.info('PCO Cam initialized')
-    
+
     def open_camera(self):
         import pco
-        self.cam = pco.Camera() # no logging 
-        # self.cam = pco.Camera(debuglevel='verbose', timestamp='on')
-
-        self.cam.sdk.set_cmos_line_timing('on', self.cfg.camera_parameters['line_interval']) # 75 us delay
-        self.cam.set_exposure_time(self.cfg.camera_parameters['exp_time'])
-        # self.cam.sdk.set_cmos_line_exposure_delay(80, 0) # 266 lines = 20 ms / 75 us
-        self.cam.configuration = {'trigger' : self.cfg.camera_parameters['trigger']}
-
-        line_time = self.cam.sdk.get_cmos_line_timing()['line time']
-        lines_exposure = self.cam.sdk.get_cmos_line_exposure_delay()['lines exposure']
-        t = self.cam.get_exposure_time()
-        #print('Exposure Time: {:9.6f} s'.format(t))
-        #print('Line Time: {:9.6f} s'.format(line_time))
-        #print('Number of Lines: {:d}'.format(lines_exposure))
-
-        self.cam.record(number_of_images=4, mode='fifo')
+        self.cam = pco.Camera()
+        logger.info(f'PCO: opened {self.cam.camera_name}, serial {self.cam.camera_serial}')
+        self.cam.configuration = {'trigger': self.cfg.camera_parameters['trigger']}
+        self._apply_lightsheet()
+        self.buffer_frames = int(self.cfg.camera_parameters.get('series_buffer_frames', 64))
+        self._start_recording(self.buffer_frames)
+        logger.info(f'PCO: recording into a fifo of {self.buffer_frames} frames '
+                    f'({self.buffer_frames * self.x_pixels * self.y_pixels * 2 / 2**30:.2f} GiB)')
 
     def close_camera(self):
-        self.cam.stop()
+        if self.cam is None:
+            return
+        self._stop_recording()
         self.cam.close()
+        self.cam = None
+
+    # ------------------------------------------------------------------ settings
+    def _apply_lightsheet(self):
+        '''Send line time, exposure lines and readout direction. The recorder must be stopped.'''
+        lines_exposure = max(1, int(round(self.camera_exposure_time / self.camera_line_interval)))
+        arg = {'line time': self.camera_line_interval, 'lines exposure': lines_exposure}
+        # 'top bottom' is the lightsheet default. The pco.edge 4.2 bi USB firmware rejects
+        # set_interface_output_format() altogether (0x80031020, "not supported by this hardware",
+        # 2026-11-26), so it is only sent when the readout is to be inverted.
+        if self.readout_direction != 'top bottom':
+            arg['scmos readout'] = self.readout_direction
+        try:
+            self.cam.lightsheet_configuration = arg
+        except Exception as e:
+            if 'scmos readout' not in arg:
+                raise
+            raise RuntimeError(f"PCO: this camera does not accept readout_direction = {self.readout_direction!r} ({e}). "
+                               f"Set camera_parameters['readout_direction'] = 'top bottom' and rotate the camera "
+                               f"by 180 deg instead.") from e
+        # read back with the sdk calls: the lightsheet_configuration getter also queries the
+        # interface output format, which this firmware does not support
+        lt = self.cam.sdk.get_cmos_line_timing()
+        lines = self.cam.sdk.get_cmos_line_exposure_delay()['lines exposure']
+        exposure = lt['line time'] * lines
+        logger.info(f"PCO lightsheet: line timing {lt['parameter']}, line time {lt['line time'] * 1e6:.2f} us, "
+                    f"{lines} lines exposure = {exposure * 1e3:.3f} ms, readout {self.readout_direction}")
+        if abs(lt['line time'] - self.camera_line_interval) > 1e-3 * self.camera_line_interval:
+            logger.warning(f"PCO: line time is {lt['line time'] * 1e6:.2f} us, requested {self.camera_line_interval * 1e6:.2f} us")
+
+    def _reconfigure(self):
+        '''Apply new timing; restart the recorder if it was running (live mode).'''
+        if self.cam is None:
+            return
+        frames = self.recording_frames if self.recording else 0
+        self._stop_recording()
+        self._apply_lightsheet()
+        if frames:
+            self._start_recording(frames)
 
     def set_exposure_time(self, time):
-        self.cam.set_exposure_time(time)
         self.camera_exposure_time = time
-        
+        self._reconfigure()
+
     def set_line_interval(self, time):
-        print('Setting line interval is not implemented, set the interval in the config file')
-        
+        self.camera_line_interval = time
+        self._reconfigure()
+
     def set_binning(self, binningstring):
-        pass
-                
-    def get_image(self):
-        image, meta = self.cam.image(image_number=-1)
-        return image
-        
-    def initialize_image_series(self):
-        pass
-    
-    def get_images_in_series(self):
-        image, meta = self.cam.image(image_number=-1)
-        return [image]
+        if binningstring != '1x1':
+            logger.warning(f'PCO: binning {binningstring} is not supported in lightsheet mode, keeping 1x1')
+        self.state['camera_binning'] = '1x1'
 
-    def close_image_series(self):
-        pass
+    # ------------------------------------------------------------------ recorder
+    def _start_recording(self, frames):
+        self.cam.record(number_of_images=frames, mode='fifo')
+        self.recording = True
+        self.recording_frames = frames
 
+    def _stop_recording(self):
+        if self.recording:
+            self.cam.stop()
+            self.recording = False
+
+    def _discard_waiting(self):
+        '''Drop frames left in the fifo (e.g. from the end of the previous live session).'''
+        n = 0
+        while self.cam.recorded_image_count > 0:
+            self.cam.image(image_index=0)
+            n += 1
+        if n:
+            logger.debug(f'PCO: discarded {n} stale frame(s)')
+
+    def _read_frames(self, max_frames, timeout_s):
+        '''Wait up to timeout_s for a frame, then return up to max_frames already waiting, oldest first.'''
+        try:
+            self.cam.wait_for_new_image(delay=True, timeout=timeout_s)
+        except TimeoutError:
+            return []
+        images = []
+        while len(images) < max_frames and self.cam.recorded_image_count > 0:
+            image, _ = self.cam.image(image_index=0)
+            images.append(image)
+        return images
+
+    # ------------------------------------------------------------------ live / snap
     def initialize_live_mode(self):
-        pass
+        self._discard_waiting()
 
     def get_live_image(self):
-        image, meta = self.cam.image(image_number=-1)
-        return [image]
+        # one frame per sweep; drain all waiting frames so the fifo never fills, show the newest
+        images = self._read_frames(self.buffer_frames, self.SERIES_POLL_TIMEOUT_S)
+        if not images:
+            logger.warning(f'PCO: no live frame within {self.SERIES_POLL_TIMEOUT_S} s')
+        return images[-1:]
+
+    def get_image(self):
+        images = self._read_frames(self.buffer_frames, self.SERIES_POLL_TIMEOUT_S)
+        if not images:
+            raise TimeoutError(f'PCO: no frame within {self.SERIES_POLL_TIMEOUT_S} s')
+        return images[-1]
 
     def close_live_mode(self):
-        pass
+        pass  # recorder keeps running, see the class docstring
+
+    # ------------------------------------------------------------------ image series
+    def initialize_image_series(self):
+        self._discard_waiting()
+
+    def get_images_in_series(self):
+        '''Return every frame already buffered, waiting up to SERIES_POLL_TIMEOUT_S for the first one.
+
+        Returns an empty list on timeout.
+        '''
+        images = self._read_frames(self.SERIES_MAX_FRAMES_PER_CALL, self.SERIES_POLL_TIMEOUT_S)
+        if not images:
+            logger.warning(f'PCO: no frame within {self.SERIES_POLL_TIMEOUT_S} s')
+        return images
+
+    def close_image_series(self):
+        pass  # recorder keeps running, see the class docstring
 
     
