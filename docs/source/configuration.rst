@@ -306,8 +306,10 @@ camera
 For Photometrics camera parameter examples, see ``demo_config.py``.
 
 PCO pco.edge cameras run in lightsheet (CMOS line timing) mode. The rolling shutter
-reads one line per ``line_interval``, from the top sensor row to the bottom, and each
-line is exposed for ``round(exp_time / line_interval)`` line times:
+reads one line per ``startup['camera_line_interval']``, from the top sensor row to the
+bottom, and each line is exposed for
+``round(camera_exposure_time / camera_line_interval)`` line times. Both values are set
+in ``startup`` only, like for the other cameras:
 
 .. code-block:: python
 
@@ -321,8 +323,6 @@ line is exposed for ``round(exp_time / line_interval)`` line times:
        'y_pixel_size_in_microns': 6.5,
        'subsampling': [1, 2, 4],
        'binning': '1x1',                 # binning is not available in lightsheet mode
-       'line_interval': 0.000118,        # s; = startup['camera_line_interval']
-       'exp_time': 0.02,                 # s; = startup['camera_exposure_time']
        'trigger': 'external exposure start & software trigger',
        'readout_direction': 'top bottom',  # 'inverse' is not supported by the pco.edge 4.2 bi USB
        'series_buffer_frames': 64,       # recorder fifo; when full, the camera misses triggers
@@ -330,12 +330,54 @@ line is exposed for ``round(exp_time / line_interval)`` line times:
 
    binning_dict = {'1x1': (1, 1)}
 
+   startup = {
+       # ...
+       'camera_exposure_time': 0.02,     # s; 169 line times = 19.94 ms
+       'camera_line_interval': 0.000118, # s; slit 169 lines = 220 um at 5x
+   }
+
 Mount the camera so that its readout (sensor vertical) axis is parallel to the
 light-sheet propagation, with the top sensor row where the ETL sweep starts. The
 camera window shows frames transposed, so the beam then runs horizontally on screen
 and the rolling shutter moves left to right. See the notes in
 ``config/examples/hardware/config_benchtop-cDAQ-ASI-PCOedge42bi_hw.py`` for a
 live-mode check of the orientation.
+
+**Known artifact: bright first sensor row in lightsheet mode.** On the pco.edge 4.2 bi
+we tested (USB, serial 18500172), the first sensor row reads far above the rest of the
+image in lightsheet mode, also with the laser off and the detection path covered. In
+the camera window it shows as a bright column at the left edge. Dark frames
+(``line time`` 0.118 ms, 169 lines exposure; median counts):
+
+.. list-table::
+   :header-rows: 1
+
+   * - Mode
+     - Image
+     - Row 0
+     - Row 1
+     - Row 2
+     - Row 3
+     - Row 2047
+   * - Normal rolling shutter, 20 ms
+     - 103
+     - 112
+     - 109
+     - 109
+     - 109
+     - 110
+   * - Lightsheet mode
+     - 179
+     - 469
+     - 316
+     - 279
+     - 257
+     - 297
+
+It does not come from stray light, the timestamp (off) or a defective row (normal
+mode is clean). The cause is not known, and it may be specific to this camera unit.
+The excess is the same in every frame, so dark-frame subtraction (dark frames taken in
+lightsheet mode) removes it. The driver does not correct it.
 
 microscope_parameters
 ~~~~~~~~~~~~~~~~~~~~~

@@ -34,7 +34,6 @@ plugins = {
         "../src/plugins",         # Ignored if it does not exits (use '/')
         "C:/a/different/plugin/location",  # Ignored if it does not exits (use '/')
     ],
-    'first_image_writer': 'MP_OME_Zarr_Writer', # 'H5_BDV_Writer', 'MP_OME_Zarr_Writer', 'Tiff_Writer', 'Big_Tiff_Writer', 'RAW_Writer'
 }
 
 ui_options = {'dark_mode' : True, # Dark mode: Renders the UI dark if enabled
@@ -197,9 +196,10 @@ camera = 'PCO' # 'DemoCamera' or 'HamamatsuOrca' or 'Photometrics' or 'PCO'
 
 '''
 pco.edge 4.2 bi, lightsheet (CMOS line timing) mode. Needs the `pco` Python package 2.x (pip install pco, 2.6.0)
-and the PCO USB3 interface driver. 'line_interval' and 'exp_time' are the values sent when the camera opens;
-exposure and line interval changed in the GUI are sent too (the driver stops and restarts the recorder).
-The exposure is a whole number of line times: round(exp_time / line_interval) = 169 lines = 19.94 ms.
+and the PCO USB3 interface driver. Line time and exposure are startup['camera_line_interval'] and
+startup['camera_exposure_time'] (below); an exposure changed in the GUI is sent too (the driver stops and
+restarts the recorder). The exposure is a whole number of line times:
+round(camera_exposure_time / camera_line_interval) = 169 lines = 19.94 ms.
 Binning stays 1x1 (not available in lightsheet mode).
 Slit = exposure / line interval = 20 ms / 0.118 ms = 169 lines = 1.1 mm on the sensor = 220 um at 5x (= L_beam).
 '''
@@ -209,8 +209,6 @@ camera_parameters = {'x_pixels' : 2048,
                      'y_pixel_size_in_microns' : 6.5,
                      'subsampling' : [1,2,4],
                      'binning' : '1x1',
-                     'line_interval' : 0.000118, # s, lightsheet-mode line time; same as startup['camera_line_interval']
-                     'exp_time' : 0.02, # s, same as startup['camera_exposure_time']
                      'trigger' : 'external exposure start & software trigger', # pco 2.6.0 sdk.set_trigger_mode(): exposure starts on the camera TTL
                      'readout_direction' : 'top bottom', # keep 'top bottom': this USB camera's firmware rejected setting the readout format; a 180 deg camera must be rotated
                      'series_buffer_frames' : 64, # recorder fifo, live and stacks (8 MB each, 0.5 GiB); when full the camera misses triggers
@@ -366,20 +364,15 @@ False will only save the original resolution data.
 shards are defined by default. Be careful, shard shape must be defined carefully to prevent performance 
 degradation. We suggest that shards are shallow in Z and as large as you camera sensor in XY. 
 For best performance set the base and target chunks to the same z-depth as your shards.
-
-async_finalize: default: True. Enables acquisition of the next tile to proceed immediately while the multiscale 
-is finalized in the background. On systems with slow IO, data can accumulate in RAM and cause a crash.
-Slow IO can be improved by using bigger chunks. If bigger chunks do not help, use async_finalize: False 
-to make mesoSPSIM pause after each tile acquisition until the multiscale is finished generating. 
 '''
 
 MP_OME_Zarr_Writer = {
-    'ome_version': '0.4',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
+    'ome_version': '0.5',  # 0.4 (zarr v2), 0.5 (zarr v3, sharding supported)
     'generate_multiscales': True, # True, False. False: only the primary data is saved. True: multiscale data is generated
     'compression': 'zstd',  # None, 'zstd', 'lz4'
-    'compression_level': 5,  # 1-9
+    'compression_level': 1,  # 1-9
     'shards': (64, 6000, 6000),  # None or Tuple specifying max shard size. (axes: z,y,x), ignored if ome_version "0.4"
-    'base_chunks': (32, 1264, 1480),
+    'base_chunks': (64, 1024, 1024),
     # Tuple specifying starting chunk size (multiscale level 0). Bigger chunks, less files (axes: z,y,x)
     'target_chunks': (64, 64, 64),
     # Tuple specifying ending chunk size (multiscale highest level). Bigger chunks, less files (axes: z,y,x)
@@ -460,8 +453,8 @@ startup = {
 'stage_trigger_pulse_%' : 1,
 'camera_delay_%' : 7.0, # first line 6 ms (3 x ETL tau = 2 ms) into the ETL ramp
 'camera_pulse_%' : 1.0,
-'camera_exposure_time':0.02, # = camera_parameters['exp_time']
-'camera_line_interval':0.000118, # = camera_parameters['line_interval']; slit 169 lines = 220 um at 5x
+'camera_exposure_time':0.02, # s; PCO: 169 line times = 19.94 ms
+'camera_line_interval':0.000118, # s; PCO lightsheet line time; slit 169 lines = 220 um at 5x
 'camera_display_live_subsampling': 2,
 'camera_display_snap_subsampling': 1,
 'camera_display_acquisition_subsampling': 2,

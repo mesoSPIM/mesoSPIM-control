@@ -774,8 +774,9 @@ class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
     Line timing and exposure can only change while the recorder is stopped, so a change of
     exposure or line interval stops and restarts it (one 2.27 s pause).
 
-    camera_parameters keys: 'line_interval' (s), 'exp_time' (s), 'trigger', and optional
-    'readout_direction' (default 'top bottom') and 'series_buffer_frames' (default 64).
+    Line time and exposure: startup['camera_line_interval'] and startup['camera_exposure_time'] (s).
+    camera_parameters keys: 'trigger', and optional 'readout_direction' (default 'top bottom') and
+    'series_buffer_frames' (default 64).
     '''
     # Longest wait for one frame (s): generous for any sweeptime, but finite (see the Photometrics driver).
     SERIES_POLL_TIMEOUT_S = 5.0
@@ -787,8 +788,12 @@ class mesoSPIM_PCOCamera(mesoSPIM_GenericCamera):
         self.cam = None
         self.recording = False
         self.recording_frames = 0
-        self.camera_line_interval = self.cfg.camera_parameters.get('line_interval', self.camera_line_interval)
-        self.camera_exposure_time = self.cfg.camera_parameters.get('exp_time', self.camera_exposure_time)
+        # Line time and exposure come from startup['camera_line_interval'] / ['camera_exposure_time'] (set by
+        # mesoSPIM_GenericCamera), the same values the GUI shows and the metadata records.
+        for key in ('line_interval', 'exp_time'):
+            if key in self.cfg.camera_parameters:
+                logger.warning(f"PCO: camera_parameters['{key}'] is ignored; set startup['camera_line_interval'] "
+                               f"and startup['camera_exposure_time'] instead")
         self.readout_direction = self.cfg.camera_parameters.get('readout_direction', 'top bottom')
         if self.readout_direction not in ('top bottom', 'inverse'):
             raise ValueError(f"PCO: camera_parameters['readout_direction'] = {self.readout_direction!r}; "

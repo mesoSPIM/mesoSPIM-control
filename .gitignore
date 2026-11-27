@@ -44,3 +44,4 @@ docs/build_log.txt
 PROJECT_CONTEXT.md
 .claude/skills
 CLAUDE.md
+.claude/launch.json
